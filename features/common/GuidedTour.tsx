@@ -55,7 +55,30 @@ const CSS = `
 .gt-root .sptitle{font-size:17px;font-weight:800;color:#e6f0ff;animation:gtsppop .6s ease .1s both}
 .gt-root .spsub{font-size:11.5px;font-weight:700;color:#9fb4dd;animation:gtsppop .6s ease .2s both}
 @keyframes gtsppop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+/* Classy dark "robot narrator" bookends — shown for the intro and the done
+   screens so the tour opens and closes on the same premium note as the logo
+   splash, with a female-styled robot that "talks" while the voice narrates. */
+.gt-root .gt-scene{position:relative;margin:-16px;min-height:352px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:15px;text-align:center;padding:34px 26px;background:radial-gradient(130% 120% at 50% 0%,#1b3f8f,#0b1020 78%);overflow:hidden}
+.gt-root .gt-scene::before{content:"";position:absolute;top:-30%;left:-45%;width:60%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.09),transparent);transform:skewX(-18deg);animation:gtshine 5.5s ease-in-out infinite}
+.gt-root .gt-bot{position:relative;width:118px;height:118px;display:grid;place-items:center}
+.gt-root .gt-bot .halo{position:absolute;inset:-16px;border-radius:50%;background:radial-gradient(circle,rgba(90,190,255,.5),transparent 62%);animation:gtpulse 2.4s ease-in-out infinite}
+@keyframes gtpulse{0%,100%{opacity:.5;transform:scale(.92)}50%{opacity:1;transform:scale(1.07)}}
+.gt-root .gt-bot .bob{position:relative;animation:gtbob 4s ease-in-out infinite}
+@keyframes gtbob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.gt-root .gt-bot .eye{transform-box:fill-box;transform-origin:center;animation:gtblink 5.2s infinite}
+@keyframes gtblink{0%,93%,100%{transform:scaleY(1)}96.5%{transform:scaleY(.12)}}
+.gt-root .gt-bot .mbar{transform-box:fill-box;transform-origin:center;animation:gttalk .82s ease-in-out infinite}
+.gt-root .gt-bot .mbar.b2{animation-duration:.6s;animation-delay:.09s}.gt-root .gt-bot .mbar.b3{animation-duration:.72s;animation-delay:.18s}
+@keyframes gttalk{0%,100%{transform:scaleY(.3)}50%{transform:scaleY(1)}}
+.gt-root .gt-scene-badge{display:inline-flex;align-items:center;gap:6px;font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;color:#7fd0ff;background:rgba(80,170,255,.12);border:1px solid rgba(127,208,255,.28);border-radius:999px;padding:4px 12px}
+.gt-root .gt-scene-title{font-size:20px;font-weight:800;color:#eaf2ff;letter-spacing:-.2px;animation:gtsppop .5s ease both}
+.gt-root .gt-scene-sub{font-size:12.5px;font-weight:600;color:#9fb4dd;max-width:350px;line-height:1.55;animation:gtsppop .5s ease .1s both}
 `;
+// A female-styled robot avatar (antenna, side pods, visor eyes, equalizer
+// mouth) that idles with a bob + blink and "talks" via the mouth bars.
+const BOT = `<div class="gt-bot"><span class="halo"></span><svg class="bob" width="112" height="112" viewBox="0 0 112 112" fill="none" xmlns="http://www.w3.org/2000/svg"><defs><linearGradient id="gtbHead" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f6faff"/><stop offset="1" stop-color="#c9dcff"/></linearGradient><radialGradient id="gtbEye" cx="50%" cy="40%" r="60%"><stop offset="0" stop-color="#cbf3ff"/><stop offset="1" stop-color="#33b6ff"/></radialGradient></defs><line x1="56" y1="17" x2="56" y2="31" stroke="#8fb6ff" stroke-width="3" stroke-linecap="round"/><circle cx="56" cy="13" r="5" fill="#ff5aa8"/><circle cx="19" cy="63" r="11" fill="url(#gtbHead)" stroke="#a9c6ff" stroke-width="1.5"/><circle cx="93" cy="63" r="11" fill="url(#gtbHead)" stroke="#a9c6ff" stroke-width="1.5"/><circle cx="19" cy="63" r="4" fill="#7fd0ff"/><circle cx="93" cy="63" r="4" fill="#7fd0ff"/><rect x="26" y="30" width="60" height="60" rx="22" fill="url(#gtbHead)" stroke="#a9c6ff" stroke-width="1.5"/><rect x="33" y="45" width="46" height="27" rx="13.5" fill="#0e1e46"/><ellipse class="eye" cx="47" cy="58" rx="5" ry="6.2" fill="url(#gtbEye)"/><ellipse class="eye" cx="65" cy="58" rx="5" ry="6.2" fill="url(#gtbEye)"/><rect class="mbar b1" x="49.5" y="77" width="3" height="9" rx="1.5" fill="#7fd0ff"/><rect class="mbar b2" x="54.5" y="77" width="3" height="9" rx="1.5" fill="#7fd0ff"/><rect class="mbar b3" x="59.5" y="77" width="3" height="9" rx="1.5" fill="#7fd0ff"/></svg></div>`;
+const scene = (badge: string, title: string, sub: string) =>
+  `<div class="gt-scene appear">${BOT}<div class="gt-scene-badge">${badge}</div><div class="gt-scene-title">${title}</div><div class="gt-scene-sub">${sub}</div></div>`;
 
 export function GuidedTour({ config }: { config: TourConfig }) {
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -75,7 +98,6 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     const backBtn = root.querySelector(".gt-back") as HTMLElement;
     const fwdBtn = root.querySelector(".gt-fwd") as HTMLElement;
     const soundBtn = root.querySelector(".gt-sound") as HTMLElement;
-    const voiceSel = root.querySelector(".gt-voice") as HTMLSelectElement | null;
     const hasSpeech = typeof window !== "undefined" && "speechSynthesis" in window;
 
     let token = 0, dead = false, soundOn = false, paused = false, currentIdx = -1;
@@ -87,20 +109,16 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     const strip = (h: string) => h.replace(/<[^>]+>/g, "").replace(/&amp;/g, " and ").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&#39;|&rsquo;|&apos;/g, "'").replace(/&quot;/g, '"').replace(/[—–]/g, ", ").replace(/\s+/g, " ").trim();
     const readMs = (t: string) => Math.max(2400, t.split(/\s+/).length * 330);
 
+    // One fixed narrator: "Google UK English Female" when available (Chrome),
+    // otherwise the closest British female / en-GB voice. No picker — every tour
+    // sounds the same on a given device.
     function pickVoice(): SpeechSynthesisVoice | null {
       if (!hasSpeech) return null;
       const vs = window.speechSynthesis.getVoices(); if (!vs.length) return null;
-      const pref = ["Google UK English Female", "Microsoft Sonia", "Serena", "Kate", "Fiona", "Samantha"];
-      for (const n of pref) { const v = vs.find((x) => x.name === n) || vs.find((x) => x.name.includes(n)); if (v) return v; }
-      return vs.find((v) => /en-GB/i.test(v.lang)) || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
-    }
-    function fillVoices(): boolean {
-      if (!voiceSel || !hasSpeech) return false;
-      const vs = window.speechSynthesis.getVoices().filter((v) => /^en/i.test(v.lang)); if (!vs.length) return false;
-      const cur = voiceSel.value;
-      voiceSel.innerHTML = vs.map((v) => `<option value="${v.name}">${v.name} (${v.lang})</option>`).join("");
-      voiceSel.value = cur || (voice ? voice.name : "");
-      return true;
+      return vs.find((v) => v.name === "Google UK English Female")
+        || vs.find((v) => /en-GB/i.test(v.lang) && /female|Sonia|Serena|Kate|Fiona|Libby|Hazel/i.test(v.name))
+        || vs.find((v) => /en-GB/i.test(v.lang))
+        || vs.find((v) => /^en/i.test(v.lang)) || vs[0];
     }
     function speak(t: string) {
       if (!soundOn || !hasSpeech || !t) { speaking = Promise.resolve(); return; }
@@ -129,7 +147,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
         <div class="wbody">${s.bodyHtml}</div>
         <div class="wfoot"><span class="btn ghost">← Back</span><span class="btn amber" id="gtnext">${i === cfg.steps.length - 1 ? "Done ✓" : "Next →"}</span></div></div>`;
     };
-    const doneView = `<div class="appear" style="text-align:center;padding:14px 0"><div style="font-size:34px">🎉</div><div style="font-size:16px;font-weight:800;margin-top:6px">All done!</div><div style="font-size:12px;color:var(--muted);margin-top:3px">You've seen the essentials of this page.</div></div>`;
+    const doneView = scene("✓ Complete", "All done", "You've seen the essentials of this page.");
 
     async function run(startIdx = 0) {
       const cfg = cfgRef.current;
@@ -139,9 +157,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
       cursor.style.transform = "translate(24px,20px) scale(1)";
       if (startIdx <= 0) {
         if (splash) { splash.style.display = "flex"; splash.classList.remove("hide"); void splash.offsetWidth; await sleep(2200); if (!alive()) return; splash.classList.add("hide"); await sleep(500); splash.style.display = "none"; }
-        currentIdx = -1; content.innerHTML = cfg.introHtml
-          ? `<div class="appear" style="padding:24px 6px;font-size:13px;color:var(--ink2);line-height:1.6">${cfg.introHtml}</div>`
-          : `<div class="appear" style="display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:200px;gap:8px"><div style="font-size:30px">👋</div><div style="font-size:16px;font-weight:800;color:var(--ink)">${cfg.title}</div><div style="font-size:12px;color:var(--ink3)">Here's a quick walkthrough.</div></div>`;
+        currentIdx = -1; content.innerHTML = scene("Guided walkthrough", cfg.title, "Sit back — I'll show you round this page.");
         await line(cfg.introLine); if (!alive()) return;
       } else if (splash) { splash.style.display = "none"; }
       for (let i = Math.max(0, startIdx); i < cfg.steps.length; i++) {
@@ -154,13 +170,13 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     }
 
     const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "🔊 Sound"; capEl.style.display = on ? "none" : ""; };
-    let vp = 0; const pollIv = hasSpeech ? window.setInterval(() => { if (fillVoices() || ++vp > 24) window.clearInterval(pollIv); }, 250) : 0;
-    if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); fillVoices(); }; }
-    if (voiceSel) { voiceSel.onmousedown = () => { fillVoices(); }; voiceSel.onchange = () => { voice = window.speechSynthesis.getVoices().find((v) => v.name === voiceSel.value) || voice; if (!soundOn) setSound(true); if (hasSpeech) window.speechSynthesis.cancel(); speak(strip(capEl.innerHTML)); }; }
+    // Voices load asynchronously — poll until the fixed narrator resolves.
+    let vp = 0; const pollIv = hasSpeech ? window.setInterval(() => { if (window.speechSynthesis.getVoices().length) { voice = pickVoice(); window.clearInterval(pollIv); } else if (++vp > 24) window.clearInterval(pollIv); }, 250) : 0;
+    if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
     replayBtn.onclick = () => { run(0); };
     if (backBtn) backBtn.onclick = () => { run(currentIdx - 1); };
     if (fwdBtn) fwdBtn.onclick = () => { run(currentIdx + 1); };
-    soundBtn.onclick = () => { fillVoices(); setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(currentIdx < 0 ? 0 : currentIdx); };
+    soundBtn.onclick = () => { setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(currentIdx < 0 ? 0 : currentIdx); };
     if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶ Resume" : "⏸ Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 
@@ -177,7 +193,6 @@ export function GuidedTour({ config }: { config: TourConfig }) {
         <button type="button" className="cbtn gt-pause">⏸ Pause</button>
         <button type="button" className="cbtn gt-fwd" title="Skip forward">⏭</button>
         <button type="button" className="cbtn gt-sound">🔊 Sound</button>
-        <select className="cbtn gt-voice" title="Pick a voice" style={{ maxWidth: 200 }} />
       </div>
       <div className="gt-stage">
         <div className="gt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
