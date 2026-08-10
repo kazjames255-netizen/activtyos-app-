@@ -69,6 +69,28 @@ function actionsFor(text: string, kind: Kind, portal: string) {
   return out;
 }
 
+// ── Actions the co-pilot can DO (front-end, executed on your confirm) ────────
+type ActionDraft = { kind: "task" | "calendar"; title: string; due?: string; date?: string; time?: string };
+function cleanActionTitle(t: string): string {
+  return t
+    .replace(/^\s*(please\s+|can you\s+|could you\s+)+/i, "")
+    .replace(/^(add|create|make|set ?up|schedule|put|new|book|log)\s+(a|an|the)?\s*(new\s+)?(task|to-?do|reminder|calendar event|event|meeting|diary entry|entry)\s*(to|for|:|that says|about|called|named|reminding me to)?\s*/i, "")
+    .replace(/^(remind me to|i need to|note to self:?)\s*/i, "")
+    .replace(/\s*[.。]\s*$/, "")
+    .trim();
+}
+function detectAction(text: string): ActionDraft | null {
+  const low = text.toLowerCase();
+  const verb = /\b(add|create|make|set ?up|schedule|put|new|book|log|remind)\b/.test(low);
+  if (/\b(calendar|diary|meeting|event)\b/.test(low) && verb) {
+    return { kind: "calendar", title: cleanActionTitle(text) || text.trim(), date: new Date().toISOString().slice(0, 10), time: "" };
+  }
+  if ((/\b(task|to-?do)\b/.test(low) && verb) || /^(remind me to|i need to|note to self)\b/.test(low)) {
+    return { kind: "task", title: cleanActionTitle(text) || text.trim(), due: "" };
+  }
+  return null;
+}
+
 function followupsFor(text: string): string[] {
   const t = text.toLowerCase();
   if (/\b(owe|unpaid|outstanding|invoice)\b/.test(t)) return ["Who owes the most?", "How long have these been outstanding?"];
@@ -128,6 +150,9 @@ export function AiAssistant({ kind }: { kind: Kind }) {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pendingAction, setPendingAction] = useState<ActionDraft | null>(null);
+  const [actBusy, setActBusy] = useState(false);
+  const [actError, setActError] = useState<string | null>(null);
   const [speakOn, setSpeakOn] = useState(false);
   const [handsFree, setHandsFree] = useState(false);
   const [chats, setChats] = useState<Chat[]>([]);
@@ -169,6 +194,14 @@ export function AiAssistant({ kind }: { kind: Kind }) {
     const q = text.trim();
     if (!q || busy) return;
     setError(null); setDraft(""); tts.cancel();
+    // If they're asking me to DO something (task / calendar), open a confirm
+    // card instead of answering read-only.
+    const act = (kind === "operator" || kind === "staff") ? detectAction(q) : null;
+    if (act) {
+      const h = [...msgs, { role: "user" as const, content: q }].slice(-20);
+      setMsgs(h); persist(h); setPendingAction(act); setActError(null);
+      return;
+    }
     const history = [...msgs, { role: "user" as const, content: q }].slice(-20);
     setMsgs(history); persist(history); setBusy(true);
     try {
@@ -179,7 +212,29 @@ export function AiAssistant({ kind }: { kind: Kind }) {
     } catch (e) {
       setError((e as Error).message); setDraft(q);
     } finally { setBusy(false); }
-  }, [busy, msgs, tts, speakReply, persist]);
+  }, [busy, msgs, tts, speakReply, persist, kind]);
+
+  const appendAssistant = useCallback((content: string) => {
+    setMsgs((m) => { const next = [...m, { role: "assistant" as const, content }]; persist(next); return next; });
+    if (speakOn || handsFreeRef.current) tts.speak(content);
+  }, [persist, speakOn, tts]);
+
+  // Run a confirmed action against the real (authed) endpoint.
+  const runAction = useCallback(async () => {
+    if (!pendingAction || actBusy) return;
+    setActBusy(true); setActError(null);
+    try {
+      if (pendingAction.kind === "task") {
+        await post("/api/tasks", { t: pendingAction.title, ...(pendingAction.due ? { due: pendingAction.due } : {}) });
+        appendAssistant(`✅ Done — I've added the task "${pendingAction.title}"${pendingAction.due ? `, due ${pendingAction.due}` : ""} to your Task manager.`);
+      } else {
+        await post("/api/calendar-events", { title: pendingAction.title, date: pendingAction.date, ...(pendingAction.time ? { start: pendingAction.time } : { allDay: true }) });
+        appendAssistant(`✅ Done — "${pendingAction.title}" is now in your calendar on ${pendingAction.date}.`);
+      }
+      setPendingAction(null);
+    } catch (e) { setActError((e as Error).message); }
+    finally { setActBusy(false); }
+  }, [pendingAction, actBusy, appendAssistant]);
 
   const mic = useMic((t) => { if (handsFreeRef.current) void send(t); else setDraft((d) => (d ? d + " " : "") + t); });
   const micRef = useRef(mic);
@@ -188,8 +243,8 @@ export function AiAssistant({ kind }: { kind: Kind }) {
   const robotState: RobotState = busy ? "thinking" : tts.speaking ? "talking" : mic.listening ? "listening" : "idle";
   const status = busy ? "Thinking…" : tts.speaking ? "Speaking…" : mic.listening ? "Listening…" : "Ready when you are";
 
-  const newChat = () => { tts.cancel(); setMsgs([]); setDraft(""); setError(null); setChatId(uid()); };
-  const loadChat = (c: Chat) => { tts.cancel(); setMsgs(c.msgs); setChatId(c.id); setError(null); };
+  const newChat = () => { tts.cancel(); setMsgs([]); setDraft(""); setError(null); setPendingAction(null); setActError(null); setChatId(uid()); };
+  const loadChat = (c: Chat) => { tts.cancel(); setMsgs(c.msgs); setChatId(c.id); setError(null); setPendingAction(null); };
   const delChat = (id: string) => setChats((cur) => { const next = cur.filter((c) => c.id !== id); try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* ignore */ } return next; });
   const pinChat = (id: string) => setChats((cur) => { const next = cur.map((c) => c.id === id ? { ...c, pinned: !c.pinned } : c); try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* ignore */ } return next; });
 
@@ -297,6 +352,37 @@ export function AiAssistant({ kind }: { kind: Kind }) {
                 })}
                 {busy && (
                   <div className="flex items-center gap-2.5"><RobotAvatar state="thinking" size={34} className="flex-none" /><div className="rounded-2xl rounded-bl-md border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[12.5px] text-[var(--ink-3)]">Reading your live data…</div></div>
+                )}
+                {pendingAction && (
+                  <div className="flex items-start gap-2.5">
+                    <RobotAvatar state="idle" size={34} className="mt-0.5 flex-none" />
+                    <div className="w-full max-w-[420px] rounded-2xl rounded-bl-md border border-[#cdddf7] bg-[#f6faff] p-3">
+                      <div className="text-[12.5px] font-extrabold text-[#1d3a8f]">{pendingAction.kind === "task" ? "✅ Create this task?" : "🗓️ Add this to your calendar?"}</div>
+                      <label className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Title
+                        <input className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-medium text-[var(--ink)] outline-none focus:border-[#2f6bd8]" value={pendingAction.title} onChange={(e) => setPendingAction((p) => (p ? { ...p, title: e.target.value } : p))} />
+                      </label>
+                      {pendingAction.kind === "task" ? (
+                        <label className="mt-2 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Due (optional)
+                          <input type="date" className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" value={pendingAction.due ?? ""} onChange={(e) => setPendingAction((p) => (p ? { ...p, due: e.target.value } : p))} />
+                        </label>
+                      ) : (
+                        <div className="mt-2 flex gap-2">
+                          <label className="flex-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Date
+                            <input type="date" className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" value={pendingAction.date ?? ""} onChange={(e) => setPendingAction((p) => (p ? { ...p, date: e.target.value } : p))} />
+                          </label>
+                          <label className="flex-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Time (optional)
+                            <input type="time" className="mt-0.5 w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" value={pendingAction.time ?? ""} onChange={(e) => setPendingAction((p) => (p ? { ...p, time: e.target.value } : p))} />
+                          </label>
+                        </div>
+                      )}
+                      {actError && <div className="mt-2 rounded-md border border-[#f6c9cc] bg-[#fdebec] px-2 py-1 text-[11.5px] text-[#c02636]">{actError}</div>}
+                      <div className="mt-2.5 flex items-center gap-2">
+                        <button type="button" onClick={() => void runAction()} disabled={actBusy || !pendingAction.title.trim() || (pendingAction.kind === "calendar" && !pendingAction.date)} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>{actBusy ? "Working…" : pendingAction.kind === "task" ? "Create task" : "Add event"}</button>
+                        <button type="button" onClick={() => { setPendingAction(null); setActError(null); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button>
+                      </div>
+                      <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">I only create it when you click — edit the details first if you like.</div>
+                    </div>
+                  </div>
                 )}
               </div>
             )}
