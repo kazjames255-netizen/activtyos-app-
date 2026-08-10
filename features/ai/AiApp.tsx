@@ -69,7 +69,14 @@ function actionsFor(text: string, kind: Kind, portal: string) {
   return out;
 }
 
-// ── Actions the co-pilot can DO (front-end, executed on your confirm) ────────
+// ── Actions the co-pilot can DO ─────────────────────────────────────────────
+// Two paths: (1) client-detected, self-contained actions (task/calendar) it
+// executes against existing endpoints on your confirm; (2) once the backend
+// tool-use lands (docs/ai-assistant-tooluse-handoff.md), /api/ai/chat may return
+// a `action:{id,tool,summary,args}` the model proposed — we show the same
+// "are you sure?" card and the SERVER executes it (re-checking permissions) via
+// POST /api/ai/act. Anything needing "which record" resolution goes this route.
+type ProposedAction = { id?: string; tool: string; summary: string; args?: Record<string, unknown> };
 type ActionDraft = { kind: "task" | "calendar"; title: string; due?: string; date?: string; time?: string };
 function cleanActionTitle(t: string): string {
   return t
@@ -151,6 +158,7 @@ export function AiAssistant({ kind }: { kind: Kind }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<ActionDraft | null>(null);
+  const [proposed, setProposed] = useState<ProposedAction | null>(null);
   const [actBusy, setActBusy] = useState(false);
   const [actError, setActError] = useState<string | null>(null);
   const [speakOn, setSpeakOn] = useState(false);
@@ -205,10 +213,12 @@ export function AiAssistant({ kind }: { kind: Kind }) {
     const history = [...msgs, { role: "user" as const, content: q }].slice(-20);
     setMsgs(history); persist(history); setBusy(true);
     try {
-      const { reply } = await post<{ reply: string }>("/api/ai/chat", { messages: history });
+      const res = await post<{ reply?: string; action?: ProposedAction }>("/api/ai/chat", { messages: history });
+      const reply = res.reply ?? res.action?.summary ?? "";
       const full = [...history, { role: "assistant" as const, content: reply }];
       setMsgs(full); persist(full);
-      speakReply(reply);
+      if (res.action) setProposed(res.action);   // backend tool-use → confirm card
+      if (reply) speakReply(reply);
     } catch (e) {
       setError((e as Error).message); setDraft(q);
     } finally { setBusy(false); }
@@ -236,6 +246,19 @@ export function AiAssistant({ kind }: { kind: Kind }) {
     finally { setActBusy(false); }
   }, [pendingAction, actBusy, appendAssistant]);
 
+  // Confirm a server-proposed action (backend tool-use) — the server executes
+  // it and re-checks permissions; we just relay the receipt.
+  const confirmProposed = useCallback(async () => {
+    if (!proposed || actBusy) return;
+    setActBusy(true); setActError(null);
+    try {
+      const r = await post<{ reply?: string }>("/api/ai/act", { id: proposed.id, tool: proposed.tool, args: proposed.args });
+      appendAssistant(r.reply ?? "✅ Done.");
+      setProposed(null);
+    } catch (e) { setActError((e as Error).message); }
+    finally { setActBusy(false); }
+  }, [proposed, actBusy, appendAssistant]);
+
   const mic = useMic((t) => { if (handsFreeRef.current) void send(t); else setDraft((d) => (d ? d + " " : "") + t); });
   const micRef = useRef(mic);
   useEffect(() => { micRef.current = mic; });
@@ -243,8 +266,8 @@ export function AiAssistant({ kind }: { kind: Kind }) {
   const robotState: RobotState = busy ? "thinking" : tts.speaking ? "talking" : mic.listening ? "listening" : "idle";
   const status = busy ? "Thinking…" : tts.speaking ? "Speaking…" : mic.listening ? "Listening…" : "Ready when you are";
 
-  const newChat = () => { tts.cancel(); setMsgs([]); setDraft(""); setError(null); setPendingAction(null); setActError(null); setChatId(uid()); };
-  const loadChat = (c: Chat) => { tts.cancel(); setMsgs(c.msgs); setChatId(c.id); setError(null); setPendingAction(null); };
+  const newChat = () => { tts.cancel(); setMsgs([]); setDraft(""); setError(null); setPendingAction(null); setProposed(null); setActError(null); setChatId(uid()); };
+  const loadChat = (c: Chat) => { tts.cancel(); setMsgs(c.msgs); setChatId(c.id); setError(null); setPendingAction(null); setProposed(null); };
   const delChat = (id: string) => setChats((cur) => { const next = cur.filter((c) => c.id !== id); try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* ignore */ } return next; });
   const pinChat = (id: string) => setChats((cur) => { const next = cur.map((c) => c.id === id ? { ...c, pinned: !c.pinned } : c); try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* ignore */ } return next; });
 
@@ -381,6 +404,21 @@ export function AiAssistant({ kind }: { kind: Kind }) {
                         <button type="button" onClick={() => { setPendingAction(null); setActError(null); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button>
                       </div>
                       <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">I only create it when you click — edit the details first if you like.</div>
+                    </div>
+                  </div>
+                )}
+                {proposed && (
+                  <div className="flex items-start gap-2.5">
+                    <RobotAvatar state="idle" size={34} className="mt-0.5 flex-none" />
+                    <div className="max-w-[85%] rounded-2xl rounded-bl-md border border-[#cdddf7] bg-[#f6faff] p-3">
+                      <div className="text-[12.5px] font-extrabold text-[#1d3a8f]">Confirm this action?</div>
+                      <div className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink)]">{proposed.summary}</div>
+                      {actError && <div className="mt-2 rounded-md border border-[#f6c9cc] bg-[#fdebec] px-2 py-1 text-[11.5px] text-[#c02636]">{actError}</div>}
+                      <div className="mt-2.5 flex items-center gap-2">
+                        <button type="button" onClick={() => void confirmProposed()} disabled={actBusy} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>{actBusy ? "Working…" : "Yes, do it"}</button>
+                        <button type="button" onClick={() => { setProposed(null); setActError(null); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Cancel</button>
+                      </div>
+                      <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Nothing happens until you confirm — the server runs it and checks you're allowed.</div>
                     </div>
                   </div>
                 )}

@@ -11,17 +11,25 @@ the existing **`POST /api/ai/chat`** (Groq, read-only, role-scoped to the accoun
 
 Everything below is backend. Priority order:
 
-## 1. Action tool-use (function calling) — the big one
+## 1. Action tool-use (function calling) — GREENLIT (Kaz, 2026-08-10), the big one
 Let the assistant *do* things, with a human confirm step. Keep it read-only until
 the operator confirms; **never** auto-execute money/irreversible actions.
 
-- Extend the chat endpoint (or add `POST /api/ai/act`) so the model can return
-  **either** a normal text reply **or** a proposed action:
-  `{ tool: string, args: {...}, summary: "Message the 3 families who owe" }`.
-- The front-end already has the shape to render a **confirm card** ("Do this?
-  Confirm / Cancel"); on confirm it calls the real endpoint (or the server
-  executes and returns a receipt). I'll wire the confirm card once the contract
-  exists.
+**The front-end is already built to this exact contract** (`features/ai/AiApp.tsx`)
+— you only need the two server bits below and it lights up, no further FE work:
+
+- **`POST /api/ai/chat`** response — return **either** a text reply **or** a
+  proposed action (or both):
+  `{ reply?: string, action?: { id?: string, tool: string, summary: string, args?: object } }`.
+  When `action` is present the FE renders a confirm card showing `summary`
+  ("Message the 3 families who owe £180") with **Yes, do it / Cancel**. It does
+  **not** execute on `/chat`.
+- **`POST /api/ai/act`** request `{ id?, tool, args }` → the server **re-checks
+  role/tenant**, runs the mapped endpoint, and returns `{ reply: string }` (a
+  human receipt like "Done — messaged 3 families."). The FE relays that reply.
+  Nothing executes until this call, which only fires on the user's confirm.
+- Resolve "which record" **server-side** from the account's live data (the model
+  proposes `args` grounded in that data); never trust the model to self-authorize.
 - Map tools to **existing authed, tenant-scoped endpoints** — no new powers:
   - `message_families` → `POST /api/messages/broadcast` (emails/listings already there)
   - `create_task` → `POST /api/tasks`
