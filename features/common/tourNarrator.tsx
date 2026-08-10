@@ -48,23 +48,40 @@ export const NARRATOR_CSS = `
 .tnr-link .tx small{display:block;font-size:10.5px;color:#9fb4dd;line-height:1.35;margin-top:1px}
 .tnr-link .arw{flex:none;color:#7fd0ff;font-size:15px;font-weight:800;transition:transform .15s}
 .tnr-link:hover .arw{transform:translateX(2px)}
+.tnr-cta{margin-top:11px;border:none;border-radius:999px;padding:9px 22px;font-size:13px;font-weight:800;color:#04223f;cursor:pointer;background:linear-gradient(180deg,#8fe0ff,#3aa0ea);box-shadow:0 7px 18px -6px rgba(58,160,234,.7);animation:tnrpop .5s ease .18s both}
+.tnr-cta:hover{filter:brightness(1.06)}
 `;
 
 export interface SettingsLink { icon: string; label: string; tab: string; note?: string }
+// A control-panel row: a real link (href) OR a JS-wired button (id + attach
+// onclick after render, e.g. an in-page tab switch that has no URL).
+export interface PanelItem { icon: string; label: string; note?: string; href?: string; id?: string }
 
 export function narratorScene(badge: string, title: string, sub: string): string {
   return `<div class="tnr-scene">${NARRATOR_BOT}<div class="tnr-badge">${badge}</div><div class="tnr-title">${title}</div><div class="tnr-sub">${sub}</div></div>`;
 }
 
 // The robot "control panel" scene: a glowing conduit connects the robot to a
-// panel of real deep-links into the Settings tabs that govern this page. Links
-// are true anchors, so a click (or tap) navigates straight to that tab.
-export function settingsScene(portal: string, items: SettingsLink[]): string {
+// panel of destinations. Rows with an href are true anchors (a tap navigates
+// straight there); rows with an id render as buttons to be wired up by the
+// host tour. An optional CTA button sits under the panel.
+export function controlPanelScene(badge: string, items: PanelItem[], cta?: { label: string; id: string }): string {
   const rows = items
-    .map(
-      (it) =>
-        `<a class="tnr-link" href="/${portal}/setup?tab=${encodeURIComponent(it.tab)}"><span class="ic">${it.icon}</span><span class="tx"><b>${it.label}</b>${it.note ? `<small>${it.note}</small>` : ""}</span><span class="arw">→</span></a>`,
-    )
+    .map((it) => {
+      const inner = `<span class="ic">${it.icon}</span><span class="tx"><b>${it.label}</b>${it.note ? `<small>${it.note}</small>` : ""}</span><span class="arw">→</span>`;
+      return it.href
+        ? `<a class="tnr-link" href="${it.href}">${inner}</a>`
+        : `<span class="tnr-link" id="${it.id ?? ""}" role="button" tabindex="0">${inner}</span>`;
+    })
     .join("");
-  return `<div class="tnr-scene tnr-set">${NARRATOR_BOT}<div class="tnr-conduit"><span class="tnr-spark"></span></div><div class="tnr-badge">⚙ Change it in Settings</div><div class="tnr-panel">${rows}</div></div>`;
+  const btn = cta ? `<button type="button" class="tnr-cta" id="${cta.id}">${cta.label}</button>` : "";
+  return `<div class="tnr-scene tnr-set">${NARRATOR_BOT}<div class="tnr-conduit"><span class="tnr-spark"></span></div><div class="tnr-badge">${badge}</div><div class="tnr-panel">${rows}</div>${btn}</div>`;
+}
+
+// Direct deep-links into the Settings tabs that govern this page.
+export function settingsScene(portal: string, items: SettingsLink[]): string {
+  return controlPanelScene(
+    "⚙ Change it in Settings",
+    items.map((it) => ({ icon: it.icon, label: it.label, note: it.note, href: `/${portal}/setup?tab=${encodeURIComponent(it.tab)}` })),
+  );
 }

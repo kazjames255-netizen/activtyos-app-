@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { NARRATOR_CSS, narratorScene, settingsScene } from "@/features/common/tourNarrator";
+import { NARRATOR_CSS, narratorScene, settingsScene, controlPanelScene } from "@/features/common/tourNarrator";
 
 // ─────────────────────────────────────────────────────────────────────────
 // A self-driving, narrated "watch me build it" demo for creating a listing.
@@ -222,10 +222,19 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
         <div class="wbody">${s.body}</div>
         <div class="wfoot"><span class="btn ghost">← Back</span><span class="btn amber" id="next">${i === STEPS.length - 1 ? "Publish ✓" : "Next →"}</span></div></div>`;
     };
-    const introView = `<div class="appear"><div class="tabs"><span class="tab">Listings</span><span class="tab on">Categories</span><span class="tab">Locations</span></div>
-      <div class="hint" style="margin-top:12px;font-size:12px">Three quick set-ups live in their own tabs: your <b>Categories</b> (like “Holiday Camp”), your <b>Locations</b> (your venues), and your <b>Seasons</b> (your holiday and term date ranges). Set them once, and reuse them on every listing.</div>
-      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap"><span class="lnk" id="lnkCat">🏷️ Set up categories →</span><span class="lnk" id="lnkLoc">📍 Set up locations →</span><span class="lnk" id="lnkSea">🗓️ Add a season →</span></div>
-      <div style="margin-top:14px"><span class="btn amber" id="newListing">＋ New listing</span></div></div>`;
+    // Intro is the robot's own control panel — the three quick set-ups that live
+    // in their own tabs, presented like the Settings scene but at the start.
+    // Categories + Locations switch the page's tab (wired below); Seasons is a
+    // real link into Setup.
+    const introView = controlPanelScene(
+      "✨ First — three quick set-ups",
+      [
+        { icon: "🏷️", label: "Categories", note: "like Holiday Camp or After-school Club", id: "lnkCat" },
+        { icon: "📍", label: "Locations", note: "your venues", id: "lnkLoc" },
+        { icon: "🗓️", label: "Seasons", note: "your holiday and term dates", href: `${setupHref}?tab=seasons` },
+      ],
+      { label: "＋ New listing", id: "newListing" },
+    );
     const doneView = narratorScene("✓ Complete", "All done", "Your listing is live and ready to take bookings.");
 
     async function run(startIdx = 0) {
@@ -238,7 +247,6 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
         currentIdx = -1; content.innerHTML = introView;
         const lc = pick("lnkCat"); if (lc) lc.onclick = () => onTabRef.current?.("categories");
         const ll = pick("lnkLoc"); if (ll) ll.onclick = () => onTabRef.current?.("locations");
-        const lse = pick("lnkSea"); if (lse) lse.onclick = () => { window.location.href = setupHref; };
         await line("Let's create a listing — that's a camp, class or club parents can book. First though, three quick set-ups live in their own tabs: your <b>Categories</b>, your <b>Locations</b> — that's your venues — and your <b>Seasons</b>, your holiday and term dates. There are links right here to jump straight to each. Set them up once and reuse them everywhere. Then hit <b>New listing</b>."); if (!alive()) return;
         await move("newListing"); await click(); if (!alive()) return;
       } else if (splash) { splash.style.display = "none"; }
