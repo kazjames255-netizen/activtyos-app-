@@ -37,16 +37,19 @@ export function PageHero({
   lede,
   actions,
   icon,
+  background,
 }: {
   title: ReactNode;
   lede?: ReactNode;
   actions?: ReactNode;
   icon?: ReactNode;
+  /** Optional themed hero gradient; defaults to the house navy→blue band. */
+  background?: string;
 }) {
   return (
     <div
       className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]"
-      style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)" }}
+      style={{ background: background ?? "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)" }}
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
@@ -97,16 +100,22 @@ export function OperatorPage({
   actions,
   icon,
   children,
+  background,
+  heroBackground,
 }: {
   title: ReactNode;
   lede?: ReactNode;
   actions?: ReactNode;
   icon?: ReactNode;
   children: ReactNode;
+  /** Optional themed page wash; defaults to the flat light --bg. */
+  background?: string;
+  /** Optional themed hero gradient; defaults to the house navy→blue band. */
+  heroBackground?: string;
 }) {
   return (
-    <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title={title} lede={lede} actions={actions} icon={icon} />
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={{ ...LIGHT_PALETTE, ...(background ? { background } : {}) }}>
+      <PageHero title={title} lede={lede} actions={actions} icon={icon} background={heroBackground} />
       {children}
     </div>
   );

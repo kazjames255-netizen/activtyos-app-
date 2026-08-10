@@ -10,6 +10,7 @@ import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, resolveSavedText, triggerDownload } from "@/lib/momentImage";
 import { Badge, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
+import { useSurfaceTheme } from "@/lib/surfaceThemes";
 import { MERGE_FIELDS } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
 import { downscaleImage, type Company, type Newsletter } from "@/features/newsfeed/newsletter";
@@ -1761,6 +1762,8 @@ export function EmailApp() {
   // Deep-link from the Register: ?to=parent@email opens addressed to one parent.
   const searchParams = useSearchParams();
   const presetTo = searchParams.get("to") ?? "";
+  // Gmail-style bright background theme for the Email surface (its own saved pick).
+  const { theme, control: themeControl } = useSurfaceTheme("aos.emailTheme");
   // Hand-off from the Newsletter builder ("Email to parents") — a ready-to-send
   // subject + body stashed in localStorage. Read once on first render.
   const nlDraft = typeof window === "undefined" ? null : ((): { subject?: string; body?: string; html?: string; newsletter?: Newsletter } | null => { try { return JSON.parse(localStorage.getItem("aos.email.draft.v1") || "null"); } catch { return null; } })();
@@ -2077,7 +2080,7 @@ export function EmailApp() {
   }
 
   return (
-    <OperatorPage title="Email" icon="✉️" lede="Your inbox, campaigns and the emails ActivityOS sends for you — all in one place.">
+    <OperatorPage title="Email" icon="✉️" lede="Your inbox, campaigns and the emails ActivityOS sends for you — all in one place." actions={themeControl} background={theme.page} heroBackground={theme.hero}>
       <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["compose", "Compose"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["settings", "Settings"]]} value={tab} onChange={setTab} />
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
