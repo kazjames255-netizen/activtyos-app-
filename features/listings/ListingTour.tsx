@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { NARRATOR_CSS, narratorScene } from "@/features/common/tourNarrator";
+import { NARRATOR_CSS, narratorScene, settingsScene } from "@/features/common/tourNarrator";
 
 // ─────────────────────────────────────────────────────────────────────────
 // A self-driving, narrated "watch me build it" demo for creating a listing.
@@ -253,7 +253,15 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
         })();
         await line(s.line); await act; if (!alive()) return;
       }
-      currentIdx = STEPS.length; content.innerHTML = doneView;
+      // Settings reminder before the sign-off — direct links to the tabs that
+      // control what every listing starts from.
+      const portal = window.location.pathname.split("/")[1] || "freelancer";
+      currentIdx = STEPS.length; content.innerHTML = settingsScene(portal, [
+        { icon: "🆕", label: "New listing defaults", tab: "defaults", note: "what every new listing starts with" },
+        { icon: "🗓️", label: "Seasons", tab: "seasons", note: "your term and holiday dates" },
+      ]);
+      await line("One last thing — the defaults every new listing starts with, and your seasons, both live in Settings. Tap either card to jump straight there."); if (!alive()) return;
+      content.innerHTML = doneView;
       if (!alive()) return; await line("That's it — your listing is ready!");
     }
 

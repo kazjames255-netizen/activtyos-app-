@@ -1270,3 +1270,26 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
 
 };
 TOUR_CONFIGS.invoices = TOUR_CONFIGS.purchasing;
+
+// Direct Settings deep-links surfaced by the walkthrough's robot before it
+// signs off — the tabs in Setup that control features on each page.
+TOUR_CONFIGS.dash.settings = [{"icon":"🗓️","label":"Seasons","tab":"seasons","note":"the term and holiday windows your figures use"}];
+TOUR_CONFIGS.meals.settings = [{"icon":"🍽️","label":"Meal settings","tab":"meals","note":"caterer email, order cut-offs and sharing"}];
+TOUR_CONFIGS.customers.settings = [{"icon":"❓","label":"Child questions","tab":"people","note":"what parents fill in about each child"}];
+TOUR_CONFIGS.ratios.settings = [{"icon":"👥","label":"Age groups and rooms","tab":"groups","note":"the groups and rooms children are placed in"},{"icon":"🛡️","label":"Safeguarding","tab":"safeguarding","note":"when EYFS ratios apply"}];
+TOUR_CONFIGS.registers.settings = [{"icon":"📋","label":"Register settings","tab":"registers","note":"sign-in rules and the late-collection threshold"}];
+TOUR_CONFIGS.incidents.settings = [{"icon":"🛡️","label":"Safeguarding","tab":"safeguarding","note":"who is alerted and acknowledgement rules"}];
+TOUR_CONFIGS.accidents.settings = [{"icon":"🛡️","label":"Safeguarding","tab":"safeguarding","note":"who is alerted and acknowledgement rules"}];
+TOUR_CONFIGS.medication.settings = [{"icon":"💊","label":"Medication settings","tab":"medication","note":"consent and administration options"}];
+TOUR_CONFIGS.trips.settings = [{"icon":"🚌","label":"Trips and visits","tab":"trips","note":"parent notify, consent and your ratio target"}];
+TOUR_CONFIGS.calendar.settings = [{"icon":"🗓️","label":"Calendar settings","tab":"calendar","note":"event categories and reminder timing"}];
+TOUR_CONFIGS.inventory.settings = [{"icon":"📦","label":"Inventory settings","tab":"inventory","note":"categories, locations and low-stock alerts"}];
+TOUR_CONFIGS.staff.settings = [{"icon":"👷","label":"Staff and workforce","tab":"staff","note":"roles, invites and permissions"}];
+TOUR_CONFIGS.schedule.settings = [{"icon":"👷","label":"Staff and workforce","tab":"staff","note":"your team and their roles"}];
+TOUR_CONFIGS.finance.settings = [{"icon":"💷","label":"Money settings","tab":"money","note":"how income and payouts are figured"}];
+TOUR_CONFIGS.expenses.settings = [{"icon":"💷","label":"Money settings","tab":"money","note":"expense categories and defaults"}];
+TOUR_CONFIGS.purchasing.settings = [{"icon":"💷","label":"Money settings","tab":"money","note":"income and invoice settings"}];
+TOUR_CONFIGS.reconciliation.settings = [{"icon":"🎟️","label":"Childcare vouchers","tab":"vouchers","note":"your voucher providers and references"}];
+TOUR_CONFIGS.bookings.settings = [{"icon":"💳","label":"Payments","tab":"bookings","note":"how you take payment"},{"icon":"↩️","label":"Cancellations and refunds","tab":"cancel","note":"your cancellation policy"}];
+TOUR_CONFIGS.email.settings = [{"icon":"🔔","label":"Notifications","tab":"notifications","note":"the automatic emails ActivityOS sends"},{"icon":"🎨","label":"Branding","tab":"branding","note":"your logo and colours"}];
+TOUR_CONFIGS.referrals.settings = [{"icon":"🎁","label":"Refer a friend","tab":"refer","note":"the referral reward and terms"}];

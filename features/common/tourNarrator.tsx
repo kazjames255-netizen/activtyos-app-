@@ -29,8 +29,42 @@ export const NARRATOR_CSS = `
 .tnr-title{font-size:20px;font-weight:800;color:#eaf2ff;letter-spacing:-.2px;animation:tnrpop .5s ease both}
 .tnr-sub{font-size:12.5px;font-weight:600;color:#9fb4dd;max-width:350px;line-height:1.55;animation:tnrpop .5s ease .1s both}
 @keyframes tnrpop{from{opacity:0;transform:translateY(8px) scale(.96)}to{opacity:1;transform:none}}
+/* Settings "control panel" scene — the robot beams down a glowing conduit into
+   a panel of direct deep-links to the Settings tabs that control this page. */
+.tnr-scene.tnr-set{gap:9px;padding:24px 22px}
+.tnr-set .tnr-bot{width:84px;height:84px}
+.tnr-set .tnr-bot svg{width:80px;height:80px}
+.tnr-conduit{position:relative;width:2px;height:26px;border-radius:2px;background:linear-gradient(180deg,rgba(127,208,255,.12),rgba(127,208,255,.85),rgba(127,208,255,.12))}
+.tnr-conduit .tnr-spark{position:absolute;left:50%;top:0;width:7px;height:7px;margin-left:-3.5px;border-radius:50%;background:#cbf3ff;box-shadow:0 0 10px 3px rgba(127,208,255,.8);animation:tnrflow 1.6s ease-in-out infinite}
+@keyframes tnrflow{0%{top:-3px;opacity:0}20%{opacity:1}80%{opacity:1}100%{top:24px;opacity:0}}
+.tnr-panel{position:relative;width:100%;max-width:370px;margin-top:2px;background:linear-gradient(180deg,rgba(22,44,96,.55),rgba(11,16,32,.5));border:1px solid rgba(127,208,255,.22);border-radius:16px;padding:7px;box-shadow:0 0 0 1px rgba(127,208,255,.05),0 20px 44px -22px rgba(0,0,0,.7);animation:tnrpop .5s ease .12s both}
+.tnr-panel::before{content:"";position:absolute;top:-1px;left:50%;transform:translateX(-50%);width:58px;height:2px;background:#7fd0ff;border-radius:2px;box-shadow:0 0 12px 2px rgba(127,208,255,.75)}
+.tnr-link{display:flex;align-items:center;gap:11px;padding:9px 11px;border-radius:12px;text-decoration:none;color:#eaf2ff;transition:background .15s,transform .15s,box-shadow .15s}
+.tnr-link + .tnr-link{margin-top:2px}
+.tnr-link:hover{background:rgba(127,208,255,.12);transform:translateX(3px);box-shadow:inset 0 0 0 1px rgba(127,208,255,.25)}
+.tnr-link .ic{flex:none;width:31px;height:31px;border-radius:9px;display:grid;place-items:center;font-size:15px;background:rgba(127,208,255,.14);border:1px solid rgba(127,208,255,.24)}
+.tnr-link .tx{min-width:0;flex:1;text-align:left}
+.tnr-link .tx b{display:block;font-size:12.5px;font-weight:800;color:#eaf2ff}
+.tnr-link .tx small{display:block;font-size:10.5px;color:#9fb4dd;line-height:1.35;margin-top:1px}
+.tnr-link .arw{flex:none;color:#7fd0ff;font-size:15px;font-weight:800;transition:transform .15s}
+.tnr-link:hover .arw{transform:translateX(2px)}
 `;
+
+export interface SettingsLink { icon: string; label: string; tab: string; note?: string }
 
 export function narratorScene(badge: string, title: string, sub: string): string {
   return `<div class="tnr-scene">${NARRATOR_BOT}<div class="tnr-badge">${badge}</div><div class="tnr-title">${title}</div><div class="tnr-sub">${sub}</div></div>`;
+}
+
+// The robot "control panel" scene: a glowing conduit connects the robot to a
+// panel of real deep-links into the Settings tabs that govern this page. Links
+// are true anchors, so a click (or tap) navigates straight to that tab.
+export function settingsScene(portal: string, items: SettingsLink[]): string {
+  const rows = items
+    .map(
+      (it) =>
+        `<a class="tnr-link" href="/${portal}/setup?tab=${encodeURIComponent(it.tab)}"><span class="ic">${it.icon}</span><span class="tx"><b>${it.label}</b>${it.note ? `<small>${it.note}</small>` : ""}</span><span class="arw">→</span></a>`,
+    )
+    .join("");
+  return `<div class="tnr-scene tnr-set">${NARRATOR_BOT}<div class="tnr-conduit"><span class="tnr-spark"></span></div><div class="tnr-badge">⚙ Change it in Settings</div><div class="tnr-panel">${rows}</div></div>`;
 }

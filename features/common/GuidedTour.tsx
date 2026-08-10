@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { NARRATOR_CSS, narratorScene } from "./tourNarrator";
+import { NARRATOR_CSS, narratorScene, settingsScene, type SettingsLink } from "./tourNarrator";
 
 // ─────────────────────────────────────────────────────────────────────────
 // A reusable, self-driving, narrated "watch me use it" walkthrough. Feed it a
@@ -15,7 +15,7 @@ import { NARRATOR_CSS, narratorScene } from "./tourNarrator";
 // ─────────────────────────────────────────────────────────────────────────
 
 export type TourStep = { label: string; stage: string; line: string; bodyHtml: string };
-export type TourConfig = { title: string; introLine: string; doneLine: string; steps: TourStep[]; introHtml?: string };
+export type TourConfig = { title: string; introLine: string; doneLine: string; steps: TourStep[]; introHtml?: string; settings?: SettingsLink[] };
 
 const CSS = `
 .gt-root{--navy:#16306e;--blue:#2f6bd8;--blue2:#4f8bf5;--teal:#0ea5a5;--green:#0e9a5a;--ink:#12203c;--ink2:#3a4a68;--muted:#5b6b86;--faint:#9aa6bd;--line:#e6ebf5;--panel:#f4f7fc;--surface:#fff;--brandink:#1d3a8f;color:var(--ink)}
@@ -132,6 +132,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
 
     async function run(startIdx = 0) {
       const cfg = cfgRef.current;
+      const portal = (typeof window !== "undefined" ? window.location.pathname.split("/")[1] : "") || "freelancer";
       const tk = ++token; const alive = () => tk === token && !dead;
       if (hasSpeech) window.speechSynthesis.cancel();
       paused = false; waiters.splice(0).forEach((f) => f()); if (pauseBtn) pauseBtn.textContent = "⏸ Pause";
@@ -145,6 +146,14 @@ export function GuidedTour({ config }: { config: TourConfig }) {
         currentIdx = i; content.innerHTML = frame(i);
         const act = (async () => { await sleep(500); await move("gtnext"); await click(); })();
         await line(cfg.steps[i].line); await act; if (!alive()) return;
+      }
+      // Settings reminder — the robot beams down direct links to the Settings
+      // tabs that control features on this page (shown before the sign-off).
+      if (cfg.settings?.length) {
+        currentIdx = cfg.steps.length; content.innerHTML = settingsScene(portal, cfg.settings);
+        const names = cfg.settings.map((x) => x.label).join(", ");
+        await line(`One last thing — a few of these live in your Settings: ${names}. Tap any card to jump straight there.`);
+        if (!alive()) return;
       }
       currentIdx = cfg.steps.length; content.innerHTML = doneView;
       if (!alive()) return; await line(cfg.doneLine);
