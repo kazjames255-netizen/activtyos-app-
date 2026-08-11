@@ -9,7 +9,6 @@ import { DEFAULT_ROLES } from "@/lib/settings";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 import { LocationsApp, DEMO_VENUES } from "@/features/locations/LocationsApp";
-import { RolesEditor } from "@/features/locations/LocationDetail";
 
 // ── Team & invites (company / franchise) ──────────────────────────────────
 // Invite people, give each a role (from Setup → Roles & permissions) and the
@@ -47,7 +46,7 @@ const initials = (s: string) => s.split(/[\s@.]+/).filter(Boolean).map((w) => w[
 
 export function TeamApp() {
   const { settings, save } = useSettings();
-  const [tab, setTab] = useState<"team" | "roles" | "locations">("team");
+  const [tab, setTab] = useState<"team" | "locations">("team");
   const roles = (settings.roles?.length ? settings.roles : DEFAULT_ROLES).filter((r) => !r.owner || true); // include all
   const [me, setMe] = useState<Me | null>(null);
   const [invites, setInvites] = useState<Invite[] | null>(null);
@@ -171,14 +170,12 @@ export function TeamApp() {
       <PageHero title="Team & invites" icon="👥" lede={`${active.length} active · ${pending.length} pending — invite people, give them a role and their listings`} />
 
       <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
-        {([["team", "Team members"], ["roles", "Roles"], ["locations", "Locations"]] as const).map(([t, lbl]) => (
+        {([["team", "Team members"], ["locations", "Locations"]] as const).map(([t, lbl]) => (
           <button key={t} type="button" onClick={() => setTab(t)} className={"rounded-lg px-4 py-1.5 text-[13px] font-bold transition-colors " + (tab === t ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>
         ))}
       </div>
 
-      {tab === "locations" ? <LocationsApp embedded />
-      : tab === "roles" ? <RolesEditor jobTitles={settings.staffRoles ?? []} onChange={(next) => { void save({ settings: { ...settings, staffRoles: next } }); }} />
-      : (
+      {tab === "locations" ? <LocationsApp embedded /> : (
       <>
       {/* Staff usage / plan meter */}
       <Card className="mb-3 p-4">
@@ -235,7 +232,7 @@ export function TeamApp() {
               <option value="">— Job title —</option>
               {jobTitles.map((j) => <option key={j} value={j}>{j}</option>)}
             </Select>
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">The role they&rsquo;re scheduled as (Lifeguard, Site Manager…) — the coloured rows in the rota. Manage the full list on the <b>Roles</b> tab above.</div>
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">The role they&rsquo;re scheduled as (Lifeguard, Site Manager…) — the coloured rows in the rota. Not listed? Use <b>＋ Add</b> and it saves for everyone.</div>
           </div>
         </div>
 
