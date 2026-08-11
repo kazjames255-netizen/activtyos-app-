@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
+import { Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { LocationDetail, type Venue } from "./LocationDetail";
 
@@ -16,15 +17,29 @@ export const DEMO_VENUES: Venue[] = [
 ];
 
 interface Listing { id: string; title?: string; name?: string; venueId?: string | null; seasonId?: string | null; status?: string; visibility?: string; archived?: boolean }
-interface LocStaff { id: string; name: string; sites: string[]; role?: string; perm?: string; home?: string }
-interface Store { staff: LocStaff[]; pending?: unknown[] }
+interface LocStaff { id: string; name: string; role?: string; sites: string[]; listings: string[] }
+interface Store { staff: LocStaff[] }
 const STAFF_KEY = "aos.locstaff.v1";
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const AV_COL = ["#c2268f", "#0f857b", "#2f6bd8", "#c06a10", "#6366f1", "#b45309"];
 const avColour = (id: string) => AV_COL[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % AV_COL.length];
+const SEED = (vids: string[]): LocStaff[] => [
+  { id: "susan", name: "Susan Preston", role: "Lead Coach", sites: vids.slice(0, 2), listings: [] },
+  { id: "amelia", name: "Amelia Hart", role: "Coach", sites: vids.slice(0, 2), listings: [] },
+  { id: "oluwa", name: "OluwaDamilola Adeyemi", role: "Lead Coach", sites: vids.slice(), listings: [] },
+  { id: "liberty", name: "Liberty Young", role: "Coach", sites: vids.slice(0, 1), listings: [] },
+  { id: "dom", name: "Dom Reyes", role: "Lifeguard", sites: [], listings: [] },
+  { id: "kitty", name: "Kitty-Rose Bright", role: "Activity Assistant", sites: [], listings: [] },
+  { id: "louis", name: "Louis Calderwood", role: "Lifeguard", sites: [], listings: [] },
+  { id: "taigan", name: "Taigan McMahon", role: "First Aider", sites: [], listings: [] },
+];
 
-// Deployment: one place — who works at each location (assign inline) + the live
-// listings that run there. Click a location for its Timesheets & notifications.
+const CHIP_ON = { borderColor: "#22b365", background: "#eef8f1", color: "#0f7a43" } as const;
+const CHIP_OFF = { borderColor: "#c9d6ef", background: "white", color: "#1d3a8f" } as const;
+
+// Deployment — move staff around fast. Three views: by location, by staff (A–Z),
+// by listing. Assignment = which venues (sites) + which specific listings each
+// person works. Turn one on and the schedule offers them for those shifts.
 export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -33,26 +48,45 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const [venues, setVenues] = useState<Venue[] | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
   const [store, setStore] = useState<Store>({ staff: [] });
+  const [view, setView] = useState<"loc" | "staff" | "listing">("loc");
+  const [q, setQ] = useState("");
 
   const refresh = useCallback(() => {
     apiGet<{ venues?: Venue[] }>("/api/library").then((lib) => setVenues(lib.venues ?? [])).catch(() => setVenues([]));
     apiGet<Listing[]>("/api/listings?mine=1").then(setListings).catch(() => setListings([]));
   }, []);
-  useEffect(() => { refresh(); try { const s = JSON.parse(localStorage.getItem(STAFF_KEY) || "null"); if (s?.staff) setStore(s); } catch { /* ignore */ } }, [refresh]);
+  useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["library"], refresh);
+
+  const list = useMemo(() => (venues && venues.length > 0 ? venues : venues ? DEMO_VENUES : null), [venues]);
+
+  // Load once venues are known; seed a demo team if there's nothing saved.
+  useEffect(() => {
+    if (!list) return;
+    let s: Store | null = null;
+    try { s = JSON.parse(localStorage.getItem(STAFF_KEY) || "null"); } catch { /* ignore */ }
+    if (s?.staff?.length) setStore({ staff: s.staff.map((x) => ({ ...x, sites: x.sites ?? [], listings: x.listings ?? [] })) });
+    else { const seeded = { staff: SEED(list.map((v) => v.id)) }; setStore(seeded); try { localStorage.setItem(STAFF_KEY, JSON.stringify(seeded)); } catch { /* ignore */ } }
+  }, [list]);
 
   const persist = (next: Store) => { setStore(next); try { localStorage.setItem(STAFF_KEY, JSON.stringify(next)); } catch { /* ignore */ } };
   const staff = store.staff;
-  const toggle = (staffId: string, vid: string) => persist({ ...store, staff: staff.map((s) => s.id === staffId ? { ...s, sites: s.sites.includes(vid) ? s.sites.filter((x) => x !== vid) : [...s.sites, vid] } : s) });
-  const setAllForVenue = (vid: string, on: boolean) => persist({ ...store, staff: staff.map((s) => ({ ...s, sites: on ? [...new Set([...s.sites, vid])] : s.sites.filter((x) => x !== vid) })) });
+  const upd = (staffId: string, fn: (s: LocStaff) => LocStaff) => persist({ staff: staff.map((s) => (s.id === staffId ? fn(s) : s)) });
+  const has = (arr: string[], v: string) => arr.includes(v);
+  const flip = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
+  const toggleSite = (sid: string, vid: string) => upd(sid, (s) => ({ ...s, sites: flip(s.sites, vid) }));
+  const toggleListing = (sid: string, lid: string) => upd(sid, (s) => ({ ...s, listings: flip(s.listings, lid) }));
+  const addSite = (sid: string, vid: string) => upd(sid, (s) => ({ ...s, sites: [...new Set([...s.sites, vid])] }));
+  const addListing = (sid: string, lid: string) => upd(sid, (s) => ({ ...s, listings: [...new Set([...s.listings, lid])] }));
 
-  const list = useMemo(() => (venues && venues.length > 0 ? venues : venues ? DEMO_VENUES : null), [venues]);
   const seasonName = (sid?: string | null) => settings.seasons?.find((s) => s.id === sid)?.name;
   const liveListings = useMemo(() => listings.filter((l) => (l.title || l.name) && (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived), [listings]);
+  const lTitle = (l: Listing) => l.title || l.name || "Untitled";
   const open = (vid: string) => router.push(`${pathname}?id=${encodeURIComponent(vid)}`);
-
   const detailVenue = list && id ? list.find((v) => v.id === id) : undefined;
-  const notDeployed = staff.filter((s) => s.sites.length === 0);
+
+  const az = useMemo(() => [...staff].sort((a, b) => a.name.localeCompare(b.name)), [staff]);
+  const shown = q.trim() ? az.filter((s) => s.name.toLowerCase().includes(q.toLowerCase()) || (s.role ?? "").toLowerCase().includes(q.toLowerCase())) : az;
 
   return (
     <div className={embedded ? "text-[var(--ink)]" : "-m-3 min-h-[calc(100vh-3.5rem)] p-3 text-[var(--ink)] sm:-m-5 sm:p-5"} style={embedded ? undefined : LIGHT_PALETTE}>
@@ -60,57 +94,56 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
       <>
       <div className="mb-3">
         <h2 className="text-[20px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Deployment</h2>
-        <p className="text-[12.5px] text-[var(--ink-3)]">Who works at each location and the listings that run there. Turn a location on for someone and the schedule offers them for its shifts. Locations &amp; listings are edited in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p>
+        <p className="text-[12.5px] text-[var(--ink-3)]">Move staff across locations &amp; listings — turn one on and the schedule offers them for its shifts. Locations &amp; listings are edited in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p>
       </div>
 
-      {!list ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div> : (
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="inline-flex rounded-xl bg-[var(--panel)] p-1">
+          {([["loc", "By location"], ["staff", "By staff"], ["listing", "By listing"]] as const).map(([v, lbl]) => (
+            <button key={v} type="button" onClick={() => setView(v)} className={"rounded-lg px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (view === v ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>
+          ))}
+        </div>
+        {view === "staff" && <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search staff" className="w-[200px] text-[12.5px]" />}
+      </div>
+
+      {!list ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+
+      /* ── BY LOCATION ── */
+      : view === "loc" ? (
         <div className="flex flex-col gap-3">
           {list.map((v) => {
             const here = staff.filter((s) => s.sites.includes(v.id));
+            const notHere = staff.filter((s) => !s.sites.includes(v.id));
             const vListings = liveListings.filter((l) => l.venueId === v.id);
             return (
               <div key={v.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
                 <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-                  <span className="text-[14px]">📍</span>
-                  <span className="text-[15px] font-extrabold text-[var(--ink)]">{v.name}</span>
-                  {v.city && <span className="text-[11.5px] text-[var(--ink-3)]">· {v.city}</span>}
-                  <span className="ml-auto flex items-center gap-2">
-                    <span className="rounded-full bg-white px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">{here.length} of {staff.length} deployed</span>
-                    <button type="button" onClick={() => open(v.id)} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Timesheets &amp; alerts ›</button>
-                  </span>
+                  <span className="text-[14px]">📍</span><span className="text-[15px] font-extrabold text-[var(--ink)]">{v.name}</span>{v.city && <span className="text-[11.5px] text-[var(--ink-3)]">· {v.city}</span>}
+                  <span className="ml-auto flex items-center gap-2"><span className="rounded-full bg-white px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">{here.length} deployed</span><button type="button" onClick={() => open(v.id)} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Timesheets &amp; alerts ›</button></span>
                 </div>
                 <div className="grid gap-4 p-4 md:grid-cols-[1.3fr,1fr]">
-                  {/* assign team here */}
                   <div>
-                    <div className="mb-1.5 flex items-center gap-2">
-                      <span className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Team — who works here</span>
-                      <span className="ml-auto flex gap-1.5">
-                        <button type="button" onClick={() => setAllForVenue(v.id, true)} className="rounded-full border border-[#bfe3cd] bg-[#eef8f1] px-2.5 py-0.5 text-[11px] font-bold text-[#0f7a43]">✓ All</button>
-                        <button type="button" onClick={() => setAllForVenue(v.id, false)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">Clear</button>
-                      </span>
+                    <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Team here</div>
+                    <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
+                      {here.length === 0 && <p className="py-1 text-[12px] text-[var(--ink-3)]">No one yet — add someone below.</p>}
+                      {here.map((s) => (
+                        <div key={s.id} className="flex items-center gap-2.5 py-2">
+                          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
+                          <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{s.name}</div><div className="text-[11px] text-[var(--ink-3)]">{s.role ?? "—"} · all listings here</div></div>
+                          <button type="button" onClick={() => toggleSite(s.id, v.id)} title="Remove from this location" className="text-[16px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button>
+                        </div>
+                      ))}
                     </div>
-                    {staff.length === 0 ? <p className="text-[12px] text-[var(--ink-3)]">No staff yet — invite people in <b>Team members</b>.</p> : (
-                      <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
-                        {staff.map((s) => { const on = s.sites.includes(v.id); return (
-                          <div key={s.id} className="flex items-center gap-2.5 py-2">
-                            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
-                            <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{s.name}</div><div className="text-[11px] text-[var(--ink-3)]">{s.role ?? "—"}{on ? " · all listings here" : ""}</div></div>
-                            <button type="button" onClick={() => toggle(s.id, v.id)} role="switch" aria-checked={on} title={on ? "Works here — click to remove" : "Not here — click to add"} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: on ? "#22b365" : "var(--line)" }}><span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ left: on ? "21px" : "3px" }} /></button>
-                          </div>
-                        ); })}
-                      </div>
-                    )}
+                    <Select value="" onChange={(e) => { if (e.target.value) addSite(e.target.value, v.id); }} className="mt-2 w-full text-[12.5px]">
+                      <option value="">＋ Add staff to this location…</option>
+                      {notHere.map((s) => <option key={s.id} value={s.id}>{s.name}{s.role ? ` · ${s.role}` : ""}</option>)}
+                    </Select>
                   </div>
-                  {/* live listings here */}
                   <div>
                     <div className="mb-1.5 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings here · {vListings.length}<a href="/company/listings" className="ml-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a></div>
                     {vListings.length === 0 ? <p className="text-[12px] text-[var(--ink-3)]">No live listings run here yet.</p> : (
                       <div className="flex flex-col gap-1.5">{vListings.map((l) => { const sn = seasonName(l.seasonId); return (
-                        <div key={l.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5">
-                          <span className="text-[13px]">🎟</span>
-                          <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-[var(--ink)]">{l.title || l.name}</span>
-                          {sn && <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}
-                        </div>
+                        <div key={l.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5"><span className="text-[13px]">🎟</span><span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-[var(--ink)]">{lTitle(l)}</span>{sn && <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}</div>
                       ); })}</div>
                     )}
                   </div>
@@ -118,16 +151,66 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
               </div>
             );
           })}
+        </div>
 
-          {/* not deployed — access by role only */}
-          {notDeployed.length > 0 && (
-            <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-4">
-              <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Not rostered · {notDeployed.length} <span className="font-normal normal-case">— page access by role only, not in the schedule</span></div>
-              <div className="flex flex-wrap gap-1.5">{notDeployed.map((s) => (
-                <span key={s.id} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--panel)] px-2.5 py-1 text-[12px] font-bold text-[var(--ink)]"><span className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>{s.name}{s.role ? ` · ${s.role}` : ""}</span>
-              ))}</div>
+      /* ── BY STAFF (A–Z) ── */
+      ) : view === "staff" ? (
+        <div className="flex flex-col gap-2">
+          {shown.length === 0 && <p className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No staff match.</p>}
+          {shown.map((s) => (
+            <div key={s.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
+              <div className="flex items-center gap-2.5">
+                <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
+                <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{s.role ?? "—"}</div></div>
+                <span className="text-[11px] font-bold text-[var(--ink-3)]">{s.sites.length + s.listings.length === 0 ? "Not deployed" : `${s.sites.length} loc · ${s.listings.length} listing`}</span>
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className="mr-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Locations</span>
+                {list.map((v) => { const on = has(s.sites, v.id); return (
+                  <button key={v.id} type="button" onClick={() => toggleSite(s.id, v.id)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors" style={on ? CHIP_ON : CHIP_OFF}>{on ? "✓ " : ""}{v.name}</button>
+                ); })}
+              </div>
+              {liveListings.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <span className="mr-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings</span>
+                  {liveListings.map((l) => { const on = has(s.listings, l.id); return (
+                    <button key={l.id} type="button" onClick={() => toggleListing(s.id, l.id)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors" style={on ? CHIP_ON : CHIP_OFF}>{on ? "✓ " : ""}🎟 {lTitle(l)}</button>
+                  ); })}
+                </div>
+              )}
             </div>
-          )}
+          ))}
+        </div>
+
+      /* ── BY LISTING ── */
+      ) : (
+        <div className="flex flex-col gap-2">
+          {liveListings.length === 0 ? <p className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No live listings yet — publish one in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p> : liveListings.map((l) => {
+            const on = staff.filter((s) => s.listings.includes(l.id));
+            const off = staff.filter((s) => !s.listings.includes(l.id));
+            const sn = seasonName(l.seasonId);
+            const venueName = list.find((v) => v.id === l.venueId)?.name;
+            return (
+              <div key={l.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[13px]">🎟</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{lTitle(l)}</span>
+                  {sn && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}
+                  {venueName && <span className="text-[11.5px] text-[var(--ink-3)]">· 📍 {venueName}</span>}
+                  <a href="/company/listings" className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a>
+                </div>
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {on.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No one assigned to this listing yet.</span>}
+                  {on.map((s) => (
+                    <span key={s.id} className="inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[12px] font-bold" style={CHIP_ON}><span className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>{s.name}<button type="button" onClick={() => toggleListing(s.id, l.id)} title="Remove" className="text-[13px] text-[#0f7a43] hover:text-[#c0392b]">×</button></span>
+                  ))}
+                </div>
+                <Select value="" onChange={(e) => { if (e.target.value) addListing(e.target.value, l.id); }} className="mt-2 w-full max-w-[280px] text-[12.5px]">
+                  <option value="">＋ Add staff to this listing…</option>
+                  {off.map((s) => <option key={s.id} value={s.id}>{s.name}{s.role ? ` · ${s.role}` : ""}</option>)}
+                </Select>
+              </div>
+            );
+          })}
         </div>
       )}
       </>
