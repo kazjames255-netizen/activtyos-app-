@@ -83,6 +83,28 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
       <div className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${items.length}, minmax(0,1fr))` }}>{items}</div>
     </div>
   );
+  // The same five records as compact icon buttons on each search result, so a
+  // record can be logged straight from the list — opening the card is optional.
+  const rowActions = (name: string) => {
+    const n = encodeURIComponent(name);
+    const b = (icon: ReactNode, label: string, href: string) => (
+      <button key={label} type="button" title={label} aria-label={label}
+        onClick={(e) => { e.stopPropagation(); go(href); }}
+        className="flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[14px] leading-none transition hover:border-[#1d3a8f] hover:bg-[#eef4fd]">
+        {icon}
+      </button>
+    );
+    return (
+      <div className="flex flex-none items-center gap-1">
+        {acts.firstAid !== false && b("⛑️", "First aid", `/${portal}/accidents?child=${n}`)}
+        {acts.incident !== false && b("⚠️", "Log concern", `/${portal}/${incidentSeg}?child=${n}`)}
+        {acts.medication !== false && b("💊", "Medication", `/${portal}/medication?child=${n}`)}
+        {acts.meals !== false && b("🍽️", "Meals", `/${portal}/meals?child=${n}`)}
+        {acts.moments !== false && b("📸", "Moment", `/${portal}/moments?child=${n}`)}
+      </div>
+    );
+  };
+
   let quickLinks: ReactNode = null;
   if (openInfo) {
     const name = encodeURIComponent(openInfo.name);
@@ -139,13 +161,16 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
                   : shown.length === 0 ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{term ? "No child matches." : "No children on your list yet."}</div>
                     : <ul className="space-y-1">{shown.map((r) => (
                         <li key={r.childId}>
-                          <button type="button" disabled={loadingCard} onClick={() => openChild(r.childId)} className="flex w-full items-center gap-3 rounded-xl border border-[var(--line)] px-3 py-2 text-left transition hover:border-[#1d3a8f] hover:bg-[#f7faff] disabled:opacity-50">
-                            <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[13px] font-extrabold text-[#1d3a8f]" style={{ background: "#eef4fd" }}>{r.name.slice(0, 1)}</span>
-                            <span className="min-w-0">
-                              <span className="block truncate text-[13px] font-extrabold text-[var(--ink)]">{r.name}</span>
-                              <span className="block truncate text-[11.5px] text-[var(--ink-3)]">👤 {r.parentName || "—"}{r.postcode ? ` · 📍 ${r.postcode}` : ""}</span>
-                            </span>
-                          </button>
+                          <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 transition hover:border-[#1d3a8f] hover:bg-[#f7faff]">
+                            <button type="button" disabled={loadingCard} onClick={() => openChild(r.childId)} title="Open profile card" className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-50">
+                              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[13px] font-extrabold text-[#1d3a8f]" style={{ background: "#eef4fd" }}>{r.name.slice(0, 1)}</span>
+                              <span className="min-w-0">
+                                <span className="block truncate text-[13px] font-extrabold text-[var(--ink)]">{r.name}</span>
+                                <span className="block truncate text-[11.5px] text-[var(--ink-3)]">👤 {r.parentName || "—"}{r.postcode ? ` · 📍 ${r.postcode}` : ""}</span>
+                              </span>
+                            </button>
+                            {rowActions(r.name)}
+                          </div>
                         </li>
                       ))}</ul>}
               </div>
