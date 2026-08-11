@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="640" height="360" viewBox="0 0 640 360" role="img" aria-label="Sample listing hero photo">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#4f8bf5"/>
+      <stop offset="1" stop-color="#7fb0ff"/>
+    </linearGradient>
+    <linearGradient id="band" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#e2225f"/>
+      <stop offset="1" stop-color="#f0803c"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="360" fill="url(#sky)"/>
+  <circle cx="528" cy="74" r="40" fill="#ffd84d"/>
+  <path d="M0 300 Q160 250 320 292 T640 288 V360 H0 Z" fill="#3ea36b"/>
+  <path d="M0 320 Q200 288 400 320 T640 316 V360 H0 Z" fill="#2f8f5c"/>
+  <g fill="#ffffff" opacity="0.92">
+    <circle cx="120" cy="150" r="16"/><rect x="112" y="164" width="16" height="46" rx="7"/>
+    <circle cx="176" cy="140" r="16"/><rect x="168" y="154" width="16" height="50" rx="7"/>
+    <circle cx="232" cy="152" r="16"/><rect x="224" y="166" width="16" height="44" rx="7"/>
+  </g>
+  <circle cx="430" cy="196" r="26" fill="#ffffff"/>
+  <path d="M430 170 l7 16 h18 l-14 11 5 18 -16 -11 -16 11 5 -18 -14 -11 h18 z" fill="#ffcf3f"/>
+  <rect x="0" y="228" width="640" height="52" fill="url(#band)" opacity="0.95"/>
+  <text x="320" y="263" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="30" font-weight="800" fill="#ffffff" letter-spacing="2">SPORTS · CREATIVE · ARTS</text>
+</svg>

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost, isDemoMode } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
@@ -409,7 +409,10 @@ export function emptyDraft(defaults?: {
 }): WizardDraft {
   const firstLive = (defaults?.cancellationPolicies ?? [])[0];
   return {
-    id: null, title: "", images: [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
+    // In a walkthrough/demo, start with a sample hero photo already added so the
+    // Basics step can show the real crop-and-move panel (a file upload can't be
+    // driven from the tour). Real accounts always start empty.
+    id: null, title: "", images: isDemoMode() ? [{ src: "/mockups/listing-hero-sample.svg", x: 50, y: 50, zoom: 100 }] : [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
     categoryIds: [], venueId: null, seasonId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], toBring: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
@@ -1230,7 +1233,11 @@ export function CroppedImage({ im, className, style }: { im: ListingImage; class
 
 function ImageManager({ images, onChange, addLabel }: { images: ListingImage[]; onChange: (imgs: ListingImage[]) => void; addLabel: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
-  const [editIdx, setEditIdx] = useState<number | null>(null);
+  // In a walkthrough, the main photo is pre-seeded — open its crop panel on
+  // mount so the tour can show the crop-and-move controls straight away.
+  const [editIdx, setEditIdx] = useState<number | null>(
+    () => (isDemoMode() && addLabel.includes("main") && images.length > 0 ? 0 : null),
+  );
   async function pick(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || []);
     const add: ListingImage[] = [];
