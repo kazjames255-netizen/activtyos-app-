@@ -4,6 +4,8 @@
 // sign-in. Representative UK activity-camp data — the point is that the tour
 // shows the actual page exactly as it looks in use.
 
+import { GENERATED_FIXTURES } from "./tourFixtures.generated";
+
 type Fixtures = Record<string, unknown>;
 
 // ── Dashboard ───────────────────────────────────────────────────────────────
@@ -103,5 +105,7 @@ const DASH: Fixtures = {
 };
 
 export const TOUR_FIXTURES: Record<string, Fixtures> = {
+  // Agent-authored fixtures for the other pages; the hand-tuned dashboard wins.
+  ...GENERATED_FIXTURES,
   dash: DASH,
 };
