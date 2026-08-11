@@ -9,6 +9,7 @@ import { Button, Card, FieldLabel, Input, Select, inputCls } from "@/components/
 import { PrintableDoc } from "@/features/money/doc-shared";
 import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
+import { RolesPermissions } from "./RolesPermissions";
 import {
   useSettings,
   PROVIDER_NOTIFICATIONS,
@@ -79,7 +80,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "company" | "branding" | "people" | "staff" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
+type Tab = "features" | "company" | "branding" | "people" | "staff" | "roles" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1249,7 +1250,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "roles", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1292,6 +1293,7 @@ export function SetupApp() {
     ["branding", "Branding"],
     ["people", "Child questions"],
     ["staff", "Staff & workforce"],
+    ...(portal === "company" ? [["roles", "Roles & permissions"] as [Tab, string]] : []),
     ["learning", "Learning"],
     ["meals", "Meals"],
     ["medication", "Medication"],
@@ -1393,6 +1395,12 @@ export function SetupApp() {
             <Input type="number" min={1} value={settings.staff?.defaultRatioTarget ?? 8} onChange={(e) => set("staff", { ...settings.staff, defaultRatioTarget: Number(e.target.value) || 1 })} className="w-24" />
           </Row>
           <div className="mt-3"><FieldLabel>Note added to staff invite emails</FieldLabel><Input value={settings.staff?.inviteMessage ?? ""} placeholder="Looking forward to having you on the team!" onChange={(e) => set("staff", { ...settings.staff, inviteMessage: e.target.value })} className="w-full" /></div>
+        </Section>
+      )}
+
+      {tab === "roles" && (
+        <Section title="Roles & permissions" lede="Define the roles in your organisation and what each can see or change. Assign a role to each person when you invite them (coming next); Owner always has full access.">
+          <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => set("roles", roles)} />
         </Section>
       )}
 

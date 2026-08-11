@@ -396,6 +396,54 @@ export function notificationOn(prefs: Record<string, boolean> | undefined, key: 
  *  same-named constant in server/src/lib/notify.ts. */
 export const EMAIL_DELIVERY_KEY = "email-delivery";
 
+// ── Roles & permissions ────────────────────────────────────────────────────
+// Company/head-office defines named roles and, per area, how much access each
+// role gets. Phase 1 = the model + editor; wiring it to hide nav items and gate
+// actions, and picking a role on each invite, follows. Backend will enforce
+// (see docs) — the UI gate is convenience only.
+export type CapLevel = "none" | "view" | "edit";
+export interface StaffRole {
+  id: string;
+  name: string;
+  builtin?: boolean; // a seeded role — can't be deleted (Owner also can't be edited)
+  owner?: boolean;   // full access, locked to "edit" on everything
+  caps: Record<string, CapLevel>;
+}
+/** The areas access is set against, grouped for the matrix. `sensitive` rows
+ *  cover data we especially want locked down (medical, money, payroll). */
+export const ROLE_CAPS: { key: string; label: string; group: string; sensitive?: boolean }[] = [
+  { key: "bookings", label: "Bookings", group: "Sell & take bookings" },
+  { key: "listings", label: "Listings & blocks", group: "Sell & take bookings" },
+  { key: "customers", label: "Families", group: "Sell & take bookings" },
+  { key: "registers", label: "Registers", group: "Run the day" },
+  { key: "ratios", label: "Ratios & groups", group: "Run the day" },
+  { key: "timetable", label: "Timetable & calendar", group: "Run the day" },
+  { key: "meals", label: "Meals", group: "Run the day" },
+  { key: "trips", label: "Trips & visits", group: "Run the day" },
+  { key: "medical", label: "Child medical / SEND / contacts", group: "Safeguarding", sensitive: true },
+  { key: "incidents", label: "Concerns & first aid", group: "Safeguarding", sensitive: true },
+  { key: "medication", label: "Medication", group: "Safeguarding", sensitive: true },
+  { key: "moments", label: "Moments & photos", group: "Safeguarding" },
+  { key: "documents", label: "Documents & learning", group: "Team" },
+  { key: "staff", label: "Staff & schedule", group: "Team" },
+  { key: "payroll", label: "Payroll", group: "Money", sensitive: true },
+  { key: "finances", label: "Finances & analytics", group: "Money", sensitive: true },
+  { key: "moneyops", label: "Money in / out, invoices", group: "Money" },
+  { key: "marketing", label: "Marketing & referrals", group: "Growth" },
+  { key: "messaging", label: "Messages & newsfeed", group: "Communication" },
+  { key: "settings", label: "Setup & settings", group: "Admin" },
+];
+const CAP_KEYS = ROLE_CAPS.map((c) => c.key);
+const capsAt = (level: CapLevel): Record<string, CapLevel> =>
+  Object.fromEntries(CAP_KEYS.map((k) => [k, level]));
+/** Sensible starting roles a company can then tweak or add to. */
+export const DEFAULT_ROLES: StaffRole[] = [
+  { id: "owner", name: "Owner / Admin", builtin: true, owner: true, caps: capsAt("edit") },
+  { id: "manager", name: "Manager", builtin: true, caps: { ...capsAt("edit"), payroll: "view", finances: "view", settings: "none" } },
+  { id: "lead", name: "Site / Camp Lead", builtin: true, caps: { ...capsAt("none"), bookings: "view", customers: "view", registers: "edit", ratios: "edit", timetable: "edit", meals: "edit", trips: "edit", medical: "view", incidents: "edit", medication: "edit", moments: "edit", documents: "view", messaging: "view" } },
+  { id: "coach", name: "Coach / Staff", builtin: true, caps: { ...capsAt("none"), registers: "view", ratios: "view", timetable: "view", customers: "view", medical: "view", moments: "edit", documents: "view", messaging: "view" } },
+];
+
 export interface TenantSettings {
   // ── Public identity ──
   /**
@@ -835,6 +883,9 @@ export interface TenantSettings {
    * A tenant-level policy, not per session.
    */
   ratioGroups: RatioGroup[];
+  /** Company/head-office roles & per-area access. Optional — the editor falls
+   *  back to DEFAULT_ROLES when unset. */
+  roles?: StaffRole[];
   /** Ask the operator why, when they cancel. Off = don't make them answer. */
   askReasonOperator: boolean;
   /** Ask the parent why, when they cancel their own booking. */
@@ -1018,6 +1069,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   voucherDueByDays: 0,
   voucherWhenClose: "hide",
   ratioGroups: DEFAULT_RATIO_GROUPS,
+  roles: DEFAULT_ROLES,
   refundApproval: "review",
   askReasonOperator: true,
   askReasonParent: false,
