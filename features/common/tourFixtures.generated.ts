@@ -5339,5 +5339,1813 @@ export const GENERATED_FIXTURES: Record<string, Record<string, unknown>> = {
       "role": "freelancer"
     },
     "/api/library": null
+  },
+  "medication": {
+    "/api/me": {
+      "role": "freelancer"
+    },
+    "/api/library": {
+      "settings": {
+        "providerName": "Sunshine Sports Camps",
+        "medication": {
+          "informParentGiven": true,
+          "informParentMissed": true,
+          "notifyParentNote": true,
+          "notifyParentAuthorise": true,
+          "remindWhenDue": true,
+          "requireWitness": false,
+          "leadsOnly": false
+        }
+      }
+    },
+    "/api/bookings": [
+      {
+        "child": "Oliver Bennett",
+        "childId": "c-oliver",
+        "listing": "Summer Multi-Sports Camp",
+        "days": [
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14"
+        ]
+      },
+      {
+        "child": "Amelia Clarke",
+        "childId": "c-amelia",
+        "listing": "Summer Multi-Sports Camp",
+        "days": [
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-15"
+        ]
+      },
+      {
+        "child": "Harry Dawson",
+        "childId": "c-harry",
+        "listing": "Football Academy",
+        "days": [
+          "2026-08-03",
+          "2026-08-04",
+          "2026-08-05",
+          "2026-08-06",
+          "2026-08-07"
+        ]
+      },
+      {
+        "child": "Sophia Evans",
+        "childId": "c-sophia",
+        "listing": "Gymnastics Camp",
+        "days": [
+          "2026-07-27",
+          "2026-07-28",
+          "2026-07-29",
+          "2026-07-30",
+          "2026-07-31"
+        ]
+      },
+      {
+        "child": "Jack Foster",
+        "childId": "c-jack",
+        "listing": "Forest School Adventures",
+        "days": [
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14"
+        ]
+      },
+      {
+        "child": "Isla Green",
+        "childId": "c-isla",
+        "listing": "Summer Multi-Sports Camp",
+        "days": [
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-15"
+        ]
+      },
+      {
+        "child": "Charlie Hughes",
+        "childId": "c-charlie",
+        "listing": "Football Academy",
+        "days": [
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14"
+        ]
+      },
+      {
+        "child": "Lily Jackson",
+        "childId": "c-lily",
+        "listing": "Holiday Camp",
+        "days": [
+          "2026-08-04",
+          "2026-08-05",
+          "2026-08-06",
+          "2026-08-07",
+          "2026-08-08"
+        ]
+      },
+      {
+        "child": "George King",
+        "childId": "c-george",
+        "listing": "Gymnastics Camp",
+        "days": [
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14"
+        ]
+      },
+      {
+        "child": "Freya Lewis",
+        "childId": "c-freya",
+        "listing": "Forest School Adventures",
+        "days": [
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14",
+          "2026-08-15"
+        ]
+      }
+    ],
+    "/api/medications": [
+      {
+        "id": "m-oliver-ventolin",
+        "childId": "c-oliver",
+        "childName": "Oliver Bennett",
+        "name": "Ventolin (salbutamol) inhaler",
+        "dose": "one puff",
+        "route": "inhaler",
+        "condition": "asthma",
+        "schedule": "On every booked day · at 12:30",
+        "instructions": "Shake well and use with the blue spacer. Wait 30 seconds between puffs. Offer before high-energy activity.",
+        "asNeeded": false,
+        "storage": "Office first-aid cupboard, room temperature",
+        "heldOnSite": true,
+        "expiryDate": "2027-03-31",
+        "consentGranted": true,
+        "consentBy": "Rachel Bennett",
+        "consentDate": "2026-07-28T09:15:00.000Z",
+        "parentNote": "He gets wheezy after running — please offer it before football and let me know if he needs it more than once.",
+        "archived": false
+      },
+      {
+        "id": "m-amelia-piriton",
+        "childId": "c-amelia",
+        "childName": "Amelia Clarke",
+        "name": "Piriton (chlorphenamine)",
+        "dose": "5ml",
+        "route": "oral",
+        "condition": "hay fever",
+        "schedule": "On these days: Mon 11 Aug, Tue 12 Aug, Wed 13 Aug · at 09:00",
+        "instructions": "Give with breakfast. May cause slight drowsiness.",
+        "asNeeded": false,
+        "storage": "Office medicine box",
+        "heldOnSite": true,
+        "expiryDate": "2027-09-30",
+        "consentGranted": true,
+        "consentBy": "James Clarke",
+        "consentDate": "2026-08-01T08:40:00.000Z",
+        "archived": false
+      },
+      {
+        "id": "m-harry-epipen",
+        "childId": "c-harry",
+        "childName": "Harry Dawson",
+        "name": "EpiPen (adrenaline auto-injector)",
+        "dose": "0.3mg auto-injector",
+        "route": "intramuscular",
+        "condition": "severe nut allergy (anaphylaxis)",
+        "schedule": "Only when needed",
+        "instructions": "EMERGENCY ONLY. Administer to the outer thigh, hold 3 seconds, then call 999. A second pen is in his named bag.",
+        "asNeeded": true,
+        "storage": "Harry's named red med bag — kept with the group lead at all times",
+        "heldOnSite": true,
+        "expiryDate": "2026-12-15",
+        "consentGranted": true,
+        "consentBy": "Sarah Dawson",
+        "consentDate": "2026-08-02T18:22:00.000Z",
+        "parentNote": "Please make sure whoever is leading his group carries the bag on trips and at lunch.",
+        "archived": false
+      },
+      {
+        "id": "m-sophia-calpol",
+        "childId": "c-sophia",
+        "childName": "Sophia Evans",
+        "name": "Calpol (paracetamol)",
+        "dose": "5ml",
+        "route": "oral",
+        "condition": "pain / high temperature",
+        "schedule": "Only when needed",
+        "instructions": "Only if temperature is above 38°C or she is in obvious discomfort. Maximum one dose every 6 hours. Call me before a second dose.",
+        "asNeeded": true,
+        "storage": "Office medicine box",
+        "heldOnSite": true,
+        "expiryDate": "2028-01-31",
+        "consentGranted": true,
+        "consentBy": "Emma Evans",
+        "consentDate": "2026-07-26T10:05:00.000Z",
+        "archived": false
+      },
+      {
+        "id": "m-sophia-amox",
+        "childId": "c-sophia",
+        "childName": "Sophia Evans",
+        "name": "Amoxicillin",
+        "dose": "5ml",
+        "route": "oral",
+        "condition": "chest infection",
+        "schedule": "On every booked day · at 08:30, 16:30",
+        "instructions": "Course prescribed by GP. Give with food.",
+        "asNeeded": false,
+        "storage": "Fridge in the office",
+        "heldOnSite": false,
+        "expiryDate": "2026-08-24",
+        "consentGranted": false,
+        "archived": false
+      },
+      {
+        "id": "m-jack-amox",
+        "childId": "c-jack",
+        "childName": "Jack Foster",
+        "name": "Amoxicillin",
+        "dose": "5ml",
+        "route": "oral",
+        "condition": "ear infection",
+        "schedule": "On every booked day · at 08:30, 16:30",
+        "instructions": "7-day course, ends 15 Aug. Give with food. Shake the bottle before use.",
+        "asNeeded": false,
+        "storage": "Fridge in the office",
+        "heldOnSite": true,
+        "expiryDate": "2026-08-20",
+        "consentGranted": true,
+        "consentBy": "Laura Foster",
+        "consentDate": "2026-08-08T07:55:00.000Z",
+        "archived": false
+      },
+      {
+        "id": "m-isla-insulin",
+        "childId": "c-isla",
+        "childName": "Isla Green",
+        "name": "NovoRapid (insulin) — pump",
+        "dose": "per carb count",
+        "route": "insulin pump",
+        "condition": "type 1 diabetes",
+        "schedule": "On every booked day",
+        "instructions": "Parent-managed pump. Staff to supervise carbohydrate counting at lunch only — do NOT adjust the pump. Check blood glucose before lunch.",
+        "asNeeded": false,
+        "storage": "Isla carries her own kit; hypo box in her bag",
+        "heldOnSite": false,
+        "expiryDate": "2026-10-31",
+        "consentGranted": true,
+        "consentBy": "Priya Green",
+        "consentDate": "2026-08-05T09:00:00.000Z",
+        "parentNote": "Check BG before lunch. If below 4, give the juice + biscuits in her hypo box and call me straight away.",
+        "archived": false
+      },
+      {
+        "id": "m-charlie-mph",
+        "childId": "c-charlie",
+        "childName": "Charlie Hughes",
+        "name": "Methylphenidate (Medikinet)",
+        "dose": "one 10mg tablet",
+        "route": "oral",
+        "condition": "ADHD",
+        "schedule": "On these days: Mon 10 Aug, Tue 11 Aug · at 12:00",
+        "instructions": "Give with lunch.",
+        "asNeeded": false,
+        "storage": "Locked office cabinet",
+        "heldOnSite": true,
+        "expiryDate": "2027-05-31",
+        "consentGranted": false,
+        "archived": false
+      },
+      {
+        "id": "m-lily-hc",
+        "childId": "c-lily",
+        "childName": "Lily Jackson",
+        "name": "Hydrocortisone 1% cream",
+        "dose": "thin layer",
+        "route": "topical",
+        "condition": "eczema",
+        "schedule": "Only when needed",
+        "instructions": "Apply a thin layer to affected areas (backs of knees, inner elbows) up to twice daily. Wash hands after.",
+        "asNeeded": true,
+        "storage": "Office medicine box",
+        "heldOnSite": true,
+        "expiryDate": "2026-06-30",
+        "consentGranted": true,
+        "consentBy": "Mark Jackson",
+        "consentDate": "2026-08-03T08:30:00.000Z",
+        "archived": false
+      },
+      {
+        "id": "m-freya-melatonin",
+        "childId": "c-freya",
+        "childName": "Freya Lewis",
+        "name": "Melatonin",
+        "dose": "3mg",
+        "route": "oral",
+        "condition": "sleep (SEND)",
+        "schedule": "Only when needed",
+        "instructions": "Only if I request it ahead of a late pick-up. Not a routine dose.",
+        "asNeeded": true,
+        "storage": "Office medicine box",
+        "heldOnSite": true,
+        "expiryDate": "2027-11-30",
+        "consentGranted": true,
+        "consentBy": "Hannah Lewis",
+        "consentDate": "2026-08-06T16:10:00.000Z",
+        "archived": false
+      },
+      {
+        "id": "m-george-salbutamol",
+        "childId": "c-george",
+        "childName": "George King",
+        "name": "Salbutamol inhaler",
+        "dose": "two puffs",
+        "route": "inhaler",
+        "condition": "asthma",
+        "schedule": "On every booked day · at 15:00",
+        "instructions": "Use with spacer. Two puffs, 30 seconds apart.",
+        "asNeeded": false,
+        "storage": "Office first-aid cupboard",
+        "heldOnSite": true,
+        "expiryDate": "2027-02-28",
+        "consentGranted": false,
+        "consentBy": "Diane King",
+        "consentDate": "2026-08-04T09:20:00.000Z",
+        "consentWithdrawnAt": "2026-08-11T07:45:00.000Z",
+        "parentNote": "We've stopped this for now on the GP's advice — please don't administer.",
+        "archived": true
+      },
+      {
+        "id": "m-oliver-eyedrops",
+        "childId": "c-oliver",
+        "childName": "Oliver Bennett",
+        "name": "Chloramphenicol eye drops",
+        "dose": "one drop each eye",
+        "route": "ophthalmic",
+        "condition": "conjunctivitis",
+        "schedule": "On these days: Wed 29 Jul, Thu 30 Jul, Fri 31 Jul · at 09:00",
+        "instructions": "One drop in each eye. Finished course on 31 Jul.",
+        "asNeeded": false,
+        "storage": "Fridge in the office",
+        "heldOnSite": true,
+        "expiryDate": "2026-07-31",
+        "consentGranted": true,
+        "consentBy": "Rachel Bennett",
+        "consentDate": "2026-07-27T08:50:00.000Z",
+        "archived": true
+      }
+    ],
+    "/api/medications/administrations": [
+      {
+        "id": "a1",
+        "medicationId": "m-oliver-ventolin",
+        "medName": "Ventolin (salbutamol) inhaler",
+        "childName": "Oliver Bennett",
+        "date": "2026-08-11",
+        "time": "12:30",
+        "doseGiven": "one puff",
+        "given": true,
+        "administeredByName": "Emma Thompson",
+        "notes": "Before football, no wheeze after"
+      },
+      {
+        "id": "a2",
+        "medicationId": "m-oliver-ventolin",
+        "medName": "Ventolin (salbutamol) inhaler",
+        "childName": "Oliver Bennett",
+        "date": "2026-08-10",
+        "time": "12:35",
+        "doseGiven": "one puff",
+        "given": true,
+        "administeredByName": "Daniel Roberts"
+      },
+      {
+        "id": "a3",
+        "medicationId": "m-amelia-piriton",
+        "medName": "Piriton (chlorphenamine)",
+        "childName": "Amelia Clarke",
+        "date": "2026-08-11",
+        "time": "09:00",
+        "doseGiven": "5ml",
+        "given": true,
+        "administeredByName": "Emma Thompson",
+        "notes": "With breakfast"
+      },
+      {
+        "id": "a4",
+        "medicationId": "m-jack-amox",
+        "medName": "Amoxicillin",
+        "childName": "Jack Foster",
+        "date": "2026-08-11",
+        "time": "08:30",
+        "doseGiven": "5ml",
+        "given": true,
+        "administeredByName": "Priya Shah",
+        "notes": "With toast"
+      },
+      {
+        "id": "a5",
+        "medicationId": "m-jack-amox",
+        "medName": "Amoxicillin",
+        "childName": "Jack Foster",
+        "date": "2026-08-10",
+        "time": "08:30",
+        "doseGiven": "5ml",
+        "given": true,
+        "administeredByName": "Priya Shah"
+      },
+      {
+        "id": "a6",
+        "medicationId": "m-jack-amox",
+        "medName": "Amoxicillin",
+        "childName": "Jack Foster",
+        "date": "2026-08-10",
+        "time": "16:30",
+        "doseGiven": "5ml",
+        "given": true,
+        "administeredByName": "Daniel Roberts"
+      },
+      {
+        "id": "a7",
+        "medicationId": "m-jack-amox",
+        "medName": "Amoxicillin",
+        "childName": "Jack Foster",
+        "date": "2026-08-09",
+        "time": "16:30",
+        "doseGiven": "Not given",
+        "given": false,
+        "administeredByName": "Daniel Roberts",
+        "notes": "Refused — spat it out. Retried 15 mins later, took it"
+      },
+      {
+        "id": "a8",
+        "medicationId": "m-isla-insulin",
+        "medName": "NovoRapid (insulin) — pump",
+        "childName": "Isla Green",
+        "date": "2026-08-11",
+        "time": "12:15",
+        "doseGiven": "carb count supervised (48g)",
+        "given": true,
+        "administeredByName": "Michael Carter",
+        "notes": "BG 6.2 before lunch"
+      },
+      {
+        "id": "a9",
+        "medicationId": "m-isla-insulin",
+        "medName": "NovoRapid (insulin) — pump",
+        "childName": "Isla Green",
+        "date": "2026-08-10",
+        "time": "12:20",
+        "doseGiven": "carb count supervised (52g)",
+        "given": true,
+        "administeredByName": "Michael Carter",
+        "notes": "BG 5.8 before lunch"
+      },
+      {
+        "id": "a10",
+        "medicationId": "m-lily-hc",
+        "medName": "Hydrocortisone 1% cream",
+        "childName": "Lily Jackson",
+        "date": "2026-08-11",
+        "time": "09:15",
+        "doseGiven": "thin layer",
+        "given": true,
+        "administeredByName": "Emma Thompson",
+        "notes": "Backs of knees, a little red this morning"
+      },
+      {
+        "id": "a11",
+        "medicationId": "m-lily-hc",
+        "medName": "Hydrocortisone 1% cream",
+        "childName": "Lily Jackson",
+        "date": "2026-08-05",
+        "time": "09:10",
+        "doseGiven": "thin layer",
+        "given": true,
+        "administeredByName": "Emma Thompson"
+      },
+      {
+        "id": "a12",
+        "medicationId": "m-sophia-calpol",
+        "medName": "Calpol (paracetamol)",
+        "childName": "Sophia Evans",
+        "date": "2026-07-29",
+        "time": "13:40",
+        "doseGiven": "5ml",
+        "given": true,
+        "administeredByName": "Daniel Roberts",
+        "witnessedBy": "Priya Shah",
+        "notes": "Temp 38.4°C, settled after and rejoined the group"
+      },
+      {
+        "id": "a13",
+        "medicationId": "m-george-salbutamol",
+        "medName": "Salbutamol inhaler",
+        "childName": "George King",
+        "date": "2026-08-10",
+        "time": "15:00",
+        "doseGiven": "two puffs",
+        "given": true,
+        "administeredByName": "Priya Shah",
+        "notes": "Recorded before consent was withdrawn"
+      },
+      {
+        "id": "a14",
+        "medicationId": "m-oliver-eyedrops",
+        "medName": "Chloramphenicol eye drops",
+        "childName": "Oliver Bennett",
+        "date": "2026-07-30",
+        "time": "09:00",
+        "doseGiven": "one drop each eye",
+        "given": true,
+        "administeredByName": "Emma Thompson"
+      },
+      {
+        "id": "a15",
+        "medicationId": "m-oliver-eyedrops",
+        "medName": "Chloramphenicol eye drops",
+        "childName": "Oliver Bennett",
+        "date": "2026-07-31",
+        "time": "09:05",
+        "doseGiven": "one drop each eye",
+        "given": true,
+        "administeredByName": "Emma Thompson",
+        "notes": "Course complete"
+      }
+    ]
+  },
+  "incidents": {
+    "/api/me": {
+      "role": "freelancer",
+      "name": "Sarah Mitchell",
+      "tenantId": "VOiiaTnDNd03MLbZaVcM"
+    },
+    "/api/bookings": [
+      {
+        "child": "Oliver Bennett",
+        "childId": "c-oliver",
+        "listing": "Summer Multi-Sports Camp",
+        "dates": "4–8 Aug 2026",
+        "status": "confirmed"
+      },
+      {
+        "child": "Amelia Hughes",
+        "childId": "c-amelia",
+        "listing": "Forest School Holiday Camp",
+        "dates": "4–8 Aug 2026",
+        "status": "confirmed"
+      },
+      {
+        "child": "Jack Thompson",
+        "childId": "c-jack",
+        "listing": "Football Development Camp",
+        "dates": "4–8 Aug 2026",
+        "status": "confirmed"
+      },
+      {
+        "child": "Isla Richardson",
+        "childId": "c-isla",
+        "listing": "Forest School Holiday Camp",
+        "dates": "4–8 Aug 2026",
+        "status": "confirmed"
+      },
+      {
+        "child": "Harry Patel",
+        "childId": "c-harry",
+        "listing": "Football Development Camp",
+        "dates": "4–8 Aug 2026",
+        "status": "confirmed"
+      },
+      {
+        "child": "Sophie Clarke",
+        "childId": "c-sophie",
+        "listing": "Little Movers Gymnastics",
+        "dates": "3–7 Aug 2026",
+        "status": "confirmed"
+      },
+      {
+        "child": "Freddie Morgan",
+        "childId": "c-freddie",
+        "listing": "Football Development Camp",
+        "dates": "28 Jul–1 Aug 2026",
+        "status": "completed"
+      },
+      {
+        "child": "Grace Walker",
+        "childId": "c-grace",
+        "listing": "Summer Multi-Sports Camp",
+        "dates": "28 Jul–1 Aug 2026",
+        "status": "completed"
+      },
+      {
+        "child": "Noah Edwards",
+        "childId": "c-noah",
+        "listing": "Adventure Holiday Camp",
+        "dates": "21–25 Jul 2026",
+        "status": "completed"
+      },
+      {
+        "child": "Ava Robinson",
+        "childId": "c-ava",
+        "listing": "Little Movers Gymnastics",
+        "dates": "21–25 Jul 2026",
+        "status": "completed"
+      },
+      {
+        "child": "Leo Nguyen",
+        "childId": "c-leo",
+        "listing": "Summer Multi-Sports Camp",
+        "dates": "4–8 Aug 2026",
+        "status": "confirmed"
+      }
+    ],
+    "/api/library": {
+      "settings": {
+        "providerName": "Sunshine Holiday Camps",
+        "providerNameMode": "business",
+        "billing": {
+          "businessName": "Sunshine Holiday Camps Ltd",
+          "email": "hello@sunshinecamps.co.uk",
+          "phone": "01992 555 0123",
+          "address": "Loughton Manor, High Road, Loughton, Essex IG10 4AA"
+        },
+        "safeguarding": {
+          "notifyParentAccident": true,
+          "notifyParentIncident": false,
+          "notifyStaffAcknowledged": true,
+          "requireAcknowledgement": false,
+          "dslTitle": "Designated Safeguarding Lead (DSL)",
+          "dslName": "Sarah Mitchell",
+          "dslEmail": "sarah@sunshinecamps.co.uk",
+          "contacts": {
+            "nspccPhone": "0808 800 5000",
+            "policePhone": "999 (emergency) / 101",
+            "authorities": [
+              {
+                "id": "essex",
+                "name": "Essex",
+                "ladoName": "Essex LADO",
+                "ladoPhone": "03330 139 797",
+                "socialCarePhone": "0345 603 7627",
+                "outOfHoursPhone": "0345 606 1212"
+              },
+              {
+                "id": "redbridge",
+                "name": "Redbridge",
+                "ladoName": "Redbridge LADO",
+                "ladoPhone": "020 8708 5350",
+                "socialCarePhone": "020 8708 3885",
+                "outOfHoursPhone": "020 8708 5897"
+              }
+            ],
+            "extra": [
+              {
+                "label": "Ofsted concerns line",
+                "phone": "0300 123 4666"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "/api/incidents": [
+      {
+        "id": "inc-1001",
+        "kind": "incident",
+        "date": "2026-08-10",
+        "time": "14:20",
+        "childName": "Oliver Bennett",
+        "childId": "c-oliver",
+        "location": "Loughton Manor — Main hall",
+        "description": "Pushed another child during a game of dodgeball; both were upset but there was no injury. Separated and spoke with both boys, who were playing together again by home time.",
+        "severity": "minor",
+        "incidentType": "Rough play",
+        "actionTaken": "Time to calm down; both children spoken to; reminded of the rules",
+        "witnesses": "Tom Bradley (coach)",
+        "shareWithParent": true,
+        "parentNotified": true,
+        "parentNotifiedAt": "2026-08-10T15:05:00Z",
+        "parentNotifiedHow": "In person at pickup",
+        "followUp": "Monitor at tomorrow's session",
+        "recordedByName": "Tom Bradley",
+        "acknowledgedAt": "2026-08-10T18:30:00Z",
+        "acknowledgedBy": "Emma Bennett",
+        "createdAt": "2026-08-10T15:04:00Z",
+        "concernCategory": "Child-on-child abuse (bullying, harassment)",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex",
+        "dslLog": [
+          {
+            "id": "c1",
+            "key": "monitor",
+            "label": "Manage internally — monitor & review",
+            "note": "Low level; both children fine. Noted for pattern-watching.",
+            "at": "2026-08-10T15:10:00Z",
+            "by": "Sarah Mitchell",
+            "done": true,
+            "doneAt": "2026-08-10T15:10:00Z"
+          }
+        ],
+        "notes": [
+          {
+            "by": "Tom Bradley",
+            "role": "staff",
+            "text": "Logged after the session; both boys fine and playing together again by home time.",
+            "at": "2026-08-10T15:06:00Z"
+          },
+          {
+            "by": "Emma Bennett",
+            "role": "parent",
+            "text": "Thanks for letting me know — I've had a chat with Oliver this evening.",
+            "at": "2026-08-10T18:32:00Z"
+          }
+        ]
+      },
+      {
+        "id": "inc-1002",
+        "kind": "incident",
+        "date": "2026-08-08",
+        "time": "11:10",
+        "childName": "Amelia Hughes",
+        "childId": "c-amelia",
+        "location": "Buckhurst Hill Primary — Playground",
+        "description": "Became very upset and withdrawn after lunch and said she 'didn't want to go home'. Comforted and stayed with her keyworker for the afternoon.",
+        "severity": "moderate",
+        "incidentType": "Emotional / dysregulation",
+        "actionTaken": "1:1 support; offered a quiet space; mum phoned",
+        "witnesses": "Priya Shah",
+        "shareWithParent": false,
+        "parentNotified": true,
+        "parentNotifiedAt": "2026-08-08T12:00:00Z",
+        "parentNotifiedHow": "By phone",
+        "followUp": "Check in with mum at the end of the week",
+        "recordedByName": "Priya Shah",
+        "createdAt": "2026-08-08T11:40:00Z",
+        "concernCategory": "Welfare concern / early help",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex",
+        "dslLog": [
+          {
+            "id": "d1",
+            "key": "early-help",
+            "label": "Early help assessment",
+            "note": "Discussed with mum; agreed to start an early help conversation.",
+            "reviewDate": "2026-08-22",
+            "at": "2026-08-08T12:15:00Z",
+            "by": "Sarah Mitchell",
+            "done": false
+          }
+        ]
+      },
+      {
+        "id": "inc-1003",
+        "kind": "incident",
+        "date": "2026-08-07",
+        "time": "15:45",
+        "childName": "Jack Thompson",
+        "childId": "c-jack",
+        "location": "Chigwell Sports Hall",
+        "description": "Swore repeatedly at a coach after being asked to wait his turn and refused to rejoin the game. Calmed down after about ten minutes and apologised.",
+        "severity": "minor",
+        "incidentType": "Language / swearing",
+        "actionTaken": "Reminded of expectations; short break; rejoined the activity",
+        "shareWithParent": false,
+        "parentNotified": false,
+        "recordedByName": "Daniel O'Connor",
+        "createdAt": "2026-08-07T16:00:00Z",
+        "concernCategory": "Welfare concern / early help",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex"
+      },
+      {
+        "id": "inc-1004",
+        "kind": "incident",
+        "date": "2026-08-05",
+        "time": "10:30",
+        "childName": "Isla Richardson",
+        "childId": "c-isla",
+        "location": "Epping Forest Centre — Forest School",
+        "description": "Disclosed that an older sibling 'hits her' at home. Recorded her exact words; no leading questions were asked. Reassured her and kept her with a familiar adult.",
+        "severity": "serious",
+        "incidentType": "Other",
+        "actionTaken": "Listened, reassured, recorded verbatim; did not question further",
+        "shareWithParent": false,
+        "parentNotified": false,
+        "recordedByName": "Sarah Mitchell",
+        "createdAt": "2026-08-05T10:55:00Z",
+        "concernCategory": "Disclosure / allegation by a child",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex",
+        "dslLog": [
+          {
+            "id": "a1",
+            "key": "childrens-social-care",
+            "label": "Refer to children's social care (MASH)",
+            "note": "Called Essex MASH and gave a verbal referral; written referral to follow within 48h.",
+            "reviewDate": "2026-08-12",
+            "at": "2026-08-05T11:10:00Z",
+            "by": "Sarah Mitchell",
+            "done": false
+          },
+          {
+            "id": "a2",
+            "key": "inform-parents",
+            "label": "Consult / inform parents or carers",
+            "note": "Agreed with MASH not to inform the sibling's household yet.",
+            "at": "2026-08-05T11:25:00Z",
+            "by": "Sarah Mitchell",
+            "done": true,
+            "doneAt": "2026-08-05T11:25:00Z"
+          }
+        ]
+      },
+      {
+        "id": "inc-1005",
+        "kind": "incident",
+        "date": "2026-08-04",
+        "time": "13:15",
+        "childName": "Harry Patel",
+        "childId": "c-harry",
+        "location": "Loughton Manor — Astro pitch",
+        "description": "Fell during football and grazed his knee, then threw the ball at a peer in frustration afterwards. Knee cleaned and he was helped to calm down before rejoining.",
+        "severity": "moderate",
+        "injury": "Grazed knee",
+        "incidentType": "Unsafe behaviour",
+        "actionTaken": "First aid to the knee; talked through the frustration; rejoined",
+        "firstAider": "Tom Bradley",
+        "witnesses": "Two peers on the pitch",
+        "shareWithParent": true,
+        "parentNotified": true,
+        "parentNotifiedAt": "2026-08-04T17:00:00Z",
+        "parentNotifiedHow": "At pickup",
+        "recordedByName": "Tom Bradley",
+        "updatedAt": "2026-08-05T09:00:00Z",
+        "createdAt": "2026-08-04T13:40:00Z",
+        "attachments": [
+          "/uploads/harry-knee-graze.jpg"
+        ],
+        "concernCategory": "Welfare concern / early help",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex",
+        "bodyMap": [
+          {
+            "view": "front",
+            "x": 45,
+            "y": 78,
+            "n": 1,
+            "note": "Graze to right knee, cleaned"
+          }
+        ]
+      },
+      {
+        "id": "inc-1006",
+        "kind": "incident",
+        "date": "2026-08-03",
+        "time": "09:50",
+        "childName": "Sophie Clarke",
+        "childId": "c-sophie",
+        "location": "Woodford Green Prep",
+        "description": "Arrived with bruising on her upper arm and said 'I fell off my bike'. Observation recorded factually and a body map completed; DSL informed.",
+        "severity": "serious",
+        "incidentType": "Other",
+        "actionTaken": "Recorded observation; body map completed; DSL informed",
+        "shareWithParent": false,
+        "parentNotified": false,
+        "recordedByName": "Sarah Mitchell",
+        "updatedAt": "2026-08-03T16:45:00Z",
+        "createdAt": "2026-08-03T10:00:00Z",
+        "attachments": [
+          "/uploads/sophie-arm-1.jpg",
+          "/uploads/sophie-arm-2.jpg"
+        ],
+        "concernCategory": "Physical abuse",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex",
+        "bodyMap": [
+          {
+            "view": "front",
+            "x": 32,
+            "y": 38,
+            "n": 1,
+            "note": "Bruise ~3cm, upper right arm"
+          },
+          {
+            "view": "back",
+            "x": 60,
+            "y": 30,
+            "n": 2,
+            "note": "Faint mark, left shoulder blade"
+          }
+        ],
+        "dslLog": [
+          {
+            "id": "b1",
+            "key": "monitor",
+            "label": "Manage internally — monitor & review",
+            "note": "No threshold met yet; body map recorded, will watch for further marks.",
+            "reviewDate": "2026-08-17",
+            "at": "2026-08-03T10:05:00Z",
+            "by": "Sarah Mitchell",
+            "done": false
+          },
+          {
+            "id": "b2",
+            "key": "inform-parents",
+            "label": "Consult / inform parents or carers",
+            "note": "Mentioned the mark to mum at pickup; she confirmed the bike fall.",
+            "at": "2026-08-03T16:40:00Z",
+            "by": "Sarah Mitchell",
+            "done": true,
+            "doneAt": "2026-08-03T16:40:00Z"
+          }
+        ]
+      },
+      {
+        "id": "inc-1007",
+        "kind": "incident",
+        "date": "2026-07-30",
+        "time": "14:00",
+        "childName": "Freddie Morgan",
+        "childId": "c-freddie",
+        "location": "Chigwell Sports Hall",
+        "description": "Repeatedly excluded another child from the team and made unkind comments about their kit. Talked through kindness with the group and reshuffled the teams.",
+        "severity": "minor",
+        "incidentType": "Bullying / unkindness",
+        "actionTaken": "Discussed kindness; both children supported; group reshuffled",
+        "witnesses": "Priya Shah",
+        "shareWithParent": true,
+        "parentNotified": true,
+        "parentNotifiedAt": "2026-07-30T17:30:00Z",
+        "parentNotifiedHow": "By phone",
+        "recordedByName": "Priya Shah",
+        "createdAt": "2026-07-30T14:15:00Z",
+        "concernCategory": "Child-on-child abuse (bullying, harassment)",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex",
+        "dslLog": [
+          {
+            "id": "e1",
+            "key": "monitor",
+            "label": "Manage internally — monitor & review",
+            "at": "2026-07-30T14:25:00Z",
+            "by": "Sarah Mitchell",
+            "done": true,
+            "doneAt": "2026-07-30T14:25:00Z"
+          }
+        ],
+        "notes": [
+          {
+            "by": "Priya Shah",
+            "role": "staff",
+            "text": "Reshuffled the teams so everyone gets a turn — kept a closer eye for the rest of the session.",
+            "at": "2026-07-30T14:20:00Z"
+          },
+          {
+            "by": "Laura Morgan",
+            "role": "parent",
+            "text": "Appreciate you dealing with it. We'll have a talk with Freddie too.",
+            "at": "2026-07-30T19:10:00Z"
+          }
+        ]
+      },
+      {
+        "id": "inc-1008",
+        "kind": "incident",
+        "date": "2026-07-28",
+        "time": "12:30",
+        "childName": "Grace Walker",
+        "childId": "c-grace",
+        "location": "Buckhurst Hill Primary",
+        "description": "Mentioned she hadn't had breakfast 'again' and seemed very hungry at lunch. Gave her a snack and noted the comment.",
+        "severity": "moderate",
+        "incidentType": "Other",
+        "actionTaken": "Provided food; noted the pattern; will monitor",
+        "shareWithParent": false,
+        "parentNotified": false,
+        "followUp": "Watch for a repeat; start an early-help conversation if it continues",
+        "recordedByName": "Daniel O'Connor",
+        "createdAt": "2026-07-28T12:45:00Z",
+        "concernCategory": "Neglect",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex"
+      },
+      {
+        "id": "inc-1009",
+        "kind": "incident",
+        "date": "2026-07-24",
+        "time": "15:30",
+        "childName": "Noah Edwards",
+        "childId": "c-noah",
+        "location": "Epping Forest Centre",
+        "description": "Showed another child an inappropriate video on his phone during break. Phone was taken and stored, and we had an online-safety chat with the group.",
+        "severity": "moderate",
+        "incidentType": "Online / device",
+        "actionTaken": "Device removed and stored; parents to collect; online-safety chat delivered",
+        "witnesses": "Tom Bradley",
+        "shareWithParent": true,
+        "parentNotified": true,
+        "parentNotifiedAt": "2026-07-24T16:10:00Z",
+        "parentNotifiedHow": "By phone",
+        "recordedByName": "Tom Bradley",
+        "acknowledgedAt": "2026-07-24T19:00:00Z",
+        "acknowledgedBy": "Rachel Edwards",
+        "createdAt": "2026-07-24T15:50:00Z",
+        "attachments": [
+          "/uploads/noah-device-note.jpg"
+        ],
+        "concernCategory": "Online / digital harm",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Redbridge",
+        "dslLog": [
+          {
+            "id": "f1",
+            "key": "monitor",
+            "label": "Manage internally — monitor & review",
+            "note": "Online-safety chat done; parents collected the phone.",
+            "at": "2026-07-24T15:45:00Z",
+            "by": "Sarah Mitchell",
+            "done": true,
+            "doneAt": "2026-07-24T15:45:00Z"
+          },
+          {
+            "id": "f2",
+            "key": "inform-parents",
+            "label": "Consult / inform parents or carers",
+            "at": "2026-07-24T16:00:00Z",
+            "by": "Sarah Mitchell",
+            "done": true,
+            "doneAt": "2026-07-24T16:00:00Z"
+          }
+        ],
+        "notes": [
+          {
+            "by": "Rachel Edwards",
+            "role": "parent",
+            "text": "So sorry — we've spoken to Noah about what's appropriate and removed the app.",
+            "at": "2026-07-24T19:05:00Z"
+          }
+        ]
+      },
+      {
+        "id": "inc-1010",
+        "kind": "incident",
+        "date": "2026-07-22",
+        "time": "10:15",
+        "childName": "Ava Robinson",
+        "childId": "c-ava",
+        "location": "Loughton Manor — Main hall",
+        "description": "Bit another child on the hand during a squabble over toys; the skin was not broken. Both children were comforted and the hand was checked.",
+        "severity": "minor",
+        "incidentType": "Physical",
+        "actionTaken": "Both children comforted; first aider checked the hand; parents told at pickup",
+        "firstAider": "Priya Shah",
+        "shareWithParent": true,
+        "parentNotified": true,
+        "parentNotifiedAt": "2026-07-22T16:30:00Z",
+        "parentNotifiedHow": "At pickup",
+        "recordedByName": "Priya Shah",
+        "createdAt": "2026-07-22T10:30:00Z",
+        "concernCategory": "Child-on-child abuse (bullying, harassment)",
+        "subject": "child",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex"
+      },
+      {
+        "id": "inc-1011",
+        "kind": "incident",
+        "date": "2026-07-18",
+        "time": "16:20",
+        "childName": "Mark Reynolds (Coach)",
+        "location": "Chigwell Sports Hall",
+        "description": "A parent raised that a coach used a raised voice and firmly grabbed a child's arm to move them. Account recorded; the coach is not on shift pending review.",
+        "severity": "serious",
+        "incidentType": "Other",
+        "actionTaken": "Coach stood down pending review; LADO to be consulted the same working day",
+        "witnesses": "Parent (reporting) and one assistant",
+        "shareWithParent": false,
+        "parentNotified": false,
+        "recordedByName": "Sarah Mitchell",
+        "createdAt": "2026-07-18T16:40:00Z",
+        "concernCategory": "Allegation against a member of staff / volunteer",
+        "subject": "staff",
+        "reportedTo": "Designated Safeguarding Lead (DSL) · Sarah Mitchell",
+        "localAuthority": "Essex",
+        "dslLog": [
+          {
+            "id": "g1",
+            "key": "lado",
+            "label": "Refer to the LADO",
+            "note": "Rang the Essex LADO within one working day; advice logged, coach remains stood down.",
+            "reviewDate": "2026-07-21",
+            "at": "2026-07-18T16:45:00Z",
+            "by": "Sarah Mitchell",
+            "done": true,
+            "doneAt": "2026-07-21T09:30:00Z"
+          },
+          {
+            "id": "g2",
+            "key": "inform-parents",
+            "label": "Consult / inform parents or carers",
+            "note": "Kept the reporting parent updated on the process.",
+            "at": "2026-07-18T17:30:00Z",
+            "by": "Sarah Mitchell",
+            "done": true,
+            "doneAt": "2026-07-18T17:30:00Z"
+          }
+        ]
+      }
+    ]
+  },
+  "moments": {
+    "/api/me": {
+      "role": "freelancer"
+    },
+    "/api/library": null,
+    "/api/listings": [
+      {
+        "id": "l-multisports",
+        "title": "Summer Multi-Sports Camp"
+      },
+      {
+        "id": "l-football",
+        "title": "Football Academy Week"
+      },
+      {
+        "id": "l-forest",
+        "title": "Forest School Adventure"
+      },
+      {
+        "id": "l-gymnastics",
+        "title": "Gymnastics Holiday Camp"
+      },
+      {
+        "id": "l-drama",
+        "title": "Stage & Drama Camp"
+      },
+      {
+        "id": "l-swim",
+        "title": "Swim & Splash Week"
+      },
+      {
+        "id": "l-science",
+        "title": "Mini Scientists Camp"
+      }
+    ],
+    "/api/moments/taggable": [
+      {
+        "childId": "c1",
+        "name": "Olivia Bennett",
+        "photoConsent": true,
+        "parentName": "Sarah Bennett",
+        "email": "sarah.bennett@gmail.com",
+        "listing": "Summer Multi-Sports Camp",
+        "postcode": "GU1 4AP"
+      },
+      {
+        "childId": "c2",
+        "name": "Jack Thompson",
+        "photoConsent": true,
+        "parentName": "Laura Thompson",
+        "email": "laura.t@outlook.com",
+        "listing": "Football Academy Week",
+        "postcode": "GU2 7XH"
+      },
+      {
+        "childId": "c3",
+        "name": "Amelia Clarke",
+        "photoConsent": false,
+        "parentName": "Emma Clarke",
+        "email": "emma.clarke@gmail.com",
+        "listing": "Forest School Adventure",
+        "postcode": "GU1 2RT"
+      },
+      {
+        "childId": "c4",
+        "name": "Harry Wilson",
+        "photoConsent": true,
+        "parentName": "James Wilson",
+        "email": "j.wilson@yahoo.co.uk",
+        "listing": "Summer Multi-Sports Camp",
+        "postcode": "GU7 1DB"
+      },
+      {
+        "childId": "c5",
+        "name": "Sophie Turner",
+        "photoConsent": true,
+        "parentName": "Rachel Turner",
+        "email": "rachel.turner@gmail.com",
+        "listing": "Gymnastics Holiday Camp",
+        "postcode": "GU4 8PN"
+      },
+      {
+        "childId": "c6",
+        "name": "Charlie Evans",
+        "photoConsent": false,
+        "parentName": "Daniel Evans",
+        "email": "dan.evans@hotmail.com",
+        "listing": "Football Academy Week",
+        "postcode": "GU3 3LM"
+      },
+      {
+        "childId": "c7",
+        "name": "Isla Robinson",
+        "photoConsent": true,
+        "parentName": "Hannah Robinson",
+        "email": "hannah.r@gmail.com",
+        "listing": "Forest School Adventure",
+        "postcode": "GU1 1AA"
+      },
+      {
+        "childId": "c8",
+        "name": "George Walker",
+        "photoConsent": true,
+        "parentName": "Michael Walker",
+        "email": "m.walker@gmail.com",
+        "listing": "Swim & Splash Week",
+        "postcode": "GU5 9QP"
+      },
+      {
+        "childId": "c9",
+        "name": "Freya Hughes",
+        "photoConsent": true,
+        "parentName": "Katie Hughes",
+        "email": "katie.hughes@gmail.com",
+        "listing": "Stage & Drama Camp",
+        "postcode": "GU2 4BW"
+      },
+      {
+        "childId": "c10",
+        "name": "Noah Patel",
+        "photoConsent": true,
+        "parentName": "Priya Patel",
+        "email": "priya.patel@gmail.com",
+        "listing": "Mini Scientists Camp",
+        "postcode": "GU7 2SR"
+      },
+      {
+        "childId": "c11",
+        "name": "Ruby Morgan",
+        "photoConsent": true,
+        "parentName": "Chloe Morgan",
+        "email": "chloe.morgan@gmail.com",
+        "listing": "Gymnastics Holiday Camp",
+        "postcode": "GU1 3EF"
+      },
+      {
+        "childId": "c12",
+        "name": "Leo Cooper",
+        "photoConsent": false,
+        "parentName": "Sam Cooper",
+        "email": "sam.cooper@gmail.com",
+        "listing": "Summer Multi-Sports Camp",
+        "postcode": "GU4 7HG"
+      }
+    ],
+    "/api/moments": [
+      {
+        "id": "m1",
+        "photoUrl": "https://picsum.photos/seed/moment-football-1/900/900",
+        "caption": "Jack had a fantastic time on the field today, scoring goals in our mini tournament and came back beaming!",
+        "activity": "Sports",
+        "photoType": "child",
+        "date": "2026-08-11",
+        "listingId": "l-football",
+        "childIds": [
+          "c2",
+          "c4"
+        ],
+        "childNames": [
+          "Jack Thompson",
+          "Harry Wilson"
+        ],
+        "postedByName": "Coach Danny",
+        "createdAt": "2026-08-11T10:42:00.000Z",
+        "comments": [
+          {
+            "by": "p-laura",
+            "byName": "Laura Thompson",
+            "role": "parent",
+            "text": "He hasn't stopped talking about his hat-trick! Thank you so much.",
+            "at": "2026-08-11T16:05:00.000Z",
+            "marketing": true
+          },
+          {
+            "by": "s-danny",
+            "byName": "Coach Danny",
+            "role": "staff",
+            "text": "He was brilliant Laura — a real team player today.",
+            "at": "2026-08-11T16:20:00.000Z"
+          }
+        ]
+      },
+      {
+        "id": "m2",
+        "photoUrl": "https://picsum.photos/seed/moment-art-2/900/900",
+        "caption": "Olivia spent the morning being really creative, painting a picture to bring home. A really lovely day all round.",
+        "activity": "Arts & crafts",
+        "photoType": "child",
+        "date": "2026-08-11",
+        "listingId": "l-multisports",
+        "childIds": [
+          "c1"
+        ],
+        "childNames": [
+          "Olivia Bennett"
+        ],
+        "postedByName": "Miss Priya",
+        "createdAt": "2026-08-11T11:15:00.000Z",
+        "comments": [
+          {
+            "by": "p-sarah",
+            "byName": "Sarah Bennett",
+            "role": "parent",
+            "text": "This is going straight on the fridge. She's so proud of it!",
+            "at": "2026-08-11T17:30:00.000Z",
+            "marketing": true
+          }
+        ]
+      },
+      {
+        "id": "m3",
+        "photoUrl": "https://picsum.photos/seed/moment-forestwork-3/900/900",
+        "caption": "The children built the most incredible den in the woodland this afternoon — proper teamwork.",
+        "activity": "Outdoors",
+        "photoType": "work",
+        "date": "2026-08-11",
+        "listingId": "l-forest",
+        "childIds": [
+          "c3",
+          "c7"
+        ],
+        "childNames": [
+          "Amelia Clarke",
+          "Isla Robinson"
+        ],
+        "postedByName": "Ranger Tom",
+        "createdAt": "2026-08-11T14:05:00.000Z",
+        "comments": []
+      },
+      {
+        "id": "m4",
+        "photoUrl": "https://picsum.photos/seed/moment-gym-4/900/900",
+        "caption": "Sophie grew in confidence on the beam today and nailed her cartwheel — such a happy afternoon!",
+        "activity": "Free play",
+        "photoType": "child",
+        "date": "2026-08-10",
+        "listingId": "l-gymnastics",
+        "childIds": [
+          "c5",
+          "c11"
+        ],
+        "childNames": [
+          "Sophie Turner",
+          "Ruby Morgan"
+        ],
+        "postedByName": "Miss Rachel",
+        "createdAt": "2026-08-10T13:20:00.000Z",
+        "comments": [
+          {
+            "by": "p-rachel",
+            "byName": "Rachel Turner",
+            "role": "parent",
+            "text": "She showed me her cartwheel three times when she got home. Amazing progress!",
+            "at": "2026-08-10T18:10:00.000Z"
+          },
+          {
+            "by": "p-chloe",
+            "byName": "Chloe Morgan",
+            "role": "parent",
+            "text": "Ruby loved every second, thank you team.",
+            "at": "2026-08-10T19:02:00.000Z",
+            "marketing": true
+          }
+        ]
+      },
+      {
+        "id": "m5",
+        "photoUrl": "https://picsum.photos/seed/moment-science-5/900/900",
+        "caption": "Noah was a brilliant little scientist today, making a fizzy volcano experiment and was so proud!",
+        "activity": "Science",
+        "photoType": "child",
+        "date": "2026-08-10",
+        "listingId": "l-science",
+        "childIds": [
+          "c10"
+        ],
+        "childNames": [
+          "Noah Patel"
+        ],
+        "postedByName": "Dr Amina",
+        "createdAt": "2026-08-10T15:40:00.000Z",
+        "comments": [
+          {
+            "by": "p-priya",
+            "byName": "Priya Patel",
+            "role": "parent",
+            "text": "He wants to do the volcano again at home now! So engaged.",
+            "at": "2026-08-10T20:15:00.000Z"
+          }
+        ]
+      },
+      {
+        "id": "m6",
+        "photoUrl": "https://picsum.photos/seed/moment-lunch-6/900/900",
+        "caption": "Snack time was a hit for the whole group — everyone tried the fruit skewers.",
+        "activity": "Lunch & snack",
+        "photoType": "child",
+        "date": "2026-08-10",
+        "listingId": "l-multisports",
+        "childIds": [
+          "c1",
+          "c4",
+          "c12"
+        ],
+        "childNames": [
+          "Olivia Bennett",
+          "Harry Wilson",
+          "Leo Cooper"
+        ],
+        "postedByName": "Miss Priya",
+        "createdAt": "2026-08-10T12:05:00.000Z",
+        "comments": []
+      },
+      {
+        "id": "m7",
+        "photoUrl": "https://picsum.photos/seed/moment-drama-7/900/900",
+        "caption": "Freya shone in drama today, performing in our end of day show — a real highlight of the day.",
+        "activity": "Drama",
+        "photoType": "child",
+        "date": "2026-08-07",
+        "listingId": "l-drama",
+        "childIds": [
+          "c9"
+        ],
+        "childNames": [
+          "Freya Hughes"
+        ],
+        "postedByName": "Mr Oliver",
+        "createdAt": "2026-08-07T15:55:00.000Z",
+        "comments": [
+          {
+            "by": "p-katie",
+            "byName": "Katie Hughes",
+            "role": "parent",
+            "text": "We came to watch and she was the star of the show. Wonderful week.",
+            "at": "2026-08-07T18:40:00.000Z",
+            "marketing": true
+          },
+          {
+            "by": "s-oliver",
+            "byName": "Mr Oliver",
+            "role": "staff",
+            "text": "A natural performer — hope to see her back next holidays!",
+            "at": "2026-08-07T19:00:00.000Z"
+          }
+        ]
+      },
+      {
+        "id": "m8",
+        "photoUrl": "https://picsum.photos/seed/moment-swim-8/900/900",
+        "caption": "George did brilliantly in the pool today, swimming widths with the floats. Such a happy afternoon!",
+        "activity": "Swimming",
+        "photoType": "child",
+        "date": "2026-08-06",
+        "listingId": "l-swim",
+        "childIds": [
+          "c8"
+        ],
+        "childNames": [
+          "George Walker"
+        ],
+        "postedByName": "Coach Beth",
+        "createdAt": "2026-08-06T11:30:00.000Z",
+        "comments": [
+          {
+            "by": "p-michael",
+            "byName": "Michael Walker",
+            "role": "parent",
+            "text": "First time swimming a full width! Over the moon.",
+            "at": "2026-08-06T17:20:00.000Z"
+          }
+        ]
+      },
+      {
+        "id": "m9",
+        "photoUrl": "https://picsum.photos/seed/moment-footballwork-9/900/900",
+        "caption": "The squad designed their own team crests before kick-off — brilliant imaginations on display.",
+        "activity": "Arts & crafts",
+        "photoType": "work",
+        "date": "2026-08-05",
+        "listingId": "l-football",
+        "childIds": [
+          "c2",
+          "c6"
+        ],
+        "childNames": [
+          "Jack Thompson",
+          "Charlie Evans"
+        ],
+        "postedByName": "Coach Danny",
+        "createdAt": "2026-08-05T10:10:00.000Z",
+        "comments": []
+      },
+      {
+        "id": "m10",
+        "photoUrl": "https://picsum.photos/seed/moment-forest-10/900/900",
+        "caption": "Isla loved hunting for bugs and minibeasts today and came back beaming!",
+        "activity": "Outdoors",
+        "photoType": "child",
+        "date": "2026-08-04",
+        "listingId": "l-forest",
+        "childIds": [
+          "c7"
+        ],
+        "childNames": [
+          "Isla Robinson"
+        ],
+        "postedByName": "Ranger Tom",
+        "createdAt": "2026-08-04T14:25:00.000Z",
+        "comments": [
+          {
+            "by": "p-hannah",
+            "byName": "Hannah Robinson",
+            "role": "parent",
+            "text": "She found a stag beetle and told the whole family about it at dinner!",
+            "at": "2026-08-04T19:30:00.000Z",
+            "marketing": true
+          }
+        ]
+      },
+      {
+        "id": "m11",
+        "photoUrl": "https://picsum.photos/seed/moment-multisport-11/900/900",
+        "caption": "Great team spirit from Harry today, racing in the relay games. A really lovely day all round.",
+        "activity": "Sports",
+        "photoType": "child",
+        "date": "2026-07-31",
+        "listingId": "l-multisports",
+        "childIds": [
+          "c4"
+        ],
+        "childNames": [
+          "Harry Wilson"
+        ],
+        "postedByName": "Miss Priya",
+        "createdAt": "2026-07-31T13:50:00.000Z",
+        "comments": []
+      },
+      {
+        "id": "m12",
+        "photoUrl": "https://picsum.photos/seed/moment-gymwork-12/900/900",
+        "caption": "Ruby and the group made their own medals ready for our end-of-week showcase.",
+        "activity": "Arts & crafts",
+        "photoType": "work",
+        "date": "2026-07-30",
+        "listingId": "l-gymnastics",
+        "childIds": [
+          "c11",
+          "c5"
+        ],
+        "childNames": [
+          "Ruby Morgan",
+          "Sophie Turner"
+        ],
+        "postedByName": "Miss Rachel",
+        "createdAt": "2026-07-30T11:00:00.000Z",
+        "comments": [
+          {
+            "by": "p-chloe",
+            "byName": "Chloe Morgan",
+            "role": "parent",
+            "text": "The medal is now hanging on her bedroom door. So sweet!",
+            "at": "2026-07-30T18:45:00.000Z"
+          }
+        ]
+      },
+      {
+        "id": "m13",
+        "photoUrl": "https://picsum.photos/seed/moment-play-13/900/900",
+        "caption": "Lots of giggles from Charlie today, building an amazing fort and making lovely new friends.",
+        "activity": "Free play",
+        "photoType": "work",
+        "date": "2026-07-29",
+        "listingId": "l-football",
+        "childIds": [
+          "c6"
+        ],
+        "childNames": [
+          "Charlie Evans"
+        ],
+        "postedByName": "Coach Danny",
+        "createdAt": "2026-07-29T14:40:00.000Z",
+        "comments": []
+      },
+      {
+        "id": "m14",
+        "photoUrl": "https://picsum.photos/seed/moment-swim-14/900/900",
+        "caption": "A lovely outdoor adventure for the whole group — pond dipping and bird spotting in the sunshine.",
+        "activity": "Outdoors",
+        "photoType": "child",
+        "date": "2026-07-28",
+        "listingId": "l-forest",
+        "childIds": [
+          "c7",
+          "c3"
+        ],
+        "childNames": [
+          "Isla Robinson",
+          "Amelia Clarke"
+        ],
+        "postedByName": "Ranger Tom",
+        "createdAt": "2026-07-28T15:10:00.000Z",
+        "comments": [
+          {
+            "by": "p-hannah",
+            "byName": "Hannah Robinson",
+            "role": "parent",
+            "text": "These weekly photos make my day, thank you for sharing them.",
+            "at": "2026-07-28T20:00:00.000Z",
+            "marketing": true
+          }
+        ]
+      }
+    ]
+  },
+  "documents": {
+    "/api/me": {
+      "role": "freelancer"
+    },
+    "/api/documents": [
+      {
+        "id": "doc_001",
+        "title": "Child Protection & Safeguarding Policy 2026",
+        "category": "Policies",
+        "url": "https://files.activityos.uk/docs/safeguarding-policy-2026.pdf",
+        "fileType": "application/pdf",
+        "notes": "Reviewed annually — next review Apr 2027",
+        "uploadedByName": "Rachael Gilbert",
+        "createdAt": "2026-04-12T09:15:00.000Z"
+      },
+      {
+        "id": "doc_002",
+        "title": "Health & Safety Policy",
+        "category": "Policies",
+        "url": "https://files.activityos.uk/docs/health-safety-policy.pdf",
+        "fileType": "application/pdf",
+        "notes": "Signed off by lead",
+        "uploadedByName": "Rachael Gilbert",
+        "createdAt": "2026-03-02T11:40:00.000Z"
+      },
+      {
+        "id": "doc_003",
+        "title": "Behaviour Management Policy",
+        "category": "Policies",
+        "url": "https://files.activityos.uk/docs/behaviour-management.pdf",
+        "fileType": "application/pdf",
+        "uploadedByName": "Rachael Gilbert",
+        "createdAt": "2026-02-18T14:05:00.000Z"
+      },
+      {
+        "id": "doc_004",
+        "title": "Multi-Sports Camp — Site Risk Assessment (Treehouse)",
+        "category": "Risk assessments",
+        "url": "https://files.activityos.uk/docs/ra-treehouse-multisports.pdf",
+        "fileType": "application/pdf",
+        "notes": "Valid for Summer 2026 term",
+        "uploadedByName": "Tom Fletcher",
+        "createdAt": "2026-07-01T08:30:00.000Z"
+      },
+      {
+        "id": "doc_005",
+        "title": "Forest School Activity Risk Assessment",
+        "category": "Risk assessments",
+        "url": "https://files.activityos.uk/docs/ra-forest-school.pdf",
+        "fileType": "application/pdf",
+        "notes": "Includes fire-pit and tool-use controls",
+        "uploadedByName": "Tom Fletcher",
+        "createdAt": "2026-06-20T10:12:00.000Z"
+      },
+      {
+        "id": "doc_006",
+        "title": "Off-Site Trip Risk Assessment — Woburn Safari",
+        "category": "Risk assessments",
+        "url": "https://files.activityos.uk/docs/ra-trip-woburn.pdf",
+        "fileType": "application/pdf",
+        "uploadedByName": "Tom Fletcher",
+        "createdAt": "2026-07-28T16:45:00.000Z"
+      },
+      {
+        "id": "doc_007",
+        "title": "Public Liability Insurance Certificate 2026/27",
+        "category": "Insurance",
+        "url": "https://files.activityos.uk/docs/public-liability-2026.pdf",
+        "fileType": "application/pdf",
+        "notes": "£10m cover — expires 31 Mar 2027",
+        "uploadedByName": "Rachael Gilbert",
+        "createdAt": "2026-04-01T09:00:00.000Z"
+      },
+      {
+        "id": "doc_008",
+        "title": "Employers' Liability Insurance Certificate",
+        "category": "Insurance",
+        "url": "https://files.activityos.uk/docs/employers-liability-2026.pdf",
+        "fileType": "application/pdf",
+        "notes": "Displayed at all venues",
+        "uploadedByName": "Rachael Gilbert",
+        "createdAt": "2026-04-01T09:05:00.000Z"
+      },
+      {
+        "id": "doc_009",
+        "title": "Paediatric First Aid Certificate — Sarah Whitmore",
+        "category": "Certificates",
+        "url": "https://files.activityos.uk/docs/pfa-sarah-whitmore.pdf",
+        "fileType": "application/pdf",
+        "notes": "3-year — expires Sep 2027",
+        "uploadedByName": "Sarah Whitmore",
+        "createdAt": "2026-05-14T13:20:00.000Z"
+      },
+      {
+        "id": "doc_010",
+        "title": "Enhanced DBS Certificate — James Okoro",
+        "category": "Certificates",
+        "url": "https://files.activityos.uk/docs/dbs-james-okoro.pdf",
+        "fileType": "application/pdf",
+        "notes": "On the update service",
+        "uploadedByName": "James Okoro",
+        "createdAt": "2026-06-05T15:30:00.000Z"
+      },
+      {
+        "id": "doc_011",
+        "title": "Level 3 Coaching Award — Priya Patel",
+        "category": "Certificates",
+        "url": "https://files.activityos.uk/docs/coaching-l3-priya-patel.jpg",
+        "fileType": "image/jpeg",
+        "uploadedByName": "Priya Patel",
+        "createdAt": "2026-01-22T10:00:00.000Z"
+      },
+      {
+        "id": "doc_012",
+        "title": "Fire Evacuation Procedure — Wolverton Hall",
+        "category": "Procedures",
+        "url": "https://files.activityos.uk/docs/fire-evac-wolverton.pdf",
+        "fileType": "application/pdf",
+        "notes": "Muster point: main car park",
+        "uploadedByName": "Tom Fletcher",
+        "createdAt": "2026-07-10T08:00:00.000Z"
+      },
+      {
+        "id": "doc_013",
+        "title": "Medication Administration Procedure",
+        "category": "Procedures",
+        "url": "https://files.activityos.uk/docs/medication-procedure.pdf",
+        "fileType": "application/pdf",
+        "uploadedByName": "Sarah Whitmore",
+        "createdAt": "2026-05-30T12:15:00.000Z"
+      },
+      {
+        "id": "doc_014",
+        "title": "Parent Handbook — Summer 2026",
+        "category": "Other",
+        "url": "https://files.activityos.uk/docs/parent-handbook-summer-2026.pdf",
+        "fileType": "application/pdf",
+        "notes": "Sent to all booked families",
+        "uploadedByName": "Rachael Gilbert",
+        "createdAt": "2026-06-28T09:45:00.000Z"
+      },
+      {
+        "id": "doc_015",
+        "title": "Staff Code of Conduct",
+        "category": "Other",
+        "url": "https://files.activityos.uk/docs/staff-code-of-conduct.pdf",
+        "fileType": "application/pdf",
+        "uploadedByName": "Rachael Gilbert",
+        "createdAt": "2026-03-15T11:00:00.000Z"
+      }
+    ]
   }
 };
