@@ -94,8 +94,9 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
     const noBooking = !((openInfo.info.attending ?? []).length);
     const log: ReactNode[] = [];
     if (acts.firstAid !== false) log.push(tile("⛑️", "First aid", "#be123c", `/${portal}/accidents?child=${name}`, noBooking));
-    if (acts.incident !== false) log.push(tile("⚠️", "Incident", "#b45309", `/${portal}/${incidentSeg}?child=${name}`, noBooking));
+    if (acts.incident !== false) log.push(tile("⚠️", "Log concern", "#b45309", `/${portal}/${incidentSeg}?child=${name}`, noBooking));
     if (acts.medication !== false) log.push(tile("💊", "Medication", "#15803d", `/${portal}/medication?child=${name}`, noBooking));
+    if (acts.meals !== false) log.push(tile("🍽️", "Meals", "#0f766e", `/${portal}/meals?child=${name}`, noBooking));
     if (acts.moments !== false) log.push(tile("📸", "Moment", "#7c3aed", `/${portal}/moments?child=${name}`, noBooking));
     const fam: ReactNode[] = [];
     if (acts.message !== false) fam.push(tile("💬", "Message parent", "#1d3a8f", `/${portal}/messages?compose=1&emails=${email}`, !openInfo.email));
@@ -106,7 +107,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
         <div className="flex w-full flex-wrap gap-2">{wheel("Log", "#be123c", log)}{wheel("Family", "#1d3a8f", fam)}</div>
         {noBooking && (
           <div className="mt-2 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-            First aid, incidents, medication &amp; moments unlock once <b>{openInfo.name}</b> has a booking — they&rsquo;re on-the-day records that only reach the parent for a child who&rsquo;s attending.
+            First aid, concerns, medication, meals &amp; moments unlock once <b>{openInfo.name}</b> has a booking — they&rsquo;re on-the-day records that only reach the parent for a child who&rsquo;s attending.
           </div>
         )}
       </div>

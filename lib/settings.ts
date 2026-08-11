@@ -615,7 +615,7 @@ export interface TenantSettings {
       mainContact?: boolean; emergency?: boolean; password?: boolean; school?: boolean; bookingNotes?: boolean; attending?: boolean;
     };
     /** Which quick-link actions appear on each register row. Each defaults to on. */
-    actions?: { firstAid?: boolean; incident?: boolean; medication?: boolean; message?: boolean; moments?: boolean; email?: boolean; whatsapp?: boolean };
+    actions?: { firstAid?: boolean; incident?: boolean; medication?: boolean; meals?: boolean; message?: boolean; moments?: boolean; email?: boolean; whatsapp?: boolean };
   };
 
   /**
