@@ -100,7 +100,7 @@ export function LocationDetail({ venue, venues, onBack }: { venue: Venue; venues
           {tab === "roles" && <RolesTab jobTitles={jobTitles} onChange={saveJobTitles} />}
           {tab === "staff" && (
             <StaffTab venue={venue} venues={venues} store={store} persist={persist} jobTitles={jobTitles} permRoles={permRoles}
-              assignedHere={assignedHere} flash={flash} />
+              onAddJobTitle={(t) => saveJobTitles([...new Set([...jobTitles, t])])} assignedHere={assignedHere} flash={flash} />
           )}
           {tab === "scheduling" && <SchedulingTab value={scheduling} onChange={saveScheduling} />}
           {tab === "timesheets" && <TimesheetsTab venueName={venue.name} />}
@@ -168,9 +168,9 @@ function RolesTab({ jobTitles, onChange }: { jobTitles: string[]; onChange: (nex
 }
 
 // ── Staff (the main tab) ────────────────────────────────────────────────────
-function StaffTab({ venue, venues, store, persist, jobTitles, permRoles, assignedHere, flash }: {
+function StaffTab({ venue, venues, store, persist, jobTitles, permRoles, onAddJobTitle, assignedHere, flash }: {
   venue: Venue; venues: Venue[]; store: Store; persist: (s: Store) => void; jobTitles: string[]; permRoles: string[];
-  assignedHere: LocStaff[]; flash: (m: string) => void;
+  onAddJobTitle: (t: string) => void; assignedHere: LocStaff[]; flash: (m: string) => void;
 }) {
   const [view, setView] = useState<"staff" | "site">("staff");
   const [q, setQ] = useState("");
@@ -306,7 +306,12 @@ function StaffTab({ venue, venues, store, persist, jobTitles, permRoles, assigne
           <Input value={nName} onChange={(e) => setNName(e.target.value)} placeholder="Full name" className="w-full" />
           <Input type="email" value={nEmail} onChange={(e) => setNEmail(e.target.value)} placeholder="Email address" className="w-full" />
           <div><label className="mb-1 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Access role — permissions</label><Select value={nPerm} onChange={(e) => setNPerm(e.target.value)} className="w-full"><option value="">— Access role —</option>{permRoles.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
-          <div><label className="mb-1 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Job title — rostered as</label><Select value={nJob} onChange={(e) => setNJob(e.target.value)} className="w-full"><option value="">— Job title —</option>{jobTitles.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
+          <div>
+            <label className="mb-1 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Job title — rostered as
+              <button type="button" onClick={() => { const t = window.prompt("New job title")?.trim(); if (t) { onAddJobTitle(t); setNJob(t); } }} className="ml-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">＋ Add</button>
+            </label>
+            <Select value={nJob} onChange={(e) => setNJob(e.target.value)} className="w-full"><option value="">— Job title —</option>{jobTitles.map((r) => <option key={r} value={r}>{r}</option>)}</Select>
+          </div>
         </div>
         <div className="mt-3 flex justify-end"><button type="button" disabled={!nName.trim() || !nEmail.trim()} onClick={sendInvite} className="rounded-full bg-[#0f7a43] px-6 py-2.5 text-[13px] font-extrabold text-white hover:brightness-105 disabled:opacity-40">Send invite</button></div>
       </Card>

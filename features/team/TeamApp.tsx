@@ -44,7 +44,7 @@ const roleStyle = (id: string): React.CSSProperties => { const t = roleTone(id);
 const initials = (s: string) => s.split(/[\s@.]+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
 
 export function TeamApp() {
-  const { settings } = useSettings();
+  const { settings, save } = useSettings();
   const roles = (settings.roles?.length ? settings.roles : DEFAULT_ROLES).filter((r) => !r.owner || true); // include all
   const [me, setMe] = useState<Me | null>(null);
   const [invites, setInvites] = useState<Invite[] | null>(null);
@@ -215,12 +215,14 @@ export function TeamApp() {
             <div className="mt-1 text-[11px] text-[var(--ink-3)]">Sets what they can see &amp; do — edit in <Link href="/company/setup?tab=roles" className="font-bold text-[#1d3a8f] underline">Roles &amp; permissions</Link>.</div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Job title — rostered as</label>
+            <label className="mb-1 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Job title — rostered as
+              <button type="button" onClick={() => { const t = window.prompt("New job title")?.trim(); if (t) { void save({ settings: { ...settings, staffRoles: [...new Set([...jobTitles, t])] } }); setJobTitle(t); } }} className="ml-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">＋ Add</button>
+            </label>
             <Select value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full">
               <option value="">— Job title —</option>
               {jobTitles.map((j) => <option key={j} value={j}>{j}</option>)}
             </Select>
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">The role they&rsquo;re scheduled as (Lifeguard, Site Manager…) — the coloured rows in the rota. Manage the list on a location&rsquo;s <b>Roles</b> tab.</div>
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">The role they&rsquo;re scheduled as (Lifeguard, Site Manager…) — the coloured rows in the rota. Manage the full list on a location&rsquo;s <b>Roles</b> tab.</div>
           </div>
         </div>
 
