@@ -12,7 +12,7 @@ upgrade prompt at the plan's included limit.
 ## Owed (Amir)
 1. **Store the sub-role + assignment on the invite.** The client already sends
    extra fields on `POST /api/invites`: `staffRole` (a `settings.roles[].id`) and
-   `assignment: { mode: "all" | "some", ids: listingId[] }`. Add them to the zod
+   `assignment: { mode: "all"|"listings"|"locations", ids: id[] }`. Add them to the zod
    schema + the invite doc. (Right now they're stripped; the UI mirrors them in
    localStorage so they display — that's temporary.)
 2. **Return them on `GET /api/invites`** so the team list is authoritative (drop

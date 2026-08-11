@@ -22,9 +22,10 @@ import { PageHero } from "@/components/OperatorPage";
 interface Invite { token: string; role: "franchise" | "staff"; createdAt: string; usedBy: string | null; sentTo?: string | null }
 interface Me { role: string; tenantName: string | null }
 interface Listing { id: string; title: string }
+interface Venue { id: string; name: string }
 interface SubCurrent { plan: string; staffLimit?: number | null; staffUsed?: number | null; details?: { name?: string } }
 
-type Assignment = { mode: "all" | "some"; ids: string[] };
+type Assignment = { mode: "all" | "listings" | "locations"; ids: string[] };
 type LocalMeta = { staffRole?: string; assignment?: Assignment; status?: "active" | "deactivated" };
 const META_KEY = "aos.team.meta.v1";
 const loadMeta = (): Record<string, LocalMeta> => { try { return JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch { return {}; } };
@@ -48,6 +49,7 @@ export function TeamApp() {
   const [me, setMe] = useState<Me | null>(null);
   const [invites, setInvites] = useState<Invite[] | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
+  const [venues, setVenues] = useState<Venue[]>([]);
   const [sub, setSub] = useState<SubCurrent | null>(null);
   const [meta, setMeta] = useState<Record<string, LocalMeta>>({});
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export function TeamApp() {
   // Invite form
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("coach");
-  const [assignMode, setAssignMode] = useState<"all" | "some">("all");
+  const [assignMode, setAssignMode] = useState<"all" | "listings" | "locations">("all");
   const [assignIds, setAssignIds] = useState<string[]>([]);
 
   const refresh = useCallback(() => {
@@ -70,6 +72,7 @@ export function TeamApp() {
     setMeta(loadMeta());
     apiGet<Me>("/api/me").then(setMe).catch(() => {});
     apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1").then((rows) => setListings(rows.map((r) => ({ id: r.id, title: r.title || r.name || "Untitled listing" })))).catch(() => {});
+    apiGet<{ venues?: Venue[] } | null>("/api/library").then((lib) => setVenues(lib?.venues ?? [])).catch(() => {});
     apiGet<{ current: SubCurrent }>("/api/subscription").then((p) => setSub(p.current)).catch(() => {});
     refresh();
   }, [refresh]);
@@ -95,7 +98,7 @@ export function TeamApp() {
     setBusy(true); setError(null); setSentNote(null); setCapNote(null);
     try {
       const to = email.trim();
-      const assignment: Assignment = { mode: assignMode, ids: assignMode === "some" ? assignIds : [] };
+      const assignment: Assignment = { mode: assignMode, ids: assignMode === "all" ? [] : assignIds };
       const r = await apiPost<{ token: string; sentTo: string | null }>("/api/invites", {
         role,
         ...(to ? { email: to } : {}),
@@ -125,7 +128,10 @@ export function TeamApp() {
   };
   const toggleAssign = (id: string) => setAssignIds((xs) => (xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]));
   const roleName = (id?: string) => roles.find((r) => r.id === id)?.name ?? "Staff";
-  const assignLabel = (a?: Assignment) => (!a || a.mode === "all" ? "All listings" : `${a.ids.length} listing${a.ids.length === 1 ? "" : "s"}`);
+  const assignLabel = (a?: Assignment) =>
+    !a || a.mode === "all" ? "All listings"
+      : a.mode === "locations" ? `${a.ids.length} location${a.ids.length === 1 ? "" : "s"}`
+        : `${a.ids.length} listing${a.ids.length === 1 ? "" : "s"}`;
 
   const memberRow = (r: (typeof rows)[number], tone: "active" | "deactivated") => (
     <Card key={r.token} className={"flex flex-wrap items-center gap-3 p-3 " + (tone === "deactivated" ? "opacity-60" : "")}>
@@ -203,14 +209,14 @@ export function TeamApp() {
         <div className="mt-3">
           <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Assign to</label>
           <div className="flex flex-wrap gap-1.5">
-            {(["all", "some"] as const).map((m) => (
-              <button key={m} type="button" onClick={() => setAssignMode(m)} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold"
+            {([["all", "All listings"], ["locations", "By location"], ["listings", "By listing"]] as const).map(([m, label]) => (
+              <button key={m} type="button" onClick={() => { setAssignMode(m); setAssignIds([]); }} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold"
                 style={assignMode === m ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-                {m === "all" ? "All listings" : "Choose listings"}
+                {label}
               </button>
             ))}
           </div>
-          {assignMode === "some" && (
+          {assignMode === "listings" && (
             <div className="mt-2 flex flex-wrap gap-1.5">
               {listings.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No listings yet.</span>}
               {listings.map((l) => {
@@ -224,7 +230,21 @@ export function TeamApp() {
               })}
             </div>
           )}
-          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Assigned people only see the registers, trips, timetable and children for these listings.</div>
+          {assignMode === "locations" && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {venues.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No locations yet — add them in Locations.</span>}
+              {venues.map((v) => {
+                const on = assignIds.includes(v.id);
+                return (
+                  <button key={v.id} type="button" onClick={() => toggleAssign(v.id)} className="rounded-lg border px-2.5 py-1 text-[12px] font-semibold"
+                    style={on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
+                    {on ? "✓ " : ""}📍 {v.name}
+                  </button>
+                );
+              })}
+            </div>
+          )}
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Assigned people only see the registers, trips, timetable and children for these{assignMode === "locations" ? " locations" : " listings"}. A location covers every listing that runs there.</div>
         </div>
 
         {capNote && (
