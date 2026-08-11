@@ -204,9 +204,11 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         // both). We await the narration afterwards so the step's timing is the
         // longer of the two.
         const say = line(step.line);
+        // clickIn first — it often OPENS a panel (e.g. a calculator row) that the
+        // fill then types into.
+        if (step.clickIn) { for (const [t, w] of step.clickIn) { clickWithin(t, w); await sleep(620); if (!alive()) return; } }
         if (step.fill) { for (const [f, v] of step.fill) { fillInFrame(f, v); await sleep(Math.max(560, v.length * 55 + 260)); if (!alive()) return; } }
         if (step.pick) { for (const t of step.pick) { pickInFrame(t); await sleep(520); if (!alive()) return; } }
-        if (step.clickIn) { for (const [t, w] of step.clickIn) { clickWithin(t, w); await sleep(620); if (!alive()) return; } }
         await say; if (!alive()) return;
         // Advance a real multi-step builder (e.g. click the wizard's "Next ›")
         // AFTER narrating, so the next step spotlights the panel that appears.

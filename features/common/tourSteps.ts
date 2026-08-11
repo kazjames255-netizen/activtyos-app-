@@ -113,8 +113,9 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
       { find: "+ Add a period", click: true, fill: [["Period title", "Holiday Club — Full Day"], ["Start", "09:00"], ["Finish", "15:30"]], line: "First, your periods — the time windows in a day. Click Add a period, give it a name, and set the start and finish times.", advance: "Add period" },
       { find: "+ Add a pass", click: true, fill: [["Pass name", "Full-week pass"], ["Days", "5"]], line: "Then your passes — how long a parent books. Click Add a pass, name it, and set the number of days.", advance: "Add pass" },
       { find: "Build your blocks", clickIn: [["+ Add to block", "Full day"], ["+ Add to block", "5-day week pass"]], line: "Now build the block — click Add to block on the periods and passes you want, and they drop in here on the right.", },
-      { find: "Name your block", fill: [["Name your block", "Summer Holiday Multi-Sports Camp"]], line: "Name the block, and the calculator prices every day-and-pass combination for you.", advance: "Move to Block Library" },
-      { find: "Move to Block Library", line: "It lands in your Block Library, ready to drop onto any listing — build it once, reuse it everywhere." },
+      { find: "Name your block", fill: [["Name your block", "Summer Holiday Multi-Sports Camp"]], line: "Name the block, then Move to Block Library.", advance: "Move to Block Library" },
+      { find: "Pricing calculator", clickIn: [["longest", "Pricing calculator"]], fill: [["Price for this", "195"]], line: "Every saved block gets a pricing calculator. Set the full price for the longest pass — I'll make it a hundred and ninety-five pounds — and watch each shorter pass price itself automatically.", },
+      { find: "Pricing calculator", line: "That's a block built and priced — in your library now, ready to drop onto any listing. Build it once, reuse it everywhere." },
     ],
   },
   tasks: {

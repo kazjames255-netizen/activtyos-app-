@@ -138,12 +138,30 @@ const DEMO_BLOCK: Fixtures = {
   ],
 };
 
+// Keep the blocks builder short — just a few periods & passes — so the block
+// being built (column 3) and the pricing calculator are visible without
+// scrolling. The library block's own resolved passes still drive the calculator.
+const BLOCKS_TRIM: Fixtures = {
+  "/api/periods": [
+    { id: "per-fullday", title: "Full day", start: "09:00", finish: "15:30" },
+    { id: "per-morning", title: "Morning only", start: "09:00", finish: "12:30" },
+    { id: "per-late", title: "Late pick-up", start: "15:30", finish: "17:30" },
+  ],
+  "/api/passes": [
+    { id: "pass-5day", name: "5-day week pass", days: 5, details: "Monday to Friday — our best-value full week." },
+    { id: "pass-3day", name: "3-day pass", days: 3 },
+    { id: "pass-1day", name: "Single day pass", days: 1 },
+  ],
+};
+
 export const TOUR_FIXTURES: Record<string, Fixtures> = {
   // Agent-authored fixtures for the other pages; the hand-tuned dashboard wins.
   ...GENERATED_FIXTURES,
   ...LB_FIXTURES,
   // Give the listings tour a block to pull into the Tickets step.
   listings: { ...LB_FIXTURES.listings, ...DEMO_BLOCK },
+  // Fewer periods/passes so the built block + calculator fit on screen.
+  blocks: { ...LB_FIXTURES.blocks, ...BLOCKS_TRIM },
   dash: DASH,
   setup: SETUP,
 };
