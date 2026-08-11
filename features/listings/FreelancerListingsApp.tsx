@@ -8,6 +8,7 @@ import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
+import { ListingTour } from "./ListingTour";
 import { useTenantSettings } from "@/lib/settings";
 import { VenueMap } from "./VenueMap";
 import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
@@ -415,7 +416,7 @@ export function FreelancerListingsApp() {
         </div>
       </div>
 
-      <TourLauncher view="listings" />
+      <TourLauncher view="listings" custom={<ListingTour onTab={(t) => setTab(t as Tab)} />} />
 
       {/* Tabs */}
       <div className="mb-3 flex gap-1.5 border-b border-[var(--line)]">

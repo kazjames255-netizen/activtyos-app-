@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { LiveTour } from "./LiveTour";
 import { GuidedTour } from "./GuidedTour";
@@ -12,12 +12,12 @@ import { TOUR_CONFIGS } from "./tourConfigs";
 // walkthrough in a popup. The tour only mounts while the popup is open (so the
 // voice/iframe don't run in the background), and closing it unmounts the tour,
 // which stops the narration.
-export function TourLauncher({ view, portal: portalProp }: { view: string; portal?: string }) {
+export function TourLauncher({ view, portal: portalProp, custom }: { view: string; portal?: string; custom?: ReactNode }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const portal = portalProp || pathname?.split("/")[1] || "freelancer";
   const hasLive = !!TOUR_STEPS[view] && !!TOUR_FIXTURES[view];
-  const hasTour = hasLive || !!TOUR_CONFIGS[view];
+  const hasTour = !!custom || hasLive || !!TOUR_CONFIGS[view];
 
   useEffect(() => {
     if (!open) return;
@@ -66,7 +66,9 @@ export function TourLauncher({ view, portal: portalProp }: { view: string; porta
             >
               ×
             </button>
-            {hasLive ? (
+            {custom ? (
+              custom
+            ) : hasLive ? (
               <LiveTour view={view} portal={portal} steps={TOUR_STEPS[view]} />
             ) : (
               <GuidedTour config={TOUR_CONFIGS[view]} />

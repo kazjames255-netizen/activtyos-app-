@@ -5,6 +5,7 @@ import { api as apiCall, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
 import { TourLauncher } from "@/features/common/TourLauncher";
+import { BlocksTour } from "./BlocksTour";
 import { PageHero } from "@/components/OperatorPage";
 import * as blocksApi from "./blocksApi";
 import type { ApiBundle, BundleInput } from "./blocksApi";
@@ -268,7 +269,7 @@ export function BlocksApp() {
         </div>
       )}
 
-      <TourLauncher view="blocks" />
+      <TourLauncher view="blocks" custom={<BlocksTour />} />
 
       {loading ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>

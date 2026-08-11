@@ -280,7 +280,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
     const pollIv = hasSpeech ? window.setInterval(() => { if (window.speechSynthesis.getVoices().length) { voice = pickVoice(); window.clearInterval(pollIv); } else if (++voicePoll > 24) window.clearInterval(pollIv); }, 250) : 0;
     if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
     // Turning sound on hides the on-screen caption (the voice replaces it).
-    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "🔊 Sound"; capEl.style.display = on ? "none" : ""; };
+    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "▶ Play with sound"; capEl.style.display = on ? "none" : ""; };
     replayBtn.onclick = () => { run(0); };
     if (backBtn) backBtn.onclick = () => { run(currentIdx - 1); };
     if (fwdBtn) fwdBtn.onclick = () => { run(currentIdx + 1); };
@@ -302,7 +302,7 @@ export function ListingTour({ onTab }: { onTab?: (t: string) => void } = {}) {
           <button type="button" className="tctl-btn ico lt-fwd" title="Skip forward" aria-label="Skip forward">⏭</button>
         </div>
         <button type="button" className="tctl-btn lt-replay" title="Start again">↺ Replay</button>
-        <button type="button" className="tctl-btn lt-sound">🔊 Sound</button>
+        <button type="button" className="tctl-btn lt-sound">▶ Play with sound</button>
       </div>
       <div className="lt-stage">
         <div className="lt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>

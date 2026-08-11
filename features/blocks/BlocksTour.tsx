@@ -244,7 +244,7 @@ export function BlocksTour() {
     const pollIv = hasSpeech ? window.setInterval(() => { if (window.speechSynthesis.getVoices().length) { voice = pickVoice(); window.clearInterval(pollIv); } else if (++voicePoll > 24) window.clearInterval(pollIv); }, 250) : 0;
     if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
     replayBtn.onclick = () => { run(); };
-    soundBtn.onclick = () => { soundOn = !soundOn; soundBtn.classList.toggle("on", soundOn); soundBtn.textContent = soundOn ? "🔊 Sound on" : "🔊 Sound"; if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
+    soundBtn.onclick = () => { soundOn = !soundOn; soundBtn.classList.toggle("on", soundOn); soundBtn.textContent = soundOn ? "🔊 Sound on" : "▶ Play with sound"; if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(); };
     run();
 
     return () => { dead = true; token++; window.clearInterval(pollIv); if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; } };
@@ -267,7 +267,7 @@ export function BlocksTour() {
       <div className="tctl bt-controls">
         <span className="tctl-count bt-count" />
         <button type="button" className="tctl-btn bt-replay" title="Start again">↺ Replay</button>
-        <button type="button" className="tctl-btn bt-sound">🔊 Sound</button>
+        <button type="button" className="tctl-btn bt-sound">▶ Play with sound</button>
       </div>
     </div>
   );
