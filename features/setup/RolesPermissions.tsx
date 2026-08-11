@@ -6,23 +6,26 @@ import { Button, Input } from "@/components/ui";
 
 // ── Roles & permissions matrix (company / head-office) ─────────────────────
 // Define named roles and, per area, how much access each gets: None / View /
-// Edit. Phase 1 = model + editor; enforcing it (hiding nav, gating actions) and
-// picking a role on each invite come next. This just captures the access model.
+// Edit, plus a per-role scope (all sites vs assigned listings only). Phase 1 =
+// model + editor; enforcing it and picking a role on each invite come next.
 
-const LEVELS: { v: CapLevel; label: string; short: string; fg: string; bg: string }[] = [
-  { v: "none", label: "None", short: "N", fg: "var(--ink-3)", bg: "var(--panel)" },
-  { v: "view", label: "View", short: "V", fg: "#1d3a8f", bg: "#e7effc" },
-  { v: "edit", label: "Edit", short: "E", fg: "#0f7a43", bg: "#e2f4ea" },
+const LEVELS: { v: CapLevel; label: string; fg: string; bg: string; ring: string }[] = [
+  { v: "none", label: "None", fg: "var(--ink-3)", bg: "var(--surface)", ring: "var(--line)" },
+  { v: "view", label: "View", fg: "#1d3a8f", bg: "#eaf1fd", ring: "#bcd3f5" },
+  { v: "edit", label: "Edit", fg: "#0f7a43", bg: "#e4f5eb", ring: "#a9dcc0" },
 ];
 
-const uid = () => `role-${Math.random().toString(36).slice(2, 9)}`;
+const GROUP_ICON: Record<string, string> = {
+  "Overview": "📊", "Sell & take bookings": "🎟", "Run the day": "📆", "Safeguarding": "🛡",
+  "Team & learning": "👥", "Money": "💷", "Growth": "📣", "Communication": "✉️", "Admin": "⚙️",
+};
 
-// The distinct area groups, in ROLE_CAPS order.
+const uid = () => `role-${Math.random().toString(36).slice(2, 9)}`;
 const GROUPS = ROLE_CAPS.reduce<string[]>((acc, c) => (acc.includes(c.group) ? acc : [...acc, c.group]), []);
 
 function LevelPicker({ value, disabled, onChange }: { value: CapLevel; disabled?: boolean; onChange: (v: CapLevel) => void }) {
   return (
-    <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)]" role="group">
+    <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-[3px]">
       {LEVELS.map((l) => {
         const on = value === l.v;
         return (
@@ -31,11 +34,13 @@ function LevelPicker({ value, disabled, onChange }: { value: CapLevel; disabled?
             type="button"
             disabled={disabled}
             onClick={() => onChange(l.v)}
-            title={l.label}
-            className="h-7 w-8 text-[11px] font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-70"
-            style={on ? { background: l.bg, color: l.fg } : { background: "transparent", color: "var(--ink-3)" }}
+            aria-pressed={on}
+            className="rounded-lg px-2.5 py-1 text-[11.5px] font-extrabold transition-all disabled:cursor-not-allowed disabled:opacity-60"
+            style={on
+              ? { background: l.bg, color: l.fg, boxShadow: `inset 0 0 0 1px ${l.ring}, 0 1px 2px rgba(20,40,90,.08)` }
+              : { color: "var(--ink-3)" }}
           >
-            {l.short}
+            {l.label}
           </button>
         );
       })}
@@ -57,62 +62,72 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
   const addRole = () => {
     const name = newName.trim();
     if (!name) return;
-    // Start a new role from "Coach / Staff" if present, else all-None.
     const base = list.find((r) => r.id === "coach")?.caps ?? Object.fromEntries(ROLE_CAPS.map((c) => [c.key, "none" as CapLevel]));
-    onChange([...list, { id: uid(), name, caps: { ...base } }]);
+    onChange([...list, { id: uid(), name, scope: "assigned", caps: { ...base } }]);
     setNewName("");
   };
   const resetDefaults = () => onChange(DEFAULT_ROLES.map((r) => ({ ...r, caps: { ...r.caps } })));
 
   return (
     <div className="flex flex-col gap-3.5">
-      <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3 text-[12.5px] leading-relaxed text-[#1d3a8f]">
-        Set what each role can reach — <b>None</b> hides it, <b>View</b> is read-only, <b>Edit</b> lets them change it.
-        Owner always has full access. Each role also has a <b>scope</b>: <b>All sites</b> or <b>Assigned only</b> — assigned roles
-        see just the listings they&rsquo;re on (registers, trips, timetable, calendar, listings). Booking <b>cost</b> and the
-        dashboard <b>money tiles</b> show only to roles with Finances access.
-        <span className="block text-[#5b6b86]">Next step: pick a role when you invite each person, and these rules take effect across the app and sidebar.</span>
+      {/* Intro + legend */}
+      <div className="rounded-2xl border border-[#dbe6fb] bg-gradient-to-b from-[#f6faff] to-[#eef4fd] px-4 py-3.5">
+        <div className="text-[12.5px] leading-relaxed text-[#1d3a8f]">
+          Set what each role can reach, then give each person a role when you invite them.
+          Each role also has a <b>scope</b> — <b>All sites</b> or <b>Assigned only</b> (they see just the listings they&rsquo;re on).
+          Booking <b>cost</b> and dashboard <b>money tiles</b> show only to roles with Finances access.
+        </div>
+        <div className="mt-2.5 flex flex-wrap items-center gap-2">
+          {LEVELS.map((l) => (
+            <span key={l.v} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={{ background: l.bg, color: l.fg, boxShadow: `inset 0 0 0 1px ${l.ring}` }}>
+              <span className="h-1.5 w-1.5 rounded-full" style={{ background: l.fg }} />
+              {l.label}
+              <span className="font-semibold opacity-70">{l.v === "none" ? "· hidden" : l.v === "view" ? "· read-only" : "· can change"}</span>
+            </span>
+          ))}
+        </div>
       </div>
 
-      {/* The matrix — sticky first column, scrolls sideways as roles grow. */}
-      <div className="overflow-x-auto rounded-2xl border border-[var(--line)]">
-        <table className="w-full border-collapse text-left" style={{ minWidth: 520 + list.length * 132 }}>
+      {/* Matrix */}
+      <div className="overflow-x-auto rounded-2xl border border-[var(--line)] shadow-[0_12px_30px_-22px_rgba(20,35,90,.5)]">
+        <table className="w-full border-collapse text-left" style={{ minWidth: 300 + list.length * 176 }}>
           <thead>
             <tr>
-              <th className="sticky left-0 z-10 bg-[var(--surface)] px-4 py-3 align-bottom">
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">Area</span>
+              <th className="sticky left-0 z-20 min-w-[240px] border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 align-bottom shadow-[6px_0_10px_-8px_rgba(20,35,90,.25)]">
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-3)]">Area of the app</span>
               </th>
               {list.map((r) => (
-                <th key={r.id} className="min-w-[132px] border-l border-[var(--line-2,#eef2f8)] px-3 py-2.5 align-bottom">
+                <th key={r.id} className="min-w-[176px] border-b border-l border-[var(--line)] bg-gradient-to-b from-[var(--panel)] to-[var(--surface)] px-3 py-2.5 align-bottom">
                   <div className="flex items-center justify-between gap-1">
-                    {/* Every role's name is editable — the single source, so a
-                        rename shows everywhere the role appears. */}
                     <input
                       value={r.name}
                       onChange={(e) => rename(r.id, e.target.value)}
                       title="Rename this role — used everywhere it appears"
-                      className="w-full min-w-0 rounded-md border border-transparent bg-transparent text-[12.5px] font-extrabold text-[var(--ink)] outline-none hover:border-[var(--line)] focus:border-[var(--brand)]"
+                      className="w-full min-w-0 rounded-md border border-transparent bg-transparent text-[13.5px] font-extrabold text-[var(--ink)] outline-none hover:border-[var(--line)] focus:border-[var(--brand)]"
                     />
                     {r.owner ? (
                       <span title="Full access — locked" className="flex-none text-[11px] text-[var(--ink-3)]">🔒</span>
                     ) : !r.builtin ? (
-                      <button type="button" onClick={() => remove(r.id)} title="Delete role" className="flex-none text-[13px] leading-none text-[var(--ink-3)] hover:text-[#c0392b]">×</button>
+                      <button type="button" onClick={() => remove(r.id)} title="Delete role" className="flex-none rounded px-1 text-[13px] leading-none text-[var(--ink-3)] hover:bg-[#fdebec] hover:text-[#c0392b]">×</button>
                     ) : null}
                   </div>
-                  {/* Scope: all sites vs assigned listings only */}
-                  <div className="mt-1.5 inline-flex overflow-hidden rounded-md border border-[var(--line)]">
-                    {(["all", "assigned"] as const).map((s) => {
-                      const on = (r.scope ?? "all") === s;
-                      return (
-                        <button key={s} type="button" disabled={r.owner} onClick={() => setScope(r.id, s)}
-                          title={s === "all" ? "Sees every site / listing" : "Sees only listings they're assigned to"}
-                          className="px-1.5 py-[3px] text-[9.5px] font-extrabold uppercase tracking-[0.03em] transition-colors disabled:opacity-60"
-                          style={on ? { background: "#eef4fd", color: "#1d3a8f" } : { background: "transparent", color: "var(--ink-3)" }}>
-                          {s === "all" ? "All" : "Assigned"}
-                        </button>
-                      );
-                    })}
+                  <div className="mt-1.5 flex items-center gap-1.5">
+                    <span className="text-[9.5px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Sees</span>
+                    <div className="inline-flex overflow-hidden rounded-md border border-[var(--line)]">
+                      {(["all", "assigned"] as const).map((s) => {
+                        const on = (r.scope ?? "all") === s;
+                        return (
+                          <button key={s} type="button" disabled={r.owner} onClick={() => setScope(r.id, s)}
+                            title={s === "all" ? "Sees every site / listing" : "Sees only listings they're assigned to"}
+                            className="px-2 py-[3px] text-[9.5px] font-extrabold uppercase tracking-[0.03em] transition-colors disabled:opacity-60"
+                            style={on ? { background: "#eef4fd", color: "#1d3a8f" } : { background: "transparent", color: "var(--ink-3)" }}>
+                            {s === "all" ? "All sites" : "Assigned"}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
+                  <div className="mt-1 text-[9.5px] font-semibold uppercase tracking-[0.05em] text-[var(--ink-3)]">{r.builtin ? "Built-in" : "Custom"}</div>
                 </th>
               ))}
             </tr>
@@ -121,19 +136,21 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
             {GROUPS.map((group) => (
               <Fragment key={group}>
                 <tr>
-                  <td colSpan={1 + list.length} className="sticky left-0 bg-[var(--panel)] px-4 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">
-                    {group}
+                  <td colSpan={1 + list.length} className="sticky left-0 border-t border-[var(--line)] bg-gradient-to-r from-[#eef3fb] to-transparent px-4 py-1.5">
+                    <span className="text-[10.5px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-2)]">
+                      <span className="mr-1.5">{GROUP_ICON[group] ?? "•"}</span>{group}
+                    </span>
                   </td>
                 </tr>
                 {ROLE_CAPS.filter((c) => c.group === group).map((cap) => (
-                  <tr key={cap.key} className="border-t border-[var(--line-2,#eef2f8)]">
-                    <td className="sticky left-0 z-10 bg-[var(--surface)] px-4 py-2">
-                      <div className="text-[12.5px] font-semibold text-[var(--ink)]">
-                        {cap.sensitive && <span title="Sensitive data" className="mr-1 text-[10px]">🔒</span>}
+                  <tr key={cap.key} className="group border-t border-[var(--line-2,#eef2f8)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand)_4%,transparent)]">
+                    <td className="sticky left-0 z-10 min-w-[240px] bg-[var(--surface)] px-4 py-2.5 shadow-[6px_0_10px_-8px_rgba(20,35,90,.18)] group-hover:bg-[color-mix(in_srgb,var(--brand)_4%,var(--surface))]">
+                      <div className="text-[13px] font-semibold text-[var(--ink)]">
+                        {cap.sensitive && <span title="Sensitive data" className="mr-1 text-[10.5px]">🔒</span>}
                         {cap.label}
-                        {cap.scoped && <span title="Honours the role's Assigned-only scope" className="ml-1 text-[10px] text-[var(--ink-3)]">◎</span>}
+                        {cap.scoped && <span title="Honours the role's Assigned-only scope" className="ml-1.5 text-[10px] text-[#2f6bd8]">◎</span>}
                       </div>
-                      {cap.note && <div className="text-[10.5px] leading-tight text-[var(--ink-3)]">{cap.note}</div>}
+                      {cap.note && <div className="mt-0.5 text-[10.5px] leading-tight text-[var(--ink-3)]">{cap.note}</div>}
                     </td>
                     {list.map((r) => (
                       <td key={r.id} className="border-l border-[var(--line-2,#eef2f8)] px-3 py-2 text-center">
@@ -159,7 +176,7 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") addRole(); }}
           placeholder="New role name — e.g. Senior Coach"
-          className="w-[220px]"
+          className="w-[240px]"
         />
         <Button variant="primary" onClick={addRole} disabled={!newName.trim()}>＋ Add role</Button>
         <button type="button" onClick={resetDefaults} className="ml-auto text-[12px] font-semibold text-[var(--ink-3)] underline hover:text-[var(--ink)]">
