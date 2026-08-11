@@ -38,7 +38,10 @@ const ROLE_COL: Record<string, string> = { "Lead Coach": "#2f6bd8", "Lifeguard":
 const roleCol = (r: string) => ROLE_COL[r] ?? "#64748b";
 const ROLES = ["Lead Coach", "Coach", "Lifeguard", "First Aider", "Activity Assistant"];
 
+interface Template { id: string; name: string; items: { dayOffset: number; site: string; role: string; listing?: string; season?: string; staffId: string | null; start: string; end: string }[] }
 const KEY = "aos.rota.v2";
+const TKEY = "aos.rota.templates.v1";
+const loadTpl = (): Template[] => { try { return JSON.parse(localStorage.getItem(TKEY) || "[]"); } catch { return []; } };
 function seed(): Store {
   const mon = mondayOf(new Date());
   const day = (n: number) => { const x = new Date(mon); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
@@ -99,9 +102,15 @@ export function ScheduleApp() {
   const [hover, setHover] = useState<{ id: string; top: number; left: number } | null>(null);
   const [availEdit, setAvailEdit] = useState<Staff | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [copyMenu, setCopyMenu] = useState(false);
+  const [templates, setTemplates] = useState<Template[]>([]);
+  const [tplSaveOpen, setTplSaveOpen] = useState(false);
+  const [tplName, setTplName] = useState("");
+  const [tplListOpen, setTplListOpen] = useState(false);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2600); };
 
-  useEffect(() => { setStore(load()); apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
+  useEffect(() => { setStore(load()); setTemplates(loadTpl()); apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
+  const persistTpl = (next: Template[]) => { setTemplates(next); try { localStorage.setItem(TKEY, JSON.stringify(next)); } catch { /* ignore */ } };
   const persist = (s: Store) => { setStore(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
 
   // Period dates for the current span/anchor
@@ -168,7 +177,18 @@ export function ScheduleApp() {
     flash(filled ? `Auto-filled ${filled} shift${filled === 1 ? "" : "s"}.` : "No confirmed staff free for the open shifts.");
   }
   function clearPeriod() { setAutoMenu(false); const n = periodShifts.length; persist({ ...store, shifts: store.shifts.filter((s) => !inPeriod(s)) }); flash(`Cleared ${n} shift${n === 1 ? "" : "s"}.`); }
-  function copyForward() { const len = dates.length; const copies = periodShifts.map((s, i) => ({ ...s, id: `sh${Date.now()}${i}`, date: addDays(s.date, len), in: undefined, out: undefined, locked: false })); persist({ ...store, shifts: [...store.shifts, ...copies] }); flash(`Copied ${copies.length} shift${copies.length === 1 ? "" : "s"} forward.`); }
+  function copyForward() { setCopyMenu(false); const len = dates.length; const copies = periodShifts.map((s, i) => ({ ...s, id: `sh${Date.now()}${i}`, date: addDays(s.date, len), in: undefined, out: undefined, locked: false })); persist({ ...store, shifts: [...store.shifts, ...copies] }); flash(`Copied ${copies.length} shift${copies.length === 1 ? "" : "s"} forward to the next ${span === "day" ? "day" : span === "month" ? "month" : span === "week" ? "week" : span === "2w" ? "2 weeks" : "4 weeks"}.`); }
+  function saveTemplate() {
+    const name = tplName.trim(); if (!name) return;
+    const items = periodShifts.map((s) => ({ dayOffset: Math.max(0, dates.indexOf(s.date)), site: s.site, role: s.role, listing: s.listing, season: s.season, staffId: s.staffId, start: s.start, end: s.end }));
+    persistTpl([...templates, { id: `tpl${Date.now()}`, name, items }]);
+    setTplSaveOpen(false); setTplName(""); flash(`Saved “${name}” — ${items.length} shift${items.length === 1 ? "" : "s"} in the template.`);
+  }
+  function applyTemplate(tpl: Template) {
+    const created = tpl.items.filter((it) => dates[it.dayOffset]).map((it, i) => ({ id: `sh${Date.now()}${i}`, site: it.site, role: it.role, listing: it.listing, season: it.season, staffId: it.staffId, date: dates[it.dayOffset], start: it.start, end: it.end }));
+    persist({ ...store, shifts: [...store.shifts, ...created] }); setTplListOpen(false); flash(`Applied “${tpl.name}” — added ${created.length} shift${created.length === 1 ? "" : "s"}.`);
+  }
+  function deleteTemplate(id: string) { persistTpl(templates.filter((t) => t.id !== id)); }
   function publish() { const ids = new Set(periodShifts.filter((s) => s.staffId).map((s) => s.id)); persist({ ...store, shifts: store.shifts.map((s) => (ids.has(s.id) ? { ...s, locked: true } : s)) }); flash(`Published to ${assignedStaff.size} staff — shifts locked.`); }
   const openAdd = (site_: string, role: string, c: { date: string; hour: number | null }, staffId: string | null) =>
     setDraft({ site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonF !== "all" ? seasonF : "Summer 2026", date: c.date, staffId, start: c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00", end: c.hour != null ? `${String(c.hour + 1).padStart(2, "0")}:00` : "17:00" });
@@ -209,7 +229,7 @@ export function ScheduleApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="Staff schedule" icon="🗓" lede="Build the rota by site & role or by team member, across day / week / month — with wages and on-cost." />
+      <PageHero title="Staff schedule" icon="🗓" lede="Build the rota by location & role or by team member, across day / week / month — with wages and on-cost." />
 
       <Card className="mb-3 overflow-hidden">
         <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span><span className="text-[14px] font-extrabold text-[var(--ink)]">How availability works</span><span className="ml-auto text-[12px] text-[var(--ink-3)]">{help ? "▲" : "▼"}</span></button>
@@ -218,7 +238,7 @@ export function ScheduleApp() {
 
       {/* Toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📍 <Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All sites</option>{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
+        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📍 <Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All locations</option>{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">🎟 <Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All listings</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📅 <Select value={seasonF} onChange={(e) => setSeasonF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All seasons</option>{seasonOpts.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1">
@@ -239,7 +259,14 @@ export function ScheduleApp() {
               {autoMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg"><button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Fill open shifts from confirmed staff</button><button type="button" onClick={clearPeriod} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">Clear all shifts shown</button></div>}
             </div>
             <button type="button" onClick={() => { setStore(load()); flash("Refreshed."); }} title="Refresh" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px]">↻</button>
-            <button type="button" onClick={copyForward} title="Copy this period forward" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px]">⧉</button>
+            <div className="relative">
+              <button type="button" onClick={() => setCopyMenu((v) => !v)} title="Copy schedule / templates" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">⧉ Copy ▾</button>
+              {copyMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
+                <button type="button" onClick={copyForward} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Copy schedule <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">Duplicate this view into the next period</span></button>
+                <button type="button" onClick={() => { setCopyMenu(false); setTplName(""); setTplSaveOpen(true); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Save as template <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">Reuse this week&rsquo;s pattern later</span></button>
+                <button type="button" onClick={() => { setCopyMenu(false); setTplListOpen(true); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Templates… <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">{templates.length} saved</span></button>
+              </div>}
+            </div>
             <button type="button" onClick={publish} className="rounded-full bg-[#0f7a43] px-4 py-1.5 text-[13px] font-extrabold text-white hover:brightness-105">Publish to staff · {assignedStaff.size}</button>
           </div>
         )}
@@ -333,6 +360,43 @@ export function ScheduleApp() {
               <div className="mt-3 flex flex-col gap-1.5">{alerts.map((s) => { const st = staffById[s.staffId!]; return (
                 <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{st?.name}</span><span className="text-[var(--ink-3)]">{dt(s.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {to12(s.start)}–{to12(s.end)} · {s.site}</span><span className="ml-auto flex items-center gap-1.5"><span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">⚪ Not in</span><button type="button" onClick={() => remind(s.staffId!)} className="rounded-full bg-[#1d3a8f] px-2.5 py-0.5 text-[11px] font-bold text-white hover:bg-[#16306e]">Remind</button></span></div>
               ); })}</div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Save as template */}
+      {tplSaveOpen && (
+        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[10vh]" onClick={() => setTplSaveOpen(false)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2"><span className="text-[16px]">📋</span><div className="text-[15px] font-extrabold text-[var(--ink)]">Save as template</div><button type="button" onClick={() => setTplSaveOpen(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <p className="mt-1 text-[12px] text-[var(--ink-3)]">Saves the <b>{periodShifts.length}</b> shift{periodShifts.length === 1 ? "" : "s"} shown (day, role, hours &amp; who&rsquo;s assigned) as a reusable pattern you can drop onto any week.</p>
+            <label className="mt-3 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Template name</label>
+            <Input autoFocus value={tplName} onChange={(e) => setTplName(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") saveTemplate(); }} placeholder="e.g. Standard summer camp week" className="mt-1 w-full" />
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => setTplSaveOpen(false)} className="rounded-full border border-[var(--line)] bg-white px-4 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button>
+              <button type="button" disabled={!tplName.trim() || periodShifts.length === 0} onClick={saveTemplate} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-40">Save template</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Templates picker */}
+      {tplListOpen && (
+        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setTplListOpen(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2"><span className="text-[16px]">📋</span><div className="text-[15px] font-extrabold text-[var(--ink)]">Templates</div><button type="button" onClick={() => setTplListOpen(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <p className="mt-1 text-[12px] text-[var(--ink-3)]">Apply a saved pattern onto <b>{label}</b> — it adds the shifts on the matching days.</p>
+            {templates.length === 0 ? (
+              <p className="mt-3 rounded-lg bg-[var(--panel)] px-3 py-3 text-center text-[12.5px] text-[var(--ink-3)]">No templates yet. Build a week you like, then <b>Copy ▾ → Save as template</b>.</p>
+            ) : (
+              <div className="mt-3 flex flex-col gap-1.5">{templates.map((t) => (
+                <div key={t.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5 text-[12.5px]">
+                  <div className="min-w-0 flex-1"><div className="truncate font-bold text-[var(--ink)]">{t.name}</div><div className="text-[11px] text-[var(--ink-3)]">{t.items.length} shift{t.items.length === 1 ? "" : "s"}</div></div>
+                  <button type="button" onClick={() => applyTemplate(t)} className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-bold text-white hover:bg-[#16306e]">Apply</button>
+                  <button type="button" onClick={() => deleteTemplate(t.id)} title="Delete template" className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Delete</button>
+                </div>
+              ))}</div>
             )}
           </div>
         </div>
