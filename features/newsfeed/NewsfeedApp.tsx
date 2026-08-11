@@ -6,8 +6,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Button } from "@/components/ui";
-import { HowItWorks } from "@/components/HowItWorks";
-import { InlineTour } from "@/features/common/InlineTour";
+import { TourLauncher } from "@/features/common/TourLauncher";
 import { NewsletterBuilder, NewsletterView, PostImage, NL_PALETTES, downscaleImage, newMeta, newsletterToText, newsletterToHtml, type Newsletter, type NlMeta } from "./newsletter";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -322,10 +321,7 @@ export function NewsfeedApp() {
         </div>
       </div>
 
-      <HowItWorks tour={<InlineTour view="newsfeed" />} video="Picking a post template, adding an event with RSVPs or a booking nudge, scoping who sees it, pinning and scheduling." minutes="2 min">
-        <p className="mb-2"><b className="text-[var(--ink-2)]">Start from a template.</b> An <b>Event</b> carries a date, time and RSVP; a <b>Booking nudge</b> adds a button to a listing; an <b>Urgent notice</b> is pinned and asks families to acknowledge it.</p>
-        <p><b className="text-[var(--ink-2)]">Choose who sees it and when.</b> Send to all families or just one listing’s families, pin it to the top, and publish now or schedule it for later.</p>
-      </HowItWorks>
+      <TourLauncher view="newsfeed" />
 
       {canManage && (
         <div className="mb-4 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">

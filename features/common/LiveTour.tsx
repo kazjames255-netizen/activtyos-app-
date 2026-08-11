@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { SETTINGS_OUTRO } from "./tourSteps";
 
 // A narrated walkthrough that drives the REAL page. It embeds /tour/<portal>/<view>
 // (the real component populated with demo fixtures) in an iframe, then for each
@@ -56,7 +57,8 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
     let voice: SpeechSynthesisVoice | null = null;
     let speaking: Promise<unknown> = Promise.resolve();
     let resolveReady: () => void = () => {};
-    const readyP = new Promise<void>((res) => (resolveReady = res));
+    let readyP = new Promise<void>((res) => (resolveReady = res));
+    let frameView = view; // which view the iframe currently shows
 
     const gate = () => (paused ? new Promise<void>((r) => waiters.push(r)) : Promise.resolve());
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms)).then(gate);
@@ -107,6 +109,17 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       });
     const clearHi = () => frame.contentWindow?.postMessage({ type: "tour:clear" }, "*");
 
+    // Point the iframe at a different view mid-tour (used to end on the real
+    // Settings page). Waits for that page's TourBridge to report ready again.
+    async function ensureFrame(v: string) {
+      if (v === frameView) return;
+      ready = false;
+      readyP = new Promise<void>((res) => (resolveReady = res));
+      frame.src = `/tour/${portal}/${v}`;
+      frameView = v;
+      await Promise.race([readyP, sleep(4800)]);
+    }
+
     async function moveTo(rect: DOMRect | null) {
       if (rect) {
         const cx = rect.left + Math.min(rect.width * 0.5, 90);
@@ -122,29 +135,37 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
 
     async function run(startIdx = 0) {
       const c = cfgRef.current;
+      // The page's own steps, then a shared closing tour of the real Settings
+      // page explaining its tabs — each step carries the view it belongs to.
+      const all = [
+        ...c.steps.map((s) => ({ v: view, find: s.find, line: s.line })),
+        ...SETTINGS_OUTRO.map((s) => ({ v: "setup", find: s.find, line: s.line })),
+      ];
       const tk = ++token; const alive = () => tk === token && !dead;
       if (hasSpeech) window.speechSynthesis.cancel();
       paused = false; waiters.splice(0).forEach((f) => f()); pauseBtn.textContent = "⏸";
       cursor.style.transform = "translate(34px,30px)";
       if (startIdx <= 0) {
         splash.style.display = "flex"; splash.classList.remove("hide"); void splash.offsetWidth;
+        await ensureFrame(view); // reset to the page (a prior run may have ended on Settings)
         await sleep(2200); if (!alive()) return;
         splash.classList.add("hide"); await sleep(500); splash.style.display = "none";
         currentIdx = -1; clearHi();
         await line(c.introLine); if (!alive()) return;
       } else { splash.style.display = "none"; }
       if (!ready) await Promise.race([readyP, sleep(4500)]);
-      for (let i = Math.max(0, startIdx); i < c.steps.length; i++) {
+      for (let i = Math.max(0, startIdx); i < all.length; i++) {
         currentIdx = i;
-        const rect = await spotlight(c.steps[i].find); if (!alive()) return;
+        await ensureFrame(all[i].v); if (!alive()) return;
+        const rect = await spotlight(all[i].find); if (!alive()) return;
         await moveTo(rect); if (!alive()) return;
-        await line(c.steps[i].line); if (!alive()) return;
+        await line(all[i].line); if (!alive()) return;
       }
-      currentIdx = c.steps.length; clearHi();
+      currentIdx = all.length; clearHi();
       if (!alive()) return; await line(c.doneLine);
     }
 
-    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "🔊 Sound"; capEl.style.display = on ? "none" : ""; };
+    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "▶ Play with sound"; capEl.style.display = on ? "none" : ""; };
     let vp = 0;
     const pollIv = hasSpeech ? window.setInterval(() => { if (window.speechSynthesis.getVoices().length) { voice = pickVoice(); window.clearInterval(pollIv); } else if (++vp > 24) window.clearInterval(pollIv); }, 250) : 0;
     if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
@@ -171,7 +192,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         <button type="button" className="cbtn ico lt-pause" title="Pause or resume" aria-label="Pause or resume">⏸</button>
         <button type="button" className="cbtn ico lt-fwd" title="Skip forward" aria-label="Skip forward">⏭</button>
         <button type="button" className="cbtn lt-replay" title="Start again">↺ Replay</button>
-        <button type="button" className="cbtn lt-sound">🔊 Sound</button>
+        <button type="button" className="cbtn lt-sound">▶ Play with sound</button>
       </div>
       <div className="lt-stage">
         <iframe className="lt-frame" title="walkthrough" src={`/tour/${portal}/${view}`} />

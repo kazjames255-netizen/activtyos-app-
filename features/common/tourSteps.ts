@@ -7,6 +7,15 @@ import { GENERATED_STEPS } from "./tourSteps.generated";
 // only gets a live tour when it has BOTH steps here and fixtures in
 // tourFixtures.ts — otherwise PageTour falls back to the mock GuidedTour.
 
+// Shared closing segment: every live tour ends on the REAL Settings page and
+// briefly explains what the tabs there control. LiveTour navigates the iframe
+// to /tour/<portal>/setup for these steps.
+export const SETTINGS_OUTRO: { find: string; line: string }[] = [
+  { find: "Features", line: "One last thing — almost everything you've just seen is switched on and fine-tuned here in Settings, under Setup and features." },
+  { find: "Company setup", line: "The tabs run one part of ActivityOS each: Company setup and Branding for your details and logo, Staff and workforce for your team, and Child questions for what you ask families at sign-up." },
+  { find: "Cancellations", line: "Further along you'll find Meals, Medication and Safeguarding, plus Cancellations and refunds, Seasons, Vouchers and Memberships. Open any tab to change what you've just seen." },
+];
+
 export const TOUR_STEPS: Record<string, LiveTourSteps> = {
   // Agent-authored steps for the other pages; the hand-tuned dashboard wins.
   ...GENERATED_STEPS,

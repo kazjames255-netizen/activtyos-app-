@@ -5,8 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button } from "@/components/ui";
-import { HowItWorks } from "@/components/HowItWorks";
-import { InlineTour } from "@/features/common/InlineTour";
+import { TourLauncher } from "@/features/common/TourLauncher";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Task Manager — the operator to-do system. A task hangs off a real record
@@ -300,11 +299,7 @@ export function TasksApp() {
         </div>
       </div>
 
-      <HowItWorks tour={<InlineTour view="tasks" />} video="Adding tasks fast, linking them to a booking or family, the board, and showing a task on the Events calendar." minutes="2 min">
-        <p className="mb-2"><b className="text-[var(--ink-2)]">Everything your team needs to do, in one place.</b> Add a task with the quick bar — type <b>@name</b> to assign it{noAssignee ? "" : ""}, <b>!high</b> for priority and a word like <b>tomorrow</b> for the deadline — or press <b>+ New task</b> for the full form.</p>
-        <p className="mb-2"><b className="text-[var(--ink-2)]">Link it to the real thing.</b> A task can point straight at a booking, child, parent, listing or location — the chip on the card jumps you there, so &ldquo;call the Barda family&rdquo; is one click from their booking.</p>
-        <p><b className="text-[var(--ink-2)]">Track it your way.</b> Drag cards across the board, tick <b>Done</b>, filter by <b>When</b> or priority, and optionally mirror a task onto the Events calendar so its labels, subtasks and comments show there too.</p>
-      </HowItWorks>
+      <TourLauncher view="tasks" />
 
       {/* Quick add */}
       <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">

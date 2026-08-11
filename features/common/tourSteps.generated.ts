@@ -111,12 +111,12 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
   },
   "timetable": {
     "title": "Timetable",
-    "introLine": "Welcome to the timetable builder, where your activity bank becomes a proper day-by-day camp week for staff and parents.",
-    "doneLine": "And that is your camp sorted, a full week built, refined, shared and saved from the one page.",
+    "introLine": "Welcome to the timetable builder, where your activity bank becomes a proper day-by-day activity week for staff and parents.",
+    "doneLine": "And that is your week sorted, a full week built, refined, shared and saved from the one page.",
     "steps": [
       {
         "find": "Listing & dates",
-        "line": "Kick off by pulling in your listing and ticking exactly which dates the camp runs, since everything downstream is built from what you choose here."
+        "line": "Kick off by pulling in your listing and ticking exactly which dates it runs, since everything downstream is built from what you choose here."
       },
       {
         "find": "The day",
@@ -182,7 +182,7 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
     "steps": [
       {
         "find": "Showing",
-        "line": "Start by picking your season, your camp and the day with the arrows or date picker, and the board reads that day's registers."
+        "line": "Start by picking your season, your listing and the day with the arrows or date picker, and the board reads that day's registers."
       },
       {
         "find": "Staff on duty",
@@ -213,7 +213,7 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
     "steps": [
       {
         "find": "EXPECTED",
-        "line": "Start by choosing the season, the camp and the day up here, so the whole register points at the right group before you mark a soul present."
+        "line": "Start by choosing the season, the listing and the day up here, so the whole register points at the right group before you mark a soul present."
       },
       {
         "find": "Message all attending",
@@ -561,7 +561,7 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
   },
   "tasks": {
     "title": "Tasks",
-    "introLine": "Welcome to your Task manager — proper to-dos tied to real camps, bookings and compliance, all in one tidy inbox.",
+    "introLine": "Welcome to your Task manager — proper to-dos tied to real listings, bookings and compliance, all in one tidy inbox.",
     "doneLine": "Capture it, tick it off, and never lose track of what's due across all your gigs.",
     "steps": [
       {
@@ -570,7 +570,7 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
       },
       {
         "find": "+ New task",
-        "line": "Add a task in plain English — an exclamation mark sets priority, a hash links a camp or booking, and words like tomorrow set the due date, or press New task for the full form."
+        "line": "Add a task in plain English — an exclamation mark sets priority, a hash links a listing or booking, and words like tomorrow set the due date, or press New task for the full form."
       },
       {
         "find": "One inbox across every company",

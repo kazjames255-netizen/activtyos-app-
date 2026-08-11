@@ -162,7 +162,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
       if (!alive()) return; await line(cfg.doneLine);
     }
 
-    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "🔊 Sound"; capEl.style.display = on ? "none" : ""; };
+    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "▶ Play with sound"; capEl.style.display = on ? "none" : ""; };
     // Voices load asynchronously — poll until the fixed narrator resolves.
     let vp = 0; const pollIv = hasSpeech ? window.setInterval(() => { if (window.speechSynthesis.getVoices().length) { voice = pickVoice(); window.clearInterval(pollIv); } else if (++vp > 24) window.clearInterval(pollIv); }, 250) : 0;
     if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
@@ -187,7 +187,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
           <button type="button" className="tctl-btn ico gt-fwd" title="Skip forward" aria-label="Skip forward">⏭</button>
         </div>
         <button type="button" className="tctl-btn gt-replay" title="Start again">↺ Replay</button>
-        <button type="button" className="tctl-btn gt-sound">🔊 Sound</button>
+        <button type="button" className="tctl-btn gt-sound">▶ Play with sound</button>
       </div>
       <div className="gt-stage">
         <div className="gt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>

@@ -104,8 +104,17 @@ const DASH: Fixtures = {
   "/api/library": null,
 };
 
+// The Settings page shown at the end of every tour — the tab strip renders from
+// defaults, so it only needs enough to not error.
+const SETUP: Fixtures = {
+  "/api/library": null,
+  "/api/messages/settings": {},
+  "/api/listings": [],
+};
+
 export const TOUR_FIXTURES: Record<string, Fixtures> = {
   // Agent-authored fixtures for the other pages; the hand-tuned dashboard wins.
   ...GENERATED_FIXTURES,
   dash: DASH,
+  setup: SETUP,
 };

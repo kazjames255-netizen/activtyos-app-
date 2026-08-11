@@ -9,8 +9,7 @@ import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { bookingKids, sessionIsoDates } from "@/features/bookings/helpers";
 import { uploadPlan } from "@/features/listings/planUpload";
 import { CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
-import { HowItWorks } from "@/components/HowItWorks";
-import { InlineTour } from "@/features/common/InlineTour";
+import { TourLauncher } from "@/features/common/TourLauncher";
 import { useTenantSettings, questionsFor, dobRequired, limitFor } from "@/lib/settings";
 import { QuestionFields } from "@/components/QuestionFields";
 
@@ -606,21 +605,7 @@ export function CustomersApp() {
           </>}
         />
       </div>
-      <HowItWorks
-        tour={<InlineTour view="customers" />}
-        video="Adding a family from a phone call, sending the sign-up link, and what each pipeline stage means."
-        minutes="2 min"
-      >
-        <p className="mb-2">
-          Everyone who has enquired or booked, and where each of them has got to. Bookings add
-          people on their own — you never type a family in after they&rsquo;ve booked.
-        </p>
-        <p className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-2 text-[var(--ink-2)]">
-          <b>Add a family when someone rings.</b> Take their name and email, send a sign-up link,
-          and they land in their own area with every live listing — so they can book themselves
-          without ringing back.
-        </p>
-      </HowItWorks>
+      <TourLauncher view="customers" />
 
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">

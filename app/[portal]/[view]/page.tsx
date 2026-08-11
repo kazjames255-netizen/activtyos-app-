@@ -26,7 +26,7 @@ export default async function ViewPage(props: PageProps<"/[portal]/[view]">) {
   if (!registeredView) notFound();
   return (
     <div className="p-3 sm:p-5">
-      {PROVIDER_PORTALS.has(portalKey) && <PageTour view={view} portal={portalKey} />}
+      {PROVIDER_PORTALS.has(portalKey) && <PageTour view={view} />}
       {createElement(registeredView)}
     </div>
   );

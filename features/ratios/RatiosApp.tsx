@@ -6,8 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Card } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
-import { HowItWorks } from "@/components/HowItWorks";
-import { InlineTour } from "@/features/common/InlineTour";
+import { TourLauncher } from "@/features/common/TourLauncher";
 import { useSettings, groupForAge, DEFAULT_RATIO_GROUPS, type RatioGroup } from "@/lib/settings";
 import type { ServerListing } from "@/features/listings/ListingWizard";
 
@@ -860,40 +859,7 @@ export function RatiosApp() {
       lede="Set your groups and target ratios, and track live cover as you take registers"
     >
       {/* How ratios work — folded away, with a walkthrough video to come. */}
-      <HowItWorks tour={<InlineTour view="ratios" />} video="How ratios work on this board: setting your own targets, placing children by age, the by-time view, and when EYFS applies." minutes="2 min">
-        <p className="mb-2.5">
-          <b>These are your camp&rsquo;s own ratio targets.</b> Activity &amp; coaching camps aren&rsquo;t bound by
-          statutory childcare ratios — you set them, guided by Ofsted&rsquo;s voluntary-register guidance, your
-          insurer, activity / NGB rules and a risk assessment. <b>EYFS ratios apply only if you admit children under 5.</b>
-        </p>
-
-        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-2)]">Setting your ratios</div>
-        <ol className="mb-3 ml-0 list-none space-y-1.5">
-          {[
-            <><b>Set your groups</b> in <b>Setup → Age groups &amp; rooms</b> — each group&rsquo;s age band, its <b>1&nbsp;:&nbsp;N</b> staff target, and room size. This is the one master record; every board and listing reads it.</>,
-            <><b>Take registers</b> and the day&rsquo;s children drop onto the board, sorted into groups by age.</>,
-            <><b>Add your team</b> in <b>Your team</b>, then assign each staff member to a group from the roster down the side.</>,
-            <><b>Watch live cover</b> — each card shows a 🙂 when it&rsquo;s in ratio, or how many more staff it needs. The header bar totals it for the day.</>,
-          ].map((step, i) => (
-            <li key={i} className="flex gap-2">
-              <span className="mt-[1px] flex h-[17px] w-[17px] flex-none items-center justify-center rounded-full bg-[var(--brand-2,#2f6bd8)] text-[10px] font-extrabold text-white">{i + 1}</span>
-              <span>{step}</span>
-            </li>
-          ))}
-        </ol>
-
-        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-2)]">Two ways to view the day</div>
-        <ul className="ml-0 list-none space-y-1.5">
-          <li className="flex gap-2">
-            <span className="flex-none font-bold text-[var(--ink-2)]">By age group</span>
-            <span>Cards are your age bands. Each needs one adult per your target for that age. <b>Drag a child</b> between groups to regroup them just for the day — it warns if their age doesn&rsquo;t fit the band.</span>
-          </li>
-          <li className="flex gap-2">
-            <span className="flex-none font-bold text-[var(--ink-2)]">By time</span>
-            <span>Cards are the <b>hours children are in</b> (say 9am–3pm vs 8am–5:30pm). Cover is rechecked for each window, so an early drop-off or late pickup that leaves you short shows up on its own.</span>
-          </li>
-        </ul>
-      </HowItWorks>
+      <TourLauncher view="ratios" />
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c0392b]">{error}</div>}
 
