@@ -11,7 +11,7 @@ import { LocationDetail, type Venue } from "./LocationDetail";
 
 // A demo set so the Locations area is usable before any venues are saved in the
 // library. Matches the sites used by the staff schedule.
-const DEMO_VENUES: Venue[] = [
+export const DEMO_VENUES: Venue[] = [
   { id: "v-loughton", name: "Loughton Manor First School", address: "Pitchford Avenue, Loughton", city: "Milton Keynes", kind: "place" },
   { id: "v-gullivers", name: "Gullivers Land, Milton Keynes", address: "Livingstone Drive", city: "Milton Keynes", kind: "place" },
   { id: "v-stantonbury", name: "Stantonbury Leisure Centre", address: "Stantonbury", city: "Milton Keynes", kind: "place" },

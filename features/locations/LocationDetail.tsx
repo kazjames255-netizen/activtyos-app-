@@ -23,7 +23,7 @@ export interface Venue {
 
 type LocTab = "general" | "roles" | "staff" | "scheduling" | "timesheets" | "notifications";
 const TABS: [LocTab, string][] = [
-  ["general", "General"], ["roles", "Roles"], ["staff", "Staff"],
+  ["general", "General"], ["staff", "Staff"],
   ["scheduling", "Scheduling"], ["timesheets", "Timesheets"], ["notifications", "Notifications & extensions"],
 ];
 
@@ -97,7 +97,6 @@ export function LocationDetail({ venue, venues, onBack }: { venue: Venue; venues
 
         <div className="min-w-0 flex-1">
           {tab === "general" && <GeneralTab venue={venue} />}
-          {tab === "roles" && <RolesTab jobTitles={jobTitles} onChange={saveJobTitles} />}
           {tab === "staff" && (
             <StaffTab venue={venue} venues={venues} store={store} persist={persist} jobTitles={jobTitles} permRoles={permRoles}
               onAddJobTitle={(t) => saveJobTitles([...new Set([...jobTitles, t])])} assignedHere={assignedHere} flash={flash} />
@@ -138,8 +137,10 @@ const Field = ({ label, value }: { label: string; value: string }) => (
   <div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{label}</div><div className="text-[12.5px] text-[var(--ink)]">{value}</div></div>
 );
 
-// ── Roles — editable job-titles list (the coloured schedule rows) ────────────
-function RolesTab({ jobTitles, onChange }: { jobTitles: string[]; onChange: (next: string[]) => void }) {
+// ── Roles editor — the shared job-titles list (coloured schedule rows) ───────
+// One central editor (used in the Staff area). Not per-location — the list is
+// company-wide and feeds the schedule + the invite Job-title picker.
+export function RolesEditor({ jobTitles, onChange }: { jobTitles: string[]; onChange: (next: string[]) => void }) {
   const [adding, setAdding] = useState("");
   const rename = (i: number, v: string) => onChange(jobTitles.map((r, j) => (j === i ? v : r)));
   const remove = (i: number) => onChange(jobTitles.filter((_, j) => j !== i));
@@ -147,7 +148,7 @@ function RolesTab({ jobTitles, onChange }: { jobTitles: string[]; onChange: (nex
   return (
     <Card className="p-5">
       <div className="text-[16px] font-extrabold text-[var(--ink)]">Roles</div>
-      <p className="mt-1 text-[13px] leading-relaxed text-[var(--ink-2)]">The <b>roles</b> staff are rostered into — e.g. Lifeguard, Site Manager, Instructor, SEND, Lead Coach. (These are the coloured rows in the schedule.) Roles are managed centrally under <b>Your team</b> and sync here automatically; you can also add or edit them here. A role carries nothing extra — just a name.</p>
+      <p className="mt-1 text-[13px] leading-relaxed text-[var(--ink-2)]">The <b>roles</b> staff are rostered into — e.g. Lifeguard, Site Manager, Instructor, SEND, Lead Coach. These are the coloured rows in the schedule and the <b>Job title</b> options when you invite someone. A role carries nothing extra — just a name.</p>
       <p className="mt-1 text-[12px] italic text-[var(--ink-3)]">Access levels (Owner / Management / Staff) are separate — those are set under Roles &amp; permissions in Setup.</p>
 
       <div className="mt-4 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Roles</div>
