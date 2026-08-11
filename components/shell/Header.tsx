@@ -161,12 +161,12 @@ export function Header({ portal }: { portal: PortalKey }) {
               <button
                 type="button"
                 onClick={() => setCommOpen((o) => !o)}
-                title="Communication — newsfeed, messages and email"
+                title="Contact parents — newsfeed, messages and email"
                 className="relative inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105"
                 style={commActive || commOpen ? { background: "linear-gradient(120deg,#0f9d58,#3ddc84)", color: "#fff", boxShadow: "0 4px 12px -2px #0f9d5880" } : { background: "#0f9d5818", color: "#0b7a43" }}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{CHAT}</span>
-                <span className="hidden truncate sm:inline">Communication</span>
+                <span className="hidden truncate sm:inline">Contact parents</span>
                 <span className="flex-none text-[9px] leading-none" aria-hidden>▼</span>
                 {unread > 0 && (
                   <span className="ml-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none" style={{ background: "var(--sem-crit, #ef4444)", color: "#fff" }}>{unread}</span>
@@ -174,7 +174,7 @@ export function Header({ portal }: { portal: PortalKey }) {
               </button>
               {commOpen && (
                 <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.4)]">
-                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Communication</div>
+                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Contact parents</div>
                   {commItems.map((it) => {
                     const on = it.view === view;
                     return (
