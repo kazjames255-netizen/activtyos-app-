@@ -6,30 +6,32 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 
 // ── Staff schedule / rota (manual edit663) ─────────────────────────────────
-// The full scheduling screen: a left staff panel (rates, hours, pay, cost incl.
-// on-cost, availability status) and a right week grid grouped by Location →
-// Role, with per-day hour totals, shift blocks (assigned/unfilled/locked +
-// check-in status), Add per cell, a wages total with on-cost, and the
-// availability-request workflow. Demo store for now (front-end); the backend
-// (staff pay rates, shifts w/ site+role+check-in+publish, availability) is
-// owed — see docs/availability-handoff.md.
+// Left staff panel (rates, hours, pay, cost incl. on-cost, availability) and a
+// right week grid grouped Location → Role (or by staff), with per-day totals,
+// shift blocks (assigned/unfilled/locked + check-in), Add per cell, wages with
+// on-cost, and wired toolbar: site filter, week nav, check-in alerts,
+// week-by-area/staff, auto-schedule (fill/clear), refresh, copy week, publish.
+// Demo store for now; backend owed (see docs/availability-handoff.md).
 
-const ON_COST = 12.07; // employer NI / pension %, recorded only
+const ON_COST = 12.07;
 const money = (n: number) => `£${n.toFixed(2)}`;
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 function mondayOf(d: Date) { const x = new Date(d); const day = (x.getUTCDay() + 6) % 7; x.setUTCDate(x.getUTCDate() - day); return x; }
 const mins = (t: string) => { const [h, m] = t.split(":").map(Number); return (h || 0) * 60 + (m || 0); };
-const dur = (a: string, b: string) => Math.max(0, mins(b) - mins(a)) / 60;
+const durH = (a: string, b: string) => Math.max(0, mins(b) - mins(a)) / 60;
 const hLabel = (h: number) => (h === 0 ? "0h" : Number.isInteger(h) ? `${h}h` : `${Math.floor(h)}h ${Math.round((h % 1) * 60)}m`);
 const to12 = (t: string) => { const [h, m] = t.split(":").map(Number); const ap = h < 12 ? "am" : "pm"; const hh = ((h + 11) % 12) + 1; return `${hh}:${String(m).padStart(2, "0")}${ap}`; };
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const add7 = (d: string) => { const x = new Date(`${d}T00:00:00Z`); x.setUTCDate(x.getUTCDate() + 7); return iso(x); };
+const overlaps = (a: { start: string; end: string }, b: { start: string; end: string }) => mins(a.start) < mins(b.end) && mins(b.start) < mins(a.end);
 
-interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; note?: string; reminders?: number }
+interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number }
 interface Shift { id: string; staffId: string | null; site: string; role: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean }
 interface Store { staff: Staff[]; shifts: Shift[]; sites: string[] }
 
 const ROLE_COL: Record<string, string> = { "Lead Coach": "#2f6bd8", "Lifeguard": "#0f857b", "Coach": "#6366f1", "Activity Assistant": "#8b5cf6", "First Aider": "#c06a10" };
 const roleCol = (r: string) => ROLE_COL[r] ?? "#64748b";
+const ROLES = ["Lead Coach", "Coach", "Lifeguard", "First Aider", "Activity Assistant"];
 
 const KEY = "aos.rota.v2";
 function seed(): Store {
@@ -65,8 +67,8 @@ function seed(): Store {
 }
 const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.shifts ? v : seed(); } catch { return seed(); } };
 
-const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-type Draft = { site: string; role: string; date: string; staffId: string | null; start: string; end: string };
+const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+type Draft = { id?: string; site: string; role: string; date: string; staffId: string | null; start: string; end: string };
 
 export function ScheduleApp() {
   const [store, setStore] = useState<Store>(seed);
@@ -76,6 +78,11 @@ export function ScheduleApp() {
   const [help, setHelp] = useState(false);
   const [canManage, setCanManage] = useState(true);
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [view, setView] = useState<"area" | "staff">("area");
+  const [autoMenu, setAutoMenu] = useState(false);
+  const [showAlerts, setShowAlerts] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2600); };
 
   useEffect(() => { setStore(load()); apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   const persist = (s: Store) => { setStore(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
@@ -83,43 +90,77 @@ export function ScheduleApp() {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => { const x = new Date(`${weekStart}T00:00:00Z`); x.setUTCDate(x.getUTCDate() + i); return x; }), [weekStart]);
   const weekEnd = iso(days[6]);
   const staffById = useMemo(() => Object.fromEntries(store.staff.map((s) => [s.id, s])), [store.staff]);
-  const weekShifts = useMemo(() => store.shifts.filter((s) => s.date >= weekStart && s.date <= weekEnd && (site === "all" || s.site === site)), [store.shifts, weekStart, weekEnd, site]);
+  const inWeek = (s: Shift) => s.date >= weekStart && s.date <= weekEnd && (site === "all" || s.site === site);
+  const weekShifts = useMemo(() => store.shifts.filter(inWeek), [store.shifts, weekStart, weekEnd, site]);
 
-  const staffHours = (id: string) => weekShifts.filter((s) => s.staffId === id).reduce((n, s) => n + dur(s.start, s.end), 0);
+  const staffHours = (id: string) => weekShifts.filter((s) => s.staffId === id).reduce((n, s) => n + durH(s.start, s.end), 0);
   const wagesAt = store.staff.reduce((n, st) => n + staffHours(st.id) * st.rate, 0);
   const wagesCost = wagesAt * (1 + ON_COST / 100);
-  const publishCount = new Set(weekShifts.filter((s) => s.staffId).map((s) => s.staffId)).size;
+  const assignedStaff = useMemo(() => new Set(weekShifts.filter((s) => s.staffId).map((s) => s.staffId as string)), [weekShifts]);
   const notSubmitted = store.staff.filter((s) => s.avail === "notsubmitted").length;
+  const alerts = useMemo(() => weekShifts.filter((s) => s.staffId && !s.in && !s.out), [weekShifts]);
 
-  // Group grid: site → role → day → shifts
   const grid = useMemo(() => {
     const sites = site === "all" ? store.sites.filter((si) => weekShifts.some((s) => s.site === si)) : [site];
-    return sites.map((si) => {
-      const roles = [...new Set(weekShifts.filter((s) => s.site === si).map((s) => s.role))];
-      return {
-        site: si,
-        count: weekShifts.filter((s) => s.site === si).length,
-        roles: roles.map((role) => ({
-          role,
-          byDay: days.map((d) => weekShifts.filter((s) => s.site === si && s.role === role && s.date === iso(d)).sort((a, b) => mins(a.start) - mins(b.start))),
-        })),
-      };
-    });
+    return sites.map((si) => ({
+      site: si, count: weekShifts.filter((s) => s.site === si).length,
+      roles: [...new Set(weekShifts.filter((s) => s.site === si).map((s) => s.role))].map((role) => ({
+        role, byDay: days.map((d) => weekShifts.filter((s) => s.site === si && s.role === role && s.date === iso(d)).sort((a, b) => mins(a.start) - mins(b.start))),
+      })),
+    }));
   }, [store, weekShifts, days, site]);
 
   const shownStaff = store.staff.filter((s) => !q || s.name.toLowerCase().includes(q.toLowerCase()) || s.role.toLowerCase().includes(q.toLowerCase()));
 
   function shiftWeek(delta: number) { const s = new Date(`${weekStart}T00:00:00Z`); s.setUTCDate(s.getUTCDate() + delta * 7); setWeekStart(iso(s)); }
   const removeShift = (id: string) => persist({ ...store, shifts: store.shifts.filter((s) => s.id !== id) });
-  const remind = (id: string) => persist({ ...store, staff: store.staff.map((s) => (s.id === id ? { ...s, reminders: (s.reminders ?? 0) + 1 } : s)) });
-  const requestAvail = () => persist({ ...store, staff: store.staff.map((s) => (s.avail === "confirmed" ? s : { ...s, avail: "notsubmitted" })) });
-  const saveDraft = () => { if (!draft) return; persist({ ...store, shifts: [...store.shifts, { id: `sh${Date.now()}`, ...draft }] }); setDraft(null); };
+  const remind = (id: string) => { persist({ ...store, staff: store.staff.map((s) => (s.id === id ? { ...s, reminders: (s.reminders ?? 0) + 1 } : s)) }); flash("Reminder sent."); };
+  const requestAvail = () => { persist({ ...store, staff: store.staff.map((s) => (s.avail === "confirmed" ? s : { ...s })) }); flash(`Availability requested from ${notSubmitted} staff.`); };
+
+  function saveDraft() {
+    if (!draft) return;
+    if (draft.id) persist({ ...store, shifts: store.shifts.map((s) => (s.id === draft.id ? { ...s, ...draft } : s)) });
+    else persist({ ...store, shifts: [...store.shifts, { id: `sh${Date.now()}`, site: draft.site, role: draft.role, date: draft.date, staffId: draft.staffId, start: draft.start, end: draft.end }] });
+    setDraft(null);
+  }
+  function autoFill() {
+    setAutoMenu(false);
+    const confirmed = store.staff.filter((s) => s.avail === "confirmed");
+    const next = store.shifts.map((s) => ({ ...s }));
+    let filled = 0;
+    for (const u of next.filter((s) => inWeek(s) && !s.staffId)) {
+      const busy = (sid: string) => next.some((x) => x.staffId === sid && x.date === u.date && overlaps(x, u));
+      const cand = [...confirmed].sort((a, b) => Number(b.role === u.role) - Number(a.role === u.role)).find((c) => !busy(c.id));
+      if (cand) { u.staffId = cand.id; filled++; }
+    }
+    persist({ ...store, shifts: next });
+    flash(filled ? `Auto-filled ${filled} shift${filled === 1 ? "" : "s"} from confirmed staff.` : "No confirmed staff free for the open shifts.");
+  }
+  function clearWeek() { setAutoMenu(false); const n = weekShifts.length; persist({ ...store, shifts: store.shifts.filter((s) => !inWeek(s)) }); flash(`Cleared ${n} shift${n === 1 ? "" : "s"} this week.`); }
+  function copyWeek() { const copies = weekShifts.map((s, i) => ({ ...s, id: `sh${Date.now()}${i}`, date: add7(s.date), in: undefined, out: undefined, locked: false })); persist({ ...store, shifts: [...store.shifts, ...copies] }); flash(`Copied ${copies.length} shift${copies.length === 1 ? "" : "s"} to next week.`); }
+  function publish() { const ids = new Set(weekShifts.filter((s) => s.staffId).map((s) => s.id)); persist({ ...store, shifts: store.shifts.map((s) => (ids.has(s.id) ? { ...s, locked: true } : s)) }); flash(`Published to ${assignedStaff.size} staff — their shifts are now locked.`); }
+
+  const ShiftBlock = ({ s }: { s: Shift }) => {
+    const st = s.staffId ? staffById[s.staffId] : null; const filled = !!st; const col = roleCol(s.role);
+    return (
+      <button type="button" onClick={() => canManage && setDraft({ id: s.id, site: s.site, role: s.role, date: s.date, staffId: s.staffId, start: s.start, end: s.end })} disabled={!canManage}
+        className="w-full rounded-lg border px-2 py-1.5 text-left text-[11px] transition-shadow enabled:hover:shadow-sm"
+        style={filled ? { borderColor: col, background: `${col}0f`, borderLeftWidth: 3 } : { borderColor: "var(--line)", borderStyle: "dashed", background: "var(--surface)" }}>
+        <div className="flex items-start gap-1">
+          <span className="min-w-0 flex-1 font-extrabold text-[var(--ink)]">{to12(s.start)} – {to12(s.end)}</span>
+          {canManage && <span role="button" onClick={(e) => { e.stopPropagation(); removeShift(s.id); }} className="flex-none text-[var(--ink-3)] hover:text-[#c0392b]" aria-label="Remove">×</span>}
+        </div>
+        <div className={"truncate " + (filled ? "font-bold text-[var(--ink)]" : "text-[var(--ink-3)]")}>{st ? st.name : "Unfilled"}</div>
+        {filled && <div className="mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold" style={s.out || s.in ? { background: "#e2f4ea", color: "#0f7a43" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{s.out ? `✅ Out ${to12(s.out)}` : s.in ? `🟢 In ${to12(s.in)}` : "⚪ Not in"}</div>}
+        {s.locked && <div className="mt-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">Locked</div>}
+      </button>
+    );
+  };
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Staff schedule" icon="🗓" lede="Build the week's rota by site and role, request availability, and see wages with on-cost. Hours feed Payroll." />
 
-      {/* How availability works */}
       <Card className="mb-3 overflow-hidden">
         <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left">
           <span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span>
@@ -128,15 +169,15 @@ export function ScheduleApp() {
         </button>
         {help && (
           <ol className="ml-9 list-decimal space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]">
-            <li><b>Request availability</b> — hit the green button in the staff panel and pick <b>This week</b> or <b>All weeks</b>. Everyone starts <b className="text-[#c0392b]">Not submitted</b>.</li>
+            <li><b>Request availability</b> — hit the red button in the staff panel. Everyone starts <b className="text-[#c0392b]">Not submitted</b>.</li>
             <li>Staff get a <b>notification</b> and set the days &amp; times they can work — their card turns <b className="text-[#0f7a43]">Confirmed</b>.</li>
             <li>Still red? Tap the <b>gold bell</b> on their card to send a reminder (it counts taps).</li>
-            <li>Hover the <b>note icon</b> on a card to read anything they&rsquo;ve added.</li>
+            <li>Then build the rota: ✨ Auto-schedule fills open shifts, and Publish locks them &amp; tells staff.</li>
           </ol>
         )}
       </Card>
 
-      {/* Toolbar */}
+      {/* Toolbar — all wired */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">
           📍 <Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All sites</option>{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select>
@@ -146,12 +187,24 @@ export function ScheduleApp() {
           <span className="min-w-[120px] text-center text-[12.5px] font-bold text-[var(--ink)]">{days[0].toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })} – {days[6].toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })}</span>
           <button type="button" onClick={() => shiftWeek(1)} className="px-2 text-[15px] text-[var(--ink-3)] hover:text-[var(--ink)]">›</button>
         </div>
-        <button type="button" className="rounded-full border border-[#bcd0f5] bg-[#eef4fd] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f]">🔔 Check-in alerts</button>
+        <button type="button" onClick={() => setShowAlerts(true)} className="relative rounded-full border border-[#bcd0f5] bg-[#eef4fd] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f]">🔔 Check-in alerts{alerts.length > 0 && <span className="ml-1 rounded-full bg-[#c0392b] px-1.5 text-[10px] font-extrabold text-white">{alerts.length}</span>}</button>
+        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">
+          <Select value={view} onChange={(e) => setView(e.target.value as "area" | "staff")} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="area">Week by Area</option><option value="staff">Week by Staff</option></Select>
+        </div>
         {canManage && (
           <div className="ml-auto flex items-center gap-2">
-            <button type="button" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f]">✨ Auto-schedule ▾</button>
-            <button type="button" onClick={() => setStore(load())} title="Refresh" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px]">↻</button>
-            <button type="button" className="rounded-full bg-[#0f7a43] px-4 py-1.5 text-[13px] font-extrabold text-white">Publish to staff · {publishCount}</button>
+            <div className="relative">
+              <button type="button" onClick={() => setAutoMenu((v) => !v)} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f]">✨ Auto-schedule ▾</button>
+              {autoMenu && (
+                <div className="absolute right-0 top-[38px] z-20 w-[220px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
+                  <button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Fill open shifts from confirmed staff</button>
+                  <button type="button" onClick={clearWeek} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">Clear all shifts this week</button>
+                </div>
+              )}
+            </div>
+            <button type="button" onClick={() => { setStore(load()); flash("Refreshed."); }} title="Refresh" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px]">↻</button>
+            <button type="button" onClick={copyWeek} title="Copy this week to next week" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px]">⧉</button>
+            <button type="button" onClick={publish} className="rounded-full bg-[#0f7a43] px-4 py-1.5 text-[13px] font-extrabold text-white hover:brightness-105">Publish to staff · {assignedStaff.size}</button>
           </div>
         )}
       </div>
@@ -168,14 +221,11 @@ export function ScheduleApp() {
         <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">Predicted <b>on-cost</b> adds a cost on top of wages (e.g. employer NI, pension). Recorded only — ActivityOS never moves money.</p>
       </Card>
 
-      {/* Body: staff panel + grid */}
       <div className="flex flex-col gap-3 lg:flex-row">
         {/* Left staff panel */}
         <div className="lg:w-[290px] lg:flex-none">
           <Card className="p-3">
-            <div className="mb-2.5 flex items-center gap-2">
-              <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search staff" className="w-full" />
-            </div>
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search staff" className="mb-2.5 w-full" />
             {canManage && (
               <div className="mb-3">
                 <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Step 1 · Confirm availability</div>
@@ -190,9 +240,7 @@ export function ScheduleApp() {
                     <span className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5"><span className="truncate text-[13px] font-extrabold text-[var(--ink)]">{st.name}</span>
-                        {st.avail === "notsubmitted"
-                          ? <button type="button" onClick={() => remind(st.id)} title={`Send reminder${st.reminders ? ` (sent ${st.reminders})` : ""}`} className="flex-none text-[12px]">🔔</button>
-                          : <span title="Availability confirmed" className="flex-none text-[11px] text-[#0f7a43]">✓</span>}
+                        {st.avail === "notsubmitted" ? <button type="button" onClick={() => remind(st.id)} title={`Send reminder${st.reminders ? ` (sent ${st.reminders})` : ""}`} className="flex-none text-[12px]">🔔</button> : <span title="Availability confirmed" className="flex-none text-[11px] text-[#0f7a43]">✓</span>}
                       </div>
                       <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{st.role} · <span className={st.avail === "confirmed" ? "text-[#0f7a43]" : "text-[#c0392b]"}>{st.avail === "confirmed" ? "Confirmed" : "Not submitted"}</span></div>
                       <div className="mt-0.5 text-[11.5px] text-[var(--ink-2)]">{hLabel(hrs)} scheduled · £{st.rate.toFixed(2)}/hr</div>
@@ -210,88 +258,108 @@ export function ScheduleApp() {
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <div style={{ minWidth: 820 }}>
-                {/* Day header */}
-                <div className="grid text-white" style={{ gridTemplateColumns: "repeat(7,1fr)", background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
-                  {days.map((d) => <div key={iso(d)} className="px-3 py-2.5 text-[12.5px] font-extrabold">{DAYS[(d.getUTCDay() + 6) % 7]} {d.getUTCDate()}</div>)}
+                <div className="grid text-white" style={{ gridTemplateColumns: view === "staff" ? "170px repeat(7,1fr)" : "repeat(7,1fr)", background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
+                  {view === "staff" && <div className="px-3 py-2.5 text-[12.5px] font-extrabold">Staff</div>}
+                  {days.map((d) => <div key={iso(d)} className="px-3 py-2.5 text-[12.5px] font-extrabold">{DOW[(d.getUTCDay() + 6) % 7]} {d.getUTCDate()}</div>)}
                 </div>
 
-                {grid.length === 0 && <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">No shifts this week{site !== "all" ? " at this site" : ""}.</div>}
-
-                {grid.map((g) => (
-                  <div key={g.site}>
-                    <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-                      <span className="text-[13px]">📍</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{g.site}</span>
-                      <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{g.count} shift{g.count === 1 ? "" : "s"}</span>
-                    </div>
-                    {g.roles.map((r) => {
-                      const col = roleCol(r.role);
-                      return (
-                        <div key={r.role}>
-                          <div className="flex items-center gap-2 border-b border-[var(--line-2,#eef2f8)] px-3 py-1.5" style={{ boxShadow: `inset 3px 0 0 ${col}` }}>
-                            <span className="h-2.5 w-2.5 rounded-full" style={{ background: col }} /><span className="text-[13px] font-extrabold" style={{ color: col }}>{r.role}</span>
-                          </div>
-                          {/* per-day hour totals */}
-                          <div className="grid border-b border-[var(--line-2,#eef2f8)]" style={{ gridTemplateColumns: "repeat(7,1fr)" }}>
-                            {r.byDay.map((cells, i) => <div key={i} className="px-3 py-1 text-[10.5px] font-bold text-[var(--ink-3)]">{hLabel(cells.reduce((n, s) => n + dur(s.start, s.end), 0))}</div>)}
-                          </div>
-                          {/* shift cells */}
-                          <div className="grid" style={{ gridTemplateColumns: "repeat(7,1fr)" }}>
-                            {r.byDay.map((cells, i) => (
-                              <div key={i} className="flex min-h-[70px] flex-col gap-1.5 border-r border-[var(--line-2,#eef2f8)] p-1.5 last:border-r-0">
-                                {cells.map((s) => {
-                                  const st = s.staffId ? staffById[s.staffId] : null;
-                                  const filled = !!st;
-                                  return (
-                                    <div key={s.id} className="rounded-lg border px-2 py-1.5 text-[11px]"
-                                      style={filled ? { borderColor: col, background: `${col}0f`, borderLeftWidth: 3 } : { borderColor: "var(--line)", borderStyle: "dashed", background: "var(--surface)" }}>
-                                      <div className="flex items-start gap-1">
-                                        <span className="min-w-0 flex-1 font-extrabold text-[var(--ink)]">{to12(s.start)} – {to12(s.end)}</span>
-                                        {canManage && <button type="button" onClick={() => removeShift(s.id)} className="flex-none text-[var(--ink-3)] hover:text-[#c0392b]" aria-label="Remove">×</button>}
-                                      </div>
-                                      <div className={"truncate " + (filled ? "font-bold text-[var(--ink)]" : "text-[var(--ink-3)]")}>{st ? st.name : "Unfilled"}</div>
-                                      {filled && (
-                                        <div className="mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold"
-                                          style={s.out ? { background: "#e2f4ea", color: "#0f7a43" } : s.in ? { background: "#e2f4ea", color: "#0f7a43" } : { background: "var(--panel)", color: "var(--ink-3)" }}>
-                                          {s.out ? `✅ Out ${to12(s.out)}` : s.in ? `🟢 In ${to12(s.in)}` : "⚪ Not in"}
-                                        </div>
-                                      )}
-                                      {s.locked && <div className="mt-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">Locked</div>}
-                                    </div>
-                                  );
-                                })}
-                                {canManage && <button type="button" onClick={() => setDraft({ site: g.site, role: r.role, date: iso(days[i]), staffId: null, start: "09:00", end: "17:00" })} className="rounded-lg border border-dashed border-[var(--line)] py-1 text-[13px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]">＋</button>}
+                {view === "area" ? (
+                  <>
+                    {grid.length === 0 && <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">No shifts this week{site !== "all" ? " at this site" : ""}.</div>}
+                    {grid.map((g) => (
+                      <div key={g.site}>
+                        <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-2"><span className="text-[13px]">📍</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{g.site}</span><span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{g.count} shift{g.count === 1 ? "" : "s"}</span></div>
+                        {g.roles.map((r) => {
+                          const col = roleCol(r.role);
+                          return (
+                            <div key={r.role}>
+                              <div className="flex items-center gap-2 border-b border-[var(--line-2,#eef2f8)] px-3 py-1.5" style={{ boxShadow: `inset 3px 0 0 ${col}` }}><span className="h-2.5 w-2.5 rounded-full" style={{ background: col }} /><span className="text-[13px] font-extrabold" style={{ color: col }}>{r.role}</span></div>
+                              <div className="grid border-b border-[var(--line-2,#eef2f8)]" style={{ gridTemplateColumns: "repeat(7,1fr)" }}>{r.byDay.map((cells, i) => <div key={i} className="px-3 py-1 text-[10.5px] font-bold text-[var(--ink-3)]">{hLabel(cells.reduce((n, s) => n + durH(s.start, s.end), 0))}</div>)}</div>
+                              <div className="grid" style={{ gridTemplateColumns: "repeat(7,1fr)" }}>
+                                {r.byDay.map((cells, i) => (
+                                  <div key={i} className="flex min-h-[70px] flex-col gap-1.5 border-r border-[var(--line-2,#eef2f8)] p-1.5 last:border-r-0">
+                                    {cells.map((s) => <ShiftBlock key={s.id} s={s} />)}
+                                    {canManage && <button type="button" onClick={() => setDraft({ site: g.site, role: r.role, date: iso(days[i]), staffId: null, start: "09:00", end: "17:00" })} className="rounded-lg border border-dashed border-[var(--line)] py-1 text-[13px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]">＋</button>}
+                                  </div>
+                                ))}
                               </div>
-                            ))}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  /* Week by Staff */
+                  shownStaff.map((st) => (
+                    <div key={st.id} className="grid border-b border-[var(--line-2,#eef2f8)]" style={{ gridTemplateColumns: "170px repeat(7,1fr)" }}>
+                      <div className="border-r border-[var(--line-2,#eef2f8)] px-3 py-2"><div className="text-[12.5px] font-extrabold text-[var(--ink)]">{st.name}</div><div className="text-[10px] font-bold uppercase text-[var(--ink-3)]">{st.role} · {hLabel(staffHours(st.id))}</div></div>
+                      {days.map((d) => {
+                        const cells = weekShifts.filter((s) => s.staffId === st.id && s.date === iso(d)).sort((a, b) => mins(a.start) - mins(b.start));
+                        return (
+                          <div key={iso(d)} className="flex min-h-[56px] flex-col gap-1.5 border-r border-[var(--line-2,#eef2f8)] p-1.5 last:border-r-0">
+                            {cells.map((s) => <ShiftBlock key={s.id} s={s} />)}
+                            {canManage && <button type="button" onClick={() => setDraft({ site: store.sites[0], role: st.role, date: iso(d), staffId: st.id, start: "09:00", end: "17:00" })} className="rounded-lg border border-dashed border-[var(--line)] py-0.5 text-[12px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]">＋</button>}
                           </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ))}
+                        );
+                      })}
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </Card>
         </div>
       </div>
 
-      {/* Add-shift modal */}
+      {/* Check-in alerts modal */}
+      {showAlerts && (
+        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setShowAlerts(false)}>
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2"><span className="text-[16px]">🔔</span><div className="text-[15px] font-extrabold text-[var(--ink)]">Check-in alerts</div><button type="button" onClick={() => setShowAlerts(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <p className="mt-1 text-[12px] text-[var(--ink-3)]">Assigned staff who haven&rsquo;t checked in for their shift this week.</p>
+            {alerts.length === 0 ? <p className="mt-3 rounded-lg bg-[#e2f4ea] px-3 py-2.5 text-[12.5px] font-bold text-[#0f7a43]">✓ Everyone assigned is checked in.</p> : (
+              <div className="mt-3 flex flex-col gap-1.5">
+                {alerts.map((s) => { const st = staffById[s.staffId!]; return (
+                  <div key={s.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px]">
+                    <span className="font-bold text-[var(--ink)]">{st?.name}</span>
+                    <span className="text-[var(--ink-3)]">{new Date(`${s.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {to12(s.start)}–{to12(s.end)} · {s.site}</span>
+                    <span className="ml-auto rounded-full bg-[#eef1f6] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">⚪ Not in</span>
+                  </div>
+                ); })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Add / edit shift modal */}
       {draft && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setDraft(null)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="text-[15px] font-extrabold text-[var(--ink)]">Add a shift</div>
-            <div className="mt-1 text-[12px] text-[var(--ink-3)]">{draft.role} · {draft.site} · {new Date(`${draft.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" })}</div>
+            <div className="text-[15px] font-extrabold text-[var(--ink)]">{draft.id ? "Edit shift" : "Add a shift"}</div>
+            <div className="mt-1 text-[12px] text-[var(--ink-3)]">{new Date(`${draft.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" })}</div>
             <div className="mt-3 grid gap-2.5">
-              <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Assign to</label>
-                <Select value={draft.staffId ?? ""} onChange={(e) => setDraft({ ...draft, staffId: e.target.value || null })} className="w-full"><option value="">Unfilled — fill later</option>{store.staff.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.role}</option>)}</Select></div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Site</label><Select value={draft.site} onChange={(e) => setDraft({ ...draft, site: e.target.value })} className="w-full">{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
+                <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Role</label><Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className="w-full">{ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
+              </div>
+              <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Assign to</label><Select value={draft.staffId ?? ""} onChange={(e) => setDraft({ ...draft, staffId: e.target.value || null })} className="w-full"><option value="">Unfilled — fill later</option>{store.staff.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.role}</option>)}</Select></div>
               <div className="grid grid-cols-2 gap-2.5">
                 <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Start</label><Input type="time" value={draft.start} onChange={(e) => setDraft({ ...draft, start: e.target.value })} className="w-full" /></div>
                 <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">End</label><Input type="time" value={draft.end} onChange={(e) => setDraft({ ...draft, end: e.target.value })} className="w-full" /></div>
               </div>
             </div>
-            <div className="mt-4 flex gap-2"><Button variant="primary" onClick={saveDraft}>Add shift</Button><Button onClick={() => setDraft(null)}>Cancel</Button></div>
+            <div className="mt-4 flex items-center gap-2">
+              <Button variant="primary" onClick={saveDraft}>{draft.id ? "Save changes" : "Add shift"}</Button>
+              <Button onClick={() => setDraft(null)}>Cancel</Button>
+              {draft.id && <button type="button" onClick={() => { removeShift(draft.id!); setDraft(null); }} className="ml-auto text-[12px] font-bold text-[#c0392b] hover:underline">Delete shift</button>}
+            </div>
           </div>
         </div>
       )}
+
+      {toast && <div className="fixed bottom-5 left-1/2 z-[140] -translate-x-1/2 rounded-full bg-[#16306e] px-4 py-2.5 text-[12.5px] font-bold text-white shadow-lg">{toast}</div>}
     </div>
   );
 }
