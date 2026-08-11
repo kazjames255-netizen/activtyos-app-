@@ -12,13 +12,18 @@ import { NARRATOR_CSS, narratorScene, settingsScene } from "./tourNarrator";
 // not a hand-drawn mock — so what you see is exactly the real screen.
 
 export type LiveStep = {
-  find: string; line: string; label?: string;
+  find?: string; line: string; label?: string;
   click?: boolean;              // press the `find` element (open its form)
   advance?: string;            // after narrating, press the element matching this text
   fill?: [string, string][];   // [field label/placeholder, value] — types into real inputs
   pick?: string[];             // chip / option / checkbox texts to click (select)
+  slide?: string;              // slides mode: HTML shown in the stage for this step
 };
-export type LiveTourSteps = { title: string; introLine: string; doneLine: string; steps: LiveStep[] };
+// `slides` mode swaps the live-page iframe for a deck of hand-built HTML screens
+// (each step's `slide`), for flows whose real steps happen on an external site
+// we can't embed — e.g. connecting Gmail. Everything else (robot, voice, splash,
+// controls) is identical, so it looks and sounds like every other walkthrough.
+export type LiveTourSteps = { title: string; introLine: string; doneLine: string; steps: LiveStep[]; slides?: boolean };
 
 const CSS = `
 .lt-root{--navy:#16306e;--blue:#2f6bd8;--blue2:#4f8bf5;--teal:#0ea5a5;--ink:#12203c;--ink2:#3a4a68;--faint:#9aa6bd;--line:#e6ebf5;--surface:#fff;color:var(--ink)}
@@ -38,6 +43,7 @@ const CSS = `
 .lt-root .splogo{font-size:38px;font-weight:900;letter-spacing:-1px;background:linear-gradient(90deg,#7fd0ff,#ffffff 45%,#7fd0ff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 10px rgba(80,170,255,.4))}
 .lt-root .splos{-webkit-text-fill-color:#ff5aa8;color:#ff5aa8;background:none;filter:drop-shadow(0 2px 10px rgba(255,90,168,.5))}
 .lt-root .sptitle{font-size:17px;font-weight:800;color:#e6f0ff}.lt-root .spsub{font-size:11.5px;font-weight:700;color:#9fb4dd}
+.lt-root .lt-slide{display:flex;align-items:center;justify-content:center;overflow:auto;padding:22px}
 `;
 
 export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: string; steps: LiveTourSteps }) {
@@ -50,6 +56,8 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
     if (!root) return;
     const stage = root.querySelector(".lt-stage") as HTMLElement;
     const frame = root.querySelector(".lt-frame") as HTMLIFrameElement;
+    const slideEl = root.querySelector(".lt-slide") as HTMLElement | null; // present only in slides mode
+    const slidesMode = !!cfgRef.current.slides;
     const cursor = root.querySelector(".lt-cursor") as HTMLElement;
     const capEl = root.querySelector(".lt-cap") as HTMLElement;
     const overlay = root.querySelector(".lt-overlay") as HTMLElement;
@@ -72,7 +80,10 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
 
     const gate = () => (paused ? new Promise<void>((r) => waiters.push(r)) : Promise.resolve());
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms)).then(gate);
-    const readMs = (t: string) => Math.max(2400, t.split(/\s+/).length * 330);
+    // Caption dwell (also the floor when sound is off). Kept a touch under
+    // spoken pace so that, with sound on, we wait on the speech itself and add
+    // no dead air after it — the gap between cards was the main complaint.
+    const readMs = (t: string) => Math.max(1400, t.split(/\s+/).length * 235);
 
     function pickVoice(): SpeechSynthesisVoice | null {
       if (!hasSpeech) return null;
@@ -133,7 +144,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         const cy = rect.top + Math.min(rect.height * 0.5, 34);
         cursor.style.transform = `translate(${cx}px,${cy}px)`;
         cursor.classList.add("click");
-        await sleep(700);
+        await sleep(450);
         cursor.classList.remove("click");
       } else {
         await sleep(200);
@@ -148,23 +159,31 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       cursor.style.transform = "translate(34px,30px)";
       if (startIdx <= 0) {
         splash.style.display = "flex"; splash.classList.remove("hide"); void splash.offsetWidth;
-        await sleep(2200); if (!alive()) return;
-        splash.classList.add("hide"); await sleep(500); splash.style.display = "none";
+        await sleep(1200); if (!alive()) return;
+        splash.classList.add("hide"); await sleep(400); splash.style.display = "none";
         // Robot greets before we dive into the page.
         currentIdx = -1; clearHi();
         showScene(narratorScene("Guided walkthrough", c.title, "Sit back — I'll show you round this page."));
         await line(c.introLine); if (!alive()) return;
         hideScene();
       } else { splash.style.display = "none"; hideScene(); }
-      if (!ready) await Promise.race([readyP, sleep(4500)]);
+      if (!slidesMode && !ready) await Promise.race([readyP, sleep(4500)]);
       for (let i = Math.max(0, startIdx); i < c.steps.length; i++) {
         const step = c.steps[i];
         currentIdx = i; hideScene();
-        const rect = await spotlight(step.find); if (!alive()) return;
+        // Slides mode: swap in this step's screen and just narrate — no live
+        // page to spotlight, so no cursor/click/fill.
+        if (slidesMode) {
+          if (slideEl && step.slide != null) slideEl.innerHTML = step.slide;
+          cursor.style.display = "none";
+          await line(step.line); if (!alive()) return;
+          continue;
+        }
+        const rect = await spotlight(step.find || ""); if (!alive()) return;
         await moveTo(rect); if (!alive()) return;
         // A "click" step presses the control (opening its form) before narrating,
         // so the next steps can spotlight the fields that just appeared.
-        if (step.click) { clickInFrame(step.find); await sleep(950); if (!alive()) return; }
+        if (step.click) { clickInFrame(step.find || ""); await sleep(950); if (!alive()) return; }
         // Actually build it: type into the real fields and pick the real options,
         // so the provider watches the form fill in.
         if (step.fill) { for (const [f, v] of step.fill) { fillInFrame(f, v); await sleep(420); if (!alive()) return; } }
@@ -180,8 +199,10 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       const links = SETTINGS_LINKS[view] || [];
       if (links.length) {
         showScene(settingsScene(portal, links));
-        const names = links.map((l) => l.label).join(" and ");
-        await line(`One last thing — this page is set up in your Settings, under ${names}. Tap any card to jump straight there.`);
+        // Say what each setting actually does (its note) — with examples —
+        // rather than just naming the tabs.
+        const detail = links.map((l) => `${l.label} — ${l.note}`).join(". ");
+        await line(`One last thing — everything on this page is set up in your Settings. ${detail}. Tap any card to jump straight there.`);
         if (!alive()) return;
       }
       // Sign-off from the robot.
@@ -221,7 +242,9 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         <button type="button" className="cbtn lt-sound">▶ Play with sound</button>
       </div>
       <div className="lt-stage">
-        <iframe className="lt-frame" title="walkthrough" src={`/tour/${portal}/${view}`} />
+        {cfg.slides
+          ? <div className="lt-frame lt-slide" />
+          : <iframe className="lt-frame" title="walkthrough" src={`/tour/${portal}/${view}`} />}
         <div className="lt-overlay" />
         <div className="lt-cursor"><span className="ring" /><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
         <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">Activity<span className="splos">OS</span></div><div className="sptitle">{cfg.title}</div><div className="spsub">a quick guided walkthrough</div></div>

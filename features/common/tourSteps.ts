@@ -17,8 +17,7 @@ export const SETTINGS_LINKS: Record<string, SettingsLink[]> = {
   ...LB_SETTINGS,
   ...CREATE_SETTINGS,
   dash: [
-    { icon: "⚙️", label: "Features", tab: "features", note: "Switch major areas of ActivityOS on or off" },
-    { icon: "🗓", label: "Seasons", tab: "seasons", note: "Date ranges every figure here can filter by" },
+    { icon: "⚙️", label: "Features", tab: "features", note: "turn whole areas of ActivityOS on or off — Meals, Trips, Moments, the Task manager and more — so the dashboard only shows what you actually use" },
   ],
   meals: [{ icon: "🍽", label: "Meals", tab: "meals", note: "Cut-off times, who sees each menu, and whether swaps need approval" }],
   customers: [
@@ -131,6 +130,14 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
       { find: "Today ·", line: "Below, Today lists every session running now, each with its time, how full it is, and anyone waiting on the list." },
       { find: "Live listings · places left", line: "Live listings shows your open runs and exactly how many places are left, with a green, amber or red tag you can read at a glance." },
       { find: "Tasks today", line: "And Tasks today pulls in anything due today from your task manager, so nothing slips through." },
+      // Business analytics — the lower half of the page. Kept brief and swift:
+      // each line sweeps a cluster of cards so we cover them all without dragging.
+      { find: "Business analytics", line: "Scroll on and here's your Business analytics — the bigger picture, worked out from your bookings. Flip between three, six or twelve months up here." },
+      { find: "Income collected", line: "These four tiles sum it up — income collected, total bookings, how many families, and your average booking value." },
+      { find: "Income by month", line: "Income by month tracks what you've taken, and Booked versus collected sets what parents owe against what's actually landed." },
+      { find: "Revenue by activity", line: "Revenue by activity shows which camps and clubs earn you the most." },
+      { find: "Booking funnel", line: "The booking funnel shows how many bookings get confirmed and paid, and Repeat customers how many families come back for more." },
+      { find: "Bookings & payments", line: "Bookings and payments breaks things down by status and how people pay, and Newest bookings lists the latest to land." },
     ],
   },
 };

@@ -15,6 +15,7 @@ import { MERGE_FIELDS } from "@/lib/merge-fields";
 import type { TenantSettings } from "@/lib/settings";
 import { downscaleImage, type Company, type Newsletter } from "@/features/newsfeed/newsletter";
 import { CampaignDesigner, renderDesignHtml, renderDesignText, loadMyTemplates, persistMyTemplates, type CampaignDesign, type Block, type SavedTemplate, type Social } from "@/features/email/campaignTemplates";
+import { GmailSetupWalkthrough } from "@/features/email/GmailSetupWalkthrough";
 
 // ── "Automatic emails" — which system emails ActivityOS sends on the provider's
 // behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
@@ -364,6 +365,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
   const [mb, setMb] = useState<Mailbox | null>(null);
   const [copied, setCopied] = useState(false);
   const [host, setHost] = useState<string | null>(null);
+  const [walk, setWalk] = useState(false); // the Gmail step-by-step walkthrough overlay
   const [open, setOpen] = useState(false); // the "Setting up your email" dropdown — collapsed by default
   const { settings, save } = useSettings();
   const load = useCallback(() => { apiGet<Mailbox>("/api/emails/mailbox").then(setMb).catch(() => {}); }, []);
@@ -414,7 +416,9 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
         <span className="text-[13px] font-extrabold text-[#127a3e]">✓ Your email is connected</span>
         <code data-ui="inbound-address" className="rounded-md bg-white px-2 py-0.5 text-[11.5px] font-bold text-[var(--ink-2)]">{address}</code>
         <span className="text-[11.5px] text-[var(--ink-3)]">Last message {when(mb.lastAt ?? undefined)}</span>
+        <button type="button" onClick={() => setWalk(true)} className="text-[11.5px] font-bold text-[#1d3a8f] underline">Gmail walkthrough</button>
         <button type="button" onClick={() => setHost("outlook")} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] underline">Change or re-check setup</button>
+        {walk && <GmailSetupWalkthrough address={address} onClose={() => setWalk(false)} />}
       </div>
     );
   }
@@ -443,6 +447,14 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
           — it takes about two minutes, once — and everything parents send you shows up here too.
           Your email keeps working exactly as it does now, and you keep your own copy of everything.
         </div>
+        {/* Gmail is by far the most common host, and its confirmation-code step
+            is where people get stuck — so we offer a screen-by-screen walk. */}
+        <button type="button" onClick={() => setWalk(true)}
+          className="mb-3 inline-flex items-center gap-2 rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] px-3.5 py-2 text-[12.5px] font-extrabold text-[#16306e] hover:border-[#2f6bd8]">
+          <span className="grid h-6 w-6 place-items-center rounded-full bg-gradient-to-b from-[#4f8bf5] to-[#2f6bd8] text-[10px] text-white">▶</span>
+          Watch the Gmail walkthrough
+          <span className="font-semibold text-[var(--ink-3)]">— 8 quick screens</span>
+        </button>
         {/* Step 1 — the address. Always visible: it's what every route needs. */}
         <div className="text-[12.5px] font-extrabold text-[var(--ink)]">Step 1 — copy your ActivityOS address</div>
         <div className="mt-1.5 flex flex-wrap items-center gap-2">
@@ -517,6 +529,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
           </div>
         )}
       </div>}
+      {walk && <GmailSetupWalkthrough address={address} code={mb.pendingVerification?.code} onClose={() => setWalk(false)} />}
     </div>
   );
 }
