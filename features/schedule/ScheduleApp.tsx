@@ -135,6 +135,7 @@ export function ScheduleApp() {
   const [availEdit, setAvailEdit] = useState<Staff | null>(null);
   const [availWeekMode, setAvailWeekMode] = useState<"all" | "this">("all");
   const [assignOpen, setAssignOpen] = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [copyMenu, setCopyMenu] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -194,28 +195,46 @@ export function ScheduleApp() {
   const requestAvail = () => flash(`Availability requested from ${notSubmitted} staff.`);
   // Reconcile the grouped draft back into individual shift rows (one per needed slot),
   // reusing existing rows (to keep check-ins) where a staff member still matches.
-  function saveDraft() {
-    if (!draft) return;
-    const existing = store.shifts.filter((s) => draft.groupIds.includes(s.id));
+  function currentRows(d: Draft): Shift[] {
+    const existing = store.shifts.filter((s) => d.groupIds.includes(s.id));
     const used = new Set<string>();
-    const rows: Shift[] = draft.slots.map((sid, i) => {
+    return d.slots.map((sid, i) => {
       let base = sid ? existing.find((e) => e.staffId === sid && !used.has(e.id)) : undefined;
       if (!base) base = existing.find((e) => !used.has(e.id));
       if (base) used.add(base.id);
       const keepIO = base && base.staffId === sid;
       return {
         id: base?.id ?? `sh${Date.now()}${i}`,
-        site: draft.site, role: draft.role,
-        listing: draft.listing || undefined, season: draft.season || undefined,
-        date: draft.date, start: draft.start, end: draft.end, staffId: sid,
+        site: d.site, role: d.role, listing: d.listing || undefined, season: d.season || undefined,
+        date: d.date, start: d.start, end: d.end, staffId: sid,
         in: keepIO ? base!.in : undefined, out: keepIO ? base!.out : undefined,
-        locked: base?.locked, note: draft.note || undefined, brk: draft.brk || undefined,
+        locked: base?.locked, note: d.note || undefined, brk: d.brk || undefined,
       };
     });
-    persist({ ...store, shifts: [...store.shifts.filter((s) => !draft.groupIds.includes(s.id)), ...rows] });
-    setDraft(null); setAssignOpen(false);
   }
-  function deleteDraft() { if (!draft) return; persist({ ...store, shifts: store.shifts.filter((s) => !draft.groupIds.includes(s.id)) }); setDraft(null); setAssignOpen(false); }
+  const freshRows = (d: Draft, date: string, tag: string): Shift[] => d.slots.map((sid, i) => ({ id: `sh${Date.now()}${tag}${i}`, site: d.site, role: d.role, listing: d.listing || undefined, season: d.season || undefined, date, start: d.start, end: d.end, staffId: sid, note: d.note || undefined, brk: d.brk || undefined }));
+  function saveDraft() {
+    if (!draft) return;
+    persist({ ...store, shifts: [...store.shifts.filter((s) => !draft.groupIds.includes(s.id)), ...currentRows(draft)] });
+    setDraft(null); setAssignOpen(false); setActionsOpen(false);
+  }
+  function deleteDraft() { if (!draft) return; persist({ ...store, shifts: store.shifts.filter((s) => !draft.groupIds.includes(s.id)) }); setDraft(null); setActionsOpen(false); setAssignOpen(false); }
+  // Shift-actions menu
+  function copyToAllDays() {
+    if (!draft) return;
+    const others = store.shifts.filter((s) => !draft.groupIds.includes(s.id));
+    const targets = dates.filter((d) => d !== draft.date && !others.some((s) => gkey(s) === gkey({ ...draft, date: d })));
+    const copies = targets.flatMap((d, di) => freshRows(draft, d, `c${di}`));
+    persist({ ...store, shifts: [...others, ...currentRows(draft), ...copies] });
+    setDraft(null); setActionsOpen(false); flash(`Copied to ${targets.length} day${targets.length === 1 ? "" : "s"} in view.`);
+  }
+  function duplicateShift() {
+    if (!draft) return;
+    const others = store.shifts.filter((s) => !draft.groupIds.includes(s.id));
+    persist({ ...store, shifts: [...others, ...currentRows(draft), ...freshRows(draft, draft.date, "d")] });
+    setDraft(null); setActionsOpen(false); flash("Shift duplicated.");
+  }
+  const clearOpen = () => { if (!draft) return; setDraft({ ...draft, slots: draft.slots.map(() => null) }); setActionsOpen(false); };
   // Auto-fill the draft's empty slots from available, non-double-booked staff (role-preferred).
   function autoFillDraft() {
     if (!draft) return;
@@ -263,10 +282,13 @@ export function ScheduleApp() {
   }
   function deleteTemplate(id: string) { persistTpl(templates.filter((t) => t.id !== id)); }
   function publish() { const ids = new Set(periodShifts.filter((s) => s.staffId).map((s) => s.id)); persist({ ...store, shifts: store.shifts.map((s) => (ids.has(s.id) ? { ...s, locked: true } : s)) }); flash(`Published to ${assignedStaff.size} staff — shifts locked.`); }
-  const openAdd = (site_: string, role: string, c: { date: string; hour: number | null }, staffId: string | null) =>
+  const openAdd = (site_: string, role: string, c: { date: string; hour: number | null }, staffId: string | null) => {
+    setAssignOpen(false); setActionsOpen(false);
     setDraft({ groupIds: [], site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonF !== "all" ? seasonF : "Summer 2026", date: c.date, start: c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00", end: c.hour != null ? `${String(c.hour + 1).padStart(2, "0")}:00` : "17:00", slots: [staffId], brk: null, note: "" });
+  };
   // Open the editor on the whole group of shifts sharing this slot (N needed / M filled).
   const openEditGroup = (s: Shift) => {
+    setAssignOpen(false); setActionsOpen(false);
     const group = store.shifts.filter((x) => gkey(x) === gkey(s));
     const filledFirst = [...group].sort((a, b) => Number(!!b.staffId) - Number(!!a.staffId));
     setDraft({ groupIds: group.map((x) => x.id), site: s.site, role: s.role, listing: s.listing ?? "", season: s.season ?? "", date: s.date, start: s.start, end: s.end, slots: filledFirst.map((x) => x.staffId), brk: s.brk ?? null, note: s.note ?? "" });
@@ -499,7 +521,7 @@ export function ScheduleApp() {
               <button type="button" onClick={() => { setDraft(null); setAssignOpen(false); }} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button>
             </div>
 
-            {!assignOpen ? (
+            {!assignOpen && !actionsOpen ? (
             <div className="px-5 py-4">
               {/* date */}
               <div className="flex items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">📅</span><span className="text-[13.5px] font-bold text-[var(--ink)]">{dt(draft.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span></div>
@@ -544,12 +566,12 @@ export function ScheduleApp() {
               <div className="mt-3 flex items-center gap-3">
                 <div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Total</div><div className="text-[15px] font-extrabold text-[var(--ink)]">{hLabel(shiftH)} · <span className="tabular-nums">{money(cost)}</span></div></div>
                 <div className="ml-auto flex items-center gap-2">
-                  {draft.groupIds.length > 0 && <button type="button" onClick={deleteDraft} title="Delete shift" className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] text-[16px] text-[var(--ink-3)] hover:bg-[#fdebec] hover:text-[#c0392b]">🗑</button>}
+                  <button type="button" onClick={() => setActionsOpen(true)} title="Shift actions" className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] text-[18px] font-extrabold leading-none text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[var(--ink)]">⋯</button>
                   <button type="button" onClick={saveDraft} className="rounded-xl bg-[#0f7a43] px-6 py-2 text-[14px] font-extrabold text-white hover:brightness-105">Save</button>
                 </div>
               </div>
             </div>
-            ) : (
+            ) : assignOpen ? (
             /* ── Assign staff sub-panel ── */
             <div className="px-5 py-4">
               <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setAssignOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button><div className="text-[15px] font-extrabold text-[var(--ink)]">Assign staff</div><div className="ml-auto text-[12.5px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{filled} / {need} filled</div></div>
@@ -571,6 +593,18 @@ export function ScheduleApp() {
                   ); })}
               </div>
               <div className="mt-3 flex justify-end"><button type="button" onClick={() => setAssignOpen(false)} className="rounded-xl bg-[#0f7a43] px-6 py-2 text-[14px] font-extrabold text-white hover:brightness-105">Done</button></div>
+            </div>
+            ) : (
+            /* ── Shift actions ── */
+            <div className="px-5 py-4">
+              <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setActionsOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button><div className="text-[15px] font-extrabold text-[var(--ink)]">Shift actions</div></div>
+              <div className="flex flex-col gap-2">
+                <button type="button" onClick={() => { autoFillDraft(); setActionsOpen(false); }} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-left text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">⚡</span>Auto-fill available staff</button>
+                <button type="button" onClick={copyToAllDays} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-left text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">📋</span>Copy to all days in view</button>
+                <button type="button" onClick={duplicateShift} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-left text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">⧉</span>Duplicate shift</button>
+                <button type="button" onClick={clearOpen} className="flex items-center gap-3 rounded-xl border border-[var(--line)] px-4 py-3 text-left text-[14px] font-extrabold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="text-[16px]">↺</span>Clear (unassign → open)</button>
+                <button type="button" onClick={deleteDraft} className="flex items-center gap-3 rounded-xl border border-[#f3c9cd] px-4 py-3 text-left text-[14px] font-extrabold text-[#c0392b] hover:bg-[#fdebec]"><span className="text-[16px]">🗑</span>Delete shift (all cards)</button>
+              </div>
             </div>
             )}
           </div>
@@ -661,3 +695,4 @@ export function ScheduleApp() {
     </div>
   );
 }
+
