@@ -43,7 +43,7 @@ const CSS = `
 .lt-root .splogo{font-size:38px;font-weight:900;letter-spacing:-1px;background:linear-gradient(90deg,#7fd0ff,#ffffff 45%,#7fd0ff);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 2px 10px rgba(80,170,255,.4))}
 .lt-root .splos{-webkit-text-fill-color:#ff5aa8;color:#ff5aa8;background:none;filter:drop-shadow(0 2px 10px rgba(255,90,168,.5))}
 .lt-root .sptitle{font-size:17px;font-weight:800;color:#e6f0ff}.lt-root .spsub{font-size:11.5px;font-weight:700;color:#9fb4dd}
-.lt-root .lt-slide{display:flex;align-items:center;justify-content:center;overflow:auto;padding:22px}
+.lt-root .lt-slide{display:flex;align-items:center;justify-content:center;overflow:auto;padding:26px;background:radial-gradient(120% 130% at 50% -10%,#e9f1fd 0%,#d9e6fb 48%,#c7dbf6 100%)}
 `;
 
 export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: string; steps: LiveTourSteps }) {

@@ -40,7 +40,7 @@ const pill = (t: string, bg: string, col = "#fff") =>
   `<span style="display:inline-block;border-radius:999px;padding:7px 16px;font:800 12px/1 system-ui;background:${bg};color:${col}">${t}</span>`;
 
 function centre(inner: string): string {
-  return `<div style="display:flex;flex-direction:column;align-items:center;gap:14px;font-family:system-ui;max-width:560px">${inner}</div>`;
+  return `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;font-family:system-ui;width:100%;max-width:600px">${inner}</div>`;
 }
 
 export function gmailTour(address: string, code = "184973"): LiveTourSteps {
@@ -133,7 +133,7 @@ export function gmailTour(address: string, code = "184973"): LiveTourSteps {
         line:
           "Here's the clever bit. Because that address is yours, Gmail's confirmation code appears right here on your setup panel, all by itself, within a minute. Usually that's all it takes. If Gmail also asks you to type the code in, just pop it into the box in Gmail and press Verify.",
         slide: centre(`
-          <div style="width:100%;max-width:440px;border:1px solid #f3d98a;background:#fdf6e3;border-radius:14px;padding:16px">
+          <div style="width:100%;border:1px solid #f3d98a;background:#fdf6e3;border-radius:14px;padding:18px 20px">
             <div style="font:800 12px/1 system-ui;color:#7a5a12">Gmail sent us your confirmation code</div>
             <div style="margin-top:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap">
               <code style="border-radius:9px;background:#fff;padding:8px 12px;font:800 17px/1 ui-monospace,monospace;letter-spacing:.15em;color:#7a5a12">${code}</code>
