@@ -294,12 +294,12 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       ],
     },
     {
-      label: "Sell & take bookings",
+      label: "Blocks and listings",
       pinned: false,
       footer: false,
       items: [
         { view: "listings", legacyView: "freelancer-listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
-        { view: "blocks", legacyView: "freelancer-blocks", label: "Sessions & blocks", icon: { type: "glyph", value: "▥" }, badge: null },
+        { view: "blocks", legacyView: "freelancer-blocks", label: "Blocks", icon: { type: "glyph", value: "▥" }, badge: null },
         { view: "bookings", legacyView: "freelancer-bookings", label: "Bookings", hidden: true, icon: { type: "glyph", value: "◷" }, badge: null },
       ],
     },
@@ -308,7 +308,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "customers", legacyView: "freelancer-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
+        { view: "customers", legacyView: "freelancer-customers", label: "Families", hidden: true, icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "registers", legacyView: "freelancer-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
         { view: "meals", legacyView: "freelancer-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
         { view: "ratios", legacyView: "freelancer-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
