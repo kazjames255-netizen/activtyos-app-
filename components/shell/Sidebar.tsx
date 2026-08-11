@@ -82,7 +82,9 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded }: {
       style={
         active
           ? { background: "rgba(255,255,255,0.16)", color: "#ffffff", fontWeight: 700, boxShadow: "inset 3px 0 0 var(--side-ct-bg)" }
-          : { color: "var(--side-nav)" }
+          : item.highlight
+            ? { color: "#ffe08a", background: "rgba(250,204,21,0.14)", boxShadow: "inset 3px 0 0 #facc15" }
+            : { color: "var(--side-nav)" }
       }
     >
       <Icon icon={item.icon} />
