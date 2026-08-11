@@ -26,8 +26,11 @@ const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join
 const addDays = (s: string, n: number) => { const x = dt(s); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
 const overlaps = (a: { start: string; end: string }, b: { start: string; end: string }) => mins(a.start) < mins(b.end) && mins(b.start) < mins(a.end);
 const HOURS = Array.from({ length: 13 }, (_, i) => 7 + i); // 7am–7pm
+type WDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+const WDAYS: [WDay, string][] = [["mon", "Mon"], ["tue", "Tue"], ["wed", "Wed"], ["thu", "Thu"], ["fri", "Fri"], ["sat", "Sat"], ["sun", "Sun"]];
+const WIN_A = 7 * 60, WIN = 19 * 60 - WIN_A; // availability bar window: 7am–7pm
 
-interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number }
+interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number; week?: Partial<Record<WDay, { from: string; to: string }>> }
 interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; season?: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean }
 interface Store { staff: Staff[]; shifts: Shift[]; sites: string[] }
 
@@ -41,13 +44,13 @@ function seed(): Store {
   const day = (n: number) => { const x = new Date(mon); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
   const LM = "Loughton Manor First School", GL = "Gullivers Land, Milton Keynes";
   const staff: Staff[] = [
-    { id: "amelia", name: "Amelia Hart", role: "Coach", rate: 14.0, avail: "confirmed" },
+    { id: "amelia", name: "Amelia Hart", role: "Coach", rate: 14.0, avail: "confirmed", week: { mon: { from: "09:00", to: "15:00" }, tue: { from: "09:00", to: "15:00" }, thu: { from: "09:00", to: "18:00" }, fri: { from: "09:00", to: "18:00" }, sat: { from: "10:00", to: "16:00" } } },
     { id: "dom", name: "Dom Reyes", role: "Lifeguard", rate: 11.5, avail: "notsubmitted" },
     { id: "kitty", name: "Kitty-Rose Bright", role: "Activity Assistant", rate: 13.0, avail: "notsubmitted" },
-    { id: "liberty", name: "Liberty Young", role: "Coach", rate: 12.0, avail: "confirmed" },
+    { id: "liberty", name: "Liberty Young", role: "Coach", rate: 12.0, avail: "confirmed", week: { mon: { from: "09:00", to: "17:00" }, tue: { from: "09:00", to: "17:00" }, wed: { from: "09:00", to: "17:00" }, thu: { from: "09:00", to: "17:00" }, fri: { from: "09:00", to: "17:00" } } },
     { id: "louis", name: "Louis Calderwood", role: "Lifeguard", rate: 11.0, avail: "notsubmitted" },
-    { id: "oluwa", name: "OluwaDamilola Adeyemi", role: "Lead Coach", rate: 15.5, avail: "confirmed" },
-    { id: "susan", name: "Susan Preston", role: "Lead Coach", rate: 12.5, avail: "confirmed" },
+    { id: "oluwa", name: "OluwaDamilola Adeyemi", role: "Lead Coach", rate: 15.5, avail: "confirmed", week: { mon: { from: "08:00", to: "16:00" }, tue: { from: "08:00", to: "16:00" }, wed: { from: "08:00", to: "16:00" }, sat: { from: "09:00", to: "15:00" } } },
+    { id: "susan", name: "Susan Preston", role: "Lead Coach", rate: 12.5, avail: "confirmed", week: { mon: { from: "08:00", to: "14:00" }, thu: { from: "08:00", to: "14:00" }, fri: { from: "08:00", to: "14:00" } } },
     { id: "taigan", name: "Taigan McMahon", role: "First Aider", rate: 13.5, avail: "notsubmitted" },
   ];
   let n = 0; const id = () => `sh${++n}`;
@@ -93,6 +96,8 @@ export function ScheduleApp() {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [autoMenu, setAutoMenu] = useState(false);
   const [showAlerts, setShowAlerts] = useState(false);
+  const [hover, setHover] = useState<{ id: string; top: number; left: number } | null>(null);
+  const [availEdit, setAvailEdit] = useState<Staff | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2600); };
 
@@ -254,10 +259,15 @@ export function ScheduleApp() {
             {canManage && <div className="mb-2.5"><div className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step 1 · Confirm availability</div><button type="button" onClick={requestAvail} className="w-full rounded-lg bg-[#c0392b] px-2 py-2 text-[11px] font-extrabold uppercase leading-tight tracking-wide text-white hover:brightness-105">Request staff{notSubmitted ? ` · ${notSubmitted}` : ""}</button></div>}
             <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
               {shownStaff.map((st) => { const hrs = staffHours(st.id); const pay = hrs * st.rate; const cost = pay * (1 + ON_COST / 100); return (
-                <div key={st.id} className="flex items-start gap-2 py-2">
+                <div key={st.id}
+                  onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHover({ id: st.id, top: Math.max(64, Math.min(r.top, (typeof window !== "undefined" ? window.innerHeight : 800) - 430)), left: r.right + 10 }); }}
+                  onMouseLeave={() => setHover((h) => (h?.id === st.id ? null : h))}
+                  onClick={() => setAvailEdit(st)}
+                  title="Click to view / edit availability"
+                  className="-mx-1 flex cursor-pointer items-start gap-2 rounded-lg px-1 py-2 hover:bg-[var(--panel)]">
                   <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1"><span className="truncate text-[12px] font-extrabold text-[var(--ink)]">{st.name}</span>{st.avail === "notsubmitted" ? <button type="button" onClick={() => remind(st.id)} title={`Send reminder${st.reminders ? ` (sent ${st.reminders})` : ""}`} className="flex-none text-[11px]">🔔</button> : <span title="Confirmed" className="flex-none text-[10px] text-[#0f7a43]">✓</span>}</div>
+                    <div className="flex items-center gap-1"><span className="truncate text-[12px] font-extrabold text-[var(--ink)]">{st.name}</span>{st.avail === "notsubmitted" ? <button type="button" onClick={(e) => { e.stopPropagation(); remind(st.id); }} title={`Send reminder${st.reminders ? ` (sent ${st.reminders})` : ""}`} className="flex-none text-[11px]">🔔</button> : <span title="Confirmed" className="flex-none text-[10px] text-[#0f7a43]">✓</span>}</div>
                     <div className="text-[9px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className={st.avail === "confirmed" ? "text-[#0f7a43]" : "text-[#c0392b]"}>{st.avail === "confirmed" ? "Confirmed" : "Not submitted"}</span></div>
                     <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{hLabel(hrs)} · £{st.rate.toFixed(2)}/hr</div>
                     <div className="text-[11px] font-bold text-[var(--ink)]">{money(pay)} <span className="font-normal text-[var(--ink-3)]">· {money(cost)} on-cost</span></div>
@@ -344,6 +354,53 @@ export function ScheduleApp() {
           </div>
         </div>
       )}
+
+      {/* Hover card — a staff member's weekly availability */}
+      {hover && (() => { const st = staffById[hover.id]; if (!st) return null; const daysOn = WDAYS.filter(([k]) => st.week?.[k]).length; return (
+        <div style={{ position: "fixed", top: hover.top, left: hover.left, zIndex: 200 }} className="pointer-events-none w-[330px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-2xl">
+          <div className="flex items-center gap-3 px-4 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
+            <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-white/20 text-[14px] font-extrabold">{initials(st.name)}</span>
+            <div><div className="text-[15px] font-extrabold">{st.name}</div><div className="text-[12px] text-white/85">{st.avail === "confirmed" ? `Available ${daysOn} of 7 days` : "Availability not submitted"} · £{st.rate.toFixed(2)}/hr</div></div>
+          </div>
+          <div className="px-4 py-3">
+            <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">Weekly availability</div>
+            {st.avail !== "confirmed" ? <p className="py-2 text-[12.5px] text-[var(--ink-3)]">They haven&rsquo;t submitted their availability yet — send a reminder.</p> : (
+              <div className="flex flex-col gap-2">
+                {WDAYS.map(([k, lbl]) => { const w = st.week?.[k]; return (
+                  <div key={k} className="flex items-center gap-3">
+                    <span className="w-9 flex-none text-[12.5px] font-extrabold text-[var(--ink)]">{lbl}</span>
+                    <div className="relative h-2 flex-1 rounded-full bg-[var(--panel)]">{w && <div className="absolute top-0 h-2 rounded-full" style={{ left: `${(mins(w.from) - WIN_A) / WIN * 100}%`, width: `${(mins(w.to) - mins(w.from)) / WIN * 100}%`, background: "#22b365" }} />}</div>
+                    <span className="w-[112px] flex-none text-right text-[12px] font-bold" style={{ color: w ? "#0f7a43" : "var(--ink-3)" }}>{w ? `${to12(w.from)}–${to12(w.to)}` : "Unavailable"}</span>
+                  </div>
+                ); })}
+              </div>
+            )}
+          </div>
+        </div>
+      ); })()}
+
+      {/* View / edit a staff member's availability */}
+      {availEdit && (() => { const st = availEdit;
+        const setDay = (k: WDay, w: { from: string; to: string } | null) => { const week = { ...(st.week ?? {}) }; if (w) week[k] = w; else delete week[k]; const next: Staff = { ...st, week, avail: Object.keys(week).length ? "confirmed" : st.avail }; setAvailEdit(next); persist({ ...store, staff: store.staff.map((x) => (x.id === st.id ? next : x)) }); };
+        return (
+          <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[7vh]" onClick={() => setAvailEdit(null)}>
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--panel)] text-[11px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span><div><div className="text-[15px] font-extrabold text-[var(--ink)]">{st.name}</div><div className="text-[11px] text-[var(--ink-3)]">{st.role} · availability</div></div><button type="button" onClick={() => setAvailEdit(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+              <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">Staff set this themselves; here you can view or adjust the days &amp; times they can work.</p>
+              <div className="mt-2.5 flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
+                {WDAYS.map(([k, lbl]) => { const w = st.week?.[k]; return (
+                  <div key={k} className="flex flex-wrap items-center gap-2.5 py-2">
+                    <button type="button" onClick={() => setDay(k, w ? null : { from: "09:00", to: "17:00" })} role="switch" aria-checked={!!w} className="relative h-[20px] w-[36px] flex-none rounded-full transition-colors" style={{ background: w ? "#2f6bd8" : "var(--line)" }}><span className="absolute top-[3px] h-[14px] w-[14px] rounded-full bg-white transition-all" style={{ left: w ? "19px" : "3px" }} /></button>
+                    <span className="w-[70px] flex-none text-[13px] font-extrabold text-[var(--ink)]">{lbl}</span>
+                    {w ? <div className="flex items-center gap-1.5 text-[12.5px] text-[var(--ink-2)]"><Input type="time" value={w.from} onChange={(e) => setDay(k, { ...w, from: e.target.value })} className="w-[108px]" /><span className="text-[var(--ink-3)]">to</span><Input type="time" value={w.to} onChange={(e) => setDay(k, { ...w, to: e.target.value })} className="w-[108px]" /></div> : <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">Not available</span>}
+                  </div>
+                ); })}
+              </div>
+              <div className="mt-4 flex justify-end"><Button variant="primary" onClick={() => setAvailEdit(null)}>Done</Button></div>
+            </div>
+          </div>
+        );
+      })()}
 
       {toast && <div className="fixed bottom-5 left-1/2 z-[140] -translate-x-1/2 rounded-full bg-[#16306e] px-4 py-2.5 text-[12.5px] font-bold text-white shadow-lg">{toast}</div>}
     </div>
