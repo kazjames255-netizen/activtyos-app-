@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { firebaseAuth } from "./firebase/client";
+import { isDemoMode } from "./api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -110,7 +111,12 @@ export function subscribeRealtime(collections: string[], onChange: () => void): 
 /** React hook flavour: live-refetch while the component is mounted. */
 export function useRealtime(collections: string[], onChange: () => void): void {
   useEffect(
-    () => subscribeRealtime(collections, onChange),
+    () => {
+      // In a guided-tour demo document there's no auth and no live data to
+      // invalidate — the fixtures are static, so never open a socket.
+      if (isDemoMode()) return;
+      return subscribeRealtime(collections, onChange);
+    },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [collections.join(","), onChange],
   );

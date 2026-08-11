@@ -38,7 +38,36 @@ async function signedInUser() {
   return firebaseAuth.currentUser;
 }
 
+// ── Guided-tour demo mode ──────────────────────────────────────────────────
+// A tour route (rendered in its own iframe) flips this on so api() returns
+// canned fixtures instead of hitting the network — the real page component then
+// renders with representative data and NO sign-in. Scoped to the tour's own
+// document, so live pages are never affected.
+let demoFixtures: Record<string, unknown> | null = null;
+export function enableDemoMode(fixtures: Record<string, unknown>) {
+  demoFixtures = fixtures;
+}
+export function isDemoMode() {
+  return demoFixtures !== null;
+}
+function demoLookup(path: string): unknown {
+  if (!demoFixtures) return undefined;
+  const clean = path.split("?")[0];
+  if (clean in demoFixtures) return demoFixtures[clean];
+  const noApi = clean.replace(/^\/api/, "");
+  if (noApi in demoFixtures) return demoFixtures[noApi];
+  return undefined;
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  if (demoFixtures) {
+    // Writes just succeed silently; reads return the fixture, or null so a
+    // page with a missing fixture degrades to its empty state rather than
+    // hanging on a network call that can never resolve here.
+    if (init?.method && init.method !== "GET") return (demoLookup(path) ?? {}) as T;
+    const hit = demoLookup(path);
+    return (hit === undefined ? null : hit) as T;
+  }
   const user = await signedInUser();
   if (!user) throw new ApiError(401, "Not signed in");
   const token = await withTimeout(user.getIdToken(), "Getting your sign-in token");
