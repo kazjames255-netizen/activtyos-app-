@@ -43,3 +43,19 @@ ActivityOS build manual (`~/Downloads/AAAAAAA.html`, edit663) specs this as
 `roles` + `role_permissions(role_id, capability, level)` + `invites` + `audit_log`,
 base roles "Company admin (Owner) / Manager / Staff-Coach", "staff are view-only for
 their own sessions; medical/SEND/contacts are permissioned".
+
+## Extra enforcement rules (from operator's presets)
+- **Scope** — each role has `scope: "all" | "assigned"`. For the `scoped` areas
+  (`listings`, `registers`, `ratios`, `meals`, `trips`, `timetable`, `calendar`),
+  an `assigned` role must only see rows for the listings that staff member is
+  assigned to (needs the staff↔listing assignment). Owner/Manager = all by
+  default; Lead/Coach = assigned.
+- **Field-level money** — booking **cost** and the dashboard **money tiles** are
+  shown only to roles whose `finances` cap is `view`+. So a Lead/Coach (finances
+  = none) sees bookings without prices and a dashboard without financial figures,
+  automatically — don't gate the whole Bookings/Dashboard page for that, just the
+  money bits.
+- **Own-only** — `schedule` and `learning` for a non-manager role mean *their
+  own* record only (their shifts, their training), not the whole team's.
+- `tasks` is editable by everyone by default (set & assign). `messaging`, `email`,
+  `support` default on for all roles; admin can switch any off per role.

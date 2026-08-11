@@ -49,6 +49,8 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
 
   const setCap = (roleId: string, cap: string, level: CapLevel) =>
     onChange(list.map((r) => (r.id === roleId ? { ...r, caps: { ...r.caps, [cap]: level } } : r)));
+  const setScope = (roleId: string, scope: "all" | "assigned") =>
+    onChange(list.map((r) => (r.id === roleId ? { ...r, scope } : r)));
   const rename = (roleId: string, name: string) =>
     onChange(list.map((r) => (r.id === roleId ? { ...r, name } : r)));
   const remove = (roleId: string) => onChange(list.filter((r) => r.id !== roleId));
@@ -66,7 +68,10 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
     <div className="flex flex-col gap-3.5">
       <div className="rounded-xl border border-[#dbe6fb] bg-[#f4f8ff] px-4 py-3 text-[12.5px] leading-relaxed text-[#1d3a8f]">
         Set what each role can reach — <b>None</b> hides it, <b>View</b> is read-only, <b>Edit</b> lets them change it.
-        Owner always has full access. <span className="text-[#5b6b86]">Next step: pick a role when you invite each person, and these rules take effect across the app and sidebar.</span>
+        Owner always has full access. Each role also has a <b>scope</b>: <b>All sites</b> or <b>Assigned only</b> — assigned roles
+        see just the listings they&rsquo;re on (registers, trips, timetable, calendar, listings). Booking <b>cost</b> and the
+        dashboard <b>money tiles</b> show only to roles with Finances access.
+        <span className="block text-[#5b6b86]">Next step: pick a role when you invite each person, and these rules take effect across the app and sidebar.</span>
       </div>
 
       {/* The matrix — sticky first column, scrolls sideways as roles grow. */}
@@ -95,7 +100,20 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
                       <button type="button" onClick={() => remove(r.id)} title="Delete role" className="flex-none text-[13px] leading-none text-[var(--ink-3)] hover:text-[#c0392b]">×</button>
                     ) : null}
                   </div>
-                  <div className="mt-0.5 text-[10px] font-semibold text-[var(--ink-3)]">{r.builtin ? "Built-in" : "Custom"}</div>
+                  {/* Scope: all sites vs assigned listings only */}
+                  <div className="mt-1.5 inline-flex overflow-hidden rounded-md border border-[var(--line)]">
+                    {(["all", "assigned"] as const).map((s) => {
+                      const on = (r.scope ?? "all") === s;
+                      return (
+                        <button key={s} type="button" disabled={r.owner} onClick={() => setScope(r.id, s)}
+                          title={s === "all" ? "Sees every site / listing" : "Sees only listings they're assigned to"}
+                          className="px-1.5 py-[3px] text-[9.5px] font-extrabold uppercase tracking-[0.03em] transition-colors disabled:opacity-60"
+                          style={on ? { background: "#eef4fd", color: "#1d3a8f" } : { background: "transparent", color: "var(--ink-3)" }}>
+                          {s === "all" ? "All" : "Assigned"}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </th>
               ))}
             </tr>
@@ -110,9 +128,13 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
                 </tr>
                 {ROLE_CAPS.filter((c) => c.group === group).map((cap) => (
                   <tr key={cap.key} className="border-t border-[var(--line-2,#eef2f8)]">
-                    <td className="sticky left-0 z-10 bg-[var(--surface)] px-4 py-2 text-[12.5px] font-semibold text-[var(--ink)]">
-                      {cap.sensitive && <span title="Sensitive data" className="mr-1 text-[10px]">🔒</span>}
-                      {cap.label}
+                    <td className="sticky left-0 z-10 bg-[var(--surface)] px-4 py-2">
+                      <div className="text-[12.5px] font-semibold text-[var(--ink)]">
+                        {cap.sensitive && <span title="Sensitive data" className="mr-1 text-[10px]">🔒</span>}
+                        {cap.label}
+                        {cap.scoped && <span title="Honours the role's Assigned-only scope" className="ml-1 text-[10px] text-[var(--ink-3)]">◎</span>}
+                      </div>
+                      {cap.note && <div className="text-[10.5px] leading-tight text-[var(--ink-3)]">{cap.note}</div>}
                     </td>
                     {list.map((r) => (
                       <td key={r.id} className="border-l border-[var(--line-2,#eef2f8)] px-3 py-2 text-center">

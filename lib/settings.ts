@@ -408,41 +408,81 @@ export interface StaffRole {
   builtin?: boolean; // a seeded role — can't be deleted (Owner also can't be edited)
   owner?: boolean;   // full access, locked to "edit" on everything
   caps: Record<string, CapLevel>;
+  /** "all" = sees every site/listing; "assigned" = only the listings this
+   *  person is assigned to (registers, trips, timetable, calendar, listings).
+   *  Owner/Manager default to all; Leads/Coaches to assigned. */
+  scope?: "all" | "assigned";
 }
 /** The areas access is set against, grouped for the matrix. `sensitive` rows
- *  cover data we especially want locked down (medical, money, payroll). */
-export const ROLE_CAPS: { key: string; label: string; group: string; sensitive?: boolean }[] = [
-  { key: "dashboard", label: "Dashboard", group: "Overview" },
-  { key: "bookings", label: "Bookings", group: "Sell & take bookings" },
-  { key: "listings", label: "Listings & blocks", group: "Sell & take bookings" },
+ *  cover data we especially want locked down (medical, money, payroll).
+ *  `scoped` areas honour the role's assigned-only scope. `note` shows a hint. */
+export const ROLE_CAPS: { key: string; label: string; group: string; sensitive?: boolean; scoped?: boolean; note?: string }[] = [
+  { key: "dashboard", label: "Dashboard", group: "Overview", note: "Money tiles show only with Finances access" },
+  { key: "listings", label: "Listings & blocks", group: "Sell & take bookings", scoped: true },
+  { key: "bookings", label: "Bookings", group: "Sell & take bookings", note: "Cost is hidden without Finances access" },
   { key: "customers", label: "Families", group: "Sell & take bookings" },
-  { key: "registers", label: "Registers", group: "Run the day" },
-  { key: "ratios", label: "Ratios & groups", group: "Run the day" },
-  { key: "timetable", label: "Timetable & calendar", group: "Run the day" },
-  { key: "meals", label: "Meals", group: "Run the day" },
-  { key: "trips", label: "Trips & visits", group: "Run the day" },
+  { key: "registers", label: "Registers", group: "Run the day", scoped: true },
+  { key: "ratios", label: "Ratios & groups", group: "Run the day", scoped: true },
+  { key: "meals", label: "Meals & menus", group: "Run the day", scoped: true },
+  { key: "trips", label: "Trips & visits", group: "Run the day", scoped: true },
+  { key: "timetable", label: "Activity timetable", group: "Run the day", scoped: true },
+  { key: "calendar", label: "Events calendar", group: "Run the day", scoped: true },
+  { key: "tasks", label: "Task manager", group: "Run the day" },
   { key: "medical", label: "Child medical / SEND / contacts", group: "Safeguarding", sensitive: true },
   { key: "incidents", label: "Concerns & first aid", group: "Safeguarding", sensitive: true },
   { key: "medication", label: "Medication", group: "Safeguarding", sensitive: true },
   { key: "moments", label: "Moments & photos", group: "Safeguarding" },
-  { key: "documents", label: "Documents & learning", group: "Team" },
-  { key: "staff", label: "Staff & schedule", group: "Team" },
-  { key: "payroll", label: "Payroll", group: "Money", sensitive: true },
+  { key: "staff", label: "Staff", group: "Team & learning" },
+  { key: "schedule", label: "Staff schedule", group: "Team & learning", note: "Non-managers see their own only" },
+  { key: "learning", label: "Learning Centre", group: "Team & learning", note: "Non-managers see their own only" },
+  { key: "documents", label: "Documents", group: "Team & learning" },
   { key: "finances", label: "Finances & analytics", group: "Money", sensitive: true },
-  { key: "moneyops", label: "Money in / out, invoices", group: "Money" },
+  { key: "moneyops", label: "Money in / out, invoices", group: "Money", sensitive: true },
+  { key: "payroll", label: "Payroll", group: "Money", sensitive: true },
   { key: "marketing", label: "Marketing & referrals", group: "Growth" },
   { key: "messaging", label: "Messages & newsfeed", group: "Communication" },
-  { key: "settings", label: "Setup & settings", group: "Admin" },
+  { key: "email", label: "Email", group: "Communication" },
+  { key: "support", label: "Message ActivityOS (support)", group: "Communication" },
+  { key: "franchise", label: "Franchise Support Framework", group: "Admin" },
+  { key: "settings", label: "Setup & features", group: "Admin" },
 ];
 const CAP_KEYS = ROLE_CAPS.map((c) => c.key);
 const capsAt = (level: CapLevel): Record<string, CapLevel> =>
   Object.fromEntries(CAP_KEYS.map((k) => [k, level]));
-/** Sensible starting roles a company can then tweak or add to. */
+/** Sensible starting roles a company can then tweak or add to. Levels match the
+ *  presets agreed with the operator; Owner is full & locked. */
 export const DEFAULT_ROLES: StaffRole[] = [
-  { id: "owner", name: "Owner / Admin", builtin: true, owner: true, caps: capsAt("edit") },
-  { id: "manager", name: "Manager", builtin: true, caps: { ...capsAt("edit"), payroll: "view", finances: "view", settings: "none" } },
-  { id: "lead", name: "Site / Camp Lead", builtin: true, caps: { ...capsAt("none"), dashboard: "view", bookings: "view", customers: "view", registers: "edit", ratios: "edit", timetable: "edit", meals: "edit", trips: "edit", medical: "view", incidents: "edit", medication: "edit", moments: "edit", documents: "view", messaging: "view" } },
-  { id: "coach", name: "Coach / Staff", builtin: true, caps: { ...capsAt("none"), dashboard: "view", registers: "view", ratios: "view", timetable: "view", customers: "view", medical: "view", moments: "edit", documents: "view", messaging: "view" } },
+  { id: "owner", name: "Owner / Admin", builtin: true, owner: true, scope: "all", caps: capsAt("edit") },
+  {
+    id: "manager", name: "Manager", builtin: true, scope: "all",
+    caps: {
+      ...capsAt("edit"),
+      medical: "view", payroll: "view",
+      franchise: "view", settings: "none",
+    },
+  },
+  {
+    id: "lead", name: "Site / Camp Lead", builtin: true, scope: "assigned",
+    caps: {
+      ...capsAt("none"),
+      dashboard: "view", listings: "view", bookings: "view", customers: "view",
+      registers: "edit", ratios: "edit", meals: "view", trips: "view", timetable: "view", calendar: "view", tasks: "edit",
+      medical: "view", incidents: "edit", medication: "edit", moments: "edit",
+      schedule: "view", learning: "view", documents: "view",
+      messaging: "edit", email: "edit", support: "edit",
+    },
+  },
+  {
+    id: "coach", name: "Coach / Staff", builtin: true, scope: "assigned",
+    caps: {
+      ...capsAt("none"),
+      dashboard: "view", listings: "view", bookings: "view", customers: "view",
+      registers: "edit", ratios: "view", meals: "view", trips: "view", timetable: "view", calendar: "view", tasks: "edit",
+      medical: "view", incidents: "edit", medication: "view", moments: "edit",
+      schedule: "view", learning: "view", documents: "view",
+      messaging: "edit", email: "edit", support: "edit",
+    },
+  },
 ];
 
 export interface TenantSettings {
