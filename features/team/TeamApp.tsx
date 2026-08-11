@@ -8,6 +8,7 @@ import { useSettings } from "@/lib/settings";
 import { DEFAULT_ROLES } from "@/lib/settings";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
+import { LocationsApp } from "@/features/locations/LocationsApp";
 
 // ── Team & invites (company / franchise) ──────────────────────────────────
 // Invite people, give each a role (from Setup → Roles & permissions) and the
@@ -45,6 +46,7 @@ const initials = (s: string) => s.split(/[\s@.]+/).filter(Boolean).map((w) => w[
 
 export function TeamApp() {
   const { settings, save } = useSettings();
+  const [tab, setTab] = useState<"team" | "locations">("team");
   const roles = (settings.roles?.length ? settings.roles : DEFAULT_ROLES).filter((r) => !r.owner || true); // include all
   const [me, setMe] = useState<Me | null>(null);
   const [invites, setInvites] = useState<Invite[] | null>(null);
@@ -167,6 +169,14 @@ export function TeamApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Team & invites" icon="👥" lede={`${active.length} active · ${pending.length} pending — invite people, give them a role and their listings`} />
 
+      <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
+        {([["team", "Team members"], ["locations", "Locations"]] as const).map(([t, lbl]) => (
+          <button key={t} type="button" onClick={() => setTab(t)} className={"rounded-lg px-4 py-1.5 text-[13px] font-bold transition-colors " + (tab === t ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>
+        ))}
+      </div>
+
+      {tab === "locations" ? <LocationsApp embedded /> : (
+      <>
       {/* Staff usage / plan meter */}
       <Card className="mb-3 p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -326,6 +336,9 @@ export function TeamApp() {
           )}
         </div>
       )}
+      </>
+      )}
     </div>
   );
 }
+

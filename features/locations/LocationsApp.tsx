@@ -19,7 +19,7 @@ const DEMO_VENUES: Venue[] = [
 
 // Read view of the tenant's venues (edited under Listings → Locations). Click a
 // venue to manage its staff, roles and scheduling on the detail page (?id=…).
-export function LocationsApp() {
+export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
   const id = useSearchParams().get("id");
@@ -39,7 +39,7 @@ export function LocationsApp() {
   const detailVenue = list && id ? list.find((v) => v.id === id) : undefined;
 
   return (
-    <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 text-[var(--ink)] sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
+    <div className={embedded ? "text-[var(--ink)]" : "-m-3 min-h-[calc(100vh-3.5rem)] p-3 text-[var(--ink)] sm:-m-5 sm:p-5"} style={embedded ? undefined : LIGHT_PALETTE}>
       {detailVenue ? <LocationDetail venue={detailVenue} venues={list!} onBack={() => router.push(pathname)} /> : (
       <>
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Locations</h2>
@@ -72,3 +72,4 @@ export function LocationsApp() {
     </div>
   );
 }
+
