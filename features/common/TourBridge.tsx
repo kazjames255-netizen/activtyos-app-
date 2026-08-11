@@ -14,9 +14,12 @@ export function TourBridge() {
       if (!boxEl) {
         boxEl = document.createElement("div");
         boxEl.setAttribute("aria-hidden", "true");
+        // A soft ring around the thing being discussed — NO full-page dim and
+        // no filled interior, so it never washes out the card's own text. The
+        // moving cursor is the primary pointer; this just frames its target.
         boxEl.style.cssText =
-          "position:fixed;z-index:2147483000;pointer-events:none;border:3px solid #2f6bd8;border-radius:16px;" +
-          "box-shadow:0 0 0 100vmax rgba(10,18,38,.34),0 12px 34px -10px rgba(20,48,110,.55);" +
+          "position:fixed;z-index:2147483000;pointer-events:none;border:2px solid rgba(47,107,216,.75);border-radius:14px;" +
+          "box-shadow:0 0 0 3px rgba(47,107,216,.14),0 10px 28px -14px rgba(20,48,110,.35);" +
           "transition:top .5s cubic-bezier(.4,0,.2,1),left .5s cubic-bezier(.4,0,.2,1),width .5s,height .5s,opacity .3s;opacity:0";
         document.body.appendChild(boxEl);
       }
@@ -68,6 +71,20 @@ export function TourBridge() {
       el.dispatchEvent(new Event("change", { bubbles: true }));
     };
 
+    // Type a value in character by character so it reads as someone filling the
+    // field, not a value teleporting in. A token cancels an in-flight type when
+    // a newer fill starts.
+    let typeToken = 0;
+    const typeInto = async (el: HTMLInputElement | HTMLTextAreaElement, value: string) => {
+      const mine = ++typeToken;
+      setValue(el, "");
+      for (let i = 1; i <= value.length; i++) {
+        if (mine !== typeToken) return;
+        setValue(el, value.slice(0, i));
+        await new Promise((r) => setTimeout(r, 42));
+      }
+    };
+
     // Find the input/select/textarea a label points at (by htmlFor, containment,
     // the next field after a bare text label, or a matching placeholder).
     const fieldFor = (labelText: string): HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement | null => {
@@ -102,12 +119,13 @@ export function TourBridge() {
       if (d.type === "tour:fill") {
         const el = fieldFor(String(d.field ?? ""));
         if (!el) return;
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
         if (el instanceof HTMLSelectElement) {
           const want = String(d.value ?? "").toLowerCase();
           const opt = [...el.options].find((o) => o.text.toLowerCase().includes(want) || o.value.toLowerCase().includes(want));
           if (opt) setValue(el, opt.value);
         } else {
-          setValue(el, String(d.value ?? ""));
+          void typeInto(el, String(d.value ?? ""));
         }
         return;
       }
@@ -126,7 +144,13 @@ export function TourBridge() {
           window.parent.postMessage({ type: "tour:rect", id: d.id, ok: false }, "*");
           return;
         }
-        el.scrollIntoView({ block: "center", behavior: "smooth" });
+        // Centre short targets; for a card taller than most of the viewport,
+        // align its top (with a little breathing room) so its header isn't cut
+        // off above the fold.
+        const vh = window.innerHeight || document.documentElement.clientHeight;
+        const tall = el.getBoundingClientRect().height > vh * 0.78;
+        el.style.scrollMarginTop = "22px";
+        el.scrollIntoView({ block: tall ? "start" : "center", behavior: "smooth" });
         // Let the smooth scroll settle before measuring / reporting.
         window.setTimeout(() => {
           const r = el.getBoundingClientRect();

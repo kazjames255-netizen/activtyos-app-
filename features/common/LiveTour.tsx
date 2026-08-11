@@ -181,17 +181,22 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         }
         const rect = await spotlight(step.find || ""); if (!alive()) return;
         await moveTo(rect); if (!alive()) return;
-        // A "click" step presses the control (opening its form) before narrating,
-        // so the next steps can spotlight the fields that just appeared.
-        if (step.click) { clickInFrame(step.find || ""); await sleep(950); if (!alive()) return; }
-        // Actually build it: type into the real fields and pick the real options,
-        // so the provider watches the form fill in.
-        if (step.fill) { for (const [f, v] of step.fill) { fillInFrame(f, v); await sleep(420); if (!alive()) return; } }
-        if (step.pick) { for (const t of step.pick) { pickInFrame(t); await sleep(360); if (!alive()) return; } }
-        await line(step.line); if (!alive()) return;
+        // A "click" step presses the control (opening its form) before narrating.
+        // Clear the ring straight after, so it doesn't linger over the button
+        // that's now hidden behind the form that opened.
+        if (step.click) { clickInFrame(step.find || ""); await sleep(850); clearHi(); if (!alive()) return; }
+        // Narrate AND demonstrate at the same time: start the voice, then type
+        // into the real fields / pick the real options while it talks — so the
+        // spoken line and the on-screen action stay together (and a pause halts
+        // both). We await the narration afterwards so the step's timing is the
+        // longer of the two.
+        const say = line(step.line);
+        if (step.fill) { for (const [f, v] of step.fill) { fillInFrame(f, v); await sleep(Math.max(560, v.length * 55 + 260)); if (!alive()) return; } }
+        if (step.pick) { for (const t of step.pick) { pickInFrame(t); await sleep(520); if (!alive()) return; } }
+        await say; if (!alive()) return;
         // Advance a real multi-step builder (e.g. click the wizard's "Next ›")
         // AFTER narrating, so the next step spotlights the panel that appears.
-        if (step.advance) { clickInFrame(step.advance); await sleep(900); if (!alive()) return; }
+        if (step.advance) { clickInFrame(step.advance); await sleep(850); if (!alive()) return; }
       }
       // Page-specific "one last thing" — the robot beams down the Settings tabs
       // that control THIS page (each with a note on what it does).
