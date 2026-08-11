@@ -137,6 +137,14 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="operator" />,
     payroll: PayrollPlanned("company", "staff"),
+    schedule: planned({
+      title: "Staff schedule",
+      blurb: "Who's on shift, where — build the rota across your sites, then it feeds registers, ratios and payroll.",
+      links: [
+        { href: "/company/staff", label: "Staff", hint: "your team & invites" },
+        { href: "/company/payroll", label: "Payroll", hint: "hours become pay" },
+      ],
+    }),
     "ho-framework": planned({
       title: "Franchise Support Framework",
       blurb: "The head-office playbook per franchise: support visits, standards checks and improvement plans in one place.",
