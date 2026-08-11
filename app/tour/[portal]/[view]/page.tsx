@@ -6,6 +6,7 @@ import type { PortalKey } from "@/lib/nav/config";
 import { getRegisteredView } from "@/lib/view-registry";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { TOUR_FIXTURES } from "@/features/common/tourFixtures";
+import { TourBridge } from "@/features/common/TourBridge";
 
 // Renders a REAL provider-page component populated with demo fixtures, with no
 // sidebar/header and no auth guard — this route lives outside the [portal]
@@ -23,6 +24,7 @@ export default function TourPage({ params }: { params: Promise<{ portal: string;
   if (!View) return null;
   return (
     <div style={LIGHT_PALETTE} className="p-3 sm:p-5">
+      <TourBridge />
       {createElement(View)}
     </div>
   );
