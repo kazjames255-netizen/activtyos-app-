@@ -290,7 +290,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "listings", legacyView: "freelancer-listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
         { view: "blocks", legacyView: "freelancer-blocks", label: "Sessions & blocks", icon: { type: "glyph", value: "▥" }, badge: null },
         { view: "bookings", legacyView: "freelancer-bookings", label: "Bookings", hidden: true, icon: { type: "glyph", value: "◷" }, badge: null },
-        { view: "customers", legacyView: "freelancer-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
       ],
     },
     {
@@ -298,6 +297,8 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
+        { view: "customers", legacyView: "freelancer-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
+        { view: "registers", legacyView: "freelancer-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
         { view: "ratios", legacyView: "freelancer-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
         { view: "trips", legacyView: "freelancer-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
         { view: "calendar", legacyView: "cal-freelancer", label: "Events calendar", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4.5\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M3 9.5h18M8 3v3M16 3v3\"></path></svg>" }, badge: null },
@@ -333,7 +334,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "purchasing", legacyView: "freelancer-purchasing", label: "Money in", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><path d=\"M4.5 6.5h15l-1.2 8.5a2 2 0 0 1-2 1.7H7.7a2 2 0 0 1-2-1.7z\"></path><path d=\"M4.5 6.5 3.4 3.4H1.8M9 20.2h.01M15.5 20.2h.01\"></path></svg>" }, badge: null },
         { view: "invoices", legacyView: "freelancer-invoices", label: "Invoices", hidden: true, icon: null, badge: null },
         { view: "reconciliation", legacyView: "freelancer-reconciliation", label: "Reconciliation", icon: { type: "glyph", value: "⇄" }, badge: null },
-        { view: "subscription", legacyView: "freelancer-subscription", label: "Subscription", icon: { type: "glyph", value: "◈" }, badge: null },
       ],
     },
     {
@@ -351,6 +351,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "setup", legacyView: "freelancer-setup", label: "Setup & features", icon: { type: "glyph", value: "◐" }, badge: null },
         { view: "account", legacyView: "freelancer-account", label: "Onboarding info", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3\"></path></svg>" }, badge: null },
+        { view: "subscription", legacyView: "freelancer-subscription", label: "Subscription", icon: { type: "glyph", value: "◈" }, badge: null },
         { view: "support", legacyView: "freelancer-support", label: "Support", icon: { type: "glyph", value: "💬" }, badge: null },
       ],
     },
@@ -359,7 +360,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "registers", legacyView: "freelancer-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
         { view: "incidents", legacyView: "freelancer-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
         { view: "medication", legacyView: "freelancer-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
         { view: "accidents", legacyView: "freelancer-accidents", label: "First aid", icon: { type: "glyph", value: "⛑" }, badge: null },

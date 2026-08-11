@@ -75,6 +75,9 @@ export function Header({ portal }: { portal: PortalKey }) {
           // out of the sidebar. Only where the portal has a bookings view.
           ...(findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: "Bookings", icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Bookings — nothing needs attention" }] : []),
           ...(findNavItem(portal, "messages") && !featureOff(features, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : "Messages" }] : []),
+          // Families promoted to the top bar next to Messages — quick access to
+          // the family list from anywhere.
+          ...(findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: "Families", icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: "Families — leads and customers" }] : []),
         ];
 
   return (
@@ -296,4 +299,7 @@ const CALENDAR = (
 );
 const STAR = (
   <svg viewBox="0 0 24 24" fill="currentColor" stroke="none"><path d="M12 3l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9 6.8 19.2l1-5.8L3.5 9.2l5.9-.9z" /></svg>
+);
+const PEOPLE = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 20c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2" /><path d="M16.5 6.5a3 3 0 0 1 0 5.6M17.6 20c0-2.3-1.2-4.2-3-5.1" /></svg>
 );
