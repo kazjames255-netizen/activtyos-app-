@@ -1,6 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
@@ -27,6 +28,10 @@ export function MealReport() {
   const [listingId, setListingId] = useState("");
   const [kid, setKid] = useState("");
   const [view, setView] = useState<View>("daily");
+  // Opened from a child's card ("Meals" quick action) → focus just that child's
+  // meals, not the whole listing's.
+  const childParam = useSearchParams()?.get("child") ?? "";
+  const appliedChild = useRef(false);
 
   const load = useCallback(() => {
     apiGet<{ rows: Row[]; missing: Missing[] }>("/api/meal-orders/report").then((d) => { setRows(d.rows ?? []); setMissing(d.missing ?? []); }).catch(() => { setRows([]); setMissing([]); });
@@ -43,6 +48,12 @@ export function MealReport() {
   }, [rows]);
   // Every child who's ordered, A–Z, for the child filter.
   const allKids = useMemo(() => [...new Set((rows ?? []).map((r) => r.child))].sort((a, b) => a.localeCompare(b)), [rows]);
+  useEffect(() => {
+    if (appliedChild.current || !childParam || !rows) return;
+    const match = allKids.find((k) => k.toLowerCase() === childParam.toLowerCase());
+    setKid(match ?? childParam);
+    appliedChild.current = true;
+  }, [childParam, allKids, rows]);
   const filtered = useMemo(() => (rows ?? []).filter((r) => (!listingId || r.listingId === listingId) && (!kid || r.child === kid)), [rows, listingId, kid]);
   const grand = filtered.length;
   const spend = filtered.reduce((s, r) => s + r.price, 0);

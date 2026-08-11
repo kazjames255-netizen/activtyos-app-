@@ -283,6 +283,17 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       ],
     },
     {
+      label: "Communication",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "newsfeed", legacyView: "freelancer-newsfeed", label: "Newsfeed", hidden: true, icon: { type: "glyph", value: "📢" }, badge: null },
+        { view: "messages", legacyView: "freelancer-messages", label: "Messages", hidden: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M4 7.5l8 5.5 8-5.5\"></path></svg>" }, badge: null },
+        { view: "activityos", legacyView: "freelancer-activityos", label: "Message ActivityOS", hidden: true, icon: null, badge: null },
+        { view: "email", legacyView: "freelancer-email", label: "Email", hidden: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3.5 7l8.5 6 8.5-6\"></path></svg>" }, badge: null },
+      ],
+    },
+    {
       label: "Sell & take bookings",
       pinned: false,
       footer: false,
@@ -299,19 +310,12 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "customers", legacyView: "freelancer-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
         { view: "registers", legacyView: "freelancer-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
+        { view: "meals", legacyView: "freelancer-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
         { view: "ratios", legacyView: "freelancer-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
         { view: "trips", legacyView: "freelancer-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
         { view: "calendar", legacyView: "cal-freelancer", label: "Events calendar", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4.5\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M3 9.5h18M8 3v3M16 3v3\"></path></svg>" }, badge: null },
         { view: "timetable", legacyView: "freelancer-timetable", label: "Activity timetable", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect><path d=\"M3 9h18M9 3v18\"></path></svg>" }, badge: null },
         { view: "tasks", legacyView: "freelancer-tasks", label: "Task manager", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l3 3 9-9\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10\"></path></svg>" }, badge: null },
-      ],
-    },
-    {
-      label: "Operations",
-      pinned: false,
-      footer: false,
-      items: [
-        { view: "inventory", legacyView: "freelancer-inventory", label: "Inventory", icon: { type: "glyph", value: "📦" }, badge: null },
       ],
     },
     {
@@ -334,6 +338,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "purchasing", legacyView: "freelancer-purchasing", label: "Money in", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><path d=\"M4.5 6.5h15l-1.2 8.5a2 2 0 0 1-2 1.7H7.7a2 2 0 0 1-2-1.7z\"></path><path d=\"M4.5 6.5 3.4 3.4H1.8M9 20.2h.01M15.5 20.2h.01\"></path></svg>" }, badge: null },
         { view: "invoices", legacyView: "freelancer-invoices", label: "Invoices", hidden: true, icon: null, badge: null },
         { view: "reconciliation", legacyView: "freelancer-reconciliation", label: "Reconciliation", icon: { type: "glyph", value: "⇄" }, badge: null },
+        { view: "inventory", legacyView: "freelancer-inventory", label: "Inventory", icon: { type: "glyph", value: "📦" }, badge: null },
       ],
     },
     {
@@ -360,22 +365,10 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "incidents", legacyView: "freelancer-incidents", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
-        { view: "medication", legacyView: "freelancer-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
-        { view: "accidents", legacyView: "freelancer-accidents", label: "First aid", icon: { type: "glyph", value: "⛑" }, badge: null },
-        { view: "meals", legacyView: "freelancer-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
-        { view: "moments", legacyView: "freelancer-moments", label: "Moments", icon: { type: "glyph", value: "📷" }, badge: null },
-      ],
-    },
-    {
-      label: "Communication",
-      pinned: false,
-      footer: false,
-      items: [
-        { view: "newsfeed", legacyView: "freelancer-newsfeed", label: "Newsfeed", icon: { type: "glyph", value: "📢" }, badge: null },
-        { view: "messages", legacyView: "freelancer-messages", label: "Messages", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M4 7.5l8 5.5 8-5.5\"></path></svg>" }, badge: null },
-        { view: "activityos", legacyView: "freelancer-activityos", label: "Message ActivityOS", hidden: true, icon: null, badge: null },
-        { view: "email", legacyView: "freelancer-email", label: "Email", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3.5 7l8.5 6 8.5-6\"></path></svg>" }, badge: null },
+        { view: "incidents", legacyView: "freelancer-incidents", label: "Log concern", hidden: true, icon: { type: "glyph", value: "⚑" }, badge: null },
+        { view: "medication", legacyView: "freelancer-medication", label: "Medication", hidden: true, icon: { type: "glyph", value: "💊" }, badge: null },
+        { view: "accidents", legacyView: "freelancer-accidents", label: "First aid", hidden: true, icon: { type: "glyph", value: "⛑" }, badge: null },
+        { view: "moments", legacyView: "freelancer-moments", label: "Moments", hidden: true, icon: { type: "glyph", value: "📷" }, badge: null },
       ],
     },
     {

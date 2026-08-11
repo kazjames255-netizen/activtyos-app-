@@ -29,10 +29,17 @@ async function bookedChildren(tenantId: string) {
   return map;
 }
 
-async function postcodesFor(docs: FirebaseFirestore.DocumentSnapshot[]) {
+async function placesFor(docs: FirebaseFirestore.DocumentSnapshot[]) {
   const uids = [...new Set(docs.filter((d) => d.exists).map((d) => (d.data() as { parentUid?: string }).parentUid).filter((u): u is string => !!u))];
   const userDocs = uids.length ? await db.getAll(...uids.map((u) => db.collection("users").doc(u))) : [];
-  return new Map(userDocs.filter((u) => u.exists).map((u) => [u.id, (u.data() as { postcode?: string }).postcode ?? ""] as const));
+  return new Map(userDocs.filter((u) => u.exists).map((u) => {
+    const ud = u.data() as { postcode?: string; address?: string };
+    // Registration captures a free-text address ("Street, town"); the town is
+    // the last comma-part. No comma → we can't tell the town from the street.
+    const parts = (ud.address ?? "").split(",").map((s) => s.trim()).filter(Boolean);
+    const town = parts.length > 1 ? parts[parts.length - 1] : "";
+    return [u.id, { postcode: ud.postcode ?? "", town }] as const;
+  }));
 }
 
 // GET /api/children/lookup — the searchable list (name, parent, where they live).
@@ -58,11 +65,12 @@ children.get("/lookup", async (req, res) => {
   if (!idx.size) { res.json([]); return; }
   const ids = [...idx.keys()];
   const docs = await db.getAll(...ids.map((id) => db.collection("children").doc(id)));
-  const postcodeOf = await postcodesFor(docs);
+  const placeOf = await placesFor(docs);
   const out = docs.filter((d) => d.exists).map((d) => {
-    const c = d.data() as { name?: string; dob?: string; parentUid?: string };
+    const c = d.data() as { name?: string; dob?: string; parentUid?: string; photo?: string };
     const p = idx.get(d.id)!;
-    return { childId: d.id, name: c.name ?? "", dob: c.dob ?? "", parentName: p.parentName, parentEmail: p.email, parentPhone: p.phone, ref: p.ref, postcode: c.parentUid ? (postcodeOf.get(c.parentUid) ?? "") : "" };
+    const place = c.parentUid ? (placeOf.get(c.parentUid) ?? { postcode: "", town: "" }) : { postcode: "", town: "" };
+    return { childId: d.id, name: c.name ?? "", dob: c.dob ?? "", parentName: p.parentName, parentEmail: p.email, parentPhone: p.phone, ref: p.ref, postcode: place.postcode, town: place.town, photo: c.photo ?? "" };
   }).sort((a, b) => (a.name < b.name ? -1 : 1));
   res.json(out);
 });

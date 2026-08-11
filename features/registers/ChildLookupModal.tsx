@@ -6,7 +6,7 @@ import { get as apiGet } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
 import { ChildCard, type ChildInfo } from "./ChildCard";
 
-interface LookupRow { childId: string; name: string; dob: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string }
+interface LookupRow { childId: string; name: string; dob: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string; town?: string; photo?: string }
 interface CardResp { childId: string; name: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string; bookings?: { ref: string; listing: string; dates: string; pass: string; start: string; end: string; status: string }[]; record: Record<string, string | boolean | Record<string, string> | undefined> }
 
 const ageOf = (dob?: string) => { if (!dob) return undefined; const bd = new Date(dob); if (isNaN(+bd)) return undefined; const n = new Date(); let a = n.getFullYear() - bd.getFullYear(); const m = n.getMonth() - bd.getMonth(); if (m < 0 || (m === 0 && n.getDate() < bd.getDate())) a--; return a >= 0 && a < 120 ? a : undefined; };
@@ -87,20 +87,22 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
   // record can be logged straight from the list — opening the card is optional.
   const rowActions = (name: string) => {
     const n = encodeURIComponent(name);
-    const b = (icon: ReactNode, label: string, href: string) => (
+    // Styled to match the coloured record tiles on the child's profile card.
+    const b = (icon: ReactNode, label: string, tint: string, href: string) => (
       <button key={label} type="button" title={label} aria-label={label}
         onClick={(e) => { e.stopPropagation(); go(href); }}
-        className="flex h-8 w-8 flex-none items-center justify-center rounded-lg border border-[var(--line)] bg-[var(--surface)] text-[14px] leading-none transition hover:border-[#1d3a8f] hover:bg-[#eef4fd]">
-        {icon}
+        className="flex h-9 w-9 flex-none items-center justify-center rounded-xl border transition hover:-translate-y-0.5 hover:shadow-[0_8px_18px_-10px_rgba(9,20,44,.5)]"
+        style={{ borderColor: tint + "33", background: tint + "0f" }}>
+        <span className="flex h-6 w-6 items-center justify-center rounded-full text-[13px] leading-none" style={{ background: tint + "22" }}>{icon}</span>
       </button>
     );
     return (
-      <div className="flex flex-none items-center gap-1">
-        {acts.firstAid !== false && b("⛑️", "First aid", `/${portal}/accidents?child=${n}`)}
-        {acts.incident !== false && b("⚠️", "Log concern", `/${portal}/${incidentSeg}?child=${n}`)}
-        {acts.medication !== false && b("💊", "Medication", `/${portal}/medication?child=${n}`)}
-        {acts.meals !== false && b("🍽️", "Meals", `/${portal}/meals?child=${n}`)}
-        {acts.moments !== false && b("📸", "Moment", `/${portal}/moments?child=${n}`)}
+      <div className="flex flex-none items-center gap-1.5">
+        {acts.firstAid !== false && b("⛑️", "First aid", "#be123c", `/${portal}/accidents?child=${n}`)}
+        {acts.incident !== false && b("⚠️", "Log concern", "#b45309", `/${portal}/${incidentSeg}?child=${n}`)}
+        {acts.medication !== false && b("💊", "Medication", "#15803d", `/${portal}/medication?child=${n}`)}
+        {acts.meals !== false && b("🍽️", "Meals", "#0f766e", `/${portal}/meals?child=${n}`)}
+        {acts.moments !== false && b("📸", "Moment", "#7c3aed", `/${portal}/moments?child=${n}`)}
       </div>
     );
   };
@@ -163,10 +165,12 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
                         <li key={r.childId}>
                           <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 transition hover:border-[#1d3a8f] hover:bg-[#f7faff]">
                             <button type="button" disabled={loadingCard} onClick={() => openChild(r.childId)} title="Open profile card" className="flex min-w-0 flex-1 items-center gap-3 text-left disabled:opacity-50">
-                              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl text-[13px] font-extrabold text-[#1d3a8f]" style={{ background: "#eef4fd" }}>{r.name.slice(0, 1)}</span>
+                              {r.photo
+                                ? <img src={r.photo} alt="" className="h-10 w-10 flex-none rounded-xl object-cover ring-1 ring-[var(--line)]" />
+                                : <span className="flex h-10 w-10 flex-none items-center justify-center rounded-xl text-[14px] font-extrabold text-[#1d3a8f]" style={{ background: "#eef4fd" }}>{r.name.slice(0, 1).toUpperCase()}</span>}
                               <span className="min-w-0">
                                 <span className="block truncate text-[13px] font-extrabold text-[var(--ink)]">{r.name}</span>
-                                <span className="block truncate text-[11.5px] text-[var(--ink-3)]">👤 {r.parentName || "—"}{r.postcode ? ` · 📍 ${r.postcode}` : ""}</span>
+                                <span className="block truncate text-[11.5px] text-[var(--ink-3)]">👤 {r.parentName || "—"}{r.town ? ` · 📍 ${r.town}` : ""}{r.postcode ? ` · ${r.postcode}` : ""}</span>
                               </span>
                             </button>
                             {rowActions(r.name)}

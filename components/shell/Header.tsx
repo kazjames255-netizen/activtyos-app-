@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { findNavItem, type PortalKey } from "@/lib/nav/config";
@@ -60,6 +60,15 @@ export function Header({ portal }: { portal: PortalKey }) {
   // Features). Operators lose the Messages tab when they turn Messages off.
   const customerArea = useCustomerArea(portal);
   const features = useOperatorFeatures(portal);
+  const [commOpen, setCommOpen] = useState(false);
+  const commRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!commOpen) return;
+    const h = (e: MouseEvent) => { if (commRef.current && !commRef.current.contains(e.target as Node)) setCommOpen(false); };
+    document.addEventListener("mousedown", h);
+    return () => document.removeEventListener("mousedown", h);
+  }, [commOpen]);
+  useEffect(() => { setCommOpen(false); }, [view]);
   const tabs: { view: string; href: string; label: string; icon: ReactNode; wide: boolean; badge: number; fancy?: boolean; accent?: string; accentLight?: string; tip?: string }[] =
     portal === "custdash"
       ? [
@@ -74,11 +83,19 @@ export function Header({ portal }: { portal: PortalKey }) {
           // Bookings promoted to the top bar (like the customer's My bookings),
           // out of the sidebar. Only where the portal has a bookings view.
           ...(findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: "Bookings", icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Bookings — nothing needs attention" }] : []),
-          ...(findNavItem(portal, "messages") && !featureOff(features, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : "Messages" }] : []),
-          // Families promoted to the top bar next to Messages — quick access to
-          // the family list from anywhere.
+          // Families promoted to the top bar — quick access to the family list.
           ...(findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: "Families", icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: "Families — leads and customers" }] : []),
         ];
+
+  // The green "Communication" top-bar tab: a dropdown gathering the comms
+  // views (Newsfeed, Messages, Email) so they're out of the sidebar.
+  const commItems: { view: string; label: string; icon: ReactNode; href: string; badge: number }[] =
+    portal === "custdash" ? [] : ([
+      findNavItem(portal, "newsfeed") && !featureOff(features, "newsfeed") ? { view: "newsfeed", label: "Newsfeed", icon: MEGAPHONE, href: `/${portal}/newsfeed`, badge: 0 } : null,
+      findNavItem(portal, "messages") && !featureOff(features, "messages") ? { view: "messages", label: "Messages", icon: MAIL, href: `/${portal}/messages`, badge: unread } : null,
+      findNavItem(portal, "email") && !featureOff(features, "email") ? { view: "email", label: "Email", icon: MAIL, href: `/${portal}/email`, badge: 0 } : null,
+    ] as ({ view: string; label: string; icon: ReactNode; href: string; badge: number } | null)[]).filter((x) => x !== null) as { view: string; label: string; icon: ReactNode; href: string; badge: number }[];
+  const commActive = commItems.some((c) => c.view === view);
 
   return (
     <header className="flex h-14 flex-none items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-3 sm:gap-3 sm:px-5">
@@ -139,6 +156,39 @@ export function Header({ portal }: { portal: PortalKey }) {
               </Link>
             );
           })}
+          {commItems.length > 0 && (
+            <div className="relative" ref={commRef}>
+              <button
+                type="button"
+                onClick={() => setCommOpen((o) => !o)}
+                title="Communication — newsfeed, messages and email"
+                className="relative inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105"
+                style={commActive || commOpen ? { background: "linear-gradient(120deg,#0f9d58,#3ddc84)", color: "#fff", boxShadow: "0 4px 12px -2px #0f9d5880" } : { background: "#0f9d5818", color: "#0b7a43" }}
+              >
+                <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{CHAT}</span>
+                <span className="hidden truncate sm:inline">Communication</span>
+                <span className="flex-none text-[9px] leading-none" aria-hidden>▼</span>
+                {unread > 0 && (
+                  <span className="ml-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none" style={{ background: "var(--sem-crit, #ef4444)", color: "#fff" }}>{unread}</span>
+                )}
+              </button>
+              {commOpen && (
+                <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.4)]">
+                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Communication</div>
+                  {commItems.map((it) => {
+                    const on = it.view === view;
+                    return (
+                      <Link key={it.view} href={it.href} onClick={() => setCommOpen(false)} className="flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-[13px] font-bold no-underline transition-colors" style={on ? { background: "#eafaf0", color: "#0b7a43" } : { color: "var(--ink)" }}>
+                        <span className="flex-none text-[#0f9d58] [&_svg]:h-[17px] [&_svg]:w-[17px]" aria-hidden>{it.icon}</span>
+                        <span className="min-w-0 flex-1 truncate">{it.label}</span>
+                        {it.badge > 0 && <span className="flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none text-white" style={{ background: "#ef4444" }}>{it.badge}</span>}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
         </nav>
       )}
 
@@ -302,4 +352,10 @@ const STAR = (
 );
 const PEOPLE = (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="8" r="3.2" /><path d="M3.5 20c0-3 2.5-5.2 5.5-5.2s5.5 2.2 5.5 5.2" /><path d="M16.5 6.5a3 3 0 0 1 0 5.6M17.6 20c0-2.3-1.2-4.2-3-5.1" /></svg>
+);
+const CHAT = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.4 9 9 0 0 1-3.9-.9L3 20.5l1.5-4.4A8.3 8.3 0 0 1 3.5 11.5 8.4 8.4 0 0 1 12 3a8.4 8.4 0 0 1 9 8.5z" /></svg>
+);
+const MEGAPHONE = (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"><path d="M3 11v2a1 1 0 0 0 1 1h2l3.5 4V6L6 10H4a1 1 0 0 0-1 1z" /><path d="M14 8.5a4 4 0 0 1 0 7M18 6a7 7 0 0 1 0 12" /></svg>
 );
