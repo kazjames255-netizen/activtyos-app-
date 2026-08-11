@@ -26,7 +26,7 @@ const add7 = (d: string) => { const x = new Date(`${d}T00:00:00Z`); x.setUTCDate
 const overlaps = (a: { start: string; end: string }, b: { start: string; end: string }) => mins(a.start) < mins(b.end) && mins(b.start) < mins(a.end);
 
 interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number }
-interface Shift { id: string; staffId: string | null; site: string; role: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean }
+interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; season?: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean }
 interface Store { staff: Staff[]; shifts: Shift[]; sites: string[] }
 
 const ROLE_COL: Record<string, string> = { "Lead Coach": "#2f6bd8", "Lifeguard": "#0f857b", "Coach": "#6366f1", "Activity Assistant": "#8b5cf6", "First Aider": "#c06a10" };
@@ -63,17 +63,24 @@ function seed(): Store {
     { id: id(), staffId: "amelia", site: GL, role: "Lead Coach", date: day(1), start: "09:00", end: "15:00", in: "09:02" },
     { id: id(), staffId: "taigan", site: GL, role: "Lead Coach", date: day(6), start: "11:45", end: "16:15", locked: true },
   ];
+  // Tie each shift to a listing + season so those filters have real data.
+  for (const s of shifts) {
+    s.listing = s.role === "Lifeguard" ? "Swim School" : s.site === LM ? "Holiday Multi-Sports Camp" : "Football Intensive";
+    s.season = s.site === GL ? "Autumn 2026" : "Summer 2026";
+  }
   return { staff, shifts, sites: [LM, GL, "Stantonbury Leisure Centre"] };
 }
 const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.shifts ? v : seed(); } catch { return seed(); } };
 
 const DOW = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-type Draft = { id?: string; site: string; role: string; date: string; staffId: string | null; start: string; end: string };
+type Draft = { id?: string; site: string; role: string; listing: string; season: string; date: string; staffId: string | null; start: string; end: string };
 
 export function ScheduleApp() {
   const [store, setStore] = useState<Store>(seed);
   const [weekStart, setWeekStart] = useState(() => iso(mondayOf(new Date())));
   const [site, setSite] = useState("all");
+  const [listingF, setListingF] = useState("all");
+  const [seasonF, setSeasonF] = useState("all");
   const [q, setQ] = useState("");
   const [help, setHelp] = useState(false);
   const [canManage, setCanManage] = useState(true);
@@ -90,8 +97,10 @@ export function ScheduleApp() {
   const days = useMemo(() => Array.from({ length: 7 }, (_, i) => { const x = new Date(`${weekStart}T00:00:00Z`); x.setUTCDate(x.getUTCDate() + i); return x; }), [weekStart]);
   const weekEnd = iso(days[6]);
   const staffById = useMemo(() => Object.fromEntries(store.staff.map((s) => [s.id, s])), [store.staff]);
-  const inWeek = (s: Shift) => s.date >= weekStart && s.date <= weekEnd && (site === "all" || s.site === site);
-  const weekShifts = useMemo(() => store.shifts.filter(inWeek), [store.shifts, weekStart, weekEnd, site]);
+  const inWeek = (s: Shift) => s.date >= weekStart && s.date <= weekEnd && (site === "all" || s.site === site) && (listingF === "all" || s.listing === listingF) && (seasonF === "all" || s.season === seasonF);
+  const weekShifts = useMemo(() => store.shifts.filter(inWeek), [store.shifts, weekStart, weekEnd, site, listingF, seasonF]);
+  const listingOpts = useMemo(() => [...new Set(store.shifts.map((s) => s.listing).filter(Boolean) as string[])].sort(), [store.shifts]);
+  const seasonOpts = useMemo(() => [...new Set(store.shifts.map((s) => s.season).filter(Boolean) as string[])].sort(), [store.shifts]);
 
   const staffHours = (id: string) => weekShifts.filter((s) => s.staffId === id).reduce((n, s) => n + durH(s.start, s.end), 0);
   const wagesAt = store.staff.reduce((n, st) => n + staffHours(st.id) * st.rate, 0);
@@ -120,7 +129,7 @@ export function ScheduleApp() {
   function saveDraft() {
     if (!draft) return;
     if (draft.id) persist({ ...store, shifts: store.shifts.map((s) => (s.id === draft.id ? { ...s, ...draft } : s)) });
-    else persist({ ...store, shifts: [...store.shifts, { id: `sh${Date.now()}`, site: draft.site, role: draft.role, date: draft.date, staffId: draft.staffId, start: draft.start, end: draft.end }] });
+    else persist({ ...store, shifts: [...store.shifts, { id: `sh${Date.now()}`, site: draft.site, role: draft.role, listing: draft.listing || undefined, season: draft.season || undefined, date: draft.date, staffId: draft.staffId, start: draft.start, end: draft.end }] });
     setDraft(null);
   }
   function autoFill() {
@@ -143,7 +152,7 @@ export function ScheduleApp() {
   const ShiftBlock = ({ s }: { s: Shift }) => {
     const st = s.staffId ? staffById[s.staffId] : null; const filled = !!st; const col = roleCol(s.role);
     return (
-      <button type="button" onClick={() => canManage && setDraft({ id: s.id, site: s.site, role: s.role, date: s.date, staffId: s.staffId, start: s.start, end: s.end })} disabled={!canManage}
+      <button type="button" onClick={() => canManage && setDraft({ id: s.id, site: s.site, role: s.role, listing: s.listing ?? "", season: s.season ?? "", date: s.date, staffId: s.staffId, start: s.start, end: s.end })} disabled={!canManage}
         className="w-full rounded-lg border px-2 py-1.5 text-left text-[11px] transition-shadow enabled:hover:shadow-sm"
         style={filled ? { borderColor: col, background: `${col}0f`, borderLeftWidth: 3 } : { borderColor: "var(--line)", borderStyle: "dashed", background: "var(--surface)" }}>
         <div className="flex items-start gap-1">
@@ -181,6 +190,12 @@ export function ScheduleApp() {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">
           📍 <Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All sites</option>{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select>
+        </div>
+        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">
+          🎟 <Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All listings</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select>
+        </div>
+        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">
+          📅 <Select value={seasonF} onChange={(e) => setSeasonF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All seasons</option>{seasonOpts.map((s) => <option key={s} value={s}>{s}</option>)}</Select>
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1">
           <button type="button" onClick={() => shiftWeek(-1)} className="px-2 text-[15px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button>
@@ -222,29 +237,29 @@ export function ScheduleApp() {
       </Card>
 
       <div className="flex flex-col gap-3 lg:flex-row">
-        {/* Left staff panel */}
-        <div className="lg:w-[290px] lg:flex-none">
-          <Card className="p-3">
-            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search staff" className="mb-2.5 w-full" />
+        {/* Left staff panel — kept narrow so the week grid fits without scroll */}
+        <div className="lg:w-[204px] lg:flex-none">
+          <Card className="p-2.5">
+            <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search" className="mb-2 w-full text-[12px]" />
             {canManage && (
-              <div className="mb-3">
-                <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Step 1 · Confirm availability</div>
-                <button type="button" onClick={requestAvail} className="w-full rounded-xl bg-[#c0392b] px-3 py-2.5 text-[12.5px] font-extrabold uppercase tracking-wide text-white hover:brightness-105">Request staff to confirm availability{notSubmitted ? ` · ${notSubmitted}` : ""}</button>
+              <div className="mb-2.5">
+                <div className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step 1 · Confirm availability</div>
+                <button type="button" onClick={requestAvail} className="w-full rounded-lg bg-[#c0392b] px-2 py-2 text-[11px] font-extrabold uppercase leading-tight tracking-wide text-white hover:brightness-105">Request staff{notSubmitted ? ` · ${notSubmitted}` : ""}</button>
               </div>
             )}
             <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
               {shownStaff.map((st) => {
                 const hrs = staffHours(st.id); const pay = hrs * st.rate; const cost = pay * (1 + ON_COST / 100);
                 return (
-                  <div key={st.id} className="flex items-start gap-2.5 py-2.5">
-                    <span className="mt-0.5 flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
+                  <div key={st.id} className="flex items-start gap-2 py-2">
+                    <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-1.5"><span className="truncate text-[13px] font-extrabold text-[var(--ink)]">{st.name}</span>
-                        {st.avail === "notsubmitted" ? <button type="button" onClick={() => remind(st.id)} title={`Send reminder${st.reminders ? ` (sent ${st.reminders})` : ""}`} className="flex-none text-[12px]">🔔</button> : <span title="Availability confirmed" className="flex-none text-[11px] text-[#0f7a43]">✓</span>}
+                      <div className="flex items-center gap-1"><span className="truncate text-[12px] font-extrabold text-[var(--ink)]">{st.name}</span>
+                        {st.avail === "notsubmitted" ? <button type="button" onClick={() => remind(st.id)} title={`Send reminder${st.reminders ? ` (sent ${st.reminders})` : ""}`} className="flex-none text-[11px]">🔔</button> : <span title="Availability confirmed" className="flex-none text-[10px] text-[#0f7a43]">✓</span>}
                       </div>
-                      <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{st.role} · <span className={st.avail === "confirmed" ? "text-[#0f7a43]" : "text-[#c0392b]"}>{st.avail === "confirmed" ? "Confirmed" : "Not submitted"}</span></div>
-                      <div className="mt-0.5 text-[11.5px] text-[var(--ink-2)]">{hLabel(hrs)} scheduled · £{st.rate.toFixed(2)}/hr</div>
-                      <div className="text-[11.5px] font-bold text-[var(--ink)]">{money(pay)} pay <span className="font-normal text-[var(--ink-3)]">· {money(cost)} incl. on-cost</span></div>
+                      <div className="text-[9px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className={st.avail === "confirmed" ? "text-[#0f7a43]" : "text-[#c0392b]"}>{st.avail === "confirmed" ? "Confirmed" : "Not submitted"}</span></div>
+                      <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{hLabel(hrs)} · £{st.rate.toFixed(2)}/hr</div>
+                      <div className="text-[11px] font-bold text-[var(--ink)]">{money(pay)} <span className="font-normal text-[var(--ink-3)]">· {money(cost)} on-cost</span></div>
                     </div>
                   </div>
                 );
@@ -257,7 +272,7 @@ export function ScheduleApp() {
         <div className="min-w-0 flex-1">
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
-              <div style={{ minWidth: 820 }}>
+              <div style={{ minWidth: 640 }}>
                 <div className="grid text-white" style={{ gridTemplateColumns: view === "staff" ? "170px repeat(7,1fr)" : "repeat(7,1fr)", background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
                   {view === "staff" && <div className="px-3 py-2.5 text-[12.5px] font-extrabold">Staff</div>}
                   {days.map((d) => <div key={iso(d)} className="px-3 py-2.5 text-[12.5px] font-extrabold">{DOW[(d.getUTCDay() + 6) % 7]} {d.getUTCDate()}</div>)}
@@ -279,7 +294,7 @@ export function ScheduleApp() {
                                 {r.byDay.map((cells, i) => (
                                   <div key={i} className="flex min-h-[70px] flex-col gap-1.5 border-r border-[var(--line-2,#eef2f8)] p-1.5 last:border-r-0">
                                     {cells.map((s) => <ShiftBlock key={s.id} s={s} />)}
-                                    {canManage && <button type="button" onClick={() => setDraft({ site: g.site, role: r.role, date: iso(days[i]), staffId: null, start: "09:00", end: "17:00" })} className="rounded-lg border border-dashed border-[var(--line)] py-1 text-[13px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]">＋</button>}
+                                    {canManage && <button type="button" onClick={() => setDraft({ site: g.site, role: r.role, listing: listingF !== "all" ? listingF : "", season: seasonF !== "all" ? seasonF : "Summer 2026", date: iso(days[i]), staffId: null, start: "09:00", end: "17:00" })} className="rounded-lg border border-dashed border-[var(--line)] py-1 text-[13px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]">＋</button>}
                                   </div>
                                 ))}
                               </div>
@@ -299,7 +314,7 @@ export function ScheduleApp() {
                         return (
                           <div key={iso(d)} className="flex min-h-[56px] flex-col gap-1.5 border-r border-[var(--line-2,#eef2f8)] p-1.5 last:border-r-0">
                             {cells.map((s) => <ShiftBlock key={s.id} s={s} />)}
-                            {canManage && <button type="button" onClick={() => setDraft({ site: store.sites[0], role: st.role, date: iso(d), staffId: st.id, start: "09:00", end: "17:00" })} className="rounded-lg border border-dashed border-[var(--line)] py-0.5 text-[12px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]">＋</button>}
+                            {canManage && <button type="button" onClick={() => setDraft({ site: store.sites[0], role: st.role, listing: listingF !== "all" ? listingF : "", season: seasonF !== "all" ? seasonF : "Summer 2026", date: iso(d), staffId: st.id, start: "09:00", end: "17:00" })} className="rounded-lg border border-dashed border-[var(--line)] py-0.5 text-[12px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]">＋</button>}
                           </div>
                         );
                       })}
@@ -317,14 +332,17 @@ export function ScheduleApp() {
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setShowAlerts(false)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2"><span className="text-[16px]">🔔</span><div className="text-[15px] font-extrabold text-[var(--ink)]">Check-in alerts</div><button type="button" onClick={() => setShowAlerts(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
-            <p className="mt-1 text-[12px] text-[var(--ink-3)]">Assigned staff who haven&rsquo;t checked in for their shift this week.</p>
+            <p className="mt-1 text-[12px] text-[var(--ink-3)]">Assigned staff who haven&rsquo;t checked in for a shift this week. Staff check in from their app / the register; if they&rsquo;re not in by their start time they appear here — nudge them.</p>
             {alerts.length === 0 ? <p className="mt-3 rounded-lg bg-[#e2f4ea] px-3 py-2.5 text-[12.5px] font-bold text-[#0f7a43]">✓ Everyone assigned is checked in.</p> : (
               <div className="mt-3 flex flex-col gap-1.5">
                 {alerts.map((s) => { const st = staffById[s.staffId!]; return (
-                  <div key={s.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px]">
+                  <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px]">
                     <span className="font-bold text-[var(--ink)]">{st?.name}</span>
                     <span className="text-[var(--ink-3)]">{new Date(`${s.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {to12(s.start)}–{to12(s.end)} · {s.site}</span>
-                    <span className="ml-auto rounded-full bg-[#eef1f6] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">⚪ Not in</span>
+                    <span className="ml-auto flex items-center gap-1.5">
+                      <span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">⚪ Not in</span>
+                      <button type="button" onClick={() => remind(s.staffId!)} className="rounded-full bg-[#1d3a8f] px-2.5 py-0.5 text-[11px] font-bold text-white hover:bg-[#16306e]">Remind</button>
+                    </span>
                   </div>
                 ); })}
               </div>
@@ -341,8 +359,12 @@ export function ScheduleApp() {
             <div className="mt-1 text-[12px] text-[var(--ink-3)]">{new Date(`${draft.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" })}</div>
             <div className="mt-3 grid gap-2.5">
               <div className="grid grid-cols-2 gap-2.5">
-                <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Site</label><Select value={draft.site} onChange={(e) => setDraft({ ...draft, site: e.target.value })} className="w-full">{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
+                <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Location</label><Select value={draft.site} onChange={(e) => setDraft({ ...draft, site: e.target.value })} className="w-full">{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
                 <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Role</label><Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className="w-full">{ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Listing</label><Input value={draft.listing} onChange={(e) => setDraft({ ...draft, listing: e.target.value })} list="rota-listings" placeholder="e.g. Summer Camp" className="w-full" /><datalist id="rota-listings">{listingOpts.map((l) => <option key={l} value={l} />)}</datalist></div>
+                <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Season</label><Input value={draft.season} onChange={(e) => setDraft({ ...draft, season: e.target.value })} list="rota-seasons" placeholder="e.g. Summer 2026" className="w-full" /><datalist id="rota-seasons">{seasonOpts.map((s) => <option key={s} value={s} />)}</datalist></div>
               </div>
               <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Assign to</label><Select value={draft.staffId ?? ""} onChange={(e) => setDraft({ ...draft, staffId: e.target.value || null })} className="w-full"><option value="">Unfilled — fill later</option>{store.staff.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.role}</option>)}</Select></div>
               <div className="grid grid-cols-2 gap-2.5">
