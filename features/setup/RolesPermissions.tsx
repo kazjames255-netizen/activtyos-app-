@@ -85,15 +85,14 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
               {list.map((r) => (
                 <th key={r.id} className="min-w-[132px] border-l border-[var(--line-2,#eef2f8)] px-3 py-2.5 align-bottom">
                   <div className="flex items-center justify-between gap-1">
-                    {r.builtin ? (
-                      <span className="text-[12.5px] font-extrabold text-[var(--ink)]">{r.name}</span>
-                    ) : (
-                      <input
-                        value={r.name}
-                        onChange={(e) => rename(r.id, e.target.value)}
-                        className="w-full min-w-0 rounded-md border border-transparent bg-transparent text-[12.5px] font-extrabold text-[var(--ink)] outline-none hover:border-[var(--line)] focus:border-[var(--brand)]"
-                      />
-                    )}
+                    {/* Every role's name is editable — the single source, so a
+                        rename shows everywhere the role appears. */}
+                    <input
+                      value={r.name}
+                      onChange={(e) => rename(r.id, e.target.value)}
+                      title="Rename this role — used everywhere it appears"
+                      className="w-full min-w-0 rounded-md border border-transparent bg-transparent text-[12.5px] font-extrabold text-[var(--ink)] outline-none hover:border-[var(--line)] focus:border-[var(--brand)]"
+                    />
                     {r.owner ? (
                       <span title="Full access — locked" className="flex-none text-[11px] text-[var(--ink-3)]">🔒</span>
                     ) : !r.builtin ? (
