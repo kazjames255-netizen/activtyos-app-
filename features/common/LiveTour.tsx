@@ -11,7 +11,7 @@ import { NARRATOR_CSS, narratorScene, settingsScene } from "./tourNarrator";
 // controls + splash as GuidedTour; the difference is the stage is the live page,
 // not a hand-drawn mock — so what you see is exactly the real screen.
 
-export type LiveStep = { find: string; line: string; label?: string };
+export type LiveStep = { find: string; line: string; label?: string; click?: boolean; advance?: string };
 export type LiveTourSteps = { title: string; introLine: string; doneLine: string; steps: LiveStep[] };
 
 const CSS = `
@@ -115,6 +115,9 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         setTimeout(() => { if (pending.has(id)) { pending.delete(id); res(null); } }, 2600);
       });
     const clearHi = () => frame.contentWindow?.postMessage({ type: "tour:clear" }, "*");
+    // Click a real control in the page (e.g. "Add event") so the tour can open a
+    // create form and then walk through it — showing HOW to build, not just talk.
+    const clickInFrame = (find: string) => frame.contentWindow?.postMessage({ type: "tour:click", find }, "*");
 
     async function moveTo(rect: DOMRect | null) {
       if (rect) {
@@ -147,10 +150,17 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       } else { splash.style.display = "none"; hideScene(); }
       if (!ready) await Promise.race([readyP, sleep(4500)]);
       for (let i = Math.max(0, startIdx); i < c.steps.length; i++) {
+        const step = c.steps[i];
         currentIdx = i; hideScene();
-        const rect = await spotlight(c.steps[i].find); if (!alive()) return;
+        const rect = await spotlight(step.find); if (!alive()) return;
         await moveTo(rect); if (!alive()) return;
-        await line(c.steps[i].line); if (!alive()) return;
+        // A "click" step presses the control (opening its form) before narrating,
+        // so the next steps can spotlight the fields that just appeared.
+        if (step.click) { clickInFrame(step.find); await sleep(950); if (!alive()) return; }
+        await line(step.line); if (!alive()) return;
+        // Advance a real multi-step builder (e.g. click the wizard's "Next ›")
+        // AFTER narrating, so the next step spotlights the panel that appears.
+        if (step.advance) { clickInFrame(step.advance); await sleep(900); if (!alive()) return; }
       }
       // Page-specific "one last thing" — the robot beams down the Settings tabs
       // that control THIS page (each with a note on what it does).

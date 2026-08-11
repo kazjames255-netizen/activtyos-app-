@@ -44,9 +44,26 @@ export function TourBridge() {
       return card;
     };
 
+    // For "click" steps: prefer an actual clickable (button/link) matching the
+    // text, else fall back to the nearest element, and click it.
+    const clickable = (needle: string): HTMLElement | null => {
+      const n = needle.trim().toLowerCase();
+      let best: HTMLElement | null = null;
+      let bestLen = Infinity;
+      for (const el of document.querySelectorAll<HTMLElement>("button,a,[role='button']")) {
+        const t = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
+        if (t.includes(n) && t.length < bestLen) { best = el; bestLen = t.length; }
+      }
+      return best ?? find(needle);
+    };
+
     const onMsg = (e: MessageEvent) => {
       const d = e.data as { type?: string; find?: string; id?: number } | null;
       if (!d || typeof d !== "object") return;
+      if (d.type === "tour:click") {
+        clickable(String(d.find ?? ""))?.click();
+        return;
+      }
       if (d.type === "tour:find") {
         const el = find(String(d.find ?? ""));
         if (!el) {
