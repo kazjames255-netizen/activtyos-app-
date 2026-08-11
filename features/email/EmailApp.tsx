@@ -703,6 +703,14 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               </>}
               <button type="button" onClick={() => setShowContact((v) => !v)} className={`${toolBtn} ml-auto`} title="Show this sender's contact card">◐ Contact</button>
             </div>
+            {/* Reply / Forward / Mark as enquiry — also at the top so they're
+                reachable without scrolling past a long message. */}
+            {isMsg(o.id) && <div className="flex flex-wrap gap-2 border-b border-[var(--line)] px-6 py-3">
+              <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
+              {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>}
+              <button type="button" onClick={() => forward(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↪ Forward</button>
+              <button type="button" onClick={() => { setEnqLocs([]); setEnqFor(o); }} className="ml-auto rounded-lg border border-[#bfe6cf] px-4 py-2 text-[13px] font-bold text-[#127a3e] hover:bg-[#eafaf0]" title="Add this sender to your New enquiries list">➕ Mark as enquiry</button>
+            </div>}
             {/* message */}
             <div className="px-6 py-5">
               <div className="flex items-start gap-3">
