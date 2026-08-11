@@ -37,6 +37,7 @@ import { TasksApp } from "@/features/tasks/TasksApp";
 import { TripsApp } from "@/features/trips/TripsApp";
 import { ParentTripsApp } from "@/features/trips/ParentTripsApp";
 import { ScheduleApp as RotaApp } from "@/features/schedule/ScheduleApp";
+import { AvailabilityApp } from "@/features/schedule/AvailabilityApp";
 import { CalendarApp } from "@/features/calendar/CalendarApp";
 import { InventoryApp } from "@/features/inventory/InventoryApp";
 import { LocationsApp } from "@/features/locations/LocationsApp";
@@ -258,11 +259,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     account: AccountApp,
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="staff" />,
-    availability: planned({
-      title: "My availability",
-      blurb: "Tell your organiser which days and hours you can work; the rota builds around it.",
-      links: [{ href: "/staff/schedule", label: "Schedule", hint: "your shifts as they stand" }],
-    }),
+    availability: AvailabilityApp,
     holiday: planned({
       title: "My holiday",
       blurb: "Request time off and see what's approved, with the rota kept in step automatically.",
