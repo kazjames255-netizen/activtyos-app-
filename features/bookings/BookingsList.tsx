@@ -52,16 +52,6 @@ const HERO_TONE: Record<string, { bg: string; fg: string }> = {
 };
 const heroTone = (s: string) => HERO_TONE[s] || { bg: "#e4e9fa", fg: "#2140a0" };
 
-// A fixed-width labelled column, so every row's cells line up down the page.
-function Col({ label, w, children }: { label: string; w: string; children: React.ReactNode }) {
-  return (
-    <span className={"flex flex-col justify-center " + w}>
-      <span className="text-[8px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{label}</span>
-      <span className="mt-[3px] block leading-[1.2]">{children}</span>
-    </span>
-  );
-}
-
 /**
  * The list. With a booking open it becomes the left rail of a split view:
  * same filters and search, rows compressed to a name, an activity and an
@@ -420,45 +410,53 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                 }
                 style={{ boxShadow: "0 12px 28px -18px rgba(20,35,90,.4)" }}
               >
-              <div className="flex items-stretch">
-                {/* Identity hero — colour = booking status */}
-                <div onClick={() => open(b.ref)} className="relative flex w-[150px] flex-none cursor-pointer items-center gap-2.5 p-2.5 pr-5 text-white sm:w-[236px]" style={{ background: heroGrad(b.status) }}>
-                  <span onClick={(e) => { e.stopPropagation(); toggleSel(b.ref); }} className={"absolute right-2 top-2 h-3.5 w-3.5 rounded border-[1.5px] " + (on ? "border-white bg-white/90" : "border-white/45")} />
-                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-xl bg-white/25 text-[15px] font-extrabold ring-1 ring-white/25" style={{ textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{lead.charAt(0).toUpperCase()}</span>
-                  <div className="min-w-0">
-                    <div className="text-[13.5px] font-extrabold leading-[1.15] [overflow-wrap:anywhere]" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 3px rgba(0,0,0,.3)" }}>{kids.map((k) => k.name).filter(Boolean).join(" & ") || b.child || "—"}</div>
-                    <div className="truncate text-[10px] text-white/85" style={{ textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>Ref {b.ref}{b.createdAt ? ` · ${prettyBookedOn(b)}` : ""}</div>
+              {/* Two-tier chip card: headline row (who · status · amount),
+                  then the details as light chips underneath. */}
+              <div className="p-3 sm:p-3.5">
+                {/* Tier 1 — who it's for, status, amount */}
+                <div className="flex items-center gap-2.5 sm:gap-3">
+                  <span onClick={(e) => { e.stopPropagation(); toggleSel(b.ref); }}
+                    className={"flex h-4 w-4 flex-none cursor-pointer items-center justify-center rounded border-[1.5px] text-[10px] text-white " + (on ? "border-[var(--brand-2)] bg-[var(--brand-2)]" : "border-[var(--line)] hover:border-[var(--ink-3)]")}>{on ? "✓" : ""}</span>
+                  <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[14px] font-extrabold text-white ring-1 ring-black/5" style={{ background: heroGrad(b.status), textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>{lead.charAt(0).toUpperCase()}</span>
+                  <div onClick={() => open(b.ref)} className="min-w-0 flex-1 cursor-pointer">
+                    <div className="truncate text-[14.5px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }} title={kids.map((k) => k.name).filter(Boolean).join(" & ")}>{kids.map((k) => k.name).filter(Boolean).join(" & ") || b.child || "—"}</div>
+                    <div className="truncate text-[11.5px] text-[var(--ink-3)]">Ref {b.ref}{b.createdAt ? ` · booked ${prettyBookedOn(b)}` : ""}</div>
                   </div>
-                </div>
-
-                {/* Detail columns — fixed widths so every row lines up */}
-                <div onClick={() => open(b.ref)} className="flex flex-1 cursor-pointer items-center gap-4 overflow-hidden px-4 py-1.5 hover:bg-[var(--panel)]">
-                  <Col label="🎟 Listing" w="min-w-[130px] flex-1"><span className="block break-words text-[12.5px] font-extrabold leading-tight text-[var(--ink)]" title={b.listing}>{b.listing || "—"}</span></Col>
-                  <Col label="📅 Season" w="w-[124px]">{seasonNameOf(b.listingId) ? <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span> : <span className="text-[12px] text-[var(--ink-3)]">—</span>}</Col>
-                  <Col label="📆 Dates" w="w-[158px]"><span className="num text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessionCount(b)} sessions · {att > 1 ? `${att} children` : "1 child"}</span></Col>
-                  <Col label="Status" w="w-[108px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: heroTone(b.status).bg, color: heroTone(b.status).fg }}>{b.status}</span></Col>
-                  <Col label="Payment" w="w-[118px]">
-                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span>
-                    <span className="mt-0.5 block truncate text-[10.5px] font-semibold text-[var(--ink-3)]" title={payMethodLabel(b)}>{payMethodLabel(b)}</span>
-                  </Col>
-
-                  {b.pay === "Awaiting voucher payment" && !off && (
-                    <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title="Confirm the voucher money has arrived — marks it paid and tells the family"
-                      className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">Mark voucher received</button>
-                  )}
-                  {refundPending && (
-                    <button onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }} title={isVoucherBk ? "Send the refund back through the scheme, then confirm — the family is told" : "Approve and issue the refund"}
-                      className="flex-none whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{isVoucherBk ? "Mark refund sent" : "Approve refund"}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
-                  )}
-                  {!refundPending && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
-                    <span title={b.amount > 0 ? `${money(b.cancel.amount)} — ${Math.round((b.cancel.amount / b.amount) * 100)}% of ${money(b.amount)}` : undefined}
-                      className="flex-none whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-bold text-[#c0392b]">Refund {money(b.cancel.amount)}</span>
-                  )}
-
-                  <div className="ml-auto flex-none text-right">
+                  <span className="flex-none whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11.5px] font-extrabold" style={{ background: heroTone(b.status).bg, color: heroTone(b.status).fg }}>{b.status}</span>
+                  <div className="flex-none pl-1 text-right">
                     <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Amount</div>
                     <b className="text-[18px] tabular-nums text-[var(--ink)]">{money(b.amount)}</b>
                   </div>
+                </div>
+
+                {/* Tier 2 — listing, season, dates, payment as chips */}
+                <div onClick={() => open(b.ref)} className="mt-2.5 flex cursor-pointer flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-dashed border-[var(--line)] pt-2.5 hover:opacity-90">
+                  <span className="text-[12.5px] font-extrabold text-[var(--ink)]" title={b.listing}>🎟 {b.listing || "—"}</span>
+                  {seasonNameOf(b.listingId) && (
+                    <span className="whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#2f9fb8,#12586e)" }}>{seasonNameOf(b.listingId)}</span>
+                  )}
+                  <span className="text-[var(--ink-3)]">·</span>
+                  <span className="text-[12.5px] font-semibold text-[var(--ink-2)]"><span className="num font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span> <span className="text-[var(--ink-3)]">· {sessionCount(b)} sessions · {att > 1 ? `${att} children` : "1 child"}</span></span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span>
+                    <span className="text-[11px] font-semibold text-[var(--ink-3)]">{payMethodLabel(b)}</span>
+                  </span>
+
+                  {/* Contextual actions, pushed to the right */}
+                  <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
+                    {b.pay === "Awaiting voucher payment" && !off && (
+                      <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title="Confirm the voucher money has arrived — marks it paid and tells the family"
+                        className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">Mark voucher received</button>
+                    )}
+                    {refundPending && (
+                      <button onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }} title={isVoucherBk ? "Send the refund back through the scheme, then confirm — the family is told" : "Approve and issue the refund"}
+                        className="flex-none whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{isVoucherBk ? "Mark refund sent" : "Approve refund"}{b.cancel?.amount ? ` ${money(b.cancel.amount)}` : ""}</button>
+                    )}
+                    {!refundPending && b.cancel?.amount != null && b.cancel.amount > 0 && b.cancel.refund !== "none" && (
+                      <span title={b.amount > 0 ? `${money(b.cancel.amount)} — ${Math.round((b.cancel.amount / b.amount) * 100)}% of ${money(b.amount)}` : undefined}
+                        className="flex-none whitespace-nowrap rounded-full bg-[#fdebec] px-2.5 py-[3px] text-[11px] font-bold text-[#c0392b]">Refund {money(b.cancel.amount)}</span>
+                    )}
+                  </span>
                 </div>
               </div>
 
