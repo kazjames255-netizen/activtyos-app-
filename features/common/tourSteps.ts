@@ -76,19 +76,23 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
   // through each real step with "Next ›").
   listings: {
     title: "Listings, services & tickets",
+    // Cursor-only: no spotlight ring. We move the mouse and actually fill the
+    // fields, pick the options and step through the tabs to build a real listing.
+    noSpotlight: true,
     introLine: "Every camp, club and class you offer is a listing — its own page parents can find and book. Three things live in your setup first: your venues, their locations, and your seasons. With those ready, let me build a listing with you.",
     doneLine: "That's a listing built — a polished page parents can find and book in minutes.",
     steps: [
       { find: "New listing", line: "To start, you press New listing, and this step-by-step builder opens.", click: true },
       { find: "Listing title", fill: [["Listing title", "Summer Holiday Multi-Sports Camp"]], line: "First, a clear name. Watch — I'll type it in: Summer Holiday Multi-Sports Camp." },
-      { find: "Main image", pick: ["One big image"], line: "Then the photos. Pick a layout — I'll choose one big image — then drop in your hero photo and any gallery shots right here.", advance: "Next" },
-      { find: "Where & when", fill: [["venue", "Riverside"], ["Age from", "5"], ["Age to", "12"]], line: "Now, where and who. Your venues, their locations and your seasons are all set up once in your setup — so here you just pick them. I'll choose Riverside Sports Hall, and set the ages five to twelve." },
+      { find: "Main image", pick: ["One big image"], line: "Then the photos. Pick a layout — I'll choose one big image, and you can see it preview here as your hero photo, right at the top of the listing. Your smaller shots go in the gallery below — those are the ones parents swipe through on the booking page.", advance: "Next" },
+      { find: "Where & when", fill: [["venue", "Riverside"], ["Age from", "5"], ["Age to", "12"]], link: { label: "Set up your venues, locations & seasons ↗", href: "/freelancer/listings?tab=locations" }, line: "Now, where and who. Your venues, their locations and your seasons are all set up once beforehand — so here you just pick them. If you haven't yet, use the link below. I'll choose Riverside Sports Hall, and set the ages five to twelve." },
       { find: "Categories", pick: ["Holiday Multi-Activity Camps"], line: "Tick a category so parents can find it — this one's a holiday multi-activity camp.", advance: "Next" },
-      { find: "Places & spaces", fill: [["Maximum attendees", "60"]], line: "Next, how many can come. I'll cap this one at sixty for the whole listing, or you can limit each age group instead.", advance: "Next" },
+      { find: "Places & spaces", fill: [["Maximum attendees", "60"]], line: "Next, how many can come. I'll cap this one at sixty for the whole listing." },
+      { find: "Per-age caps", line: "And if you want, set per-age caps — limit places for each age group on top of that total, so, say, only ten of your sixty go to the under-sevens.", advance: "Next" },
       { find: "Describe your activity", line: "Describe the activity so parents know exactly what their child will be doing — and let the AI draft it from a few words if you like.", advance: "Next" },
       { find: "What is provided", line: "Tick everything that's included — snacks, equipment, a t-shirt — it all shows on the listing.", advance: "Next" },
       { find: "Safety & inclusion", line: "Show your safety features and the SEND support you offer, so families know everyone's looked after.", advance: "Next" },
-      { find: "Dates & pattern", line: "Choose the dates and which days it runs, and the calendar builds every session for you.", advance: "Next" },
+      { find: "Dates & pattern", fill: [["Runs from", "2026-08-03"], ["Runs to", "2026-08-07"]], line: "Choose the dates it runs — I'll set the first week of August — then pick which days, and the calendar builds every session for you.", advance: "Next" },
       { find: "Choose a block", line: "Pick a block you built in the Blocks area — its passes and prices become this listing's tickets.", advance: "Next" },
       { find: "Discount rules", line: "Add automatic discounts if you like — they come off the price at checkout with no codes to remember — then preview and publish, and it's live for parents to book." },
     ],

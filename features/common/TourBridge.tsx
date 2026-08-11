@@ -110,7 +110,7 @@ export function TourBridge() {
     };
 
     const onMsg = (e: MessageEvent) => {
-      const d = e.data as { type?: string; find?: string; id?: number; field?: string; value?: string; text?: string } | null;
+      const d = e.data as { type?: string; find?: string; id?: number; field?: string; value?: string; text?: string; noBox?: boolean } | null;
       if (!d || typeof d !== "object") return;
       if (d.type === "tour:click") {
         clickable(String(d.find ?? ""))?.click();
@@ -124,6 +124,10 @@ export function TourBridge() {
           const want = String(d.value ?? "").toLowerCase();
           const opt = [...el.options].find((o) => o.text.toLowerCase().includes(want) || o.value.toLowerCase().includes(want));
           if (opt) setValue(el, opt.value);
+        } else if (el instanceof HTMLInputElement && ["date", "time", "datetime-local", "month", "week", "color", "range"].includes(el.type)) {
+          // A partial date/time is invalid and would be rejected mid-type — set
+          // these in one go.
+          setValue(el, String(d.value ?? ""));
         } else {
           void typeInto(el, String(d.value ?? ""));
         }
@@ -154,12 +158,17 @@ export function TourBridge() {
         // Let the smooth scroll settle before measuring / reporting.
         window.setTimeout(() => {
           const r = el.getBoundingClientRect();
-          const b = box();
-          b.style.opacity = "1";
-          b.style.top = `${r.top - 6}px`;
-          b.style.left = `${r.left - 6}px`;
-          b.style.width = `${r.width + 12}px`;
-          b.style.height = `${r.height + 12}px`;
+          // noBox tours want the cursor only — scroll + report the rect, but
+          // never draw the ring.
+          if (d.noBox) { if (boxEl) boxEl.style.opacity = "0"; }
+          else {
+            const b = box();
+            b.style.opacity = "1";
+            b.style.top = `${r.top - 6}px`;
+            b.style.left = `${r.left - 6}px`;
+            b.style.width = `${r.width + 12}px`;
+            b.style.height = `${r.height + 12}px`;
+          }
           window.parent.postMessage(
             { type: "tour:rect", id: d.id, ok: true, rect: { top: r.top, left: r.left, width: r.width, height: r.height } },
             "*",

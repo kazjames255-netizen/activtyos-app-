@@ -219,7 +219,14 @@ async function putLibrary(s: LocalState): Promise<void> {
 
 /** Freelancer Listings — manual layout, Phase A. */
 export function FreelancerListingsApp() {
-  const [tab, setTab] = useState<Tab>("listings");
+  // Allow a deep-link to a tab (e.g. the walkthrough's "set up your locations"
+  // link → ?tab=locations) while defaulting to the Listings tab.
+  const initialTab = (): Tab => {
+    if (typeof window === "undefined") return "listings";
+    const t = new URLSearchParams(window.location.search).get("tab");
+    return t === "categories" || t === "locations" ? t : "listings";
+  };
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [listings, setListings] = useState<Listing[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [local, setLocal] = useState<LocalState | null>(null);

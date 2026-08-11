@@ -18,12 +18,13 @@ export type LiveStep = {
   fill?: [string, string][];   // [field label/placeholder, value] — types into real inputs
   pick?: string[];             // chip / option / checkbox texts to click (select)
   slide?: string;              // slides mode: HTML shown in the stage for this step
+  link?: { label: string; href: string }; // a deep-link pill shown during this step (opens in a new tab)
 };
 // `slides` mode swaps the live-page iframe for a deck of hand-built HTML screens
 // (each step's `slide`), for flows whose real steps happen on an external site
 // we can't embed — e.g. connecting Gmail. Everything else (robot, voice, splash,
 // controls) is identical, so it looks and sounds like every other walkthrough.
-export type LiveTourSteps = { title: string; introLine: string; doneLine: string; steps: LiveStep[]; slides?: boolean };
+export type LiveTourSteps = { title: string; introLine: string; doneLine: string; steps: LiveStep[]; slides?: boolean; noSpotlight?: boolean };
 
 const CSS = `
 .lt-root{--navy:#16306e;--blue:#2f6bd8;--blue2:#4f8bf5;--teal:#0ea5a5;--ink:#12203c;--ink2:#3a4a68;--faint:#9aa6bd;--line:#e6ebf5;--surface:#fff;color:var(--ink)}
@@ -44,6 +45,9 @@ const CSS = `
 .lt-root .splos{-webkit-text-fill-color:#ff5aa8;color:#ff5aa8;background:none;filter:drop-shadow(0 2px 10px rgba(255,90,168,.5))}
 .lt-root .sptitle{font-size:17px;font-weight:800;color:#e6f0ff}.lt-root .spsub{font-size:11.5px;font-weight:700;color:#9fb4dd}
 .lt-root .lt-slide{display:flex;align-items:center;justify-content:center;overflow:auto;padding:26px;background:radial-gradient(120% 130% at 50% -10%,#e9f1fd 0%,#d9e6fb 48%,#c7dbf6 100%)}
+.lt-root .lt-link{position:absolute;left:50%;bottom:16px;transform:translateX(-50%) translateY(8px);z-index:22;display:none;align-items:center;gap:8px;max-width:calc(100% - 32px);padding:10px 18px;border-radius:999px;font-size:12.5px;font-weight:800;color:#fff;text-decoration:none;background:linear-gradient(180deg,#4f8bf5,#2f6bd8);box-shadow:0 10px 26px -8px rgba(47,107,216,.7);opacity:0;transition:opacity .3s,transform .3s}
+.lt-root .lt-link.show{display:inline-flex;opacity:1;transform:translateX(-50%) translateY(0)}
+.lt-root .lt-link:hover{filter:brightness(1.06)}
 `;
 
 export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: string; steps: LiveTourSteps }) {
@@ -59,6 +63,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
     const slideEl = root.querySelector(".lt-slide") as HTMLElement | null; // present only in slides mode
     const slidesMode = !!cfgRef.current.slides;
     const cursor = root.querySelector(".lt-cursor") as HTMLElement;
+    const linkEl = root.querySelector(".lt-link") as HTMLAnchorElement;
     const capEl = root.querySelector(".lt-cap") as HTMLElement;
     const overlay = root.querySelector(".lt-overlay") as HTMLElement;
     const splash = root.querySelector(".lt-splash") as HTMLElement;
@@ -124,11 +129,12 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       }
     }
     window.addEventListener("message", onMsg);
+    const noBox = !!cfgRef.current.noSpotlight; // some tours want the cursor only, no ring
     const spotlight = (find: string) =>
       new Promise<DOMRect | null>((res) => {
         const id = ++msgId;
         pending.set(id, res);
-        frame.contentWindow?.postMessage({ type: "tour:find", find, id }, "*");
+        frame.contentWindow?.postMessage({ type: "tour:find", find, id, noBox }, "*");
         setTimeout(() => { if (pending.has(id)) { pending.delete(id); res(null); } }, 2600);
       });
     const clearHi = () => frame.contentWindow?.postMessage({ type: "tour:clear" }, "*");
@@ -156,7 +162,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       const tk = ++token; const alive = () => tk === token && !dead;
       if (hasSpeech) window.speechSynthesis.cancel();
       paused = false; waiters.splice(0).forEach((f) => f()); pauseBtn.textContent = "⏸";
-      cursor.style.transform = "translate(34px,30px)";
+      cursor.style.transform = "translate(34px,30px)"; linkEl.classList.remove("show");
       if (startIdx <= 0) {
         splash.style.display = "flex"; splash.classList.remove("hide"); void splash.offsetWidth;
         await sleep(1200); if (!alive()) return;
@@ -179,6 +185,10 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
           await line(step.line); if (!alive()) return;
           continue;
         }
+        // A deep-link pill for this step (e.g. "set up your locations") — shown
+        // while the step is on screen, so the provider can go do it if needed.
+        if (step.link) { linkEl.textContent = step.link.label; linkEl.href = step.link.href; linkEl.classList.add("show"); }
+        else linkEl.classList.remove("show");
         const rect = await spotlight(step.find || ""); if (!alive()) return;
         await moveTo(rect); if (!alive()) return;
         // A "click" step presses the control (opening its form) before narrating.
@@ -200,7 +210,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       }
       // Page-specific "one last thing" — the robot beams down the Settings tabs
       // that control THIS page (each with a note on what it does).
-      currentIdx = c.steps.length; clearHi();
+      currentIdx = c.steps.length; clearHi(); linkEl.classList.remove("show");
       const links = SETTINGS_LINKS[view] || [];
       if (links.length) {
         showScene(settingsScene(portal, links));
@@ -252,6 +262,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
           : <iframe className="lt-frame" title="walkthrough" src={`/tour/${portal}/${view}`} />}
         <div className="lt-overlay" />
         <div className="lt-cursor"><span className="ring" /><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
+        <a className="lt-link" target="_blank" rel="noreferrer" href="#" />
         <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">Activity<span className="splos">OS</span></div><div className="sptitle">{cfg.title}</div><div className="spsub">a quick guided walkthrough</div></div>
       </div>
       <div className="lt-cap" />
