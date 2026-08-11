@@ -7,8 +7,7 @@ import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
-import { HowItWorks as HowItWorksPanel } from "@/components/HowItWorks";
-import { ListingTour } from "./ListingTour";
+import { TourLauncher } from "@/features/common/TourLauncher";
 import { useTenantSettings } from "@/lib/settings";
 import { VenueMap } from "./VenueMap";
 import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
@@ -217,9 +216,6 @@ async function putLibrary(s: LocalState): Promise<void> {
   await api("/api/library", { method: "PUT", body: JSON.stringify({ ...s, addons }) });
 }
 
-function HowItWorks({ onTab }: { onTab: (t: Tab) => void }) {
-  return <HowItWorksPanel tour={<ListingTour onTab={(t) => onTab(t as Tab)} />} />;
-}
 
 /** Freelancer Listings — manual layout, Phase A. */
 export function FreelancerListingsApp() {
@@ -419,7 +415,7 @@ export function FreelancerListingsApp() {
         </div>
       </div>
 
-      <HowItWorks onTab={setTab} />
+      <TourLauncher view="listings" />
 
       {/* Tabs */}
       <div className="mb-3 flex gap-1.5 border-b border-[var(--line)]">

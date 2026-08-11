@@ -5,6 +5,7 @@
 // shows the actual page exactly as it looks in use.
 
 import { GENERATED_FIXTURES } from "./tourFixtures.generated";
+import { LB_FIXTURES } from "./tourExtra.generated";
 
 type Fixtures = Record<string, unknown>;
 
@@ -115,6 +116,7 @@ const SETUP: Fixtures = {
 export const TOUR_FIXTURES: Record<string, Fixtures> = {
   // Agent-authored fixtures for the other pages; the hand-tuned dashboard wins.
   ...GENERATED_FIXTURES,
+  ...LB_FIXTURES,
   dash: DASH,
   setup: SETUP,
 };

@@ -158,10 +158,6 @@ export const GENERATED_STEPS: Record<string, LiveTourSteps> = {
         "line": "Every booked session across your listings lands here automatically, and the Add event button is where you pop in your own meetings, INSET days and closures."
       },
       {
-        "find": "How it works",
-        "line": "New to the page? This drop-down is a quick primer on the three views, adding your own events, filtering, and reminders."
-      },
-      {
         "find": "Today",
         "line": "Flip between Month for the overview, Week for booked numbers per day, and Day for the full hour-by-hour run-sheet, and step through dates with the arrows, Today, or the date picker."
       },

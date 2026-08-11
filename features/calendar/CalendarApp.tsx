@@ -271,21 +271,7 @@ export function CalendarApp() {
         </div>
       </div>
 
-      {/* how it works — top, under the title */}
-      <details className="group mb-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-        <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-[13px] font-extrabold" style={{ color: BLUE }}><span className="text-[11px] transition-transform group-open:rotate-90">▸</span> How it works</summary>
-        <div className="border-t border-[var(--line)] px-4 py-3 text-[12.5px] leading-[1.6] text-[var(--ink-2)]">
-          <ul className="ml-4 list-disc space-y-1.5">
-            <li><b>Month, Week or Day</b> — Month is the overview, Week breaks each day into its sessions with booked numbers, Day is the full run-sheet for one date.</li>
-            <li><b>Add your own events</b> — meetings, INSET days, open days, closures. Give them a category &amp; colour to keep things tidy; click an event to edit it.</li>
-            <li><b>Filter</b> — click a listing in the legend to show/hide it, and toggle <b>Booking info</b> or <b>Events</b> on and off.</li>
-            <li><b>Reminders</b> — turn on email + in-app reminders before an event starts in <b>Settings → Calendar</b> (currently {reminderOn ? `on, ${reminderMinutes} min before` : "off"}).</li>
-            <li>Sessions are read-only here — to change dates or capacity, edit the listing&rsquo;s run in <b>Listings</b>.</li>
-          </ul>
-        </div>
-      </details>
-
-      {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
+      {error &&<div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
       {(adding || editing) && <EventForm existing={editing ?? undefined} categories={categories} settings={settings} save={save} defReminderOn={reminderOn} defReminderMinutes={reminderMinutes} onClose={() => { setAdding(false); setEditing(null); }} onSaved={() => { setAdding(false); setEditing(null); refresh(); }} onDelete={editing ? () => removeEvent(editing.id) : undefined} />}
 
       {/* mode tabs (visible) */}

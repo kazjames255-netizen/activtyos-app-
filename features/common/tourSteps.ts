@@ -1,6 +1,7 @@
 import type { LiveTourSteps } from "./LiveTour";
 import type { SettingsLink } from "./tourNarrator";
 import { GENERATED_STEPS } from "./tourSteps.generated";
+import { LB_STEPS, LB_SETTINGS } from "./tourExtra.generated";
 
 // Narration + spotlight anchors for the live walkthroughs. Each step's `find`
 // is a snippet of text the REAL page renders; the tour highlights the card that
@@ -12,6 +13,7 @@ import { GENERATED_STEPS } from "./tourSteps.generated";
 // Settings tabs that control THIS page, each with a note on what it does. Shown
 // (via the robot control-panel scene) at the end of that page's live tour.
 export const SETTINGS_LINKS: Record<string, SettingsLink[]> = {
+  ...LB_SETTINGS,
   dash: [
     { icon: "⚙️", label: "Features", tab: "features", note: "Switch major areas of ActivityOS on or off" },
     { icon: "🗓", label: "Seasons", tab: "seasons", note: "Date ranges every figure here can filter by" },
@@ -51,6 +53,7 @@ export const SETTINGS_LINKS: Record<string, SettingsLink[]> = {
 export const TOUR_STEPS: Record<string, LiveTourSteps> = {
   // Agent-authored steps for the other pages; the hand-tuned dashboard wins.
   ...GENERATED_STEPS,
+  ...LB_STEPS,
   dash: {
     title: "Dashboard",
     introLine: "This is your dashboard — the first thing you see each morning. Let me walk you through it.",
