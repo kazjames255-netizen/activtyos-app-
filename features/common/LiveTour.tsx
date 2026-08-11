@@ -17,6 +17,7 @@ export type LiveStep = {
   advance?: string;            // after narrating, press the element matching this text
   fill?: [string, string][];   // [field label/placeholder, value] — types into real inputs
   pick?: string[];             // chip / option / checkbox texts to click (select)
+  clickIn?: [string, string][]; // [buttonText, withinCardText] — click a repeated button on a specific card
   slide?: string;              // slides mode: HTML shown in the stage for this step
   link?: { label: string; href: string }; // a deep-link pill shown during this step (opens in a new tab)
 };
@@ -141,6 +142,8 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
     // Click a real control in the page (e.g. "Add event") so the tour can open a
     // create form and then walk through it — showing HOW to build, not just talk.
     const clickInFrame = (find: string) => frame.contentWindow?.postMessage({ type: "tour:click", find }, "*");
+    // Click a repeated button (e.g. "+ Add to block") scoped to a specific card.
+    const clickWithin = (find: string, within: string) => frame.contentWindow?.postMessage({ type: "tour:click", find, within }, "*");
     const fillInFrame = (field: string, value: string) => frame.contentWindow?.postMessage({ type: "tour:fill", field, value }, "*");
     const pickInFrame = (text: string) => frame.contentWindow?.postMessage({ type: "tour:pick", text }, "*");
 
@@ -203,6 +206,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         const say = line(step.line);
         if (step.fill) { for (const [f, v] of step.fill) { fillInFrame(f, v); await sleep(Math.max(560, v.length * 55 + 260)); if (!alive()) return; } }
         if (step.pick) { for (const t of step.pick) { pickInFrame(t); await sleep(520); if (!alive()) return; } }
+        if (step.clickIn) { for (const [t, w] of step.clickIn) { clickWithin(t, w); await sleep(620); if (!alive()) return; } }
         await say; if (!alive()) return;
         // Advance a real multi-step builder (e.g. click the wizard's "Next ›")
         // AFTER narrating, so the next step spotlights the panel that appears.

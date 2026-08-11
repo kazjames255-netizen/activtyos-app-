@@ -49,15 +49,19 @@ export function TourBridge() {
 
     // For "click" steps: prefer an actual clickable (button/link) matching the
     // text, else fall back to the nearest element, and click it.
-    const clickable = (needle: string): HTMLElement | null => {
+    const clickable = (needle: string, within?: string): HTMLElement | null => {
       const n = needle.trim().toLowerCase();
+      // `within` scopes the search to the card containing that text — so a
+      // repeated button like "+ Add to block" can be clicked on a SPECIFIC
+      // period/pass, not just the first one on the page.
+      const scope: ParentNode = within ? (find(within) ?? document) : document;
       let best: HTMLElement | null = null;
       let bestLen = Infinity;
-      for (const el of document.querySelectorAll<HTMLElement>("button,a,[role='button']")) {
+      for (const el of scope.querySelectorAll<HTMLElement>("button,a,[role='button']")) {
         const t = (el.textContent || "").replace(/\s+/g, " ").trim().toLowerCase();
         if (t.includes(n) && t.length < bestLen) { best = el; bestLen = t.length; }
       }
-      return best ?? find(needle);
+      return best ?? (within ? null : find(needle));
     };
 
     // Set a controlled input/textarea/select's value the way React expects, so
@@ -110,10 +114,10 @@ export function TourBridge() {
     };
 
     const onMsg = (e: MessageEvent) => {
-      const d = e.data as { type?: string; find?: string; id?: number; field?: string; value?: string; text?: string; noBox?: boolean } | null;
+      const d = e.data as { type?: string; find?: string; id?: number; field?: string; value?: string; text?: string; noBox?: boolean; within?: string } | null;
       if (!d || typeof d !== "object") return;
       if (d.type === "tour:click") {
-        clickable(String(d.find ?? ""))?.click();
+        clickable(String(d.find ?? ""), d.within ? String(d.within) : undefined)?.click();
         return;
       }
       if (d.type === "tour:fill") {

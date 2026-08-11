@@ -104,15 +104,17 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
   // Blocks: build a real block on the real page (click "Add to block").
   blocks: {
     title: "Sessions & blocks",
+    // Cursor-only, and it actually builds: opens the add forms, fills them,
+    // clicks Add, drops cards into the block, names it and moves it to the library.
+    noSpotlight: true,
     introLine: "This is where you build the patterns parents book — sessions grouped into a block, priced once and reused on any listing. Let me build one.",
     doneLine: "Build a block once here, price it, and drop it onto any camp, club or class.",
     steps: [
-      { find: "Make your periods", line: "First, your periods — the time windows in a day, like a full day, a morning, or an early drop-off. Title them anything." },
-      { find: "Make your passes", line: "Then your passes — the lengths a parent can book, from a single day to a full week or a whole term." },
-      { find: "+ Add to block", line: "To build a block, you click Add to block on the periods and passes you want — watch, I'll add one now.", click: true },
-      { find: "Build your blocks", line: "It drops into your block here on the right, ready to combine with the passes you add." },
-      { find: "Name your block", line: "Give the block a name, and the pricing calculator works out the price of every day-and-pass combination for you." },
-      { find: "Move to Block Library", line: "Move it to your Block Library, and it's ready to reuse on any listing you like." },
+      { find: "+ Add a period", click: true, fill: [["Period title", "Holiday Club — Full Day"], ["Start", "09:00"], ["Finish", "15:30"]], line: "First, your periods — the time windows in a day. Click Add a period, give it a name, and set the start and finish times.", advance: "Add period" },
+      { find: "+ Add a pass", click: true, fill: [["Pass name", "Full-week pass"], ["Days", "5"]], line: "Then your passes — how long a parent books. Click Add a pass, name it, and set the number of days.", advance: "Add pass" },
+      { find: "Build your blocks", clickIn: [["+ Add to block", "Full day"], ["+ Add to block", "5-day week pass"]], line: "Now build the block — click Add to block on the periods and passes you want, and they drop in here on the right.", },
+      { find: "Name your block", fill: [["Name your block", "Summer Holiday Multi-Sports Camp"]], line: "Name the block, and the calculator prices every day-and-pass combination for you.", advance: "Move to Block Library" },
+      { find: "Move to Block Library", line: "It lands in your Block Library, ready to drop onto any listing — build it once, reuse it everywhere." },
     ],
   },
   tasks: {
