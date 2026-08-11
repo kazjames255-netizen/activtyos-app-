@@ -16,14 +16,15 @@ export const DEMO_VENUES: Venue[] = [
 ];
 
 interface Listing { id: string; title?: string; name?: string; venueId?: string | null; seasonId?: string | null; status?: string; visibility?: string; archived?: boolean }
-interface LocStaff { id: string; name: string; sites: string[]; role?: string; perm?: string }
+interface LocStaff { id: string; name: string; sites: string[]; role?: string; perm?: string; home?: string }
+interface Store { staff: LocStaff[]; pending?: unknown[] }
 const STAFF_KEY = "aos.locstaff.v1";
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const AV_COL = ["#c2268f", "#0f857b", "#2f6bd8", "#c06a10", "#6366f1", "#b45309"];
 const avColour = (id: string) => AV_COL[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % AV_COL.length];
 
-// Deployment: who's assigned where + each location's live listings. Click a
-// location to manage its staff/roles/scheduling on the detail page (?id=…).
+// Deployment: one place — who works at each location (assign inline) + the live
+// listings that run there. Click a location for its Timesheets & notifications.
 export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -31,14 +32,19 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const { settings } = useSettings();
   const [venues, setVenues] = useState<Venue[] | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
-  const [staff, setStaff] = useState<LocStaff[]>([]);
+  const [store, setStore] = useState<Store>({ staff: [] });
 
   const refresh = useCallback(() => {
     apiGet<{ venues?: Venue[] }>("/api/library").then((lib) => setVenues(lib.venues ?? [])).catch(() => setVenues([]));
     apiGet<Listing[]>("/api/listings?mine=1").then(setListings).catch(() => setListings([]));
   }, []);
-  useEffect(() => { refresh(); try { const s = JSON.parse(localStorage.getItem(STAFF_KEY) || "null"); if (s?.staff) setStaff(s.staff); } catch { /* ignore */ } }, [refresh]);
+  useEffect(() => { refresh(); try { const s = JSON.parse(localStorage.getItem(STAFF_KEY) || "null"); if (s?.staff) setStore(s); } catch { /* ignore */ } }, [refresh]);
   useRealtime(["library"], refresh);
+
+  const persist = (next: Store) => { setStore(next); try { localStorage.setItem(STAFF_KEY, JSON.stringify(next)); } catch { /* ignore */ } };
+  const staff = store.staff;
+  const toggle = (staffId: string, vid: string) => persist({ ...store, staff: staff.map((s) => s.id === staffId ? { ...s, sites: s.sites.includes(vid) ? s.sites.filter((x) => x !== vid) : [...s.sites, vid] } : s) });
+  const setAllForVenue = (vid: string, on: boolean) => persist({ ...store, staff: staff.map((s) => ({ ...s, sites: on ? [...new Set([...s.sites, vid])] : s.sites.filter((x) => x !== vid) })) });
 
   const list = useMemo(() => (venues && venues.length > 0 ? venues : venues ? DEMO_VENUES : null), [venues]);
   const seasonName = (sid?: string | null) => settings.seasons?.find((s) => s.id === sid)?.name;
@@ -52,11 +58,9 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
     <div className={embedded ? "text-[var(--ink)]" : "-m-3 min-h-[calc(100vh-3.5rem)] p-3 text-[var(--ink)] sm:-m-5 sm:p-5"} style={embedded ? undefined : LIGHT_PALETTE}>
       {detailVenue ? <LocationDetail venue={detailVenue} venues={list!} onBack={() => router.push(pathname)} /> : (
       <>
-      <div className="mb-3 flex flex-wrap items-end justify-between gap-2">
-        <div>
-          <h2 className="text-[20px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Deployment</h2>
-          <p className="text-[12.5px] text-[var(--ink-3)]">Where your team works — who&rsquo;s at each location and the listings that run there. Locations &amp; listings are edited in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p>
-        </div>
+      <div className="mb-3">
+        <h2 className="text-[20px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Deployment</h2>
+        <p className="text-[12.5px] text-[var(--ink-3)]">Who works at each location and the listings that run there. Turn a location on for someone and the schedule offers them for its shifts. Locations &amp; listings are edited in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p>
       </div>
 
       {!list ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div> : (
@@ -70,19 +74,31 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                   <span className="text-[14px]">📍</span>
                   <span className="text-[15px] font-extrabold text-[var(--ink)]">{v.name}</span>
                   {v.city && <span className="text-[11.5px] text-[var(--ink-3)]">· {v.city}</span>}
-                  <button type="button" onClick={() => open(v.id)} className="ml-auto rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white hover:brightness-105">Manage staff ›</button>
+                  <span className="ml-auto flex items-center gap-2">
+                    <span className="rounded-full bg-white px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f]">{here.length} of {staff.length} deployed</span>
+                    <button type="button" onClick={() => open(v.id)} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Timesheets &amp; alerts ›</button>
+                  </span>
                 </div>
-                <div className="grid gap-4 p-4 md:grid-cols-2">
-                  {/* staff deployed here */}
+                <div className="grid gap-4 p-4 md:grid-cols-[1.3fr,1fr]">
+                  {/* assign team here */}
                   <div>
-                    <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Team here · {here.length}</div>
-                    {here.length === 0 ? <p className="text-[12px] text-[var(--ink-3)]">No one assigned yet — open <b>Manage staff</b> to tick this site on for people.</p> : (
-                      <div className="flex flex-col gap-1.5">{here.map((s) => (
-                        <div key={s.id} className="flex items-center gap-2.5">
-                          <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
-                          <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{s.name}</div><div className="text-[11px] text-[var(--ink-3)]">{s.role ?? "—"} · all listings here</div></div>
-                        </div>
-                      ))}</div>
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Team — who works here</span>
+                      <span className="ml-auto flex gap-1.5">
+                        <button type="button" onClick={() => setAllForVenue(v.id, true)} className="rounded-full border border-[#bfe3cd] bg-[#eef8f1] px-2.5 py-0.5 text-[11px] font-bold text-[#0f7a43]">✓ All</button>
+                        <button type="button" onClick={() => setAllForVenue(v.id, false)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">Clear</button>
+                      </span>
+                    </div>
+                    {staff.length === 0 ? <p className="text-[12px] text-[var(--ink-3)]">No staff yet — invite people in <b>Team members</b>.</p> : (
+                      <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
+                        {staff.map((s) => { const on = s.sites.includes(v.id); return (
+                          <div key={s.id} className="flex items-center gap-2.5 py-2">
+                            <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
+                            <div className="min-w-0 flex-1"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{s.name}</div><div className="text-[11px] text-[var(--ink-3)]">{s.role ?? "—"}{on ? " · all listings here" : ""}</div></div>
+                            <button type="button" onClick={() => toggle(s.id, v.id)} role="switch" aria-checked={on} title={on ? "Works here — click to remove" : "Not here — click to add"} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: on ? "#22b365" : "var(--line)" }}><span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ left: on ? "21px" : "3px" }} /></button>
+                          </div>
+                        ); })}
+                      </div>
                     )}
                   </div>
                   {/* live listings here */}
