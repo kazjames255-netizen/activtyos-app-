@@ -454,6 +454,35 @@ const capsAt = (level: CapLevel): Record<string, CapLevel> =>
  *  staff-invite "Role" picker. Editable in Setup → Staff roles. */
 export const DEFAULT_STAFF_ROLES: string[] = ["Lead Coach", "Coach", "Activity Instructor", "Lifeguard", "First Aider", "Activity Assistant"];
 
+/** Company-wide scheduling defaults, surfaced on the location Scheduling tab.
+ *  Recorded/behavioural only — ActivityOS never moves money. */
+export interface SchedulingSettings {
+  firstDay: "mon" | "sun";
+  defaultShiftHours: number;
+  defaultBreakMins: number;
+  breakPaid: "paid" | "unpaid";
+  notifyRecipient: "bestfit" | "manager" | "admin";
+  notifyOnRemoved: "email_push" | "email" | "push" | "none";
+  allowClaimOpen: boolean;
+  unconfirmedToOpen: "off" | "12h" | "24h" | "48h";
+  suggestionOrder: "bestfit" | "cost" | "hours";
+  showLocationNames: boolean;
+  coworkerVisibility: "all" | "team" | "none";
+  swapShifts: boolean;
+  swapApproval: boolean;
+  offerShifts: boolean;
+  onCostPct: number;
+  openShiftCost: number;
+  availabilityReminders: boolean;
+}
+export const DEFAULT_SCHEDULING: SchedulingSettings = {
+  firstDay: "mon", defaultShiftHours: 6, defaultBreakMins: 30, breakPaid: "unpaid",
+  notifyRecipient: "bestfit", notifyOnRemoved: "email_push", allowClaimOpen: false,
+  unconfirmedToOpen: "off", suggestionOrder: "bestfit", showLocationNames: false,
+  coworkerVisibility: "all", swapShifts: true, swapApproval: true, offerShifts: true,
+  onCostPct: 12.07, openShiftCost: 0, availabilityReminders: false,
+};
+
 /** Sensible starting roles a company can then tweak or add to. Levels match the
  *  presets agreed with the operator; Owner is full & locked. */
 export const DEFAULT_ROLES: StaffRole[] = [
@@ -936,6 +965,8 @@ export interface TenantSettings {
    *  Shared by the schedule role rows and the staff-invite Role picker.
    *  Falls back to DEFAULT_STAFF_ROLES when unset. */
   staffRoles?: string[];
+  /** Company-wide scheduling defaults (location Scheduling tab). */
+  scheduling?: SchedulingSettings;
   /** Ask the operator why, when they cancel. Off = don't make them answer. */
   askReasonOperator: boolean;
   /** Ask the parent why, when they cancel their own booking. */
@@ -1121,6 +1152,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   ratioGroups: DEFAULT_RATIO_GROUPS,
   roles: DEFAULT_ROLES,
   staffRoles: DEFAULT_STAFF_ROLES,
+  scheduling: DEFAULT_SCHEDULING,
   refundApproval: "review",
   askReasonOperator: true,
   askReasonParent: false,
@@ -1190,6 +1222,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
     seasons: s.seasons ?? DEFAULT_SETTINGS.seasons,
     staffRoles: s.staffRoles?.length ? s.staffRoles : DEFAULT_SETTINGS.staffRoles,
+    scheduling: { ...DEFAULT_SCHEDULING, ...(s.scheduling ?? {}) },
     payMethods: (s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods).filter((m) => m !== "Free place"),
     // Schemes held a single `reference` string before they held labelled
     // details. Lift rather than drop — a provider's account numbers are not

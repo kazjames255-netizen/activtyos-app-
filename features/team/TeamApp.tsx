@@ -26,7 +26,7 @@ interface Venue { id: string; name: string }
 interface SubCurrent { plan: string; staffLimit?: number | null; staffUsed?: number | null; details?: { name?: string } }
 
 type Assignment = { mode: "all" | "listings" | "locations"; ids: string[] };
-type LocalMeta = { staffRole?: string; assignment?: Assignment; status?: "active" | "deactivated" | "deleted" };
+type LocalMeta = { staffRole?: string; jobTitle?: string; assignment?: Assignment; status?: "active" | "deactivated" | "deleted" };
 const META_KEY = "aos.team.meta.v1";
 const loadMeta = (): Record<string, LocalMeta> => { try { return JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch { return {}; } };
 const saveMeta = (m: Record<string, LocalMeta>) => { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch { /* ignore */ } };
@@ -61,6 +61,8 @@ export function TeamApp() {
   // Invite form
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("coach");
+  const jobTitles = settings.staffRoles ?? [];
+  const [jobTitle, setJobTitle] = useState("");
   const [assignMode, setAssignMode] = useState<"all" | "listings" | "locations">("all");
   const [assignIds, setAssignIds] = useState<string[]>([]);
 
@@ -106,9 +108,9 @@ export function TeamApp() {
         role,
         ...(to ? { email: to } : {}),
         // Extra fields — stored by the backend later (see handoff); harmless now.
-        ...(role === "staff" ? { staffRole: roleId, assignment } : {}),
+        ...(role === "staff" ? { staffRole: roleId, jobTitle: jobTitle || undefined, assignment } : {}),
       });
-      if (role === "staff") patchMeta(r.token, { staffRole: roleId, assignment, status: "active" });
+      if (role === "staff") patchMeta(r.token, { staffRole: roleId, jobTitle: jobTitle || undefined, assignment, status: "active" });
       if (r.sentTo) { setSentNote(`Invite emailed to ${r.sentTo}`); setEmail(""); }
       setAssignMode("all"); setAssignIds([]);
       refresh();
@@ -206,11 +208,19 @@ export function TeamApp() {
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="w-full" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Role</label>
+            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Access role — permissions</label>
             <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="w-full">
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </Select>
             <div className="mt-1 text-[11px] text-[var(--ink-3)]">Sets what they can see &amp; do — edit in <Link href="/company/setup?tab=roles" className="font-bold text-[#1d3a8f] underline">Roles &amp; permissions</Link>.</div>
+          </div>
+          <div>
+            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Job title — rostered as</label>
+            <Select value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full">
+              <option value="">— Job title —</option>
+              {jobTitles.map((j) => <option key={j} value={j}>{j}</option>)}
+            </Select>
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">The role they&rsquo;re scheduled as (Lifeguard, Site Manager…) — the coloured rows in the rota. Manage the list on a location&rsquo;s <b>Roles</b> tab.</div>
           </div>
         </div>
 

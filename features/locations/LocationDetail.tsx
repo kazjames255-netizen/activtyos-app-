@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { api } from "@/lib/api";
-import { useTenantSettings } from "@/lib/settings";
-import { Button, Card, Input, Select } from "@/components/ui";
+import { useSettings, type SchedulingSettings, DEFAULT_SCHEDULING } from "@/lib/settings";
+import { Card, Input, Select } from "@/components/ui";
 import { VenueMap } from "@/features/listings/VenueMap";
 
 export interface Venue {
@@ -32,10 +32,8 @@ const AV_COL = ["#c2268f", "#0f857b", "#2f6bd8", "#c06a10", "#6366f1", "#b45309"
 const avColour = (id: string) => AV_COL[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % AV_COL.length];
 
 // ── Local demo store: who's assigned to which sites + pending invites ────────
-// Front-end only until the backend lands (staff_assignments + invites). Mirrors
-// the manual's "onboarded once, assigned to the sites they work at" model.
-interface LocStaff { id: string; name: string; home: string; sites: string[]; role?: string }
-interface Pending { id: string; name: string; email: string; role: string; at: string }
+interface LocStaff { id: string; name: string; home: string; sites: string[]; role?: string; perm?: string }
+interface Pending { id: string; name: string; email: string; perm: string; jobTitle: string; at: string }
 interface Store { staff: LocStaff[]; pending: Pending[] }
 const KEY = "aos.locstaff.v1";
 const load = (): Store | null => { try { return JSON.parse(localStorage.getItem(KEY) || "null"); } catch { return null; } };
@@ -44,40 +42,40 @@ const seed = (venueIds: string[]): Store => {
   const two = venueIds.slice(0, 2);
   return {
     staff: [
-      { id: "susan", name: "Susan Preston", home: "Milton Keynes", role: "Lead Coach", sites: two },
-      { id: "amelia", name: "Amelia Hart", home: "Milton Keynes", role: "Coach", sites: two },
-      { id: "oluwa", name: "OluwaDamilola Adeyemi", home: "Loughton", role: "Lead Coach", sites: all },
-      { id: "liberty", name: "Liberty Young", home: "Milton Keynes", role: "Coach", sites: [venueIds[0]].filter(Boolean) },
-      { id: "dom", name: "Dom Reyes", home: "Milton Keynes", role: "Lifeguard", sites: [] },
-      { id: "kitty", name: "Kitty-Rose Bright", home: "Loughton", role: "Activity Assistant", sites: [] },
-      { id: "louis", name: "Louis Calderwood", home: "Milton Keynes", role: "Lifeguard", sites: [] },
-      { id: "taigan", name: "Taigan McMahon", home: "Loughton", role: "First Aider", sites: [] },
+      { id: "susan", name: "Susan Preston", home: "Milton Keynes", role: "Lead Coach", perm: "Manager", sites: two },
+      { id: "amelia", name: "Amelia Hart", home: "Milton Keynes", role: "Coach", perm: "Staff", sites: two },
+      { id: "oluwa", name: "OluwaDamilola Adeyemi", home: "Loughton", role: "Lead Coach", perm: "Manager", sites: all },
+      { id: "liberty", name: "Liberty Young", home: "Milton Keynes", role: "Coach", perm: "Staff", sites: [venueIds[0]].filter(Boolean) },
+      { id: "dom", name: "Dom Reyes", home: "Milton Keynes", role: "Lifeguard", perm: "Staff", sites: [] },
+      { id: "kitty", name: "Kitty-Rose Bright", home: "Loughton", role: "Activity Assistant", perm: "Staff", sites: [] },
+      { id: "louis", name: "Louis Calderwood", home: "Milton Keynes", role: "Lifeguard", perm: "Staff", sites: [] },
+      { id: "taigan", name: "Taigan McMahon", home: "Loughton", role: "First Aider", perm: "Staff", sites: [] },
     ],
     pending: [],
   };
 };
 
 export function LocationDetail({ venue, venues, onBack }: { venue: Venue; venues: Venue[]; onBack: () => void }) {
-  const { settings } = useTenantSettings();
-  const staffRoles = settings.staffRoles?.length ? settings.staffRoles : ["Lead Coach", "Coach", "Lifeguard", "First Aider", "Activity Assistant"];
+  const { settings, save } = useSettings();
+  const jobTitles = settings.staffRoles?.length ? settings.staffRoles : ["Lead Coach", "Coach", "Lifeguard", "First Aider", "Activity Assistant"];
+  const permRoles = (settings.roles ?? []).map((r) => r.name);
+  const scheduling = { ...DEFAULT_SCHEDULING, ...(settings.scheduling ?? {}) };
+  const saveJobTitles = (next: string[]) => void save({ settings: { ...settings, staffRoles: next } });
+  const saveScheduling = (next: SchedulingSettings) => void save({ settings: { ...settings, scheduling: next } });
+
   const [tab, setTab] = useState<LocTab>("staff");
   const [store, setStore] = useState<Store>({ staff: [], pending: [] });
   const [toast, setToast] = useState<string | null>(null);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
   const venueIds = useMemo(() => venues.map((v) => v.id), [venues]);
 
-  useEffect(() => {
-    const existing = load();
-    setStore(existing ?? seed(venueIds));
-  }, [venueIds]);
+  useEffect(() => { setStore(load() ?? seed(venueIds)); }, [venueIds]);
   const persist = (s: Store) => { setStore(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
 
-  const venueName = (id: string) => venues.find((v) => v.id === id)?.name ?? id;
   const assignedHere = store.staff.filter((s) => s.sites.includes(venue.id));
 
   return (
     <div>
-      {/* header */}
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <button type="button" onClick={onBack} className="mb-1 text-[13px] font-bold text-[#1d3a8f] hover:underline">‹ All locations</button>
@@ -87,7 +85,6 @@ export function LocationDetail({ venue, venues, onBack }: { venue: Venue; venues
       </div>
 
       <div className="flex flex-col gap-4 lg:flex-row">
-        {/* left nav */}
         <div className="lg:w-[180px] lg:flex-none">
           <div className="flex gap-1.5 overflow-x-auto lg:flex-col">
             {TABS.map(([t, lbl]) => (
@@ -98,15 +95,14 @@ export function LocationDetail({ venue, venues, onBack }: { venue: Venue; venues
           </div>
         </div>
 
-        {/* body */}
         <div className="min-w-0 flex-1">
           {tab === "general" && <GeneralTab venue={venue} />}
-          {tab === "roles" && <RolesTab staffRoles={staffRoles} />}
+          {tab === "roles" && <RolesTab jobTitles={jobTitles} onChange={saveJobTitles} />}
           {tab === "staff" && (
-            <StaffTab venue={venue} venues={venues} store={store} persist={persist} staffRoles={staffRoles}
-              venueName={venueName} assignedHere={assignedHere} flash={flash} />
+            <StaffTab venue={venue} venues={venues} store={store} persist={persist} jobTitles={jobTitles} permRoles={permRoles}
+              assignedHere={assignedHere} flash={flash} />
           )}
-          {tab === "scheduling" && <SchedulingTab />}
+          {tab === "scheduling" && <SchedulingTab value={scheduling} onChange={saveScheduling} />}
           {tab === "timesheets" && <TimesheetsTab venueName={venue.name} />}
           {tab === "notifications" && <NotificationsTab />}
         </div>
@@ -142,58 +138,70 @@ const Field = ({ label, value }: { label: string; value: string }) => (
   <div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{label}</div><div className="text-[12.5px] text-[var(--ink)]">{value}</div></div>
 );
 
-// ── Roles (reads the company Staff-roles list) ──────────────────────────────
-function RolesTab({ staffRoles }: { staffRoles: string[] }) {
-  const portalHref = "/company/setup?tab=staffRoles";
+// ── Roles — editable job-titles list (the coloured schedule rows) ────────────
+function RolesTab({ jobTitles, onChange }: { jobTitles: string[]; onChange: (next: string[]) => void }) {
+  const [adding, setAdding] = useState("");
+  const rename = (i: number, v: string) => onChange(jobTitles.map((r, j) => (j === i ? v : r)));
+  const remove = (i: number) => onChange(jobTitles.filter((_, j) => j !== i));
+  const add = () => { const v = adding.trim(); if (!v || jobTitles.includes(v)) { setAdding(""); return; } onChange([...jobTitles, v]); setAdding(""); };
   return (
     <Card className="p-5">
-      <div className="text-[16px] font-extrabold text-[var(--ink)]">Roles at this location</div>
-      <p className="mt-1 text-[12.5px] text-[var(--ink-3)]">The job roles you can roster and invite people into. This is your company-wide list — the same roles show on every location, in the staff schedule and on the invite form.</p>
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {staffRoles.map((r) => <span key={r} className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink)]">{r}</span>)}
+      <div className="text-[16px] font-extrabold text-[var(--ink)]">Roles</div>
+      <p className="mt-1 text-[13px] leading-relaxed text-[var(--ink-2)]">The <b>roles</b> staff are rostered into — e.g. Lifeguard, Site Manager, Instructor, SEND, Lead Coach. (These are the coloured rows in the schedule.) Roles are managed centrally under <b>Your team</b> and sync here automatically; you can also add or edit them here. A role carries nothing extra — just a name.</p>
+      <p className="mt-1 text-[12px] italic text-[var(--ink-3)]">Access levels (Owner / Management / Staff) are separate — those are set under Roles &amp; permissions in Setup.</p>
+
+      <div className="mt-4 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Roles</div>
+      <div className="mt-2 flex flex-col gap-2">
+        {jobTitles.map((r, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input value={r} onChange={(e) => rename(i, e.target.value)} className="flex-1" />
+            <button type="button" onClick={() => remove(i)} title="Remove role" className="px-2 text-[18px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button>
+          </div>
+        ))}
+        <div className="flex items-center gap-2">
+          <Input value={adding} onChange={(e) => setAdding(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") add(); }} placeholder="e.g. Site Manager" className="flex-1" />
+          <button type="button" onClick={add} className="whitespace-nowrap px-2 text-[13px] font-extrabold text-[#1d3a8f] hover:underline">＋ Add a role</button>
+        </div>
       </div>
-      <a href={portalHref} className="mt-4 inline-block text-[12.5px] font-bold text-[#1d3a8f] hover:underline">Manage roles in Setup → Staff roles ›</a>
     </Card>
   );
 }
 
 // ── Staff (the main tab) ────────────────────────────────────────────────────
-function StaffTab({ venue, venues, store, persist, staffRoles, venueName, assignedHere, flash }: {
-  venue: Venue; venues: Venue[]; store: Store; persist: (s: Store) => void; staffRoles: string[];
-  venueName: (id: string) => string; assignedHere: LocStaff[]; flash: (m: string) => void;
+function StaffTab({ venue, venues, store, persist, jobTitles, permRoles, assignedHere, flash }: {
+  venue: Venue; venues: Venue[]; store: Store; persist: (s: Store) => void; jobTitles: string[]; permRoles: string[];
+  assignedHere: LocStaff[]; flash: (m: string) => void;
 }) {
   const [view, setView] = useState<"staff" | "site">("staff");
-  const [pick, setPick] = useState("");
   const [q, setQ] = useState("");
   const [nName, setNName] = useState("");
   const [nEmail, setNEmail] = useState("");
-  const [nRole, setNRole] = useState("");
+  const [nPerm, setNPerm] = useState("");
+  const [nJob, setNJob] = useState("");
 
   const toggleSite = (staffId: string, siteId: string) => persist({ ...store, staff: store.staff.map((s) => s.id === staffId ? { ...s, sites: s.sites.includes(siteId) ? s.sites.filter((x) => x !== siteId) : [...s.sites, siteId] } : s) });
   const tickAll = () => persist({ ...store, staff: store.staff.map((s) => ({ ...s, sites: venues.map((v) => v.id) })) });
   const untickAll = () => persist({ ...store, staff: store.staff.map((s) => ({ ...s, sites: [] })) });
   const removeFromLoc = (staffId: string) => persist({ ...store, staff: store.staff.map((s) => s.id === staffId ? { ...s, sites: s.sites.filter((x) => x !== venue.id) } : s) });
 
-  // "add an existing staff member" — anyone not yet assigned to THIS venue
   const notHere = store.staff.filter((s) => !s.sites.includes(venue.id));
   const searchMatches = q.trim() ? notHere.filter((s) => s.name.toLowerCase().includes(q.toLowerCase())) : [];
-  const addToLoc = (staffId: string) => { persist({ ...store, staff: store.staff.map((s) => s.id === staffId ? { ...s, sites: [...new Set([...s.sites, venue.id])] } : s) }); setPick(""); setQ(""); flash("Added to this location."); };
+  const addToLoc = (staffId: string) => { persist({ ...store, staff: store.staff.map((s) => s.id === staffId ? { ...s, sites: [...new Set([...s.sites, venue.id])] } : s) }); setQ(""); flash("Added to this location."); };
 
   const sendInvite = () => {
     if (!nName.trim() || !nEmail.trim()) return;
-    const p: Pending = { id: `p${Date.now()}`, name: nName.trim(), email: nEmail.trim(), role: nRole || staffRoles[0], at: new Date().toISOString() };
+    const p: Pending = { id: `p${Date.now()}`, name: nName.trim(), email: nEmail.trim(), perm: nPerm || permRoles[0] || "Staff", jobTitle: nJob || jobTitles[0] || "", at: new Date().toISOString() };
     persist({ ...store, pending: [...store.pending, p] });
-    void api("/api/invites", { method: "POST", body: JSON.stringify({ role: "staff", email: p.email, staffRole: p.role, assignment: { mode: "locations", ids: [venue.id] } }) }).catch(() => {});
-    setNName(""); setNEmail(""); setNRole(""); flash("Invite sent — they'll appear under Pending until they activate.");
+    void api("/api/invites", { method: "POST", body: JSON.stringify({ role: "staff", email: p.email, staffRole: p.perm, jobTitle: p.jobTitle, assignment: { mode: "locations", ids: [venue.id] } }) }).catch(() => {});
+    setNName(""); setNEmail(""); setNPerm(""); setNJob(""); flash("Invite sent — they'll appear under Pending until they activate.");
   };
   const cancelPending = (id: string) => persist({ ...store, pending: store.pending.filter((p) => p.id !== id) });
 
   return (
     <div className="flex flex-col gap-4">
-      {/* assign staff to sites */}
       <Card className="p-5">
         <div className="text-[17px] font-extrabold text-[var(--ink)]">Staff at this location</div>
-        <p className="mt-1 text-[13px] leading-relaxed text-[var(--ink-2)]">People are onboarded to your company <b>once</b>, then assigned to the <b>sites</b> they work at. Turn a site on for someone and the schedule offers them for that site&rsquo;s shifts.</p>
+        <p className="mt-1 text-[13px] leading-relaxed text-[var(--ink-2)]">People are onboarded to your company <b>once</b>, then assigned to the <b>sites</b> they work at within {venue.name}. Turn a site on for someone and the schedule offers them for that site&rsquo;s shifts.</p>
 
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--panel)] px-3.5 py-2 text-[12.5px] font-bold text-[var(--ink-2)]">👥 {assignedHere.length} assigned to this location</span>
@@ -215,7 +223,7 @@ function StaffTab({ venue, venues, store, persist, staffRoles, venueName, assign
               <div key={s.id} className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
                 <div className="flex items-center gap-2.5">
                   <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
-                  <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{s.role ? `${s.role} · ` : ""}from {s.home}</div></div>
+                  <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{s.role ? `${s.role} · ` : ""}{s.perm ? `${s.perm} · ` : ""}from {s.home}</div></div>
                   <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{s.sites.length} of {venues.length} sites</span>
                   <button type="button" onClick={() => removeFromLoc(s.id)} title="Remove from this location" className="text-[16px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button>
                 </div>
@@ -234,12 +242,16 @@ function StaffTab({ venue, venues, store, persist, staffRoles, venueName, assign
         ) : (
           <div className="mt-3 flex flex-col gap-2">
             {venues.map((v) => { const on = store.staff.filter((s) => s.sites.includes(v.id)); return (
-              <div key={v.id} className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
-                <div className="flex items-center gap-2"><span className="text-[13px]">📍</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{v.name}</span><span className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)]">{on.length} staff</span></div>
-                <div className="mt-2 flex flex-wrap gap-1.5">
-                  {on.length === 0 ? <span className="text-[12px] text-[var(--ink-3)]">No one assigned yet.</span> : on.map((s) => (
-                    <span key={s.id} className="inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[12px] font-bold text-[var(--ink)]"><span className="flex h-5 w-5 items-center justify-center rounded-full text-[9px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>{s.name}</span>
-                  ))}
+              <div key={v.id} className="overflow-hidden rounded-2xl border border-[var(--line)]" style={{ boxShadow: `inset 4px 0 0 ${v.id === venue.id ? "#22b365" : "#2f6bd8"}` }}>
+                <div className="flex items-center gap-2 bg-[var(--panel)] px-3 py-2.5"><span className="text-[13px]">📍</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{v.name}</span><span className="ml-auto text-[11.5px] font-bold text-[#1d3a8f]">{on.length} of {store.staff.length} staff</span></div>
+                <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)] bg-white">
+                  {store.staff.map((s) => { const isOn = s.sites.includes(v.id); return (
+                    <div key={s.id} className="flex items-center gap-2.5 px-3 py-2.5">
+                      <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full text-[11px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
+                      <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-bold text-[var(--ink)]">{s.name}</div><div className="text-[11px] text-[var(--ink-3)]">from {s.home}</div></div>
+                      <button type="button" onClick={() => toggleSite(s.id, v.id)} role="switch" aria-checked={isOn} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: isOn ? "#22b365" : "var(--line)" }}><span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ left: isOn ? "21px" : "3px" }} /></button>
+                    </div>
+                  ); })}
                 </div>
               </div>
             ); })}
@@ -251,7 +263,7 @@ function StaffTab({ venue, venues, store, persist, staffRoles, venueName, assign
       <Card className="p-5">
         <div className="text-[15px] font-extrabold text-[var(--ink)]">Add an existing staff member</div>
         <p className="mt-1 text-[12.5px] text-[var(--ink-3)]">Search across <b>all</b> your onboarded staff — including people onboarded at another location — and add them to {venue.name}.</p>
-        <Select value={pick} onChange={(e) => { if (e.target.value) addToLoc(e.target.value); else setPick(""); }} className="mt-3 w-full">
+        <Select value="" onChange={(e) => { if (e.target.value) addToLoc(e.target.value); }} className="mt-3 w-full">
           <option value="">Choose from all staff…</option>
           {notHere.map((s) => <option key={s.id} value={s.id}>{s.name}{s.role ? ` · ${s.role}` : ""} — from {s.home}</option>)}
         </Select>
@@ -278,7 +290,7 @@ function StaffTab({ venue, venues, store, persist, staffRoles, venueName, assign
         ) : (
           <div className="mt-3 flex flex-col gap-1.5">{store.pending.map((p) => (
             <div key={p.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px]">
-              <span className="font-bold text-[var(--ink)]">{p.name}</span><span className="text-[var(--ink-3)]">{p.email} · {p.role}</span>
+              <span className="font-bold text-[var(--ink)]">{p.name}</span><span className="text-[var(--ink-3)]">{p.email} · {p.perm}{p.jobTitle ? ` · ${p.jobTitle}` : ""}</span>
               <span className="ml-auto rounded-full bg-[#fff4d6] px-2 py-0.5 text-[11px] font-bold text-[#a86a00]">Pending</span>
               <button type="button" onClick={() => cancelPending(p.id)} className="text-[12px] font-bold text-[#c0392b] hover:underline">Cancel</button>
             </div>
@@ -286,32 +298,91 @@ function StaffTab({ venue, venues, store, persist, staffRoles, venueName, assign
         )}
       </Card>
 
-      {/* onboard someone new */}
+      {/* onboard someone new — two layers: access role + job title */}
       <Card className="p-5">
         <div className="text-[15px] font-extrabold text-[var(--ink)]">Onboard someone new</div>
-        <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink-3)]">Not in the list yet? Add their name and email — we&rsquo;ll <b>email them an invite</b>. They appear under <b>Pending invites</b> above, <b>not in the schedule</b>, and stay Pending until they <b>first log in</b> and finish onboarding. Only once they&rsquo;ve <b>activated</b> do they join the assignable staff and become available to roster.</p>
-        <div className="mt-3 flex flex-wrap items-end gap-2">
-          <div className="min-w-[140px] flex-1"><Input value={nName} onChange={(e) => setNName(e.target.value)} placeholder="Full name" className="w-full" /></div>
-          <div className="min-w-[160px] flex-1"><Input type="email" value={nEmail} onChange={(e) => setNEmail(e.target.value)} placeholder="Email address" className="w-full" /></div>
-          <div className="min-w-[120px]"><Select value={nRole} onChange={(e) => setNRole(e.target.value)} className="w-full"><option value="">— Role —</option>{staffRoles.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
-          <button type="button" disabled={!nName.trim() || !nEmail.trim()} onClick={sendInvite} className="rounded-full bg-[#0f7a43] px-5 py-2.5 text-[13px] font-extrabold text-white hover:brightness-105 disabled:opacity-40">Send invite</button>
+        <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink-3)]">Add their name and email — we&rsquo;ll <b>email them an invite</b>. Give them an <b>access role</b> (what they can see &amp; do) and a <b>job title</b> (what they&rsquo;re rostered as). They appear under <b>Pending invites</b>, <b>not in the schedule</b>, until they first log in and finish onboarding.</p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <Input value={nName} onChange={(e) => setNName(e.target.value)} placeholder="Full name" className="w-full" />
+          <Input type="email" value={nEmail} onChange={(e) => setNEmail(e.target.value)} placeholder="Email address" className="w-full" />
+          <div><label className="mb-1 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Access role — permissions</label><Select value={nPerm} onChange={(e) => setNPerm(e.target.value)} className="w-full"><option value="">— Access role —</option>{permRoles.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
+          <div><label className="mb-1 block text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Job title — rostered as</label><Select value={nJob} onChange={(e) => setNJob(e.target.value)} className="w-full"><option value="">— Job title —</option>{jobTitles.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
         </div>
+        <div className="mt-3 flex justify-end"><button type="button" disabled={!nName.trim() || !nEmail.trim()} onClick={sendInvite} className="rounded-full bg-[#0f7a43] px-6 py-2.5 text-[13px] font-extrabold text-white hover:brightness-105 disabled:opacity-40">Send invite</button></div>
       </Card>
     </div>
   );
 }
 
-// ── Scheduling / Timesheets / Notifications (lighter tabs) ──────────────────
-function SchedulingTab() {
+// ── Scheduling settings ─────────────────────────────────────────────────────
+function SchedulingTab({ value, onChange }: { value: SchedulingSettings; onChange: (next: SchedulingSettings) => void }) {
+  const set = <K extends keyof SchedulingSettings>(k: K, v: SchedulingSettings[K]) => onChange({ ...value, [k]: v });
   return (
-    <Card className="p-5">
-      <div className="text-[16px] font-extrabold text-[var(--ink)]">Scheduling</div>
-      <p className="mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)]">Rotas are built in the staff schedule. Whoever&rsquo;s ticked for this site on the Staff tab is offered for its shifts, and the roles you add there come from your company Staff-roles list.</p>
-      <a href="/company/schedule" className="mt-3 inline-block rounded-full bg-[#1d3a8f] px-5 py-2.5 text-[13px] font-extrabold text-white hover:brightness-105">Open the staff schedule ›</a>
-      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Per-location scheduling defaults (standard shift times, auto-publish) are coming next.</p>
-    </Card>
+    <div className="flex flex-col gap-4">
+      <Card className="p-5">
+        <SecHead>Basics</SecHead>
+        <SelRow label="First day of week" desc="Determines the start day of the schedule and the default week period for calculating weekly overtime." value={value.firstDay} onChange={(v) => set("firstDay", v as "mon" | "sun")} opts={[["mon", "Mon"], ["sun", "Sun"]]} />
+        <NumRow label="Default shift duration (hours)" desc="Default shift length when creating shifts." value={value.defaultShiftHours} onChange={(v) => set("defaultShiftHours", v)} suffix="hrs" />
+        <NumRow label="Default break duration (minutes)" desc="Default break length when creating shifts." value={value.defaultBreakMins} onChange={(v) => set("defaultBreakMins", v)} suffix="mins" />
+        <SelRow label="Default break — paid or unpaid" desc="Sets whether the pre-filled break counts as paid time. Drives worked-hours and the pay vs cost split shown on the schedule. Recorded only — no money is moved." value={value.breakPaid} onChange={(v) => set("breakPaid", v as "paid" | "unpaid")} opts={[["unpaid", "Unpaid"], ["paid", "Paid"]]} />
+      </Card>
+
+      <Card className="p-5">
+        <SecHead>Creating and publishing shifts</SecHead>
+        <SelRow label="Shift notifications recipient" desc="Who receives shift notifications for late staff and shift-swap approvals." value={value.notifyRecipient} onChange={(v) => set("notifyRecipient", v as SchedulingSettings["notifyRecipient"])} opts={[["bestfit", "Best fit"], ["manager", "Site manager"], ["admin", "Admin / Owner"]]} />
+        <SelRow label="Send notification when shifts are removed" desc="Notify staff when they are removed from a published shift." value={value.notifyOnRemoved} onChange={(v) => set("notifyOnRemoved", v as SchedulingSettings["notifyOnRemoved"])} opts={[["email_push", "Email and smartphone push"], ["email", "Email only"], ["push", "Push only"], ["none", "Don't notify"]]} />
+        <TogRow label="Allow staff to claim or request open shifts if unavailable" desc="Staff can claim or request open shifts (with approval) even if unavailable or partially available. Extends to staff-initiated swaps and offers." value={value.allowClaimOpen} onChange={(v) => set("allowClaimOpen", v)} />
+        <SelRow label="Turn unconfirmed published shifts to open shifts" desc="After this timeframe, unconfirmed published shifts become open shifts." value={value.unconfirmedToOpen} onChange={(v) => set("unconfirmedToOpen", v as SchedulingSettings["unconfirmedToOpen"])} opts={[["off", "Not required"], ["12h", "After 12 hours"], ["24h", "After 24 hours"], ["48h", "After 48 hours"]]} />
+        <SelRow label="Scheduling suggestion order" desc="How suggested staff are displayed. Best fit spreads scheduled hours evenly across the team while minimising cost." value={value.suggestionOrder} onChange={(v) => set("suggestionOrder", v as SchedulingSettings["suggestionOrder"])} opts={[["bestfit", "Best fit"], ["cost", "Lowest cost first"], ["hours", "Fewest hours first"]]} />
+        <TogRow label="Display location and area name when publishing via SMS and calendar" desc="Show location and area names instead of codes. May result in additional SMS charges." value={value.showLocationNames} onChange={(v) => set("showLocationNames", v)} />
+      </Card>
+
+      <Card className="p-5">
+        <SecHead>Swaps and offers</SecHead>
+        <SelRow label="Co-worker schedule visibility" desc="If staff can view each other's schedule, you can enable shift swaps between them." value={value.coworkerVisibility} onChange={(v) => set("coworkerVisibility", v as SchedulingSettings["coworkerVisibility"])} opts={[["all", "Allow all"], ["team", "Same team only"], ["none", "Hidden"]]} />
+        <TogRow label="Swap shifts" desc="Staff can swap shifts with each other if both hold the appropriate training/qualifications." value={value.swapShifts} onChange={(v) => set("swapShifts", v)} />
+        <TogRow label="Manager approval for shift swaps" desc="Require a manager to approve shift swaps." value={value.swapApproval} onChange={(v) => set("swapApproval", v)} />
+        <TogRow label="Offer shifts" desc="Staff can offer their shift to qualified, available co-workers. Manager approval not required but a manager is notified when the shift is accepted." value={value.offerShifts} onChange={(v) => set("offerShifts", v)} />
+      </Card>
+
+      <Card className="p-5">
+        <SecHead>Reporting</SecHead>
+        <NumRow label="On-cost percentage" desc="Adds an additional cost on top of all wages (e.g. employer NI, pension). Shows on the schedule and on cost reports. Recorded only — ActivityOS never moves money." value={value.onCostPct} onChange={(v) => set("onCostPct", v)} suffix="%" step="0.01" />
+        <NumRow label="Default open/empty shift cost (per hour)" desc="Open/empty shifts are included in scheduled hours and cost using this default hourly cost." value={value.openShiftCost} onChange={(v) => set("openShiftCost", v)} suffix="£/hr" />
+      </Card>
+
+      <Card className="p-5">
+        <SecHead>Availability</SecHead>
+        <TogRow label="Send reminders" desc="Remind staff to keep their availability up to date." value={value.availabilityReminders} onChange={(v) => set("availabilityReminders", v)} />
+      </Card>
+    </div>
   );
 }
+const SecHead = ({ children }: { children: ReactNode }) => <div className="mb-1 text-[17px] font-extrabold text-[var(--ink)]">{children}</div>;
+function RowShell({ label, desc, control }: { label: string; desc: string; control: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-4 border-t border-[var(--line-2,#eef2f8)] py-3.5 first:border-t-0">
+      <div className="min-w-[180px] flex-1"><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{label}</div><div className="mt-0.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">{desc}</div></div>
+      <div className="flex-none">{control}</div>
+    </div>
+  );
+}
+function SelRow({ label, desc, value, onChange, opts }: { label: string; desc: string; value: string; onChange: (v: string) => void; opts: [string, string][] }) {
+  return <RowShell label={label} desc={desc} control={<Select value={value} onChange={(e) => onChange(e.target.value)} className="min-w-[190px]">{opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>} />;
+}
+function NumRow({ label, desc, value, onChange, suffix, step }: { label: string; desc: string; value: number; onChange: (v: number) => void; suffix?: string; step?: string }) {
+  return <RowShell label={label} desc={desc} control={<span className="inline-flex items-center gap-1.5"><Input type="number" step={step} value={value} onChange={(e) => onChange(Number(e.target.value))} className="w-[120px] text-right" />{suffix && <span className="text-[12.5px] font-bold text-[var(--ink-3)]">{suffix}</span>}</span>} />;
+}
+function TogRow({ label, desc, value, onChange }: { label: string; desc: string; value: boolean; onChange: (v: boolean) => void }) {
+  return <RowShell label={label} desc={desc} control={
+    <span className="inline-flex items-center gap-2">
+      <button type="button" onClick={() => onChange(!value)} role="switch" aria-checked={value} className="relative h-[24px] w-[44px] flex-none rounded-full transition-colors" style={{ background: value ? "#22b365" : "var(--line)" }}><span className="absolute top-[3px] h-[18px] w-[18px] rounded-full bg-white transition-all" style={{ left: value ? "23px" : "3px" }} /></button>
+      <span className="w-[26px] text-[11px] font-extrabold" style={{ color: value ? "#0f7a43" : "var(--ink-3)" }}>{value ? "ON" : "OFF"}</span>
+    </span>
+  } />;
+}
+
+// ── Timesheets / Notifications ──────────────────────────────────────────────
 function TimesheetsTab({ venueName }: { venueName: string }) {
   return (
     <Card className="p-5">
@@ -343,3 +414,4 @@ function NotificationsTab() {
     </Card>
   );
 }
+

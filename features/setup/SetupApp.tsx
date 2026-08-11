@@ -80,7 +80,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "company" | "branding" | "people" | "staff" | "roles" | "staffRoles" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
+type Tab = "features" | "company" | "branding" | "people" | "staff" | "roles" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1250,7 +1250,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "roles", "staffRoles", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "roles", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1293,7 +1293,7 @@ export function SetupApp() {
     ["branding", "Branding"],
     ["people", "Child questions"],
     ["staff", "Staff & workforce"],
-    ...(portal === "company" ? [["roles", "Roles & permissions"] as [Tab, string], ["staffRoles", "Staff roles"] as [Tab, string]] : []),
+    ...(portal === "company" ? [["roles", "Roles & permissions"] as [Tab, string]] : []),
     ["learning", "Learning"],
     ["meals", "Meals"],
     ["medication", "Medication"],
@@ -1409,11 +1409,6 @@ export function SetupApp() {
       {tab === "roles" && (
         <Section title="Roles & permissions" lede="Define the roles in your organisation and what each can see or change. Assign a role to each person when you invite them (coming next); Owner always has full access.">
           <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => set("roles", roles)} />
-        </Section>
-      )}
-      {tab === "staffRoles" && (
-        <Section title="Staff roles" lede="The job roles you roster by — Lead Coach, Lifeguard, Activity Instructor, and so on. This one list feeds the staff schedule (the roles you add per location) and the ‘Role’ picker when you invite or onboard someone. These are positions, not access levels — access is set under Roles & permissions.">
-          <ListEditor items={settings.staffRoles ?? []} onChange={(v) => set("staffRoles", v)} placeholder="e.g. Lead Coach" />
         </Section>
       )}
 
