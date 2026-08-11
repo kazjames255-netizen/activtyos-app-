@@ -50,9 +50,9 @@ const to12parts = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number)
 const from12 = (hr: number, m: string, ap: string) => { let h = hr % 12; if (ap === "pm") h += 12; return `${String(h).padStart(2, "0")}:${m}`; };
 const MIN_OPTS = ["00", "15", "30", "45"];
 
-const ROLE_COL: Record<string, string> = { "Lead Coach": "#2f6bd8", "Lifeguard": "#0f857b", "Coach": "#6366f1", "Activity Assistant": "#8b5cf6", "First Aider": "#c06a10" };
+const ROLE_COL: Record<string, string> = { "Lead Coach": "#2f6bd8", "Lifeguard": "#0f857b", "Coach": "#6366f1", "Activity Assistant": "#8b5cf6", "Activity Instructor": "#b45309", "First Aider": "#c06a10" };
 const roleCol = (r: string) => ROLE_COL[r] ?? "#64748b";
-const ROLES = ["Lead Coach", "Coach", "Lifeguard", "First Aider", "Activity Assistant"];
+const ROLES = ["Lead Coach", "Coach", "Activity Instructor", "Lifeguard", "First Aider", "Activity Assistant"];
 
 interface Template { id: string; name: string; items: { dayOffset: number; site: string; role: string; listing?: string; season?: string; staffId: string | null; start: string; end: string }[] }
 const KEY = "aos.rota.v4";
@@ -136,6 +136,9 @@ export function ScheduleApp() {
   const [availWeekMode, setAvailWeekMode] = useState<"all" | "this">("all");
   const [assignOpen, setAssignOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
+  const [extraRoles, setExtraRoles] = useState<Record<string, string[]>>({});
+  const [roleMenu, setRoleMenu] = useState<string | null>(null);
+  const addRole = (siteName: string, role: string) => { setExtraRoles((p) => ({ ...p, [siteName]: [...new Set([...(p[siteName] ?? []), role])] })); setRoleMenu(null); };
   const [toast, setToast] = useState<string | null>(null);
   const [copyMenu, setCopyMenu] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -417,7 +420,7 @@ export function ScheduleApp() {
 
                 {group === "area" ? (
                   gridSites.map((si) => {
-                    const siteRoles = [...new Set(periodShifts.filter((s) => s.site === si).map((s) => s.role))];
+                    const siteRoles = [...new Set([...periodShifts.filter((s) => s.site === si).map((s) => s.role), ...(extraRoles[si] ?? [])])];
                     return (
                     <div key={si}>
                       <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-2"><span className="text-[13px]">📍</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{si}</span><span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{periodShifts.filter((s) => s.site === si).length} shifts</span></div>
@@ -431,7 +434,18 @@ export function ScheduleApp() {
                           </div>
                         );
                       })}
-                      {canManage && <div className="border-b border-[var(--line-2,#eef2f8)] px-3 py-2"><button type="button" onClick={() => openAdd(si, siteRoles[0] ?? ROLES[0], { date: dates[0], hour: null }, null)} className="rounded-full border border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[var(--panel)]">＋ Add shift{siteRoles.length === 0 ? " here" : ""}</button></div>}
+                      {canManage && <div className="relative border-b border-[var(--line-2,#eef2f8)] px-3 py-2.5">
+                        <button type="button" onClick={() => setRoleMenu((m) => (m === si ? null : si))} className="text-[13px] font-extrabold text-[#1d3a8f] hover:underline">＋ Add a new role</button>
+                        {roleMenu === si && (
+                          <div className="absolute left-3 top-[42px] z-30 w-[230px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
+                            <div className="px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Add role to {si}</div>
+                            {ROLES.filter((r) => !siteRoles.includes(r)).map((r) => (
+                              <button key={r} type="button" onClick={() => addRole(si, r)} className="flex w-full items-center gap-2 border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: roleCol(r) }} />{r}</button>
+                            ))}
+                            <button type="button" onClick={() => { const r = window.prompt("New role name"); if (r && r.trim()) addRole(si, r.trim()); else setRoleMenu(null); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2 text-left text-[12.5px] font-semibold text-[#1d3a8f] hover:bg-[var(--panel)]">＋ Custom role…</button>
+                          </div>
+                        )}
+                      </div>}
                     </div>
                   ); })
                 ) : (
