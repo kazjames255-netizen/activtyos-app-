@@ -275,14 +275,24 @@ interface Scheduled { id: string; subject: string; body?: string; recipientCount
 interface SenderIdentity { fromName: string; fromAddress: string; replyTo: string | null }
 
 const KNOWN_LABELS = new Set<string>(["urgent", "follow", "haf", "enquiry", "system"]);
+// Many emails (Gmail/Outlook) send the real content as HTML with only a sparse
+// text/plain part — often just a "--" signature. Show whichever is fuller so the
+// whole message is visible; both are rendered as plain text (linkified), never
+// as raw HTML, so there's no XSS surface.
+function bestBody(m: ServerMail): string {
+  const text = (m.body ?? "").trim();
+  const fromHtml = m.html ? htmlToText(m.html) : "";
+  return fromHtml.length > text.length ? fromHtml : text;
+}
+
 const toMail = (m: ServerMail): Mail => ({
   id: m.id,
   from: m.from,
   fromEmail: m.fromEmail,
   to: m.to,
   subject: m.subject,
-  preview: (m.body ?? "").replace(/\s+/g, " ").slice(0, 120),
-  body: m.body,
+  preview: bestBody(m).replace(/\s+/g, " ").slice(0, 120),
+  body: bestBody(m),
   time: when(m.at),
   unread: m.unread,
   starred: m.starred,
