@@ -26,7 +26,7 @@ interface Listing { id: string; title: string }
 interface Venue { id: string; name: string }
 interface SubCurrent { plan: string; staffLimit?: number | null; staffUsed?: number | null; details?: { name?: string } }
 
-type Assignment = { mode: "all" | "listings" | "locations"; ids: string[] };
+type Assignment = { mode: "all" | "listings" | "locations" | "none"; ids: string[] };
 type LocalMeta = { staffRole?: string; jobTitle?: string; assignment?: Assignment; status?: "active" | "deactivated" | "deleted" };
 const META_KEY = "aos.team.meta.v1";
 const loadMeta = (): Record<string, LocalMeta> => { try { return JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch { return {}; } };
@@ -65,7 +65,7 @@ export function TeamApp() {
   const [roleId, setRoleId] = useState("coach");
   const jobTitles = settings.staffRoles ?? [];
   const [jobTitle, setJobTitle] = useState("");
-  const [assignMode, setAssignMode] = useState<"all" | "listings" | "locations">("all");
+  const [assignMode, setAssignMode] = useState<"all" | "listings" | "locations" | "none">("all");
   const [assignIds, setAssignIds] = useState<string[]>([]);
 
   const refresh = useCallback(() => {
@@ -105,7 +105,7 @@ export function TeamApp() {
     setBusy(true); setError(null); setSentNote(null); setCapNote(null);
     try {
       const to = email.trim();
-      const assignment: Assignment = { mode: assignMode, ids: assignMode === "all" ? [] : assignIds };
+      const assignment: Assignment = { mode: assignMode, ids: (assignMode === "all" || assignMode === "none") ? [] : assignIds };
       const r = await apiPost<{ token: string; sentTo: string | null }>("/api/invites", {
         role,
         ...(to ? { email: to } : {}),
@@ -170,7 +170,7 @@ export function TeamApp() {
       <PageHero title="Team & invites" icon="👥" lede={`${active.length} active · ${pending.length} pending — invite people, give them a role and their listings`} />
 
       <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
-        {([["team", "Team members"], ["locations", "Locations"]] as const).map(([t, lbl]) => (
+        {([["team", "Team members"], ["locations", "Deployment"]] as const).map(([t, lbl]) => (
           <button key={t} type="button" onClick={() => setTab(t)} className={"rounded-lg px-4 py-1.5 text-[13px] font-bold transition-colors " + (tab === t ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>
         ))}
       </div>
@@ -240,7 +240,7 @@ export function TeamApp() {
         <div className="mt-3">
           <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Assign to</label>
           <div className="flex flex-wrap gap-1.5">
-            {([["all", "All listings"], ["locations", "By location"], ["listings", "By listing"]] as const).map(([m, label]) => (
+            {([["all", "All listings"], ["locations", "By location"], ["listings", "By listing"], ["none", "None"]] as const).map(([m, label]) => (
               <button key={m} type="button" onClick={() => { setAssignMode(m); setAssignIds([]); }} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold"
                 style={assignMode === m ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
                 {label}
@@ -274,7 +274,11 @@ export function TeamApp() {
               })}
             </div>
           )}
-          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Assigned people only see the registers, trips, timetable and children for these{assignMode === "locations" ? " locations" : " listings"}. A location covers every listing that runs there.</div>
+          {assignMode === "none" ? (
+            <div className="mt-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-2)]"><b>Not rostered anywhere.</b> They won&rsquo;t appear in the schedule or on any register, but still get access to the pages their <b>role</b> allows (e.g. office / admin staff). You can deploy them to listings or locations later.</div>
+          ) : (
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Assigned people only see the registers, trips, timetable and children for these{assignMode === "locations" ? " locations" : " listings"}. A location covers every listing that runs there.</div>
+          )}
         </div>
 
         {capNote && (
