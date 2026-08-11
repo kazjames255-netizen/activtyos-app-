@@ -94,7 +94,11 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
       { find: "Safety & inclusion", pick: ["DBS-checked staff", "First aid on site", "Wheelchair accessible"], line: "Tick your safety features and SEND support, so families know everyone's looked after.", advance: "Next" },
       { find: "Dates & pattern", fill: [["Runs from", "2026-08-03"], ["Runs to", "2026-08-07"]], line: "Set the dates — the first week of August — and the calendar builds every session for you.", advance: "Next" },
       { find: "Choose a block", pick: ["Use this block"], link: { label: "No block yet? Build one in Blocks ↗", href: "/freelancer/blocks" }, line: "Your tickets come from a block you built in Blocks — I'll pick this one and its passes and prices drop straight in. Not built one yet? Use the link below. And you can Save draft at any time and come back to finish this listing later.", advance: "Next" },
-      { find: "Discount rules", line: "Add automatic discounts if you like, then preview and publish — and it's live for parents to book." },
+      { find: "Discount rules", line: "Add automatic discounts if you like — a sibling or early-bird deal that comes off at checkout, no codes needed.", advance: "Next" },
+      { find: "Your add-ons", pick: ["Late pick-up", "Camp T-shirt"], line: "Add-ons are optional extras — tick the ones for this camp, like a late pick-up or a t-shirt, and parents add them when they book.", advance: "Next" },
+      { find: "Your team", pick: ["Assign"], line: "Add your team, then tap Assign next to whoever's onsite — their name and bio then show on the listing.", advance: "Next" },
+      { find: "Exactly what parents see", line: "Preview is exactly what parents see — the full page, top to bottom. Give it a quick read to make sure it looks right.", advance: "Next" },
+      { find: "Policy & publish", pick: ["Public"], line: "Last step — choose who can see it, your booking style and cancellation policy. When you're happy, press Publish, top right, and it's live for parents to book." },
     ],
   },
   // Blocks: build a real block on the real page (click "Add to block").

@@ -119,7 +119,7 @@ export function TourBridge() {
       if (d.type === "tour:fill") {
         const el = fieldFor(String(d.field ?? ""));
         if (!el) return;
-        el.scrollIntoView({ block: "center", behavior: "smooth" });
+        el.scrollIntoView({ block: "center", behavior: "auto" });
         if (el instanceof HTMLSelectElement) {
           const want = String(d.value ?? "").toLowerCase();
           const opt = [...el.options].find((o) => o.text.toLowerCase().includes(want) || o.value.toLowerCase().includes(want));
@@ -154,8 +154,9 @@ export function TourBridge() {
         const vh = window.innerHeight || document.documentElement.clientHeight;
         const tall = el.getBoundingClientRect().height > vh * 0.78;
         el.style.scrollMarginTop = "22px";
-        el.scrollIntoView({ block: tall ? "start" : "center", behavior: "smooth" });
-        // Let the smooth scroll settle before measuring / reporting.
+        // Instant scroll (not smooth) so there's no long glide before the cursor
+        // moves — the between-step lag was mostly this settling.
+        el.scrollIntoView({ block: tall ? "start" : "center", behavior: "auto" });
         window.setTimeout(() => {
           const r = el.getBoundingClientRect();
           // noBox tours want the cursor only — scroll + report the rect, but
@@ -173,7 +174,7 @@ export function TourBridge() {
             { type: "tour:rect", id: d.id, ok: true, rect: { top: r.top, left: r.left, width: r.width, height: r.height } },
             "*",
           );
-        }, 480);
+        }, 180);
       } else if (d.type === "tour:clear") {
         if (boxEl) boxEl.style.opacity = "0";
       }

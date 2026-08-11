@@ -194,7 +194,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         // A "click" step presses the control (opening its form) before narrating.
         // Clear the ring straight after, so it doesn't linger over the button
         // that's now hidden behind the form that opened.
-        if (step.click) { clickInFrame(step.find || ""); await sleep(850); clearHi(); if (!alive()) return; }
+        if (step.click) { clickInFrame(step.find || ""); await sleep(650); clearHi(); if (!alive()) return; }
         // Narrate AND demonstrate at the same time: start the voice, then type
         // into the real fields / pick the real options while it talks — so the
         // spoken line and the on-screen action stay together (and a pause halts
@@ -206,7 +206,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         await say; if (!alive()) return;
         // Advance a real multi-step builder (e.g. click the wizard's "Next ›")
         // AFTER narrating, so the next step spotlights the panel that appears.
-        if (step.advance) { clickInFrame(step.advance); await sleep(850); if (!alive()) return; }
+        if (step.advance) { clickInFrame(step.advance); await sleep(650); if (!alive()) return; }
       }
       // Page-specific "one last thing" — the robot beams down the Settings tabs
       // that control THIS page (each with a note on what it does).
