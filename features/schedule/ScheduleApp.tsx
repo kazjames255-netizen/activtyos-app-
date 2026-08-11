@@ -69,6 +69,19 @@ export function ScheduleApp() {
   const totalHours = perStaff.reduce((n, [, h]) => n + h, 0);
   const unassignedCount = (shifts ?? []).filter((s) => s.staffName === UNASSIGNED).length;
 
+  // Clash detection (manual edit398): the same person double-booked at
+  // overlapping times on a day — two shifts overlapping, incl. two locations.
+  const clashIds = useMemo(() => {
+    const bad = new Set<string>();
+    const groups: Record<string, Shift[]> = {};
+    for (const s of shifts ?? []) { if (s.staffName === UNASSIGNED) continue; (groups[`${s.staffName}|${s.date}`] ??= []).push(s); }
+    for (const arr of Object.values(groups)) {
+      const sorted = [...arr].sort((a, b) => mins(a.start) - mins(b.start));
+      for (let i = 1; i < sorted.length; i++) if (mins(sorted[i].start) < mins(sorted[i - 1].end)) { bad.add(sorted[i].id); bad.add(sorted[i - 1].id); }
+    }
+    return bad;
+  }, [shifts]);
+
   function shiftWeek(delta: number) { const s = new Date(`${weekStart}T00:00:00Z`); s.setUTCDate(s.getUTCDate() + delta * 7); setWeekStart(iso(s)); }
   function openEdit(s: Shift) { setD({ id: s.id, staffName: s.staffName === UNASSIGNED ? "" : s.staffName, date: s.date, start: s.start, end: s.end, role: s.role ?? "", listingId: s.listingId ?? "" }); }
   async function save() {
@@ -109,6 +122,7 @@ export function ScheduleApp() {
             {perStaff.length === 0 ? <span className="text-[12px] text-[var(--ink-3)]">No shifts yet this week.</span>
               : perStaff.map(([name, h]) => <span key={name} className="rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)]">{name} · <span className="tabular-nums">{fmtHrs(Math.round(h * 10) / 10)}</span></span>)}
             {unassignedCount > 0 && <span className="rounded-full bg-[#fdf6e3] px-2.5 py-1 text-[11.5px] font-extrabold text-[#b45309]">{unassignedCount} unassigned</span>}
+            {clashIds.size > 0 && <span className="rounded-full bg-[#fdebec] px-2.5 py-1 text-[11.5px] font-extrabold text-[#c0392b]">⚠ {clashIds.size / 2} double-booking{clashIds.size / 2 === 1 ? "" : "s"}</span>}
           </div>
           <span className="text-[11px] text-[var(--ink-3)]">Hours feed Payroll.</span>
         </div>
@@ -154,15 +168,20 @@ export function ScheduleApp() {
                   <div className="flex flex-col gap-1.5">
                     {rows.map((s) => {
                       const unassigned = s.staffName === UNASSIGNED;
+                      const clash = clashIds.has(s.id);
                       const col = colourFor(s.listingId);
                       return (
                         <button key={s.id} type="button" onClick={() => canManage && openEdit(s)} disabled={!canManage}
+                          title={clash ? "Double-booked — this person has an overlapping shift" : undefined}
                           className="w-full rounded-lg border px-2 py-1.5 text-left transition-colors enabled:hover:shadow-sm"
-                          style={unassigned
-                            ? { borderColor: "#f0d9a8", background: "#fdf6e3", borderStyle: "dashed" }
-                            : { borderColor: "var(--line)", background: "var(--surface)", boxShadow: `inset 3px 0 0 ${col}` }}>
+                          style={clash
+                            ? { borderColor: "#e2b4b8", background: "#fdebec", boxShadow: "inset 3px 0 0 #c0392b" }
+                            : unassigned
+                              ? { borderColor: "#f0d9a8", background: "#fdf6e3", borderStyle: "dashed" }
+                              : { borderColor: "var(--line)", background: "var(--surface)", boxShadow: `inset 3px 0 0 ${col}` }}>
                           <div className="flex items-center gap-1">
-                            <span className={"min-w-0 flex-1 truncate text-[12px] font-bold " + (unassigned ? "text-[#b45309]" : "text-[var(--ink)]")}>{unassigned ? "Unassigned" : s.staffName}</span>
+                            {clash && <span title="Double-booked" className="flex-none text-[11px]">⚠</span>}
+                            <span className={"min-w-0 flex-1 truncate text-[12px] font-bold " + (unassigned ? "text-[#b45309]" : clash ? "text-[#c0392b]" : "text-[var(--ink)]")}>{unassigned ? "Unassigned" : s.staffName}</span>
                             {canManage && <span role="button" onClick={(e) => { e.stopPropagation(); remove(s); }} className="text-[var(--ink-3)] hover:text-[#c0392b]" aria-label="Delete">×</span>}
                           </div>
                           <div className="text-[11px] text-[var(--ink-2)] tabular-nums">{s.start}–{s.end}</div>
