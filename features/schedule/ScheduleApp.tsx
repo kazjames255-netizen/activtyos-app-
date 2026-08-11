@@ -434,17 +434,8 @@ export function ScheduleApp() {
                           </div>
                         );
                       })}
-                      {canManage && <div className="relative border-b border-[var(--line-2,#eef2f8)] px-3 py-2.5">
-                        <button type="button" onClick={() => setRoleMenu((m) => (m === si ? null : si))} className="text-[13px] font-extrabold text-[#1d3a8f] hover:underline">＋ Add a new role</button>
-                        {roleMenu === si && (
-                          <div className="absolute left-3 top-[42px] z-30 w-[230px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
-                            <div className="px-3.5 py-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Add role to {si}</div>
-                            {ROLES.filter((r) => !siteRoles.includes(r)).map((r) => (
-                              <button key={r} type="button" onClick={() => addRole(si, r)} className="flex w-full items-center gap-2 border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: roleCol(r) }} />{r}</button>
-                            ))}
-                            <button type="button" onClick={() => { const r = window.prompt("New role name"); if (r && r.trim()) addRole(si, r.trim()); else setRoleMenu(null); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2 text-left text-[12.5px] font-semibold text-[#1d3a8f] hover:bg-[var(--panel)]">＋ Custom role…</button>
-                          </div>
-                        )}
+                      {canManage && <div className="border-b border-[var(--line-2,#eef2f8)] px-3 py-2.5">
+                        <button type="button" onClick={() => setRoleMenu(si)} className="text-[13px] font-extrabold text-[#1d3a8f] hover:underline">＋ Add a new role</button>
                       </div>}
                     </div>
                   ); })
@@ -707,6 +698,23 @@ export function ScheduleApp() {
           </div>
         );
       })()}
+
+      {/* Add-a-new-role picker */}
+      {roleMenu && (() => { const si = roleMenu; const shown = [...new Set([...store.shifts.filter((s) => s.site === si).map((s) => s.role), ...(extraRoles[si] ?? [])])]; const avail = ROLES.filter((r) => !shown.includes(r)); return (
+        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[12vh]" onClick={() => setRoleMenu(null)}>
+          <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center gap-2"><span className="text-[16px]">➕</span><div className="text-[15px] font-extrabold text-[var(--ink)]">Add a role</div><button type="button" onClick={() => setRoleMenu(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+            <p className="mt-1 text-[12px] text-[var(--ink-3)]">Adds a role row to <b>{si}</b> so you can roster it.</p>
+            <div className="mt-3 flex flex-col gap-1.5">
+              {avail.length === 0 && <p className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-center text-[12px] text-[var(--ink-3)]">Every standard role is already on this location — add a custom one below.</p>}
+              {avail.map((r) => (
+                <button key={r} type="button" onClick={() => addRole(si, r)} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] px-3.5 py-2.5 text-left text-[13.5px] font-bold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="h-3 w-3 flex-none rounded-full" style={{ background: roleCol(r) }} />{r}</button>
+              ))}
+              <button type="button" onClick={() => { const r = window.prompt("New role name"); if (r && r.trim()) addRole(si, r.trim()); else setRoleMenu(null); }} className="mt-1 flex items-center gap-2.5 rounded-xl border border-dashed border-[var(--line)] px-3.5 py-2.5 text-left text-[13.5px] font-bold text-[#1d3a8f] hover:bg-[var(--panel)]"><span className="text-[15px]">＋</span>Custom role…</button>
+            </div>
+          </div>
+        </div>
+      ); })()}
 
       {toast && <div className="fixed bottom-5 left-1/2 z-[140] -translate-x-1/2 rounded-full bg-[#16306e] px-4 py-2.5 text-[12.5px] font-bold text-white shadow-lg">{toast}</div>}
     </div>
