@@ -55,7 +55,7 @@ const roleCol = (r: string) => ROLE_COL[r] ?? "#64748b";
 const ROLES = ["Lead Coach", "Coach", "Lifeguard", "First Aider", "Activity Assistant"];
 
 interface Template { id: string; name: string; items: { dayOffset: number; site: string; role: string; listing?: string; season?: string; staffId: string | null; start: string; end: string }[] }
-const KEY = "aos.rota.v3";
+const KEY = "aos.rota.v4";
 const TKEY = "aos.rota.templates.v1";
 const loadTpl = (): Template[] => { try { return JSON.parse(localStorage.getItem(TKEY) || "[]"); } catch { return []; } };
 function seed(): Store {
@@ -326,7 +326,7 @@ export function ScheduleApp() {
   );
 
   const compact = colW < 60;
-  const gridSites = site === "all" ? store.sites.filter((si) => periodShifts.some((s) => s.site === si)) : [site];
+  const gridSites = site === "all" ? store.sites : [site];
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
@@ -357,7 +357,7 @@ export function ScheduleApp() {
           <div className="ml-auto flex items-center gap-2">
             <div className="relative">
               <button type="button" onClick={() => setAutoMenu((v) => !v)} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f]">✨ Auto-schedule ▾</button>
-              {autoMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg"><button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Fill open shifts from confirmed staff</button><button type="button" onClick={clearPeriod} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">Clear all shifts shown</button></div>}
+              {autoMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg"><button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Fill open shifts from confirmed staff</button><button type="button" onClick={() => { setAutoMenu(false); persist(seed()); flash("Sample rota restored."); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Reset to sample data</button><button type="button" onClick={clearPeriod} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">Clear all shifts shown</button></div>}
             </div>
             <button type="button" onClick={() => { setStore(load()); flash("Refreshed."); }} title="Refresh" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px]">↻</button>
             <div className="relative">
@@ -415,13 +415,13 @@ export function ScheduleApp() {
                   {cols.map((c) => <div key={c.key} className="px-2 py-2.5 text-[11.5px] font-extrabold">{c.label}</div>)}
                 </div>
 
-                {periodShifts.length === 0 && <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">No shifts in this view.</div>}
-
                 {group === "area" ? (
-                  gridSites.map((si) => (
+                  gridSites.map((si) => {
+                    const siteRoles = [...new Set(periodShifts.filter((s) => s.site === si).map((s) => s.role))];
+                    return (
                     <div key={si}>
                       <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-2"><span className="text-[13px]">📍</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{si}</span><span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{periodShifts.filter((s) => s.site === si).length} shifts</span></div>
-                      {[...new Set(periodShifts.filter((s) => s.site === si).map((s) => s.role))].map((role) => {
+                      {siteRoles.map((role) => {
                         const rows = periodShifts.filter((s) => s.site === si && s.role === role);
                         return (
                           <div key={role}>
@@ -431,8 +431,9 @@ export function ScheduleApp() {
                           </div>
                         );
                       })}
+                      {canManage && <div className="border-b border-[var(--line-2,#eef2f8)] px-3 py-2"><button type="button" onClick={() => openAdd(si, siteRoles[0] ?? ROLES[0], { date: dates[0], hour: null }, null)} className="rounded-full border border-dashed border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[var(--panel)]">＋ Add shift{siteRoles.length === 0 ? " here" : ""}</button></div>}
                     </div>
-                  ))
+                  ); })
                 ) : (
                   shownStaff.map((st) => {
                     const rows = periodShifts.filter((s) => s.staffId === st.id);
@@ -524,7 +525,9 @@ export function ScheduleApp() {
             {!assignOpen && !actionsOpen ? (
             <div className="px-5 py-4">
               {/* date */}
-              <div className="flex items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">📅</span><span className="text-[13.5px] font-bold text-[var(--ink)]">{dt(draft.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span></div>
+              <div className="flex items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">📅</span>
+                {isDay ? <span className="text-[13.5px] font-bold text-[var(--ink)]">{dt(draft.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span>
+                  : <Select value={draft.date} onChange={(e) => setDraft({ ...draft, date: e.target.value })} className="border border-[var(--line)] bg-[var(--panel)] px-2 py-1 text-[13.5px] font-bold text-[var(--ink)] rounded-lg">{(dates.includes(draft.date) ? dates : [draft.date, ...dates]).map((d) => <option key={d} value={d}>{dt(d).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</option>)}</Select>}</div>
               {/* time */}
               <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">🕐</span><TimeSel value={draft.start} onChange={(v) => setDraft({ ...draft, start: v })} /><span className="text-[var(--ink-3)]">—</span><TimeSel value={draft.end} onChange={(v) => setDraft({ ...draft, end: v })} /></div>
               {/* staff needed / day → opens assign */}
