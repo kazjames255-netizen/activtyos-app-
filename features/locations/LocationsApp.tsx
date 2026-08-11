@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
+import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { VenueMap } from "@/features/listings/VenueMap";
 import { LocationDetail, type Venue } from "./LocationDetail";
 
@@ -35,13 +36,12 @@ export function LocationsApp() {
   const list = useMemo(() => (venues && venues.length > 0 ? venues : venues ? DEMO_VENUES : null), [venues]);
   const open = (vid: string) => router.push(`${pathname}?id=${encodeURIComponent(vid)}`);
 
-  if (list && id) {
-    const venue = list.find((v) => v.id === id);
-    if (venue) return <LocationDetail venue={venue} venues={list} onBack={() => router.push(pathname)} />;
-  }
+  const detailVenue = list && id ? list.find((v) => v.id === id) : undefined;
 
   return (
-    <div className="text-[var(--ink)]">
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 text-[var(--ink)] sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
+      {detailVenue ? <LocationDetail venue={detailVenue} venues={list!} onBack={() => router.push(pathname)} /> : (
+      <>
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Locations</h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Your venues — click one to manage its staff, roles and scheduling. Address, directions and map are edited under Listings → Locations.</p>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
@@ -66,6 +66,8 @@ export function LocationsApp() {
             </Card>
           ))}
         </div>
+      )}
+      </>
       )}
     </div>
   );
