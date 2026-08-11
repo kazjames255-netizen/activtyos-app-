@@ -7,7 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_ROLES } from "@/lib/settings";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { PageHero } from "@/components/OperatorPage";
+import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 
 // ── Team & invites (company / franchise) ──────────────────────────────────
 // Invite people, give each a role (from Setup → Roles & permissions) and the
@@ -153,7 +153,7 @@ export function TeamApp() {
   );
 
   return (
-    <div>
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Team & invites" icon="👥" lede={`${active.length} active · ${pending.length} pending — invite people, give them a role and their listings`} />
 
       {/* Staff usage / plan meter */}
