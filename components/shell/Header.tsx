@@ -197,7 +197,8 @@ export function Header({ portal }: { portal: PortalKey }) {
           type="button"
           onClick={() => setLookupOpen(true)}
           title="Find a child — key info card"
-          className="inline-flex flex-none items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] px-3.5 py-[7px] text-[12.5px] font-bold text-[var(--ink-2)] transition-colors hover:bg-[var(--surface)]"
+          className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105"
+          style={{ background: "#4f46e51a", color: "#4338ca" }}
         >
           <span aria-hidden>🔎</span>
           <span className="hidden sm:inline">Find a child</span>
@@ -216,7 +217,7 @@ export function Header({ portal }: { portal: PortalKey }) {
         {/* On phones the drawer's "Log out" item covers this. */}
         <Button
           sm
-          className="max-sm:hidden"
+          className="max-sm:hidden !border-transparent !bg-[#e11d481a] !text-[#be123c] hover:!bg-[#e11d4826]"
           onClick={async () => {
             await signOutUser();
             router.replace("/login");

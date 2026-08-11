@@ -91,7 +91,8 @@ export function Bell({ portal }: { portal: PortalKey }) {
       <button
         onClick={openPanel}
         aria-label={unread > 0 ? `Notifications (${unread} new)` : "Notifications"}
-        className="relative inline-flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] transition-colors hover:border-[var(--ink-3)]"
+        className="relative inline-flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-full transition-all hover:-translate-y-px hover:brightness-105"
+        style={{ background: "#f59e0b1f", color: "#b45309" }}
       >
         <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
