@@ -1,4 +1,5 @@
 import type { LiveTourSteps } from "./LiveTour";
+import type { SettingsLink } from "./tourNarrator";
 import { GENERATED_STEPS } from "./tourSteps.generated";
 
 // Narration + spotlight anchors for the live walkthroughs. Each step's `find`
@@ -7,14 +8,45 @@ import { GENERATED_STEPS } from "./tourSteps.generated";
 // only gets a live tour when it has BOTH steps here and fixtures in
 // tourFixtures.ts — otherwise PageTour falls back to the mock GuidedTour.
 
-// Shared closing segment: every live tour ends on the REAL Settings page and
-// briefly explains what the tabs there control. LiveTour navigates the iframe
-// to /tour/<portal>/setup for these steps.
-export const SETTINGS_OUTRO: { find: string; line: string }[] = [
-  { find: "Features", line: "One last thing — almost everything you've just seen is switched on and fine-tuned here in Settings, under Setup and features." },
-  { find: "Company setup", line: "The tabs run one part of ActivityOS each: Company setup and Branding for your details and logo, Staff and workforce for your team, and Child questions for what you ask families at sign-up." },
-  { find: "Cancellations", line: "Further along you'll find Meals, Medication and Safeguarding, plus Cancellations and refunds, Seasons, Vouchers and Memberships. Open any tab to change what you've just seen." },
-];
+// Page-specific "one last thing" — the robot beams down deep-links to just the
+// Settings tabs that control THIS page, each with a note on what it does. Shown
+// (via the robot control-panel scene) at the end of that page's live tour.
+export const SETTINGS_LINKS: Record<string, SettingsLink[]> = {
+  dash: [
+    { icon: "⚙️", label: "Features", tab: "features", note: "Switch major areas of ActivityOS on or off" },
+    { icon: "🗓", label: "Seasons", tab: "seasons", note: "Date ranges every figure here can filter by" },
+  ],
+  meals: [{ icon: "🍽", label: "Meals", tab: "meals", note: "Cut-off times, who sees each menu, and whether swaps need approval" }],
+  customers: [
+    { icon: "❓", label: "Child questions", tab: "people", note: "What you ask families about each child at sign-up" },
+    { icon: "🏢", label: "Company setup", tab: "company", note: "Your business name and contact details" },
+  ],
+  email: [{ icon: "🎨", label: "Branding", tab: "branding", note: "Your logo and colours on branded emails" }],
+  calendar: [{ icon: "📅", label: "Calendar", tab: "calendar", note: "Which event types and closures show here" }],
+  timetable: [{ icon: "⚖", label: "Age groups & rooms", tab: "groups", note: "The groups and rooms the timetable builds around" }],
+  registers: [{ icon: "☰", label: "Register", tab: "registers", note: "Sign-in and sign-out rules and what the register captures" }],
+  ratios: [{ icon: "⚖", label: "Age groups & rooms", tab: "groups", note: "Your groups, target ratios and room sizes — the master record this board reads" }],
+  incidents: [{ icon: "🛡", label: "Safeguarding", tab: "safeguarding", note: "Your DSL, categories and whether acknowledgement is required" }],
+  accidents: [{ icon: "🛡", label: "Safeguarding", tab: "safeguarding", note: "Who's notified and how first-aid records are handled" }],
+  medication: [{ icon: "💊", label: "Medication", tab: "medication", note: "Consent rules and how doses are recorded" }],
+  moments: [{ icon: "⚙️", label: "Features", tab: "features", note: "Turn Moments and photo sharing on or off" }],
+  documents: [{ icon: "⚙️", label: "Features", tab: "features", note: "Turn document sharing on or off" }],
+  finance: [
+    { icon: "💷", label: "Money", tab: "money", note: "Payment methods, fees and how payouts are handled" },
+    { icon: "↩️", label: "Cancellations & refunds", tab: "cancel", note: "Your refund rules" },
+  ],
+  expenses: [{ icon: "💷", label: "Money", tab: "money", note: "Payment methods and expense categories" }],
+  purchasing: [
+    { icon: "💷", label: "Money", tab: "money", note: "Payment methods and invoicing" },
+    { icon: "🎟", label: "Vouchers", tab: "vouchers", note: "Childcare voucher and funding setup" },
+  ],
+  newsfeed: [{ icon: "🔔", label: "Notifications", tab: "notifications", note: "How families are alerted to new posts" }],
+  staff: [{ icon: "👥", label: "Staff & workforce", tab: "staff", note: "Roles, invites and what staff can access" }],
+  tasks: [{ icon: "🔔", label: "Notifications", tab: "notifications", note: "Reminders and how tasks are surfaced" }],
+  trips: [{ icon: "🚌", label: "Trips & visits", tab: "trips", note: "Default consent and risk-assessment settings for trips" }],
+  referrals: [{ icon: "🎁", label: "Refer a friend", tab: "refer", note: "The referral reward and how it's paid" }],
+  marketing: [{ icon: "🎫", label: "Bookings", tab: "bookings", note: "Booking and pricing defaults your codes apply to" }],
+};
 
 export const TOUR_STEPS: Record<string, LiveTourSteps> = {
   // Agent-authored steps for the other pages; the hand-tuned dashboard wins.

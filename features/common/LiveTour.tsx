@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { SETTINGS_OUTRO } from "./tourSteps";
+import { SETTINGS_LINKS } from "./tourSteps";
+import { NARRATOR_CSS, narratorScene, settingsScene } from "./tourNarrator";
 
 // A narrated walkthrough that drives the REAL page. It embeds /tour/<portal>/<view>
 // (the real component populated with demo fixtures) in an iframe, then for each
@@ -22,6 +23,7 @@ const CSS = `
 .lt-root .lt-cursor{position:absolute;left:0;top:0;z-index:20;pointer-events:none;transition:transform .6s cubic-bezier(.5,.05,.25,1);filter:drop-shadow(0 3px 4px rgba(20,48,110,.4))}
 .lt-root .lt-cursor .ring{position:absolute;left:-10px;top:-10px;width:36px;height:36px;border-radius:50%;border:2px solid var(--blue);opacity:0}.lt-root .lt-cursor.click .ring{animation:ltclk .5s ease-out}@keyframes ltclk{0%{opacity:.7;transform:scale(.3)}100%{opacity:0;transform:scale(1)}}
 .lt-root .lt-cap{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--teal);border-radius:12px;padding:11px 13px;font-size:12.5px;line-height:1.55;color:var(--ink2);min-height:42px}.lt-root .lt-cap b{color:var(--ink)}
+.lt-root .lt-overlay{position:absolute;inset:0;z-index:15;display:none;padding:16px;background:#0b1020;overflow:auto}
 .lt-root .lt-splash{position:absolute;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;background:radial-gradient(130% 120% at 50% 0%,#1b3f8f,#0b1020 75%);transition:opacity .5s ease;overflow:hidden}
 .lt-root .lt-splash.hide{opacity:0;pointer-events:none}
 .lt-root .lt-splash::before{content:"";position:absolute;top:0;left:-70%;width:55%;height:100%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.28),transparent);transform:skewX(-18deg);animation:ltshine 2s ease-in-out .2s}
@@ -44,7 +46,10 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
     const frame = root.querySelector(".lt-frame") as HTMLIFrameElement;
     const cursor = root.querySelector(".lt-cursor") as HTMLElement;
     const capEl = root.querySelector(".lt-cap") as HTMLElement;
+    const overlay = root.querySelector(".lt-overlay") as HTMLElement;
     const splash = root.querySelector(".lt-splash") as HTMLElement;
+    const showScene = (html: string) => { overlay.innerHTML = html; overlay.style.display = "block"; };
+    const hideScene = () => { overlay.style.display = "none"; overlay.innerHTML = ""; };
     const replayBtn = root.querySelector(".lt-replay") as HTMLElement;
     const pauseBtn = root.querySelector(".lt-pause") as HTMLElement;
     const backBtn = root.querySelector(".lt-back") as HTMLElement;
@@ -57,8 +62,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
     let voice: SpeechSynthesisVoice | null = null;
     let speaking: Promise<unknown> = Promise.resolve();
     let resolveReady: () => void = () => {};
-    let readyP = new Promise<void>((res) => (resolveReady = res));
-    let frameView = view; // which view the iframe currently shows
+    const readyP = new Promise<void>((res) => (resolveReady = res));
 
     const gate = () => (paused ? new Promise<void>((r) => waiters.push(r)) : Promise.resolve());
     const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms)).then(gate);
@@ -79,9 +83,12 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       const u = new SpeechSynthesisUtterance(t);
       if (voice) { u.voice = voice; u.lang = voice.lang; }
       u.rate = 1.0; u.pitch = 1.05;
+      // Move the robot's mouth only while it's genuinely speaking.
+      const mouth = (on: boolean) => rootRef.current?.querySelector(".tnr-bot")?.classList.toggle("speaking", on);
+      u.onstart = () => mouth(true);
       speaking = Promise.race([
-        new Promise((res) => { u.onend = () => res(undefined); u.onerror = () => res(undefined); }),
-        sleep(22000),
+        new Promise((res) => { u.onend = () => { mouth(false); res(undefined); }; u.onerror = () => { mouth(false); res(undefined); }; }),
+        sleep(22000).then(() => mouth(false)),
       ]);
       s.speak(u);
     }
@@ -109,17 +116,6 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       });
     const clearHi = () => frame.contentWindow?.postMessage({ type: "tour:clear" }, "*");
 
-    // Point the iframe at a different view mid-tour (used to end on the real
-    // Settings page). Waits for that page's TourBridge to report ready again.
-    async function ensureFrame(v: string) {
-      if (v === frameView) return;
-      ready = false;
-      readyP = new Promise<void>((res) => (resolveReady = res));
-      frame.src = `/tour/${portal}/${v}`;
-      frameView = v;
-      await Promise.race([readyP, sleep(4800)]);
-    }
-
     async function moveTo(rect: DOMRect | null) {
       if (rect) {
         const cx = rect.left + Math.min(rect.width * 0.5, 90);
@@ -135,33 +131,39 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
 
     async function run(startIdx = 0) {
       const c = cfgRef.current;
-      // The page's own steps, then a shared closing tour of the real Settings
-      // page explaining its tabs — each step carries the view it belongs to.
-      const all = [
-        ...c.steps.map((s) => ({ v: view, find: s.find, line: s.line })),
-        ...SETTINGS_OUTRO.map((s) => ({ v: "setup", find: s.find, line: s.line })),
-      ];
       const tk = ++token; const alive = () => tk === token && !dead;
       if (hasSpeech) window.speechSynthesis.cancel();
       paused = false; waiters.splice(0).forEach((f) => f()); pauseBtn.textContent = "⏸";
       cursor.style.transform = "translate(34px,30px)";
       if (startIdx <= 0) {
         splash.style.display = "flex"; splash.classList.remove("hide"); void splash.offsetWidth;
-        await ensureFrame(view); // reset to the page (a prior run may have ended on Settings)
         await sleep(2200); if (!alive()) return;
         splash.classList.add("hide"); await sleep(500); splash.style.display = "none";
+        // Robot greets before we dive into the page.
         currentIdx = -1; clearHi();
+        showScene(narratorScene("Guided walkthrough", c.title, "Sit back — I'll show you round this page."));
         await line(c.introLine); if (!alive()) return;
-      } else { splash.style.display = "none"; }
+        hideScene();
+      } else { splash.style.display = "none"; hideScene(); }
       if (!ready) await Promise.race([readyP, sleep(4500)]);
-      for (let i = Math.max(0, startIdx); i < all.length; i++) {
-        currentIdx = i;
-        await ensureFrame(all[i].v); if (!alive()) return;
-        const rect = await spotlight(all[i].find); if (!alive()) return;
+      for (let i = Math.max(0, startIdx); i < c.steps.length; i++) {
+        currentIdx = i; hideScene();
+        const rect = await spotlight(c.steps[i].find); if (!alive()) return;
         await moveTo(rect); if (!alive()) return;
-        await line(all[i].line); if (!alive()) return;
+        await line(c.steps[i].line); if (!alive()) return;
       }
-      currentIdx = all.length; clearHi();
+      // Page-specific "one last thing" — the robot beams down the Settings tabs
+      // that control THIS page (each with a note on what it does).
+      currentIdx = c.steps.length; clearHi();
+      const links = SETTINGS_LINKS[view] || [];
+      if (links.length) {
+        showScene(settingsScene(portal, links));
+        const names = links.map((l) => l.label).join(" and ");
+        await line(`One last thing — this page is set up in your Settings, under ${names}. Tap any card to jump straight there.`);
+        if (!alive()) return;
+      }
+      // Sign-off from the robot.
+      showScene(narratorScene("✓ Complete", "All done", "You've seen the essentials of this page."));
       if (!alive()) return; await line(c.doneLine);
     }
 
@@ -186,7 +188,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
 
   return (
     <div className="lt-root" ref={rootRef}>
-      <style>{CSS}</style>
+      <style>{CSS + NARRATOR_CSS}</style>
       <div className="lt-controls">
         <button type="button" className="cbtn ico lt-back" title="Back a step" aria-label="Back a step">⏮</button>
         <button type="button" className="cbtn ico lt-pause" title="Pause or resume" aria-label="Pause or resume">⏸</button>
@@ -196,6 +198,7 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       </div>
       <div className="lt-stage">
         <iframe className="lt-frame" title="walkthrough" src={`/tour/${portal}/${view}`} />
+        <div className="lt-overlay" />
         <div className="lt-cursor"><span className="ring" /><svg width="24" height="24" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
         <div className="lt-splash"><div className="splmark">◈</div><div className="splogo">Activity<span className="splos">OS</span></div><div className="sptitle">{cfg.title}</div><div className="spsub">a quick guided walkthrough</div></div>
       </div>
