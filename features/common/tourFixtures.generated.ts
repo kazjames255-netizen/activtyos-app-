@@ -1,5 +1,5 @@
-// AUTO-GENERATED from the tour-fixtures workflow. Do not edit by hand —
-// regenerated as more pages complete. Merged in tourFixtures.ts.
+// AUTO-GENERATED from the tour-fixtures workflow. Do not edit by hand.
+// Merged (with the hand-authored dashboard winning) in tourFixtures.ts.
 
 export const GENERATED_FIXTURES: Record<string, Record<string, unknown>> = {
   "customers": {
@@ -7145,6 +7145,6319 @@ export const GENERATED_FIXTURES: Record<string, Record<string, unknown>> = {
         "fileType": "application/pdf",
         "uploadedByName": "Rachael Gilbert",
         "createdAt": "2026-03-15T11:00:00.000Z"
+      }
+    ]
+  },
+  "expenses": {
+    "/api/library": {
+      "settings": {
+        "money": {
+          "basis": "cash",
+          "usePurchaseOrders": false
+        },
+        "expenses": {
+          "categories": [
+            "First aid"
+          ],
+          "includeSubscription": false
+        }
+      },
+      "childQuestions": []
+    },
+    "/api/subscription": {
+      "current": {
+        "plan": "pro",
+        "since": "2025-09-01T00:00:00.000Z",
+        "details": {
+          "name": "Pro",
+          "price": 29,
+          "cadence": "monthly"
+        }
+      }
+    },
+    "/api/suppliers": [
+      {
+        "id": "sup-oakfield",
+        "name": "Oakfield Leisure Centre",
+        "email": "hire@oakfieldleisure.co.uk",
+        "phone": "01908 552210",
+        "address": "Oakfield Rd, Milton Keynes MK6 5LA",
+        "notes": "Sports hall + astro pitch, weekday day-rate"
+      },
+      {
+        "id": "sup-aim",
+        "name": "Activities Industry Mutual",
+        "email": "cover@aimutual.co.uk",
+        "phone": "0345 872 5230",
+        "address": "Alexandra House, Loughborough LE11 5GD",
+        "notes": "Public liability + activity cover, monthly direct debit"
+      },
+      {
+        "id": "sup-bakerross",
+        "name": "Baker Ross",
+        "email": "orders@bakerross.co.uk",
+        "phone": "0844 576 8901",
+        "address": "2 Cromwell Business Centre, Romford RM7 0AN",
+        "notes": "Craft supplies for Forest School week"
+      },
+      {
+        "id": "sup-decathlon",
+        "name": "Decathlon",
+        "email": "",
+        "phone": "020 3603 6900",
+        "address": "Canada Water, London SE16 7EF",
+        "notes": "Football kit + bibs"
+      },
+      {
+        "id": "sup-stjohn",
+        "name": "St John Ambulance",
+        "email": "training@sja.org.uk",
+        "phone": "0344 770 4800",
+        "address": "27 St John's Lane, London EC1M 4NI",
+        "notes": "Paediatric first aid certification"
+      },
+      {
+        "id": "sup-newportpagnell",
+        "name": "Newport Pagnell Hall",
+        "email": "bookings@nphall.org.uk",
+        "phone": "01908 611777",
+        "address": "Silver St, Newport Pagnell MK16 0EG",
+        "notes": "Wet-weather backup venue"
+      }
+    ],
+    "/api/expenses": {
+      "summary": {
+        "total": 3647.05,
+        "count": 18,
+        "byCategory": {
+          "Equipment": 557.4,
+          "Venue hire": 1320,
+          "Staff": 752,
+          "Insurance": 289.5,
+          "Marketing": 178,
+          "Travel": 64.3,
+          "Supplies": 232.65,
+          "Software": 29,
+          "Training": 150,
+          "Utilities": 74.2
+        }
+      },
+      "items": [
+        {
+          "id": "exp-201",
+          "date": "2026-08-05",
+          "category": "Equipment",
+          "amount": 245,
+          "supplier": "Sports Direct",
+          "notes": "Cones, bibs & size-4 footballs for Multi-Sports week",
+          "status": "paid",
+          "paidAt": "2026-08-05T09:12:00.000Z",
+          "receiptUrl": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Crect%20width='120'%20height='120'%20fill='%23eaf0fc'/%3E%3Ctext%20x='60'%20y='58'%20font-size='13'%20text-anchor='middle'%20fill='%231d3a8f'%3ESports%20Direct%3C/text%3E%3Ctext%20x='60'%20y='76'%20font-size='12'%20text-anchor='middle'%20fill='%234a4763'%3E£245.00%3C/text%3E%3C/svg%3E",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-202",
+          "date": "2026-08-03",
+          "category": "Venue hire",
+          "amount": 480,
+          "supplier": "Oakfield Leisure Centre",
+          "notes": "Sports hall — Summer Holiday Camp wk 5",
+          "status": "paid",
+          "paidAt": "2026-08-03T08:00:00.000Z",
+          "receiptUrl": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Crect%20width='120'%20height='120'%20fill='%23ece9fd'/%3E%3Ctext%20x='60'%20y='58'%20font-size='12'%20text-anchor='middle'%20fill='%234b3bc9'%3EOakfield%3C/text%3E%3Ctext%20x='60'%20y='76'%20font-size='12'%20text-anchor='middle'%20fill='%234a4763'%3E£480.00%3C/text%3E%3C/svg%3E",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-203",
+          "date": "2026-08-07",
+          "category": "Staff",
+          "amount": 620,
+          "supplier": "Rachael Gilbert",
+          "notes": "Camp lead wages — August week 1",
+          "status": "pending",
+          "dueDate": "2026-08-20",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-204",
+          "date": "2026-08-01",
+          "category": "Insurance",
+          "amount": 96.5,
+          "supplier": "Activities Industry Mutual",
+          "notes": "Public liability & activity cover",
+          "status": "paid",
+          "paidAt": "2026-08-01T06:30:00.000Z",
+          "repeat": "monthly",
+          "repeatUntil": "2027-03-01",
+          "seriesId": "series-insurance",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-205",
+          "date": "2026-07-28",
+          "category": "Marketing",
+          "amount": 120,
+          "supplier": "Meta Ads",
+          "notes": "Facebook/Instagram promo — Summer camp enrolment",
+          "status": "paid",
+          "paidAt": "2026-07-28T14:20:00.000Z",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-206",
+          "date": "2026-07-22",
+          "category": "Travel",
+          "amount": 64.3,
+          "supplier": "BP",
+          "notes": "Fuel — minibus, Forest School day trips",
+          "status": "paid",
+          "paidAt": "2026-07-22T17:05:00.000Z",
+          "receiptUrl": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Crect%20width='120'%20height='120'%20fill='%23fbeede'/%3E%3Ctext%20x='60'%20y='58'%20font-size='14'%20text-anchor='middle'%20fill='%23a9660a'%3EBP%20Fuel%3C/text%3E%3Ctext%20x='60'%20y='76'%20font-size='12'%20text-anchor='middle'%20fill='%234a4763'%3E£64.30%3C/text%3E%3C/svg%3E",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-207",
+          "date": "2026-07-15",
+          "category": "Supplies",
+          "amount": 88.75,
+          "supplier": "Baker Ross",
+          "notes": "Craft packs & lanyards — Gymnastics & Craft week",
+          "status": "paid",
+          "paidAt": "2026-07-15T11:40:00.000Z",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-208",
+          "date": "2026-07-02",
+          "category": "Software",
+          "amount": 29,
+          "supplier": "ActivityOS",
+          "notes": "Pro plan subscription — July",
+          "status": "paid",
+          "paidAt": "2026-07-02T00:05:00.000Z",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-209",
+          "date": "2026-07-01",
+          "category": "Insurance",
+          "amount": 96.5,
+          "supplier": "Activities Industry Mutual",
+          "notes": "Public liability & activity cover",
+          "status": "paid",
+          "paidAt": "2026-07-01T06:30:00.000Z",
+          "repeat": "monthly",
+          "repeatUntil": "2027-03-01",
+          "seriesId": "series-insurance",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-210",
+          "date": "2026-06-18",
+          "category": "Venue hire",
+          "amount": 360,
+          "supplier": "Newport Pagnell Hall",
+          "notes": "Wet-weather backup — Football Camp",
+          "status": "paid",
+          "paidAt": "2026-06-18T09:00:00.000Z",
+          "receiptUrl": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Crect%20width='120'%20height='120'%20fill='%23f6e9fb'/%3E%3Ctext%20x='60'%20y='58'%20font-size='11'%20text-anchor='middle'%20fill='%238a2fb0'%3ENP%20Hall%3C/text%3E%3Ctext%20x='60'%20y='76'%20font-size='12'%20text-anchor='middle'%20fill='%234a4763'%3E£360.00%3C/text%3E%3C/svg%3E",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-211",
+          "date": "2026-06-10",
+          "category": "Training",
+          "amount": 150,
+          "supplier": "St John Ambulance",
+          "notes": "Paediatric first aid — 2 staff",
+          "status": "paid",
+          "paidAt": "2026-06-10T16:00:00.000Z",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-212",
+          "date": "2026-06-05",
+          "category": "Equipment",
+          "amount": 312.4,
+          "supplier": "Decathlon",
+          "notes": "Football kit, bibs & pump — new season",
+          "status": "pending",
+          "dueDate": "2026-06-30",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-213",
+          "date": "2026-05-20",
+          "category": "Utilities",
+          "amount": 74.2,
+          "supplier": "British Gas",
+          "notes": "Store unit electricity — Q2",
+          "status": "paid",
+          "paidAt": "2026-05-20T10:10:00.000Z",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-214",
+          "date": "2026-05-08",
+          "category": "Marketing",
+          "amount": 58,
+          "supplier": "Instantprint",
+          "notes": "A5 leaflets — school gate distribution",
+          "status": "paid",
+          "paidAt": "2026-05-08T12:00:00.000Z",
+          "receiptUrl": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Crect%20width='120'%20height='120'%20fill='%23e5f2fd'/%3E%3Ctext%20x='60'%20y='58'%20font-size='11'%20text-anchor='middle'%20fill='%231f77c9'%3EInstantprint%3C/text%3E%3Ctext%20x='60'%20y='76'%20font-size='12'%20text-anchor='middle'%20fill='%234a4763'%3E£58.00%3C/text%3E%3C/svg%3E",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-215",
+          "date": "2026-05-01",
+          "category": "Insurance",
+          "amount": 96.5,
+          "supplier": "Activities Industry Mutual",
+          "notes": "Public liability & activity cover",
+          "status": "paid",
+          "paidAt": "2026-05-01T06:30:00.000Z",
+          "repeat": "monthly",
+          "repeatUntil": "2027-03-01",
+          "seriesId": "series-insurance",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-216",
+          "date": "2026-04-14",
+          "category": "Staff",
+          "amount": 132,
+          "supplier": "Disclosure & Barring Service",
+          "notes": "DBS checks — 2 new coaches",
+          "status": "paid",
+          "paidAt": "2026-04-14T13:30:00.000Z",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-217",
+          "date": "2026-04-02",
+          "category": "Venue hire",
+          "amount": 480,
+          "supplier": "Oakfield Leisure Centre",
+          "notes": "Sports hall — Easter Holiday Camp",
+          "status": "paid",
+          "paidAt": "2026-04-02T08:00:00.000Z",
+          "createdByName": "Kaz James"
+        },
+        {
+          "id": "exp-218",
+          "date": "2026-03-25",
+          "category": "Supplies",
+          "amount": 143.9,
+          "supplier": "Costco",
+          "notes": "Snacks, squash & first-aid restock",
+          "status": "paid",
+          "paidAt": "2026-03-25T15:45:00.000Z",
+          "receiptUrl": "data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='120'%20height='120'%3E%3Crect%20width='120'%20height='120'%20fill='%23eceff4'/%3E%3Ctext%20x='60'%20y='58'%20font-size='14'%20text-anchor='middle'%20fill='%2348566e'%3ECostco%3C/text%3E%3Ctext%20x='60'%20y='76'%20font-size='12'%20text-anchor='middle'%20fill='%234a4763'%3E£143.90%3C/text%3E%3C/svg%3E",
+          "createdByName": "Kaz James"
+        }
+      ]
+    }
+  },
+  "finance": {
+    "/api/bookings": [
+      {
+        "ref": "R-1041",
+        "bid": "B1041",
+        "createdAt": "2026-03-05T10:12:00Z",
+        "booker": "Sarah Thompson",
+        "email": "sarah.thompson@example.co.uk",
+        "phone": "07700 900041",
+        "child": "Oliver Thompson",
+        "age": 8,
+        "kids": [
+          {
+            "name": "Oliver Thompson",
+            "age": 8
+          },
+          {
+            "name": "Emily Thompson",
+            "age": 6
+          }
+        ],
+        "listing": "Football Academy",
+        "pass": "Full week",
+        "ticket": "Sibling x2",
+        "dates": "16 Mar – 20 Mar 2026",
+        "days": [
+          "2026-03-16",
+          "2026-03-17",
+          "2026-03-18",
+          "2026-03-19",
+          "2026-03-20"
+        ],
+        "sessions": [
+          "Mon 16 Mar 2026 · 09:00 – 15:00",
+          "Tue 17 Mar 2026 · 09:00 – 15:00",
+          "Wed 18 Mar 2026 · 09:00 – 15:00",
+          "Thu 19 Mar 2026 · 09:00 – 15:00",
+          "Fri 20 Mar 2026 · 09:00 – 15:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 120,
+        "amountPaid": 120,
+        "addons": [],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1042",
+        "bid": "B1042",
+        "createdAt": "2026-03-19T14:41:00Z",
+        "booker": "James Patel",
+        "email": "james.patel@example.co.uk",
+        "phone": "07700 900042",
+        "child": "Aisha Patel",
+        "age": 7,
+        "kids": [
+          {
+            "name": "Aisha Patel",
+            "age": 7
+          }
+        ],
+        "listing": "Gymnastics Camp",
+        "pass": "3 days",
+        "ticket": "Standard",
+        "dates": "30 Mar – 01 Apr 2026",
+        "days": [
+          "2026-03-30",
+          "2026-03-31",
+          "2026-04-01"
+        ],
+        "sessions": [
+          "Mon 30 Mar 2026 · 09:30 – 12:30",
+          "Tue 31 Mar 2026 · 09:30 – 12:30",
+          "Wed 01 Apr 2026 · 09:30 – 12:30"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 75,
+        "amountPaid": 75,
+        "addons": [],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1055",
+        "bid": "B1055",
+        "createdAt": "2026-04-08T09:03:00Z",
+        "booker": "Emma Wilson",
+        "email": "emma.wilson@example.co.uk",
+        "phone": "07700 900055",
+        "child": "Jack Wilson",
+        "age": 9,
+        "kids": [
+          {
+            "name": "Jack Wilson",
+            "age": 9
+          }
+        ],
+        "listing": "Forest School Adventure",
+        "pass": "Full week",
+        "ticket": "Standard",
+        "dates": "13 Apr – 17 Apr 2026",
+        "days": [
+          "2026-04-13",
+          "2026-04-14",
+          "2026-04-15",
+          "2026-04-16",
+          "2026-04-17"
+        ],
+        "sessions": [
+          "Mon 13 Apr 2026 · 09:00 – 15:30",
+          "Tue 14 Apr 2026 · 09:00 – 15:30",
+          "Wed 15 Apr 2026 · 09:00 – 15:30",
+          "Thu 16 Apr 2026 · 09:00 – 15:30",
+          "Fri 17 Apr 2026 · 09:00 – 15:30"
+        ],
+        "status": "Confirmed",
+        "pay": "Funded",
+        "method": "Tax-Free Childcare",
+        "amount": 160,
+        "amountPaid": 160,
+        "voucherScheme": "Tax-Free Childcare",
+        "addons": [],
+        "answers": [],
+        "note": "Paid via TFC reference TFC-88213",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1061",
+        "bid": "B1061",
+        "createdAt": "2026-04-22T18:26:00Z",
+        "booker": "Liam O'Connor",
+        "email": "liam.oconnor@example.co.uk",
+        "phone": "07700 900061",
+        "child": "Rory O'Connor",
+        "age": 10,
+        "kids": [
+          {
+            "name": "Rory O'Connor",
+            "age": 10
+          },
+          {
+            "name": "Niamh O'Connor",
+            "age": 5
+          }
+        ],
+        "listing": "Multi-Sports Holiday Camp",
+        "pass": "Full week",
+        "ticket": "Sibling x2",
+        "dates": "27 Apr – 01 May 2026",
+        "days": [
+          "2026-04-27",
+          "2026-04-28",
+          "2026-04-29",
+          "2026-04-30",
+          "2026-05-01"
+        ],
+        "sessions": [
+          "Mon 27 Apr 2026 · 09:00 – 15:00",
+          "Tue 28 Apr 2026 · 09:00 – 15:00",
+          "Wed 29 Apr 2026 · 09:00 – 15:00",
+          "Thu 30 Apr 2026 · 09:00 – 15:00",
+          "Fri 01 May 2026 · 09:00 – 15:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 145,
+        "amountPaid": 145,
+        "addons": [
+          "Early drop-off"
+        ],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1078",
+        "bid": "B1078",
+        "createdAt": "2026-05-06T11:47:00Z",
+        "booker": "Priya Sharma",
+        "email": "priya.sharma@example.co.uk",
+        "phone": "07700 900078",
+        "child": "Anaya Sharma",
+        "age": 6,
+        "kids": [
+          {
+            "name": "Anaya Sharma",
+            "age": 6
+          }
+        ],
+        "listing": "Junior Dance Camp",
+        "pass": "3 days",
+        "ticket": "Standard",
+        "dates": "11 May – 13 May 2026",
+        "days": [
+          "2026-05-11",
+          "2026-05-12",
+          "2026-05-13"
+        ],
+        "sessions": [
+          "Mon 11 May 2026 · 10:00 – 13:00",
+          "Tue 12 May 2026 · 10:00 – 13:00",
+          "Wed 13 May 2026 · 10:00 – 13:00"
+        ],
+        "status": "Cancelled",
+        "pay": "Refunded",
+        "method": "Card",
+        "amount": 90,
+        "amountPaid": 90,
+        "addons": [],
+        "answers": [],
+        "note": "Family moved away",
+        "recon": true,
+        "evid": null,
+        "refundLog": [],
+        "cancel": {
+          "on": "2026-05-10",
+          "by": "Priya Sharma",
+          "reason": "Relocation",
+          "refund": "approved",
+          "amount": 90,
+          "refundTo": "card"
+        }
+      },
+      {
+        "ref": "R-1085",
+        "bid": "B1085",
+        "createdAt": "2026-05-20T08:19:00Z",
+        "booker": "David Clarke",
+        "email": "david.clarke@example.co.uk",
+        "phone": "07700 900085",
+        "child": "Harry Clarke",
+        "age": 11,
+        "kids": [
+          {
+            "name": "Harry Clarke",
+            "age": 11
+          }
+        ],
+        "listing": "Football Academy",
+        "pass": "Full week",
+        "ticket": "Standard",
+        "dates": "25 May – 29 May 2026",
+        "days": [
+          "2026-05-25",
+          "2026-05-26",
+          "2026-05-27",
+          "2026-05-28",
+          "2026-05-29"
+        ],
+        "sessions": [
+          "Mon 25 May 2026 · 09:00 – 15:00",
+          "Tue 26 May 2026 · 09:00 – 15:00",
+          "Wed 27 May 2026 · 09:00 – 15:00",
+          "Thu 28 May 2026 · 09:00 – 15:00",
+          "Fri 29 May 2026 · 09:00 – 15:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 120,
+        "amountPaid": 120,
+        "addons": [],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1092",
+        "bid": "B1092",
+        "createdAt": "2026-06-03T09:58:00Z",
+        "booker": "Sarah Thompson",
+        "email": "sarah.thompson@example.co.uk",
+        "phone": "07700 900041",
+        "child": "Oliver Thompson",
+        "age": 8,
+        "kids": [
+          {
+            "name": "Oliver Thompson",
+            "age": 8
+          },
+          {
+            "name": "Emily Thompson",
+            "age": 6
+          }
+        ],
+        "listing": "Summer Holiday Club",
+        "pass": "Full week",
+        "ticket": "Sibling x2",
+        "dates": "08 Jun – 12 Jun 2026",
+        "days": [
+          "2026-06-08",
+          "2026-06-09",
+          "2026-06-10",
+          "2026-06-11",
+          "2026-06-12"
+        ],
+        "sessions": [
+          "Mon 08 Jun 2026 · 08:30 – 16:00",
+          "Tue 09 Jun 2026 · 08:30 – 16:00",
+          "Wed 10 Jun 2026 · 08:30 – 16:00",
+          "Thu 11 Jun 2026 · 08:30 – 16:00",
+          "Fri 12 Jun 2026 · 08:30 – 16:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 200,
+        "amountPaid": 200,
+        "addons": [
+          "Late pick-up"
+        ],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1105",
+        "bid": "B1105",
+        "createdAt": "2026-06-17T13:12:00Z",
+        "booker": "Grace Bennett",
+        "email": "grace.bennett@example.co.uk",
+        "phone": "07700 900105",
+        "child": "Freddie Bennett",
+        "age": 5,
+        "kids": [
+          {
+            "name": "Freddie Bennett",
+            "age": 5
+          }
+        ],
+        "listing": "Forest School Adventure",
+        "pass": "Full week",
+        "ticket": "Standard",
+        "dates": "22 Jun – 26 Jun 2026",
+        "days": [
+          "2026-06-22",
+          "2026-06-23",
+          "2026-06-24",
+          "2026-06-25",
+          "2026-06-26"
+        ],
+        "sessions": [
+          "Mon 22 Jun 2026 · 09:00 – 15:30",
+          "Tue 23 Jun 2026 · 09:00 – 15:30",
+          "Wed 24 Jun 2026 · 09:00 – 15:30",
+          "Thu 25 Jun 2026 · 09:00 – 15:30",
+          "Fri 26 Jun 2026 · 09:00 – 15:30"
+        ],
+        "status": "Confirmed",
+        "pay": "Unpaid",
+        "method": "Card",
+        "amount": 160,
+        "amountPaid": 0,
+        "addons": [],
+        "answers": [],
+        "note": "Invoice requested",
+        "recon": false,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1120",
+        "bid": "B1120",
+        "createdAt": "2026-07-01T07:44:00Z",
+        "booker": "Mohammed Ali",
+        "email": "mohammed.ali@example.co.uk",
+        "phone": "07700 900120",
+        "child": "Yusuf Ali",
+        "age": 9,
+        "kids": [
+          {
+            "name": "Yusuf Ali",
+            "age": 9
+          },
+          {
+            "name": "Layla Ali",
+            "age": 7
+          }
+        ],
+        "listing": "Multi-Sports Holiday Camp",
+        "pass": "Full week",
+        "ticket": "HAF funded",
+        "dates": "06 Jul – 10 Jul 2026",
+        "days": [
+          "2026-07-06",
+          "2026-07-07",
+          "2026-07-08",
+          "2026-07-09",
+          "2026-07-10"
+        ],
+        "sessions": [
+          "Mon 06 Jul 2026 · 09:00 – 15:00",
+          "Tue 07 Jul 2026 · 09:00 – 15:00",
+          "Wed 08 Jul 2026 · 09:00 – 15:00",
+          "Thu 09 Jul 2026 · 09:00 – 15:00",
+          "Fri 10 Jul 2026 · 09:00 – 15:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Funded",
+        "method": "HAF (funded £0)",
+        "amount": 0,
+        "amountPaid": 0,
+        "addons": [],
+        "answers": [],
+        "note": "HAF-funded place",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1121",
+        "bid": "B1121",
+        "createdAt": "2026-07-08T16:31:00Z",
+        "booker": "Charlotte Evans",
+        "email": "charlotte.evans@example.co.uk",
+        "phone": "07700 900121",
+        "child": "Sophie Evans",
+        "age": 6,
+        "kids": [
+          {
+            "name": "Sophie Evans",
+            "age": 6
+          }
+        ],
+        "listing": "Gymnastics Camp",
+        "pass": "3 days",
+        "ticket": "Standard",
+        "dates": "13 Jul – 15 Jul 2026",
+        "days": [
+          "2026-07-13",
+          "2026-07-14",
+          "2026-07-15"
+        ],
+        "sessions": [
+          "Mon 13 Jul 2026 · 09:30 – 12:30",
+          "Tue 14 Jul 2026 · 09:30 – 12:30",
+          "Wed 15 Jul 2026 · 09:30 – 12:30"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 135,
+        "amountPaid": 135,
+        "addons": [],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1135",
+        "bid": "B1135",
+        "createdAt": "2026-07-15T10:05:00Z",
+        "booker": "Tom Richardson",
+        "email": "tom.richardson@example.co.uk",
+        "phone": "07700 900135",
+        "child": "Ella Richardson",
+        "age": 10,
+        "kids": [
+          {
+            "name": "Ella Richardson",
+            "age": 10
+          },
+          {
+            "name": "Max Richardson",
+            "age": 12
+          }
+        ],
+        "listing": "Summer Holiday Club",
+        "pass": "Full week",
+        "ticket": "Sibling x2",
+        "dates": "20 Jul – 24 Jul 2026",
+        "days": [
+          "2026-07-20",
+          "2026-07-21",
+          "2026-07-22",
+          "2026-07-23",
+          "2026-07-24"
+        ],
+        "sessions": [
+          "Mon 20 Jul 2026 · 08:30 – 16:00",
+          "Tue 21 Jul 2026 · 08:30 – 16:00",
+          "Wed 22 Jul 2026 · 08:30 – 16:00",
+          "Thu 23 Jul 2026 · 08:30 – 16:00",
+          "Fri 24 Jul 2026 · 08:30 – 16:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Partially paid",
+        "method": "Card",
+        "amount": 250,
+        "amountPaid": 150,
+        "addons": [
+          "Late pick-up"
+        ],
+        "answers": [],
+        "note": "£100 balance to follow",
+        "recon": false,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1140",
+        "bid": "B1140",
+        "createdAt": "2026-07-22T12:38:00Z",
+        "booker": "Emma Wilson",
+        "email": "emma.wilson@example.co.uk",
+        "phone": "07700 900055",
+        "child": "Jack Wilson",
+        "age": 9,
+        "kids": [
+          {
+            "name": "Jack Wilson",
+            "age": 9
+          }
+        ],
+        "listing": "Football Academy",
+        "pass": "Full week",
+        "ticket": "Standard",
+        "dates": "27 Jul – 31 Jul 2026",
+        "days": [
+          "2026-07-27",
+          "2026-07-28",
+          "2026-07-29",
+          "2026-07-30",
+          "2026-07-31"
+        ],
+        "sessions": [
+          "Mon 27 Jul 2026 · 09:00 – 15:00",
+          "Tue 28 Jul 2026 · 09:00 – 15:00",
+          "Wed 29 Jul 2026 · 09:00 – 15:00",
+          "Thu 30 Jul 2026 · 09:00 – 15:00",
+          "Fri 31 Jul 2026 · 09:00 – 15:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 120,
+        "amountPaid": 120,
+        "addons": [],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1150",
+        "bid": "B1150",
+        "createdAt": "2026-07-29T15:52:00Z",
+        "booker": "Olivia Turner",
+        "email": "olivia.turner@example.co.uk",
+        "phone": "07700 900150",
+        "child": "Mia Turner",
+        "age": 4,
+        "kids": [
+          {
+            "name": "Mia Turner",
+            "age": 4
+          }
+        ],
+        "listing": "Junior Dance Camp",
+        "pass": "3 days",
+        "ticket": "Standard",
+        "dates": "03 Aug – 05 Aug 2026",
+        "days": [
+          "2026-08-03",
+          "2026-08-04",
+          "2026-08-05"
+        ],
+        "sessions": [
+          "Mon 03 Aug 2026 · 10:00 – 13:00",
+          "Tue 04 Aug 2026 · 10:00 – 13:00",
+          "Wed 05 Aug 2026 · 10:00 – 13:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 95,
+        "amountPaid": 95,
+        "addons": [],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1161",
+        "bid": "B1161",
+        "createdAt": "2026-08-04T09:00:00Z",
+        "booker": "Nathan Cook",
+        "email": "nathan.cook@example.co.uk",
+        "phone": "07700 900161",
+        "child": "Leo Cook",
+        "age": 8,
+        "kids": [
+          {
+            "name": "Leo Cook",
+            "age": 8
+          },
+          {
+            "name": "Ruby Cook",
+            "age": 6
+          }
+        ],
+        "listing": "Multi-Sports Holiday Camp",
+        "pass": "Full week",
+        "ticket": "Sibling x2",
+        "dates": "10 Aug – 14 Aug 2026",
+        "days": [
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14"
+        ],
+        "sessions": [
+          "Mon 10 Aug 2026 · 09:00 – 15:00",
+          "Tue 11 Aug 2026 · 09:00 – 15:00",
+          "Wed 12 Aug 2026 · 09:00 – 15:00",
+          "Thu 13 Aug 2026 · 09:00 – 15:00",
+          "Fri 14 Aug 2026 · 09:00 – 15:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 180,
+        "amountPaid": 180,
+        "addons": [
+          "Early drop-off"
+        ],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1168",
+        "bid": "B1168",
+        "createdAt": "2026-08-07T14:30:00Z",
+        "booker": "Hannah Lewis",
+        "email": "hannah.lewis@example.co.uk",
+        "phone": "07700 900168",
+        "child": "Poppy Lewis",
+        "age": 5,
+        "kids": [
+          {
+            "name": "Poppy Lewis",
+            "age": 5
+          }
+        ],
+        "listing": "Forest School Adventure",
+        "pass": "Full week",
+        "ticket": "Standard",
+        "dates": "10 Aug – 14 Aug 2026",
+        "days": [
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14"
+        ],
+        "sessions": [
+          "Mon 10 Aug 2026 · 09:00 – 15:30",
+          "Tue 11 Aug 2026 · 09:00 – 15:30",
+          "Wed 12 Aug 2026 · 09:00 – 15:30",
+          "Thu 13 Aug 2026 · 09:00 – 15:30",
+          "Fri 14 Aug 2026 · 09:00 – 15:30"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 160,
+        "amountPaid": 160,
+        "addons": [],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1172",
+        "bid": "B1172",
+        "createdAt": "2026-08-10T08:15:00Z",
+        "booker": "Daniel Scott",
+        "email": "daniel.scott@example.co.uk",
+        "phone": "07700 900172",
+        "child": "Isla Scott",
+        "age": 7,
+        "kids": [
+          {
+            "name": "Isla Scott",
+            "age": 7
+          }
+        ],
+        "listing": "Gymnastics Camp",
+        "pass": "3 days",
+        "ticket": "Standard",
+        "dates": "12 Aug – 14 Aug 2026",
+        "days": [
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14"
+        ],
+        "sessions": [
+          "Wed 12 Aug 2026 · 09:30 – 12:30",
+          "Thu 13 Aug 2026 · 09:30 – 12:30",
+          "Fri 14 Aug 2026 · 09:30 – 12:30"
+        ],
+        "status": "Confirmed",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 110,
+        "amountPaid": 110,
+        "addons": [],
+        "answers": [],
+        "note": "",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1175",
+        "bid": "B1175",
+        "createdAt": "2026-08-11T07:00:00Z",
+        "booker": "Sophie Green",
+        "email": "sophie.green@example.co.uk",
+        "phone": "07700 900175",
+        "child": "Charlie Green",
+        "age": 11,
+        "kids": [
+          {
+            "name": "Charlie Green",
+            "age": 11
+          },
+          {
+            "name": "Grace Green",
+            "age": 9
+          }
+        ],
+        "listing": "Summer Holiday Club",
+        "pass": "Full week",
+        "ticket": "Sibling x2",
+        "dates": "17 Aug – 21 Aug 2026",
+        "days": [
+          "2026-08-17",
+          "2026-08-18",
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "sessions": [
+          "Mon 17 Aug 2026 · 08:30 – 16:00",
+          "Tue 18 Aug 2026 · 08:30 – 16:00",
+          "Wed 19 Aug 2026 · 08:30 – 16:00",
+          "Thu 20 Aug 2026 · 08:30 – 16:00",
+          "Fri 21 Aug 2026 · 08:30 – 16:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Funded",
+        "method": "Tax-Free Childcare",
+        "amount": 200,
+        "amountPaid": 200,
+        "voucherScheme": "Tax-Free Childcare",
+        "addons": [],
+        "answers": [],
+        "note": "TFC ref TFC-90441",
+        "recon": true,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1180",
+        "bid": "B1180",
+        "createdAt": "2026-08-02T11:24:00Z",
+        "booker": "Rebecca Hughes",
+        "email": "rebecca.hughes@example.co.uk",
+        "phone": "07700 900180",
+        "child": "George Hughes",
+        "age": 8,
+        "kids": [
+          {
+            "name": "George Hughes",
+            "age": 8
+          }
+        ],
+        "listing": "Football Academy",
+        "pass": "Full week",
+        "ticket": "Standard",
+        "dates": "10 Aug – 14 Aug 2026",
+        "days": [
+          "2026-08-10",
+          "2026-08-11",
+          "2026-08-12",
+          "2026-08-13",
+          "2026-08-14"
+        ],
+        "sessions": [
+          "Mon 10 Aug 2026 · 09:00 – 15:00",
+          "Tue 11 Aug 2026 · 09:00 – 15:00",
+          "Wed 12 Aug 2026 · 09:00 – 15:00",
+          "Thu 13 Aug 2026 · 09:00 – 15:00",
+          "Fri 14 Aug 2026 · 09:00 – 15:00"
+        ],
+        "status": "Confirmed",
+        "pay": "Invoice sent",
+        "method": "Card",
+        "amount": 120,
+        "amountPaid": 0,
+        "addons": [],
+        "answers": [],
+        "note": "Invoice INV-2043 issued",
+        "recon": false,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1200",
+        "bid": "B1200",
+        "createdAt": "2026-08-06T19:10:00Z",
+        "booker": "Amelia Ward",
+        "email": "amelia.ward@example.co.uk",
+        "phone": "07700 900200",
+        "child": "Noah Ward",
+        "age": 7,
+        "kids": [
+          {
+            "name": "Noah Ward",
+            "age": 7
+          }
+        ],
+        "listing": "Gymnastics Camp",
+        "pass": "3 days",
+        "ticket": "Standard",
+        "dates": "17 Aug – 19 Aug 2026",
+        "days": [
+          "2026-08-17",
+          "2026-08-18",
+          "2026-08-19"
+        ],
+        "sessions": [
+          "Mon 17 Aug 2026 · 09:30 – 12:30",
+          "Tue 18 Aug 2026 · 09:30 – 12:30",
+          "Wed 19 Aug 2026 · 09:30 – 12:30"
+        ],
+        "status": "Waitlisted",
+        "pay": "Unpaid",
+        "method": "Card",
+        "amount": 135,
+        "amountPaid": 0,
+        "addons": [],
+        "answers": [],
+        "note": "On the waiting list",
+        "recon": false,
+        "evid": null,
+        "cancel": null
+      },
+      {
+        "ref": "R-1201",
+        "bid": "B1201",
+        "createdAt": "2026-08-05T20:40:00Z",
+        "booker": "Jacob Reed",
+        "email": "jacob.reed@example.co.uk",
+        "phone": "07700 900201",
+        "child": "Ethan Reed",
+        "age": 10,
+        "kids": [
+          {
+            "name": "Ethan Reed",
+            "age": 10
+          }
+        ],
+        "listing": "Forest School Adventure",
+        "pass": "Full week",
+        "ticket": "Standard",
+        "dates": "17 Aug – 21 Aug 2026",
+        "days": [
+          "2026-08-17",
+          "2026-08-18",
+          "2026-08-19",
+          "2026-08-20",
+          "2026-08-21"
+        ],
+        "sessions": [
+          "Mon 17 Aug 2026 · 09:00 – 15:30",
+          "Tue 18 Aug 2026 · 09:00 – 15:30",
+          "Wed 19 Aug 2026 · 09:00 – 15:30",
+          "Thu 20 Aug 2026 · 09:00 – 15:30",
+          "Fri 21 Aug 2026 · 09:00 – 15:30"
+        ],
+        "status": "Declined",
+        "pay": "Unpaid",
+        "method": "Card",
+        "amount": 160,
+        "amountPaid": 0,
+        "addons": [],
+        "answers": [],
+        "note": "Camp full for those dates",
+        "declineReason": "Fully booked",
+        "recon": false,
+        "evid": null,
+        "cancel": null
+      }
+    ],
+    "/api/invoices": {
+      "items": [
+        {
+          "id": "INV-2041",
+          "customerName": "Grace Bennett",
+          "amount": 160,
+          "date": "2026-07-10",
+          "dueDate": "2026-07-24",
+          "status": "sent",
+          "overdue": true
+        },
+        {
+          "id": "INV-2042",
+          "customerName": "Tom Richardson",
+          "amount": 100,
+          "date": "2026-07-18",
+          "dueDate": "2026-08-01",
+          "status": "sent",
+          "overdue": true
+        },
+        {
+          "id": "INV-2047",
+          "customerName": "Jacob Reed",
+          "amount": 90,
+          "date": "2026-06-28",
+          "dueDate": "2026-07-12",
+          "status": "sent",
+          "overdue": true
+        },
+        {
+          "id": "INV-2043",
+          "customerName": "Rebecca Hughes",
+          "amount": 120,
+          "date": "2026-08-02",
+          "dueDate": "2026-08-16",
+          "status": "sent",
+          "overdue": false
+        },
+        {
+          "id": "INV-2046",
+          "customerName": "Amelia Ward",
+          "amount": 220,
+          "date": "2026-08-05",
+          "dueDate": "2026-08-19",
+          "status": "sent",
+          "overdue": false
+        },
+        {
+          "id": "INV-2044",
+          "customerName": "Nathan Cook",
+          "amount": 180,
+          "date": "2026-08-04",
+          "dueDate": "2026-08-18",
+          "status": "paid",
+          "overdue": false
+        },
+        {
+          "id": "INV-2045",
+          "customerName": "Charlotte Evans",
+          "amount": 135,
+          "date": "2026-07-08",
+          "dueDate": "2026-07-22",
+          "status": "paid",
+          "overdue": false
+        },
+        {
+          "id": "INV-2048",
+          "customerName": "Sarah Thompson",
+          "amount": 200,
+          "date": "2026-06-03",
+          "dueDate": "2026-06-17",
+          "status": "paid",
+          "overdue": false
+        }
+      ],
+      "summary": {
+        "count": 8,
+        "outstanding": 690,
+        "collected": 515,
+        "overdue": 350
+      }
+    },
+    "/api/payments": [
+      {
+        "id": "PM-9017",
+        "refs": [
+          "R-1175"
+        ],
+        "email": "sophie.green@example.co.uk",
+        "amount": 200,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-08-11T07:02:00Z"
+      },
+      {
+        "id": "PM-9003",
+        "refs": [
+          "R-1172"
+        ],
+        "email": "daniel.scott@example.co.uk",
+        "amount": 110,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-08-10T08:20:00Z"
+      },
+      {
+        "id": "PM-9002",
+        "refs": [
+          "R-1168"
+        ],
+        "email": "hannah.lewis@example.co.uk",
+        "amount": 160,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-08-07T14:35:00Z"
+      },
+      {
+        "id": "PM-9001",
+        "refs": [
+          "R-1161"
+        ],
+        "email": "nathan.cook@example.co.uk",
+        "amount": 180,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-08-04T09:05:00Z"
+      },
+      {
+        "id": "PM-9004",
+        "refs": [
+          "R-1150"
+        ],
+        "email": "olivia.turner@example.co.uk",
+        "amount": 95,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-07-29T15:55:00Z"
+      },
+      {
+        "id": "PM-9005",
+        "refs": [
+          "R-1140"
+        ],
+        "email": "emma.wilson@example.co.uk",
+        "amount": 120,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-07-22T12:41:00Z"
+      },
+      {
+        "id": "PM-9006",
+        "refs": [
+          "R-1135"
+        ],
+        "email": "tom.richardson@example.co.uk",
+        "amount": 150,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-07-15T10:08:00Z"
+      },
+      {
+        "id": "PM-9007",
+        "refs": [
+          "R-1121"
+        ],
+        "email": "charlotte.evans@example.co.uk",
+        "amount": 135,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-07-08T16:34:00Z"
+      },
+      {
+        "id": "PM-9008",
+        "refs": [
+          "R-1092"
+        ],
+        "email": "sarah.thompson@example.co.uk",
+        "amount": 200,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-06-03T10:01:00Z"
+      },
+      {
+        "id": "PM-9010",
+        "refs": [
+          "R-1085"
+        ],
+        "email": "david.clarke@example.co.uk",
+        "amount": 120,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-05-20T08:22:00Z"
+      },
+      {
+        "id": "PM-9011",
+        "refs": [
+          "R-1061"
+        ],
+        "email": "liam.oconnor@example.co.uk",
+        "amount": 145,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-04-22T18:29:00Z"
+      },
+      {
+        "id": "PM-9013",
+        "refs": [
+          "R-1041"
+        ],
+        "email": "sarah.thompson@example.co.uk",
+        "amount": 120,
+        "type": "payment",
+        "status": "paid",
+        "createdAt": "2026-03-05T10:15:00Z"
+      },
+      {
+        "id": "PM-9009",
+        "refs": [
+          "R-1078"
+        ],
+        "email": "priya.sharma@example.co.uk",
+        "amount": 90,
+        "type": "refund",
+        "status": "refunded",
+        "createdAt": "2026-05-10T12:00:00Z"
+      },
+      {
+        "id": "PM-9012",
+        "refs": [
+          "R-1135"
+        ],
+        "email": "tom.richardson@example.co.uk",
+        "amount": 25,
+        "type": "refund",
+        "status": "refunded",
+        "createdAt": "2026-07-30T09:00:00Z"
+      }
+    ],
+    "/api/payments/status": {
+      "connected": true,
+      "payoutsEnabled": true,
+      "chargesEnabled": true,
+      "detailsSubmitted": true
+    }
+  },
+  "newsfeed": {
+    "/api/me": {
+      "role": "freelancer",
+      "name": "Hannah Whitfield",
+      "tenantId": "VOiiaTnDNd03MLbZaVcM"
+    },
+    "/api/library": null,
+    "/api/listings": [
+      {
+        "id": "lst_multisports",
+        "title": "Multi-Sports Holiday Camp"
+      },
+      {
+        "id": "lst_football",
+        "title": "Football Academy"
+      },
+      {
+        "id": "lst_gymnastics",
+        "title": "Gymnastics Stars"
+      },
+      {
+        "id": "lst_forest",
+        "title": "Forest School Adventures"
+      },
+      {
+        "id": "lst_dance",
+        "title": "Dance & Drama Week"
+      },
+      {
+        "id": "lst_tennis",
+        "title": "Junior Tennis Camp"
+      }
+    ],
+    "/api/discounts": [
+      {
+        "code": "SUMMER10",
+        "type": "percent",
+        "value": 10,
+        "expiry": "31 Aug 2026",
+        "active": true
+      },
+      {
+        "code": "SIBLING5",
+        "type": "perAttendee",
+        "value": 5,
+        "expiry": "31 Dec 2026",
+        "active": true
+      },
+      {
+        "code": "EARLYBIRD",
+        "type": "fixed",
+        "value": 15,
+        "expiry": "01 Jul 2026",
+        "active": true
+      },
+      {
+        "code": "AUGUST20",
+        "type": "percent",
+        "value": 20,
+        "active": true
+      },
+      {
+        "code": "OLDCODE",
+        "type": "fixed",
+        "value": 8,
+        "expiry": "01 Jan 2026",
+        "active": false
+      }
+    ],
+    "/api/posts": [
+      {
+        "id": "post_urgent_heat",
+        "tpl": "urgent",
+        "title": "Heatwave — extra water & sun cream on Wednesday",
+        "body": "With temperatures forecast to reach 31°C on Wednesday 13 August, please send your child with a named refillable water bottle, a sun hat and sun cream already applied before drop-off. We'll keep the children in the shade during the hottest part of the day and move the afternoon football session indoors. Please tap Acknowledge so we know you've seen this.",
+        "priority": "urgent",
+        "pinned": true,
+        "ackRequired": true,
+        "react": true,
+        "status": "published",
+        "audience": "all",
+        "audLabel": "All families",
+        "seen": 142,
+        "reactions": 9,
+        "ref": "NF-1042",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-10T08:15:00.000Z"
+      },
+      {
+        "id": "post_reminder_kit",
+        "tpl": "reminder",
+        "title": "Don't forget: trainers & packed lunch",
+        "body": "A quick reminder that every child needs a packed lunch, a mid-morning snack and clean trainers each day. We're a nut-free camp, so please avoid anything containing nuts. Lost property is emptied every Friday.",
+        "colour": "#f59e0b",
+        "pinned": true,
+        "react": true,
+        "status": "published",
+        "audience": "all",
+        "audLabel": "All families",
+        "folder": "Policies",
+        "seen": 118,
+        "reactions": 4,
+        "ref": "NF-1038",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-09T16:40:00.000Z"
+      },
+      {
+        "id": "post_event_sportsday",
+        "tpl": "event",
+        "title": "End-of-summer Sports Day & family picnic",
+        "body": "Join us for our end-of-summer celebration! Races, a tug-of-war, medals for every child and a family picnic on the field. Parents, carers and siblings are all welcome — bring a blanket and your best cheering voices.",
+        "date": "Fri 22 Aug 2026",
+        "time": "10:00 – 13:00",
+        "location": "Kingsmead Recreation Ground, Guildford",
+        "react": true,
+        "status": "published",
+        "audience": "all",
+        "audLabel": "All families",
+        "folder": "Summer 2026",
+        "rsvp": {
+          "yes": 47,
+          "no": 6,
+          "maybe": 12
+        },
+        "cta": {
+          "label": "RSVP now",
+          "url": "https://forms.example.com/sportsday"
+        },
+        "seen": 131,
+        "reactions": 23,
+        "ref": "NF-1035",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-08T11:05:00.000Z"
+      },
+      {
+        "id": "post_booking_forest",
+        "tpl": "booking",
+        "title": "Last spaces — Forest School Adventures",
+        "body": "Only a handful of places left on our Forest School week (25–29 August). Den building, campfire cooking, bug hunts and woodland crafts for ages 5–11. Book soon to avoid missing out!",
+        "colour": "#15b364",
+        "react": true,
+        "status": "published",
+        "audience": "all",
+        "audLabel": "All families",
+        "cta": {
+          "label": "Book now",
+          "target": "Forest School Adventures",
+          "listingId": "lst_forest"
+        },
+        "seen": 96,
+        "reactions": 11,
+        "ref": "NF-1031",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-07T09:30:00.000Z"
+      },
+      {
+        "id": "post_celebrate_medals",
+        "tpl": "celebrate",
+        "title": "Gymnastics Stars smash their badges!",
+        "body": "A huge well done to our Gymnastics Stars group — 18 children earned their bronze and silver badges this week. Special shout-out to Amelia, Noah and Priya for their brilliant beam routines. We're so proud of every one of them!",
+        "react": true,
+        "status": "published",
+        "audience": "listing",
+        "audId": "lst_gymnastics",
+        "audIds": [
+          "lst_gymnastics"
+        ],
+        "audLabel": "Listings: Gymnastics Stars",
+        "seen": 54,
+        "reactions": 38,
+        "ref": "NF-1028",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-06T15:20:00.000Z",
+        "editedAt": "2026-08-06T15:45:00.000Z"
+      },
+      {
+        "id": "post_announce_welcome",
+        "tpl": "announce",
+        "title": "Welcome to summer camp 2026!",
+        "body": "We can't wait to get started. Camp runs Monday to Friday, 9am–3:30pm, with early drop-off from 8am and late pick-up until 5pm available. Your daily register, photos and any messages will all appear right here in your app. Here's to a brilliant summer!",
+        "react": true,
+        "status": "published",
+        "audience": "all",
+        "audLabel": "All families",
+        "folder": "Summer 2026",
+        "seen": 156,
+        "reactions": 27,
+        "ref": "NF-1001",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-07-21T10:00:00.000Z"
+      },
+      {
+        "id": "post_newsletter_august",
+        "tpl": "newsletter",
+        "title": "August at Whitfield Activity Camps",
+        "body": "This month at Whitfield Activity Camps — what's on, our summer offer, and a look back at a brilliant few weeks.",
+        "react": true,
+        "status": "published",
+        "audience": "all",
+        "audLabel": "All families",
+        "folder": "Summer 2026",
+        "seen": 128,
+        "reactions": 19,
+        "ref": "NF-1030",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-05T12:00:00.000Z",
+        "newsletter": {
+          "layout": "classic",
+          "palette": "sky",
+          "company": {
+            "name": "Whitfield Activity Camps",
+            "phone": "01483 555 0123",
+            "email": "hello@whitfieldcamps.co.uk",
+            "address": "Kingsmead Pavilion, Guildford, GU1 4TX",
+            "logo": ""
+          },
+          "blocks": [
+            {
+              "t": "banner"
+            },
+            {
+              "t": "hero",
+              "heading": "This month at Whitfield Activity Camps",
+              "body": "Long summer days, happy children and plenty still to come. Here's everything you need to know for August."
+            },
+            {
+              "t": "heading",
+              "heading": "What's on"
+            },
+            {
+              "t": "text",
+              "body": "Multi-Sports, Football Academy and Gymnastics Stars run every week through to 29 August. Our ever-popular Forest School Adventures returns for its final week of the summer from 25 August — with just a few spaces left."
+            },
+            {
+              "t": "eventbar",
+              "date": "Fri 22 Aug 2026",
+              "time": "10:00 – 13:00",
+              "location": "Kingsmead Recreation Ground"
+            },
+            {
+              "t": "columns",
+              "left": "Please pack a nut-free lunch, a snack, a named water bottle, a sun hat and sun cream every day.",
+              "right": "Early drop-off from 8am and late pick-up until 5pm are available — just let us know the day before."
+            },
+            {
+              "t": "discount",
+              "code": "SUMMER10",
+              "codeDesc": "10% off your next booking — this week only."
+            },
+            {
+              "t": "button",
+              "label": "Book your place",
+              "url": "https://whitfieldcamps.co.uk/book",
+              "listingTitle": "Summer Camp"
+            },
+            {
+              "t": "quote",
+              "body": "My two have come home exhausted and beaming every single day. Thank you!",
+              "heading": "— Sarah, parent"
+            },
+            {
+              "t": "footer"
+            }
+          ]
+        }
+      },
+      {
+        "id": "post_reminder_photos",
+        "tpl": "reminder",
+        "title": "Photo consent — please check your settings",
+        "body": "We love sharing the fun on the Newsfeed. If you'd prefer your child's photo not to be shared, you can update your consent in your account settings at any time and we'll honour it straight away.",
+        "colour": "#f59e0b",
+        "react": true,
+        "status": "published",
+        "audience": "all",
+        "audLabel": "All families",
+        "folder": "Policies",
+        "seen": 89,
+        "reactions": 2,
+        "ref": "NF-1024",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-04T08:50:00.000Z"
+      },
+      {
+        "id": "post_draft_openday",
+        "tpl": "announce",
+        "title": "Autumn term clubs — coming soon",
+        "body": "We're putting the finishing touches to our after-school and Saturday clubs for the autumn term. Football, gymnastics and a brand-new coding club will be on offer. Full details and booking to follow — watch this space!",
+        "react": true,
+        "status": "draft",
+        "audience": "all",
+        "audLabel": "All families",
+        "seen": 0,
+        "reactions": 0,
+        "ref": "NF-1050",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-11T07:20:00.000Z"
+      },
+      {
+        "id": "post_scheduled_lastday",
+        "tpl": "event",
+        "title": "Last day of summer camp — dress-up Friday!",
+        "body": "Our final day of the summer holidays is a costume day — superheroes, princesses, dinosaurs, anything goes! There'll be a disco in the afternoon and a certificate for every child. Normal pick-up times apply.",
+        "date": "Fri 29 Aug 2026",
+        "time": "09:00 – 15:30",
+        "location": "Kingsmead Pavilion",
+        "react": true,
+        "status": "scheduled",
+        "publishAt": "27 Aug 2026, 08:00",
+        "audience": "all",
+        "audLabel": "All families",
+        "folder": "Summer 2026",
+        "seen": 0,
+        "reactions": 0,
+        "ref": "NF-1048",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-10T13:10:00.000Z"
+      },
+      {
+        "id": "post_booking_tennis",
+        "tpl": "booking",
+        "title": "New! Junior Tennis Camp — August week",
+        "body": "By popular demand we've added a Junior Tennis Camp for ages 7–12, running 18–22 August. All equipment provided, coached by LTA-qualified staff. £145 for the week, with sibling discounts available.",
+        "colour": "#15b364",
+        "react": true,
+        "status": "published",
+        "audience": "listing",
+        "audId": "lst_tennis",
+        "audIds": [
+          "lst_tennis"
+        ],
+        "audLabel": "Listings: Junior Tennis Camp",
+        "cta": {
+          "label": "Reserve a place",
+          "target": "Junior Tennis Camp",
+          "listingId": "lst_tennis"
+        },
+        "seen": 63,
+        "reactions": 8,
+        "ref": "NF-1026",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-08-03T10:15:00.000Z"
+      },
+      {
+        "id": "post_archived_julyclose",
+        "tpl": "announce",
+        "title": "Bank holiday closure — 25 May",
+        "body": "A reminder that camp was closed on Monday 25 May for the spring bank holiday. All bookings for that day were automatically credited to your wallet.",
+        "react": true,
+        "status": "archived",
+        "audience": "all",
+        "audLabel": "All families",
+        "seen": 74,
+        "reactions": 1,
+        "ref": "NF-0987",
+        "postedByName": "Hannah Whitfield",
+        "createdAt": "2026-05-20T09:00:00.000Z"
+      }
+    ]
+  },
+  "purchasing": {
+    "/api/invoices": {
+      "items": [
+        {
+          "id": "inv-2601",
+          "customerName": "Sarah Whitfield",
+          "customerEmail": "sarah.whitfield@gmail.com",
+          "customerAddress": "14 Bramble Close, Milton Keynes, MK4 2QP",
+          "reference": "INV-1042",
+          "bookingRef": "BK-8841",
+          "description": "Summer Holiday Camp — Week 1 (Olivia, age 8)",
+          "amount": 180,
+          "lineItems": [
+            {
+              "description": "Holiday Camp full day x5",
+              "qty": 5,
+              "unitPrice": 36
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-08-03",
+          "dueDate": "2026-08-17",
+          "status": "paid",
+          "paidVia": "link",
+          "paidAt": "2026-08-05",
+          "notes": "Paid promptly via card link."
+        },
+        {
+          "id": "inv-2602",
+          "customerName": "James Okafor",
+          "customerEmail": "j.okafor@outlook.com",
+          "customerAddress": "3 Willow Bank, Bletchley, MK2 3HN",
+          "reference": "INV-1043",
+          "description": "Multi-Sports Camp — Week 2 (Daniel, age 10)",
+          "amount": 165,
+          "lineItems": [
+            {
+              "description": "Multi-Sports full day x5",
+              "qty": 5,
+              "unitPrice": 33
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-08-04",
+          "dueDate": "2026-08-18",
+          "status": "paid",
+          "paidVia": "manual",
+          "paidAt": "2026-08-06",
+          "notes": "Bank transfer received."
+        },
+        {
+          "id": "inv-2603",
+          "customerName": "Priya Sharma",
+          "customerEmail": "priya.sharma88@gmail.com",
+          "customerAddress": "27 Fenny Road, Stony Stratford, MK11 1AA",
+          "reference": "INV-1044",
+          "poNumber": "PO-5567",
+          "accountRef": "ACME-SCHOOL",
+          "description": "Forest School block — 6 sessions (Aarav, age 6)",
+          "amount": 210,
+          "lineItems": [
+            {
+              "description": "Forest School session",
+              "qty": 6,
+              "unitPrice": 35
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-07-28",
+          "dueDate": "2026-08-11",
+          "status": "sent",
+          "emailedAt": "2026-07-28",
+          "notes": "Awaiting payment."
+        },
+        {
+          "id": "inv-2604",
+          "customerName": "Emma Thompson",
+          "customerEmail": "emma.t@hotmail.com",
+          "customerAddress": "9 Ashby Grove, Wolverton, MK12 5LR",
+          "reference": "INV-1045",
+          "description": "Gymnastics Camp — Week 3 (Grace, age 7)",
+          "amount": 150,
+          "lineItems": [
+            {
+              "description": "Gymnastics full day x5",
+              "qty": 5,
+              "unitPrice": 30
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-08-01",
+          "dueDate": "2026-08-15",
+          "status": "sent",
+          "emailedAt": "2026-08-01"
+        },
+        {
+          "id": "inv-2605",
+          "customerName": "Michael Brennan",
+          "customerEmail": "m.brennan@gmail.com",
+          "customerAddress": "41 Tanners Drive, Blakelands, MK14 5BN",
+          "reference": "INV-1039",
+          "description": "Football Camp — July (Jack, age 9)",
+          "amount": 132,
+          "lineItems": [
+            {
+              "description": "Football half day x8",
+              "qty": 8,
+              "unitPrice": 16.5
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-07-06",
+          "dueDate": "2026-07-20",
+          "status": "sent",
+          "emailedAt": "2026-07-06",
+          "overdue": true,
+          "notes": "Overdue — chase sent."
+        },
+        {
+          "id": "inv-2606",
+          "customerName": "Laura Bennett",
+          "customerEmail": "laura.bennett@gmail.com",
+          "customerAddress": "5 Coriander Court, Newport Pagnell, MK16 0FG",
+          "reference": "INV-1046",
+          "description": "Holiday Camp — Week 4 (Sophie, age 5 & Ethan, age 8)",
+          "amount": 320,
+          "lineItems": [
+            {
+              "description": "Holiday Camp full day x5 (Sophie)",
+              "qty": 5,
+              "unitPrice": 32
+            },
+            {
+              "description": "Holiday Camp full day x5 (Ethan)",
+              "qty": 5,
+              "unitPrice": 32
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-08-08",
+          "dueDate": "2026-08-22",
+          "status": "paid",
+          "paidVia": "link",
+          "paidAt": "2026-08-09"
+        },
+        {
+          "id": "inv-2607",
+          "customerName": "David Nwosu",
+          "customerEmail": "david.nwosu@yahoo.co.uk",
+          "customerAddress": "18 Cedar Way, Shenley Brook End, MK5 7AB",
+          "reference": "INV-1047",
+          "description": "Draft — Autumn after-school club (Chloe, age 6)",
+          "amount": 96,
+          "lineItems": [
+            {
+              "description": "After-school session x8",
+              "qty": 8,
+              "unitPrice": 12
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-08-10",
+          "status": "draft"
+        },
+        {
+          "id": "inv-2608",
+          "customerName": "Hannah Clarke",
+          "customerEmail": "hannah.clarke@gmail.com",
+          "customerAddress": "22 Linford Lane, Willen, MK15 9DL",
+          "reference": "INV-1041",
+          "description": "Multi-Sports Camp — Week 1 (Ruby, age 7)",
+          "amount": 165,
+          "lineItems": [
+            {
+              "description": "Multi-Sports full day x5",
+              "qty": 5,
+              "unitPrice": 33
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-07-27",
+          "dueDate": "2026-08-10",
+          "status": "paid",
+          "paidVia": "link",
+          "paidAt": "2026-07-30"
+        },
+        {
+          "id": "inv-2609",
+          "customerName": "Robert Fielding",
+          "customerEmail": "rob.fielding@gmail.com",
+          "customerAddress": "7 Kingsmead, Loughton, MK5 8AA",
+          "reference": "INV-1038",
+          "description": "Cancelled — camp withdrawn (Leo, age 11)",
+          "amount": 165,
+          "lineItems": [
+            {
+              "description": "Multi-Sports full day x5",
+              "qty": 5,
+              "unitPrice": 33
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-07-02",
+          "dueDate": "2026-07-16",
+          "status": "cancelled",
+          "notes": "Family cancelled, credit issued."
+        },
+        {
+          "id": "inv-2610",
+          "customerName": "Aisha Malik",
+          "customerEmail": "aisha.malik@gmail.com",
+          "customerAddress": "33 Downland, Two Mile Ash, MK8 8AF",
+          "reference": "INV-1048",
+          "description": "Gymnastics Camp — Week 4 (Zara, age 6)",
+          "amount": 150,
+          "lineItems": [
+            {
+              "description": "Gymnastics full day x5",
+              "qty": 5,
+              "unitPrice": 30
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-08-09",
+          "dueDate": "2026-08-23",
+          "status": "sent",
+          "emailedAt": "2026-08-09"
+        },
+        {
+          "id": "inv-2611",
+          "customerName": "Tom Richardson",
+          "customerEmail": "tom.richardson@gmail.com",
+          "customerAddress": "12 Great Monks Street, Fullers Slade, MK11 2BW",
+          "reference": "INV-1040",
+          "description": "Forest School — July block (Noah, age 5)",
+          "amount": 175,
+          "lineItems": [
+            {
+              "description": "Forest School session",
+              "qty": 5,
+              "unitPrice": 35
+            }
+          ],
+          "taxRate": 0,
+          "date": "2026-07-14",
+          "dueDate": "2026-07-28",
+          "status": "paid",
+          "paidVia": "manual",
+          "paidAt": "2026-07-19"
+        }
+      ],
+      "summary": {
+        "count": 11,
+        "outstanding": 675,
+        "collected": 990,
+        "overdue": 132
+      }
+    },
+    "/api/income": {
+      "items": [
+        {
+          "id": "inc-501",
+          "date": "2026-08-10",
+          "category": "Sessions",
+          "amount": 96,
+          "source": "Door takings — Mon multi-sports",
+          "method": "Cash",
+          "notes": "3 drop-ins paid on the day",
+          "listingId": "lst-multisports"
+        },
+        {
+          "id": "inc-502",
+          "date": "2026-08-07",
+          "category": "Camps",
+          "amount": 360,
+          "source": "Holiday Camp Week 3 — card machine",
+          "method": "Card",
+          "listingId": "lst-holidaycamp"
+        },
+        {
+          "id": "inc-503",
+          "date": "2026-08-05",
+          "category": "Grants",
+          "amount": 2400,
+          "source": "HAF funding — Milton Keynes Council (Aug)",
+          "method": "Bank transfer",
+          "notes": "Summer HAF places, 40 funded sessions"
+        },
+        {
+          "id": "inc-504",
+          "date": "2026-08-03",
+          "category": "Memberships",
+          "amount": 45,
+          "source": "Gold membership renewal — Whitfield",
+          "method": "Card",
+          "repeat": "monthly",
+          "repeatUntil": "2027-08-03",
+          "seriesId": "mem-whitfield"
+        },
+        {
+          "id": "inc-505",
+          "date": "2026-08-02",
+          "category": "Merchandise",
+          "amount": 84,
+          "source": "Club hoodies x7",
+          "method": "Card",
+          "listingId": "lst-holidaycamp"
+        },
+        {
+          "id": "inc-506",
+          "date": "2026-07-29",
+          "category": "Deposits",
+          "amount": 150,
+          "source": "Autumn camp deposits x6",
+          "method": "Bank transfer"
+        },
+        {
+          "id": "inc-507",
+          "date": "2026-07-24",
+          "category": "Sessions",
+          "amount": 132,
+          "source": "Football pay-and-play evenings",
+          "method": "PayPal",
+          "listingId": "lst-football"
+        },
+        {
+          "id": "inc-508",
+          "date": "2026-07-20",
+          "category": "Camps",
+          "amount": 495,
+          "source": "Multi-Sports Week 1 — Tax-Free Childcare",
+          "method": "Tax-Free Childcare",
+          "listingId": "lst-multisports"
+        },
+        {
+          "id": "inc-509",
+          "date": "2026-07-15",
+          "category": "Fundraising",
+          "amount": 218.5,
+          "source": "Summer fete — cake stall & raffle",
+          "method": "Cash"
+        },
+        {
+          "id": "inc-510",
+          "date": "2026-07-10",
+          "category": "Camps",
+          "amount": 288,
+          "source": "Gymnastics Week 1 — childcare vouchers",
+          "method": "Childcare vouchers",
+          "listingId": "lst-gymnastics"
+        },
+        {
+          "id": "inc-511",
+          "date": "2026-07-03",
+          "category": "Memberships",
+          "amount": 45,
+          "source": "Gold membership — Whitfield",
+          "method": "Card",
+          "repeat": "monthly",
+          "repeatUntil": "2027-08-03",
+          "seriesId": "mem-whitfield"
+        },
+        {
+          "id": "inc-512",
+          "date": "2026-06-26",
+          "category": "Sessions",
+          "amount": 72,
+          "source": "Forest School drop-ins",
+          "method": "Cash",
+          "listingId": "lst-forestschool"
+        },
+        {
+          "id": "inc-513",
+          "date": "2026-06-12",
+          "category": "Grants",
+          "amount": 1500,
+          "source": "Sport England small grant",
+          "method": "Bank transfer"
+        },
+        {
+          "id": "inc-514",
+          "date": "2026-05-18",
+          "category": "Other",
+          "amount": 60,
+          "source": "Venue hire recharge — birthday party",
+          "method": "Bank transfer"
+        },
+        {
+          "id": "inc-515",
+          "date": "2026-04-09",
+          "category": "Camps",
+          "amount": 420,
+          "source": "Easter camp balance takings",
+          "method": "Card",
+          "listingId": "lst-holidaycamp"
+        }
+      ],
+      "summary": {
+        "total": 6595.5,
+        "count": 15,
+        "byCategory": {
+          "Sessions": 300,
+          "Camps": 1563,
+          "Memberships": 90,
+          "Merchandise": 84,
+          "Grants": 3900,
+          "Fundraising": 218.5,
+          "Deposits": 150,
+          "Other": 60
+        }
+      }
+    },
+    "/api/bookings": [
+      {
+        "ref": "BK-8841",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 180,
+        "amountPaid": 180,
+        "createdAt": "2026-08-05",
+        "booker": "Sarah Whitfield",
+        "listing": "Summer Holiday Camp",
+        "listingId": "lst-holidaycamp"
+      },
+      {
+        "ref": "BK-8842",
+        "pay": "Paid",
+        "method": "Tax-Free Childcare",
+        "amount": 165,
+        "amountPaid": 165,
+        "createdAt": "2026-08-04",
+        "booker": "James Okafor",
+        "listing": "Multi-Sports Camp",
+        "listingId": "lst-multisports"
+      },
+      {
+        "ref": "BK-8843",
+        "pay": "Part paid",
+        "method": "Bank transfer",
+        "amount": 210,
+        "amountPaid": 105,
+        "createdAt": "2026-08-02",
+        "booker": "Priya Sharma",
+        "listing": "Forest School",
+        "listingId": "lst-forestschool"
+      },
+      {
+        "ref": "BK-8844",
+        "pay": "Paid",
+        "method": "Childcare vouchers",
+        "amount": 150,
+        "amountPaid": 150,
+        "createdAt": "2026-08-01",
+        "booker": "Emma Thompson",
+        "listing": "Gymnastics Camp",
+        "listingId": "lst-gymnastics"
+      },
+      {
+        "ref": "BK-8845",
+        "pay": "Unpaid",
+        "method": "Invoice",
+        "amount": 132,
+        "amountPaid": 0,
+        "createdAt": "2026-07-30",
+        "booker": "Michael Brennan",
+        "listing": "Football Camp",
+        "listingId": "lst-football"
+      },
+      {
+        "ref": "BK-8846",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 320,
+        "amountPaid": 320,
+        "createdAt": "2026-08-08",
+        "booker": "Laura Bennett",
+        "listing": "Summer Holiday Camp",
+        "listingId": "lst-holidaycamp"
+      },
+      {
+        "ref": "BK-8847",
+        "pay": "Paid",
+        "method": "HAF (funded £0)",
+        "amount": 0,
+        "amountPaid": 0,
+        "createdAt": "2026-08-06",
+        "booker": "Kelly Adams",
+        "listing": "Multi-Sports Camp",
+        "listingId": "lst-multisports"
+      },
+      {
+        "ref": "BK-8848",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 165,
+        "amountPaid": 165,
+        "createdAt": "2026-07-27",
+        "booker": "Hannah Clarke",
+        "listing": "Multi-Sports Camp",
+        "listingId": "lst-multisports"
+      },
+      {
+        "ref": "BK-8849",
+        "pay": "Paid",
+        "method": "PayPal",
+        "amount": 175,
+        "amountPaid": 175,
+        "createdAt": "2026-07-19",
+        "booker": "Tom Richardson",
+        "listing": "Forest School",
+        "listingId": "lst-forestschool"
+      },
+      {
+        "ref": "BK-8850",
+        "pay": "Paid",
+        "method": "Cash",
+        "amount": 96,
+        "amountPaid": 96,
+        "createdAt": "2026-08-10",
+        "booker": "Nadia Hussain",
+        "listing": "Multi-Sports Camp",
+        "listingId": "lst-multisports"
+      },
+      {
+        "ref": "BK-8851",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 288,
+        "amountPaid": 288,
+        "createdAt": "2026-07-10",
+        "booker": "Rachel Green",
+        "listing": "Gymnastics Camp",
+        "listingId": "lst-gymnastics"
+      },
+      {
+        "ref": "BK-8852",
+        "pay": "Part paid",
+        "method": "Bank transfer",
+        "amount": 360,
+        "amountPaid": 180,
+        "createdAt": "2026-08-07",
+        "booker": "Oliver Hunt",
+        "listing": "Summer Holiday Camp",
+        "listingId": "lst-holidaycamp"
+      },
+      {
+        "ref": "BK-8853",
+        "pay": "Paid",
+        "method": "Card",
+        "amount": 132,
+        "amountPaid": 132,
+        "createdAt": "2026-07-24",
+        "booker": "Sophie Walker",
+        "listing": "Football Camp",
+        "listingId": "lst-football"
+      }
+    ],
+    "/api/listings": [
+      {
+        "id": "lst-holidaycamp",
+        "seasonId": "s-summer-hols"
+      },
+      {
+        "id": "lst-multisports",
+        "seasonId": "s-summer-hols"
+      },
+      {
+        "id": "lst-gymnastics",
+        "seasonId": "s-summer-hols"
+      },
+      {
+        "id": "lst-forestschool",
+        "seasonId": "s-summer-hols"
+      },
+      {
+        "id": "lst-football",
+        "seasonId": "s-summer-2"
+      },
+      {
+        "id": "lst-afterschool",
+        "seasonId": "s-autumn-1"
+      }
+    ],
+    "/api/customers": [
+      {
+        "id": "cus-1",
+        "name": "Sarah Whitfield",
+        "email": "sarah.whitfield@gmail.com",
+        "children": [
+          {
+            "name": "Olivia Whitfield"
+          }
+        ]
+      },
+      {
+        "id": "cus-2",
+        "name": "James Okafor",
+        "email": "j.okafor@outlook.com",
+        "children": [
+          {
+            "name": "Daniel Okafor"
+          }
+        ]
+      },
+      {
+        "id": "cus-3",
+        "name": "Priya Sharma",
+        "email": "priya.sharma88@gmail.com",
+        "children": [
+          {
+            "name": "Aarav Sharma"
+          }
+        ]
+      },
+      {
+        "id": "cus-4",
+        "name": "Emma Thompson",
+        "email": "emma.t@hotmail.com",
+        "children": [
+          {
+            "name": "Grace Thompson"
+          }
+        ]
+      },
+      {
+        "id": "cus-5",
+        "name": "Michael Brennan",
+        "email": "m.brennan@gmail.com",
+        "children": [
+          {
+            "name": "Jack Brennan"
+          }
+        ]
+      },
+      {
+        "id": "cus-6",
+        "name": "Laura Bennett",
+        "email": "laura.bennett@gmail.com",
+        "children": [
+          {
+            "name": "Sophie Bennett"
+          },
+          {
+            "name": "Ethan Bennett"
+          }
+        ]
+      },
+      {
+        "id": "cus-7",
+        "name": "Hannah Clarke",
+        "email": "hannah.clarke@gmail.com",
+        "children": [
+          {
+            "name": "Ruby Clarke"
+          }
+        ]
+      },
+      {
+        "id": "cus-8",
+        "name": "Aisha Malik",
+        "email": "aisha.malik@gmail.com",
+        "children": [
+          {
+            "name": "Zara Malik"
+          }
+        ]
+      },
+      {
+        "id": "cus-9",
+        "name": "Tom Richardson",
+        "email": "tom.richardson@gmail.com",
+        "children": [
+          {
+            "name": "Noah Richardson"
+          }
+        ]
+      }
+    ],
+    "/api/library": {
+      "settings": {
+        "billing": {
+          "businessName": "Sunshine Sports & Camps",
+          "defaultTaxRate": 0,
+          "fields": {
+            "poNumber": true,
+            "accountRef": true,
+            "customerAddress": true
+          }
+        },
+        "seasons": [
+          {
+            "id": "s-summer-2",
+            "name": "Summer 2"
+          },
+          {
+            "id": "s-summer-hols",
+            "name": "Summer Holidays"
+          },
+          {
+            "id": "s-autumn-1",
+            "name": "Autumn 1"
+          },
+          {
+            "id": "s-oct-half",
+            "name": "Oct Half Term"
+          }
+        ]
+      },
+      "childQuestions": []
+    }
+  },
+  "staff": {
+    "/api/me": {
+      "role": "company",
+      "tenantName": "Sunrise Active Camps"
+    },
+    "/api/invites": [
+      {
+        "token": "inv_9f3a1c7b2e8d4a6f0b5c9d2e7a1f4b8c",
+        "role": "franchise",
+        "createdAt": "2026-07-14T09:12:00.000Z",
+        "usedBy": "franchise_leeds_north",
+        "sentTo": "leedsnorth@sunriseactive.co.uk"
+      },
+      {
+        "token": "inv_2b7e4d9a1f6c8035e2a4b7d1c9f0e3a6",
+        "role": "franchise",
+        "createdAt": "2026-07-22T14:35:00.000Z",
+        "usedBy": null,
+        "sentTo": "manchester.central@sunriseactive.co.uk"
+      },
+      {
+        "token": "inv_5c1a8f3b7d2e9046a1b3c5d7e9f1a2b4",
+        "role": "franchise",
+        "createdAt": "2026-08-01T11:05:00.000Z",
+        "usedBy": null,
+        "sentTo": null
+      },
+      {
+        "token": "inv_7d4b2a9c6f1e8350b2c4a6d8e0f2b4c6",
+        "role": "staff",
+        "createdAt": "2026-07-09T08:40:00.000Z",
+        "usedBy": "staff_emma_richardson",
+        "sentTo": "emma.richardson@sunriseactive.co.uk"
+      },
+      {
+        "token": "inv_1a6c3e8b5d0f7924a3b5c7d9e1f3a5b7",
+        "role": "staff",
+        "createdAt": "2026-07-18T16:20:00.000Z",
+        "usedBy": "staff_daniel_okafor",
+        "sentTo": "daniel.okafor@sunriseactive.co.uk"
+      },
+      {
+        "token": "inv_8e2b5d1a9c4f6738b1c3a5d7e9f0b2c4",
+        "role": "staff",
+        "createdAt": "2026-07-25T10:15:00.000Z",
+        "usedBy": null,
+        "sentTo": "sophie.turner@sunriseactive.co.uk"
+      },
+      {
+        "token": "inv_3f9c1b7d4a2e8560c3a5b7d9e1f2a4b6",
+        "role": "staff",
+        "createdAt": "2026-07-31T13:50:00.000Z",
+        "usedBy": null,
+        "sentTo": "james.patel@gmail.com"
+      },
+      {
+        "token": "inv_6b4d2f8a1c9e7350a2b4c6d8e0f1a3b5",
+        "role": "staff",
+        "createdAt": "2026-08-04T09:30:00.000Z",
+        "usedBy": null,
+        "sentTo": null
+      },
+      {
+        "token": "inv_4c8e2a6f1b9d7350c1a3b5d7e9f0b2a4",
+        "role": "staff",
+        "createdAt": "2026-08-07T15:45:00.000Z",
+        "usedBy": "staff_grace_bennett",
+        "sentTo": "grace.bennett@sunriseactive.co.uk"
+      },
+      {
+        "token": "inv_0d5b3f9c7a1e8462b0c2a4d6e8f1b3c5",
+        "role": "staff",
+        "createdAt": "2026-08-10T12:00:00.000Z",
+        "usedBy": null,
+        "sentTo": null
+      }
+    ]
+  },
+  "tasks": {
+    "/api/me": {
+      "role": "company",
+      "name": "Jordan Blake",
+      "email": "jordan@sunrisecamps.co.uk"
+    },
+    "/api/listings": [
+      {
+        "id": "lst_multisports",
+        "title": "Multi-Sports Holiday Camp",
+        "location": "Riverside Primary School"
+      },
+      {
+        "id": "lst_football",
+        "title": "Football Academy",
+        "location": "Bedford Leisure Centre"
+      },
+      {
+        "id": "lst_gymnastics",
+        "title": "Gymnastics Camp",
+        "location": "Kingsway Sports Hall"
+      },
+      {
+        "id": "lst_forest",
+        "title": "Forest School Adventures",
+        "location": "Oakwood Country Park"
+      },
+      {
+        "id": "lst_juniors",
+        "title": "Junior Multi-Sports",
+        "location": "Elmpark Community Centre"
+      },
+      {
+        "id": "lst_dance",
+        "title": "Dance & Drama Week",
+        "location": "Kingsway Sports Hall"
+      }
+    ],
+    "/api/bookings": [
+      {
+        "ref": "BK-2087",
+        "booker": "Sarah Whitfield",
+        "email": "sarah.whitfield@gmail.com",
+        "phone": "07712 445880",
+        "postcode": "MK40 2QR",
+        "child": "Oliver Whitfield",
+        "kids": [
+          {
+            "name": "Oliver Whitfield",
+            "age": 8
+          },
+          {
+            "name": "Emily Whitfield",
+            "age": 6
+          }
+        ],
+        "listing": "Multi-Sports Holiday Camp",
+        "pass": "Full week",
+        "dates": "10–14 Aug 2026"
+      },
+      {
+        "ref": "BK-2086",
+        "booker": "James Okafor",
+        "email": "j.okafor@outlook.com",
+        "phone": "07890 112233",
+        "postcode": "MK42 8LN",
+        "child": "Daniel Okafor",
+        "kids": [
+          {
+            "name": "Daniel Okafor",
+            "age": 10
+          }
+        ],
+        "listing": "Football Academy",
+        "pass": "3 days",
+        "dates": "11–13 Aug 2026"
+      },
+      {
+        "ref": "BK-2085",
+        "booker": "Priya Sharma",
+        "email": "priya.sharma88@gmail.com",
+        "phone": "07455 667788",
+        "postcode": "MK43 0PS",
+        "child": "Aanya Sharma",
+        "kids": [
+          {
+            "name": "Aanya Sharma",
+            "age": 7
+          },
+          {
+            "name": "Rohan Sharma",
+            "age": 9
+          }
+        ],
+        "listing": "Gymnastics Camp",
+        "pass": "Full week",
+        "dates": "10–14 Aug 2026"
+      },
+      {
+        "ref": "BK-2084",
+        "booker": "Emma Thompson",
+        "email": "emma.t@hotmail.co.uk",
+        "phone": "07701 334455",
+        "postcode": "MK41 9RT",
+        "child": "Sophie Thompson",
+        "kids": [
+          {
+            "name": "Sophie Thompson",
+            "age": 5
+          }
+        ],
+        "listing": "Forest School Adventures",
+        "pass": "2 days",
+        "dates": "12–13 Aug 2026"
+      },
+      {
+        "ref": "BK-2083",
+        "booker": "Michael Barda",
+        "email": "m.barda@gmail.com",
+        "phone": "07966 778899",
+        "postcode": "MK40 1DG",
+        "child": "Leo Barda",
+        "kids": [
+          {
+            "name": "Leo Barda",
+            "age": 11
+          },
+          {
+            "name": "Mia Barda",
+            "age": 8
+          }
+        ],
+        "listing": "Multi-Sports Holiday Camp",
+        "pass": "Full week",
+        "dates": "10–14 Aug 2026"
+      },
+      {
+        "ref": "BK-2082",
+        "booker": "Rebecca Nolan",
+        "email": "becky.nolan@gmail.com",
+        "phone": "07533 221100",
+        "postcode": "MK44 3EH",
+        "child": "Grace Nolan",
+        "kids": [
+          {
+            "name": "Grace Nolan",
+            "age": 9
+          }
+        ],
+        "listing": "Dance & Drama Week",
+        "pass": "Full week",
+        "dates": "10–14 Aug 2026"
+      },
+      {
+        "ref": "BK-2081",
+        "booker": "David Chen",
+        "email": "david.chen@yahoo.com",
+        "phone": "07844 556677",
+        "postcode": "MK42 7AB",
+        "child": "Lucas Chen",
+        "kids": [
+          {
+            "name": "Lucas Chen",
+            "age": 6
+          },
+          {
+            "name": "Chloe Chen",
+            "age": 4
+          }
+        ],
+        "listing": "Junior Multi-Sports",
+        "pass": "Full week",
+        "dates": "10–14 Aug 2026"
+      },
+      {
+        "ref": "BK-2080",
+        "booker": "Hannah Price",
+        "email": "hannah.price@icloud.com",
+        "phone": "07700 990011",
+        "postcode": "MK45 2WQ",
+        "child": "Isla Price",
+        "kids": [
+          {
+            "name": "Isla Price",
+            "age": 7
+          }
+        ],
+        "listing": "Football Academy",
+        "pass": "Full week",
+        "dates": "10–14 Aug 2026"
+      },
+      {
+        "ref": "BK-2079",
+        "booker": "Tom Fletcher",
+        "email": "tom.fletcher@gmail.com",
+        "phone": "07922 445566",
+        "postcode": "MK40 4JN",
+        "child": "Harry Fletcher",
+        "kids": [
+          {
+            "name": "Harry Fletcher",
+            "age": 10
+          },
+          {
+            "name": "Freya Fletcher",
+            "age": 12
+          }
+        ],
+        "listing": "Gymnastics Camp",
+        "pass": "3 days",
+        "dates": "11–13 Aug 2026"
+      },
+      {
+        "ref": "BK-2078",
+        "booker": "Sarah Whitfield",
+        "email": "sarah.whitfield@gmail.com",
+        "phone": "07712 445880",
+        "postcode": "MK40 2QR",
+        "child": "Oliver Whitfield",
+        "kids": [
+          {
+            "name": "Oliver Whitfield",
+            "age": 8
+          }
+        ],
+        "listing": "Forest School Adventures",
+        "pass": "1 day",
+        "dates": "18 Aug 2026"
+      }
+    ],
+    "/api/tasks": [
+      {
+        "id": "tsk_001",
+        "t": "Call the Barda family — confirm Mia's inhaler is in her bag",
+        "who": "Jordan Blake",
+        "prio": "urgent",
+        "due": "2026-08-08",
+        "time": "09:30",
+        "status": "prog",
+        "link": {
+          "k": "parent",
+          "v": "Michael Barda",
+          "href": "/company/families/BK-2083"
+        },
+        "cat": "Welfare",
+        "labels": [
+          "medical",
+          "follow-up"
+        ],
+        "subs": [
+          {
+            "t": "Check medical form on file",
+            "done": true
+          },
+          {
+            "t": "Confirm inhaler received at drop-off",
+            "done": false
+          }
+        ],
+        "comments": [
+          {
+            "who": "Jess Whitmore",
+            "body": "Left a voicemail this morning, no answer yet.",
+            "when": "8 Aug, 10:12"
+          }
+        ],
+        "atts": [
+          {
+            "name": "Mia-medical-form.pdf"
+          }
+        ],
+        "createdByName": "Jess Whitmore",
+        "calEventId": "cal_88a1"
+      },
+      {
+        "id": "tsk_002",
+        "t": "Chase outstanding balance — BK-2086 Okafor",
+        "who": "Priya Patel",
+        "prio": "high",
+        "due": "2026-08-10",
+        "time": null,
+        "status": "todo",
+        "link": {
+          "k": "book",
+          "v": "#BK-2086",
+          "href": "/company/bookings/BK-2086"
+        },
+        "cat": "Finance",
+        "labels": [
+          "payment"
+        ],
+        "subs": [],
+        "comments": [],
+        "atts": []
+      },
+      {
+        "id": "tsk_003",
+        "t": "Print Week 2 registers for Multi-Sports",
+        "who": "Jordan Blake",
+        "prio": "high",
+        "due": "2026-08-11",
+        "time": "07:45",
+        "status": "todo",
+        "link": {
+          "k": "list",
+          "v": "Multi-Sports Holiday Camp",
+          "href": "/company/listings/lst_multisports"
+        },
+        "cat": "Operations",
+        "labels": [
+          "registers"
+        ],
+        "subs": [
+          {
+            "t": "Print morning register",
+            "done": false
+          },
+          {
+            "t": "Print afternoon register",
+            "done": false
+          }
+        ],
+        "comments": [],
+        "atts": []
+      },
+      {
+        "id": "tsk_004",
+        "t": "First-aid certificate expiring — renew before September",
+        "who": "Jordan Blake",
+        "prio": "urgent",
+        "due": "2026-08-11",
+        "time": null,
+        "status": "prog",
+        "link": {
+          "k": "comp",
+          "v": "First-aid — Sam Carter",
+          "href": "/company/compliance"
+        },
+        "cat": "Compliance",
+        "labels": [
+          "staff",
+          "expiring"
+        ],
+        "subs": [
+          {
+            "t": "Book renewal course",
+            "done": true
+          },
+          {
+            "t": "Upload new certificate",
+            "done": false
+          }
+        ],
+        "comments": [
+          {
+            "who": "Sam Carter",
+            "body": "Course booked for 20th Aug.",
+            "when": "9 Aug, 14:03"
+          }
+        ],
+        "atts": [],
+        "spawn": true,
+        "calEventId": "cal_2f30"
+      },
+      {
+        "id": "tsk_005",
+        "t": "Restock first-aid kits at Riverside",
+        "who": "Sam Carter",
+        "prio": "med",
+        "due": "2026-08-11",
+        "time": "16:00",
+        "status": "todo",
+        "link": {
+          "k": "venue",
+          "v": "Riverside Primary School",
+          "href": "/company/locations"
+        },
+        "cat": "Operations",
+        "labels": [
+          "inventory"
+        ],
+        "subs": [],
+        "comments": []
+      },
+      {
+        "id": "tsk_006",
+        "t": "Welcome call to new family — Chen (first booking)",
+        "who": "Jess Whitmore",
+        "prio": "med",
+        "due": "2026-08-12",
+        "time": "11:00",
+        "status": "todo",
+        "link": {
+          "k": "parent",
+          "v": "David Chen",
+          "href": "/company/families/BK-2081"
+        },
+        "cat": "Customer care",
+        "labels": [
+          "onboarding"
+        ],
+        "subs": [],
+        "comments": []
+      },
+      {
+        "id": "tsk_007",
+        "t": "Confirm coach cover for Gymnastics — Liam off Thursday",
+        "who": "Jordan Blake",
+        "prio": "high",
+        "due": "2026-08-13",
+        "time": null,
+        "status": "backlog",
+        "link": {
+          "k": "list",
+          "v": "Gymnastics Camp",
+          "href": "/company/listings/lst_gymnastics"
+        },
+        "cat": "Staffing",
+        "labels": [
+          "cover"
+        ],
+        "subs": [
+          {
+            "t": "Ask Chloe if free",
+            "done": false
+          },
+          {
+            "t": "Update ratios board",
+            "done": false
+          }
+        ],
+        "comments": []
+      },
+      {
+        "id": "tsk_008",
+        "t": "Order extra footballs and bibs for Academy",
+        "who": "Liam O'Brien",
+        "prio": "low",
+        "due": "2026-08-14",
+        "time": null,
+        "status": "backlog",
+        "link": {
+          "k": "list",
+          "v": "Football Academy",
+          "href": "/company/listings/lst_football"
+        },
+        "cat": "Purchasing",
+        "labels": [
+          "equipment"
+        ],
+        "subs": [],
+        "comments": []
+      },
+      {
+        "id": "tsk_009",
+        "t": "Risk assessment for Forest School site walk",
+        "who": "",
+        "prio": "high",
+        "due": "2026-08-14",
+        "time": "08:00",
+        "status": "todo",
+        "link": {
+          "k": "comp",
+          "v": "Forest School RA",
+          "href": "/company/compliance"
+        },
+        "cat": "Compliance",
+        "labels": [
+          "safety",
+          "unassigned"
+        ],
+        "subs": [
+          {
+            "t": "Walk the woodland boundary",
+            "done": false
+          },
+          {
+            "t": "Log hazards in system",
+            "done": false
+          }
+        ],
+        "comments": []
+      },
+      {
+        "id": "tsk_010",
+        "t": "Follow up on Sophie Thompson's dietary note (nut allergy)",
+        "who": "Jess Whitmore",
+        "prio": "urgent",
+        "due": "2026-08-12",
+        "time": null,
+        "status": "todo",
+        "link": {
+          "k": "child",
+          "v": "Sophie Thompson",
+          "href": "/company/families/BK-2084"
+        },
+        "cat": "Welfare",
+        "labels": [
+          "allergy",
+          "medical"
+        ],
+        "subs": [],
+        "comments": [
+          {
+            "who": "Emma Thompson",
+            "body": "Please make sure the kitchen knows — severe nut allergy.",
+            "when": "10 Aug, 18:22"
+          }
+        ],
+        "atts": []
+      },
+      {
+        "id": "tsk_011",
+        "t": "Send parent newsletter — Week 3 what's on",
+        "who": "Priya Patel",
+        "prio": "low",
+        "due": "2026-08-18",
+        "time": null,
+        "status": "backlog",
+        "link": {
+          "k": "gen",
+          "v": "Marketing"
+        },
+        "cat": "Marketing",
+        "labels": [
+          "newsletter"
+        ],
+        "subs": [],
+        "comments": []
+      },
+      {
+        "id": "tsk_012",
+        "t": "Review photo consent for Dance & Drama group",
+        "who": "",
+        "prio": "med",
+        "due": "2026-08-21",
+        "time": null,
+        "status": "backlog",
+        "link": {
+          "k": "list",
+          "v": "Dance & Drama Week",
+          "href": "/company/listings/lst_dance"
+        },
+        "cat": "Compliance",
+        "labels": [
+          "consent"
+        ],
+        "subs": [],
+        "comments": []
+      },
+      {
+        "id": "tsk_013",
+        "t": "Plan Week 4 timetable and staff rota",
+        "who": "Jordan Blake",
+        "prio": "med",
+        "due": null,
+        "time": null,
+        "status": "backlog",
+        "link": {
+          "k": "gen",
+          "v": "Planning"
+        },
+        "cat": "Operations",
+        "labels": [
+          "rota"
+        ],
+        "subs": [
+          {
+            "t": "Draft timetable",
+            "done": false
+          },
+          {
+            "t": "Check staff availability",
+            "done": false
+          },
+          {
+            "t": "Publish to team",
+            "done": false
+          }
+        ],
+        "comments": []
+      },
+      {
+        "id": "tsk_014",
+        "t": "Debrief with Sam after incident report #INC-114",
+        "who": "Jordan Blake",
+        "prio": "high",
+        "due": "2026-08-10",
+        "time": "17:30",
+        "status": "done",
+        "link": {
+          "k": "comp",
+          "v": "Incident #INC-114",
+          "href": "/company/incidents/INC-114"
+        },
+        "cat": "Welfare",
+        "labels": [
+          "incident"
+        ],
+        "subs": [
+          {
+            "t": "Read report",
+            "done": true
+          },
+          {
+            "t": "Meet Sam",
+            "done": true
+          }
+        ],
+        "comments": [
+          {
+            "who": "Jordan Blake",
+            "body": "All resolved, parent informed and happy.",
+            "when": "10 Aug, 18:00"
+          }
+        ],
+        "atts": []
+      },
+      {
+        "id": "tsk_015",
+        "t": "Confirm minibus booking for Oakwood trip",
+        "who": "Liam O'Brien",
+        "prio": "med",
+        "due": "2026-08-08",
+        "time": null,
+        "status": "done",
+        "link": {
+          "k": "venue",
+          "v": "Oakwood Country Park",
+          "href": "/company/locations"
+        },
+        "cat": "Operations",
+        "labels": [
+          "transport"
+        ],
+        "subs": [],
+        "comments": []
+      },
+      {
+        "id": "tsk_016",
+        "t": "Update safeguarding policy for new term",
+        "who": "Jordan Blake",
+        "prio": "high",
+        "due": "2026-08-04",
+        "time": null,
+        "status": "done",
+        "link": {
+          "k": "comp",
+          "v": "Safeguarding policy",
+          "href": "/company/compliance"
+        },
+        "cat": "Compliance",
+        "labels": [
+          "policy"
+        ],
+        "subs": [],
+        "comments": [],
+        "archived": true
+      },
+      {
+        "id": "tsk_017",
+        "t": "Archive Week 1 registers",
+        "who": "Priya Patel",
+        "prio": "low",
+        "due": "2026-08-03",
+        "time": null,
+        "status": "done",
+        "link": {
+          "k": "gen",
+          "v": "Operations"
+        },
+        "cat": "Operations",
+        "labels": [],
+        "subs": [],
+        "comments": [],
+        "archived": true
+      }
+    ]
+  },
+  "referrals": {
+    "/api/referrals": {
+      "enabled": true,
+      "type": "amount",
+      "friendOff": 5,
+      "referrerReward": 10,
+      "friendsBooked": 12,
+      "rewardsPaid": 70,
+      "referredRevenue": 1269,
+      "friendDiscountTotal": 60,
+      "rewardsIssued": 12,
+      "rewardsRedeemed": 7,
+      "outstandingCount": 5,
+      "outstandingLiability": 50,
+      "monthly": [
+        {
+          "label": "Jun",
+          "count": 3,
+          "revenue": 270
+        },
+        {
+          "label": "Jul",
+          "count": 5,
+          "revenue": 615
+        },
+        {
+          "label": "Aug",
+          "count": 4,
+          "revenue": 384
+        }
+      ],
+      "leaderboard": [
+        {
+          "email": "sarah.thompson@gmail.com",
+          "name": "Sarah Thompson",
+          "count": 3,
+          "reward": 30
+        },
+        {
+          "email": "james.okafor@outlook.com",
+          "name": "James Okafor",
+          "count": 2,
+          "reward": 20
+        },
+        {
+          "email": "priya.patel@gmail.com",
+          "name": "Priya Patel",
+          "count": 2,
+          "reward": 20
+        },
+        {
+          "email": "hannah.williams@yahoo.co.uk",
+          "name": "Hannah Williams",
+          "count": 2,
+          "reward": 20
+        },
+        {
+          "email": "daniel.murphy@gmail.com",
+          "name": "Daniel Murphy",
+          "count": 2,
+          "reward": 20
+        },
+        {
+          "email": "chloe.bennett@icloud.com",
+          "name": "Chloe Bennett",
+          "count": 1,
+          "reward": 10
+        }
+      ],
+      "recent": [
+        {
+          "referrerEmail": "sarah.thompson@gmail.com",
+          "referrerName": "Sarah Thompson",
+          "friendEmail": "emma.clarke@gmail.com",
+          "friendName": "Emma Clarke",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 96,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-2081",
+          "rewardRedeemed": false,
+          "at": "2026-08-09T09:15:00.000Z",
+          "viaCode": "SARAH-REF"
+        },
+        {
+          "referrerEmail": "james.okafor@outlook.com",
+          "referrerName": "James Okafor",
+          "friendEmail": "olivia.reed@gmail.com",
+          "friendName": "Olivia Reed",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 48,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-2074",
+          "rewardRedeemed": true,
+          "at": "2026-08-06T14:40:00.000Z",
+          "viaCode": "JAMES-REF"
+        },
+        {
+          "referrerEmail": "priya.patel@gmail.com",
+          "referrerName": "Priya Patel",
+          "friendEmail": "lucas.grant@outlook.com",
+          "friendName": "Lucas Grant",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 165,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-2066",
+          "rewardRedeemed": false,
+          "at": "2026-08-03T11:05:00.000Z",
+          "viaCode": "PRIYA-REF"
+        },
+        {
+          "referrerEmail": "hannah.williams@yahoo.co.uk",
+          "referrerName": "Hannah Williams",
+          "friendEmail": "sophie.turner@gmail.com",
+          "friendName": "Sophie Turner",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 105,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-2059",
+          "rewardRedeemed": true,
+          "at": "2026-07-30T16:20:00.000Z",
+          "viaCode": "HANNAH-REF"
+        },
+        {
+          "referrerEmail": "daniel.murphy@gmail.com",
+          "referrerName": "Daniel Murphy",
+          "friendEmail": "george.harris@icloud.com",
+          "friendName": "George Harris",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 60,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-2048",
+          "rewardRedeemed": false,
+          "at": "2026-07-26T08:50:00.000Z",
+          "viaCode": "DANIEL-REF"
+        },
+        {
+          "referrerEmail": "sarah.thompson@gmail.com",
+          "referrerName": "Sarah Thompson",
+          "friendEmail": "isla.morgan@gmail.com",
+          "friendName": "Isla Morgan",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 150,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-2039",
+          "rewardRedeemed": true,
+          "at": "2026-07-22T13:10:00.000Z",
+          "viaCode": "SARAH-REF"
+        },
+        {
+          "referrerEmail": "chloe.bennett@icloud.com",
+          "referrerName": "Chloe Bennett",
+          "friendEmail": "noah.evans@gmail.com",
+          "friendName": "Noah Evans",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 75,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": null,
+          "rewardRedeemed": false,
+          "at": "2026-07-18T10:35:00.000Z",
+          "viaCode": "CHLOE-REF"
+        },
+        {
+          "referrerEmail": "james.okafor@outlook.com",
+          "referrerName": "James Okafor",
+          "friendEmail": "amelia.foster@yahoo.co.uk",
+          "friendName": "Amelia Foster",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 120,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-2021",
+          "rewardRedeemed": true,
+          "at": "2026-07-14T15:00:00.000Z",
+          "viaCode": "JAMES-REF"
+        },
+        {
+          "referrerEmail": "priya.patel@gmail.com",
+          "referrerName": "Priya Patel",
+          "friendEmail": "jacob.hughes@gmail.com",
+          "friendName": "Jacob Hughes",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 180,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-2013",
+          "rewardRedeemed": true,
+          "at": "2026-07-08T09:45:00.000Z",
+          "viaCode": "PRIYA-REF"
+        },
+        {
+          "referrerEmail": "hannah.williams@yahoo.co.uk",
+          "referrerName": "Hannah Williams",
+          "friendEmail": "mia.robinson@gmail.com",
+          "friendName": "Mia Robinson",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 45,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-1998",
+          "rewardRedeemed": false,
+          "at": "2026-06-28T12:25:00.000Z",
+          "viaCode": "HANNAH-REF"
+        },
+        {
+          "referrerEmail": "daniel.murphy@gmail.com",
+          "referrerName": "Daniel Murphy",
+          "friendEmail": "leo.walker@outlook.com",
+          "friendName": "Leo Walker",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 135,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-1985",
+          "rewardRedeemed": true,
+          "at": "2026-06-19T14:15:00.000Z",
+          "viaCode": "DANIEL-REF"
+        },
+        {
+          "referrerEmail": "sarah.thompson@gmail.com",
+          "referrerName": "Sarah Thompson",
+          "friendEmail": "ava.mitchell@gmail.com",
+          "friendName": "Ava Mitchell",
+          "reward": 10,
+          "friendOff": 5,
+          "friendSpend": 90,
+          "friendDiscount": 5,
+          "type": "amount",
+          "cap": null,
+          "bookingRef": "BK-1972",
+          "rewardRedeemed": true,
+          "at": "2026-06-11T10:00:00.000Z",
+          "viaCode": "SARAH-REF"
+        }
+      ]
+    }
+  },
+  "marketing": {
+    "/api/listings": [
+      {
+        "id": "lst_multisports",
+        "title": "Summer Multi-Sports Camp"
+      },
+      {
+        "id": "lst_football",
+        "title": "Football Academy — August"
+      },
+      {
+        "id": "lst_gymnastics",
+        "title": "Gymnastics Holiday Club"
+      },
+      {
+        "id": "lst_forest",
+        "title": "Forest School Adventure Days"
+      },
+      {
+        "id": "lst_easter",
+        "title": "Easter Holiday Camp"
+      },
+      {
+        "id": "lst_swimming",
+        "name": "Learn to Swim Intensive"
+      }
+    ],
+    "/api/customers": [
+      {
+        "id": "cus_khan",
+        "name": "Amara Khan",
+        "email": "amara.khan@gmail.com"
+      },
+      {
+        "id": "cus_patel",
+        "name": "Rahul Patel",
+        "email": "rahul.patel@outlook.com"
+      },
+      {
+        "id": "cus_smith",
+        "name": "Charlotte Smith",
+        "email": "charlotte.smith@gmail.com"
+      },
+      {
+        "id": "cus_obrien",
+        "name": "Sean O'Brien",
+        "email": "sean.obrien@hotmail.co.uk"
+      },
+      {
+        "id": "cus_williams",
+        "name": "Bethan Williams",
+        "email": "bethan.williams@yahoo.co.uk"
+      },
+      {
+        "id": "cus_johnson",
+        "name": "Marcus Johnson",
+        "email": "marcus.johnson@gmail.com"
+      },
+      {
+        "id": "cus_ahmed",
+        "name": "Yusuf Ahmed",
+        "email": "yusuf.ahmed@gmail.com"
+      },
+      {
+        "id": "cus_taylor",
+        "name": "Emily Taylor",
+        "email": "emily.taylor@icloud.com"
+      },
+      {
+        "id": "cus_roberts",
+        "name": "Gareth Roberts",
+        "email": "gareth.roberts@gmail.com"
+      },
+      {
+        "id": "cus_evans",
+        "name": "Nia Evans",
+        "email": "nia.evans@outlook.com"
+      },
+      {
+        "id": "cus_okafor",
+        "name": "Chidi Okafor",
+        "email": "chidi.okafor@gmail.com"
+      },
+      {
+        "id": "cus_nowak",
+        "name": "Kasia Nowak",
+        "email": "kasia.nowak@gmail.com"
+      },
+      {
+        "id": "cus_murphy",
+        "name": "Dervla Murphy",
+        "email": "dervla.murphy@hotmail.com"
+      }
+    ],
+    "/api/discounts/groups": [
+      {
+        "id": "grp_nhs",
+        "name": "NHS parents",
+        "emails": [
+          "amara.khan@gmail.com",
+          "yusuf.ahmed@gmail.com",
+          "emily.taylor@icloud.com",
+          "dervla.murphy@hotmail.com"
+        ]
+      },
+      {
+        "id": "grp_returning",
+        "name": "Returning families 2025",
+        "emails": [
+          "rahul.patel@outlook.com",
+          "charlotte.smith@gmail.com",
+          "marcus.johnson@gmail.com",
+          "gareth.roberts@gmail.com",
+          "nia.evans@outlook.com"
+        ]
+      },
+      {
+        "id": "grp_stmarys",
+        "name": "St Mary's School parents",
+        "emails": [
+          "sean.obrien@hotmail.co.uk",
+          "bethan.williams@yahoo.co.uk",
+          "chidi.okafor@gmail.com"
+        ]
+      }
+    ],
+    "/api/discounts": [
+      {
+        "id": "dsc_summer25",
+        "code": "SUMMER25",
+        "type": "percent",
+        "value": 25,
+        "minSpend": 60,
+        "expiry": "2026-08-31",
+        "usageLimit": 100,
+        "usedCount": 63,
+        "active": true,
+        "perCustomerLimit": true
+      },
+      {
+        "id": "dsc_earlybird",
+        "code": "EARLYBIRD10",
+        "type": "amount",
+        "value": 10,
+        "minSpend": 50,
+        "expiry": "2026-08-25",
+        "usageLimit": 50,
+        "usedCount": 28,
+        "active": true,
+        "listingId": "lst_multisports"
+      },
+      {
+        "id": "dsc_sibling",
+        "code": "SIBLING5",
+        "type": "perAttendee",
+        "value": 5,
+        "usageLimit": null,
+        "usedCount": 47,
+        "active": true,
+        "exclusive": false
+      },
+      {
+        "id": "dsc_khan2026",
+        "code": "KHAN2026",
+        "type": "percent",
+        "value": 20,
+        "expiry": "2026-09-30",
+        "usageLimit": 1,
+        "usedCount": 0,
+        "active": true,
+        "assignedTo": "amara.khan@gmail.com",
+        "assignedName": "Amara Khan"
+      },
+      {
+        "id": "dsc_nhs15",
+        "code": "NHS15",
+        "type": "percent",
+        "value": 15,
+        "minSpend": 40,
+        "expiry": "2026-12-31",
+        "usageLimit": 40,
+        "usedCount": 12,
+        "active": true,
+        "assignedGroupId": "grp_nhs",
+        "assignedGroupName": "NHS parents",
+        "assignedEmails": [
+          "amara.khan@gmail.com",
+          "yusuf.ahmed@gmail.com",
+          "emily.taylor@icloud.com",
+          "dervla.murphy@hotmail.com"
+        ],
+        "perCustomerLimit": true
+      },
+      {
+        "id": "dsc_footy20",
+        "code": "FOOTY20",
+        "type": "percent",
+        "value": 20,
+        "expiry": "2026-08-20",
+        "usageLimit": 30,
+        "usedCount": 30,
+        "active": true,
+        "listingId": "lst_football"
+      },
+      {
+        "id": "dsc_welcome",
+        "code": "WELCOME2026",
+        "type": "amount",
+        "value": 15,
+        "minSpend": 75,
+        "usageLimit": 200,
+        "usedCount": 91,
+        "active": true,
+        "perCustomerLimit": true
+      },
+      {
+        "id": "dsc_easter",
+        "code": "EASTER30",
+        "type": "percent",
+        "value": 30,
+        "expiry": "2026-04-18",
+        "usageLimit": 60,
+        "usedCount": 58,
+        "active": false,
+        "listingId": "lst_easter"
+      },
+      {
+        "id": "dsc_forest",
+        "code": "FOREST5",
+        "type": "amount",
+        "value": 5,
+        "expiry": "2026-08-31",
+        "usageLimit": 25,
+        "usedCount": 9,
+        "active": true,
+        "listingId": "lst_forest",
+        "exclusive": true
+      },
+      {
+        "id": "dsc_returning",
+        "code": "LOYAL10",
+        "type": "percent",
+        "value": 10,
+        "minSpend": 30,
+        "expiry": "2026-11-30",
+        "usageLimit": 50,
+        "usedCount": 22,
+        "active": true,
+        "assignedGroupId": "grp_returning",
+        "assignedGroupName": "Returning families 2025",
+        "assignedEmails": [
+          "rahul.patel@outlook.com",
+          "charlotte.smith@gmail.com",
+          "marcus.johnson@gmail.com",
+          "gareth.roberts@gmail.com",
+          "nia.evans@outlook.com"
+        ]
+      },
+      {
+        "id": "dsc_gym",
+        "code": "GYMFUN",
+        "type": "perAttendee",
+        "value": 7.5,
+        "minSpend": 45,
+        "usageLimit": 40,
+        "usedCount": 16,
+        "active": true,
+        "listingId": "lst_gymnastics"
+      },
+      {
+        "id": "dsc_flash",
+        "code": "FLASH50",
+        "type": "percent",
+        "value": 50,
+        "expiry": "2026-07-15",
+        "usageLimit": 20,
+        "usedCount": 20,
+        "active": false
+      },
+      {
+        "id": "dsc_patel",
+        "code": "PATEL2026",
+        "type": "amount",
+        "value": 25,
+        "expiry": "2026-10-31",
+        "usageLimit": 1,
+        "usedCount": 1,
+        "active": true,
+        "assignedTo": "rahul.patel@outlook.com",
+        "assignedName": "Rahul Patel"
+      }
+    ]
+  },
+  "trips": {
+    "/api/trips": [
+      {
+        "id": "trip-eureka-1108",
+        "destination": "Eureka! The National Children's Museum",
+        "address": "Discovery Rd, Halifax HX1 2NE",
+        "date": "2026-08-11",
+        "departTime": "08:45",
+        "returnTime": "16:15",
+        "listingId": "lst-multisports-hx",
+        "transport": "Coach",
+        "lead": "Sarah Whitcombe",
+        "leadPhone": "07700 900412",
+        "evc": "Helen Barford",
+        "cost": "18.50",
+        "offsiteRatio": 8,
+        "itinerary": [
+          {
+            "t": "08:45",
+            "a": "Depart base",
+            "k": "Head-count on"
+          },
+          {
+            "t": "09:30",
+            "a": "Arrive at venue",
+            "k": "Register taken"
+          },
+          {
+            "t": "09:45",
+            "a": "Welcome & safety briefing",
+            "k": "Meeting-point reminder"
+          },
+          {
+            "t": "10:30",
+            "a": "Morning activity session",
+            "k": "Water / hydration break"
+          },
+          {
+            "t": "12:30",
+            "a": "Lunch",
+            "k": "Wash hands"
+          },
+          {
+            "t": "13:30",
+            "a": "Afternoon activity session",
+            "k": "Apply sun cream / hats"
+          },
+          {
+            "t": "15:00",
+            "a": "Final head count & register",
+            "k": "Head-count off"
+          },
+          {
+            "t": "15:30",
+            "a": "Travel back to base",
+            "k": "Seatbelts checked"
+          },
+          {
+            "t": "16:15",
+            "a": "Handover to parents / carers",
+            "k": "Confirm collection / password"
+          }
+        ],
+        "kit": "Packed lunch, water bottle, sun cream, hat, weather-appropriate clothing, any medication.",
+        "hazards": [
+          {
+            "h": "Transport / travel",
+            "who": "All children & staff",
+            "controls": "• Seatbelts on\n• Head-count on and off\n• First-aider on board\n• DBS-checked driver",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Lost / separated child",
+            "who": "Children",
+            "controls": "• Hi-vis vests\n• Agreed meeting point\n• Head-count at every leg\n• Buddy system",
+            "initial": "H",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Road crossing / pedestrian",
+            "who": "All",
+            "controls": "• Use crossings\n• Staff front and back\n• Walk in pairs",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Weather / sun / heat",
+            "who": "All",
+            "controls": "• Sun cream\n• Hats & water\n• Shade breaks\n• Check forecast",
+            "initial": "L",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Medical / allergies",
+            "who": "Named children",
+            "controls": "• Meds & care plans carried\n• First-aid kit\n• Emergency contacts to hand",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          }
+        ],
+        "raSigned": true,
+        "raAssessor": "Sarah Whitcombe",
+        "raDate": "2026-08-01",
+        "raRef": "RA-2026-071",
+        "raReview": "Reviewed before each run",
+        "roster": [
+          {
+            "n": "Sarah Whitcombe",
+            "r": "Trip lead",
+            "fa": true
+          },
+          {
+            "n": "Marcus Reilly",
+            "r": "Activity leader",
+            "fa": false
+          },
+          {
+            "n": "Priya Nair",
+            "r": "Activity leader",
+            "fa": true
+          }
+        ],
+        "attendees": [
+          {
+            "n": "Amelia Thornton",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Jacob Fielding",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Sofia Marchetti",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "med": "Asthma — inhaler",
+            "sent": true
+          },
+          {
+            "n": "Oliver Bennett",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Ruby Castellano",
+            "age": 10,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Harry Dawson",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Isla Ferguson",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Noah Whitfield",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "med": "Nut allergy — EpiPen",
+            "sent": true
+          },
+          {
+            "n": "Freya Lindqvist",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Ethan Pardeep",
+            "age": 11,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Grace Ashworth",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Leo Nakamura",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          }
+        ],
+        "checkpoints": [
+          {
+            "n": "Depart base",
+            "counted": 12,
+            "time": "08:45"
+          },
+          {
+            "n": "Arrive venue",
+            "counted": 12,
+            "time": "09:32"
+          },
+          {
+            "n": "Lunch / midpoint",
+            "counted": 12,
+            "time": "12:35"
+          },
+          {
+            "n": "Before return",
+            "counted": null
+          },
+          {
+            "n": "Back at base",
+            "counted": null
+          }
+        ],
+        "signoff": {
+          "approvedBy": "Helen Barford (Manager)",
+          "approvedAt": "Fri 8 Aug 2026, 16:20",
+          "submitted": true
+        },
+        "returned": false,
+        "payBy": "2026-08-06",
+        "parentMsgSentAt": "Wed 30 Jul 2026, 09:15",
+        "askPay": true,
+        "askConsent": true,
+        "childNames": [
+          "Amelia Thornton",
+          "Jacob Fielding",
+          "Sofia Marchetti",
+          "Oliver Bennett",
+          "Ruby Castellano",
+          "Harry Dawson",
+          "Isla Ferguson",
+          "Noah Whitfield",
+          "Freya Lindqvist",
+          "Ethan Pardeep",
+          "Grace Ashworth",
+          "Leo Nakamura"
+        ],
+        "staff": [
+          "Sarah Whitcombe",
+          "Marcus Reilly",
+          "Priya Nair"
+        ],
+        "headcount": 12,
+        "consentObtained": true,
+        "status": "planned",
+        "createdByName": "Sarah Whitcombe"
+      },
+      {
+        "id": "trip-forest-1414",
+        "destination": "Hardcastle Crags Forest School",
+        "address": "Hebden Bridge HX7 7AP",
+        "date": "2026-08-14",
+        "departTime": "08:45",
+        "returnTime": "16:15",
+        "listingId": "lst-forest-hx",
+        "transport": "Minibus",
+        "lead": "Sarah Whitcombe",
+        "leadPhone": "07700 900412",
+        "evc": "Helen Barford",
+        "cost": "12.00",
+        "offsiteRatio": 8,
+        "itinerary": [
+          {
+            "t": "08:45",
+            "a": "Depart base",
+            "k": "Head-count on"
+          },
+          {
+            "t": "09:30",
+            "a": "Arrive at venue",
+            "k": "Register taken"
+          },
+          {
+            "t": "09:45",
+            "a": "Welcome & safety briefing",
+            "k": "Meeting-point reminder"
+          },
+          {
+            "t": "10:30",
+            "a": "Morning activity session",
+            "k": "Water / hydration break"
+          },
+          {
+            "t": "12:30",
+            "a": "Lunch",
+            "k": "Wash hands"
+          },
+          {
+            "t": "13:30",
+            "a": "Afternoon activity session",
+            "k": "Apply sun cream / hats"
+          },
+          {
+            "t": "15:00",
+            "a": "Final head count & register",
+            "k": "Head-count off"
+          },
+          {
+            "t": "15:30",
+            "a": "Travel back to base",
+            "k": "Seatbelts checked"
+          },
+          {
+            "t": "16:15",
+            "a": "Handover to parents / carers",
+            "k": "Confirm collection / password"
+          }
+        ],
+        "kit": "Packed lunch, water bottle, sun cream, hat, weather-appropriate clothing, any medication.",
+        "hazards": [
+          {
+            "h": "Transport / travel",
+            "who": "All children & staff",
+            "controls": "• Seatbelts on\n• Head-count on and off\n• First-aider on board\n• DBS-checked driver",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Lost / separated child",
+            "who": "Children",
+            "controls": "• Hi-vis vests\n• Agreed meeting point\n• Head-count at every leg\n• Buddy system",
+            "initial": "H",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Road crossing / pedestrian",
+            "who": "All",
+            "controls": "• Use crossings\n• Staff front and back\n• Walk in pairs",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Weather / sun / heat",
+            "who": "All",
+            "controls": "• Sun cream\n• Hats & water\n• Shade breaks\n• Check forecast",
+            "initial": "L",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Medical / allergies",
+            "who": "Named children",
+            "controls": "• Meds & care plans carried\n• First-aid kit\n• Emergency contacts to hand",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          }
+        ],
+        "raSigned": true,
+        "raAssessor": "Sarah Whitcombe",
+        "raDate": "2026-08-01",
+        "raRef": "RA-2026-072",
+        "raReview": "Reviewed before each run",
+        "roster": [
+          {
+            "n": "Sarah Whitcombe",
+            "r": "Trip lead",
+            "fa": true
+          },
+          {
+            "n": "Marcus Reilly",
+            "r": "Activity leader",
+            "fa": false
+          },
+          {
+            "n": "Priya Nair",
+            "r": "Activity leader",
+            "fa": true
+          }
+        ],
+        "attendees": [
+          {
+            "n": "Amelia Thornton",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Ruby Castellano",
+            "age": 10,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Isla Ferguson",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Grace Ashworth",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Leo Nakamura",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Oliver Bennett",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Harry Dawson",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Sofia Marchetti",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "med": "Asthma — inhaler",
+            "sent": true
+          },
+          {
+            "n": "Mia Kowalski",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Charlie Beaumont",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          }
+        ],
+        "checkpoints": [
+          {
+            "n": "Depart base",
+            "counted": null
+          },
+          {
+            "n": "Arrive venue",
+            "counted": null
+          },
+          {
+            "n": "Lunch / midpoint",
+            "counted": null
+          },
+          {
+            "n": "Before return",
+            "counted": null
+          },
+          {
+            "n": "Back at base",
+            "counted": null
+          }
+        ],
+        "signoff": {
+          "approvedBy": "Helen Barford (Manager)",
+          "approvedAt": "Sat 9 Aug 2026, 11:05",
+          "submitted": true
+        },
+        "returned": false,
+        "payBy": "2026-08-11",
+        "parentMsgSentAt": "Mon 4 Aug 2026, 14:40",
+        "askPay": true,
+        "askConsent": true,
+        "childNames": [
+          "Amelia Thornton",
+          "Ruby Castellano",
+          "Isla Ferguson",
+          "Grace Ashworth",
+          "Leo Nakamura",
+          "Oliver Bennett",
+          "Harry Dawson",
+          "Sofia Marchetti",
+          "Mia Kowalski",
+          "Charlie Beaumont"
+        ],
+        "staff": [
+          "Sarah Whitcombe",
+          "Marcus Reilly",
+          "Priya Nair"
+        ],
+        "headcount": 10,
+        "consentObtained": true,
+        "status": "planned",
+        "createdByName": "Sarah Whitcombe"
+      },
+      {
+        "id": "trip-yorkwildlife-1817",
+        "destination": "Yorkshire Wildlife Park",
+        "address": "Branton, Doncaster DN9 3QN",
+        "date": "2026-08-18",
+        "departTime": "08:30",
+        "returnTime": "17:00",
+        "listingId": "lst-holidaycamp-le",
+        "transport": "Coach",
+        "lead": "Sarah Whitcombe",
+        "leadPhone": "07700 900412",
+        "evc": "Helen Barford",
+        "cost": "24.00",
+        "offsiteRatio": 8,
+        "itinerary": [
+          {
+            "t": "08:45",
+            "a": "Depart base",
+            "k": "Head-count on"
+          },
+          {
+            "t": "09:30",
+            "a": "Arrive at venue",
+            "k": "Register taken"
+          },
+          {
+            "t": "09:45",
+            "a": "Welcome & safety briefing",
+            "k": "Meeting-point reminder"
+          },
+          {
+            "t": "10:30",
+            "a": "Morning activity session",
+            "k": "Water / hydration break"
+          },
+          {
+            "t": "12:30",
+            "a": "Lunch",
+            "k": "Wash hands"
+          },
+          {
+            "t": "13:30",
+            "a": "Afternoon activity session",
+            "k": "Apply sun cream / hats"
+          },
+          {
+            "t": "15:00",
+            "a": "Final head count & register",
+            "k": "Head-count off"
+          },
+          {
+            "t": "15:30",
+            "a": "Travel back to base",
+            "k": "Seatbelts checked"
+          },
+          {
+            "t": "16:15",
+            "a": "Handover to parents / carers",
+            "k": "Confirm collection / password"
+          }
+        ],
+        "kit": "Packed lunch, water bottle, sun cream, hat, weather-appropriate clothing, any medication.",
+        "hazards": [
+          {
+            "h": "Transport / travel",
+            "who": "All children & staff",
+            "controls": "• Seatbelts on\n• Head-count on and off\n• First-aider on board\n• DBS-checked driver",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Lost / separated child",
+            "who": "Children",
+            "controls": "• Hi-vis vests\n• Agreed meeting point\n• Head-count at every leg\n• Buddy system",
+            "initial": "H",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Road crossing / pedestrian",
+            "who": "All",
+            "controls": "• Use crossings\n• Staff front and back\n• Walk in pairs",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Weather / sun / heat",
+            "who": "All",
+            "controls": "• Sun cream\n• Hats & water\n• Shade breaks\n• Check forecast",
+            "initial": "L",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Medical / allergies",
+            "who": "Named children",
+            "controls": "• Meds & care plans carried\n• First-aid kit\n• Emergency contacts to hand",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          }
+        ],
+        "raSigned": true,
+        "raAssessor": "Sarah Whitcombe",
+        "raDate": "2026-08-01",
+        "raRef": "RA-2026-073",
+        "raReview": "Reviewed before each run",
+        "roster": [
+          {
+            "n": "Sarah Whitcombe",
+            "r": "Trip lead",
+            "fa": true
+          },
+          {
+            "n": "Marcus Reilly",
+            "r": "Activity leader",
+            "fa": false
+          },
+          {
+            "n": "Priya Nair",
+            "r": "Activity leader",
+            "fa": true
+          },
+          {
+            "n": "Daniel Okafor",
+            "r": "Activity leader",
+            "fa": false
+          }
+        ],
+        "attendees": [
+          {
+            "n": "Ethan Pardeep",
+            "age": 11,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Freya Lindqvist",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Noah Whitfield",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "med": "Nut allergy — EpiPen",
+            "sent": true
+          },
+          {
+            "n": "Jacob Fielding",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Amelia Thornton",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Ruby Castellano",
+            "age": 10,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Mia Kowalski",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Charlie Beaumont",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Grace Ashworth",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Leo Nakamura",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Isla Ferguson",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Harry Dawson",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Oliver Bennett",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Sofia Marchetti",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "med": "Asthma — inhaler",
+            "sent": true
+          }
+        ],
+        "checkpoints": [
+          {
+            "n": "Depart base",
+            "counted": null
+          },
+          {
+            "n": "Arrive venue",
+            "counted": null
+          },
+          {
+            "n": "Lunch / midpoint",
+            "counted": null
+          },
+          {
+            "n": "Before return",
+            "counted": null
+          },
+          {
+            "n": "Back at base",
+            "counted": null
+          }
+        ],
+        "signoff": {},
+        "returned": false,
+        "payBy": "2026-08-15",
+        "parentMsgSentAt": "Fri 8 Aug 2026, 10:00",
+        "askPay": true,
+        "askConsent": true,
+        "childNames": [
+          "Ethan Pardeep",
+          "Freya Lindqvist",
+          "Noah Whitfield",
+          "Jacob Fielding",
+          "Amelia Thornton",
+          "Ruby Castellano",
+          "Mia Kowalski",
+          "Charlie Beaumont",
+          "Grace Ashworth",
+          "Leo Nakamura",
+          "Isla Ferguson",
+          "Harry Dawson",
+          "Oliver Bennett",
+          "Sofia Marchetti"
+        ],
+        "staff": [
+          "Sarah Whitcombe",
+          "Marcus Reilly",
+          "Priya Nair",
+          "Daniel Okafor"
+        ],
+        "headcount": 14,
+        "consentObtained": true,
+        "status": "planned",
+        "createdByName": "Sarah Whitcombe"
+      },
+      {
+        "id": "trip-magna-2020",
+        "destination": "Magna Science Adventure Centre",
+        "address": "Sheffield Rd, Rotherham S60 1FD",
+        "date": "2026-08-20",
+        "departTime": "08:45",
+        "returnTime": "16:15",
+        "listingId": "lst-multisports-hx",
+        "transport": "Coach",
+        "lead": "Sarah Whitcombe",
+        "leadPhone": "07700 900412",
+        "evc": "Helen Barford",
+        "cost": "16.50",
+        "offsiteRatio": 8,
+        "itinerary": [
+          {
+            "t": "08:45",
+            "a": "Depart base",
+            "k": "Head-count on"
+          },
+          {
+            "t": "09:30",
+            "a": "Arrive at venue",
+            "k": "Register taken"
+          },
+          {
+            "t": "09:45",
+            "a": "Welcome & safety briefing",
+            "k": "Meeting-point reminder"
+          },
+          {
+            "t": "10:30",
+            "a": "Morning activity session",
+            "k": "Water / hydration break"
+          },
+          {
+            "t": "12:30",
+            "a": "Lunch",
+            "k": "Wash hands"
+          },
+          {
+            "t": "13:30",
+            "a": "Afternoon activity session",
+            "k": "Apply sun cream / hats"
+          },
+          {
+            "t": "15:00",
+            "a": "Final head count & register",
+            "k": "Head-count off"
+          },
+          {
+            "t": "15:30",
+            "a": "Travel back to base",
+            "k": "Seatbelts checked"
+          },
+          {
+            "t": "16:15",
+            "a": "Handover to parents / carers",
+            "k": "Confirm collection / password"
+          }
+        ],
+        "kit": "Packed lunch, water bottle, sun cream, hat, weather-appropriate clothing, any medication.",
+        "hazards": [
+          {
+            "h": "Transport / travel",
+            "who": "All children & staff",
+            "controls": "• Seatbelts on\n• Head-count on and off\n• First-aider on board\n• DBS-checked driver",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Lost / separated child",
+            "who": "Children",
+            "controls": "• Hi-vis vests\n• Agreed meeting point\n• Head-count at every leg\n• Buddy system",
+            "initial": "H",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Road crossing / pedestrian",
+            "who": "All",
+            "controls": "• Use crossings\n• Staff front and back\n• Walk in pairs",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Weather / sun / heat",
+            "who": "All",
+            "controls": "• Sun cream\n• Hats & water\n• Shade breaks\n• Check forecast",
+            "initial": "L",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Medical / allergies",
+            "who": "Named children",
+            "controls": "• Meds & care plans carried\n• First-aid kit\n• Emergency contacts to hand",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          }
+        ],
+        "raSigned": true,
+        "raAssessor": "Sarah Whitcombe",
+        "raDate": "2026-08-01",
+        "raRef": "RA-2026-074",
+        "raReview": "Reviewed before each run",
+        "roster": [
+          {
+            "n": "Sarah Whitcombe",
+            "r": "Trip lead",
+            "fa": true
+          },
+          {
+            "n": "Marcus Reilly",
+            "r": "Activity leader",
+            "fa": false
+          },
+          {
+            "n": "Priya Nair",
+            "r": "Activity leader",
+            "fa": true
+          }
+        ],
+        "attendees": [
+          {
+            "n": "Amelia Thornton",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Jacob Fielding",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Ruby Castellano",
+            "age": 10,
+            "consent": "granted",
+            "paid": false,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Oliver Bennett",
+            "age": 6,
+            "consent": "pending",
+            "paid": false,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Harry Dawson",
+            "age": 8,
+            "consent": "pending",
+            "paid": false,
+            "em": false,
+            "sent": true
+          },
+          {
+            "n": "Isla Ferguson",
+            "age": 7,
+            "consent": "pending",
+            "paid": false,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Grace Ashworth",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Leo Nakamura",
+            "age": 7,
+            "consent": "declined",
+            "paid": false,
+            "em": true
+          },
+          {
+            "n": "Mia Kowalski",
+            "age": 9,
+            "consent": "granted",
+            "paid": false,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Charlie Beaumont",
+            "age": 6,
+            "consent": "pending",
+            "paid": false,
+            "em": true,
+            "sent": true
+          }
+        ],
+        "checkpoints": [
+          {
+            "n": "Depart base",
+            "counted": null
+          },
+          {
+            "n": "Arrive venue",
+            "counted": null
+          },
+          {
+            "n": "Lunch / midpoint",
+            "counted": null
+          },
+          {
+            "n": "Before return",
+            "counted": null
+          },
+          {
+            "n": "Back at base",
+            "counted": null
+          }
+        ],
+        "signoff": {},
+        "returned": false,
+        "payBy": "2026-08-17",
+        "parentMsgSentAt": "Sat 9 Aug 2026, 18:30",
+        "askPay": true,
+        "askConsent": true,
+        "childNames": [
+          "Amelia Thornton",
+          "Jacob Fielding",
+          "Ruby Castellano",
+          "Grace Ashworth",
+          "Mia Kowalski"
+        ],
+        "staff": [
+          "Sarah Whitcombe",
+          "Marcus Reilly",
+          "Priya Nair"
+        ],
+        "headcount": 5,
+        "consentObtained": false,
+        "status": "planned",
+        "createdByName": "Sarah Whitcombe"
+      },
+      {
+        "id": "trip-lightwater-2525",
+        "destination": "Lightwater Valley Family Adventure Park",
+        "address": "North Stainley, Ripon HG4 3HT",
+        "date": "2026-08-25",
+        "departTime": "08:45",
+        "returnTime": "16:15",
+        "listingId": "lst-holidaycamp-le",
+        "transport": "Minibus",
+        "lead": "Marcus Reilly",
+        "leadPhone": "07700 900733",
+        "evc": "Helen Barford",
+        "cost": "22.00",
+        "offsiteRatio": 8,
+        "itinerary": [
+          {
+            "t": "08:45",
+            "a": "Depart base",
+            "k": "Head-count on"
+          },
+          {
+            "t": "09:30",
+            "a": "Arrive at venue",
+            "k": "Register taken"
+          },
+          {
+            "t": "09:45",
+            "a": "Welcome & safety briefing",
+            "k": "Meeting-point reminder"
+          },
+          {
+            "t": "10:30",
+            "a": "Morning activity session",
+            "k": "Water / hydration break"
+          },
+          {
+            "t": "12:30",
+            "a": "Lunch",
+            "k": "Wash hands"
+          },
+          {
+            "t": "13:30",
+            "a": "Afternoon activity session",
+            "k": "Apply sun cream / hats"
+          },
+          {
+            "t": "15:00",
+            "a": "Final head count & register",
+            "k": "Head-count off"
+          },
+          {
+            "t": "15:30",
+            "a": "Travel back to base",
+            "k": "Seatbelts checked"
+          },
+          {
+            "t": "16:15",
+            "a": "Handover to parents / carers",
+            "k": "Confirm collection / password"
+          }
+        ],
+        "kit": "Packed lunch, water bottle, sun cream, hat, weather-appropriate clothing, any medication.",
+        "hazards": [
+          {
+            "h": "Transport / travel",
+            "who": "All children & staff",
+            "controls": "• Seatbelts on\n• Head-count on and off\n• First-aider on board",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-08",
+            "amendedBy": "Marcus Reilly"
+          },
+          {
+            "h": "Lost / separated child",
+            "who": "Children",
+            "controls": "• Hi-vis vests\n• Agreed meeting point\n• Buddy system",
+            "initial": "H",
+            "residual": "L",
+            "done": false,
+            "amendedOn": "2026-08-08",
+            "amendedBy": "Marcus Reilly"
+          },
+          {
+            "h": "Water safety",
+            "who": "Children near water",
+            "controls": "• Count in and out of water\n• Lifeguard present\n• No deep water",
+            "initial": "H",
+            "residual": "",
+            "done": false
+          },
+          {
+            "h": "Weather / sun / heat",
+            "who": "All",
+            "controls": "• Sun cream\n• Hats & water\n• Shade breaks",
+            "initial": "L",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-08",
+            "amendedBy": "Marcus Reilly"
+          }
+        ],
+        "raSigned": false,
+        "raAssessor": "",
+        "raDate": "2026-08-08",
+        "raReview": "Reviewed before each run",
+        "roster": [
+          {
+            "n": "Marcus Reilly",
+            "r": "Trip lead",
+            "fa": false
+          }
+        ],
+        "attendees": [
+          {
+            "n": "Ethan Pardeep",
+            "age": 11,
+            "consent": "granted",
+            "paid": false,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Freya Lindqvist",
+            "age": 6,
+            "consent": "granted",
+            "paid": false,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Noah Whitfield",
+            "age": 9,
+            "consent": "granted",
+            "paid": false,
+            "em": true,
+            "med": "Nut allergy — EpiPen",
+            "sent": true
+          },
+          {
+            "n": "Mia Kowalski",
+            "age": 9,
+            "consent": "pending",
+            "paid": false,
+            "em": true
+          },
+          {
+            "n": "Charlie Beaumont",
+            "age": 6,
+            "consent": "pending",
+            "paid": false,
+            "em": true
+          },
+          {
+            "n": "Sofia Marchetti",
+            "age": 9,
+            "consent": "pending",
+            "paid": false,
+            "em": true,
+            "med": "Asthma — inhaler"
+          },
+          {
+            "n": "Amelia Thornton",
+            "age": 8,
+            "consent": "granted",
+            "paid": false,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Jacob Fielding",
+            "age": 7,
+            "consent": "pending",
+            "paid": false,
+            "em": true
+          },
+          {
+            "n": "Ruby Castellano",
+            "age": 10,
+            "consent": "granted",
+            "paid": false,
+            "em": true,
+            "sent": true
+          }
+        ],
+        "checkpoints": [
+          {
+            "n": "Depart base",
+            "counted": null
+          },
+          {
+            "n": "Arrive venue",
+            "counted": null
+          },
+          {
+            "n": "Lunch / midpoint",
+            "counted": null
+          },
+          {
+            "n": "Before return",
+            "counted": null
+          },
+          {
+            "n": "Back at base",
+            "counted": null
+          }
+        ],
+        "signoff": {},
+        "returned": false,
+        "payBy": "2026-08-22",
+        "askPay": true,
+        "askConsent": true,
+        "childNames": [
+          "Ethan Pardeep",
+          "Freya Lindqvist",
+          "Noah Whitfield",
+          "Amelia Thornton",
+          "Ruby Castellano"
+        ],
+        "staff": [
+          "Marcus Reilly"
+        ],
+        "headcount": 5,
+        "consentObtained": false,
+        "status": "planned",
+        "createdByName": "Marcus Reilly"
+      },
+      {
+        "id": "trip-natlmedia-0729",
+        "destination": "National Science & Media Museum",
+        "address": "Little Horton Ln, Bradford BD1 1NQ",
+        "date": "2026-07-29",
+        "departTime": "08:45",
+        "returnTime": "16:15",
+        "listingId": "lst-multisports-hx",
+        "transport": "Coach",
+        "lead": "Sarah Whitcombe",
+        "leadPhone": "07700 900412",
+        "evc": "Helen Barford",
+        "cost": "14.00",
+        "offsiteRatio": 8,
+        "itinerary": [
+          {
+            "t": "08:45",
+            "a": "Depart base",
+            "k": "Head-count on"
+          },
+          {
+            "t": "09:30",
+            "a": "Arrive at venue",
+            "k": "Register taken"
+          },
+          {
+            "t": "09:45",
+            "a": "Welcome & safety briefing",
+            "k": "Meeting-point reminder"
+          },
+          {
+            "t": "10:30",
+            "a": "Morning activity session",
+            "k": "Water / hydration break"
+          },
+          {
+            "t": "12:30",
+            "a": "Lunch",
+            "k": "Wash hands"
+          },
+          {
+            "t": "13:30",
+            "a": "Afternoon activity session",
+            "k": "Apply sun cream / hats"
+          },
+          {
+            "t": "15:00",
+            "a": "Final head count & register",
+            "k": "Head-count off"
+          },
+          {
+            "t": "15:30",
+            "a": "Travel back to base",
+            "k": "Seatbelts checked"
+          },
+          {
+            "t": "16:15",
+            "a": "Handover to parents / carers",
+            "k": "Confirm collection / password"
+          }
+        ],
+        "kit": "Packed lunch, water bottle, sun cream, hat, weather-appropriate clothing, any medication.",
+        "hazards": [
+          {
+            "h": "Transport / travel",
+            "who": "All children & staff",
+            "controls": "• Seatbelts on\n• Head-count on and off\n• First-aider on board\n• DBS-checked driver",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Lost / separated child",
+            "who": "Children",
+            "controls": "• Hi-vis vests\n• Agreed meeting point\n• Head-count at every leg\n• Buddy system",
+            "initial": "H",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Road crossing / pedestrian",
+            "who": "All",
+            "controls": "• Use crossings\n• Staff front and back\n• Walk in pairs",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Weather / sun / heat",
+            "who": "All",
+            "controls": "• Sun cream\n• Hats & water\n• Shade breaks\n• Check forecast",
+            "initial": "L",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Medical / allergies",
+            "who": "Named children",
+            "controls": "• Meds & care plans carried\n• First-aid kit\n• Emergency contacts to hand",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          }
+        ],
+        "raSigned": true,
+        "raAssessor": "Sarah Whitcombe",
+        "raDate": "2026-08-01",
+        "raRef": "RA-2026-061",
+        "raReview": "Reviewed before each run",
+        "roster": [
+          {
+            "n": "Sarah Whitcombe",
+            "r": "Trip lead",
+            "fa": true
+          },
+          {
+            "n": "Marcus Reilly",
+            "r": "Activity leader",
+            "fa": false
+          },
+          {
+            "n": "Priya Nair",
+            "r": "Activity leader",
+            "fa": true
+          }
+        ],
+        "attendees": [
+          {
+            "n": "Amelia Thornton",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Jacob Fielding",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Sofia Marchetti",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "med": "Asthma — inhaler",
+            "sent": true
+          },
+          {
+            "n": "Oliver Bennett",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Ruby Castellano",
+            "age": 10,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Harry Dawson",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Isla Ferguson",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Grace Ashworth",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Leo Nakamura",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Mia Kowalski",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          }
+        ],
+        "checkpoints": [
+          {
+            "n": "Depart base",
+            "counted": 10,
+            "time": "08:45"
+          },
+          {
+            "n": "Arrive venue",
+            "counted": 10,
+            "time": "09:32"
+          },
+          {
+            "n": "Lunch / midpoint",
+            "counted": 10,
+            "time": "12:35"
+          },
+          {
+            "n": "Before return",
+            "counted": 10,
+            "time": "15:05"
+          },
+          {
+            "n": "Back at base",
+            "counted": 10,
+            "time": "16:18"
+          }
+        ],
+        "signoff": {
+          "approvedBy": "Helen Barford (Manager)",
+          "approvedAt": "Fri 25 Jul 2026, 15:10",
+          "submitted": true
+        },
+        "returned": true,
+        "payBy": "2026-07-24",
+        "parentMsgSentAt": "Mon 21 Jul 2026, 09:00",
+        "askPay": true,
+        "askConsent": true,
+        "childNames": [
+          "Amelia Thornton",
+          "Jacob Fielding",
+          "Sofia Marchetti",
+          "Oliver Bennett",
+          "Ruby Castellano",
+          "Harry Dawson",
+          "Isla Ferguson",
+          "Grace Ashworth",
+          "Leo Nakamura",
+          "Mia Kowalski"
+        ],
+        "staff": [
+          "Sarah Whitcombe",
+          "Marcus Reilly",
+          "Priya Nair"
+        ],
+        "headcount": 10,
+        "consentObtained": true,
+        "notes": "Great day. Lower-school children flagged for a shorter afternoon next time. No incidents; all children handed back to named adults.",
+        "status": "completed",
+        "createdByName": "Sarah Whitcombe"
+      },
+      {
+        "id": "trip-brimham-0805",
+        "destination": "Brimham Rocks (National Trust)",
+        "address": "Summerbridge, Harrogate HG3 4DW",
+        "date": "2026-08-05",
+        "departTime": "08:45",
+        "returnTime": "16:15",
+        "listingId": "lst-forest-hx",
+        "transport": "Minibus",
+        "lead": "Priya Nair",
+        "leadPhone": "07700 900588",
+        "evc": "Helen Barford",
+        "cost": "9.50",
+        "offsiteRatio": 8,
+        "itinerary": [
+          {
+            "t": "08:45",
+            "a": "Depart base",
+            "k": "Head-count on"
+          },
+          {
+            "t": "09:30",
+            "a": "Arrive at venue",
+            "k": "Register taken"
+          },
+          {
+            "t": "09:45",
+            "a": "Welcome & safety briefing",
+            "k": "Meeting-point reminder"
+          },
+          {
+            "t": "10:30",
+            "a": "Morning activity session",
+            "k": "Water / hydration break"
+          },
+          {
+            "t": "12:30",
+            "a": "Lunch",
+            "k": "Wash hands"
+          },
+          {
+            "t": "13:30",
+            "a": "Afternoon activity session",
+            "k": "Apply sun cream / hats"
+          },
+          {
+            "t": "15:00",
+            "a": "Final head count & register",
+            "k": "Head-count off"
+          },
+          {
+            "t": "15:30",
+            "a": "Travel back to base",
+            "k": "Seatbelts checked"
+          },
+          {
+            "t": "16:15",
+            "a": "Handover to parents / carers",
+            "k": "Confirm collection / password"
+          }
+        ],
+        "kit": "Packed lunch, water bottle, sun cream, hat, weather-appropriate clothing, any medication.",
+        "hazards": [
+          {
+            "h": "Transport / travel",
+            "who": "All children & staff",
+            "controls": "• Seatbelts on\n• Head-count on and off\n• First-aider on board\n• DBS-checked driver",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Lost / separated child",
+            "who": "Children",
+            "controls": "• Hi-vis vests\n• Agreed meeting point\n• Head-count at every leg\n• Buddy system",
+            "initial": "H",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Road crossing / pedestrian",
+            "who": "All",
+            "controls": "• Use crossings\n• Staff front and back\n• Walk in pairs",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Weather / sun / heat",
+            "who": "All",
+            "controls": "• Sun cream\n• Hats & water\n• Shade breaks\n• Check forecast",
+            "initial": "L",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Medical / allergies",
+            "who": "Named children",
+            "controls": "• Meds & care plans carried\n• First-aid kit\n• Emergency contacts to hand",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          }
+        ],
+        "raSigned": true,
+        "raAssessor": "Sarah Whitcombe",
+        "raDate": "2026-08-01",
+        "raRef": "RA-2026-066",
+        "raReview": "Reviewed before each run",
+        "roster": [
+          {
+            "n": "Sarah Whitcombe",
+            "r": "Trip lead",
+            "fa": true
+          },
+          {
+            "n": "Marcus Reilly",
+            "r": "Activity leader",
+            "fa": false
+          },
+          {
+            "n": "Priya Nair",
+            "r": "Activity leader",
+            "fa": true
+          }
+        ],
+        "attendees": [
+          {
+            "n": "Freya Lindqvist",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Ethan Pardeep",
+            "age": 11,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Grace Ashworth",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Leo Nakamura",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Charlie Beaumont",
+            "age": 6,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Mia Kowalski",
+            "age": 9,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Harry Dawson",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Isla Ferguson",
+            "age": 7,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          }
+        ],
+        "checkpoints": [
+          {
+            "n": "Depart base",
+            "counted": 8,
+            "time": "08:45"
+          },
+          {
+            "n": "Arrive venue",
+            "counted": 8,
+            "time": "09:32"
+          },
+          {
+            "n": "Lunch / midpoint",
+            "counted": 8,
+            "time": "12:35"
+          },
+          {
+            "n": "Before return",
+            "counted": 8,
+            "time": "15:05"
+          },
+          {
+            "n": "Back at base",
+            "counted": 8,
+            "time": "16:18"
+          }
+        ],
+        "signoff": {
+          "approvedBy": "Helen Barford (Manager)",
+          "approvedAt": "Fri 1 Aug 2026, 16:45",
+          "submitted": true
+        },
+        "returned": true,
+        "payBy": "2026-07-31",
+        "parentMsgSentAt": "Tue 29 Jul 2026, 10:20",
+        "askPay": true,
+        "askConsent": true,
+        "childNames": [
+          "Freya Lindqvist",
+          "Ethan Pardeep",
+          "Grace Ashworth",
+          "Leo Nakamura",
+          "Charlie Beaumont",
+          "Mia Kowalski",
+          "Harry Dawson",
+          "Isla Ferguson"
+        ],
+        "staff": [
+          "Sarah Whitcombe",
+          "Marcus Reilly",
+          "Priya Nair"
+        ],
+        "headcount": 8,
+        "consentObtained": true,
+        "notes": "Weather held. One grazed knee (first aid given, parent informed). Excellent engagement at the scramble area.",
+        "status": "completed",
+        "createdByName": "Priya Nair"
+      },
+      {
+        "id": "trip-tropical-1515",
+        "destination": "Tropical World Roundhay",
+        "address": "Princes Ave, Leeds LS8 2ER",
+        "date": "2026-08-15",
+        "departTime": "08:45",
+        "returnTime": "16:15",
+        "listingId": "lst-holidaycamp-le",
+        "transport": "Coach",
+        "lead": "Sarah Whitcombe",
+        "leadPhone": "07700 900412",
+        "evc": "Helen Barford",
+        "cost": "13.00",
+        "offsiteRatio": 8,
+        "itinerary": [
+          {
+            "t": "08:45",
+            "a": "Depart base",
+            "k": "Head-count on"
+          },
+          {
+            "t": "09:30",
+            "a": "Arrive at venue",
+            "k": "Register taken"
+          },
+          {
+            "t": "09:45",
+            "a": "Welcome & safety briefing",
+            "k": "Meeting-point reminder"
+          },
+          {
+            "t": "10:30",
+            "a": "Morning activity session",
+            "k": "Water / hydration break"
+          },
+          {
+            "t": "12:30",
+            "a": "Lunch",
+            "k": "Wash hands"
+          },
+          {
+            "t": "13:30",
+            "a": "Afternoon activity session",
+            "k": "Apply sun cream / hats"
+          },
+          {
+            "t": "15:00",
+            "a": "Final head count & register",
+            "k": "Head-count off"
+          },
+          {
+            "t": "15:30",
+            "a": "Travel back to base",
+            "k": "Seatbelts checked"
+          },
+          {
+            "t": "16:15",
+            "a": "Handover to parents / carers",
+            "k": "Confirm collection / password"
+          }
+        ],
+        "kit": "Packed lunch, water bottle, sun cream, hat, weather-appropriate clothing, any medication.",
+        "hazards": [
+          {
+            "h": "Transport / travel",
+            "who": "All children & staff",
+            "controls": "• Seatbelts on\n• Head-count on and off\n• First-aider on board\n• DBS-checked driver",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Lost / separated child",
+            "who": "Children",
+            "controls": "• Hi-vis vests\n• Agreed meeting point\n• Head-count at every leg\n• Buddy system",
+            "initial": "H",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Road crossing / pedestrian",
+            "who": "All",
+            "controls": "• Use crossings\n• Staff front and back\n• Walk in pairs",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Weather / sun / heat",
+            "who": "All",
+            "controls": "• Sun cream\n• Hats & water\n• Shade breaks\n• Check forecast",
+            "initial": "L",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          },
+          {
+            "h": "Medical / allergies",
+            "who": "Named children",
+            "controls": "• Meds & care plans carried\n• First-aid kit\n• Emergency contacts to hand",
+            "initial": "M",
+            "residual": "L",
+            "done": true,
+            "amendedOn": "2026-08-01",
+            "amendedBy": "Sarah Whitcombe"
+          }
+        ],
+        "raSigned": true,
+        "raAssessor": "Sarah Whitcombe",
+        "raDate": "2026-08-01",
+        "raRef": "RA-2026-068",
+        "raReview": "Reviewed before each run",
+        "roster": [
+          {
+            "n": "Sarah Whitcombe",
+            "r": "Trip lead",
+            "fa": true
+          },
+          {
+            "n": "Marcus Reilly",
+            "r": "Activity leader",
+            "fa": false
+          },
+          {
+            "n": "Priya Nair",
+            "r": "Activity leader",
+            "fa": true
+          }
+        ],
+        "attendees": [
+          {
+            "n": "Amelia Thornton",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Ruby Castellano",
+            "age": 10,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Oliver Bennett",
+            "age": 6,
+            "consent": "granted",
+            "paid": false,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Isla Ferguson",
+            "age": 7,
+            "consent": "pending",
+            "paid": false,
+            "em": true,
+            "sent": true
+          },
+          {
+            "n": "Grace Ashworth",
+            "age": 8,
+            "consent": "granted",
+            "paid": true,
+            "em": true,
+            "sent": true
+          }
+        ],
+        "checkpoints": [
+          {
+            "n": "Depart base",
+            "counted": null
+          },
+          {
+            "n": "Arrive venue",
+            "counted": null
+          },
+          {
+            "n": "Lunch / midpoint",
+            "counted": null
+          },
+          {
+            "n": "Before return",
+            "counted": null
+          },
+          {
+            "n": "Back at base",
+            "counted": null
+          }
+        ],
+        "signoff": {},
+        "returned": false,
+        "payBy": "2026-08-12",
+        "askPay": true,
+        "askConsent": true,
+        "childNames": [
+          "Amelia Thornton",
+          "Ruby Castellano",
+          "Oliver Bennett",
+          "Grace Ashworth"
+        ],
+        "staff": [
+          "Sarah Whitcombe",
+          "Marcus Reilly",
+          "Priya Nair"
+        ],
+        "headcount": 4,
+        "consentObtained": false,
+        "notes": "Cancelled — coach operator double-booked; parents refunded to wallet. Rebooking for early September.",
+        "status": "cancelled",
+        "createdByName": "Sarah Whitcombe"
+      }
+    ],
+    "/api/me": {
+      "name": "Sarah Whitcombe",
+      "email": "sarah@whitcombeactive.co.uk",
+      "role": "freelancer"
+    },
+    "/api/library": {
+      "settings": {
+        "providerName": "Whitcombe Active Kids",
+        "providerNameMode": "business",
+        "trips": {
+          "notifyParent": true,
+          "requireConsent": true,
+          "ratioTarget": 8
+        }
+      },
+      "staff": [
+        {
+          "first": "Sarah",
+          "last": "Whitcombe"
+        },
+        {
+          "first": "Marcus",
+          "last": "Reilly"
+        },
+        {
+          "first": "Priya",
+          "last": "Nair"
+        },
+        {
+          "first": "Daniel",
+          "last": "Okafor"
+        },
+        {
+          "first": "Helen",
+          "last": "Barford"
+        },
+        {
+          "first": "Tom",
+          "last": "Ashfield"
+        }
+      ],
+      "venues": [
+        {
+          "name": "Eureka! The National Children's Museum",
+          "address": "Discovery Rd, Halifax HX1 2NE",
+          "city": "Halifax"
+        },
+        {
+          "name": "Hardcastle Crags Forest School",
+          "address": "Hebden Bridge HX7 7AP",
+          "city": "Hebden Bridge"
+        },
+        {
+          "name": "Yorkshire Wildlife Park",
+          "address": "Branton, Doncaster DN9 3QN",
+          "city": "Doncaster"
+        },
+        {
+          "name": "Magna Science Adventure Centre",
+          "address": "Sheffield Rd, Rotherham S60 1FD",
+          "city": "Rotherham"
+        },
+        {
+          "name": "Tropical World Roundhay",
+          "address": "Princes Ave, Leeds LS8 2ER",
+          "city": "Leeds"
+        }
+      ]
+    },
+    "/api/bookings": [
+      {
+        "child": "Amelia Thornton",
+        "age": 8,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-11",
+          "2026-08-14",
+          "2026-08-18",
+          "2026-08-20",
+          "2026-08-25"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Jacob Fielding",
+        "age": 7,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-11",
+          "2026-08-18",
+          "2026-08-20"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Sofia Marchetti",
+        "age": 9,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-11",
+          "2026-08-20"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Oliver Bennett",
+        "age": 6,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Day pass (no trips)",
+        "days": [
+          "2026-08-11",
+          "2026-08-20"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Ruby Castellano",
+        "age": 10,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-11",
+          "2026-08-14",
+          "2026-08-18",
+          "2026-08-20",
+          "2026-08-25"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Harry Dawson",
+        "age": 8,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Day pass (no trips)",
+        "days": [
+          "2026-08-11",
+          "2026-08-20"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Isla Ferguson",
+        "age": 7,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-11",
+          "2026-08-14",
+          "2026-08-20"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Noah Whitfield",
+        "age": 9,
+        "listing": "Holiday Camp — Leeds",
+        "listingId": "lst-holidaycamp-le",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-18",
+          "2026-08-25"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Freya Lindqvist",
+        "age": 6,
+        "listing": "Forest School Adventures",
+        "listingId": "lst-forest-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-14"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Ethan Pardeep",
+        "age": 11,
+        "listing": "Holiday Camp — Leeds",
+        "listingId": "lst-holidaycamp-le",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-18",
+          "2026-08-25"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Grace Ashworth",
+        "age": 8,
+        "listing": "Forest School Adventures",
+        "listingId": "lst-forest-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-14"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Leo Nakamura",
+        "age": 7,
+        "listing": "Forest School Adventures",
+        "listingId": "lst-forest-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-14"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Mia Kowalski",
+        "age": 9,
+        "listing": "Holiday Camp — Leeds",
+        "listingId": "lst-holidaycamp-le",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-18",
+          "2026-08-25"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Charlie Beaumont",
+        "age": 6,
+        "listing": "Holiday Camp — Leeds",
+        "listingId": "lst-holidaycamp-le",
+        "pass": "Day pass (no trips)",
+        "days": [
+          "2026-08-18",
+          "2026-08-25"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Dylan Osei",
+        "age": 10,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-11",
+          "2026-08-20"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Poppy Hargreaves",
+        "age": 5,
+        "listing": "Forest School Adventures",
+        "listingId": "lst-forest-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-14"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Zara Iqbal",
+        "age": 8,
+        "listing": "Holiday Camp — Leeds",
+        "listingId": "lst-holidaycamp-le",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-18"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Finley Rhodes",
+        "age": 12,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-20"
+        ],
+        "status": "confirmed"
+      },
+      {
+        "child": "Aria Delacroix",
+        "age": 7,
+        "listing": "Holiday Camp — Leeds",
+        "listingId": "lst-holidaycamp-le",
+        "pass": "Waitlist",
+        "days": [
+          "2026-08-25"
+        ],
+        "status": "waitlisted"
+      },
+      {
+        "child": "Samuel Adebayo",
+        "age": 9,
+        "listing": "Summer Multi-Sports Camp",
+        "listingId": "lst-multisports-hx",
+        "pass": "Full week + trips",
+        "days": [
+          "2026-08-18"
+        ],
+        "status": "cancelled"
       }
     ]
   }
