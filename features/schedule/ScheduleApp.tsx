@@ -30,16 +30,32 @@ type WDay = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 const WDAYS: [WDay, string][] = [["mon", "Mon"], ["tue", "Tue"], ["wed", "Wed"], ["thu", "Thu"], ["fri", "Fri"], ["sat", "Sat"], ["sun", "Sun"]];
 const WIN_A = 7 * 60, WIN = 19 * 60 - WIN_A; // availability bar window: 7am–7pm
 
-interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number; week?: Partial<Record<WDay, { from: string; to: string }>> }
-interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; season?: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean }
+type Week = Partial<Record<WDay, { from: string; to: string }>>;
+interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number; week?: Week; weeks?: Record<string, Week> }
+interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; season?: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean; note?: string; brk?: { from: string; to: string } }
 interface Store { staff: Staff[]; shifts: Shift[]; sites: string[] }
+
+// weekday key for a date; per-week override (weeks[mondayIso]) falls back to the recurring pattern
+const weekdayKey = (date: string): WDay => (["sun", "mon", "tue", "wed", "thu", "fri", "sat"][dt(date).getUTCDay()]) as WDay;
+const effWeek = (st: Staff, date: string): Week => st.weeks?.[iso(mondayOf(dt(date)))] ?? st.week ?? {};
+// availability of a staff member on a given day, for the assign panel
+function dayAvail(st: Staff, date: string): { ok: boolean; label: string } {
+  const w = effWeek(st, date)[weekdayKey(date)];
+  return w ? { ok: true, label: `${to12(w.from)}–${to12(w.to)} available` } : { ok: false, label: "Unavailable this day" };
+}
+// group key: shifts sharing these fields are one "shift" (N needed / M filled) in the editor
+const gkey = (s: { site: string; role: string; date: string; start: string; end: string }) => `${s.site}|${s.role}|${s.date}|${s.start}|${s.end}`;
+// 12-hour split / join for the am–pm time dropdowns
+const to12parts = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); const ap = h >= 12 ? "pm" : "am"; const hr = h % 12 === 0 ? 12 : h % 12; return { hr, m: String(m).padStart(2, "0"), ap }; };
+const from12 = (hr: number, m: string, ap: string) => { let h = hr % 12; if (ap === "pm") h += 12; return `${String(h).padStart(2, "0")}:${m}`; };
+const MIN_OPTS = ["00", "15", "30", "45"];
 
 const ROLE_COL: Record<string, string> = { "Lead Coach": "#2f6bd8", "Lifeguard": "#0f857b", "Coach": "#6366f1", "Activity Assistant": "#8b5cf6", "First Aider": "#c06a10" };
 const roleCol = (r: string) => ROLE_COL[r] ?? "#64748b";
 const ROLES = ["Lead Coach", "Coach", "Lifeguard", "First Aider", "Activity Assistant"];
 
 interface Template { id: string; name: string; items: { dayOffset: number; site: string; role: string; listing?: string; season?: string; staffId: string | null; start: string; end: string }[] }
-const KEY = "aos.rota.v2";
+const KEY = "aos.rota.v3";
 const TKEY = "aos.rota.templates.v1";
 const loadTpl = (): Template[] => { try { return JSON.parse(localStorage.getItem(TKEY) || "[]"); } catch { return []; } };
 function seed(): Store {
@@ -83,7 +99,23 @@ type Group = "area" | "staff";
 const SPANS: [Span, string][] = [["day", "Day"], ["week", "Week"], ["2w", "2 Weeks"], ["4w", "4 Weeks"], ["month", "Month"]];
 const GROUPS: [Group, string][] = [["area", "Area"], ["staff", "Team member"]];
 const SPAN_WORD: Record<Span, string> = { day: "today", week: "this week", "2w": "these 2 weeks", "4w": "these 4 weeks", month: "this month" };
-type Draft = { id?: string; site: string; role: string; listing: string; season: string; date: string; staffId: string | null; start: string; end: string };
+// A grouped shift draft: one "shift" that needs `slots.length` staff, filled where slot != null.
+type Draft = { groupIds: string[]; site: string; role: string; listing: string; season: string; date: string; start: string; end: string; slots: (string | null)[]; brk: { from: string; to: string } | null; note: string };
+
+// Compact am–pm time picker (hour : minute : am/pm) matching the manual.
+function TimeSel({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const p = to12parts(value);
+  const mins = MIN_OPTS.includes(p.m) ? MIN_OPTS : [...MIN_OPTS, p.m].sort();
+  const cls = "border border-[var(--line)] bg-[var(--panel)] px-1.5 py-1 text-[13px] font-bold text-[var(--ink)] rounded-lg";
+  return (
+    <span className="inline-flex items-center gap-1">
+      <Select value={p.hr} onChange={(e) => onChange(from12(Number(e.target.value), p.m, p.ap))} className={cls}>{Array.from({ length: 12 }, (_, i) => i + 1).map((h) => <option key={h} value={h}>{h}</option>)}</Select>
+      <span className="text-[var(--ink-3)]">:</span>
+      <Select value={p.m} onChange={(e) => onChange(from12(p.hr, e.target.value, p.ap))} className={cls}>{mins.map((m) => <option key={m} value={m}>{m}</option>)}</Select>
+      <Select value={p.ap} onChange={(e) => onChange(from12(p.hr, p.m, e.target.value))} className={cls}>{["am", "pm"].map((a) => <option key={a} value={a}>{a}</option>)}</Select>
+    </span>
+  );
+}
 
 export function ScheduleApp() {
   const [store, setStore] = useState<Store>(seed);
@@ -101,6 +133,8 @@ export function ScheduleApp() {
   const [showAlerts, setShowAlerts] = useState(false);
   const [hover, setHover] = useState<{ id: string; top: number; left: number } | null>(null);
   const [availEdit, setAvailEdit] = useState<Staff | null>(null);
+  const [availWeekMode, setAvailWeekMode] = useState<"all" | "this">("all");
+  const [assignOpen, setAssignOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [copyMenu, setCopyMenu] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -158,12 +192,51 @@ export function ScheduleApp() {
   const removeShift = (id: string) => persist({ ...store, shifts: store.shifts.filter((s) => s.id !== id) });
   const remind = (id: string) => { persist({ ...store, staff: store.staff.map((s) => (s.id === id ? { ...s, reminders: (s.reminders ?? 0) + 1 } : s)) }); flash("Reminder sent."); };
   const requestAvail = () => flash(`Availability requested from ${notSubmitted} staff.`);
+  // Reconcile the grouped draft back into individual shift rows (one per needed slot),
+  // reusing existing rows (to keep check-ins) where a staff member still matches.
   function saveDraft() {
     if (!draft) return;
-    if (draft.id) persist({ ...store, shifts: store.shifts.map((s) => (s.id === draft.id ? { ...s, ...draft, listing: draft.listing || undefined, season: draft.season || undefined } : s)) });
-    else persist({ ...store, shifts: [...store.shifts, { id: `sh${Date.now()}`, site: draft.site, role: draft.role, listing: draft.listing || undefined, season: draft.season || undefined, date: draft.date, staffId: draft.staffId, start: draft.start, end: draft.end }] });
-    setDraft(null);
+    const existing = store.shifts.filter((s) => draft.groupIds.includes(s.id));
+    const used = new Set<string>();
+    const rows: Shift[] = draft.slots.map((sid, i) => {
+      let base = sid ? existing.find((e) => e.staffId === sid && !used.has(e.id)) : undefined;
+      if (!base) base = existing.find((e) => !used.has(e.id));
+      if (base) used.add(base.id);
+      const keepIO = base && base.staffId === sid;
+      return {
+        id: base?.id ?? `sh${Date.now()}${i}`,
+        site: draft.site, role: draft.role,
+        listing: draft.listing || undefined, season: draft.season || undefined,
+        date: draft.date, start: draft.start, end: draft.end, staffId: sid,
+        in: keepIO ? base!.in : undefined, out: keepIO ? base!.out : undefined,
+        locked: base?.locked, note: draft.note || undefined, brk: draft.brk || undefined,
+      };
+    });
+    persist({ ...store, shifts: [...store.shifts.filter((s) => !draft.groupIds.includes(s.id)), ...rows] });
+    setDraft(null); setAssignOpen(false);
   }
+  function deleteDraft() { if (!draft) return; persist({ ...store, shifts: store.shifts.filter((s) => !draft.groupIds.includes(s.id)) }); setDraft(null); setAssignOpen(false); }
+  // Auto-fill the draft's empty slots from available, non-double-booked staff (role-preferred).
+  function autoFillDraft() {
+    if (!draft) return;
+    const taken = new Set(draft.slots.filter(Boolean) as string[]);
+    const busy = (sid: string) => store.shifts.some((s) => s.staffId === sid && s.date === draft.date && !draft.groupIds.includes(s.id));
+    const pool = store.staff
+      .filter((s) => !taken.has(s.id) && !busy(s.id) && dayAvail(s, draft.date).ok)
+      .sort((a, b) => Number(b.role === draft.role) - Number(a.role === draft.role));
+    const slots = draft.slots.slice(); let pi = 0;
+    for (let i = 0; i < slots.length && pi < pool.length; i++) if (!slots[i]) { slots[i] = pool[pi++].id; }
+    setDraft({ ...draft, slots });
+  }
+  const toggleAssign = (sid: string) => {
+    if (!draft) return;
+    const slots = draft.slots.slice();
+    const at = slots.indexOf(sid);
+    if (at >= 0) slots[at] = null;                       // unassign
+    else { const empty = slots.indexOf(null); if (empty >= 0) slots[empty] = sid; else slots.push(sid); }
+    setDraft({ ...draft, slots });
+  };
+  const setNeed = (n: number) => { if (!draft) return; const slots = draft.slots.slice(); if (n > slots.length) while (slots.length < n) slots.push(null); else { for (let i = slots.length - 1; i >= 0 && slots.length > n; i--) if (!slots[i]) slots.splice(i, 1); while (slots.length > n) slots.pop(); } setDraft({ ...draft, slots }); };
   function autoFill() {
     setAutoMenu(false);
     const confirmed = store.staff.filter((s) => s.avail === "confirmed");
@@ -191,12 +264,18 @@ export function ScheduleApp() {
   function deleteTemplate(id: string) { persistTpl(templates.filter((t) => t.id !== id)); }
   function publish() { const ids = new Set(periodShifts.filter((s) => s.staffId).map((s) => s.id)); persist({ ...store, shifts: store.shifts.map((s) => (ids.has(s.id) ? { ...s, locked: true } : s)) }); flash(`Published to ${assignedStaff.size} staff — shifts locked.`); }
   const openAdd = (site_: string, role: string, c: { date: string; hour: number | null }, staffId: string | null) =>
-    setDraft({ site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonF !== "all" ? seasonF : "Summer 2026", date: c.date, staffId, start: c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00", end: c.hour != null ? `${String(c.hour + 1).padStart(2, "0")}:00` : "17:00" });
+    setDraft({ groupIds: [], site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonF !== "all" ? seasonF : "Summer 2026", date: c.date, start: c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00", end: c.hour != null ? `${String(c.hour + 1).padStart(2, "0")}:00` : "17:00", slots: [staffId], brk: null, note: "" });
+  // Open the editor on the whole group of shifts sharing this slot (N needed / M filled).
+  const openEditGroup = (s: Shift) => {
+    const group = store.shifts.filter((x) => gkey(x) === gkey(s));
+    const filledFirst = [...group].sort((a, b) => Number(!!b.staffId) - Number(!!a.staffId));
+    setDraft({ groupIds: group.map((x) => x.id), site: s.site, role: s.role, listing: s.listing ?? "", season: s.season ?? "", date: s.date, start: s.start, end: s.end, slots: filledFirst.map((x) => x.staffId), brk: s.brk ?? null, note: s.note ?? "" });
+  };
 
   const ShiftBlock = ({ s, compact }: { s: Shift; compact?: boolean }) => {
     const st = s.staffId ? staffById[s.staffId] : null; const filled = !!st; const col = roleCol(s.role);
     return (
-      <button type="button" onClick={() => canManage && setDraft({ id: s.id, site: s.site, role: s.role, listing: s.listing ?? "", season: s.season ?? "", date: s.date, staffId: s.staffId, start: s.start, end: s.end })} disabled={!canManage}
+      <button type="button" onClick={() => canManage && openEditGroup(s)} disabled={!canManage}
         className={"w-full rounded-lg border text-left transition-shadow enabled:hover:shadow-sm " + (compact ? "px-1 py-1 text-[9.5px]" : "px-2 py-1.5 text-[11px]")}
         style={filled ? { borderColor: col, background: `${col}0f`, borderLeftWidth: 3 } : { borderColor: "var(--line)", borderStyle: "dashed", background: "var(--surface)" }}>
         {!compact && <div className="flex items-start gap-1"><span className="min-w-0 flex-1 font-extrabold text-[var(--ink)]">{to12(s.start)} – {to12(s.end)}</span>{canManage && <span role="button" onClick={(e) => { e.stopPropagation(); removeShift(s.id); }} className="flex-none text-[var(--ink-3)] hover:text-[#c0392b]">×</span>}</div>}
@@ -402,22 +481,101 @@ export function ScheduleApp() {
         </div>
       )}
 
-      {/* Add / edit shift */}
-      {draft && (
-        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setDraft(null)}>
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <div className="text-[15px] font-extrabold text-[var(--ink)]">{draft.id ? "Edit shift" : "Add a shift"}</div>
-            <div className="mt-1 text-[12px] text-[var(--ink-3)]">{dt(draft.date).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "short", timeZone: "UTC" })}</div>
-            <div className="mt-3 grid gap-2.5">
-              <div className="grid grid-cols-2 gap-2.5"><div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Location</label><Select value={draft.site} onChange={(e) => setDraft({ ...draft, site: e.target.value })} className="w-full">{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div><div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Role</label><Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className="w-full">{ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div></div>
-              <div className="grid grid-cols-2 gap-2.5"><div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Listing</label><Input value={draft.listing} onChange={(e) => setDraft({ ...draft, listing: e.target.value })} list="rota-listings" className="w-full" /><datalist id="rota-listings">{listingOpts.map((l) => <option key={l} value={l} />)}</datalist></div><div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Season</label><Input value={draft.season} onChange={(e) => setDraft({ ...draft, season: e.target.value })} list="rota-seasons" className="w-full" /><datalist id="rota-seasons">{seasonOpts.map((s) => <option key={s} value={s} />)}</datalist></div></div>
-              <div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Assign to</label><Select value={draft.staffId ?? ""} onChange={(e) => setDraft({ ...draft, staffId: e.target.value || null })} className="w-full"><option value="">Unfilled — fill later</option>{store.staff.map((s) => <option key={s.id} value={s.id}>{s.name} · {s.role}</option>)}</Select></div>
-              <div className="grid grid-cols-2 gap-2.5"><div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Start</label><Input type="time" value={draft.start} onChange={(e) => setDraft({ ...draft, start: e.target.value })} className="w-full" /></div><div><label className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">End</label><Input type="time" value={draft.end} onChange={(e) => setDraft({ ...draft, end: e.target.value })} className="w-full" /></div></div>
+      {/* Add / edit shift — grouped (N staff needed / M filled) */}
+      {draft && (() => {
+        const assigned = draft.slots.filter(Boolean) as string[];
+        const need = draft.slots.length, filled = assigned.length;
+        const firstSt = assigned[0] ? staffById[assigned[0]] : null;
+        const brkH = draft.brk ? durH(draft.brk.from, draft.brk.to) : 0;
+        const shiftH = Math.max(0, durH(draft.start, draft.end) - brkH);
+        const cost = assigned.reduce((n, sid) => n + (staffById[sid]?.rate ?? 0) * shiftH, 0);
+        return (
+        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[7vh]" onClick={() => { setDraft(null); setAssignOpen(false); }}>
+          <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {/* header */}
+            <div className="flex items-center gap-3 border-b border-[var(--line)] px-5 py-3.5">
+              <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{firstSt ? initials(firstSt.name) : "＋"}</span>
+              <div className="min-w-0"><div className="truncate text-[16px] font-extrabold text-[var(--ink)]">{firstSt ? firstSt.name : (draft.groupIds.length ? "Shift" : "New shift")}{filled > 1 && <span className="text-[var(--ink-3)]"> +{filled - 1}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{draft.role} · {draft.site}</div></div>
+              <button type="button" onClick={() => { setDraft(null); setAssignOpen(false); }} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button>
             </div>
-            <div className="mt-4 flex items-center gap-2"><Button variant="primary" onClick={saveDraft}>{draft.id ? "Save changes" : "Add shift"}</Button><Button onClick={() => setDraft(null)}>Cancel</Button>{draft.id && <button type="button" onClick={() => { removeShift(draft.id!); setDraft(null); }} className="ml-auto text-[12px] font-bold text-[#c0392b] hover:underline">Delete shift</button>}</div>
+
+            {!assignOpen ? (
+            <div className="px-5 py-4">
+              {/* date */}
+              <div className="flex items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">📅</span><span className="text-[13.5px] font-bold text-[var(--ink)]">{dt(draft.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}</span></div>
+              {/* time */}
+              <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">🕐</span><TimeSel value={draft.start} onChange={(v) => setDraft({ ...draft, start: v })} /><span className="text-[var(--ink-3)]">—</span><TimeSel value={draft.end} onChange={(v) => setDraft({ ...draft, end: v })} /></div>
+              {/* staff needed / day → opens assign */}
+              <div className="flex flex-wrap items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] py-2.5">
+                <span className="text-[15px]">👤</span><span className="text-[13.5px] font-bold text-[var(--ink)]">Staff needed / day</span>
+                <span className="ml-auto flex items-center gap-2">
+                  <button type="button" onClick={() => setNeed(Math.max(1, need - 1))} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">−</button>
+                  <span className="w-6 text-center text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{need}</span>
+                  <button type="button" onClick={() => setNeed(need + 1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">+</button>
+                </span>
+              </div>
+              <button type="button" onClick={() => setAssignOpen(true)} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left">
+                <span className="text-[15px]">🧑‍🤝‍🧑</span>
+                <span className="text-[13.5px] font-bold text-[#1d3a8f]">Assign staff</span>
+                <span className="ml-auto flex items-center gap-1.5 text-[12px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{filled} / {need} filled<span className="text-[var(--ink-3)]">›</span></span>
+              </button>
+              {/* break */}
+              {draft.brk ? (
+                <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">☕</span><span className="text-[13px] font-bold text-[var(--ink)]">Break</span><TimeSel value={draft.brk.from} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, from: v } })} /><span className="text-[var(--ink-3)]">—</span><TimeSel value={draft.brk.to} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, to: v } })} /><button type="button" onClick={() => setDraft({ ...draft, brk: null })} className="ml-auto text-[16px] text-[var(--ink-3)]">×</button></div>
+              ) : (
+                <button type="button" onClick={() => setDraft({ ...draft, brk: { from: "12:00", to: "12:30" } })} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left"><span className="text-[15px]">☕</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">Add break</span></button>
+              )}
+              {/* note */}
+              {(draft.note.length > 0) ? (
+                <div className="flex items-start gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">💬</span><textarea autoFocus value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} rows={2} placeholder="Shift note — visible to assigned staff" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" /></div>
+              ) : (
+                <button type="button" onClick={() => setDraft({ ...draft, note: " " })} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left"><span className="text-[15px]">💬</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">Add shift note</span></button>
+              )}
+              {/* role / location / listing / season */}
+              <details className="border-b border-[var(--line-2,#eef2f8)] py-2.5"><summary className="cursor-pointer list-none text-[12.5px] font-bold text-[var(--ink-2)]">⚙️ Role · location · listing · season</summary>
+                <div className="mt-2.5 grid grid-cols-2 gap-2.5">
+                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Role</label><Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className="w-full">{ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
+                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Location</label><Select value={draft.site} onChange={(e) => setDraft({ ...draft, site: e.target.value })} className="w-full">{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
+                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Listing</label><Input value={draft.listing} onChange={(e) => setDraft({ ...draft, listing: e.target.value })} list="rota-listings" className="w-full" /><datalist id="rota-listings">{listingOpts.map((l) => <option key={l} value={l} />)}</datalist></div>
+                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Season</label><Input value={draft.season} onChange={(e) => setDraft({ ...draft, season: e.target.value })} list="rota-seasons" className="w-full" /><datalist id="rota-seasons">{seasonOpts.map((s) => <option key={s} value={s} />)}</datalist></div>
+                </div>
+              </details>
+              {/* footer */}
+              <div className="mt-3 flex items-center gap-3">
+                <div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Total</div><div className="text-[15px] font-extrabold text-[var(--ink)]">{hLabel(shiftH)} · <span className="tabular-nums">{money(cost)}</span></div></div>
+                <div className="ml-auto flex items-center gap-2">
+                  {draft.groupIds.length > 0 && <button type="button" onClick={deleteDraft} title="Delete shift" className="flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--line)] text-[16px] text-[var(--ink-3)] hover:bg-[#fdebec] hover:text-[#c0392b]">🗑</button>}
+                  <button type="button" onClick={saveDraft} className="rounded-xl bg-[#0f7a43] px-6 py-2 text-[14px] font-extrabold text-white hover:brightness-105">Save</button>
+                </div>
+              </div>
+            </div>
+            ) : (
+            /* ── Assign staff sub-panel ── */
+            <div className="px-5 py-4">
+              <div className="mb-3 flex items-center gap-2"><button type="button" onClick={() => setAssignOpen(false)} className="text-[16px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button><div className="text-[15px] font-extrabold text-[var(--ink)]">Assign staff</div><div className="ml-auto text-[12.5px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{filled} / {need} filled</div></div>
+              <button type="button" onClick={autoFillDraft} className="mb-3 w-full rounded-xl bg-[#eef4fd] px-4 py-2.5 text-[13.5px] font-extrabold text-[#1d3a8f] hover:bg-[#e2edfb]">⚡ Auto-fill available staff</button>
+              <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">Staff already on a shift that day (here or at another location) can&rsquo;t be double-booked.</p>
+              <div className="flex max-h-[46vh] flex-col divide-y divide-[var(--line-2,#eef2f8)] overflow-y-auto">
+                {[...store.staff]
+                  .map((st) => ({ st, on: draft.slots.includes(st.id), av: dayAvail(st, draft.date), busy: store.shifts.some((s) => s.staffId === st.id && s.date === draft.date && !draft.groupIds.includes(s.id)) }))
+                  .sort((a, b) => Number(b.on) - Number(a.on) || Number(b.av.ok) - Number(a.av.ok) || Number(a.busy) - Number(b.busy))
+                  .map(({ st, on, av, busy }) => {
+                    const blocked = busy && !on;
+                    return (
+                    <button key={st.id} type="button" disabled={blocked} onClick={() => toggleAssign(st.id)}
+                      className={"flex items-center gap-3 py-2.5 text-left transition-colors " + (on ? "bg-[#eef4fd]" : "enabled:hover:bg-[var(--panel)]") + (blocked ? " opacity-45" : "")}>
+                      <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
+                      <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{st.name}</div><div className="text-[12px] font-semibold" style={{ color: blocked ? "var(--ink-3)" : av.ok ? "#0f7a43" : "var(--ink-3)" }}>{blocked ? "On another shift this day" : av.label} · £{st.rate.toFixed(2)}/hr</div></div>
+                      {on && <span className="text-[16px] font-extrabold text-[#1d3a8f]">✓</span>}
+                    </button>
+                  ); })}
+              </div>
+              <div className="mt-3 flex justify-end"><button type="button" onClick={() => setAssignOpen(false)} className="rounded-xl bg-[#0f7a43] px-6 py-2 text-[14px] font-extrabold text-white hover:brightness-105">Done</button></div>
+            </div>
+            )}
           </div>
         </div>
-      )}
+      ); })()}
 
       {/* Hover card — a staff member's weekly availability */}
       {hover && (() => { const st = staffById[hover.id]; if (!st) return null; const daysOn = WDAYS.filter(([k]) => st.week?.[k]).length; return (
@@ -443,24 +601,57 @@ export function ScheduleApp() {
         </div>
       ); })()}
 
-      {/* View / edit a staff member's availability */}
+      {/* View / edit a staff member's availability — This week / All weeks */}
       {availEdit && (() => { const st = availEdit;
-        const setDay = (k: WDay, w: { from: string; to: string } | null) => { const week = { ...(st.week ?? {}) }; if (w) week[k] = w; else delete week[k]; const next: Staff = { ...st, week, avail: Object.keys(week).length ? "confirmed" : st.avail }; setAvailEdit(next); persist({ ...store, staff: store.staff.map((x) => (x.id === st.id ? next : x)) }); };
+        const mondayIso = iso(mondayOf(dt(anchor)));
+        const wkSun = addDays(mondayIso, 6);
+        const f = (s: string) => dt(s).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+        const target: Week = availWeekMode === "all" ? (st.week ?? {}) : (st.weeks?.[mondayIso] ?? st.week ?? {});
+        const daysOn = WDAYS.filter(([k]) => target[k]).length;
+        const commit = (wk: Week) => {
+          const next: Staff = availWeekMode === "all"
+            ? { ...st, week: wk, avail: Object.keys(wk).length ? "confirmed" : st.avail }
+            : { ...st, weeks: { ...(st.weeks ?? {}), [mondayIso]: wk }, avail: "confirmed" };
+          setAvailEdit(next); persist({ ...store, staff: store.staff.map((x) => (x.id === st.id ? next : x)) });
+        };
+        const setDay = (k: WDay, w: { from: string; to: string } | null) => { const wk = { ...target }; if (w) wk[k] = w; else delete wk[k]; commit(wk); };
+        const preset = (keys: WDay[]) => commit(Object.fromEntries(keys.map((k) => [k, { from: "09:00", to: "17:00" }])) as Week);
         return (
-          <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[7vh]" onClick={() => setAvailEdit(null)}>
-            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-              <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-[var(--panel)] text-[11px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span><div><div className="text-[15px] font-extrabold text-[var(--ink)]">{st.name}</div><div className="text-[11px] text-[var(--ink-3)]">{st.role} · availability</div></div><button type="button" onClick={() => setAvailEdit(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
-              <p className="mt-2 text-[11.5px] text-[var(--ink-3)]">Staff set this themselves; here you can view or adjust the days &amp; times they can work.</p>
-              <div className="mt-2.5 flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
-                {WDAYS.map(([k, lbl]) => { const w = st.week?.[k]; return (
-                  <div key={k} className="flex flex-wrap items-center gap-2.5 py-2">
-                    <button type="button" onClick={() => setDay(k, w ? null : { from: "09:00", to: "17:00" })} role="switch" aria-checked={!!w} className="relative h-[20px] w-[36px] flex-none rounded-full transition-colors" style={{ background: w ? "#2f6bd8" : "var(--line)" }}><span className="absolute top-[3px] h-[14px] w-[14px] rounded-full bg-white transition-all" style={{ left: w ? "19px" : "3px" }} /></button>
-                    <span className="w-[70px] flex-none text-[13px] font-extrabold text-[var(--ink)]">{lbl}</span>
-                    {w ? <div className="flex items-center gap-1.5 text-[12.5px] text-[var(--ink-2)]"><Input type="time" value={w.from} onChange={(e) => setDay(k, { ...w, from: e.target.value })} className="w-[108px]" /><span className="text-[var(--ink-3)]">to</span><Input type="time" value={w.to} onChange={(e) => setDay(k, { ...w, to: e.target.value })} className="w-[108px]" /></div> : <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">Not available</span>}
-                  </div>
-                ); })}
+          <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={() => setAvailEdit(null)}>
+            <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+              {/* dark header */}
+              <div className="flex items-center gap-3 px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
+                <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-white/20 text-[14px] font-extrabold">{initials(st.name)}</span>
+                <div><div className="text-[16px] font-extrabold">{st.name}</div><div className="text-[12px] text-white/85">Available {daysOn} of 7 days · £{st.rate.toFixed(2)}/hr</div></div>
+                <button type="button" onClick={() => setAvailEdit(null)} className="ml-auto text-[20px] text-white/80 hover:text-white">×</button>
               </div>
-              <div className="mt-4 flex justify-end"><Button variant="primary" onClick={() => setAvailEdit(null)}>Done</Button></div>
+              <div className="px-5 py-4">
+                {/* tabs */}
+                <div className="flex gap-2 rounded-xl bg-[var(--panel)] p-1">
+                  <button type="button" onClick={() => setAvailWeekMode("this")} className={"flex-1 rounded-lg px-3 py-2 text-center transition-colors " + (availWeekMode === "this" ? "bg-white shadow-sm" : "")}><div className={"text-[13px] font-extrabold " + (availWeekMode === "this" ? "text-[#1d3a8f]" : "text-[var(--ink-2)]")}>This week</div><div className="text-[10.5px] text-[var(--ink-3)]">{f(mondayIso)}–{f(wkSun)} only</div></button>
+                  <button type="button" onClick={() => setAvailWeekMode("all")} className={"flex-1 rounded-lg px-3 py-2 text-center transition-colors " + (availWeekMode === "all" ? "bg-white shadow-sm" : "")}><div className={"text-[13px] font-extrabold " + (availWeekMode === "all" ? "text-[#1d3a8f]" : "text-[var(--ink-2)]")}>All weeks</div><div className="text-[10.5px] text-[var(--ink-3)]">Recurring pattern</div></button>
+                </div>
+                <p className="mt-2.5 text-[11.5px] text-[var(--ink-3)]">{availWeekMode === "all"
+                  ? <>Sets {st.name.split(" ")[0]}&rsquo;s <b>standard weekly availability</b> — applies to every week until changed.</>
+                  : <>Overrides the recurring pattern for <b>this week only</b> ({f(mondayIso)}–{f(wkSun)}).</>}</p>
+                {/* presets */}
+                <div className="mt-2.5 flex flex-wrap gap-1.5">
+                  <button type="button" onClick={() => preset(["mon", "tue", "wed", "thu", "fri"])} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Weekdays 9–5</button>
+                  <button type="button" onClick={() => preset(WDAYS.map(([k]) => k))} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">All 7 days</button>
+                  <button type="button" onClick={() => commit({})} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Clear all</button>
+                </div>
+                {/* per-day */}
+                <div className="mt-2.5 flex flex-col gap-1.5">
+                  {WDAYS.map(([k, lbl]) => { const w = target[k]; return (
+                    <div key={k} className="flex flex-wrap items-center gap-2.5 rounded-xl border px-3 py-2" style={{ borderColor: w ? "#c9e7d5" : "var(--line)", background: w ? "#f2faf5" : "var(--surface)" }}>
+                      <button type="button" onClick={() => setDay(k, w ? null : { from: "09:00", to: "17:00" })} role="switch" aria-checked={!!w} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: w ? "#22b365" : "var(--line)" }}><span className="absolute top-[3px] h-[16px] w-[16px] rounded-full bg-white transition-all" style={{ left: w ? "21px" : "3px" }} /></button>
+                      <span className="w-[40px] flex-none text-[13px] font-extrabold text-[var(--ink)]">{lbl}</span>
+                      {w ? <div className="flex items-center gap-1.5"><TimeSel value={w.from} onChange={(v) => setDay(k, { ...w, from: v })} /><span className="text-[var(--ink-3)]">–</span><TimeSel value={w.to} onChange={(v) => setDay(k, { ...w, to: v })} /></div> : <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">Not available</span>}
+                    </div>
+                  ); })}
+                </div>
+                <div className="mt-4 flex justify-end"><Button variant="primary" onClick={() => setAvailEdit(null)}>Done</Button></div>
+              </div>
             </div>
           </div>
         );
