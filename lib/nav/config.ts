@@ -151,7 +151,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "account", legacyView: "account", label: "Onboarding info", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3\"></path></svg>" }, badge: null },
         { view: "subscription", legacyView: "subscription", label: "Subscription", icon: { type: "glyph", value: "◈" }, badge: null },
         { view: "support", legacyView: "support", label: "Support", icon: { type: "glyph", value: "💬" }, badge: null },
-        { view: "privacy", legacyView: "admin-privacy", label: "Data & privacy", highlight: true, icon: { type: "glyph", value: "🛡" }, badge: null },
       ],
     },
     {
