@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useTenantSettings } from "@/lib/settings";
+import { SchedulingSettingsForm } from "./SchedulingSettings";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 
@@ -141,8 +142,10 @@ export function ScheduleApp() {
   const [roleMenu, setRoleMenu] = useState<string | null>(null);
   const { settings: tenantSettings } = useTenantSettings();
   const roleOptions = tenantSettings.staffRoles?.length ? tenantSettings.staffRoles : ROLES;
+  const onCost = tenantSettings.scheduling?.onCostPct ?? ON_COST;
   const addRole = (siteName: string, role: string) => { setExtraRoles((p) => ({ ...p, [siteName]: [...new Set([...(p[siteName] ?? []), role])] })); setRoleMenu(null); };
   const [toast, setToast] = useState<string | null>(null);
+  const [schedView, setSchedView] = useState<"rota" | "settings">("rota");
   const [copyMenu, setCopyMenu] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [tplSaveOpen, setTplSaveOpen] = useState(false);
@@ -185,7 +188,7 @@ export function ScheduleApp() {
 
   const staffHours = (id: string) => periodShifts.filter((s) => s.staffId === id).reduce((n, s) => n + durH(s.start, s.end), 0);
   const wagesAt = store.staff.reduce((n, st) => n + staffHours(st.id) * st.rate, 0);
-  const wagesCost = wagesAt * (1 + ON_COST / 100);
+  const wagesCost = wagesAt * (1 + onCost / 100);
   const assignedStaff = useMemo(() => new Set(periodShifts.filter((s) => s.staffId).map((s) => s.staffId as string)), [periodShifts]);
   const notSubmitted = store.staff.filter((s) => s.avail === "notsubmitted").length;
   const alerts = useMemo(() => periodShifts.filter((s) => s.staffId && !s.in && !s.out), [periodShifts]);
@@ -338,6 +341,15 @@ export function ScheduleApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Staff schedule" icon="🗓" lede="Build the rota by location & role or by team member, across day / week / month — with wages and on-cost." />
 
+      <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
+        {([["rota", "Rota"], ["settings", "Settings"]] as const).map(([v, lbl]) => (
+          <button key={v} type="button" onClick={() => setSchedView(v)} className={"rounded-lg px-4 py-1.5 text-[13px] font-bold transition-colors " + (schedView === v ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>
+        ))}
+      </div>
+
+      {schedView === "settings" ? <SchedulingSettingsForm /> : (
+      <>
+
       <Card className="mb-3 overflow-hidden">
         <button type="button" onClick={() => setHelp((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">ⓘ</span><span className="text-[14px] font-extrabold text-[var(--ink)]">How availability works</span><span className="ml-auto text-[12px] text-[var(--ink-3)]">{help ? "▲" : "▼"}</span></button>
         {help && <ol className="ml-9 list-decimal space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li><b>Request availability</b> — hit the red button in the staff panel. Everyone starts <b className="text-[#c0392b]">Not submitted</b>.</li><li>Staff set the days &amp; times they can work — their card turns <b className="text-[#0f7a43]">Confirmed</b>.</li><li>Still red? Tap the <b>gold bell</b> to send a reminder.</li><li>Then ✨ Auto-schedule fills open shifts and Publish locks them &amp; tells staff.</li></ol>}
@@ -381,7 +393,7 @@ export function ScheduleApp() {
 
       {/* Wages */}
       <Card className="mb-3 border-l-4 border-l-[#1d3a8f] p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4"><div className="text-[14px] font-extrabold text-[var(--ink)]">Total wages · {SPAN_WORD[span]}</div><div className="flex gap-8 text-right"><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">At hourly rate</div><div className="text-[22px] font-extrabold tabular-nums text-[var(--ink)]">{money(wagesAt)}</div></div><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Incl. {ON_COST}% on-cost</div><div className="text-[22px] font-extrabold tabular-nums text-[#1d3a8f]">{money(wagesCost)}</div></div></div></div>
+        <div className="flex flex-wrap items-start justify-between gap-4"><div className="text-[14px] font-extrabold text-[var(--ink)]">Total wages · {SPAN_WORD[span]}</div><div className="flex gap-8 text-right"><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">At hourly rate</div><div className="text-[22px] font-extrabold tabular-nums text-[var(--ink)]">{money(wagesAt)}</div></div><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Incl. {onCost}% on-cost</div><div className="text-[22px] font-extrabold tabular-nums text-[#1d3a8f]">{money(wagesCost)}</div></div></div></div>
         <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">Predicted <b>on-cost</b> adds a cost on top of wages (e.g. employer NI, pension). Recorded only — ActivityOS never moves money.</p>
       </Card>
 
@@ -392,7 +404,7 @@ export function ScheduleApp() {
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search" className="mb-2 w-full text-[12px]" />
             {canManage && <div className="mb-2.5"><div className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step 1 · Confirm availability</div><button type="button" onClick={requestAvail} className="w-full rounded-lg bg-[#c0392b] px-2 py-2 text-[11px] font-extrabold uppercase leading-tight tracking-wide text-white hover:brightness-105">Request staff{notSubmitted ? ` · ${notSubmitted}` : ""}</button></div>}
             <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
-              {shownStaff.map((st) => { const hrs = staffHours(st.id); const pay = hrs * st.rate; const cost = pay * (1 + ON_COST / 100); return (
+              {shownStaff.map((st) => { const hrs = staffHours(st.id); const pay = hrs * st.rate; const cost = pay * (1 + onCost / 100); return (
                 <div key={st.id}
                   onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHover({ id: st.id, top: Math.max(64, Math.min(r.top, (typeof window !== "undefined" ? window.innerHeight : 800) - 430)), left: r.right + 10 }); }}
                   onMouseLeave={() => setHover((h) => (h?.id === st.id ? null : h))}
@@ -719,8 +731,12 @@ export function ScheduleApp() {
         </div>
       ); })()}
 
+      </>
+      )}
+
       {toast && <div className="fixed bottom-5 left-1/2 z-[140] -translate-x-1/2 rounded-full bg-[#16306e] px-4 py-2.5 text-[12.5px] font-bold text-white shadow-lg">{toast}</div>}
     </div>
   );
 }
+
 
