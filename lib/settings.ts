@@ -449,6 +449,11 @@ export const ROLE_CAPS: { key: string; label: string; group: string; sensitive?:
 const CAP_KEYS = ROLE_CAPS.map((c) => c.key);
 const capsAt = (level: CapLevel): Record<string, CapLevel> =>
   Object.fromEntries(CAP_KEYS.map((k) => [k, level]));
+/** Job roles / positions a company rosters by (distinct from the permission
+ *  StaffRoles above). One shared list feeds the schedule's role rows and the
+ *  staff-invite "Role" picker. Editable in Setup → Staff roles. */
+export const DEFAULT_STAFF_ROLES: string[] = ["Lead Coach", "Coach", "Activity Instructor", "Lifeguard", "First Aider", "Activity Assistant"];
+
 /** Sensible starting roles a company can then tweak or add to. Levels match the
  *  presets agreed with the operator; Owner is full & locked. */
 export const DEFAULT_ROLES: StaffRole[] = [
@@ -927,6 +932,10 @@ export interface TenantSettings {
   /** Company/head-office roles & per-area access. Optional — the editor falls
    *  back to DEFAULT_ROLES when unset. */
   roles?: StaffRole[];
+  /** Job roles / positions the company rosters by (Lead Coach, Lifeguard…).
+   *  Shared by the schedule role rows and the staff-invite Role picker.
+   *  Falls back to DEFAULT_STAFF_ROLES when unset. */
+  staffRoles?: string[];
   /** Ask the operator why, when they cancel. Off = don't make them answer. */
   askReasonOperator: boolean;
   /** Ask the parent why, when they cancel their own booking. */
@@ -1111,6 +1120,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   voucherWhenClose: "hide",
   ratioGroups: DEFAULT_RATIO_GROUPS,
   roles: DEFAULT_ROLES,
+  staffRoles: DEFAULT_STAFF_ROLES,
   refundApproval: "review",
   askReasonOperator: true,
   askReasonParent: false,
@@ -1179,6 +1189,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     emailAssets: { quotes: s.emailAssets?.quotes ?? [], images: s.emailAssets?.images ?? [], autoAddPhotos: s.emailAssets?.autoAddPhotos ?? false },
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
     seasons: s.seasons ?? DEFAULT_SETTINGS.seasons,
+    staffRoles: s.staffRoles?.length ? s.staffRoles : DEFAULT_SETTINGS.staffRoles,
     payMethods: (s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods).filter((m) => m !== "Free place"),
     // Schemes held a single `reference` string before they held labelled
     // details. Lift rather than drop — a provider's account numbers are not

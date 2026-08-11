@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
+import { useTenantSettings } from "@/lib/settings";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 
@@ -138,6 +139,8 @@ export function ScheduleApp() {
   const [actionsOpen, setActionsOpen] = useState(false);
   const [extraRoles, setExtraRoles] = useState<Record<string, string[]>>({});
   const [roleMenu, setRoleMenu] = useState<string | null>(null);
+  const { settings: tenantSettings } = useTenantSettings();
+  const roleOptions = tenantSettings.staffRoles?.length ? tenantSettings.staffRoles : ROLES;
   const addRole = (siteName: string, role: string) => { setExtraRoles((p) => ({ ...p, [siteName]: [...new Set([...(p[siteName] ?? []), role])] })); setRoleMenu(null); };
   const [toast, setToast] = useState<string | null>(null);
   const [copyMenu, setCopyMenu] = useState(false);
@@ -564,7 +567,7 @@ export function ScheduleApp() {
               {/* role / location / listing / season */}
               <details className="border-b border-[var(--line-2,#eef2f8)] py-2.5"><summary className="cursor-pointer list-none text-[12.5px] font-bold text-[var(--ink-2)]">⚙️ Role · location · listing · season</summary>
                 <div className="mt-2.5 grid grid-cols-2 gap-2.5">
-                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Role</label><Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className="w-full">{ROLES.map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
+                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Role</label><Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className="w-full">{[...new Set([draft.role, ...roleOptions])].filter(Boolean).map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
                   <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Location</label><Select value={draft.site} onChange={(e) => setDraft({ ...draft, site: e.target.value })} className="w-full">{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
                   <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Listing</label><Input value={draft.listing} onChange={(e) => setDraft({ ...draft, listing: e.target.value })} list="rota-listings" className="w-full" /><datalist id="rota-listings">{listingOpts.map((l) => <option key={l} value={l} />)}</datalist></div>
                   <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Season</label><Input value={draft.season} onChange={(e) => setDraft({ ...draft, season: e.target.value })} list="rota-seasons" className="w-full" /><datalist id="rota-seasons">{seasonOpts.map((s) => <option key={s} value={s} />)}</datalist></div>
@@ -700,7 +703,7 @@ export function ScheduleApp() {
       })()}
 
       {/* Add-a-new-role picker */}
-      {roleMenu && (() => { const si = roleMenu; const shown = [...new Set([...store.shifts.filter((s) => s.site === si).map((s) => s.role), ...(extraRoles[si] ?? [])])]; const avail = ROLES.filter((r) => !shown.includes(r)); return (
+      {roleMenu && (() => { const si = roleMenu; const shown = [...new Set([...store.shifts.filter((s) => s.site === si).map((s) => s.role), ...(extraRoles[si] ?? [])])]; const avail = roleOptions.filter((r) => !shown.includes(r)); return (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[12vh]" onClick={() => setRoleMenu(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2"><span className="text-[16px]">➕</span><div className="text-[15px] font-extrabold text-[var(--ink)]">Add a role</div><button type="button" onClick={() => setRoleMenu(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
