@@ -412,6 +412,7 @@ export interface StaffRole {
 /** The areas access is set against, grouped for the matrix. `sensitive` rows
  *  cover data we especially want locked down (medical, money, payroll). */
 export const ROLE_CAPS: { key: string; label: string; group: string; sensitive?: boolean }[] = [
+  { key: "dashboard", label: "Dashboard", group: "Overview" },
   { key: "bookings", label: "Bookings", group: "Sell & take bookings" },
   { key: "listings", label: "Listings & blocks", group: "Sell & take bookings" },
   { key: "customers", label: "Families", group: "Sell & take bookings" },
@@ -440,8 +441,8 @@ const capsAt = (level: CapLevel): Record<string, CapLevel> =>
 export const DEFAULT_ROLES: StaffRole[] = [
   { id: "owner", name: "Owner / Admin", builtin: true, owner: true, caps: capsAt("edit") },
   { id: "manager", name: "Manager", builtin: true, caps: { ...capsAt("edit"), payroll: "view", finances: "view", settings: "none" } },
-  { id: "lead", name: "Site / Camp Lead", builtin: true, caps: { ...capsAt("none"), bookings: "view", customers: "view", registers: "edit", ratios: "edit", timetable: "edit", meals: "edit", trips: "edit", medical: "view", incidents: "edit", medication: "edit", moments: "edit", documents: "view", messaging: "view" } },
-  { id: "coach", name: "Coach / Staff", builtin: true, caps: { ...capsAt("none"), registers: "view", ratios: "view", timetable: "view", customers: "view", medical: "view", moments: "edit", documents: "view", messaging: "view" } },
+  { id: "lead", name: "Site / Camp Lead", builtin: true, caps: { ...capsAt("none"), dashboard: "view", bookings: "view", customers: "view", registers: "edit", ratios: "edit", timetable: "edit", meals: "edit", trips: "edit", medical: "view", incidents: "edit", medication: "edit", moments: "edit", documents: "view", messaging: "view" } },
+  { id: "coach", name: "Coach / Staff", builtin: true, caps: { ...capsAt("none"), dashboard: "view", registers: "view", ratios: "view", timetable: "view", customers: "view", medical: "view", moments: "edit", documents: "view", messaging: "view" } },
 ];
 
 export interface TenantSettings {

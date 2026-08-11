@@ -1381,7 +1381,15 @@ export function SetupApp() {
       )}
 
       {tab === "staff" && (
-        <Section title="Staff & workforce" lede="Team policy — who can do what, and the checks you require. The checks are enforced by the backend (handed over).">
+        <Section title="Staff & workforce" lede="Team policy — the checks you require. The checks are enforced by the backend (handed over).">
+          {portal === "company" && (
+            <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] px-4 py-3">
+              <span className="text-[12.5px] leading-relaxed text-[#7a5a12]">
+                <b>Looking for roles &amp; who-can-see-what?</b> Name your roles and set View / Edit per area — Dashboard, Listings, Bookings, Finances and the rest — in the <b>Roles &amp; permissions</b> tab.
+              </span>
+              <button type="button" onClick={() => setTab("roles")} className="ml-auto flex-none rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white hover:bg-[#16306e]">Open Roles &amp; permissions →</button>
+            </div>
+          )}
           <Row label="Who assigns staff to groups" hint="On: only site managers & leads can assign staff to age groups / rooms. Off: anyone on the team can.">
             <Toggle on={settings.staff?.assignByLeads ?? false} onChange={(v) => set("staff", { ...settings.staff, assignByLeads: v })} labels={["Leads only", "Anyone"]} />
           </Row>
