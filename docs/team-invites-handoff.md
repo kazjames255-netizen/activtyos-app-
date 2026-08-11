@@ -33,3 +33,4 @@ upgrade prompt at the plan's included limit.
 Prototype ref: `~/Downloads/AAAAAAA.html` (edit663) — "Staff module: Invite /
 deactivate users · Roles & permissions · Schedules · Pay rates (Finance-gated) ·
 Impersonate"; `users(status invited→active→deactivated, assigned_venues[])`.
+7. **Delete / revoke a pending invite** — add `DELETE /api/invites/:token` (revokes the token so the link/email stops working). The UI already calls it best-effort and hides the row locally until it lands. Only unused invites; already-joined users are unaffected.

@@ -26,7 +26,7 @@ interface Venue { id: string; name: string }
 interface SubCurrent { plan: string; staffLimit?: number | null; staffUsed?: number | null; details?: { name?: string } }
 
 type Assignment = { mode: "all" | "listings" | "locations"; ids: string[] };
-type LocalMeta = { staffRole?: string; assignment?: Assignment; status?: "active" | "deactivated" };
+type LocalMeta = { staffRole?: string; assignment?: Assignment; status?: "active" | "deactivated" | "deleted" };
 const META_KEY = "aos.team.meta.v1";
 const loadMeta = (): Record<string, LocalMeta> => { try { return JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch { return {}; } };
 const saveMeta = (m: Record<string, LocalMeta>) => { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch { /* ignore */ } };
@@ -81,7 +81,10 @@ export function TeamApp() {
   const canInviteFranchise = me?.role === "company";
 
   // Active = accepted invites we haven't locally deactivated.
-  const rows = useMemo(() => (invites ?? []).map((inv) => ({ ...inv, meta: meta[inv.token] ?? {} })), [invites, meta]);
+  const rows = useMemo(
+    () => (invites ?? []).map((inv) => ({ ...inv, meta: meta[inv.token] ?? {} })).filter((r) => r.meta.status !== "deleted"),
+    [invites, meta],
+  );
   const active = rows.filter((r) => r.usedBy && r.meta.status !== "deactivated");
   const deactivated = rows.filter((r) => r.usedBy && r.meta.status === "deactivated");
   const pending = rows.filter((r) => !r.usedBy);
@@ -125,6 +128,12 @@ export function TeamApp() {
     patchMeta(token, { status });
     // Best-effort backend call — no-op until Amir adds the route (handoff).
     void api(`/api/invites/${token}/status`, { method: "PATCH", body: JSON.stringify({ status }) }).catch(() => {});
+  };
+  const deleteInvite = (token: string) => {
+    if (!confirm("Delete this invite? The link stops working — anyone who hasn't joined can't use it. This can't be undone.")) return;
+    patchMeta(token, { status: "deleted" });
+    // Best-effort backend call — revokes the token once Amir adds the route (handoff).
+    void api(`/api/invites/${token}`, { method: "DELETE" }).catch(() => {});
   };
   const toggleAssign = (id: string) => setAssignIds((xs) => (xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]));
   const roleName = (id?: string) => roles.find((r) => r.id === id)?.name ?? "Staff";
@@ -287,7 +296,10 @@ export function TeamApp() {
                         <span className="rounded-full bg-[#fcefd2] px-2 py-[2px] font-extrabold text-[#b45309]">Pending</span>
                       </div>
                     </div>
-                    <Button sm onClick={() => copy(r.token)}>{copied === r.token ? "Copied!" : "Copy link"}</Button>
+                    <div className="flex flex-none items-center gap-2">
+                      <Button sm onClick={() => copy(r.token)}>{copied === r.token ? "Copied!" : "Copy link"}</Button>
+                      <button type="button" onClick={() => deleteInvite(r.token)} title="Delete this invite — the link stops working" className="rounded-full border border-[#e6b3b3] bg-white px-3 py-1.5 text-[12px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Delete</button>
+                    </div>
                   </Card>
                 ))}
               </div>
