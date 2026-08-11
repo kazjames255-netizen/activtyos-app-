@@ -11,7 +11,13 @@ import { NARRATOR_CSS, narratorScene, settingsScene } from "./tourNarrator";
 // controls + splash as GuidedTour; the difference is the stage is the live page,
 // not a hand-drawn mock — so what you see is exactly the real screen.
 
-export type LiveStep = { find: string; line: string; label?: string; click?: boolean; advance?: string };
+export type LiveStep = {
+  find: string; line: string; label?: string;
+  click?: boolean;              // press the `find` element (open its form)
+  advance?: string;            // after narrating, press the element matching this text
+  fill?: [string, string][];   // [field label/placeholder, value] — types into real inputs
+  pick?: string[];             // chip / option / checkbox texts to click (select)
+};
 export type LiveTourSteps = { title: string; introLine: string; doneLine: string; steps: LiveStep[] };
 
 const CSS = `
@@ -118,6 +124,8 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
     // Click a real control in the page (e.g. "Add event") so the tour can open a
     // create form and then walk through it — showing HOW to build, not just talk.
     const clickInFrame = (find: string) => frame.contentWindow?.postMessage({ type: "tour:click", find }, "*");
+    const fillInFrame = (field: string, value: string) => frame.contentWindow?.postMessage({ type: "tour:fill", field, value }, "*");
+    const pickInFrame = (text: string) => frame.contentWindow?.postMessage({ type: "tour:pick", text }, "*");
 
     async function moveTo(rect: DOMRect | null) {
       if (rect) {
@@ -157,6 +165,10 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
         // A "click" step presses the control (opening its form) before narrating,
         // so the next steps can spotlight the fields that just appeared.
         if (step.click) { clickInFrame(step.find); await sleep(950); if (!alive()) return; }
+        // Actually build it: type into the real fields and pick the real options,
+        // so the provider watches the form fill in.
+        if (step.fill) { for (const [f, v] of step.fill) { fillInFrame(f, v); await sleep(420); if (!alive()) return; } }
+        if (step.pick) { for (const t of step.pick) { pickInFrame(t); await sleep(360); if (!alive()) return; } }
         await line(step.line); if (!alive()) return;
         // Advance a real multi-step builder (e.g. click the wizard's "Next ›")
         // AFTER narrating, so the next step spotlights the panel that appears.
@@ -184,7 +196,9 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
     replayBtn.onclick = () => { run(0); };
     backBtn.onclick = () => { run(currentIdx - 1); };
     fwdBtn.onclick = () => { run(currentIdx + 1); };
-    soundBtn.onclick = () => { setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(currentIdx < 0 ? 0 : currentIdx); };
+    // Turning sound on shouldn't restart — just voice the current caption and
+    // carry on; every later line then speaks because soundOn is now true.
+    soundBtn.onclick = () => { const on = !soundOn; setSound(on); if (hasSpeech) window.speechSynthesis.cancel(); if (on) speak(capEl.textContent || ""); };
     pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶" : "⏸"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 

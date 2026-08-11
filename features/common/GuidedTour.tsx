@@ -169,7 +169,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     replayBtn.onclick = () => { run(0); };
     if (backBtn) backBtn.onclick = () => { run(currentIdx - 1); };
     if (fwdBtn) fwdBtn.onclick = () => { run(currentIdx + 1); };
-    soundBtn.onclick = () => { setSound(!soundOn); if (hasSpeech) window.speechSynthesis.cancel(); if (soundOn) run(currentIdx < 0 ? 0 : currentIdx); };
+    soundBtn.onclick = () => { const on = !soundOn; setSound(on); if (hasSpeech) window.speechSynthesis.cancel(); if (on) speak(strip(capEl.innerHTML)); };
     if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶" : "⏸"; pauseBtn.title = paused ? "Resume" : "Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); root.querySelector(".tnr-bot")?.classList.toggle("speaking", !paused && soundOn && window.speechSynthesis.speaking); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 
