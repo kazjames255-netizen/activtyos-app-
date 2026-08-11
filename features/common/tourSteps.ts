@@ -93,7 +93,7 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
       { find: "What is provided", pick: ["Hot lunch", "All equipment", "Certificate"], line: "Tick everything that's included — a hot lunch, all equipment, a certificate — it all shows on the listing.", advance: "Next" },
       { find: "Safety & inclusion", pick: ["DBS-checked staff", "First aid on site", "Wheelchair accessible"], line: "Tick your safety features and SEND support, so families know everyone's looked after.", advance: "Next" },
       { find: "Dates & pattern", fill: [["Runs from", "2026-08-03"], ["Runs to", "2026-08-07"]], line: "Set the dates — the first week of August — and the calendar builds every session for you.", advance: "Next" },
-      { find: "Choose a block", line: "Pick a block you built in Blocks — its passes and prices become this listing's tickets.", advance: "Next" },
+      { find: "Choose a block", pick: ["Use this block"], link: { label: "No block yet? Build one in Blocks ↗", href: "/freelancer/blocks" }, line: "Your tickets come from a block you built in Blocks — I'll pick this one and its passes and prices drop straight in. Not built one yet? Use the link below. And you can Save draft at any time and come back to finish this listing later.", advance: "Next" },
       { find: "Discount rules", line: "Add automatic discounts if you like, then preview and publish — and it's live for parents to book." },
     ],
   },

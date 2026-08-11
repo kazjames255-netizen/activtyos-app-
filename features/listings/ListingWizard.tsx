@@ -106,11 +106,16 @@ const EMPTY_BLOCKS: BlocksStore = { periods: [], passes: [], library: [], resolv
 // Blocks live on the server (see features/blocks/blocksApi.ts). The server also
 // resolves pricing, so we keep `resolved` and prefer it over local arithmetic.
 async function fetchBlocks(): Promise<BlocksStore> {
-  const [periods, passes, bundles] = await Promise.all([
+  const [periodsR, passesR, bundlesR] = await Promise.all([
     blocksApi.listPeriods(),
     blocksApi.listPasses(),
     blocksApi.listBundles(),
   ]);
+  // A brand-new account (or a demo without this data) can return null — treat it
+  // as "no blocks yet" rather than crashing on .map.
+  const periods = periodsR ?? [];
+  const passes = passesR ?? [];
+  const bundles = bundlesR ?? [];
   return {
     periods,
     passes,
@@ -1845,7 +1850,12 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
           <b>Couldn’t load your blocks.</b> {blocks.error}
         </Card>
       ) : blocks.library.length === 0 ? (
-        <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">No blocks saved yet. Build one in the <b>Blocks</b> area — set your periods (times) and passes once, then reuse them here.</Card>
+        <Card className="p-4 text-[12.5px] text-[var(--ink-3)]">
+          <div className="font-bold text-[var(--ink)]">You haven&rsquo;t built a block yet.</div>
+          <p className="mt-1">A block is the pattern parents book — set your periods (times) and passes once, price it, and reuse it on any listing.</p>
+          <a href="/freelancer/blocks" target="_blank" rel="noreferrer" className="mt-2.5 inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white hover:bg-[#16306e]">Build a block in Blocks ↗</a>
+          <p className="mt-2.5 text-[11.5px]">No need to lose your work — press <b>Save draft</b> up top, go build your block, then come back and finish this listing.</p>
+        </Card>
       ) : (
         <div className="flex flex-col gap-2">
           {blocks.library.map((b) => {

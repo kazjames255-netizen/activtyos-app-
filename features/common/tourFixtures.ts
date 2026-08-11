@@ -113,10 +113,37 @@ const SETUP: Fixtures = {
   "/api/listings": [],
 };
 
+// A sample block so the listings walkthrough's Tickets step has one to pull in
+// (its passes & prices become the listing's tickets) instead of erroring.
+const DEMO_BLOCK: Fixtures = {
+  "/api/periods": [{ id: "p-fullday", title: "Full day", start: "09:00", finish: "15:30" }],
+  "/api/passes": [
+    { id: "pass-5day", name: "5-day week", days: 5 },
+    { id: "pass-day", name: "Day pass", days: 1 },
+  ],
+  "/api/block-bundles": [
+    {
+      id: "blk-summer", name: "Summer Holiday Camp — full week & days",
+      periodIds: ["p-fullday"], passIds: ["pass-5day", "pass-day"], listingIds: [],
+      order: 0, archived: false, priced: true, masterPrice: 175, calcOn: true,
+      passFlat: {}, passMode: {}, periodPrice: {},
+      resolved: {
+        passes: [
+          { id: "pass-5day", name: "5-day week", days: 5, price: 175 },
+          { id: "pass-day", name: "Day pass", days: 1, price: 38 },
+        ],
+        timings: {}, perDay: 35,
+      },
+    },
+  ],
+};
+
 export const TOUR_FIXTURES: Record<string, Fixtures> = {
   // Agent-authored fixtures for the other pages; the hand-tuned dashboard wins.
   ...GENERATED_FIXTURES,
   ...LB_FIXTURES,
+  // Give the listings tour a block to pull into the Tickets step.
+  listings: { ...LB_FIXTURES.listings, ...DEMO_BLOCK },
   dash: DASH,
   setup: SETUP,
 };
