@@ -1,4 +1,5 @@
 import type { LiveTourSteps } from "./LiveTour";
+import { GENERATED_STEPS } from "./tourSteps.generated";
 
 // Narration + spotlight anchors for the live walkthroughs. Each step's `find`
 // is a snippet of text the REAL page renders; the tour highlights the card that
@@ -7,6 +8,8 @@ import type { LiveTourSteps } from "./LiveTour";
 // tourFixtures.ts — otherwise PageTour falls back to the mock GuidedTour.
 
 export const TOUR_STEPS: Record<string, LiveTourSteps> = {
+  // Agent-authored steps for the other pages; the hand-tuned dashboard wins.
+  ...GENERATED_STEPS,
   dash: {
     title: "Dashboard",
     introLine: "This is your dashboard — the first thing you see each morning. Let me walk you through it.",

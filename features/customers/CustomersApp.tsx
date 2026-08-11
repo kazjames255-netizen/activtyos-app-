@@ -10,8 +10,7 @@ import { bookingKids, sessionIsoDates } from "@/features/bookings/helpers";
 import { uploadPlan } from "@/features/listings/planUpload";
 import { CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
 import { HowItWorks } from "@/components/HowItWorks";
-import { GuidedTour } from "@/features/common/GuidedTour";
-import { TOUR_CONFIGS } from "@/features/common/tourConfigs";
+import { InlineTour } from "@/features/common/InlineTour";
 import { useTenantSettings, questionsFor, dobRequired, limitFor } from "@/lib/settings";
 import { QuestionFields } from "@/components/QuestionFields";
 
@@ -608,7 +607,7 @@ export function CustomersApp() {
         />
       </div>
       <HowItWorks
-        tour={<GuidedTour config={TOUR_CONFIGS.customers} />}
+        tour={<InlineTour view="customers" />}
         video="Adding a family from a phone call, sending the sign-up link, and what each pipeline stage means."
         minutes="2 min"
       >

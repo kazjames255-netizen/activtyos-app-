@@ -7,8 +7,7 @@ import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Card } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
 import { HowItWorks } from "@/components/HowItWorks";
-import { GuidedTour } from "@/features/common/GuidedTour";
-import { TOUR_CONFIGS } from "@/features/common/tourConfigs";
+import { InlineTour } from "@/features/common/InlineTour";
 import { useSettings, groupForAge, DEFAULT_RATIO_GROUPS, type RatioGroup } from "@/lib/settings";
 import type { ServerListing } from "@/features/listings/ListingWizard";
 
@@ -861,7 +860,7 @@ export function RatiosApp() {
       lede="Set your groups and target ratios, and track live cover as you take registers"
     >
       {/* How ratios work — folded away, with a walkthrough video to come. */}
-      <HowItWorks tour={<GuidedTour config={TOUR_CONFIGS.ratios} />} video="How ratios work on this board: setting your own targets, placing children by age, the by-time view, and when EYFS applies." minutes="2 min">
+      <HowItWorks tour={<InlineTour view="ratios" />} video="How ratios work on this board: setting your own targets, placing children by age, the by-time view, and when EYFS applies." minutes="2 min">
         <p className="mb-2.5">
           <b>These are your camp&rsquo;s own ratio targets.</b> Activity &amp; coaching camps aren&rsquo;t bound by
           statutory childcare ratios — you set them, guided by Ofsted&rsquo;s voluntary-register guidance, your
