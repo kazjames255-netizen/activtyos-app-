@@ -984,6 +984,7 @@ export function ListingWizard({
       if (id) await api(`/api/listings/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
       else id = (await apiPost<{ id: string }>("/api/listings", body)).id;
       const next = { ...d, images, gallery, id, status };
+      selfUpdate.current = true; // this setD is our own save result — don't let it re-trigger autosave
       setD(next);
       saveDraft(id!, next);
       if (!quiet) setBusy(false);
@@ -1006,9 +1007,11 @@ export function ListingWizard({
   // screen looked saved, the customer page disagreed, and nothing said which
   // was right. Now every edit reaches the server, and the header says so.
   const dirtyRef = useRef(false);
+  const selfUpdate = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => {
     if (!dirtyRef.current) { dirtyRef.current = true; return; } // skip the first render
+    if (selfUpdate.current) { selfUpdate.current = false; return; } // change came from our own save — not a user edit
     setSaveState("dirty");
     if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(async () => {
