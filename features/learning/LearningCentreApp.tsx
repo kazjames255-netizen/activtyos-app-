@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { SEED_LIBRARY, blankCourse, type CourseDoc } from "./courseContent";
@@ -239,8 +240,8 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
 
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] -translate-x-1/2 rounded-full bg-[#111634] px-4 py-2 text-[13px] font-bold text-white shadow-lg">{toast}</div>}
 
-      {player && <CoursePlayer course={player} onClose={() => setPlayer(null)} />}
-      {editing && <CourseEditor course={editing} onSave={saveCourse} onCancel={() => setEditing(null)} />}
+      {player && typeof document !== "undefined" && createPortal(<CoursePlayer course={player} onClose={() => setPlayer(null)} />, document.body)}
+      {editing && typeof document !== "undefined" && createPortal(<CourseEditor course={editing} onSave={saveCourse} onCancel={() => setEditing(null)} />, document.body)}
     </div>
   );
 }

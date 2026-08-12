@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import type { Block, CourseDoc } from "./courseContent";
 
 // ——— Illustrated scene panels ("visuals that mimic real life") ———
@@ -190,7 +191,7 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
   const complete = () => { const n = new Set(done); n.add(li); setDone(n); if (li < course.lessons.length - 1) setLi(li + 1); };
 
   return (
-    <div className="fixed inset-0 z-[140] flex flex-col bg-[var(--bg)]" style={{ ["--bg" as string]: "#f5f8fd" }}>
+    <div className="fixed inset-0 z-[140] flex flex-col bg-[#f5f8fd]" style={LIGHT_PALETTE}>
       {/* top bar */}
       <div className="flex flex-none items-center gap-3 border-b border-[var(--line)] bg-white px-4 py-2.5 sm:px-6">
         <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">‹ Exit</button>

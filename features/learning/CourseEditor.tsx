@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button, Input, Select } from "@/components/ui";
+import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import type { Block, CourseDoc, Lesson } from "./courseContent";
 
 // Simple, functional editor: course meta + lessons + content blocks. List-shaped
@@ -56,7 +57,7 @@ export function CourseEditor({ course, onSave, onCancel }: { course: CourseDoc; 
   const [addOpen, setAddOpen] = useState(false);
 
   return (
-    <div className="fixed inset-0 z-[140] flex flex-col bg-[#f5f8fd]">
+    <div className="fixed inset-0 z-[140] flex flex-col bg-[#f5f8fd]" style={LIGHT_PALETTE}>
       <div className="flex flex-none items-center gap-3 border-b border-[var(--line)] bg-white px-4 py-2.5 sm:px-6">
         <div className="text-[14px] font-extrabold text-[var(--ink)]">✏️ Edit course</div>
         <div className="ml-auto flex gap-2"><Button onClick={onCancel}>Cancel</Button><Button variant="primary" onClick={() => onSave(c)}>Save course</Button></div>
