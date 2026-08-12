@@ -295,7 +295,7 @@ export function TeamApp() {
           {assignMode === "none" ? (
             <div className="mt-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-2)]"><b>Not rostered anywhere.</b> They won&rsquo;t appear in the schedule or on any register, but still get access to the pages their <b>role</b> allows (e.g. office / admin staff). You can deploy them to listings or locations later.</div>
           ) : (
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Assigned people only see the registers, trips, timetable and children for these{assignMode === "locations" ? " locations" : " listings"}. A location covers every listing that runs there.</div>
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Where they&rsquo;re rostered — they show in the schedule for these{assignMode === "locations" ? " locations" : " listings"} and can be given shifts there. A location covers every listing that runs there. <b>What they can see &amp; do is set by their access role</b>, not this.</div>
           )}
         </div>
         </div>
