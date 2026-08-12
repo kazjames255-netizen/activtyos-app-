@@ -27,7 +27,7 @@ interface Venue { id: string; name: string }
 interface SubCurrent { plan: string; staffLimit?: number | null; staffUsed?: number | null; details?: { name?: string } }
 
 type Assignment = { mode: "all" | "listings" | "locations" | "none"; ids: string[] };
-type LocalMeta = { staffRole?: string; jobTitle?: string; assignment?: Assignment; status?: "active" | "deactivated" | "deleted" };
+type LocalMeta = { name?: string; staffRole?: string; jobTitle?: string; assignment?: Assignment; status?: "active" | "deactivated" | "deleted" };
 const META_KEY = "aos.team.meta.v1";
 const loadMeta = (): Record<string, LocalMeta> => { try { return JSON.parse(localStorage.getItem(META_KEY) || "{}"); } catch { return {}; } };
 const saveMeta = (m: Record<string, LocalMeta>) => { try { localStorage.setItem(META_KEY, JSON.stringify(m)); } catch { /* ignore */ } };
@@ -61,6 +61,7 @@ export function TeamApp() {
   const [sentNote, setSentNote] = useState<string | null>(null);
 
   // Invite form
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("coach");
   const jobTitles = settings.staffRoles ?? [];
@@ -83,6 +84,7 @@ export function TeamApp() {
   useRealtime(["invites"], refresh);
 
   const canInviteFranchise = me?.role === "company";
+  const emailOk = /.+@.+\..+/.test(email.trim());
 
   // Active = accepted invites we haven't locally deactivated.
   const rows = useMemo(
@@ -110,10 +112,11 @@ export function TeamApp() {
         role,
         ...(to ? { email: to } : {}),
         // Extra fields — stored by the backend later (see handoff); harmless now.
+        ...(to || name.trim() ? { name: name.trim() || undefined } : {}),
         ...(role === "staff" ? { staffRole: roleId, jobTitle: jobTitle || undefined, assignment } : {}),
       });
-      if (role === "staff") patchMeta(r.token, { staffRole: roleId, jobTitle: jobTitle || undefined, assignment, status: "active" });
-      if (r.sentTo) { setSentNote(`Invite emailed to ${r.sentTo}`); setEmail(""); }
+      if (role === "staff") patchMeta(r.token, { name: name.trim() || undefined, staffRole: roleId, jobTitle: jobTitle || undefined, assignment, status: "active" });
+      if (r.sentTo) { setSentNote(`Invite emailed to ${r.sentTo}`); setEmail(""); setName(""); }
       setAssignMode("all"); setAssignIds([]);
       refresh();
     } catch (e) {
@@ -217,27 +220,32 @@ export function TeamApp() {
       <Card className="mb-4 overflow-hidden p-0">
         <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[linear-gradient(120deg,#eef4fd,#f7f0fb)] px-4 py-3">
           <span className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-white text-[18px] shadow-sm">✉️</span>
-          <div><div className="text-[15px] font-extrabold text-[var(--ink)]">Invite someone</div><p className="text-[12px] text-[var(--ink-3)]">{me?.tenantName ? `${me.tenantName} — ` : ""}send it by email, or create it and share the link yourself.</p></div>
+          <div><div className="text-[15px] font-extrabold text-[var(--ink)]">Invite someone</div><p className="text-[12px] text-[var(--ink-3)]">{me?.tenantName ? `${me.tenantName} — ` : ""}we&rsquo;ll email them a secure link to join your team.</p></div>
         </div>
         <div className="p-4">
         <div className="grid gap-4 lg:grid-cols-[1.7fr,1fr]">
         <div className="min-w-0">
         <div className="grid gap-3 sm:grid-cols-2">
-          <div>
-            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Their email <span className="font-normal normal-case">— optional</span></label>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="w-full" />
+          <div className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #c2268f" }}>
+            <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#fbe6f3] text-[12px]">👤</span><label className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Full name</label></div>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Jamie Rivers" className="w-full" />
           </div>
-          <div>
-            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Access role — permissions</label>
+          <div className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #2f6bd8" }}>
+            <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#eaf1fe] text-[12px]">📧</span><label className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Their email <span className="text-[#c0392b]">*</span></label></div>
+            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="w-full" />
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">We&rsquo;ll email them a secure link to join — that&rsquo;s how they sign up. You can also copy the link once it&rsquo;s created.</div>
+          </div>
+          <div className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #7a3aa8" }}>
+            <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#f3e8fc] text-[12px]">🔑</span><label className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Access role — permissions</label></div>
             <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="w-full">
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </Select>
             <div className="mt-1 text-[11px] text-[var(--ink-3)]">Sets what they can see &amp; do — edit in <Link href="/company/setup?tab=roles" className="font-bold text-[#1d3a8f] underline">Roles &amp; permissions</Link>.</div>
           </div>
-          <div>
-            <label className="mb-1 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Job title — rostered as
+          <div className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #0f857b" }}>
+            <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#e0f4f1] text-[12px]">🎽</span><label className="flex flex-1 items-center gap-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Job title — rostered as
               <button type="button" onClick={() => { const t = window.prompt("New job title")?.trim(); if (t) { void save({ settings: { ...settings, staffRoles: [...new Set([...jobTitles, t])] } }); setJobTitle(t); } }} className="ml-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">＋ Add</button>
-            </label>
+            </label></div>
             <Select value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full">
               <option value="">— Job title —</option>
               {jobTitles.map((j) => <option key={j} value={j}>{j}</option>)}
@@ -247,8 +255,8 @@ export function TeamApp() {
         </div>
 
         {/* Listing assignment */}
-        <div className="mt-3">
-          <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Assign to</label>
+        <div className="mt-3 rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #c06a10" }}>
+          <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#fbeddb] text-[12px]">📍</span><label className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Assign to</label></div>
           <div className="flex flex-wrap gap-1.5">
             {([["all", "All listings"], ["locations", "By location"], ["listings", "By listing"], ["none", "None"]] as const).map(([m, label]) => (
               <button key={m} type="button" onClick={() => { setAssignMode(m); setAssignIds([]); }} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold"
@@ -294,7 +302,7 @@ export function TeamApp() {
 
         {/* live preview */}
         {(() => {
-          const nm = email.trim() ? email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "New teammate";
+          const nm = name.trim() ? name.trim() : email.trim() ? email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "New teammate";
           const roleNm = roles.find((r) => r.id === roleId)?.name ?? "Staff";
           const assign = assignMode === "all" ? "All listings" : assignMode === "none" ? "Not rostered — role access only" : assignMode === "locations" ? (assignIds.length ? `${assignIds.length} location${assignIds.length === 1 ? "" : "s"}` : "By location — pick some") : (assignIds.length ? `${assignIds.length} listing${assignIds.length === 1 ? "" : "s"}` : "By listing — pick some");
           return (
@@ -325,8 +333,9 @@ export function TeamApp() {
         )}
 
         <div className="mt-3.5 flex flex-wrap items-center gap-2">
-          <Button variant="primary" disabled={busy} onClick={() => createInvite("staff")} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">＋ Send staff invite</Button>
-          {canInviteFranchise && <Button disabled={busy} onClick={() => createInvite("franchise")}>＋ Invite a franchise</Button>}
+          <button type="button" disabled={busy || !emailOk} onClick={() => createInvite("staff")} className="rounded-full px-5 py-2.5 text-[13.5px] font-extrabold text-white shadow-sm transition-[filter] hover:brightness-110 disabled:opacity-50" style={{ background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>＋ Send staff invite</button>
+          {canInviteFranchise && <Button disabled={busy || !emailOk} onClick={() => createInvite("franchise")}>＋ Invite a franchise</Button>}
+          {!emailOk && <span className="text-[12px] text-[var(--ink-3)]">Add their email to send the invite.</span>}
           {sentNote && <span className="text-[12px] font-bold text-[#0f7a43]">✓ {sentNote}</span>}
         </div>
         </div>
