@@ -8,7 +8,7 @@ import { useSettings } from "@/lib/settings";
 import { DEFAULT_ROLES } from "@/lib/settings";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
-import { LocationsApp, DEMO_VENUES } from "@/features/locations/LocationsApp";
+import { LocationsApp } from "@/features/locations/LocationsApp";
 
 // ── Team & invites (company / franchise) ──────────────────────────────────
 // Invite people, give each a role (from Setup → Roles & permissions) and the
@@ -202,7 +202,7 @@ export function TeamApp() {
           aside={<Link href="/company/subscription" className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">Manage plan →</Link>} />
         <Tile label="Active team" icon="✅" grad={GRAD.green} value={`${active.length}`} sub="activated accounts" />
         <Tile label="Pending" icon="✉️" grad={GRAD.amber} value={`${pending.length}`} sub="awaiting first login" />
-        <Tile label="Locations" icon="📍" grad={GRAD.teal} value={`${venues.length || DEMO_VENUES.length}`} sub="sites they can work" aside={<button type="button" onClick={() => setTab("locations")} className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">Deployment →</button>} />
+        <Tile label="Locations" icon="📍" grad={GRAD.teal} value={`${venues.length}`} sub="sites they can work" aside={<button type="button" onClick={() => setTab("locations")} className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">Deployment →</button>} />
       </div>
 
       {atCap && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]"><span className="font-bold">You&rsquo;ve reached the staff included on your plan.</span><span>Invite more and you move up a tier.</span><Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">Upgrade plan →</Link></div>}
@@ -222,7 +222,7 @@ export function TeamApp() {
           const s = STEPS[step - 1];
           const nm = name.trim() ? name.trim() : email.trim() ? email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "New teammate";
           const roleNm = roles.find((r) => r.id === roleId)?.name ?? "Staff";
-          const allVenues = venues.length ? venues : DEMO_VENUES;
+          const allVenues = venues;
           const locLabel = allLoc ? "All locations" : loc.length ? loc.map((id) => allVenues.find((v) => v.id === id)?.name ?? id).join(", ") : "no location";
           // listings that run at the chosen location(s)
           const scopedListings = listings.filter((l) => allLoc || (l.venueId && loc.includes(l.venueId)));

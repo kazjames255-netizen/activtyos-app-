@@ -9,31 +9,13 @@ import { Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { LocationDetail, type Venue } from "./LocationDetail";
 
-// Demo venues so Deployment is usable before venues are saved. Matches the schedule.
-export const DEMO_VENUES: Venue[] = [
-  { id: "v-loughton", name: "Loughton Manor First School", address: "Pitchford Avenue, Loughton", city: "Milton Keynes", kind: "place" },
-  { id: "v-gullivers", name: "Gullivers Land, Milton Keynes", address: "Livingstone Drive", city: "Milton Keynes", kind: "place" },
-  { id: "v-stantonbury", name: "Stantonbury Leisure Centre", address: "Stantonbury", city: "Milton Keynes", kind: "place" },
-];
-
 interface Listing { id: string; title?: string; name?: string; venueId?: string | null; seasonId?: string | null; status?: string; visibility?: string; archived?: boolean }
 interface LocStaff { id: string; name: string; role?: string; sites: string[]; listings: string[] }
 interface Store { staff: LocStaff[] }
-const STAFF_KEY = "aos.locstaff.v1";
+const STAFF_KEY = "aos.locstaff.v2";
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const AV_COL = ["#c2268f", "#0f857b", "#2f6bd8", "#c06a10", "#6366f1", "#b45309"];
 const avColour = (id: string) => AV_COL[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % AV_COL.length];
-const SEED = (vids: string[]): LocStaff[] => [
-  { id: "susan", name: "Susan Preston", role: "Lead Coach", sites: vids.slice(0, 2), listings: [] },
-  { id: "amelia", name: "Amelia Hart", role: "Coach", sites: vids.slice(0, 2), listings: [] },
-  { id: "oluwa", name: "OluwaDamilola Adeyemi", role: "Lead Coach", sites: vids.slice(), listings: [] },
-  { id: "liberty", name: "Liberty Young", role: "Coach", sites: vids.slice(0, 1), listings: [] },
-  { id: "dom", name: "Dom Reyes", role: "Lifeguard", sites: [], listings: [] },
-  { id: "kitty", name: "Kitty-Rose Bright", role: "Activity Assistant", sites: [], listings: [] },
-  { id: "louis", name: "Louis Calderwood", role: "Lifeguard", sites: [], listings: [] },
-  { id: "taigan", name: "Taigan McMahon", role: "First Aider", sites: [], listings: [] },
-];
-
 const CHIP_ON = { borderColor: "#22b365", background: "#eef8f1", color: "#0f7a43" } as const;
 const CHIP_OFF = { borderColor: "#c9d6ef", background: "white", color: "#1d3a8f" } as const;
 
@@ -60,16 +42,12 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["library"], refresh);
 
-  const list = useMemo(() => (venues && venues.length > 0 ? venues : venues ? DEMO_VENUES : null), [venues]);
+  const list = venues; // real venues from the library (null while loading, [] if none)
 
-  // Load once venues are known; seed a demo team if there's nothing saved.
+  // Load any saved staff assignments (real staff only — no demo seed).
   useEffect(() => {
-    if (!list) return;
-    let s: Store | null = null;
-    try { s = JSON.parse(localStorage.getItem(STAFF_KEY) || "null"); } catch { /* ignore */ }
-    if (s?.staff?.length) setStore({ staff: s.staff.map((x) => ({ ...x, sites: x.sites ?? [], listings: x.listings ?? [] })) });
-    else { const seeded = { staff: SEED(list.map((v) => v.id)) }; setStore(seeded); try { localStorage.setItem(STAFF_KEY, JSON.stringify(seeded)); } catch { /* ignore */ } }
-  }, [list]);
+    try { const s = JSON.parse(localStorage.getItem(STAFF_KEY) || "null"); if (s?.staff) setStore({ staff: s.staff.map((x: LocStaff) => ({ ...x, sites: x.sites ?? [], listings: x.listings ?? [] })) }); } catch { /* ignore */ }
+  }, []);
 
   const persist = (next: Store) => { setStore(next); try { localStorage.setItem(STAFF_KEY, JSON.stringify(next)); } catch { /* ignore */ } };
   const staff = store.staff;
@@ -117,6 +95,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
       /* ── BY LOCATION ── */
       : view === "loc" ? (
         <div className="flex flex-col gap-3">
+          {list.length === 0 && <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-6 text-center text-[12.5px] text-[var(--ink-3)]">No locations yet — add your venues under <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings → Locations</a>.</div>}
           {list.map((v) => {
             const here = staff.filter((s) => s.sites.includes(v.id));
             const notHere = staff.filter((s) => !s.sites.includes(v.id));
