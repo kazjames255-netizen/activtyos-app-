@@ -305,16 +305,21 @@ export function ScheduleApp() {
   };
 
   const ShiftBlock = ({ s, compact }: { s: Shift; compact?: boolean }) => {
-    const st = s.staffId ? staffById[s.staffId] : null; const filled = !!st; const col = roleCol(s.role);
+    const st = s.staffId ? staffById[s.staffId] : null; const filled = !!st;
+    // Status heat — colour is the state, not the role: green = filled/covered,
+    // amber = needs staff. (The role is still named on the row label + its dot.)
+    const heat = filled
+      ? { background: "linear-gradient(160deg,#34d399,#059669)", borderColor: "#0b9a5f", color: "#04321e" }
+      : { background: "linear-gradient(160deg,#fbbf24,#f59e0b)", borderColor: "#e0910a", color: "#3a2400" };
     return (
       <button type="button" onClick={() => canManage && openEditGroup(s)} disabled={!canManage}
-        className={"w-full rounded-lg border text-left transition-shadow enabled:hover:shadow-sm " + (compact ? "px-1 py-1 text-[9.5px]" : "px-2 py-1.5 text-[11px]")}
-        style={filled ? { borderColor: col, background: `${col}0f`, borderLeftWidth: 3 } : { borderColor: "var(--line)", borderStyle: "dashed", background: "var(--surface)" }}>
-        {!compact && <div className="flex items-start gap-1"><span className="min-w-0 flex-1 font-extrabold text-[var(--ink)]">{to12(s.start)} – {to12(s.end)}</span>{canManage && <span role="button" onClick={(e) => { e.stopPropagation(); removeShift(s.id); }} className="flex-none text-[var(--ink-3)] hover:text-[#c0392b]">×</span>}</div>}
-        <div className={"truncate " + (filled ? "font-bold text-[var(--ink)]" : "text-[var(--ink-3)]")}>{st ? (compact ? st.name.split(" ")[0] : st.name) : (compact ? "—" : "Unfilled")}</div>
-        {!compact && s.listing && <div className="truncate text-[10px] text-[var(--ink-3)]">🎟 {s.listing} <span className="text-[var(--ink-3)]">({s.site}{s.season ? ` · ${s.season}` : ""})</span></div>}
-        {!compact && filled && <div className="mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold" style={s.out || s.in ? { background: "#e2f4ea", color: "#0f7a43" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{s.out ? `✅ Out ${to12(s.out)}` : s.in ? `🟢 In ${to12(s.in)}` : "⚪ Not in"}</div>}
-        {!compact && s.locked && <div className="mt-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">Locked</div>}
+        className={"w-full rounded-lg border text-left shadow-sm transition enabled:hover:brightness-[1.04] enabled:hover:shadow-md " + (compact ? "px-1 py-1 text-[9.5px]" : "px-2 py-1.5 text-[11px]")}
+        style={heat}>
+        {!compact && <div className="flex items-start gap-1"><span className="min-w-0 flex-1 font-extrabold">{to12(s.start)} – {to12(s.end)}</span>{canManage && <span role="button" onClick={(e) => { e.stopPropagation(); removeShift(s.id); }} className="flex-none opacity-60 hover:opacity-100">×</span>}</div>}
+        <div className="truncate font-bold">{st ? (compact ? st.name.split(" ")[0] : st.name) : (compact ? "—" : "Unfilled")}</div>
+        {!compact && s.listing && <div className="truncate text-[10px] opacity-75">🎟 {s.listing}{s.season ? ` · ${s.season}` : ""}</div>}
+        {!compact && filled && <div className="mt-1 inline-flex items-center gap-1 rounded-md bg-white/40 px-1.5 py-0.5 text-[10px] font-bold">{s.out ? `✅ Out ${to12(s.out)}` : s.in ? `🟢 In ${to12(s.in)}` : "⚪ Not in"}</div>}
+        {!compact && s.locked && <div className="mt-1 inline-block rounded bg-black/25 px-1.5 py-0.5 text-[9px] font-extrabold uppercase">Locked</div>}
       </button>
     );
   };
@@ -322,12 +327,14 @@ export function ScheduleApp() {
   // Render a row of column-cells for a given set of shifts (a role or a staff member)
   const CellRow = ({ rows, onAdd, compact }: { rows: Shift[]; onAdd: (c: { date: string; hour: number | null }) => void; compact?: boolean }) => (
     <div className="grid" style={{ gridTemplateColumns: gridTmpl }}>
-      {cols.map((c) => (
+      {cols.map((c) => { const has = cellShifts(rows, c).length > 0; return (
         <div key={c.key} className="flex min-h-[54px] flex-col gap-1 border-r border-[var(--line-2,#eef2f8)] p-1 last:border-r-0">
           {cellShifts(rows, c).map((s) => <ShiftBlock key={s.id} s={s} compact={compact} />)}
-          {canManage && <button type="button" onClick={() => onAdd(c)} className="rounded-md border border-dashed border-[var(--line)] py-0.5 text-[12px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]">＋</button>}
+          {canManage && <button type="button" onClick={() => onAdd(c)} title="Add a shift" className={has
+            ? "rounded-md border border-dashed border-[var(--line)] py-0.5 text-[12px] text-[var(--ink-3)] hover:border-[var(--brand)] hover:text-[#1d3a8f]"
+            : "flex flex-1 items-center justify-center rounded-md bg-[var(--panel)] text-[13px] text-[var(--ink-3)] ring-1 ring-inset ring-[var(--line)] hover:bg-[#eef4fd] hover:text-[#1d3a8f]"}>＋</button>}
         </div>
-      ))}
+      ); })}
     </div>
   );
   const TotalsRow = ({ rows }: { rows: Shift[] }) => (
@@ -340,6 +347,38 @@ export function ScheduleApp() {
   const venueNameOf = (vid?: string | null) => venuesR.find((v) => v.id === vid)?.name ?? "";
   // The rota is organised by LISTING (location + season shown underneath).
   const gridListings = useMemo(() => scopedListings.filter((l) => (site === "all" || venueNameOf(l.venueId) === site) && (listingF === "all" || l.title === listingF)), [scopedListings, site, listingF, venuesR]);
+
+  // TEMPORARY — one-click sample shifts so the status-heat colours are visible
+  // (green = filled, amber = needs staff). Remove this + the toolbar button once
+  // real rostering is wired. Uses the listings/dates currently in view.
+  const seedDemo = () => {
+    const ls = (gridListings.length ? gridListings : scopedListings).slice(0, 2);
+    if (!ls.length) { flash("Add a listing first — nothing to fill."); return; }
+    const demoStaff: Staff[] = [
+      { id: "demo-a", name: "Alex Rivera", role: "First Aider", rate: 14.5, avail: "confirmed" },
+      { id: "demo-b", name: "Sam Patel", role: "Play Leader", rate: 12.75, avail: "confirmed" },
+      { id: "demo-c", name: "Jordan Lee", role: "First Aider", rate: 13.25, avail: "confirmed" },
+    ];
+    const roles = ["First Aider", "Play Leader"];
+    const shifts: Shift[] = [];
+    ls.forEach((l, li) => {
+      const siteN = venueNameOf(l.venueId); const seasonN = seasonNameOf(l.seasonId) ?? "";
+      roles.forEach((role, ri) => {
+        dates.forEach((d, di) => {
+          if ((di + ri + li) % 2 === 1 && di < 5) return; // sprinkle gaps, weekdays busier
+          const start = ri === 0 ? "09:00" : "13:00"; const end = ri === 0 ? "15:00" : "17:00";
+          // ~60% get a staff member (green), the rest stay unfilled (amber)
+          const assign = (di * 3 + ri * 2 + li) % 5 < 3;
+          const who = demoStaff.filter((s) => s.role === role);
+          shifts.push({ id: `demo-${li}-${ri}-${di}`, staffId: assign && who.length ? who[di % who.length].id : null, site: siteN, role, listing: l.title, season: seasonN, date: d, start, end });
+        });
+      });
+    });
+    persist({ ...store, staff: demoStaff, shifts: [...store.shifts.filter((s) => !s.id.startsWith("demo-")), ...shifts] });
+    flash(`Added ${shifts.length} sample shifts — green = filled, amber = needs staff.`);
+  };
+  const clearDemo = () => { persist({ ...store, staff: store.staff.filter((s) => !s.id.startsWith("demo-")), shifts: store.shifts.filter((s) => !s.id.startsWith("demo-")) }); flash("Cleared sample shifts."); };
+  const hasDemo = store.shifts.some((s) => s.id.startsWith("demo-"));
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
@@ -456,6 +495,17 @@ export function ScheduleApp() {
 
         {/* Grid */}
         <div className="min-w-0 flex-1">
+          {/* Status-heat key + temporary sample-data button */}
+          <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-white px-3.5 py-2 text-[11.5px] font-bold text-[var(--ink-2)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
+            <span className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Key</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "linear-gradient(160deg,#34d399,#059669)" }} />Filled</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "linear-gradient(160deg,#fbbf24,#f59e0b)" }} />Needs staff</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-[var(--panel)] ring-1 ring-inset ring-[var(--line)]" />No shift</span>
+            {canManage && <span className="ml-auto flex items-center gap-2">
+              <button type="button" onClick={seedDemo} className="rounded-full bg-[#eef4fd] px-3 py-1 text-[11.5px] font-extrabold text-[#1d3a8f] ring-1 ring-[#bcd0f5] hover:bg-[#e2ecfb]">🎨 Add sample shifts</button>
+              {hasDemo && <button type="button" onClick={clearDemo} className="rounded-full px-2.5 py-1 text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Clear samples</button>}
+            </span>}
+          </div>
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
               <div style={isDay ? { minWidth: cols.length * colW + 40 } : undefined}>
