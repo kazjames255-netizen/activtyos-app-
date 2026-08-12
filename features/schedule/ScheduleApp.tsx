@@ -346,10 +346,27 @@ export function ScheduleApp() {
       <PageHero title="Staff schedule" icon="🗓" lede="Build the rota by location & role or by team member, across day / week / month — with wages and on-cost." />
 
       {/* Wages — always above the Rota/Settings tabs */}
-      <Card className="mb-3 border-l-4 border-l-[#1d3a8f] p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4"><div className="text-[14px] font-extrabold text-[var(--ink)]">Total wages · {SPAN_WORD[span]}</div><div className="flex gap-8 text-right"><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">At hourly rate</div><div className="text-[22px] font-extrabold tabular-nums text-[var(--ink)]">{money(wagesAt)}</div></div><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Incl. {onCost}% on-cost</div><div className="text-[22px] font-extrabold tabular-nums text-[#1d3a8f]">{money(wagesCost)}</div></div></div></div>
-        <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">Predicted <b>on-cost</b> adds a cost on top of wages (e.g. employer NI, pension). Recorded only — ActivityOS never moves money.</p>
-      </Card>
+      <div className="relative mb-3 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(22,48,110,0.55)]" style={{ background: "linear-gradient(125deg,#132a63 0%,#1d3a8f 46%,#2f6bd8 100%)" }}>
+        <div className="pointer-events-none absolute -right-10 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl" />
+        <div className="pointer-events-none absolute -bottom-20 right-24 h-40 w-40 rounded-full bg-[#7fb0ff]/20 blur-2xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <div className="mb-1 inline-flex items-center gap-2 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] text-white/90 backdrop-blur">💷 Payroll forecast</div>
+            <div className="text-[19px] font-extrabold leading-tight">Total wages <span className="font-semibold text-white/70">· {SPAN_WORD[span]}</span></div>
+          </div>
+          <div className="flex items-stretch gap-3">
+            <div className="rounded-xl bg-white/10 px-4 py-2.5 ring-1 ring-white/15 backdrop-blur">
+              <div className="text-[9.5px] font-extrabold uppercase tracking-[0.08em] text-white/60">At hourly rate</div>
+              <div className="text-[24px] font-extrabold leading-tight tabular-nums text-white">{money(wagesAt)}</div>
+            </div>
+            <div className="rounded-xl bg-white px-4 py-2.5 shadow-lg ring-1 ring-white/40">
+              <div className="text-[9.5px] font-extrabold uppercase tracking-[0.08em] text-[#5566a0]">Incl. {onCost}% on-cost</div>
+              <div className="text-[24px] font-extrabold leading-tight tabular-nums text-[#1d3a8f]">{money(wagesCost)}</div>
+            </div>
+          </div>
+        </div>
+        <p className="relative mt-3 max-w-2xl text-[11.5px] leading-relaxed text-white/70">Predicted <b className="text-white">on-cost</b> adds a cost on top of wages (e.g. employer NI, pension). Recorded only — ActivityOS never moves money.</p>
+      </div>
 
       <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
         {([["rota", "Rota"], ["settings", "Settings"]] as const).map(([v, lbl]) => (
@@ -365,35 +382,40 @@ export function ScheduleApp() {
         {help && <ol className="ml-9 list-decimal space-y-1 px-4 pb-3.5 text-[13px] leading-relaxed text-[var(--ink-2)]"><li><b>Request availability</b> — hit the red button in the staff panel. Everyone starts <b className="text-[#c0392b]">Not submitted</b>.</li><li>Staff set the days &amp; times they can work — their card turns <b className="text-[#0f7a43]">Confirmed</b>.</li><li>Still red? Tap the <b>gold bell</b> to send a reminder.</li><li>Then ✨ Auto-schedule fills open shifts and Publish locks them &amp; tells staff.</li></ol>}
       </Card>
 
-      {/* Toolbar */}
+      {/* Toolbar — classy white pills, each with its own coloured icon badge */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Season first — multi-select popup; it scopes the locations & listings below */}
-        <button type="button" onClick={() => setSeasonMenu(true)} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📅 {seasonSel.length === 0 ? "All seasons" : `${seasonSel.length} of ${seasonOpts.length} seasons`} ▾</button>
+        <button type="button" onClick={() => setSeasonMenu(true)} className="group inline-flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-[#eef0ff] text-[13px] text-[#5b53d6]">📅</span>
+          {seasonSel.length === 0 ? "All seasons" : `${seasonSel.length} of ${seasonOpts.length} seasons`}<span className="text-[10px] text-[var(--ink-3)]">▾</span>
+        </button>
         {seasonSel.map((sn) => (
-          <span key={sn} className="inline-flex items-center gap-1 rounded-full border border-[#bfe3cd] bg-[#eef8f1] px-2.5 py-1 text-[12px] font-bold text-[#0f7a43]">📅 {sn}<button type="button" onClick={() => { setSeasonSel((xs) => xs.filter((x) => x !== sn)); setSite("all"); setListingF("all"); }} className="text-[13px] text-[#0f7a43] hover:text-[#c0392b]">×</button></span>
+          <span key={sn} className="inline-flex items-center gap-1 rounded-full bg-[#eef8f1] px-2.5 py-1.5 text-[12px] font-bold text-[#0f7a43] ring-1 ring-[#bfe3cd]">📅 {sn}<button type="button" onClick={() => { setSeasonSel((xs) => xs.filter((x) => x !== sn)); setSite("all"); setListingF("all"); }} className="text-[13px] text-[#0f7a43] hover:text-[#c0392b]">×</button></span>
         ))}
-        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📍 <Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All locations</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
-        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">🎟 <Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All listings</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
-        <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1">
-          <button type="button" onClick={() => nav(-1)} className="px-2 text-[15px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button>
-          <span className="min-w-[120px] text-center text-[12.5px] font-bold text-[var(--ink)]">{label}</span>
-          <button type="button" onClick={() => nav(1)} className="px-2 text-[15px] text-[var(--ink-3)] hover:text-[var(--ink)]">›</button>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#ffeef0] text-[13px]">📍</span><Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">All locations</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-7 w-7 place-items-center rounded-full bg-[#eaf1ff] text-[13px]">🎟</span><Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">All listings</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
+        <div className="inline-flex items-center gap-1 rounded-full bg-white px-1 py-1 shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
+          <button type="button" onClick={() => nav(-1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]">‹</button>
+          <span className="min-w-[116px] text-center text-[12.5px] font-extrabold text-[var(--ink)]">{label}</span>
+          <button type="button" onClick={() => nav(1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]">›</button>
         </div>
-        <button type="button" onClick={() => setShowAlerts(true)} className="relative rounded-full border border-[#bcd0f5] bg-[#eef4fd] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f]">🔔 Check-in alerts{alerts.length > 0 && <span className="ml-1 rounded-full bg-[#c0392b] px-1.5 text-[10px] font-extrabold text-white">{alerts.length}</span>}</button>
-        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">
-          <Select value={`${span}:${group}`} onChange={(e) => { const [sp, gr] = e.target.value.split(":"); setSpan(sp as Span); setGroup(gr as Group); }} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none">
+        <button type="button" onClick={() => setShowAlerts(true)} className="relative inline-flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-[#fff4e0] text-[13px]">🔔</span>Check-in alerts{alerts.length > 0 && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-extrabold text-white">{alerts.length}</span>}</button>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
+          <span className="grid h-7 w-7 place-items-center rounded-full bg-[#e9f7ef] text-[13px]">🗓</span>
+          <Select value={`${span}:${group}`} onChange={(e) => { const [sp, gr] = e.target.value.split(":"); setSpan(sp as Span); setGroup(gr as Group); }} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none">
             {GROUPS.map(([g, gl]) => SPANS.map(([s, sl]) => <option key={`${s}:${g}`} value={`${s}:${g}`}>{sl} by {gl}</option>))}
           </Select>
         </div>
         {canManage && (
           <div className="ml-auto flex items-center gap-2">
             <div className="relative">
-              <button type="button" onClick={() => setAutoMenu((v) => !v)} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f]">✨ Auto-schedule ▾</button>
+              <button type="button" onClick={() => setAutoMenu((v) => !v)} className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">✨ Auto-schedule ▾</button>
               {autoMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg"><button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Fill open shifts from confirmed staff</button><button type="button" onClick={clearPeriod} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">Clear all shifts shown</button></div>}
             </div>
-            <button type="button" onClick={() => { setStore(load()); flash("Refreshed."); }} title="Refresh" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px]">↻</button>
+            <button type="button" onClick={() => { setStore(load()); flash("Refreshed."); }} title="Refresh" className="grid h-[34px] w-[34px] place-items-center rounded-full bg-white text-[13px] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">↻</button>
             <div className="relative">
-              <button type="button" onClick={() => setCopyMenu((v) => !v)} title="Copy schedule / templates" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">⧉ Copy ▾</button>
+              <button type="button" onClick={() => setCopyMenu((v) => !v)} title="Copy schedule / templates" className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">⧉ Copy ▾</button>
               {copyMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
                 <button type="button" onClick={copyForward} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Copy schedule <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">Duplicate this view into the next period</span></button>
                 <button type="button" onClick={() => { setCopyMenu(false); setTplName(""); setTplSaveOpen(true); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Save as template <span className="block text-[10.5px] font-normal text-[var(--ink-3)]">Reuse this week&rsquo;s pattern later</span></button>
@@ -462,13 +484,18 @@ export function ScheduleApp() {
                   {gridListings.map((l) => {
                     const loc = venueNameOf(l.venueId), sn = seasonNameOf(l.seasonId);
                     const listingShifts = periodShifts.filter((s) => s.listing === l.title);
-                    const lRoles = [...new Set([...listingShifts.map((s) => s.role), ...(extraRoles[l.title] ?? [])])];
+                    // Every role/shift ever added to this listing — so switching Day /
+                    // Week / Month keeps the rows you built, even when this view's dates
+                    // hold none of them.
+                    const allListingShifts = store.shifts.filter((s) => s.listing === l.title);
+                    const elsewhere = allListingShifts.length - listingShifts.length;
+                    const lRoles = [...new Set([...allListingShifts.map((s) => s.role), ...(extraRoles[l.title] ?? [])])];
                     return (
                     <div key={l.venueId + "|" + l.title}>
                       <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-2">
                         <span className="text-[13px]">🎟</span>
                         <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{l.title}</div><div className="text-[10.5px] font-semibold text-[var(--ink-3)]">📍 {loc || "no venue"}{sn ? ` · 📅 ${sn}` : ""}</div></div>
-                        <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{listingShifts.length} shifts</span>
+                        <span className="ml-auto flex items-center gap-1.5 text-[11.5px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{listingShifts.length}</b> shifts{elsewhere > 0 && <span className="rounded-full bg-[#eef0ff] px-2 py-0.5 text-[10.5px] font-bold text-[#5b53d6]" title="Shifts on dates outside this view — widen the span or use ‹ › to see them">+{elsewhere} other dates</span>}</span>
                       </div>
                       {lRoles.map((role) => {
                         const rows = listingShifts.filter((s) => s.role === role);
