@@ -352,13 +352,17 @@ export function ScheduleApp() {
   // (green = filled, amber = needs staff). Remove this + the toolbar button once
   // real rostering is wired. Uses the listings/dates currently in view.
   const seedDemo = () => {
-    const ls = (gridListings.length ? gridListings : scopedListings).slice(0, 2);
-    if (!ls.length) { flash("Add a listing first — nothing to fill."); return; }
+    // Demo staff (always added so the Assign-staff picker has people to book),
+    // each made available all week so auto-fill / assign works out of the box.
+    const allWeek: Week = { mon: { from: "08:00", to: "18:00" }, tue: { from: "08:00", to: "18:00" }, wed: { from: "08:00", to: "18:00" }, thu: { from: "08:00", to: "18:00" }, fri: { from: "08:00", to: "18:00" }, sat: { from: "08:00", to: "18:00" }, sun: { from: "08:00", to: "18:00" } };
     const demoStaff: Staff[] = [
-      { id: "demo-a", name: "Alex Rivera", role: "First Aider", rate: 14.5, avail: "confirmed" },
-      { id: "demo-b", name: "Sam Patel", role: "Play Leader", rate: 12.75, avail: "confirmed" },
-      { id: "demo-c", name: "Jordan Lee", role: "First Aider", rate: 13.25, avail: "confirmed" },
+      { id: "demo-a", name: "Alex Rivera", role: "First Aider", rate: 14.5, avail: "confirmed", week: allWeek },
+      { id: "demo-b", name: "Sam Patel", role: "Play Leader", rate: 12.75, avail: "confirmed", week: allWeek },
+      { id: "demo-c", name: "Jordan Lee", role: "First Aider", rate: 13.25, avail: "confirmed", week: allWeek },
+      { id: "demo-d", name: "Priya Shah", role: "Play Leader", rate: 13.0, avail: "confirmed", week: allWeek },
     ];
+    const ls = (gridListings.length ? gridListings : scopedListings).slice(0, 2);
+    if (!ls.length) { persist({ ...store, staff: demoStaff }); flash("Added 4 sample staff — add a listing to place shifts."); return; }
     const roles = ["First Aider", "Play Leader"];
     const shifts: Shift[] = [];
     ls.forEach((l, li) => {
@@ -427,23 +431,23 @@ export function ScheduleApp() {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Season first — multi-select popup; it scopes the locations & listings below */}
         <button type="button" onClick={() => setSeasonMenu(true)} className="group inline-flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
-          <span className="grid h-7 w-7 place-items-center rounded-full text-[13px] text-white shadow-sm" style={{ background: "linear-gradient(135deg,#7c6cf5,#5b53d6)" }}>📅</span>
+          <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#eceaff", color: "#4f46e5" }}>📅</span>
           {seasonSel.length === 0 ? "All seasons" : `${seasonSel.length} of ${seasonOpts.length} seasons`}<span className="text-[10px] text-[var(--ink-3)]">▾</span>
         </button>
         {seasonSel.map((sn) => (
           <span key={sn} className="inline-flex items-center gap-1 rounded-full bg-[#eef8f1] px-2.5 py-1.5 text-[12px] font-bold text-[#0f7a43] ring-1 ring-[#bfe3cd]">📅 {sn}<button type="button" onClick={() => { setSeasonSel((xs) => xs.filter((x) => x !== sn)); setSite("all"); setListingF("all"); }} className="text-[13px] text-[#0f7a43] hover:text-[#c0392b]">×</button></span>
         ))}
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-7 w-7 place-items-center rounded-full text-[13px] text-white shadow-sm" style={{ background: "linear-gradient(135deg,#fb7185,#e11d48)" }}>📍</span><Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">All locations</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
-        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-7 w-7 place-items-center rounded-full text-[13px] text-white shadow-sm" style={{ background: "linear-gradient(135deg,#38bdf8,#2563eb)" }}>🎟</span><Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">All listings</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#ffe9ed", color: "#e11d48" }}>📍</span><Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">All locations</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
+        <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]"><span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#e5eefe", color: "#2563eb" }}>🎟</span><Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none"><option value="all">All listings</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1 rounded-full bg-white px-1 py-1 shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
           <button type="button" onClick={() => nav(-1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]">‹</button>
           <span className="min-w-[116px] text-center text-[12.5px] font-extrabold text-[var(--ink)]">{label}</span>
           <button type="button" onClick={() => nav(1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]">›</button>
         </div>
         <button type="button" onClick={() => setShowAlerts(true)} className="relative inline-flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
-          <span className="grid h-7 w-7 place-items-center rounded-full text-[13px] text-white shadow-sm" style={{ background: "linear-gradient(135deg,#fbbf24,#f59e0b)" }}>🔔</span>Check-in alerts{alerts.length > 0 && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-extrabold text-white">{alerts.length}</span>}</button>
+          <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#fdeecf", color: "#b45309" }}>🔔</span>Check-in alerts{alerts.length > 0 && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-extrabold text-white">{alerts.length}</span>}</button>
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
-          <span className="grid h-7 w-7 place-items-center rounded-full text-[13px] text-white shadow-sm" style={{ background: "linear-gradient(135deg,#34d399,#059669)" }}>🗓</span>
+          <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#dcf5e8", color: "#059669" }}>🗓</span>
           <Select value={`${span}:${group}`} onChange={(e) => { const [sp, gr] = e.target.value.split(":"); setSpan(sp as Span); setGroup(gr as Group); }} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none">
             {GROUPS.map(([g, gl]) => SPANS.map(([s, sl]) => <option key={`${s}:${g}`} value={`${s}:${g}`}>{sl} by {gl}</option>))}
           </Select>
