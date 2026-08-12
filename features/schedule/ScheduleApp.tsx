@@ -143,6 +143,13 @@ export function ScheduleApp() {
   const { settings: tenantSettings } = useTenantSettings();
   const roleOptions = tenantSettings.staffRoles?.length ? tenantSettings.staffRoles : ROLES;
   const onCost = tenantSettings.scheduling?.onCostPct ?? ON_COST;
+  const firstDay = tenantSettings.scheduling?.firstDay ?? "mon";
+  const defShiftH = tenantSettings.scheduling?.defaultShiftHours ?? 6;
+  const defBreakM = tenantSettings.scheduling?.defaultBreakMins ?? 30;
+  const breakUnpaid = (tenantSettings.scheduling?.breakPaid ?? "unpaid") === "unpaid";
+  // Week start honours First-day-of-week (Mon default; Sun option).
+  const weekStartOf = (d: Date) => { const x = new Date(d); const dow = x.getUTCDay(); const back = firstDay === "sun" ? dow : (dow + 6) % 7; x.setUTCDate(x.getUTCDate() - back); return x; };
+  const addMins = (t: string, m: number) => { const [h, mm] = t.split(":").map(Number); const tot = h * 60 + mm + m; return `${String(Math.floor(tot / 60) % 24).padStart(2, "0")}:${String(tot % 60).padStart(2, "0")}`; };
   const addRole = (siteName: string, role: string) => { setExtraRoles((p) => ({ ...p, [siteName]: [...new Set([...(p[siteName] ?? []), role])] })); setRoleMenu(null); };
   const [toast, setToast] = useState<string | null>(null);
   const [schedView, setSchedView] = useState<"rota" | "settings">("rota");
@@ -162,16 +169,16 @@ export function ScheduleApp() {
     if (span === "day") return [anchor];
     if (span === "month") { const d = dt(anchor); const y = d.getUTCFullYear(), m = d.getUTCMonth(); const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate(); return Array.from({ length: last }, (_, i) => iso(new Date(Date.UTC(y, m, i + 1)))); }
     const len = span === "week" ? 7 : span === "2w" ? 14 : 28;
-    const start = iso(mondayOf(dt(anchor)));
+    const start = iso(weekStartOf(dt(anchor)));
     return Array.from({ length: len }, (_, i) => addDays(start, i));
-  }, [span, anchor]);
+  }, [span, anchor, firstDay]);
   const dateSet = useMemo(() => new Set(dates), [dates]);
   const isDay = span === "day";
 
   const nav = (dir: 1 | -1) => {
     if (span === "day") setAnchor(addDays(anchor, dir));
     else if (span === "month") { const d = dt(anchor); setAnchor(iso(new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + dir, 1)))); }
-    else setAnchor(addDays(iso(mondayOf(dt(anchor))), dir * (span === "week" ? 7 : span === "2w" ? 14 : 28)));
+    else setAnchor(addDays(iso(weekStartOf(dt(anchor))), dir * (span === "week" ? 7 : span === "2w" ? 14 : 28)));
   };
   const label = useMemo(() => {
     if (span === "day") return dt(anchor).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -293,7 +300,8 @@ export function ScheduleApp() {
   function publish() { const ids = new Set(periodShifts.filter((s) => s.staffId).map((s) => s.id)); persist({ ...store, shifts: store.shifts.map((s) => (ids.has(s.id) ? { ...s, locked: true } : s)) }); flash(`Published to ${assignedStaff.size} staff — shifts locked.`); }
   const openAdd = (site_: string, role: string, c: { date: string; hour: number | null }, staffId: string | null) => {
     setAssignOpen(false); setActionsOpen(false);
-    setDraft({ groupIds: [], site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonF !== "all" ? seasonF : "Summer 2026", date: c.date, start: c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00", end: c.hour != null ? `${String(c.hour + 1).padStart(2, "0")}:00` : "17:00", slots: [staffId], brk: null, note: "" });
+    const start = c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00";
+    setDraft({ groupIds: [], site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonF !== "all" ? seasonF : "Summer 2026", date: c.date, start, end: addMins(start, defShiftH * 60), slots: [staffId], brk: null, note: "" });
   };
   // Open the editor on the whole group of shifts sharing this slot (N needed / M filled).
   const openEditGroup = (s: Shift) => {
@@ -530,7 +538,7 @@ export function ScheduleApp() {
         const need = draft.slots.length, filled = assigned.length;
         const firstSt = assigned[0] ? staffById[assigned[0]] : null;
         const brkH = draft.brk ? durH(draft.brk.from, draft.brk.to) : 0;
-        const shiftH = Math.max(0, durH(draft.start, draft.end) - brkH);
+        const shiftH = Math.max(0, durH(draft.start, draft.end) - (breakUnpaid ? brkH : 0));
         const cost = assigned.reduce((n, sid) => n + (staffById[sid]?.rate ?? 0) * shiftH, 0);
         return (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[7vh]" onClick={() => { setDraft(null); setAssignOpen(false); }}>
@@ -568,7 +576,7 @@ export function ScheduleApp() {
               {draft.brk ? (
                 <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">☕</span><span className="text-[13px] font-bold text-[var(--ink)]">Break</span><TimeSel value={draft.brk.from} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, from: v } })} /><span className="text-[var(--ink-3)]">—</span><TimeSel value={draft.brk.to} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, to: v } })} /><button type="button" onClick={() => setDraft({ ...draft, brk: null })} className="ml-auto text-[16px] text-[var(--ink-3)]">×</button></div>
               ) : (
-                <button type="button" onClick={() => setDraft({ ...draft, brk: { from: "12:00", to: "12:30" } })} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left"><span className="text-[15px]">☕</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">Add break</span></button>
+                <button type="button" onClick={() => setDraft({ ...draft, brk: { from: "12:00", to: addMins("12:00", defBreakM) } })} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left"><span className="text-[15px]">☕</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">Add break</span></button>
               )}
               {/* note */}
               {(draft.note.length > 0) ? (
