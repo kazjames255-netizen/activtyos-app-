@@ -50,6 +50,8 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const [store, setStore] = useState<Store>({ staff: [] });
   const [view, setView] = useState<"loc" | "staff" | "listing">("loc");
   const [q, setQ] = useState("");
+  const [addFor, setAddFor] = useState<string | null>(null); // which location's add-picker is open
+  const [addQ, setAddQ] = useState("");
 
   const refresh = useCallback(() => {
     apiGet<{ venues?: Venue[] }>("/api/library").then((lib) => setVenues(lib.venues ?? [])).catch(() => setVenues([]));
@@ -134,10 +136,25 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                         </div>
                       ))}
                     </div>
-                    <Select value="" onChange={(e) => { if (e.target.value) addSite(e.target.value, v.id); }} className="mt-2 w-full text-[12.5px]">
-                      <option value="">＋ Add staff to this location…</option>
-                      {notHere.map((s) => <option key={s.id} value={s.id}>{s.name}{s.role ? ` · ${s.role}` : ""}</option>)}
-                    </Select>
+                    <div className="relative mt-2">
+                      <Input value={addFor === v.id ? addQ : ""} onFocus={() => { setAddFor(v.id); setAddQ(""); }} onChange={(e) => { setAddFor(v.id); setAddQ(e.target.value); }} onBlur={() => setTimeout(() => setAddFor((f) => (f === v.id ? null : f)), 150)} placeholder="＋ Add staff — search any name…" className="w-full text-[12.5px]" />
+                      {addFor === v.id && (() => {
+                        const opts = notHere.filter((s) => !addQ.trim() || s.name.toLowerCase().includes(addQ.toLowerCase()) || (s.role ?? "").toLowerCase().includes(addQ.toLowerCase())).sort((a, b) => a.name.localeCompare(b.name));
+                        return (
+                          <div className="absolute left-0 right-0 top-[40px] z-30 max-h-[260px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white shadow-lg">
+                            {notHere.length === 0 ? <div className="px-3 py-2.5 text-[12px] text-[var(--ink-3)]">Everyone&rsquo;s already here.</div>
+                              : opts.length === 0 ? <div className="px-3 py-2.5 text-[12px] text-[var(--ink-3)]">No staff match “{addQ}”.</div>
+                              : opts.map((s) => (
+                                <button key={s.id} type="button" onMouseDown={(e) => { e.preventDefault(); addSite(s.id, v.id); setAddFor(null); setAddQ(""); }} className="flex w-full items-center gap-2.5 border-b border-[var(--line-2,#eef2f8)] px-3 py-2 text-left hover:bg-[var(--panel)] last:border-b-0">
+                                  <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[10px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
+                                  <span className="min-w-0 flex-1"><span className="block truncate text-[12.5px] font-bold text-[var(--ink)]">{s.name}</span>{s.role && <span className="block text-[10.5px] text-[var(--ink-3)]">{s.role}</span>}</span>
+                                  <span className="text-[12px] font-bold text-[#1d3a8f]">Add ›</span>
+                                </button>
+                              ))}
+                          </div>
+                        );
+                      })()}
+                    </div>
                   </div>
                   <div>
                     <div className="mb-1.5 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings here · {vListings.length}<a href="/company/listings" className="ml-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a></div>
@@ -157,29 +174,46 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
       ) : view === "staff" ? (
         <div className="flex flex-col gap-2">
           {shown.length === 0 && <p className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No staff match.</p>}
-          {shown.map((s) => (
-            <div key={s.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
+          {shown.map((s) => {
+            const sNone = s.sites.length === 0 && s.listings.length === 0;
+            const sAllLoc = list.length > 0 && list.every((v) => s.sites.includes(v.id));
+            const sAllList = s.listings.length === 0;
+            const sScoped = liveListings.filter((l) => sAllLoc || (l.venueId && s.sites.includes(l.venueId)));
+            const summary = sNone ? "Not rostered" : (sAllLoc ? "All locations" : `${s.sites.length} location${s.sites.length === 1 ? "" : "s"}`) + (sAllList ? " · all listings" : ` · ${s.listings.length} listing${s.listings.length === 1 ? "" : "s"}`);
+            return (
+            <div key={s.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
               <div className="flex items-center gap-2.5">
                 <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[12px] font-extrabold text-white" style={{ background: avColour(s.id) }}>{initials(s.name)}</span>
                 <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{s.role ?? "—"}</div></div>
-                <span className="text-[11px] font-bold text-[var(--ink-3)]">{s.sites.length + s.listings.length === 0 ? "Not deployed" : `${s.sites.length} loc · ${s.listings.length} listing`}</span>
+                <span className="text-[11px] font-bold text-[var(--ink-3)]">{summary}</span>
               </div>
-              <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                <span className="mr-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Locations</span>
-                {list.map((v) => { const on = has(s.sites, v.id); return (
-                  <button key={v.id} type="button" onClick={() => toggleSite(s.id, v.id)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors" style={on ? CHIP_ON : CHIP_OFF}>{on ? "✓ " : ""}{v.name}</button>
-                ); })}
+
+              <div className="mt-2.5 flex flex-wrap gap-1.5">
+                <button type="button" onClick={() => upd(s.id, (x) => ({ ...x, sites: list.map((v) => v.id), listings: [] }))} className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={!sNone ? CHIP_ON : CHIP_OFF}>{!sNone ? "✓ " : ""}Rostered</button>
+                <button type="button" onClick={() => upd(s.id, (x) => ({ ...x, sites: [], listings: [] }))} className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={sNone ? { borderColor: "#c06a10", background: "#fbeddb", color: "#8a4a12" } : CHIP_OFF}>{sNone ? "✓ " : ""}None — office / admin</button>
               </div>
-              {liveListings.length > 0 && (
-                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                  <span className="mr-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings</span>
-                  {liveListings.map((l) => { const on = has(s.listings, l.id); return (
-                    <button key={l.id} type="button" onClick={() => toggleListing(s.id, l.id)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold transition-colors" style={on ? CHIP_ON : CHIP_OFF}>{on ? "✓ " : ""}🎟 {lTitle(l)}</button>
-                  ); })}
-                </div>
+
+              {!sNone && (
+                <>
+                  <div className="mt-2.5">
+                    <div className="mb-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">① Locations</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button type="button" onClick={() => upd(s.id, (x) => ({ ...x, sites: list.map((v) => v.id) }))} className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={sAllLoc ? CHIP_ON : CHIP_OFF}>{sAllLoc ? "✓ " : "🌍 "}All locations</button>
+                      {list.map((v) => { const on = !sAllLoc && has(s.sites, v.id); return <button key={v.id} type="button" onClick={() => upd(s.id, (x) => ({ ...x, sites: flip(x.sites, v.id) }))} className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={on ? CHIP_ON : CHIP_OFF}>{on ? "✓ " : "📍 "}{v.name}</button>; })}
+                    </div>
+                  </div>
+                  <div className="mt-2">
+                    <div className="mb-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">② Listings {sAllLoc ? "across all locations" : "at those locations"}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      <button type="button" onClick={() => upd(s.id, (x) => ({ ...x, listings: [] }))} className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={sAllList ? CHIP_ON : CHIP_OFF}>{sAllList ? "✓ " : "🎟 "}All listings here</button>
+                      {sScoped.map((l) => { const on = !sAllList && has(s.listings, l.id); const sn = seasonName(l.seasonId); return <button key={l.id} type="button" onClick={() => upd(s.id, (x) => ({ ...x, listings: flip(x.listings, l.id) }))} className="inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={on ? CHIP_ON : CHIP_OFF}>{on ? "✓" : "🎟"} {lTitle(l)}{sn && <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-bold" style={{ color: "#1d3a8f" }}>📅 {sn}</span>}</button>; })}
+                      {sScoped.length === 0 && <span className="text-[11.5px] text-[var(--ink-3)]">No live listings here — “All listings here” covers whatever runs there.</span>}
+                    </div>
+                  </div>
+                </>
               )}
             </div>
-          ))}
+          ); })}
         </div>
 
       /* ── BY LISTING ── */
@@ -206,7 +240,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                 </div>
                 <Select value="" onChange={(e) => { if (e.target.value) addListing(e.target.value, l.id); }} className="mt-2 w-full max-w-[280px] text-[12.5px]">
                   <option value="">＋ Add staff to this listing…</option>
-                  {off.map((s) => <option key={s.id} value={s.id}>{s.name}{s.role ? ` · ${s.role}` : ""}</option>)}
+                  {[...off].sort((a, b) => a.name.localeCompare(b.name)).map((s) => <option key={s.id} value={s.id}>{s.name}{s.role ? ` · ${s.role}` : ""}</option>)}
                 </Select>
               </div>
             );
@@ -218,3 +252,5 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
     </div>
   );
 }
+
+
