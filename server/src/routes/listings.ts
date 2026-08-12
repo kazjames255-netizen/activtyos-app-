@@ -70,6 +70,9 @@ const baseListingSchema = z
     categoryIds: z.array(z.string().max(60)).max(50).optional(),
     heroCategoryId: z.string().max(60).nullable().optional(),
     venueId: z.string().max(60).nullable().optional(),
+    // Which season this listing runs in (Setup → Seasons). Groups it in
+    // bookings/audiences/money and scopes it in the staff schedule.
+    seasonId: z.string().max(60).nullable().optional(),
     // On-the-day contact number, shown to parents only while the camp runs.
     sitePhone: z.string().max(40).optional(),
     // Off-platform payment methods this listing accepts (subset of the tenant's
