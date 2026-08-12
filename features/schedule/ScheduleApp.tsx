@@ -179,6 +179,11 @@ export function ScheduleApp() {
   const seasonOpts = useMemo(() => (tenantSettings.seasons ?? []).map((s) => s.name), [tenantSettings.seasons]);
 
   const staffHours = (id: string) => periodShifts.filter((s) => s.staffId === id).reduce((n, s) => n + durH(s.start, s.end), 0);
+  // Available hours across the period (from their availability pattern) and how
+  // much of it is already rostered — used to sort staff by spare capacity.
+  const availHrs = (id: string) => { const st = staffById[id]; if (!st) return 0; return dates.reduce((n, d) => { const w = effWeek(st, d)[weekdayKey(d)]; return n + (w ? durH(w.from, w.to) : 0); }, 0); };
+  const pctUsed = (id: string) => { const a = availHrs(id); const u = staffHours(id); return a > 0 ? (u / a) * 100 : (u > 0 ? 1000 : 0); };
+  const [staffSort, setStaffSort] = useState<"name" | "availLow" | "availHigh" | "costHigh" | "costLow">("name");
   const wagesAt = store.staff.reduce((n, st) => n + staffHours(st.id) * st.rate, 0);
   const wagesCost = wagesAt * (1 + onCost / 100);
   const assignedStaff = useMemo(() => new Set(periodShifts.filter((s) => s.staffId).map((s) => s.staffId as string)), [periodShifts]);
@@ -192,7 +197,17 @@ export function ScheduleApp() {
   const overdueLabel = (s: Shift) => { const m = overdueMin(s); if (m < 60) return `${m} min late`; const h = Math.floor(m / 60); return `${h}h ${m % 60}m late`; };
   const alerts = useMemo(() => periodShifts.filter((s) => s.staffId && !s.in && !s.out && Date.now() >= shiftStartMs(s) + CHECKIN_GRACE_MIN * 60000), [periodShifts]);
   const [alertQ, setAlertQ] = useState("");
-  const shownStaff = store.staff.filter((s) => !q || s.name.toLowerCase().includes(q.toLowerCase()) || s.role.toLowerCase().includes(q.toLowerCase()));
+  const shownStaff = store.staff
+    .filter((s) => !q || s.name.toLowerCase().includes(q.toLowerCase()) || s.role.toLowerCase().includes(q.toLowerCase()))
+    .sort((a, b) => {
+      switch (staffSort) {
+        case "availLow": return pctUsed(a.id) - pctUsed(b.id);   // most spare capacity first
+        case "availHigh": return pctUsed(b.id) - pctUsed(a.id);  // most fully-booked first
+        case "costHigh": return b.rate - a.rate;
+        case "costLow": return a.rate - b.rate;
+        default: return a.name.localeCompare(b.name);
+      }
+    });
 
   // Columns: hours for Day, dates otherwise
   const cols = useMemo(() => isDay ? HOURS.map((h) => ({ key: `h${h}`, hour: h, label: to12(`${h}:00`), date: anchor })) : dates.map((d) => ({ key: d, date: d, hour: null as number | null, label: dt(d).toLocaleDateString("en-GB", span === "week" ? { weekday: "short", day: "numeric", timeZone: "UTC" } : { day: "numeric", timeZone: "UTC" }) })), [isDay, dates, anchor, span]);
@@ -500,6 +515,16 @@ export function ScheduleApp() {
         <div className="lg:w-[204px] lg:flex-none">
           <Card className="p-2.5">
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search" className="mb-2 w-full text-[12px]" />
+            <div className="mb-2 flex items-center gap-1">
+              <span className="text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Sort</span>
+              <Select value={staffSort} onChange={(e) => setStaffSort(e.target.value as typeof staffSort)} className="ml-auto w-full max-w-[150px] text-[11px]">
+                <option value="name">Name (A–Z)</option>
+                <option value="availLow">Availability used · least</option>
+                <option value="availHigh">Availability used · most</option>
+                <option value="costHigh">Cost/hr · high → low</option>
+                <option value="costLow">Cost/hr · low → high</option>
+              </Select>
+            </div>
             {canManage && <div className="mb-2.5">
               <div className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step 1 · Confirm availability</div>
               <button type="button" onClick={() => setReqOpen((v) => !v)} className="w-full rounded-lg bg-[#c0392b] px-2 py-2.5 text-[10.5px] font-extrabold uppercase leading-tight tracking-wide text-white shadow-sm hover:brightness-105">Request staff to confirm availability{notSubmitted ? ` · ${notSubmitted}` : ""}</button>
@@ -527,7 +552,10 @@ export function ScheduleApp() {
                       : <button type="button" onClick={(e) => { e.stopPropagation(); remind(st.id); }} title={st.reminders ? `Sent ${st.reminders}× — send another reminder` : "Send availability reminder"} className="flex-none inline-flex items-center gap-0.5 rounded-full bg-[#fdebec] px-1.5 py-[1px] text-[10px] font-extrabold text-[#c0392b] hover:bg-[#f9d7da]">🔔{st.reminders ? ` ${st.reminders}` : ""}</button>}</div>
                     <div className="text-[9px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className={st.avail === "confirmed" ? "text-[#0f7a43]" : st.requested ? "text-[#b45309]" : "text-[#c0392b]"}>{st.avail === "confirmed" ? "Confirmed" : st.requested ? `Requested${st.requestedScope === "all" ? " · all wks" : ""}` : "Not submitted"}</span></div>
                     <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{hLabel(hrs)} · £{st.rate.toFixed(2)}/hr</div>
-                    <div className="text-[11px] font-bold text-[var(--ink)]">{money(pay)} <span className="font-normal text-[var(--ink-3)]">· {money(cost)} on-cost</span></div>
+                    {(() => { const a = availHrs(st.id); const p = Math.round(pctUsed(st.id)); const tone = a === 0 ? "var(--ink-3)" : p >= 90 ? "#c0392b" : p >= 60 ? "#b45309" : "#0f7a43"; return (
+                      <div className="mt-0.5 flex items-center gap-1.5"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--line)]"><div className="h-full rounded-full" style={{ width: `${Math.min(100, p)}%`, background: tone }} /></div><span className="text-[9.5px] font-extrabold tabular-nums" style={{ color: tone }}>{a === 0 ? "—" : `${p}%`}</span></div>
+                    ); })()}
+                    <div className="mt-0.5 text-[11px] font-bold text-[var(--ink)]">{money(pay)} <span className="font-normal text-[var(--ink-3)]">· {money(cost)} on-cost</span></div>
                   </div>
                 </div>
               ); })}
