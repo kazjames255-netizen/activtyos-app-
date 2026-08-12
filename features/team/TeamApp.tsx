@@ -232,6 +232,7 @@ export function TeamApp() {
           const roleNm = roles.find((r) => r.id === roleId)?.name ?? "Staff";
           const assignTxt = assignMode === "all" ? "All listings" : assignMode === "none" ? "Not rostered — role access only" : assignMode === "locations" ? (assignIds.length ? `${assignIds.length} location${assignIds.length === 1 ? "" : "s"}` : "By location — pick some") : (assignIds.length ? `${assignIds.length} listing${assignIds.length === 1 ? "" : "s"}` : "By listing — pick some");
           const pillStyle = (on: boolean) => on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" };
+          const chipStyle = (on: boolean) => on ? { borderColor: "#22b365", background: "#e7f7ee", color: "#0f7a43" } : { borderColor: "#bcd0f5", background: "#f5f9ff", color: "#1d3a8f" };
           return (
           <>
             {/* big blue header + progress */}
@@ -290,14 +291,14 @@ export function TeamApp() {
                     ))}
                   </div>
                   {assignMode === "listings" && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
+                    <div className="mt-3 flex flex-wrap gap-2">
                       {listings.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No listings yet.</span>}
-                      {listings.map((l) => <button key={l.id} type="button" onClick={() => toggleAssign(l.id)} className="rounded-lg border px-2.5 py-1 text-[12px] font-semibold" style={pillStyle(assignIds.includes(l.id))}>{assignIds.includes(l.id) ? "✓ " : ""}{l.title}</button>)}
+                      {listings.map((l) => { const on = assignIds.includes(l.id); return <button key={l.id} type="button" onClick={() => toggleAssign(l.id)} className="rounded-full border-2 px-3.5 py-2 text-[13px] font-extrabold transition-colors" style={chipStyle(on)}>{on ? "✓ " : "🎟 "}{l.title}</button>; })}
                     </div>
                   )}
                   {assignMode === "locations" && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {(venues.length ? venues : DEMO_VENUES).map((v) => <button key={v.id} type="button" onClick={() => toggleAssign(v.id)} className="rounded-lg border px-2.5 py-1 text-[12px] font-semibold" style={pillStyle(assignIds.includes(v.id))}>{assignIds.includes(v.id) ? "✓ " : ""}📍 {v.name}</button>)}
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      {(venues.length ? venues : DEMO_VENUES).map((v) => { const on = assignIds.includes(v.id); return <button key={v.id} type="button" onClick={() => toggleAssign(v.id)} className="rounded-full border-2 px-3.5 py-2 text-[13px] font-extrabold transition-colors" style={chipStyle(on)}>{on ? "✓ " : "📍 "}{v.name}</button>; })}
                     </div>
                   )}
                   {assignMode === "none" ? (
