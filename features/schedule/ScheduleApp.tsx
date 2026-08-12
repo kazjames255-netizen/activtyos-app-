@@ -57,44 +57,13 @@ const roleCol = (r: string) => ROLE_COL[r] ?? "#64748b";
 const ROLES = ["Lead Coach", "Coach", "Activity Instructor", "Lifeguard", "First Aider", "Activity Assistant"];
 
 interface Template { id: string; name: string; items: { dayOffset: number; site: string; role: string; listing?: string; season?: string; staffId: string | null; start: string; end: string }[] }
-const KEY = "aos.rota.v4";
+const KEY = "aos.rota.v5";
 const TKEY = "aos.rota.templates.v1";
 const loadTpl = (): Template[] => { try { return JSON.parse(localStorage.getItem(TKEY) || "[]"); } catch { return []; } };
-function seed(): Store {
-  const mon = mondayOf(new Date());
-  const day = (n: number) => { const x = new Date(mon); x.setUTCDate(x.getUTCDate() + n); return iso(x); };
-  const LM = "Loughton Manor First School", GL = "Gullivers Land, Milton Keynes";
-  const staff: Staff[] = [
-    { id: "amelia", name: "Amelia Hart", role: "Coach", rate: 14.0, avail: "confirmed", week: { mon: { from: "09:00", to: "15:00" }, tue: { from: "09:00", to: "15:00" }, thu: { from: "09:00", to: "18:00" }, fri: { from: "09:00", to: "18:00" }, sat: { from: "10:00", to: "16:00" } } },
-    { id: "dom", name: "Dom Reyes", role: "Lifeguard", rate: 11.5, avail: "notsubmitted" },
-    { id: "kitty", name: "Kitty-Rose Bright", role: "Activity Assistant", rate: 13.0, avail: "notsubmitted" },
-    { id: "liberty", name: "Liberty Young", role: "Coach", rate: 12.0, avail: "confirmed", week: { mon: { from: "09:00", to: "17:00" }, tue: { from: "09:00", to: "17:00" }, wed: { from: "09:00", to: "17:00" }, thu: { from: "09:00", to: "17:00" }, fri: { from: "09:00", to: "17:00" } } },
-    { id: "louis", name: "Louis Calderwood", role: "Lifeguard", rate: 11.0, avail: "notsubmitted" },
-    { id: "oluwa", name: "OluwaDamilola Adeyemi", role: "Lead Coach", rate: 15.5, avail: "confirmed", week: { mon: { from: "08:00", to: "16:00" }, tue: { from: "08:00", to: "16:00" }, wed: { from: "08:00", to: "16:00" }, sat: { from: "09:00", to: "15:00" } } },
-    { id: "susan", name: "Susan Preston", role: "Lead Coach", rate: 12.5, avail: "confirmed", week: { mon: { from: "08:00", to: "14:00" }, thu: { from: "08:00", to: "14:00" }, fri: { from: "08:00", to: "14:00" } } },
-    { id: "taigan", name: "Taigan McMahon", role: "First Aider", rate: 13.5, avail: "notsubmitted" },
-  ];
-  let n = 0; const id = () => `sh${++n}`;
-  const shifts: Shift[] = [
-    { id: id(), staffId: "susan", site: LM, role: "Lead Coach", date: day(0), start: "08:00", end: "09:00", in: "08:04" },
-    { id: id(), staffId: "oluwa", site: LM, role: "Lead Coach", date: day(0), start: "08:00", end: "09:00", out: "13:02" },
-    { id: id(), staffId: null, site: LM, role: "Lead Coach", date: day(0), start: "08:00", end: "09:00" },
-    { id: id(), staffId: null, site: LM, role: "Lead Coach", date: day(0), start: "08:00", end: "09:00" },
-    { id: id(), staffId: "louis", site: LM, role: "Lead Coach", date: day(4), start: "17:00", end: "18:00" },
-    { id: id(), staffId: null, site: LM, role: "Lead Coach", date: day(4), start: "17:00", end: "18:00" },
-    { id: id(), staffId: null, site: LM, role: "Lead Coach", date: day(5), start: "11:45", end: "16:15" },
-    { id: id(), staffId: null, site: LM, role: "Lead Coach", date: day(5), start: "11:45", end: "16:15" },
-    { id: id(), staffId: "liberty", site: LM, role: "Lifeguard", date: day(2), start: "09:00", end: "13:00" },
-    { id: id(), staffId: "oluwa", site: GL, role: "Lead Coach", date: day(1), start: "09:00", end: "15:00" },
-    { id: id(), staffId: "amelia", site: GL, role: "Lead Coach", date: day(1), start: "09:00", end: "13:00", in: "09:02" },
-    { id: id(), staffId: "amelia", site: LM, role: "Coach", date: day(0), start: "09:00", end: "13:00" },
-    { id: id(), staffId: "amelia", site: LM, role: "Coach", date: day(3), start: "09:00", end: "13:00" },
-    { id: id(), staffId: "taigan", site: GL, role: "Lead Coach", date: day(6), start: "11:45", end: "16:15", locked: true },
-  ];
-  for (const s of shifts) { s.listing = s.role === "Lifeguard" ? "Swim School" : s.site === LM ? "Holiday Multi-Sports Camp" : "Football Intensive"; s.season = s.site === GL ? "Autumn 2026" : "Summer 2026"; }
-  return { staff, shifts, sites: [LM, GL, "Stantonbury Leisure Centre"] };
-}
-const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.shifts ? v : seed(); } catch { return seed(); } };
+// Real-data only: the rota starts empty. Locations come from the library, listings
+// & seasons from the operator's real data; shifts + staff are built here / wired.
+const empty = (): Store => ({ staff: [], shifts: [], sites: [] });
+const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.shifts ? v : empty(); } catch { return empty(); } };
 
 type Span = "day" | "week" | "2w" | "4w" | "month";
 type Group = "area" | "staff";
@@ -120,7 +89,7 @@ function TimeSel({ value, onChange }: { value: string; onChange: (v: string) => 
 }
 
 export function ScheduleApp() {
-  const [store, setStore] = useState<Store>(seed);
+  const [store, setStore] = useState<Store>(empty);
   const [anchor, setAnchor] = useState(() => iso(new Date()));
   const [span, setSpan] = useState<Span>("week");
   const [group, setGroup] = useState<Group>("area");
@@ -152,6 +121,8 @@ export function ScheduleApp() {
   const addMins = (t: string, m: number) => { const [h, mm] = t.split(":").map(Number); const tot = h * 60 + mm + m; return `${String(Math.floor(tot / 60) % 24).padStart(2, "0")}:${String(tot % 60).padStart(2, "0")}`; };
   const addRole = (siteName: string, role: string) => { setExtraRoles((p) => ({ ...p, [siteName]: [...new Set([...(p[siteName] ?? []), role])] })); setRoleMenu(null); };
   const [toast, setToast] = useState<string | null>(null);
+  const [venuesR, setVenuesR] = useState<{ id: string; name: string }[]>([]);
+  const [listingsR, setListingsR] = useState<{ title: string; seasonId?: string | null }[]>([]);
   const [schedView, setSchedView] = useState<"rota" | "settings">("rota");
   const [copyMenu, setCopyMenu] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -160,7 +131,14 @@ export function ScheduleApp() {
   const [tplListOpen, setTplListOpen] = useState(false);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2600); };
 
-  useEffect(() => { setStore(load()); setTemplates(loadTpl()); apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
+  useEffect(() => {
+    setStore(load()); setTemplates(loadTpl());
+    apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {});
+    apiGet<{ venues?: { id: string; name: string }[] }>("/api/library").then((lib) => setVenuesR(lib.venues ?? [])).catch(() => {});
+    apiGet<{ title?: string; name?: string; seasonId?: string | null }[]>("/api/listings?mine=1").then((rows) => setListingsR(rows.map((r) => ({ title: r.title || r.name || "", seasonId: r.seasonId ?? null })).filter((r) => r.title))).catch(() => {});
+  }, []);
+  // Real data drives the filters: locations from the library, listings + seasons from the operator's data.
+  const sites = useMemo(() => venuesR.map((v) => v.name), [venuesR]);
   const persistTpl = (next: Template[]) => { setTemplates(next); try { localStorage.setItem(TKEY, JSON.stringify(next)); } catch { /* ignore */ } };
   const persist = (s: Store) => { setStore(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
 
@@ -190,8 +168,8 @@ export function ScheduleApp() {
   const staffById = useMemo(() => Object.fromEntries(store.staff.map((s) => [s.id, s])), [store.staff]);
   const inPeriod = (s: Shift) => dateSet.has(s.date) && (site === "all" || s.site === site) && (listingF === "all" || s.listing === listingF) && (seasonF === "all" || s.season === seasonF);
   const periodShifts = useMemo(() => store.shifts.filter(inPeriod), [store.shifts, dateSet, site, listingF, seasonF]);
-  const listingOpts = useMemo(() => [...new Set(store.shifts.map((s) => s.listing).filter(Boolean) as string[])].sort(), [store.shifts]);
-  const seasonOpts = useMemo(() => [...new Set(store.shifts.map((s) => s.season).filter(Boolean) as string[])].sort(), [store.shifts]);
+  const listingOpts = useMemo(() => [...new Set(listingsR.map((l) => l.title).concat(store.shifts.map((s) => s.listing).filter(Boolean) as string[]))].sort(), [listingsR, store.shifts]);
+  const seasonOpts = useMemo(() => [...new Set((tenantSettings.seasons ?? []).map((s) => s.name).concat(store.shifts.map((s) => s.season).filter(Boolean) as string[]))].sort(), [tenantSettings.seasons, store.shifts]);
 
   const staffHours = (id: string) => periodShifts.filter((s) => s.staffId === id).reduce((n, s) => n + durH(s.start, s.end), 0);
   const wagesAt = store.staff.reduce((n, st) => n + staffHours(st.id) * st.rate, 0);
@@ -343,7 +321,7 @@ export function ScheduleApp() {
   );
 
   const compact = colW < 60;
-  const gridSites = site === "all" ? store.sites : [site];
+  const gridSites = site === "all" ? sites : [site];
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
@@ -365,7 +343,7 @@ export function ScheduleApp() {
 
       {/* Toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📍 <Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All locations</option>{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
+        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📍 <Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All locations</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">🎟 <Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All listings</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📅 <Select value={seasonF} onChange={(e) => setSeasonF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All seasons</option>{seasonOpts.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1">
@@ -383,7 +361,7 @@ export function ScheduleApp() {
           <div className="ml-auto flex items-center gap-2">
             <div className="relative">
               <button type="button" onClick={() => setAutoMenu((v) => !v)} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f]">✨ Auto-schedule ▾</button>
-              {autoMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg"><button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Fill open shifts from confirmed staff</button><button type="button" onClick={() => { setAutoMenu(false); persist(seed()); flash("Sample rota restored."); }} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Reset to sample data</button><button type="button" onClick={clearPeriod} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">Clear all shifts shown</button></div>}
+              {autoMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg"><button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">Fill open shifts from confirmed staff</button><button type="button" onClick={clearPeriod} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">Clear all shifts shown</button></div>}
             </div>
             <button type="button" onClick={() => { setStore(load()); flash("Refreshed."); }} title="Refresh" className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px]">↻</button>
             <div className="relative">
@@ -469,7 +447,7 @@ export function ScheduleApp() {
                       <div key={st.id}>
                         <div className="flex items-center gap-2 border-b border-[var(--line-2,#eef2f8)] bg-[var(--panel)] px-3 py-1.5"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{st.name}</span><span className="text-[11px] text-[var(--ink-3)]">{st.role} · {hLabel(staffHours(st.id))} · {money(staffHours(st.id) * st.rate)}</span></div>
                         {!isDay && <TotalsRow rows={rows} />}
-                        <CellRow rows={rows} compact={compact} onAdd={(c) => openAdd(store.sites[0], st.role, c, st.id)} />
+                        <CellRow rows={rows} compact={compact} onAdd={(c) => openAdd(sites[0] ?? "", st.role, c, st.id)} />
                       </div>
                     );
                   })
@@ -588,7 +566,7 @@ export function ScheduleApp() {
               <details className="border-b border-[var(--line-2,#eef2f8)] py-2.5"><summary className="cursor-pointer list-none text-[12.5px] font-bold text-[var(--ink-2)]">⚙️ Role · location · listing · season</summary>
                 <div className="mt-2.5 grid grid-cols-2 gap-2.5">
                   <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Role</label><Select value={draft.role} onChange={(e) => setDraft({ ...draft, role: e.target.value })} className="w-full">{[...new Set([draft.role, ...roleOptions])].filter(Boolean).map((r) => <option key={r} value={r}>{r}</option>)}</Select></div>
-                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Location</label><Select value={draft.site} onChange={(e) => setDraft({ ...draft, site: e.target.value })} className="w-full">{store.sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
+                  <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Location</label><Select value={draft.site} onChange={(e) => setDraft({ ...draft, site: e.target.value })} className="w-full">{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
                   <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Listing</label><Input value={draft.listing} onChange={(e) => setDraft({ ...draft, listing: e.target.value })} list="rota-listings" className="w-full" /><datalist id="rota-listings">{listingOpts.map((l) => <option key={l} value={l} />)}</datalist></div>
                   <div><label className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Season</label><Input value={draft.season} onChange={(e) => setDraft({ ...draft, season: e.target.value })} list="rota-seasons" className="w-full" /><datalist id="rota-seasons">{seasonOpts.map((s) => <option key={s} value={s} />)}</datalist></div>
                 </div>
@@ -746,5 +724,7 @@ export function ScheduleApp() {
     </div>
   );
 }
+
+
 
 
