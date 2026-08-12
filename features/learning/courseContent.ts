@@ -13,10 +13,16 @@ export type Block =
   | { k: "stat"; value: string; label: string }
   | { k: "art"; art: string; caption?: string }
   | { k: "quote"; t: string; by?: string }
-  | { k: "table"; head: string[]; rows: string[][] };
+  | { k: "table"; head: string[]; rows: string[][] }
+  // ——— interactive activities ———
+  | { k: "sort"; prompt: string; buckets: string[]; items: { text: string; bucket: number }[] }   // drag each item into the right bucket
+  | { k: "order"; prompt: string; items: string[] }                                                 // drag into the correct order (array = correct order)
+  | { k: "match"; prompt: string; pairs: { l: string; r: string }[] }                               // match left to right
+  | { k: "reveal"; prompt?: string; cards: { front: string; back: string }[] };                     // tap to flip
 
+export interface QuizQ { q: string; opts: string[]; a: number; fb?: string }
 export interface Lesson { id: string; title: string; mins: number; blocks: Block[] }
-export interface CourseDoc { id: string; title: string; cat: "Mandatory" | "Recommended" | "Optional"; blurb: string; cover: string; lessons: Lesson[] }
+export interface CourseDoc { id: string; title: string; cat: "Mandatory" | "Recommended" | "Optional"; blurb: string; cover: string; lessons: Lesson[]; pass?: number; quiz?: QuizQ[] }
 
 // ————————————————————————————————————————————————————————————————
 // SEED COURSES
@@ -100,6 +106,47 @@ const safeguarding: CourseDoc = {
         { k: "check", q: "Child-on-child abuse should be treated as:", opts: ["Banter to be ignored", "A safeguarding concern, taken as seriously as any other", "Something only the children should sort out", "A discipline issue only"], a: 1, fb: "Correct — never dismissed as “just kids”; it's a safeguarding concern." },
       ],
     },
+    { id: "l6", title: "Practise what you've learned", mins: 8, blocks: [
+      { k: "sort", prompt: "Which type of abuse does each sign most point to? Drag each into a group.", buckets: ["Physical", "Emotional", "Sexual", "Neglect"], items: [
+        { text: "Unexplained, patterned bruising", bucket: 0 }, { text: "Flinches when touched", bucket: 0 },
+        { text: "Withdrawn, very low self-worth", bucket: 1 }, { text: "Extremes of compliance or defiance", bucket: 1 },
+        { text: "Sexual language beyond their age", bucket: 2 }, { text: "Sudden fear of a specific person", bucket: 2 },
+        { text: "Always hungry, poor hygiene", bucket: 3 }, { text: "Untreated health needs", bucket: 3 },
+      ] },
+      { k: "order", prompt: "Put your response to a disclosure in the right order.", items: [
+        "Respond — listen, reassure, and don't promise secrecy",
+        "Record — write the facts in the child's own words, dated and signed",
+        "Report — tell the DSL the same day (sooner if there's immediate danger)",
+      ] },
+      { k: "match", prompt: "Match each safeguarding term to what it means.", pairs: [
+        { l: "DSL", r: "Designated Safeguarding Lead — leads on safeguarding and decides referrals" },
+        { l: "LADO", r: "Local Authority Designated Officer — handles allegations against staff" },
+        { l: "Disclosure", r: "When a child tells you about abuse or harm" },
+        { l: "Low-level concern", r: "A worry about an adult's behaviour, below the harm threshold" },
+      ] },
+      { k: "reveal", prompt: "Tap each specific safeguarding issue to see what to watch for.", cards: [
+        { front: "County lines / CCE", back: "A child used to run drugs — going missing, unexplained cash, a second phone, found out-of-area." },
+        { front: "Child sexual exploitation", back: "An older “partner”, gifts, secrecy, going missing, sexualised behaviour." },
+        { front: "Online harm", back: "Grooming, bullying and harmful content — the risk follows the child home." },
+        { front: "Radicalisation (Prevent)", back: "Drawn toward extremist views; Channel offers early, supportive help." },
+      ] },
+      { k: "check", q: "You can't reach the DSL or deputy and a child is in immediate danger. You should:", opts: ["Wait until the DSL is free", "Go home and try tomorrow", "Contact the police or children's social care directly", "Ask the child's parents to sort it"], a: 2, fb: "Correct — safeguarding never waits. Contact the police (999) or children's social care yourself." },
+    ] },
+  ],
+  pass: 80,
+  quiz: [
+    { q: "Safeguarding is the responsibility of:", opts: ["Only the DSL", "Only managers", "Every member of staff", "Only qualified teachers"], a: 2, fb: "Everyone shares the responsibility to notice and act." },
+    { q: "Which is NOT one of the four categories of abuse?", opts: ["Physical", "Emotional", "Financial", "Neglect"], a: 2, fb: "The four are physical, emotional, sexual and neglect. Financial abuse relates to adults." },
+    { q: "A child begins to disclose and asks you to keep it a secret. You should:", opts: ["Promise secrecy so they keep talking", "Explain you must share it with the person who can help", "Stop them talking", "Tell them to speak to a friend"], a: 1, fb: "Never promise confidentiality — be honest you must share it." },
+    { q: "When recording a disclosure you should write:", opts: ["Your opinion of who's to blame", "The facts, in the child's own words, dated and signed", "Only a brief summary weeks later", "Nothing — just tell someone"], a: 1, fb: "Facts, the child's words, same-day, dated and signed." },
+    { q: "You must report a concern to your DSL:", opts: ["Within a month", "The same day", "Only if you're certain", "Only if the child asks you to"], a: 1, fb: "Act the same day — sooner if a child is in immediate danger." },
+    { q: "A ‘cluster’ of small worries about a normally-happy child is:", opts: ["Nothing to act on without proof", "Enough to record and raise", "Only relevant if the child says so", "A discipline matter"], a: 1, fb: "You don't need proof — a pattern is exactly what you record and raise." },
+    { q: "Child-on-child abuse should be:", opts: ["Dismissed as banter", "Left for the children to resolve", "Taken as seriously as any other safeguarding concern", "Only logged if a parent complains"], a: 2, fb: "Never minimised as ‘just kids’." },
+    { q: "A teenager on your scheme adds you on social media and messages late at night. You:", opts: ["Reply to build trust", "Ignore, don't accept, and tell your manager/DSL", "Block and say nothing", "Meet up to talk it through"], a: 1, fb: "Keep the boundary and be transparent so nothing is misread." },
+    { q: "The DSL's role includes:", opts: ["Deciding whether to refer to children's social care", "Punishing the child", "Investigating the family themselves", "Keeping concerns off any record"], a: 0, fb: "The DSL assesses, refers and coordinates — you notice and report." },
+    { q: "A girl mentions a “special holiday to become a woman.” This may indicate:", opts: ["Nothing of concern", "A risk of FGM — record and report today", "A reward to celebrate", "A private family matter to ignore"], a: 1, fb: "Potential FGM risk — a safeguarding concern to raise immediately." },
+    { q: "‘It could happen here’ means:", opts: ["Abuse only happens elsewhere", "Assume abuse can occur in your setting and stay alert", "Only worry about certain families", "Safeguarding is someone else's job"], a: 1, fb: "Never think ‘not our children’ — stay alert." },
+    { q: "You can't reach the DSL and a child is in immediate danger. You:", opts: ["Wait for the DSL", "Contact the police or children's social care directly", "Do nothing until tomorrow", "Ask another child to help"], a: 1, fb: "Safeguarding never waits — contact the authorities yourself." },
   ],
 };
 

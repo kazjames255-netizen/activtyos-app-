@@ -11,7 +11,7 @@ import type { Block, CourseDoc, Lesson } from "./courseContent";
 // per line with a documented separator, to keep the editor compact.
 
 const uid = (p: string) => p + Math.random().toString(36).slice(2, 8);
-const BLOCK_KINDS: [Block["k"], string][] = [["text", "Paragraph"], ["points", "Key points"], ["callout", "Callout / warning"], ["steps", "Numbered steps"], ["scenario", "Scenario (interactive)"], ["check", "Knowledge check"], ["stat", "Big stat"], ["quote", "Quote"], ["art", "Illustration"], ["table", "Table"]];
+const BLOCK_KINDS: [Block["k"], string][] = [["text", "Paragraph"], ["points", "Key points"], ["callout", "Callout / warning"], ["steps", "Numbered steps"], ["scenario", "Scenario (interactive)"], ["check", "Knowledge check"], ["sort", "Drag-into-groups"], ["order", "Put-in-order"], ["match", "Match pairs"], ["reveal", "Flip cards"], ["stat", "Big stat"], ["quote", "Quote"], ["art", "Illustration"], ["table", "Table"]];
 
 function newBlock(k: Block["k"]): Block {
   switch (k) {
@@ -24,6 +24,10 @@ function newBlock(k: Block["k"]): Block {
     case "quote": return { k, t: "A memorable quote.", by: "Source" };
     case "art": return { k, art: "shield", caption: "Caption" };
     case "table": return { k, head: ["Column A", "Column B"], rows: [["a1", "b1"], ["a2", "b2"]] };
+    case "sort": return { k, prompt: "Drag each into the right group.", buckets: ["Group A", "Group B"], items: [{ text: "Item 1", bucket: 0 }, { text: "Item 2", bucket: 1 }] };
+    case "order": return { k, prompt: "Put these in order.", items: ["First", "Second", "Third"] };
+    case "match": return { k, prompt: "Match the pairs.", pairs: [{ l: "Term", r: "Definition" }] };
+    case "reveal": return { k, prompt: "Tap to reveal.", cards: [{ front: "Front", back: "Back" }] };
     default: return { k: "text", t: "New paragraph." };
   }
 }
@@ -44,6 +48,10 @@ function BlockEditor({ b, onChange }: { b: Block; onChange: (b: Block) => void }
   if (b.k === "scenario") return <div className="grid gap-2"><Field label="Situation"><TA rows={2} value={b.t} onChange={(e) => onChange({ ...b, t: e.target.value })} /></Field><Field label="Choices — one per line as “label | correct(y/n) | feedback”"><TA rows={4} value={b.choices.map((c) => `${c.label} | ${c.ok ? "y" : "n"} | ${c.fb}`).join("\n")} onChange={(e) => onChange({ ...b, choices: e.target.value.split("\n").filter(Boolean).map((l) => { const p = l.split("|"); return { label: (p[0] ?? "").trim(), ok: /^\s*[y1t]/i.test(p[1] ?? ""), fb: (p[2] ?? "").trim() }; }) })} /></Field></div>;
   if (b.k === "check") return <div className="grid gap-2"><Field label="Question"><TA rows={2} value={b.q} onChange={(e) => onChange({ ...b, q: e.target.value })} /></Field><Field label="Options — one per line"><TA rows={4} value={b.opts.join("\n")} onChange={(e) => onChange({ ...b, opts: e.target.value.split("\n").filter(Boolean) })} /></Field><div className="grid grid-cols-2 gap-2"><Field label="Correct option # (from 1)"><Input type="number" min={1} value={b.a + 1} onChange={(e) => onChange({ ...b, a: Math.max(0, Number(e.target.value) - 1) })} className="w-full" /></Field><Field label="Feedback"><Input value={b.fb ?? ""} onChange={(e) => onChange({ ...b, fb: e.target.value })} className="w-full" /></Field></div></div>;
   if (b.k === "table") return <div className="grid gap-2"><Field label="Header — comma separated"><Input value={b.head.join(", ")} onChange={(e) => onChange({ ...b, head: e.target.value.split(",").map((x) => x.trim()) })} className="w-full" /></Field><Field label="Rows — one per line, cells comma separated"><TA rows={4} value={b.rows.map((r) => r.join(", ")).join("\n")} onChange={(e) => onChange({ ...b, rows: e.target.value.split("\n").filter(Boolean).map((l) => l.split(",").map((c) => c.trim())) })} /></Field></div>;
+  if (b.k === "sort") return <div className="grid gap-2"><Field label="Prompt"><Input value={b.prompt} onChange={(e) => onChange({ ...b, prompt: e.target.value })} className="w-full" /></Field><Field label="Groups — comma separated"><Input value={b.buckets.join(", ")} onChange={(e) => onChange({ ...b, buckets: e.target.value.split(",").map((x) => x.trim()) })} className="w-full" /></Field><Field label="Items — one per line as “text | group number (from 1)”"><TA rows={4} value={b.items.map((i) => `${i.text} | ${i.bucket + 1}`).join("\n")} onChange={(e) => onChange({ ...b, items: e.target.value.split("\n").filter(Boolean).map((l) => { const p = l.split("|"); return { text: (p[0] ?? "").trim(), bucket: Math.max(0, Number(p[1] ?? 1) - 1) }; }) })} /></Field></div>;
+  if (b.k === "order") return <div className="grid gap-2"><Field label="Prompt"><Input value={b.prompt} onChange={(e) => onChange({ ...b, prompt: e.target.value })} className="w-full" /></Field><Field label="Items in the CORRECT order — one per line"><TA rows={4} value={b.items.join("\n")} onChange={(e) => onChange({ ...b, items: e.target.value.split("\n").filter(Boolean) })} /></Field></div>;
+  if (b.k === "match") return <div className="grid gap-2"><Field label="Prompt"><Input value={b.prompt} onChange={(e) => onChange({ ...b, prompt: e.target.value })} className="w-full" /></Field><Field label="Pairs — one per line as “left | right”"><TA rows={4} value={b.pairs.map((p) => `${p.l} | ${p.r}`).join("\n")} onChange={(e) => onChange({ ...b, pairs: e.target.value.split("\n").filter(Boolean).map((l) => { const p = l.split("|"); return { l: (p[0] ?? "").trim(), r: (p[1] ?? "").trim() }; }) })} /></Field></div>;
+  if (b.k === "reveal") return <div className="grid gap-2"><Field label="Prompt (optional)"><Input value={b.prompt ?? ""} onChange={(e) => onChange({ ...b, prompt: e.target.value })} className="w-full" /></Field><Field label="Cards — one per line as “front | back”"><TA rows={4} value={b.cards.map((c) => `${c.front} | ${c.back}`).join("\n")} onChange={(e) => onChange({ ...b, cards: e.target.value.split("\n").filter(Boolean).map((l) => { const p = l.split("|"); return { front: (p[0] ?? "").trim(), back: (p[1] ?? "").trim() }; }) })} /></Field></div>;
   return null;
 }
 

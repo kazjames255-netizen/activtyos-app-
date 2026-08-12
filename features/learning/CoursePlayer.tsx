@@ -146,6 +146,116 @@ function CheckBlock({ b }: { b: Extract<Block, { k: "check" }> }) {
   );
 }
 
+const shuffle = <T,>(a: T[]): T[] => { const r = [...a]; for (let i = r.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [r[i], r[j]] = [r[j], r[i]]; } return r; };
+const ActWrap = ({ tag, children }: { tag: string; children: React.ReactNode }) => (
+  <div className="my-4 rounded-2xl border border-[#cbb7f5] bg-[#f8f5ff] p-4">
+    <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-[11px] font-extrabold uppercase tracking-wide text-[#6d28d9]">🎯 {tag}</div>
+    {children}
+  </div>
+);
+
+// Drag items into the right bucket
+function SortBlock({ b }: { b: Extract<Block, { k: "sort" }> }) {
+  const [placed, setPlaced] = useState<Record<number, number | null>>(() => Object.fromEntries(b.items.map((_, i) => [i, null])));
+  const [checked, setChecked] = useState(false);
+  const [drag, setDrag] = useState<number | null>(null);
+  const tray = b.items.map((_, i) => i).filter((i) => placed[i] == null);
+  const place = (item: number, bucket: number | null) => { if (checked) return; setPlaced((p) => ({ ...p, [item]: bucket })); };
+  const correct = b.items.filter((it, i) => placed[i] === it.bucket).length;
+  return (
+    <ActWrap tag="Drag into the right group">
+      <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>
+      {tray.length > 0 && <div className="mb-3 flex flex-wrap gap-2 rounded-xl border border-dashed border-[var(--line)] bg-white p-2.5">
+        {tray.map((i) => <span key={i} draggable onDragStart={() => setDrag(i)} onClick={() => setDrag(drag === i ? null : i)} className={"cursor-grab rounded-lg border px-2.5 py-1.5 text-[12.5px] font-semibold " + (drag === i ? "border-[#6d28d9] bg-[#efe9ff]" : "border-[var(--line)] bg-[var(--panel)]")}>{b.items[i].text}</span>)}
+      </div>}
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {b.buckets.map((bk, bi) => (
+          <div key={bi} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (drag != null) { place(drag, bi); setDrag(null); } }} onClick={() => { if (drag != null) { place(drag, bi); setDrag(null); } }} className="min-h-[64px] rounded-xl border-2 border-dashed border-[var(--line)] bg-white p-2.5">
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{bk}</div>
+            <div className="flex flex-wrap gap-1.5">
+              {b.items.map((it, i) => placed[i] === bi ? (
+                <span key={i} draggable={!checked} onDragStart={() => setDrag(i)} onClick={(e) => { e.stopPropagation(); if (!checked) place(i, null); }} className={"rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-white " + (checked ? (it.bucket === bi ? "bg-[#0f9d58]" : "bg-[#c0392b]") : "bg-[#6d28d9]")}>{it.text}{checked && (it.bucket === bi ? " ✓" : " ✗")}</span>
+              ) : null)}
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        {!checked ? <button type="button" disabled={tray.length > 0} onClick={() => setChecked(true)} className="rounded-full bg-[#6d28d9] px-4 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-40">Check answers</button>
+          : <><span className="text-[13px] font-extrabold" style={{ color: correct === b.items.length ? "#0f7a43" : "#b45309" }}>{correct} / {b.items.length} correct</span><button type="button" onClick={() => { setChecked(false); setPlaced(Object.fromEntries(b.items.map((_, i) => [i, null]))); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Try again</button></>}
+      </div>
+    </ActWrap>
+  );
+}
+
+// Drag to put the steps in the right order
+function OrderBlock({ b }: { b: Extract<Block, { k: "order" }> }) {
+  const [order, setOrder] = useState<number[]>(() => { let s = shuffle(b.items.map((_, i) => i)); if (JSON.stringify(s) === JSON.stringify(b.items.map((_, i) => i)) && b.items.length > 1) s = shuffle(s); return s; });
+  const [checked, setChecked] = useState(false);
+  const [drag, setDrag] = useState<number | null>(null);
+  const move = (from: number, to: number) => { if (checked || from === to) return; setOrder((o) => { const a = [...o]; const [x] = a.splice(from, 1); a.splice(to, 0, x); return a; }); };
+  const right = order.filter((v, pos) => v === pos).length;
+  return (
+    <ActWrap tag="Put in the correct order">
+      <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>
+      <div className="flex flex-col gap-2">
+        {order.map((itemIdx, pos) => (
+          <div key={itemIdx} draggable={!checked} onDragStart={() => setDrag(pos)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (drag != null) { move(drag, pos); setDrag(null); } }} className={"flex items-center gap-3 rounded-xl border px-3 py-2.5 " + (checked ? (itemIdx === pos ? "border-[#0f9d58] bg-[#eaf8f0]" : "border-[#c0392b] bg-[#fdecec]") : "cursor-grab border-[var(--line)] bg-white")}>
+            <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-[#6d28d9] text-[11px] font-extrabold text-white">{pos + 1}</span>
+            <span className="flex-1 text-[13.5px] font-semibold text-[var(--ink)]">{b.items[itemIdx]}</span>
+            {checked ? <span>{itemIdx === pos ? "✓" : "✗"}</span> : <span className="text-[var(--ink-3)]">⠿</span>}
+          </div>
+        ))}
+      </div>
+      <div className="mt-3 flex items-center gap-3">
+        {!checked ? <button type="button" onClick={() => setChecked(true)} className="rounded-full bg-[#6d28d9] px-4 py-1.5 text-[12.5px] font-extrabold text-white">Check order</button>
+          : <><span className="text-[13px] font-extrabold" style={{ color: right === b.items.length ? "#0f7a43" : "#b45309" }}>{right} / {b.items.length} in place</span><button type="button" onClick={() => { setChecked(false); setOrder(shuffle(b.items.map((_, i) => i))); }} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Shuffle & retry</button></>}
+      </div>
+    </ActWrap>
+  );
+}
+
+// Tap a term, then its match
+function MatchBlock({ b }: { b: Extract<Block, { k: "match" }> }) {
+  const [rights] = useState(() => shuffle(b.pairs.map((_, i) => i)));
+  const [sel, setSel] = useState<number | null>(null);
+  const [links, setLinks] = useState<Record<number, number>>({}); // left index -> right pair index
+  const done = Object.keys(links).length === b.pairs.length;
+  const pick = (li: number) => { if (links[li] != null) return; setSel(sel === li ? null : li); };
+  const connect = (ri: number) => { if (sel == null || Object.values(links).includes(ri)) return; setLinks((l) => ({ ...l, [sel]: ri })); setSel(null); };
+  return (
+    <ActWrap tag="Match the pairs">
+      <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>
+      <div className="grid grid-cols-2 gap-3">
+        <div className="flex flex-col gap-2">{b.pairs.map((p, li) => { const linked = links[li] != null; const ok = linked && links[li] === li; return (
+          <button key={li} type="button" onClick={() => pick(li)} className={"rounded-xl border-2 px-3 py-2 text-left text-[13px] font-semibold transition-colors " + (linked ? (ok ? "border-[#0f9d58] bg-[#eaf8f0]" : "border-[#c0392b] bg-[#fdecec]") : sel === li ? "border-[#6d28d9] bg-[#efe9ff]" : "border-[var(--line)] bg-white")}>{p.l}{linked && (ok ? " ✓" : " ✗")}</button>
+        ); })}</div>
+        <div className="flex flex-col gap-2">{rights.map((ri) => { const used = Object.values(links).includes(ri); return (
+          <button key={ri} type="button" disabled={used} onClick={() => connect(ri)} className={"rounded-xl border-2 px-3 py-2 text-left text-[13px] font-semibold transition-colors " + (used ? "border-[var(--line)] bg-[var(--panel)] opacity-45" : "border-[var(--line)] bg-white hover:border-[#6d28d9]")}>{b.pairs[ri].r}</button>
+        ); })}</div>
+      </div>
+      {done && <button type="button" onClick={() => { setLinks({}); setSel(null); }} className="mt-3 rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Reset</button>}
+    </ActWrap>
+  );
+}
+
+// Flip cards
+function RevealBlock({ b }: { b: Extract<Block, { k: "reveal" }> }) {
+  const [flipped, setFlipped] = useState<Record<number, boolean>>({});
+  return (
+    <ActWrap tag="Tap each card to reveal">
+      {b.prompt && <p className="mb-3 text-[14px] font-semibold text-[var(--ink)]">{b.prompt}</p>}
+      <div className="grid gap-2.5 sm:grid-cols-2">
+        {b.cards.map((c, i) => (
+          <button key={i} type="button" onClick={() => setFlipped((f) => ({ ...f, [i]: !f[i] }))} className={"min-h-[76px] rounded-xl border-2 px-3.5 py-3 text-left transition-colors " + (flipped[i] ? "border-[#6d28d9] bg-white" : "border-transparent bg-gradient-to-br from-[#7c3aed] to-[#4338ca] text-white")}>
+            {flipped[i] ? <div className="text-[13px] leading-snug text-[var(--ink-2)]"><div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">{c.front}</div>{c.back}</div> : <div className="flex h-full items-center gap-2 text-[14px] font-extrabold">🔎 {c.front}</div>}
+          </button>
+        ))}
+      </div>
+    </ActWrap>
+  );
+}
+
 function BlockView({ b }: { b: Block }) {
   if (b.k === "text") return <p className="my-3 text-[15px] leading-[1.75] text-[var(--ink-2)]">{b.t}</p>;
   if (b.k === "art") return <Scene art={b.art} caption={b.caption} />;
@@ -180,31 +290,83 @@ function BlockView({ b }: { b: Block }) {
   );
   if (b.k === "scenario") return <ScenarioBlock b={b} />;
   if (b.k === "check") return <CheckBlock b={b} />;
+  if (b.k === "sort") return <SortBlock b={b} />;
+  if (b.k === "order") return <OrderBlock b={b} />;
+  if (b.k === "match") return <MatchBlock b={b} />;
+  if (b.k === "reveal") return <RevealBlock b={b} />;
   return null;
 }
 
+// ——— final quiz (~10 min) ———
+function QuizRunner({ course, onPass }: { course: CourseDoc; onPass: () => void }) {
+  const qs = course.quiz ?? [];
+  const pass = course.pass ?? 80;
+  const [ans, setAns] = useState<Record<number, number>>({});
+  const [submitted, setSubmitted] = useState(false);
+  const score = qs.filter((q, i) => ans[i] === q.a).length;
+  const pctScore = qs.length ? Math.round((score / qs.length) * 100) : 0;
+  const passed = pctScore >= pass;
+  const submit = () => { setSubmitted(true); if (pctScore >= pass) onPass(); if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" }); };
+  return (
+    <article className="mx-auto max-w-[720px] px-5 py-7 sm:px-8">
+      <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#6d28d9]">Final assessment</div>
+      <h1 className="mb-1 text-[26px] font-extrabold tracking-tight text-[var(--ink)]">Course quiz</h1>
+      <p className="mb-5 text-[13.5px] text-[var(--ink-3)]">{qs.length} questions · pass mark {pass}% · about 10 minutes. Answer every question, then submit.</p>
+      {submitted && (
+        <div className={"mb-5 rounded-2xl border p-4 " + (passed ? "border-[#bfe3cd] bg-[#eef8f1]" : "border-[#f3c9cd] bg-[#fdecec]")}>
+          <div className="text-[17px] font-extrabold" style={{ color: passed ? "#0f7a43" : "#c0392b" }}>{passed ? "🎉 Passed" : "Not passed yet"} — {pctScore}% ({score}/{qs.length})</div>
+          <div className="text-[13px] text-[var(--ink-2)]">{passed ? "A completion certificate would be issued here." : `You need ${pass}% to pass. Review the answers below and try again.`}</div>
+        </div>
+      )}
+      <div className="flex flex-col gap-4">
+        {qs.map((q, i) => (
+          <div key={i} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+            <div className="mb-2.5 flex gap-2 text-[14.5px] font-semibold text-[var(--ink)]"><span className="text-[#6d28d9]">{i + 1}.</span>{q.q}</div>
+            <div className="flex flex-col gap-2">
+              {q.opts.map((o, oi) => {
+                const sel = ans[i] === oi;
+                const tone = !submitted ? (sel ? "border-[#6d28d9] bg-[#efe9ff]" : "border-[var(--line)] bg-white hover:border-[#6d28d9]") : oi === q.a ? "border-[#0f9d58] bg-[#eaf8f0]" : sel ? "border-[#c0392b] bg-[#fdecec]" : "border-[var(--line)] bg-white opacity-70";
+                return <button key={oi} type="button" disabled={submitted} onClick={() => setAns((a) => ({ ...a, [i]: oi }))} className={"rounded-xl border-2 px-3.5 py-2 text-left text-[13.5px] font-semibold text-[var(--ink)] transition-colors " + tone}><span className="mr-1.5">{submitted ? (oi === q.a ? "✅" : sel ? "❌" : "○") : sel ? "●" : "○"}</span>{o}</button>;
+              })}
+            </div>
+            {submitted && q.fb && <p className="mt-2 text-[12.5px] font-semibold" style={{ color: ans[i] === q.a ? "#0f7a43" : "#c0392b" }}>{q.fb}</p>}
+          </div>
+        ))}
+      </div>
+      <div className="mt-5 border-t border-[var(--line)] pt-4">
+        {!submitted ? <button type="button" disabled={Object.keys(ans).length < qs.length} onClick={submit} className="rounded-full bg-[#6d28d9] px-6 py-2.5 text-[14px] font-extrabold text-white disabled:opacity-40">{Object.keys(ans).length < qs.length ? `Answer all ${qs.length} to submit` : "Submit quiz"}</button>
+          : !passed ? <button type="button" onClick={() => { setSubmitted(false); setAns({}); }} className="rounded-full bg-[#6d28d9] px-6 py-2.5 text-[14px] font-extrabold text-white">Try again</button> : null}
+      </div>
+    </article>
+  );
+}
+
 export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: () => void }) {
+  const hasQuiz = !!(course.quiz && course.quiz.length);
+  const quizIdx = course.lessons.length;
+  const total = course.lessons.length + (hasQuiz ? 1 : 0);
   const [li, setLi] = useState(0);
   const [done, setDone] = useState<Set<number>>(new Set());
   const voice = useVoice();
+  const isQuiz = li >= course.lessons.length;
   const lesson = course.lessons[li];
-  const pct = Math.round((done.size / course.lessons.length) * 100);
-  const readText = useMemo(() => speakText(lesson.blocks), [lesson]);
+  const pct = Math.round((done.size / total) * 100);
+  const readText = useMemo(() => (lesson ? speakText(lesson.blocks) : ""), [lesson]);
 
-  useEffect(() => { voice.stop(); voice.setOn(false); /* stop voice when lesson changes */ // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { voice.stop(); voice.setOn(false); // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [li]);
   useEffect(() => () => voice.stop(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const toggleVoice = () => { if (voice.on || voice.speaking) { voice.stop(); voice.setOn(false); } else { voice.setOn(true); voice.speak(readText); } };
-  const complete = () => { const n = new Set(done); n.add(li); setDone(n); if (li < course.lessons.length - 1) setLi(li + 1); };
+  const complete = () => { const n = new Set(done); n.add(li); setDone(n); if (li < course.lessons.length - 1) setLi(li + 1); else if (hasQuiz) setLi(quizIdx); };
 
   return (
     <div className="fixed inset-0 z-[140] flex flex-col bg-[#f5f8fd]" style={LIGHT_PALETTE}>
       {/* top bar */}
       <div className="flex flex-none items-center gap-3 border-b border-[var(--line)] bg-white px-4 py-2.5 sm:px-6">
         <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">‹ Exit</button>
-        <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{course.title}</div><div className="text-[11px] text-[var(--ink-3)]">Lesson {li + 1} of {course.lessons.length} · {lesson.mins} min read</div></div>
-        <button type="button" onClick={toggleVoice} title="Read this lesson aloud" className={"ml-auto inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-extrabold transition-colors " + (voice.speaking ? "bg-[#1d3a8f] text-white" : "border border-[#bcd0f5] bg-[#eef4fd] text-[#1d3a8f]")}>{voice.speaking ? "⏹ Stop voice" : "🔊 Read aloud"}{voice.speaking && <span className="flex items-end gap-0.5">{[0, 1, 2].map((i) => <span key={i} className="w-[3px] animate-pulse rounded-full bg-white" style={{ height: 6 + i * 4, animationDelay: `${i * 120}ms` }} />)}</span>}</button>
+        <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{course.title}</div><div className="text-[11px] text-[var(--ink-3)]">{isQuiz ? "Final quiz" : `Lesson ${li + 1} of ${course.lessons.length} · ${lesson.mins} min read`}</div></div>
+        {!isQuiz && <button type="button" onClick={toggleVoice} title="Read this lesson aloud" className={"ml-auto inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-extrabold transition-colors " + (voice.speaking ? "bg-[#1d3a8f] text-white" : "border border-[#bcd0f5] bg-[#eef4fd] text-[#1d3a8f]")}>{voice.speaking ? "⏹ Stop voice" : "🔊 Read aloud"}{voice.speaking && <span className="flex items-end gap-0.5">{[0, 1, 2].map((i) => <span key={i} className="w-[3px] animate-pulse rounded-full bg-white" style={{ height: 6 + i * 4, animationDelay: `${i * 120}ms` }} />)}</span>}</button>}
       </div>
       {/* progress */}
       <div className="h-1 flex-none bg-[var(--line)]"><div className="h-full bg-[#0f9d58] transition-all" style={{ width: `${pct}%` }} /></div>
@@ -218,19 +380,26 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
               <span className={"text-[12.5px] font-bold " + (i === li ? "text-[#1d3a8f]" : "text-[var(--ink-2)]")}>{ls.title}</span>
             </button>
           ))}
+          {hasQuiz && (
+            <button type="button" onClick={() => setLi(quizIdx)} className={"mt-1 flex w-full items-center gap-2.5 rounded-xl border-t border-[var(--line-2,#eef2f8)] px-3 py-2.5 pt-3 text-left transition-colors " + (isQuiz ? "bg-[#f3effe]" : "hover:bg-[var(--panel)]")}>
+              <span className={"grid h-6 w-6 flex-none place-items-center rounded-full text-[11px] " + (done.has(quizIdx) ? "bg-[#0f9d58] text-white" : "bg-[#6d28d9] text-white")}>{done.has(quizIdx) ? "✓" : "🎓"}</span>
+              <span className={"text-[12.5px] font-bold " + (isQuiz ? "text-[#6d28d9]" : "text-[var(--ink-2)]")}>Final quiz</span>
+            </button>
+          )}
         </aside>
         {/* content */}
         <main className="min-w-0 flex-1 overflow-y-auto">
+          {isQuiz ? <QuizRunner course={course} onPass={() => setDone((d) => new Set(d).add(quizIdx))} /> : (
           <article className="mx-auto max-w-[720px] px-5 py-7 sm:px-8">
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.1em] text-[#1d3a8f]">{course.cat} · {course.title}</div>
             <h1 className="mb-4 text-[26px] font-extrabold leading-tight tracking-tight text-[var(--ink)]">{lesson.title}</h1>
             {lesson.blocks.map((b, i) => <BlockView key={i} b={b} />)}
             <div className="mt-8 flex items-center gap-3 border-t border-[var(--line)] pt-5">
               <button type="button" onClick={() => setLi(Math.max(0, li - 1))} disabled={li === 0} className="rounded-full border border-[var(--line)] px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] disabled:opacity-40">‹ Previous</button>
-              <button type="button" onClick={complete} className="ml-auto rounded-full bg-[#0f7a43] px-6 py-2 text-[14px] font-extrabold text-white hover:brightness-105">{li < course.lessons.length - 1 ? "Mark complete & continue ›" : done.has(li) ? "Finish ✓" : "Mark complete ✓"}</button>
+              <button type="button" onClick={complete} className="ml-auto rounded-full bg-[#0f7a43] px-6 py-2 text-[14px] font-extrabold text-white hover:brightness-105">{li < course.lessons.length - 1 ? "Mark complete & continue ›" : hasQuiz ? "Take the final quiz ›" : done.has(li) ? "Finish ✓" : "Mark complete ✓"}</button>
             </div>
-            {pct === 100 && <div className="mt-4 rounded-2xl border border-[#bfe3cd] bg-[#eef8f1] p-4 text-center"><div className="text-[15px] font-extrabold text-[#0f7a43]">🎉 Course complete</div><div className="text-[12.5px] text-[var(--ink-2)]">All lessons done — a completion certificate would be issued here.</div></div>}
           </article>
+          )}
         </main>
       </div>
     </div>
