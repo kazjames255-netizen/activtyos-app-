@@ -187,7 +187,10 @@ export function ScheduleApp() {
 
   // Columns: hours for Day, dates otherwise
   const cols = useMemo(() => isDay ? HOURS.map((h) => ({ key: `h${h}`, hour: h, label: to12(`${h}:00`), date: anchor })) : dates.map((d) => ({ key: d, date: d, hour: null as number | null, label: dt(d).toLocaleDateString("en-GB", span === "week" ? { weekday: "short", day: "numeric", timeZone: "UTC" } : { day: "numeric", timeZone: "UTC" }) })), [isDay, dates, anchor, span]);
-  const colW = isDay ? 66 : span === "week" ? 92 : span === "2w" ? 58 : 34;
+  const colW = isDay ? 66 : span === "week" ? 92 : span === "2w" ? 62 : span === "4w" ? 42 : 40;
+  // Day view keeps fixed hour widths (scrolls if narrow); every dated span fills
+  // the page width instead — columns share the space so nothing scrolls sideways.
+  const gridTmpl = isDay ? `repeat(${cols.length},minmax(${colW}px,1fr))` : `repeat(${cols.length},minmax(0,1fr))`;
   const cellShifts = (rows: Shift[], c: { date: string; hour: number | null }) => rows.filter((s) => s.date === c.date && (c.hour == null || hourOf(s.start) === c.hour)).sort((a, b) => mins(a.start) - mins(b.start));
 
   const removeShift = (id: string) => persist({ ...store, shifts: store.shifts.filter((s) => s.id !== id) });
@@ -318,7 +321,7 @@ export function ScheduleApp() {
 
   // Render a row of column-cells for a given set of shifts (a role or a staff member)
   const CellRow = ({ rows, onAdd, compact }: { rows: Shift[]; onAdd: (c: { date: string; hour: number | null }) => void; compact?: boolean }) => (
-    <div className="grid" style={{ gridTemplateColumns: `repeat(${cols.length},minmax(${colW}px,1fr))` }}>
+    <div className="grid" style={{ gridTemplateColumns: gridTmpl }}>
       {cols.map((c) => (
         <div key={c.key} className="flex min-h-[54px] flex-col gap-1 border-r border-[var(--line-2,#eef2f8)] p-1 last:border-r-0">
           {cellShifts(rows, c).map((s) => <ShiftBlock key={s.id} s={s} compact={compact} />)}
@@ -328,7 +331,7 @@ export function ScheduleApp() {
     </div>
   );
   const TotalsRow = ({ rows }: { rows: Shift[] }) => (
-    <div className="grid border-b border-[var(--line-2,#eef2f8)]" style={{ gridTemplateColumns: `repeat(${cols.length},minmax(${colW}px,1fr))` }}>
+    <div className="grid border-b border-[var(--line-2,#eef2f8)]" style={{ gridTemplateColumns: gridTmpl }}>
       {cols.map((c) => <div key={c.key} className="px-2 py-1 text-[10px] font-bold text-[var(--ink-3)]">{hLabel(cellShifts(rows, c).reduce((n, s) => n + durH(s.start, s.end), 0))}</div>)}
     </div>
   );
@@ -341,6 +344,12 @@ export function ScheduleApp() {
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Staff schedule" icon="🗓" lede="Build the rota by location & role or by team member, across day / week / month — with wages and on-cost." />
+
+      {/* Wages — always above the Rota/Settings tabs */}
+      <Card className="mb-3 border-l-4 border-l-[#1d3a8f] p-4">
+        <div className="flex flex-wrap items-start justify-between gap-4"><div className="text-[14px] font-extrabold text-[var(--ink)]">Total wages · {SPAN_WORD[span]}</div><div className="flex gap-8 text-right"><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">At hourly rate</div><div className="text-[22px] font-extrabold tabular-nums text-[var(--ink)]">{money(wagesAt)}</div></div><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Incl. {onCost}% on-cost</div><div className="text-[22px] font-extrabold tabular-nums text-[#1d3a8f]">{money(wagesCost)}</div></div></div></div>
+        <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">Predicted <b>on-cost</b> adds a cost on top of wages (e.g. employer NI, pension). Recorded only — ActivityOS never moves money.</p>
+      </Card>
 
       <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
         {([["rota", "Rota"], ["settings", "Settings"]] as const).map(([v, lbl]) => (
@@ -396,12 +405,6 @@ export function ScheduleApp() {
         )}
       </div>
 
-      {/* Wages */}
-      <Card className="mb-3 border-l-4 border-l-[#1d3a8f] p-4">
-        <div className="flex flex-wrap items-start justify-between gap-4"><div className="text-[14px] font-extrabold text-[var(--ink)]">Total wages · {SPAN_WORD[span]}</div><div className="flex gap-8 text-right"><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">At hourly rate</div><div className="text-[22px] font-extrabold tabular-nums text-[var(--ink)]">{money(wagesAt)}</div></div><div><div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Incl. {onCost}% on-cost</div><div className="text-[22px] font-extrabold tabular-nums text-[#1d3a8f]">{money(wagesCost)}</div></div></div></div>
-        <p className="mt-1.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">Predicted <b>on-cost</b> adds a cost on top of wages (e.g. employer NI, pension). Recorded only — ActivityOS never moves money.</p>
-      </Card>
-
       <div className="flex flex-col gap-3 lg:flex-row">
         {/* Staff panel */}
         <div className="lg:w-[204px] lg:flex-none">
@@ -433,9 +436,24 @@ export function ScheduleApp() {
         <div className="min-w-0 flex-1">
           <Card className="overflow-hidden p-0">
             <div className="overflow-x-auto">
-              <div style={{ minWidth: cols.length * colW + 40 }}>
-                <div className="grid text-white" style={{ gridTemplateColumns: `repeat(${cols.length},minmax(${colW}px,1fr))`, background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
-                  {cols.map((c) => <div key={c.key} className="px-2 py-2.5 text-[11.5px] font-extrabold">{c.label}</div>)}
+              <div style={isDay ? { minWidth: cols.length * colW + 40 } : undefined}>
+                <div className="grid text-white" style={{ gridTemplateColumns: gridTmpl, background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
+                  {cols.map((c) => {
+                    // Day view = hour columns (keep the "9 AM" labels). Every other
+                    // span shows a real dated header: weekday over "12 Jul" — never
+                    // a bare number — with the full date on hover.
+                    if (c.hour !== null) return <div key={c.key} className="px-2 py-2.5 text-[11.5px] font-extrabold">{c.label}</div>;
+                    const d = dt(c.date);
+                    const wd = d.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+                    const dm = d.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" });
+                    const isWknd = [0, 6].includes(d.getUTCDay());
+                    return (
+                      <div key={c.key} title={d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "UTC" })} className={"px-1.5 py-2 text-center leading-tight " + (isWknd ? "bg-white/10" : "")}>
+                        <div className={"font-bold uppercase tracking-wide text-white/70 " + (colW < 50 ? "text-[8.5px]" : "text-[9.5px]")}>{wd}</div>
+                        <div className={"font-extrabold " + (colW < 50 ? "text-[10px]" : "text-[12px]")}>{dm}</div>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {group === "area" ? (

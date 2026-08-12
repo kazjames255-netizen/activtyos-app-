@@ -49,7 +49,7 @@ function pluralLabel(label: string | null, portal: PortalKey, multiChild: boolea
   return label;
 }
 
-function NavLink({ item, portal, active, multiChild, unread, coupons, faded }: { item: NavItem; portal: PortalKey; active: boolean; multiChild: boolean; unread: number; coupons: number; faded?: boolean }) {
+function NavLink({ item, portal, active, multiChild, unread, coupons, faded, collapsed }: { item: NavItem; portal: PortalKey; active: boolean; multiChild: boolean; unread: number; coupons: number; faded?: boolean; collapsed?: boolean }) {
   // The Messages badge is live: unread message count, not the config placeholder.
   // It grows as replies arrive and clears to nothing once the thread is opened
   // (the open marks messages read → realtime → this refetches). The Coupons badge
@@ -57,6 +57,28 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded }: {
   const badge = item.view === "messages" ? (unread > 0 ? String(unread) : null)
     : item.view === "coupons" ? (coupons > 0 ? String(coupons) : null)
     : item.badge;
+  // Collapsed (icon-rail) mode — used automatically in the schedule area so the
+  // calendar gets the full width. Icon only, label in a hover tooltip, badge
+  // shrunk to a dot.
+  if (collapsed) {
+    return (
+      <Link
+        href={`/${portal}/${item.view}`}
+        title={pluralLabel(item.label, portal, multiChild)}
+        className="relative mx-2 flex items-center justify-center rounded-lg py-2 no-underline hover:bg-[var(--side-hover)]"
+        style={
+          active
+            ? { background: "rgba(255,255,255,0.16)", color: "#ffffff", boxShadow: "inset 3px 0 0 var(--side-ct-bg)" }
+            : item.highlight
+              ? { color: "#ffe08a", background: "rgba(250,204,21,0.14)", boxShadow: "inset 3px 0 0 #facc15" }
+              : { color: "var(--side-nav)", opacity: faded ? 0.55 : 1 }
+        }
+      >
+        <Icon icon={item.icon} />
+        {badge && <span className="absolute right-1 top-1 h-2 w-2 rounded-full" style={{ background: "var(--side-ct-bg)" }} />}
+      </Link>
+    );
+  }
   // A faded section still shows (so the parent knows it exists) but reads as
   // empty — dimmed, with a soft "no info" pill. Still tappable, so it fills in
   // the moment the provider adds something.
@@ -98,16 +120,24 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded }: {
 // opened a MOCK sign-in screen with role-switch shortcuts. With real auth
 // they perform an actual Firebase sign-out instead — the legacy auth views
 // are never rendered.
-function SignOutItem({ item }: { item: NavItem }) {
+function SignOutItem({ item, collapsed }: { item: NavItem; collapsed?: boolean }) {
   const router = useRouter();
   const { signOutUser } = useAuth();
+  const signOut = async () => {
+    await signOutUser();
+    router.replace("/login");
+  };
+  if (collapsed) {
+    return (
+      <button type="button" onClick={signOut} title={item.label} className="mx-2 flex items-center justify-center rounded-lg py-2 hover:bg-[var(--side-hover)]" style={{ color: "var(--side-nav)" }}>
+        <Icon icon={item.icon} />
+      </button>
+    );
+  }
   return (
     <button
       type="button"
-      onClick={async () => {
-        await signOutUser();
-        router.replace("/login");
-      }}
+      onClick={signOut}
       className={`${itemCls} w-[calc(100%-16px)] text-left`}
       style={{ color: "var(--side-nav)" }}
     >
@@ -131,12 +161,12 @@ const FADE_VIEWS = new Set<string>(["moments", "newsfeed", "meals", "trips", "ti
 // Care/record sections read "No records"; the rest read "No info".
 const NO_RECORDS_VIEWS = new Set<string>(["accidents", "medication", "meals"]);
 
-function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHidden, faded }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number; coupons: number; caHidden: Set<string>; faded: Set<string> }) {
+function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHidden, faded, collapsed }: { items: NavItem[]; portal: PortalKey; pathname: string; multiChild: boolean; unread: number; coupons: number; caHidden: Set<string>; faded: Set<string>; collapsed?: boolean }) {
   return (
     <>
       {items.filter((item) => !item.hidden && !caHidden.has(item.view)).map((item) =>
         item.view === "auth" ? (
-          <SignOutItem key={item.view} item={item} />
+          <SignOutItem key={item.view} item={item} collapsed={collapsed} />
         ) : (
           <NavLink
             key={item.view}
@@ -147,6 +177,7 @@ function GroupItems({ items, portal, pathname, multiChild, unread, coupons, caHi
             unread={unread}
             coupons={coupons}
             faded={faded.has(item.view)}
+            collapsed={collapsed}
           />
         ),
       )}
@@ -162,6 +193,13 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
 
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
   const isOpen = (label: string) => openOverrides[label] ?? label === activeGroupLabel;
+
+  // The schedule area needs every pixel for the calendar, so the rail
+  // auto-narrows to an icon strip on entry. A manual toggle still wins while
+  // you're on the page; leaving the schedule restores the full rail.
+  const WIDE_VIEWS = new Set<string>(["schedule"]);
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => { setCollapsed(WIDE_VIEWS.has(activeView)); }, [activeView]);
 
   // The workspace is branded with the provider's own name, not "ActivityOS" —
   // that moves to the footer. For an operator that's their tenant (business)
@@ -259,11 +297,17 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
 
   return (
     <nav
-      className="flex h-screen w-[248px] flex-none flex-col overflow-y-auto py-4 text-[13px]"
+      className={`flex h-screen flex-none flex-col overflow-x-hidden overflow-y-auto py-4 text-[13px] transition-[width] duration-200 ${collapsed ? "w-[62px]" : "w-[248px]"}`}
       style={{ background: "var(--side-bg)", color: "var(--side-ink)" }}
     >
-      <div className="px-4 pb-4">
-        {brandLogo ? (
+      <div className={`flex items-center pb-4 ${collapsed ? "justify-center px-2" : "gap-2 px-4"}`}>
+        {collapsed ? (
+          <img
+            src={brandLogo ?? undefined}
+            alt={brandName}
+            className={brandLogo ? "h-8 w-8 rounded-md bg-white object-contain p-0.5" : "hidden"}
+          />
+        ) : brandLogo ? (
           <img
             src={brandLogo}
             alt={brandName}
@@ -271,13 +315,38 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
           />
         ) : (
           <span
-            className="block truncate text-[17px] font-extrabold"
+            className="block min-w-0 flex-1 truncate text-[17px] font-extrabold"
             style={{ fontFamily: "var(--ff-display)", color: "var(--side-ink)" }}
           >
             {brandName}
           </span>
         )}
+        {collapsed && !brandLogo && (
+          <span className="grid h-8 w-8 place-items-center rounded-md text-[15px] font-extrabold" style={{ background: "rgba(255,255,255,0.12)", color: "var(--side-ink)" }}>{brandName.slice(0, 1)}</span>
+        )}
+        {!collapsed && (
+          <button
+            type="button"
+            onClick={() => setCollapsed(true)}
+            title="Narrow menu"
+            className="grid h-6 w-6 flex-none place-items-center rounded-md text-[13px] hover:bg-[var(--side-hover)]"
+            style={{ color: "var(--side-muted)" }}
+          >
+            «
+          </button>
+        )}
       </div>
+      {collapsed && (
+        <button
+          type="button"
+          onClick={() => setCollapsed(false)}
+          title="Expand menu"
+          className="mx-2 mb-2 grid place-items-center rounded-lg py-1.5 text-[14px] hover:bg-[var(--side-hover)]"
+          style={{ color: "var(--side-muted)" }}
+        >
+          »
+        </button>
+      )}
 
       {groups.map((group) => {
         // A group whose every item is promoted elsewhere (hidden) or switched
@@ -289,13 +358,22 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               key={group.label ?? (group.footer ? "__footer" : "__pinned")}
               className={group.footer ? "mb-1 mt-auto border-t border-white/10 pt-2" : "mb-1"}
             >
-              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} faded={faded} />
+              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} faded={faded} collapsed={collapsed} />
             </div>
           );
         }
 
         const label = group.label ?? "";
         const open = isOpen(label);
+        // Collapsed rail: no group headers — every item shows as an icon, split
+        // between groups by a thin divider so the strip stays scannable.
+        if (collapsed) {
+          return (
+            <div key={label} className="mb-1 border-t border-white/10 pt-1 first:border-t-0">
+              <GroupItems items={group.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} faded={faded} collapsed />
+            </div>
+          );
+        }
         return (
           <div key={label} className="mb-0.5">
             <button
