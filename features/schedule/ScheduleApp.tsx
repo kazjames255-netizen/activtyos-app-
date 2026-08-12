@@ -34,7 +34,7 @@ const WIN_A = 7 * 60, WIN = 19 * 60 - WIN_A; // availability bar window: 7am–7
 
 type Week = Partial<Record<WDay, { from: string; to: string }>>;
 interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number; requested?: boolean; requestedScope?: "this" | "all"; requestedAt?: number; week?: Week; weeks?: Record<string, Week> }
-interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; season?: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean; note?: string; brk?: { from: string; to: string } }
+interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; season?: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean; note?: string; brk?: { from: string; to: string }; checkinPokes?: number }
 interface Store { staff: Staff[]; shifts: Shift[]; sites: string[] }
 
 // weekday key for a date; per-week override (weeks[mondayIso]) falls back to the recurring pattern
@@ -183,7 +183,15 @@ export function ScheduleApp() {
   const wagesCost = wagesAt * (1 + onCost / 100);
   const assignedStaff = useMemo(() => new Set(periodShifts.filter((s) => s.staffId).map((s) => s.staffId as string)), [periodShifts]);
   const notSubmitted = store.staff.filter((s) => s.avail === "notsubmitted").length;
-  const alerts = useMemo(() => periodShifts.filter((s) => s.staffId && !s.in && !s.out), [periodShifts]);
+  // A shift is a check-in alert only once its start time has passed by the grace
+  // window (default 15 min) and the assigned person still isn't in — future
+  // shifts and ones inside the grace period don't nag.
+  const CHECKIN_GRACE_MIN = 15;
+  const shiftStartMs = (s: Shift) => { const [y, mo, d] = s.date.split("-").map(Number); const [h, mi] = s.start.split(":").map(Number); return new Date(y, (mo || 1) - 1, d || 1, h || 0, mi || 0).getTime(); };
+  const overdueMin = (s: Shift) => Math.floor((Date.now() - shiftStartMs(s)) / 60000);
+  const overdueLabel = (s: Shift) => { const m = overdueMin(s); if (m < 60) return `${m} min late`; const h = Math.floor(m / 60); return `${h}h ${m % 60}m late`; };
+  const alerts = useMemo(() => periodShifts.filter((s) => s.staffId && !s.in && !s.out && Date.now() >= shiftStartMs(s) + CHECKIN_GRACE_MIN * 60000), [periodShifts]);
+  const [alertQ, setAlertQ] = useState("");
   const shownStaff = store.staff.filter((s) => !q || s.name.toLowerCase().includes(q.toLowerCase()) || s.role.toLowerCase().includes(q.toLowerCase()));
 
   // Columns: hours for Day, dates otherwise
@@ -196,6 +204,10 @@ export function ScheduleApp() {
 
   const removeShift = (id: string) => persist({ ...store, shifts: store.shifts.filter((s) => s.id !== id) });
   const remind = (id: string) => { persist({ ...store, staff: store.staff.map((s) => (s.id === id ? { ...s, reminders: (s.reminders ?? 0) + 1 } : s)) }); flash("Reminder sent."); };
+  // Per-shift check-in nudge (separate from the availability reminder count).
+  const pokeCheckin = (shiftId: string) => { persist({ ...store, shifts: store.shifts.map((s) => (s.id === shiftId ? { ...s, checkinPokes: (s.checkinPokes ?? 0) + 1 } : s)) }); flash("Check-in reminder sent."); };
+  // Ask ONE staff member to complete their availability (from their editor).
+  const requestOne = (id: string, scope: "this" | "all") => { persist({ ...store, staff: store.staff.map((s) => (s.id === id ? { ...s, requested: true, requestedScope: scope, requestedAt: Date.now(), reminders: (s.reminders ?? 0) + 1 } : s)) }); flash(`Availability requested · ${scope === "this" ? label : "all weeks"}.`); };
   // Step 1 — ask staff who haven't confirmed to submit their availability.
   // Scope = this week (the period in view) or all weeks in the season. Marks
   // each as Requested (front-end); the actual push/email is Amir's backend.
@@ -616,12 +628,29 @@ export function ScheduleApp() {
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setShowAlerts(false)}>
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2"><span className="text-[16px]">🔔</span><div className="text-[15px] font-extrabold text-[var(--ink)]">Check-in alerts</div><button type="button" onClick={() => setShowAlerts(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
-            <p className="mt-1 text-[12px] text-[var(--ink-3)]">Assigned staff who haven&rsquo;t checked in. Staff check in from their app / the register; if they&rsquo;re not in by their start time they appear here.</p>
-            {alerts.length === 0 ? <p className="mt-3 rounded-lg bg-[#e2f4ea] px-3 py-2.5 text-[12.5px] font-bold text-[#0f7a43]">✓ Everyone assigned is checked in.</p> : (
-              <div className="mt-3 flex flex-col gap-1.5">{alerts.map((s) => { const st = staffById[s.staffId!]; return (
-                <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{st?.name}</span><span className="text-[var(--ink-3)]">{dt(s.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {to12(s.start)}–{to12(s.end)} · {s.site}</span><span className="ml-auto flex items-center gap-1.5"><span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)]">⚪ Not in</span><button type="button" onClick={() => remind(s.staffId!)} className="rounded-full bg-[#1d3a8f] px-2.5 py-0.5 text-[11px] font-bold text-white hover:bg-[#16306e]">Remind</button></span></div>
-              ); })}</div>
-            )}
+            <p className="mt-1 text-[12px] text-[var(--ink-3)]">Assigned staff who haven&rsquo;t checked in more than {CHECKIN_GRACE_MIN} min after their start time. Staff check in from their app / the register.</p>
+            {alerts.length === 0 ? <p className="mt-3 rounded-lg bg-[#e2f4ea] px-3 py-2.5 text-[12.5px] font-bold text-[#0f7a43]">✓ No one is overdue — everyone due is checked in.</p> : (() => {
+              const shown = alerts.filter((s) => { const st = staffById[s.staffId!]; return !alertQ || (st?.name.toLowerCase().includes(alertQ.toLowerCase())); });
+              return (<>
+              <input value={alertQ} onChange={(e) => setAlertQ(e.target.value)} placeholder="🔍 Search staff name" className="mt-3 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
+              <div className="mt-2 flex max-h-[52vh] flex-col gap-1.5 overflow-y-auto">{shown.map((s) => { const st = staffById[s.staffId!]; const pokes = s.checkinPokes ?? 0; return (
+                <div key={s.id} className="rounded-xl border border-[#f4d3c8] bg-[#fff6f1] px-3 py-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="text-[13px] font-extrabold text-[var(--ink)]">{st?.name}</span>
+                    <span className="inline-flex items-center gap-1 rounded-full bg-[#fdebec] px-2 py-0.5 text-[10px] font-extrabold text-[#c0392b]"><span className="h-1.5 w-1.5 rounded-full bg-[#c0392b]" />Not in</span>
+                    <span className="ml-auto text-[11px] font-extrabold text-[#c0392b]">⏰ {overdueLabel(s)}</span>
+                  </div>
+                  <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{dt(s.date).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {to12(s.start)}–{to12(s.end)} · {s.site}</div>
+                  <div className="mt-1.5 flex items-center gap-2">
+                    {pokes > 0 && <span className="text-[10.5px] font-bold text-[#b45309]">🔔 Reminded {pokes}×</span>}
+                    <button type="button" onClick={() => pokeCheckin(s.id)} className="ml-auto rounded-full bg-[#f59e0b] px-3.5 py-1 text-[11px] font-extrabold text-white shadow-sm hover:brightness-105">{pokes > 0 ? "Remind again" : "Remind to check in"}</button>
+                  </div>
+                </div>
+              ); })}
+              {shown.length === 0 && <p className="py-4 text-center text-[12px] text-[var(--ink-3)]">No overdue staff match “{alertQ}”.</p>}
+              </div>
+              </>);
+            })()}
           </div>
         </div>
       )}
@@ -830,6 +859,10 @@ export function ScheduleApp() {
                 <p className="mt-2.5 text-[11.5px] text-[var(--ink-3)]">{availWeekMode === "all"
                   ? <>Sets {st.name.split(" ")[0]}&rsquo;s <b>standard weekly availability</b> — applies to every week until changed.</>
                   : <>Overrides the recurring pattern for <b>this week only</b> ({f(mondayIso)}–{f(wkSun)}).</>}</p>
+                {/* individually ask this staff member to fill in their own availability */}
+                {(() => { const live = store.staff.find((x) => x.id === st.id) ?? st; const asked = live.reminders ?? 0; return (
+                  <button type="button" onClick={() => requestOne(st.id, availWeekMode)} className={"mt-2.5 flex w-full items-center justify-center gap-2 rounded-lg px-3 py-2 text-[11.5px] font-extrabold uppercase tracking-wide text-white shadow-sm hover:brightness-105 " + (live.avail === "confirmed" ? "bg-[#1d3a8f]" : "bg-[#c0392b]")}>✉️ {live.avail === "confirmed" ? `Ask ${st.name.split(" ")[0]} to update` : `Request ${st.name.split(" ")[0]} to complete availability`}{asked > 0 && <span className="rounded-full bg-white/25 px-1.5 py-[1px] text-[10px]">asked {asked}×</span>}</button>
+                ); })()}
                 {/* presets */}
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
                   <button type="button" onClick={() => preset(["mon", "tue", "wed", "thu", "fri"])} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Weekdays 9–5</button>
