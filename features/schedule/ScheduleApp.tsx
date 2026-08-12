@@ -760,11 +760,17 @@ export function ScheduleApp() {
                   <button type="button" onClick={() => setNeed(need + 1)} className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--line)] text-[15px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">+</button>
                 </span>
               </div>
-              <button type="button" onClick={() => setAssignOpen(true)} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left">
+              <button type="button" onClick={() => setAssignOpen(true)} className={"flex w-full items-center gap-2 py-2.5 text-left " + (assigned.length === 0 ? "border-b border-[var(--line-2,#eef2f8)]" : "")}>
                 <span className="text-[15px]">🧑‍🤝‍🧑</span>
                 <span className="text-[13.5px] font-bold text-[#1d3a8f]">Assign staff</span>
                 <span className="ml-auto flex items-center gap-1.5 text-[12px] font-bold" style={{ color: filled >= need ? "#0f7a43" : "var(--ink-3)" }}>{filled} / {need} filled<span className="text-[var(--ink-3)]">›</span></span>
               </button>
+              {/* assigned staff — remove one to unassign (frees the slot → open) */}
+              {assigned.length > 0 && <div className="flex flex-wrap gap-1.5 border-b border-[var(--line-2,#eef2f8)] pb-2.5">
+                {assigned.map((sid) => { const s = staffById[sid]; return (
+                  <span key={sid} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] py-1 pl-2.5 pr-1.5 text-[12px] font-bold text-[#1d3a8f]">{s?.name ?? "Unknown"}<button type="button" onClick={() => toggleAssign(sid)} title={`Unassign ${s?.name ?? ""}`} className="grid h-4 w-4 place-items-center rounded-full text-[12px] text-[#1d3a8f] hover:bg-[#dbe6fb] hover:text-[#c0392b]">×</button></span>
+                ); })}
+              </div>}
               {/* break */}
               {draft.brk ? (
                 <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">☕</span><span className="text-[13px] font-bold text-[var(--ink)]">Break</span><TimeSel value={draft.brk.from} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, from: v } })} /><span className="text-[var(--ink-3)]">—</span><TimeSel value={draft.brk.to} onChange={(v) => setDraft({ ...draft, brk: { ...draft.brk!, to: v } })} /><button type="button" onClick={() => setDraft({ ...draft, brk: null })} className="ml-auto text-[16px] text-[var(--ink-3)]">×</button></div>
