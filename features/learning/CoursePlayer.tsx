@@ -17,7 +17,15 @@ const ART: Record<string, { grad: string; emoji: string; motif: "people" | "phon
   data: { grad: "linear-gradient(135deg,#334155,#64748b)", emoji: "🔒", motif: "doc" },
   firstaid: { grad: "linear-gradient(135deg,#047857,#10b981)", emoji: "⛑️", motif: "cross" },
   fire: { grad: "linear-gradient(135deg,#c2410c,#f97316)", emoji: "🔥", motif: "flame" },
+  autism: { grad: "linear-gradient(135deg,#0369a1,#22d3ee)", emoji: "🧩", motif: "people" },
+  adhd: { grad: "linear-gradient(135deg,#c2410c,#fbbf24)", emoji: "⚡", motif: "people" },
+  mind: { grad: "linear-gradient(135deg,#4338ca,#a78bfa)", emoji: "🧠", motif: "people" },
+  cse: { grad: "linear-gradient(135deg,#9d174d,#f43f5e)", emoji: "🚸", motif: "shield" },
+  fgm: { grad: "linear-gradient(135deg,#831843,#be185d)", emoji: "🎗️", motif: "shield" },
+  domestic: { grad: "linear-gradient(135deg,#3f3f5e,#7c3aed)", emoji: "🏠", motif: "shield" },
+  food: { grad: "linear-gradient(135deg,#166534,#4ade80)", emoji: "🍽️", motif: "doc" },
 };
+export const ART_KEYS = ["shield", "listen", "county", "recruit", "prevent", "epipen", "online", "behaviour", "data", "firstaid", "fire", "autism", "adhd", "mind", "cse", "fgm", "domestic", "food"];
 function Scene({ art, caption }: { art: string; caption?: string }) {
   const a = ART[art] ?? ART.shield;
   return (

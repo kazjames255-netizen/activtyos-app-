@@ -406,8 +406,257 @@ const fireSafety: CourseDoc = {
   ],
 };
 
+const safeguardingL1: CourseDoc = {
+  id: "c11", title: "Safeguarding Children (Level 1) — Awareness", cat: "Mandatory", cover: "shield",
+  blurb: "The essentials for everyone: what abuse is, that it's your business, and how to raise a concern.",
+  lessons: [
+    { id: "l1", title: "The essentials", mins: 5, blocks: [
+      { k: "art", art: "shield", caption: "If you're unsure — say something. Better a false alarm than a missed child." },
+      { k: "text", t: "Level 1 is awareness: you don't need to be an expert, you need to notice and pass it on. Abuse can be physical, emotional, sexual or neglect — and it can happen anywhere, including here." },
+      { k: "points", title: "Three things everyone must know", items: [
+        "The four types of abuse and a few signs of each.",
+        "Who your Designated Safeguarding Lead (DSL) is — before your first session.",
+        "How to report: write the facts, tell the DSL the same day, never promise secrecy.",
+      ] },
+      { k: "callout", tone: "law", title: "If in doubt, report", t: "It is never your job to decide whether abuse is “really” happening. Your job is to notice and raise it. The DSL decides what happens next." },
+      { k: "check", q: "You have a niggling worry about a child but no proof. You should:", opts: ["Wait until you're sure", "Record what you noticed and tell the DSL today", "Ask the child's friends", "Forget it — no proof"], a: 1, fb: "Correct — you don't need proof; note it and raise it the same day." },
+    ] },
+  ],
+};
+
+const safeguardingL3: CourseDoc = {
+  id: "c12", title: "Safeguarding Children (Level 3) — DSL", cat: "Recommended", cover: "shield",
+  blurb: "For Designated Safeguarding Leads: managing concerns, thresholds, referrals and allegations.",
+  lessons: [
+    { id: "l1", title: "The DSL's remit", mins: 6, blocks: [
+      { k: "text", t: "As DSL you hold lead responsibility for safeguarding: you're the point of contact for staff, you decide on referrals, you keep secure records, and you liaise with children's social care, the police and other agencies. Deputies share the load so there's always cover." },
+      { k: "points", title: "Your core duties", items: [
+        "Receive, assess and act on concerns — deciding whether the threshold for a referral is met.",
+        "Make referrals to children's social care and, where a child is at immediate risk, the police.",
+        "Keep clear, secure, chronological records — separate from the main file.",
+        "Manage allegations against staff and low-level concerns (see next lesson).",
+        "Keep the safeguarding culture alive: train, remind, and make it easy to report.",
+      ] },
+    ] },
+    { id: "l2", title: "Thresholds, referrals & allegations", mins: 6, blocks: [
+      { k: "steps", title: "When a concern comes in", items: [
+        { h: "Clarify the facts", t: "Get the recorded facts from the staff member; don't investigate the family yourself." },
+        { h: "Assess the threshold", t: "Immediate danger → police/999. Significant harm → children's social care referral. Lower level → early help, monitor, review." },
+        { h: "Refer & record", t: "Make the referral without delay, confirm in writing, and record your decision and reasons." },
+        { h: "Follow up", t: "Chase for a response; escalate if you don't hear back. A referral is not the end." },
+      ] },
+      { k: "callout", tone: "warn", title: "Allegations against staff", t: "A concern that an adult may have harmed a child, or behaved in a way that suggests they're unsuitable, goes to the Local Authority Designated Officer (LADO). Handle low-level concerns early — patterns matter." },
+      { k: "check", q: "A referral to children's social care gets no response after several days. You:", opts: ["Assume it's fine", "Chase it and escalate — a referral isn't the end", "Close the case", "Tell the parents to follow it up"], a: 1, fb: "Correct — follow up and escalate; the child's safety depends on it." },
+    ] },
+  ],
+};
+
+const autism: CourseDoc = {
+  id: "c13", title: "Autism Awareness", cat: "Recommended", cover: "autism",
+  blurb: "Understand autistic children and small, practical changes that make your camp or club work for them.",
+  lessons: [
+    { id: "l1", title: "What autism is", mins: 6, blocks: [
+      { k: "art", art: "autism", caption: "A different way of experiencing the world — not less, just different." },
+      { k: "text", t: "Autism is a lifelong difference in how a person communicates, relates to others and experiences the world. It's a spectrum — every autistic child is different — and it is not an illness to be “fixed”. Your job is to understand and adapt." },
+      { k: "points", title: "Common differences", items: [
+        "Social communication — may take language literally, find eye contact hard, or read tone and body language differently.",
+        "Social interaction — may prefer their own company, or want to join in but not know how.",
+        "Routine & change — predictability feels safe; unexpected change can be very distressing.",
+        "Sensory — sounds, lights, textures, smells or crowds may feel overwhelming (or under-stimulating).",
+        "Focused interests — deep, passionate interests that can be a brilliant way to connect.",
+      ] },
+      { k: "callout", tone: "info", title: "Behaviour is communication", t: "What looks like “naughtiness” or a “meltdown” is usually distress or sensory overload — not defiance. A meltdown is not a tantrum; it's an overwhelmed nervous system." },
+    ] },
+    { id: "l2", title: "Small changes, big difference", mins: 6, blocks: [
+      { k: "steps", title: "Practical support at camp", items: [
+        { h: "Prepare for change", t: "Give clear, visual timetables and warn about transitions: “Five more minutes, then we tidy up.”" },
+        { h: "Communicate clearly", t: "Short, literal instructions. Avoid sarcasm and vague phrases. Allow processing time — count to ten before repeating." },
+        { h: "Manage the senses", t: "Offer a quiet space, ear defenders, or a break from the crowd. Notice what overwhelms them and reduce it." },
+        { h: "Use their interests", t: "Weave their passion into activities — it builds trust and engagement fast." },
+      ] },
+      { k: "scenario", t: "During a noisy, fast game an autistic child covers their ears, drops to the floor and won't respond. The best response is to:", choices: [
+        { label: "Insist they rejoin so they don't miss out", ok: false, fb: "Pushing through overload makes it worse. They need less, not more." },
+        { label: "Calmly reduce noise, give space and offer a quiet break", ok: true, fb: "Correct — lower the sensory load and let them regulate. Rejoin when ready." },
+        { label: "Give a consequence for not joining in", ok: false, fb: "This is distress, not defiance — a consequence is unfair and unhelpful." },
+      ] },
+      { k: "callout", tone: "tip", title: "Ask the family", t: "Parents are the experts on their child. Ask what helps, what to avoid, and the words the child uses — then share it with the team." },
+    ] },
+  ],
+};
+
+const adhd: CourseDoc = {
+  id: "c14", title: "ADHD Awareness", cat: "Recommended", cover: "adhd",
+  blurb: "See past the labels of “disruptive” — understand ADHD and channel that energy positively.",
+  lessons: [
+    { id: "l1", title: "Understanding ADHD", mins: 6, blocks: [
+      { k: "art", art: "adhd", caption: "Not won't sit still — can't, without support." },
+      { k: "text", t: "ADHD (attention deficit hyperactivity disorder) affects how a child regulates attention, activity and impulses. It's a genuine neurological difference, not bad parenting or bad behaviour — and these children often have huge energy, creativity and enthusiasm to work with." },
+      { k: "points", title: "Three presentations", items: [
+        "Inattentive — easily distracted, forgetful, loses things, drifts off, hard to finish tasks.",
+        "Hyperactive-impulsive — always on the go, fidgety, blurts out, interrupts, struggles to wait.",
+        "Combined — a mix of both, the most common presentation.",
+      ] },
+      { k: "callout", tone: "info", title: "They're not choosing it", t: "A child with ADHD can't simply “try harder” to focus or sit still. Shaming rarely works and damages self-esteem — structure and encouragement do." },
+    ] },
+    { id: "l2", title: "Strategies that work", mins: 5, blocks: [
+      { k: "points", title: "Set them up to succeed", items: [
+        "Short, clear, one-step instructions — and check they've landed.",
+        "Build in movement: jobs, active roles, regular breaks to burn energy.",
+        "Structure and routine, with warnings before changes.",
+        "Catch them being good — specific praise beats constant correction.",
+        "Reduce distractions where they need to focus; seat them near an adult, not the door.",
+      ] },
+      { k: "scenario", t: "A child with ADHD keeps leaving the craft table and running around. A helpful first step is to:", choices: [
+        { label: "Make them sit and finish before anyone else moves", ok: false, fb: "Forcing stillness usually backfires and fuels frustration." },
+        { label: "Give them an active job and shorten the task into steps", ok: true, fb: "Correct — channel the energy and chunk the task; movement helps them focus." },
+        { label: "Remove them from the activity as a punishment", ok: false, fb: "Exclusion damages self-esteem and rarely teaches the skill." },
+      ] },
+    ] },
+  ],
+};
+
+const mentalHealth: CourseDoc = {
+  id: "c15", title: "Children's Mental Health", cat: "Recommended", cover: "mind",
+  blurb: "Spot when a child is struggling, know how to talk to them, and when to escalate.",
+  lessons: [
+    { id: "l1", title: "Noticing the signs", mins: 6, blocks: [
+      { k: "art", art: "mind", caption: "You don't need to fix it — you need to notice and connect." },
+      { k: "text", t: "One in five children has a probable mental-health condition. Camps and clubs can be a safe, positive break — and a place a struggling child is spotted. You're not a therapist; you're a trusted, steady adult who notices and passes on." },
+      { k: "points", title: "Signs a child may be struggling", items: [
+        "A clear change — withdrawn, tearful, irritable, or “not themselves”.",
+        "Anxiety — clinginess, avoidance, physical complaints (tummy aches), constant reassurance-seeking.",
+        "Low mood — flat, hopeless, tired, losing interest in things they loved.",
+        "Signs of self-harm, disordered eating, or talk of not wanting to be here.",
+      ] },
+      { k: "callout", tone: "warn", title: "Take any talk of self-harm or suicide seriously", t: "Never dismiss it as attention-seeking. Stay calm, don't promise secrecy, and report to your DSL the same day — sooner if a child is in immediate danger." },
+    ] },
+    { id: "l2", title: "How to help", mins: 5, blocks: [
+      { k: "steps", title: "If a child opens up", items: [
+        { h: "Listen and validate", t: "“That sounds really hard. Thank you for telling me.” Don't rush to solve or minimise." },
+        { h: "Stay calm and steady", t: "Your calm helps them feel safe. Don't react with shock or panic." },
+        { h: "Be honest about sharing", t: "Explain you'll pass it to the person who can help — never promise to keep it secret." },
+        { h: "Report and record", t: "Tell the DSL; they involve parents, GP or CAMHS as needed. Write down what was said." },
+      ] },
+      { k: "points", title: "Protective factors you can offer", items: [
+        "A predictable, welcoming routine and a sense of belonging.",
+        "One trusted adult who notices them.",
+        "Success and fun — activities where they feel good at something.",
+      ] },
+      { k: "check", q: "A child quietly tells you they've been hurting themselves. You:", opts: ["Promise not to tell so they trust you", "Stay calm, thank them, and report to the DSL today", "Tell them to stop and move on", "Announce it so others can help"], a: 1, fb: "Correct — calm, validate, no secrecy, and report the same day." },
+    ] },
+  ],
+};
+
+const cse: CourseDoc = {
+  id: "c16", title: "Child Sexual Exploitation (CSE)", cat: "Mandatory", cover: "cse",
+  blurb: "How children are groomed and exploited for sex, the signs, and how to respond — it's abuse, never a choice.",
+  lessons: [
+    { id: "l1", title: "What CSE is", mins: 6, blocks: [
+      { k: "art", art: "cse", caption: "Gifts, attention and “love” used to control and abuse." },
+      { k: "text", t: "Child sexual exploitation is a type of abuse where a child is manipulated or coerced into sexual activity, often in exchange for something — attention, affection, gifts, money, status, or simply to stop threats. It happens to boys and girls, online and in person, and the child rarely sees themselves as a victim." },
+      { k: "callout", tone: "law", title: "A child can never consent to their own abuse", t: "Even if it looks “consensual” or the child insists they're in a relationship, exploitation is abuse. Power, age and manipulation make real consent impossible." },
+    ] },
+    { id: "l2", title: "Grooming & warning signs", mins: 6, blocks: [
+      { k: "points", title: "How grooming works", items: [
+        "Targeting a vulnerable child and making them feel special and understood.",
+        "Building dependence with gifts, alcohol, drugs or a sense of belonging.",
+        "Isolating them from friends and family, then introducing secrecy, guilt and threats.",
+      ] },
+      { k: "points", title: "Signs to watch for", items: [
+        "An older or controlling “boyfriend/girlfriend” or new secretive friends.",
+        "Unexplained money, phones, gifts, or being collected by unknown adults.",
+        "Going missing, staying out, or being found in unusual places.",
+        "Secrecy about online contacts; sexualised behaviour or language beyond their age.",
+        "Sexually transmitted infections, or physical signs of assault.",
+      ] },
+      { k: "scenario", t: "A 15-year-old is being picked up by a much older adult, has an expensive new phone, and is secretive and defensive about the “relationship.” You:", choices: [
+        { label: "Warn them the relationship is wrong and confront the adult", ok: false, fb: "Never confront — it can escalate danger and push the child away." },
+        { label: "Record the facts and report to the DSL the same day", ok: true, fb: "Correct — note it, don't investigate, and pass to the DSL who involves the right agencies." },
+        { label: "Wait until you have proof it's sexual", ok: false, fb: "You don't need proof. A cluster of signs is enough to raise." },
+      ] },
+    ] },
+  ],
+};
+
+const fgm: CourseDoc = {
+  id: "c17", title: "FGM Awareness & Mandatory Reporting", cat: "Mandatory", cover: "fgm",
+  blurb: "Female genital mutilation is illegal child abuse — recognise the risk and know your duty to report.",
+  lessons: [
+    { id: "l1", title: "What FGM is", mins: 5, blocks: [
+      { k: "art", art: "fgm", caption: "Illegal. Harmful. A safeguarding emergency." },
+      { k: "text", t: "Female genital mutilation (FGM) is the partial or total removal of, or injury to, the external female genitalia for non-medical reasons. It has no health benefits, causes serious lifelong harm, and is a criminal offence and a form of child abuse. It's also illegal to take a girl abroad for FGM." },
+      { k: "callout", tone: "law", title: "The mandatory reporting duty", t: "In England & Wales, regulated professionals (teachers, health and social-care staff) have a legal duty to report to the police any case where a girl under 18 tells them she's had FGM, or they see physical signs of it. Whatever your role — always report concerns to your DSL, without delay." },
+    ] },
+    { id: "l2", title: "Risk signs & response", mins: 5, blocks: [
+      { k: "points", title: "Possible warning signs", items: [
+        "Talk of a “special procedure”, a ceremony to “become a woman”, or a long trip to visit family abroad (often over the summer holidays).",
+        "A relative or “cutter” visiting from abroad.",
+        "After a trip: being withdrawn, in pain, having trouble sitting, walking or with toileting.",
+        "Reluctance to be involved in physical activity, or asking for help with something they can't explain.",
+      ] },
+      { k: "steps", title: "If you're worried", items: [
+        { h: "Before it happens (a girl at risk)", t: "This is a safeguarding concern — record it and tell your DSL the same day so protection can be put in place." },
+        { h: "If it has happened", t: "Report to the DSL immediately; the mandatory duty means the police must be informed for a known case in an under-18." },
+        { h: "Stay factual & sensitive", t: "Don't examine the child or promise secrecy. Record the facts in the child's words." },
+      ] },
+      { k: "check", q: "A 9-year-old mentions a “special holiday to become a woman.” You:", opts: ["Assume it's just a family celebration", "Record it and tell the DSL the same day", "Ask lots of detailed questions first", "Tell her parents you're concerned"], a: 1, fb: "Correct — this is a potential FGM risk; record and report to the DSL immediately." },
+    ] },
+  ],
+};
+
+const domestic: CourseDoc = {
+  id: "c18", title: "Domestic Abuse — the Impact on Children", cat: "Recommended", cover: "domestic",
+  blurb: "Children living with domestic abuse are victims in their own right — recognise it and respond.",
+  lessons: [
+    { id: "l1", title: "Children are victims too", mins: 5, blocks: [
+      { k: "art", art: "domestic", caption: "Living with abuse harms a child, even if they're “only” watching." },
+      { k: "text", t: "Domestic abuse isn't only physical — it includes emotional, psychological, financial, sexual and coercive-controlling behaviour between people aged 16+ who are personally connected. Crucially, a child who sees, hears or lives with domestic abuse is legally recognised as a victim in their own right (Domestic Abuse Act 2021)." },
+      { k: "points", title: "How it can show in a child", items: [
+        "Anxiety, aggression, withdrawal or being unusually watchful.",
+        "Regression, poor sleep, low self-worth, or difficulty trusting adults.",
+        "Talking about violence or fear at home; worry about a parent.",
+        "Being tired, hungry or unkempt if home life is chaotic.",
+      ] },
+    ] },
+    { id: "l2", title: "Responding safely", mins: 4, blocks: [
+      { k: "callout", tone: "warn", title: "Confidentiality can be safety-critical", t: "Be careful who you speak to and how — the wrong word to the wrong adult can put a child or parent in danger. Share only with your DSL." },
+      { k: "steps", title: "If you have a concern", items: [
+        { h: "Respond & record", t: "Listen without judgement, don't promise secrecy, and write the facts down." },
+        { h: "Report to the DSL", t: "They assess risk and involve the right agencies. In immediate danger, call 999." },
+        { h: "Keep it safe", t: "Don't contact the alleged abuser or investigate — you could increase the risk." },
+      ] },
+    ] },
+  ],
+};
+
+const foodSafety: CourseDoc = {
+  id: "c19", title: "Food Safety & Hygiene", cat: "Recommended", cover: "food",
+  blurb: "The everyday basics of preparing and serving food safely to children — the 4 Cs and allergens.",
+  lessons: [
+    { id: "l1", title: "The 4 Cs", mins: 5, blocks: [
+      { k: "art", art: "food", caption: "Cleaning · Cooking · Chilling · Cross-contamination." },
+      { k: "text", t: "Most food-poisoning at settings comes down to four things going wrong. Get the 4 Cs right and you prevent almost all of it." },
+      { k: "table", head: ["The 4 Cs", "What it means"], rows: [
+        ["Cleaning", "Wash hands well and often; keep surfaces, boards and utensils clean."],
+        ["Cooking", "Cook food thoroughly — piping hot all the way through, especially chicken, mince and eggs."],
+        ["Chilling", "Keep cold food cold (fridge ≤ 5°C); don't leave food out; cool and refrigerate leftovers quickly."],
+        ["Cross-contamination", "Keep raw and ready-to-eat foods apart; separate boards; wash hands between them."],
+      ] },
+      { k: "points", title: "Personal hygiene", items: [
+        "Wash hands before handling food, after the toilet, and after touching raw food or bins.",
+        "Tie hair back, cover cuts with a blue plaster, and don't handle food if you have sickness or diarrhoea.",
+      ] },
+    ] },
+    { id: "l2", title: "Allergens — Natasha's Law", mins: 4, blocks: [
+      { k: "callout", tone: "law", title: "The 14 allergens must be known and declared", t: "Always know which of the 14 major allergens are in the food you serve, check every child's record, and never guess. Cross-contact can be as dangerous as the ingredient itself." },
+      { k: "check", q: "You're serving a snack and aren't sure if it contains nuts. You should:", opts: ["Serve it — it's probably fine", "Check the label and the children's allergy records before serving", "Ask a child if they're allergic", "Remove obvious nuts and serve"], a: 1, fb: "Correct — never guess with allergens; check the label and the records every time." },
+    ] },
+  ],
+};
+
 export const SEED_LIBRARY: CourseDoc[] = [
-  safeguarding, countyLines, saferRecruitment, prevent, allergy, firstAid, behaviour, online, dataProtection, fireSafety,
+  safeguarding, safeguardingL1, safeguardingL3, countyLines, cse, fgm, prevent, saferRecruitment,
+  autism, adhd, mentalHealth, behaviour, domestic, allergy, foodSafety, firstAid, online, dataProtection, fireSafety,
 ];
 
 export const blankCourse = (id: string): CourseDoc => ({
