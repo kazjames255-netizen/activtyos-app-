@@ -22,7 +22,7 @@ import { LocationsApp, DEMO_VENUES } from "@/features/locations/LocationsApp";
 
 interface Invite { token: string; role: "franchise" | "staff"; createdAt: string; usedBy: string | null; sentTo?: string | null }
 interface Me { role: string; tenantName: string | null }
-interface Listing { id: string; title: string }
+interface Listing { id: string; title: string; venueId?: string | null; seasonId?: string | null }
 interface Venue { id: string; name: string }
 interface SubCurrent { plan: string; staffLimit?: number | null; staffUsed?: number | null; details?: { name?: string } }
 
@@ -67,8 +67,13 @@ export function TeamApp() {
   const [roleId, setRoleId] = useState("coach");
   const jobTitles = settings.staffRoles ?? [];
   const [jobTitle, setJobTitle] = useState("");
-  const [assignMode, setAssignMode] = useState<"all" | "listings" | "locations" | "none">("all");
-  const [assignIds, setAssignIds] = useState<string[]>([]);
+  // Deployment flow: None, or pick location(s) → then listings within them.
+  const [notRostered, setNotRostered] = useState(false);
+  const [allLoc, setAllLoc] = useState(true);
+  const [loc, setLoc] = useState<string[]>([]);
+  const [allList, setAllList] = useState(true);
+  const [list, setList] = useState<string[]>([]);
+  const resetAssign = () => { setNotRostered(false); setAllLoc(true); setLoc([]); setAllList(true); setList([]); };
 
   const refresh = useCallback(() => {
     apiGet<Invite[]>("/api/invites").then(setInvites).catch((e) => setError(e instanceof Error ? e.message : "Failed to load the team"));
@@ -77,7 +82,7 @@ export function TeamApp() {
   useEffect(() => {
     setMeta(loadMeta());
     apiGet<Me>("/api/me").then(setMe).catch(() => {});
-    apiGet<{ id: string; title?: string; name?: string }[]>("/api/listings?mine=1").then((rows) => setListings(rows.map((r) => ({ id: r.id, title: r.title || r.name || "Untitled listing" })))).catch(() => {});
+    apiGet<{ id: string; title?: string; name?: string; venueId?: string | null; seasonId?: string | null }[]>("/api/listings?mine=1").then((rows) => setListings(rows.map((r) => ({ id: r.id, title: r.title || r.name || "Untitled listing", venueId: r.venueId ?? null, seasonId: r.seasonId ?? null })))).catch(() => {});
     apiGet<{ venues?: Venue[] } | null>("/api/library").then((lib) => setVenues(lib?.venues ?? [])).catch(() => {});
     apiGet<{ current: SubCurrent }>("/api/subscription").then((p) => setSub(p.current)).catch(() => {});
     refresh();
@@ -108,7 +113,10 @@ export function TeamApp() {
     setBusy(true); setError(null); setSentNote(null); setCapNote(null);
     try {
       const to = email.trim();
-      const assignment: Assignment = { mode: assignMode, ids: (assignMode === "all" || assignMode === "none") ? [] : assignIds };
+      const assignment: Assignment = notRostered ? { mode: "none", ids: [] }
+        : (!allList && list.length) ? { mode: "listings", ids: list }
+        : allLoc ? { mode: "all", ids: [] }
+        : { mode: "locations", ids: loc };
       const r = await apiPost<{ token: string; sentTo: string | null }>("/api/invites", {
         role,
         ...(to ? { email: to } : {}),
@@ -118,7 +126,7 @@ export function TeamApp() {
       });
       if (role === "staff") patchMeta(r.token, { name: name.trim() || undefined, staffRole: roleId, jobTitle: jobTitle || undefined, assignment, status: "active" });
       if (r.sentTo) { setSentNote(`Invite emailed to ${r.sentTo}`); setEmail(""); setName(""); }
-      setAssignMode("all"); setAssignIds([]); setStep(1);
+      resetAssign(); setStep(1);
       refresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to create the invite";
@@ -143,7 +151,7 @@ export function TeamApp() {
     // Best-effort backend call — revokes the token once Amir adds the route (handoff).
     void api(`/api/invites/${token}`, { method: "DELETE" }).catch(() => {});
   };
-  const toggleAssign = (id: string) => setAssignIds((xs) => (xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]));
+  const flipIn = (setter: React.Dispatch<React.SetStateAction<string[]>>, id: string) => setter((xs) => (xs.includes(id) ? xs.filter((x) => x !== id) : [...xs, id]));
   const roleName = (id?: string) => roles.find((r) => r.id === id)?.name ?? "Staff";
   const assignLabel = (a?: Assignment) =>
     !a || a.mode === "all" ? "All listings"
@@ -230,9 +238,16 @@ export function TeamApp() {
           const s = STEPS[step - 1];
           const nm = name.trim() ? name.trim() : email.trim() ? email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "New teammate";
           const roleNm = roles.find((r) => r.id === roleId)?.name ?? "Staff";
-          const assignTxt = assignMode === "all" ? "All listings" : assignMode === "none" ? "Not rostered — role access only" : assignMode === "locations" ? (assignIds.length ? `${assignIds.length} location${assignIds.length === 1 ? "" : "s"}` : "By location — pick some") : (assignIds.length ? `${assignIds.length} listing${assignIds.length === 1 ? "" : "s"}` : "By listing — pick some");
-          const pillStyle = (on: boolean) => on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" };
+          const allVenues = venues.length ? venues : DEMO_VENUES;
+          const locLabel = allLoc ? "All locations" : loc.length ? loc.map((id) => allVenues.find((v) => v.id === id)?.name ?? id).join(", ") : "no location";
+          // listings that run at the chosen location(s)
+          const scopedListings = listings.filter((l) => allLoc || (l.venueId && loc.includes(l.venueId)));
+          const assignTxt = notRostered ? "Not rostered — role access only"
+            : loc.length === 0 && !allLoc ? "Pick a location"
+            : allList ? `${locLabel} · all listings`
+            : list.length ? `${locLabel} · ${list.length} listing${list.length === 1 ? "" : "s"}` : `${locLabel} · pick listings`;
           const chipStyle = (on: boolean) => on ? { borderColor: "#22b365", background: "#e7f7ee", color: "#0f7a43" } : { borderColor: "#bcd0f5", background: "#f5f9ff", color: "#1d3a8f" };
+          const seasonName = (sid?: string | null) => settings.seasons?.find((x) => x.id === sid)?.name;
           return (
           <>
             {/* big blue header + progress */}
@@ -284,27 +299,42 @@ export function TeamApp() {
                 </div>
               )}
               {step === 4 && (
-                <div>
+                <div className="flex flex-col gap-4">
+                  {/* rostered vs none */}
                   <div className="flex flex-wrap gap-2">
-                    {([["all", "All listings"], ["locations", "By location"], ["listings", "By listing"], ["none", "None"]] as const).map(([m, label]) => (
-                      <button key={m} type="button" onClick={() => { setAssignMode(m); setAssignIds([]); }} className="rounded-full border px-4 py-2 text-[13px] font-bold" style={pillStyle(assignMode === m)}>{label}</button>
-                    ))}
+                    <button type="button" onClick={() => setNotRostered(false)} className="rounded-full border-2 px-4 py-2 text-[13px] font-extrabold transition-colors" style={chipStyle(!notRostered)}>{!notRostered ? "✓ " : ""}Rostered on the schedule</button>
+                    <button type="button" onClick={() => setNotRostered(true)} className="rounded-full border-2 px-4 py-2 text-[13px] font-extrabold transition-colors" style={notRostered ? { borderColor: "#c06a10", background: "#fbeddb", color: "#8a4a12" } : { borderColor: "#bcd0f5", background: "#f5f9ff", color: "#1d3a8f" }}>{notRostered ? "✓ " : ""}None — office / admin</button>
                   </div>
-                  {assignMode === "listings" && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {listings.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No listings yet.</span>}
-                      {listings.map((l) => { const on = assignIds.includes(l.id); return <button key={l.id} type="button" onClick={() => toggleAssign(l.id)} className="rounded-full border-2 px-3.5 py-2 text-[13px] font-extrabold transition-colors" style={chipStyle(on)}>{on ? "✓ " : "🎟 "}{l.title}</button>; })}
-                    </div>
-                  )}
-                  {assignMode === "locations" && (
-                    <div className="mt-3 flex flex-wrap gap-2">
-                      {(venues.length ? venues : DEMO_VENUES).map((v) => { const on = assignIds.includes(v.id); return <button key={v.id} type="button" onClick={() => toggleAssign(v.id)} className="rounded-full border-2 px-3.5 py-2 text-[13px] font-extrabold transition-colors" style={chipStyle(on)}>{on ? "✓ " : "📍 "}{v.name}</button>; })}
-                    </div>
-                  )}
-                  {assignMode === "none" ? (
-                    <div className="mt-3 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12px] text-[var(--ink-2)]"><b>Not rostered anywhere.</b> They won&rsquo;t appear in the schedule or on any register, but still get the page access their <b>role</b> allows (office / admin staff). Deploy them later from <b>Deployment</b>.</div>
+
+                  {notRostered ? (
+                    <div className="rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12.5px] text-[var(--ink-2)]"><b>No locations or listings.</b> They won&rsquo;t appear in the schedule or on any register — but still get the page access their <b>role</b> allows. You can deploy them later from <b>Deployment</b>.</div>
                   ) : (
-                    <p className="mt-3 text-[12px] text-[var(--ink-3)]">Where they&rsquo;re rostered — they show in the schedule for these{assignMode === "locations" ? " locations" : " listings"} and can be given shifts. <b>What they can see &amp; do is set by their access role</b>, not this.</p>
+                    <>
+                      {/* 1 · locations */}
+                      <div>
+                        <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">① Location{allVenues.length === 1 ? "" : "s"} they work at</div>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={() => { setAllLoc(true); setLoc([]); }} className="rounded-full border-2 px-3.5 py-2 text-[13px] font-extrabold transition-colors" style={chipStyle(allLoc)}>{allLoc ? "✓ " : "🌍 "}All locations</button>
+                          {allVenues.map((v) => { const on = !allLoc && loc.includes(v.id); return <button key={v.id} type="button" onClick={() => { setAllLoc(false); flipIn(setLoc, v.id); }} className="rounded-full border-2 px-3.5 py-2 text-[13px] font-extrabold transition-colors" style={chipStyle(on)}>{on ? "✓ " : "📍 "}{v.name}</button>; })}
+                        </div>
+                      </div>
+
+                      {/* 2 · listings within those locations */}
+                      {(allLoc || loc.length > 0) && (
+                        <div>
+                          <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">② Listings {allLoc ? "across all locations" : "at " + locLabel}</div>
+                          <div className="flex flex-wrap gap-2">
+                            <button type="button" onClick={() => { setAllList(true); setList([]); }} className="rounded-full border-2 px-3.5 py-2 text-[13px] font-extrabold transition-colors" style={chipStyle(allList)}>{allList ? "✓ " : "🎟 "}All listings here</button>
+                            {scopedListings.map((l) => { const on = !allList && list.includes(l.id); const sn = seasonName(l.seasonId); return (
+                              <button key={l.id} type="button" onClick={() => { setAllList(false); flipIn(setList, l.id); }} className="inline-flex items-center gap-1.5 rounded-full border-2 px-3.5 py-2 text-[13px] font-extrabold transition-colors" style={chipStyle(on)}>{on ? "✓" : "🎟"} {l.title}{sn && <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10.5px] font-bold" style={{ color: "#1d3a8f" }}>📅 {sn}</span>}</button>
+                            ); })}
+                          </div>
+                          {scopedListings.length === 0 && <p className="mt-1 text-[12px] text-[var(--ink-3)]">No live listings {allLoc ? "yet" : "at the chosen location(s)"} — “All listings here” covers whatever runs there.</p>}
+                        </div>
+                      )}
+
+                      <p className="text-[12px] text-[var(--ink-3)]">They show in the schedule for this and can be given shifts. <b>What they can see &amp; do is set by their access role</b>, not this.</p>
+                    </>
                   )}
                 </div>
               )}
@@ -394,6 +424,8 @@ export function TeamApp() {
     </div>
   );
 }
+
+
 
 
 
