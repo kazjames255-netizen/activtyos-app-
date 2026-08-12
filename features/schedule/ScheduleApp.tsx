@@ -287,6 +287,12 @@ export function ScheduleApp() {
     const start = c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00";
     setDraft({ groupIds: [], site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonSel.length === 1 ? seasonSel[0] : "", date: c.date, start, end: addMins(start, defShiftH * 60), slots: [staffId], brk: null, note: "" });
   };
+  // Add a shift under a specific listing (presets its location + season).
+  const openAddL = (l: { title: string; venueId?: string | null; seasonId?: string | null }, role: string, c: { date: string; hour: number | null }) => {
+    setAssignOpen(false); setActionsOpen(false);
+    const start = c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00";
+    setDraft({ groupIds: [], site: venueNameOf(l.venueId), role, listing: l.title, season: seasonNameOf(l.seasonId) ?? "", date: c.date, start, end: addMins(start, defShiftH * 60), slots: [null], brk: null, note: "" });
+  };
   // Open the editor on the whole group of shifts sharing this slot (N needed / M filled).
   const openEditGroup = (s: Shift) => {
     setAssignOpen(false); setActionsOpen(false);
@@ -328,7 +334,9 @@ export function ScheduleApp() {
   );
 
   const compact = colW < 60;
-  const gridSites = site === "all" ? sites : [site];
+  const venueNameOf = (vid?: string | null) => venuesR.find((v) => v.id === vid)?.name ?? "";
+  // The rota is organised by LISTING (location + season shown underneath).
+  const gridListings = useMemo(() => scopedListings.filter((l) => (site === "all" || venueNameOf(l.venueId) === site) && (listingF === "all" || l.title === listingF)), [scopedListings, site, listingF, venuesR]);
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
@@ -431,26 +439,35 @@ export function ScheduleApp() {
                 </div>
 
                 {group === "area" ? (
-                  gridSites.map((si) => {
-                    const siteRoles = [...new Set([...periodShifts.filter((s) => s.site === si).map((s) => s.role), ...(extraRoles[si] ?? [])])];
+                  <>
+                  {gridListings.length === 0 && <div className="border-b border-[var(--line)] px-3 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No listings for this view — publish listings (with a venue &amp; season) under <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>, or widen the season filter.</div>}
+                  {gridListings.map((l) => {
+                    const loc = venueNameOf(l.venueId), sn = seasonNameOf(l.seasonId);
+                    const listingShifts = periodShifts.filter((s) => s.listing === l.title);
+                    const lRoles = [...new Set([...listingShifts.map((s) => s.role), ...(extraRoles[l.title] ?? [])])];
                     return (
-                    <div key={si}>
-                      <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-2"><span className="text-[13px]">📍</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{si}</span><span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{periodShifts.filter((s) => s.site === si).length} shifts</span></div>
-                      {siteRoles.map((role) => {
-                        const rows = periodShifts.filter((s) => s.site === si && s.role === role);
+                    <div key={l.venueId + "|" + l.title}>
+                      <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+                        <span className="text-[13px]">🎟</span>
+                        <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{l.title}</div><div className="text-[10.5px] font-semibold text-[var(--ink-3)]">📍 {loc || "no venue"}{sn ? ` · 📅 ${sn}` : ""}</div></div>
+                        <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">{listingShifts.length} shifts</span>
+                      </div>
+                      {lRoles.map((role) => {
+                        const rows = listingShifts.filter((s) => s.role === role);
                         return (
                           <div key={role}>
                             <div className="flex items-center gap-2 border-b border-[var(--line-2,#eef2f8)] px-3 py-1.5" style={{ boxShadow: `inset 3px 0 0 ${roleCol(role)}` }}><span className="h-2.5 w-2.5 rounded-full" style={{ background: roleCol(role) }} /><span className="text-[13px] font-extrabold" style={{ color: roleCol(role) }}>{role}</span></div>
                             {!isDay && <TotalsRow rows={rows} />}
-                            <CellRow rows={rows} compact={compact} onAdd={(c) => openAdd(si, role, c, null)} />
+                            <CellRow rows={rows} compact={compact} onAdd={(c) => openAddL(l, role, c)} />
                           </div>
                         );
                       })}
                       {canManage && <div className="border-b border-[var(--line-2,#eef2f8)] px-3 py-2.5">
-                        <button type="button" onClick={() => setRoleMenu(si)} className="text-[13px] font-extrabold text-[#1d3a8f] hover:underline">＋ Add a new role</button>
+                        <button type="button" onClick={() => setRoleMenu(l.title)} className="text-[13px] font-extrabold text-[#1d3a8f] hover:underline">＋ Add a new role</button>
                       </div>}
                     </div>
-                  ); })
+                  ); })}
+                  </>
                 ) : (
                   shownStaff.map((st) => {
                     const rows = periodShifts.filter((s) => s.staffId === st.id);
@@ -712,13 +729,13 @@ export function ScheduleApp() {
       })()}
 
       {/* Add-a-new-role picker */}
-      {roleMenu && (() => { const si = roleMenu; const shown = [...new Set([...store.shifts.filter((s) => s.site === si).map((s) => s.role), ...(extraRoles[si] ?? [])])]; const avail = roleOptions.filter((r) => !shown.includes(r)); return (
+      {roleMenu && (() => { const si = roleMenu; const shown = [...new Set([...store.shifts.filter((s) => s.listing === si).map((s) => s.role), ...(extraRoles[si] ?? [])])]; const avail = roleOptions.filter((r) => !shown.includes(r)); return (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[12vh]" onClick={() => setRoleMenu(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2"><span className="text-[16px]">➕</span><div className="text-[15px] font-extrabold text-[var(--ink)]">Add a role</div><button type="button" onClick={() => setRoleMenu(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <p className="mt-1 text-[12px] text-[var(--ink-3)]">Adds a role row to <b>{si}</b> so you can roster it.</p>
             <div className="mt-3 flex flex-col gap-1.5">
-              {avail.length === 0 && <p className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-center text-[12px] text-[var(--ink-3)]">Every standard role is already on this location — add a custom one below.</p>}
+              {avail.length === 0 && <p className="rounded-lg bg-[var(--panel)] px-3 py-2.5 text-center text-[12px] text-[var(--ink-3)]">Every standard role is already on this listing — add a custom one below.</p>}
               {avail.map((r) => (
                 <button key={r} type="button" onClick={() => addRole(si, r)} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] px-3.5 py-2.5 text-left text-[13.5px] font-bold text-[var(--ink)] hover:bg-[var(--panel)]"><span className="h-3 w-3 flex-none rounded-full" style={{ background: roleCol(r) }} />{r}</button>
               ))}
