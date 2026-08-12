@@ -33,7 +33,7 @@ const WDAYS: [WDay, string][] = [["mon", "Mon"], ["tue", "Tue"], ["wed", "Wed"],
 const WIN_A = 7 * 60, WIN = 19 * 60 - WIN_A; // availability bar window: 7am–7pm
 
 type Week = Partial<Record<WDay, { from: string; to: string }>>;
-interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number; week?: Week; weeks?: Record<string, Week> }
+interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number; requested?: boolean; requestedScope?: "this" | "all"; requestedAt?: number; week?: Week; weeks?: Record<string, Week> }
 interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; season?: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean; note?: string; brk?: { from: string; to: string } }
 interface Store { staff: Staff[]; shifts: Shift[]; sites: string[] }
 
@@ -106,6 +106,7 @@ export function ScheduleApp() {
   const [hover, setHover] = useState<{ id: string; top: number; left: number } | null>(null);
   const [availEdit, setAvailEdit] = useState<Staff | null>(null);
   const [availWeekMode, setAvailWeekMode] = useState<"all" | "this">("all");
+  const [reqScope, setReqScope] = useState<"this" | "all">("this");
   const [assignOpen, setAssignOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [extraRoles, setExtraRoles] = useState<Record<string, string[]>>({});
@@ -195,7 +196,16 @@ export function ScheduleApp() {
 
   const removeShift = (id: string) => persist({ ...store, shifts: store.shifts.filter((s) => s.id !== id) });
   const remind = (id: string) => { persist({ ...store, staff: store.staff.map((s) => (s.id === id ? { ...s, reminders: (s.reminders ?? 0) + 1 } : s)) }); flash("Reminder sent."); };
-  const requestAvail = () => flash(`Availability requested from ${notSubmitted} staff.`);
+  // Step 1 — ask staff who haven't confirmed to submit their availability.
+  // Scope = this week (the period in view) or all weeks in the season. Marks
+  // each as Requested (front-end); the actual push/email is Amir's backend.
+  const requestAvail = () => {
+    const targets = store.staff.filter((s) => s.avail === "notsubmitted");
+    if (!targets.length) { flash("Everyone has already confirmed — nothing to request."); return; }
+    const at = Date.now();
+    persist({ ...store, staff: store.staff.map((s) => (s.avail === "notsubmitted" ? { ...s, requested: true, requestedScope: reqScope, requestedAt: at, reminders: (s.reminders ?? 0) + 1 } : s)) });
+    flash(`Availability requested from ${targets.length} staff · ${reqScope === "this" ? label : "all weeks this season"}.`);
+  };
   // Reconcile the grouped draft back into individual shift rows (one per needed slot),
   // reusing existing rows (to keep check-ins) where a staff member still matches.
   function currentRows(d: Draft): Shift[] {
@@ -358,8 +368,8 @@ export function ScheduleApp() {
     const demoStaff: Staff[] = [
       { id: "demo-a", name: "Alex Rivera", role: "First Aider", rate: 14.5, avail: "confirmed", week: allWeek },
       { id: "demo-b", name: "Sam Patel", role: "Play Leader", rate: 12.75, avail: "confirmed", week: allWeek },
-      { id: "demo-c", name: "Jordan Lee", role: "First Aider", rate: 13.25, avail: "confirmed", week: allWeek },
-      { id: "demo-d", name: "Priya Shah", role: "Play Leader", rate: 13.0, avail: "confirmed", week: allWeek },
+      { id: "demo-c", name: "Jordan Lee", role: "First Aider", rate: 13.25, avail: "notsubmitted", week: allWeek },
+      { id: "demo-d", name: "Priya Shah", role: "Play Leader", rate: 13.0, avail: "notsubmitted", week: allWeek },
     ];
     const ls = (gridListings.length ? gridListings : scopedListings).slice(0, 2);
     if (!ls.length) { persist({ ...store, staff: demoStaff }); flash("Added 4 sample staff — add a listing to place shifts."); return; }
@@ -477,7 +487,16 @@ export function ScheduleApp() {
         <div className="lg:w-[204px] lg:flex-none">
           <Card className="p-2.5">
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search" className="mb-2 w-full text-[12px]" />
-            {canManage && <div className="mb-2.5"><div className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step 1 · Confirm availability</div><button type="button" onClick={requestAvail} className="w-full rounded-lg bg-[#c0392b] px-2 py-2 text-[11px] font-extrabold uppercase leading-tight tracking-wide text-white hover:brightness-105">Request staff{notSubmitted ? ` · ${notSubmitted}` : ""}</button></div>}
+            {canManage && <div className="mb-2.5">
+              <div className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step 1 · Confirm availability</div>
+              <button type="button" onClick={requestAvail} className="w-full rounded-lg bg-[#c0392b] px-2 py-2.5 text-[10.5px] font-extrabold uppercase leading-tight tracking-wide text-white shadow-sm hover:brightness-105">Request staff to confirm availability{notSubmitted ? ` · ${notSubmitted}` : ""}</button>
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                {(["this", "all"] as const).map((sc) => (
+                  <button key={sc} type="button" onClick={() => setReqScope(sc)} className={"rounded-lg px-2 py-1.5 text-[11px] font-extrabold transition-colors " + (reqScope === sc ? "bg-[#1d3a8f] text-white shadow-sm" : "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]")}>{sc === "this" ? "This week" : "All weeks"}</button>
+                ))}
+              </div>
+              {notSubmitted === 0 && store.staff.length > 0 && <div className="mt-1.5 text-center text-[10px] font-bold text-[#0f7a43]">✓ All {store.staff.length} confirmed</div>}
+            </div>}
             <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
               {shownStaff.map((st) => { const hrs = staffHours(st.id); const pay = hrs * st.rate; const cost = pay * (1 + onCost / 100); return (
                 <div key={st.id}
@@ -489,7 +508,7 @@ export function ScheduleApp() {
                   <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-1"><span className="truncate text-[12px] font-extrabold text-[var(--ink)]">{st.name}</span>{st.avail === "notsubmitted" ? <button type="button" onClick={(e) => { e.stopPropagation(); remind(st.id); }} title={`Send reminder${st.reminders ? ` (sent ${st.reminders})` : ""}`} className="flex-none text-[11px]">🔔</button> : <span title="Confirmed" className="flex-none text-[10px] text-[#0f7a43]">✓</span>}</div>
-                    <div className="text-[9px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className={st.avail === "confirmed" ? "text-[#0f7a43]" : "text-[#c0392b]"}>{st.avail === "confirmed" ? "Confirmed" : "Not submitted"}</span></div>
+                    <div className="text-[9px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className={st.avail === "confirmed" ? "text-[#0f7a43]" : st.requested ? "text-[#b45309]" : "text-[#c0392b]"}>{st.avail === "confirmed" ? "Confirmed" : st.requested ? `Requested${st.requestedScope === "all" ? " · all wks" : ""}` : "Not submitted"}</span></div>
                     <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{hLabel(hrs)} · £{st.rate.toFixed(2)}/hr</div>
                     <div className="text-[11px] font-bold text-[var(--ink)]">{money(pay)} <span className="font-normal text-[var(--ink-3)]">· {money(cost)} on-cost</span></div>
                   </div>
