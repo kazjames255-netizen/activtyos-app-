@@ -7,7 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_ROLES } from "@/lib/settings";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
+import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { LocationsApp, DEMO_VENUES } from "@/features/locations/LocationsApp";
 
 // ── Team & invites (company / franchise) ──────────────────────────────────
@@ -43,6 +43,30 @@ const ROLE_TONE: Record<string, { bg: string; fg: string }> = {
 const roleTone = (id: string) => ROLE_TONE[id] ?? { bg: "#eef1f6", fg: "#48566f" };
 const roleStyle = (id: string): React.CSSProperties => { const t = roleTone(id); return { background: t.bg, color: t.fg }; };
 const initials = (s: string) => s.split(/[\s@.]+/).filter(Boolean).map((w) => w[0]).slice(0, 2).join("").toUpperCase() || "?";
+
+// Dashboard-style coloured KPI tiles.
+const GRAD = {
+  green: "linear-gradient(135deg,#0b6b3a 0%,#2fb56f 100%)",
+  amber: "linear-gradient(135deg,#9a5a12 0%,#f5b81f 100%)",
+  violet: "linear-gradient(135deg,#5b21b6 0%,#8b5cf6 100%)",
+  teal: "linear-gradient(135deg,#0e6f8a 0%,#14b8a6 100%)",
+} as const;
+function Tile({ label, value, sub, grad, icon, aside }: { label: string; value: string; sub?: React.ReactNode; grad: string; icon?: string; aside?: React.ReactNode }) {
+  return (
+    <div className="relative aspect-[4/3] overflow-hidden rounded-2xl p-4 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)] sm:aspect-auto" style={{ background: grad }}>
+      <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
+      <div className="relative flex h-full flex-col">
+        <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">
+          {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/15 text-[11px]">{icon}</span>}
+          <span className="truncate">{label}</span>
+        </div>
+        <div className="mt-1.5 text-[28px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{value}</div>
+        {sub && <div className="mt-1 text-[11px] font-semibold text-white/80">{sub}</div>}
+        {aside && <div className="mt-auto pt-2">{aside}</div>}
+      </div>
+    </div>
+  );
+}
 
 export function TeamApp() {
   const { settings, save } = useSettings();
@@ -105,7 +129,6 @@ export function TeamApp() {
   const staffCount = sub?.staffUsed ?? active.filter((r) => r.role === "staff").length;
   const staffLimit = sub?.staffLimit ?? null;
   const atCap = staffLimit != null && staffCount >= staffLimit;
-  const pct = staffLimit != null && staffLimit > 0 ? Math.min(100, Math.round((staffCount / staffLimit) * 100)) : 0;
 
   const patchMeta = (token: string, p: LocalMeta) => setMeta((m) => { const next = { ...m, [token]: { ...m[token], ...p } }; saveMeta(next); return next; });
 
@@ -160,7 +183,7 @@ export function TeamApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="Team & invites" icon="👥" lede={`${active.length} active · ${pending.length} pending — invite people, give them a role and their listings`} />
+      <div className="mb-3"><h2 className="text-[22px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Team &amp; invites</h2><p className="text-[12.5px] text-[var(--ink-3)]">Invite people, give them a role and where they work.</p></div>
 
       <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
         {([["team", "Team members"], ["locations", "Deployment"]] as const).map(([t, lbl]) => (
@@ -170,39 +193,18 @@ export function TeamApp() {
 
       {tab === "locations" ? <LocationsApp embedded /> : (
       <>
-      {/* Staff usage / plan meter */}
-      <Card className="mb-3 overflow-hidden p-0">
-        <div className="flex flex-wrap items-center gap-3 px-4 py-3.5 text-white" style={{ background: atCap ? "linear-gradient(120deg,#8a4a12,#e0742c)" : "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
-          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-white/15 text-[20px]">👥</span>
-          <div className="min-w-0">
-            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">Staff on your plan{sub?.details?.name ? ` · ${sub.details.name}` : ""}</div>
-            <div className="text-[22px] font-extrabold tabular-nums leading-tight">{staffCount}{staffLimit != null && <span className="text-white/55"> / {staffLimit}</span>}<span className="ml-1.5 text-[12.5px] font-bold text-white/70">on the team</span></div>
-          </div>
-          <Link href="/company/subscription" className="ml-auto rounded-full bg-white/15 px-3.5 py-1.5 text-[12px] font-extrabold text-white transition-colors hover:bg-white/25">Manage plan →</Link>
-        </div>
-        <div className="px-4 py-3">
-          {staffLimit != null && (
-            <div className="flex flex-wrap gap-1">
-              {Array.from({ length: Math.min(staffLimit, 24) }).map((_, i) => (
-                <span key={i} className="h-2.5 min-w-[8px] flex-1 rounded-full transition-colors" style={{ background: i < staffCount ? (atCap ? "#e0742c" : "#2f6bd8") : "var(--panel)" }} />
-              ))}
-            </div>
-          )}
-          <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[var(--ink-3)]">
-            {atCap ? (
-              <>
-                <span className="font-bold text-[#b45309]">You&rsquo;ve reached the staff included on your plan.</span>
-                <span>Invite more and you move up a tier.</span>
-                <Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">Upgrade plan →</Link>
-              </>
-            ) : staffLimit != null ? (
-              <span><b className="text-[var(--ink)]">{staffLimit - staffCount}</b> more included before your next tier — extra staff bill a little more each month.</span>
-            ) : (
-              <span>Extra staff bill a little more each month — see your plan.</span>
-            )}
-          </div>
-        </div>
-      </Card>
+      {/* KPI tiles — dashboard style */}
+      <div className="mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <Tile label={`On your plan${sub?.details?.name ? ` · ${sub.details.name}` : ""}`} icon="👥" grad={atCap ? GRAD.amber : GRAD.violet}
+          value={`${staffCount}${staffLimit != null ? ` / ${staffLimit}` : ""}`}
+          sub={staffLimit != null ? (atCap ? "at your plan limit" : `${staffLimit - staffCount} more included`) : "extra bill monthly"}
+          aside={<Link href="/company/subscription" className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">Manage plan →</Link>} />
+        <Tile label="Active team" icon="✅" grad={GRAD.green} value={`${active.length}`} sub="activated accounts" />
+        <Tile label="Pending" icon="✉️" grad={GRAD.amber} value={`${pending.length}`} sub="awaiting first login" />
+        <Tile label="Locations" icon="📍" grad={GRAD.teal} value={`${venues.length || DEMO_VENUES.length}`} sub="sites they can work" aside={<button type="button" onClick={() => setTab("locations")} className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">Deployment →</button>} />
+      </div>
+
+      {atCap && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]"><span className="font-bold">You&rsquo;ve reached the staff included on your plan.</span><span>Invite more and you move up a tier.</span><Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">Upgrade plan →</Link></div>}
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
 
