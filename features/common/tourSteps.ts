@@ -131,6 +131,24 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
       { find: "Deadline", line: "Set who it's for, a priority and a deadline, link it to the real booking or child, then save — it lands in the list straight away." },
     ],
   },
+  // Team & deployment: drive the REAL invite wizard — type the name and email,
+  // step through role, job title and deployment with Next, then open the
+  // Deployment tab and show how staff are placed.
+  staff: {
+    title: "Team & deployment",
+    noSpotlight: true,
+    introLine: "This is your team — invite people, watch who joins, then deploy them to the right places. Let me invite someone with you.",
+    doneLine: "That's it — invited, tracked from Pending to Activated, and deployed to the right location and listings.",
+    steps: [
+      { find: "Full name", fill: [["Jamie Rivers", "Priya Shah"], ["their@email.com", "priya@sunriseactive.co.uk"]], line: "Start with who's joining. I'll type their full name — Priya Shah — and the email we'll send the invite to. The email's required; that's how they actually sign up.", advance: "Next" },
+      { find: "What can they access", line: "Next, their access role — Owner, Management or Staff. This is what they can see and do across the app, and it's the only thing that governs their rights.", advance: "Next" },
+      { find: "rostered as", line: "Then their job title, like First Aider or Site Manager — the coloured rows on the rota. Not in the list? Add one and it saves for everyone.", advance: "Next" },
+      { find: "Where do they work", pick: ["All locations", "All listings here"], line: "Now where they work. Pick None and they get page access from their role but aren't rostered — or choose locations, then the listings inside them, each showing its season. I'll put Priya across all locations and listings.", advance: "Next" },
+      { find: "Ready to send", line: "Last step reviews it all — name, role, job title and where they're deployed — then Send fires off the invite. Remember: what they can do comes from the role, not from what they're assigned here.", advance: "Deployment" },
+      { find: "By location", line: "Once people join, the Deployment tab is where you place them. Flip between By location, By staff and By listing — here you can see each site and who's on it, add someone from the dropdown, and give them the same locations and listings as the invite.", pick: ["By staff"] },
+      { find: "By staff", line: "This is what decides whose registers, ratios and schedule each person sees. Deploy them here and they show up in exactly the right places — nothing more, nothing less. That's your team, start to finish." },
+    ],
+  },
   dash: {
     title: "Dashboard",
     introLine: "This is your dashboard — the first thing you see each morning. Let me walk you through it.",

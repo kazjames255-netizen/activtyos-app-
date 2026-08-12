@@ -164,4 +164,30 @@ export const TOUR_FIXTURES: Record<string, Fixtures> = {
   blocks: { ...LB_FIXTURES.blocks, ...BLOCKS_TRIM },
   dash: DASH,
   setup: SETUP,
+  // The Team & Deployment page reads venues, listings, seasons and the plan's
+  // staff seats — the generated fixtures predate all that, so top them up here
+  // and the live walkthrough drives the CURRENT page fully populated.
+  staff: {
+    ...GENERATED_FIXTURES.staff,
+    "/api/me": { role: "company", tenantName: "Sunrise Active Camps" },
+    "/api/subscription": { current: { plan: "Company", staffLimit: 10, staffUsed: 6, details: { name: "Company" } } },
+    "/api/library": {
+      venues: [
+        { id: "v-mk", name: "Loughton Manor First School" },
+        { id: "v-bl", name: "Bletchley Leisure Centre" },
+      ],
+      settings: {
+        seasons: [
+          { id: "s-sum1", name: "Summer 1", from: "2026-07-20", to: "2026-08-14", kind: "holiday" },
+          { id: "s-aut", name: "Autumn term", from: "2026-09-01", to: "2026-10-24", kind: "term" },
+        ],
+      },
+      childQuestions: [],
+    },
+    "/api/listings": [
+      { id: "l1", title: "Summer camp — Loughton Manor", venueId: "v-mk", seasonId: "s-sum1", status: "live", visibility: "public" },
+      { id: "l2", title: "Holiday club — Bletchley", venueId: "v-bl", seasonId: "s-sum1", status: "live", visibility: "public" },
+      { id: "l3", title: "After-school club", venueId: "v-mk", seasonId: "s-aut", status: "live", visibility: "public" },
+    ],
+  },
 };

@@ -257,7 +257,7 @@ export function TeamApp() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <label className="block">
                     <span className="mb-1.5 flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#fbe6f3] text-[12px]">👤</span>Full name</span>
-                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Jamie Rivers" className="w-full !py-2.5 !text-[15px]" />
+                    <Input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Jamie Rivers" className="w-full !py-2.5 !text-[15px]" />
                   </label>
                   <label className="block">
                     <span className="mb-1.5 flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#eaf1fe] text-[12px]">📧</span>Their email <span className="text-[#c0392b]">*</span></span>
