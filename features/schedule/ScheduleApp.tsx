@@ -106,7 +106,7 @@ export function ScheduleApp() {
   const [hover, setHover] = useState<{ id: string; top: number; left: number } | null>(null);
   const [availEdit, setAvailEdit] = useState<Staff | null>(null);
   const [availWeekMode, setAvailWeekMode] = useState<"all" | "this">("all");
-  const [reqScope, setReqScope] = useState<"this" | "all">("this");
+  const [reqOpen, setReqOpen] = useState(false); // Step 1: reveal the scope choice on click
   const [assignOpen, setAssignOpen] = useState(false);
   const [actionsOpen, setActionsOpen] = useState(false);
   const [extraRoles, setExtraRoles] = useState<Record<string, string[]>>({});
@@ -199,12 +199,13 @@ export function ScheduleApp() {
   // Step 1 — ask staff who haven't confirmed to submit their availability.
   // Scope = this week (the period in view) or all weeks in the season. Marks
   // each as Requested (front-end); the actual push/email is Amir's backend.
-  const requestAvail = () => {
+  const requestAvail = (scope: "this" | "all") => {
+    setReqOpen(false);
     const targets = store.staff.filter((s) => s.avail === "notsubmitted");
     if (!targets.length) { flash("Everyone has already confirmed — nothing to request."); return; }
     const at = Date.now();
-    persist({ ...store, staff: store.staff.map((s) => (s.avail === "notsubmitted" ? { ...s, requested: true, requestedScope: reqScope, requestedAt: at, reminders: (s.reminders ?? 0) + 1 } : s)) });
-    flash(`Availability requested from ${targets.length} staff · ${reqScope === "this" ? label : "all weeks this season"}.`);
+    persist({ ...store, staff: store.staff.map((s) => (s.avail === "notsubmitted" ? { ...s, requested: true, requestedScope: scope, requestedAt: at, reminders: (s.reminders ?? 0) + 1 } : s)) });
+    flash(`Availability requested from ${targets.length} staff · ${scope === "this" ? label : "all weeks this season"}.`);
   };
   // Reconcile the grouped draft back into individual shift rows (one per needed slot),
   // reusing existing rows (to keep check-ins) where a staff member still matches.
@@ -489,12 +490,14 @@ export function ScheduleApp() {
             <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍 Search" className="mb-2 w-full text-[12px]" />
             {canManage && <div className="mb-2.5">
               <div className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Step 1 · Confirm availability</div>
-              <button type="button" onClick={requestAvail} className="w-full rounded-lg bg-[#c0392b] px-2 py-2.5 text-[10.5px] font-extrabold uppercase leading-tight tracking-wide text-white shadow-sm hover:brightness-105">Request staff to confirm availability{notSubmitted ? ` · ${notSubmitted}` : ""}</button>
-              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                {(["this", "all"] as const).map((sc) => (
-                  <button key={sc} type="button" onClick={() => setReqScope(sc)} className={"rounded-lg px-2 py-1.5 text-[11px] font-extrabold transition-colors " + (reqScope === sc ? "bg-[#1d3a8f] text-white shadow-sm" : "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]")}>{sc === "this" ? "This week" : "All weeks"}</button>
-                ))}
-              </div>
+              <button type="button" onClick={() => setReqOpen((v) => !v)} className="w-full rounded-lg bg-[#c0392b] px-2 py-2.5 text-[10.5px] font-extrabold uppercase leading-tight tracking-wide text-white shadow-sm hover:brightness-105">Request staff to confirm availability{notSubmitted ? ` · ${notSubmitted}` : ""}</button>
+              {reqOpen && <div className="mt-1.5">
+                <div className="mb-1 text-[9px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Send request for…</div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <button type="button" onClick={() => requestAvail("this")} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[11px] font-extrabold text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:bg-[#eef4fd] hover:text-[#1d3a8f]">This week</button>
+                  <button type="button" onClick={() => requestAvail("all")} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[11px] font-extrabold text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:bg-[#eef4fd] hover:text-[#1d3a8f]">All weeks</button>
+                </div>
+              </div>}
               {notSubmitted === 0 && store.staff.length > 0 && <div className="mt-1.5 text-center text-[10px] font-bold text-[#0f7a43]">✓ All {store.staff.length} confirmed</div>}
             </div>}
             <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
@@ -507,7 +510,9 @@ export function ScheduleApp() {
                   className="-mx-1 flex cursor-pointer items-start gap-2 rounded-lg px-1 py-2 hover:bg-[var(--panel)]">
                   <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1"><span className="truncate text-[12px] font-extrabold text-[var(--ink)]">{st.name}</span>{st.avail === "notsubmitted" ? <button type="button" onClick={(e) => { e.stopPropagation(); remind(st.id); }} title={`Send reminder${st.reminders ? ` (sent ${st.reminders})` : ""}`} className="flex-none text-[11px]">🔔</button> : <span title="Confirmed" className="flex-none text-[10px] text-[#0f7a43]">✓</span>}</div>
+                    <div className="flex items-center gap-1"><span className="truncate text-[12px] font-extrabold text-[var(--ink)]">{st.name}</span>{st.avail === "confirmed"
+                      ? <span title="Confirmed availability" className="flex-none inline-flex items-center gap-0.5 rounded-full bg-[#e2f4ea] px-1.5 py-[1px] text-[10px] font-extrabold text-[#0f7a43]">🔔 ✓</span>
+                      : <button type="button" onClick={(e) => { e.stopPropagation(); remind(st.id); }} title={st.reminders ? `Sent ${st.reminders}× — send another reminder` : "Send availability reminder"} className="flex-none inline-flex items-center gap-0.5 rounded-full bg-[#fdebec] px-1.5 py-[1px] text-[10px] font-extrabold text-[#c0392b] hover:bg-[#f9d7da]">🔔{st.reminders ? ` ${st.reminders}` : ""}</button>}</div>
                     <div className="text-[9px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className={st.avail === "confirmed" ? "text-[#0f7a43]" : st.requested ? "text-[#b45309]" : "text-[#c0392b]"}>{st.avail === "confirmed" ? "Confirmed" : st.requested ? `Requested${st.requestedScope === "all" ? " · all wks" : ""}` : "Not submitted"}</span></div>
                     <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{hLabel(hrs)} · £{st.rate.toFixed(2)}/hr</div>
                     <div className="text-[11px] font-bold text-[var(--ink)]">{money(pay)} <span className="font-normal text-[var(--ink-3)]">· {money(cost)} on-cost</span></div>
