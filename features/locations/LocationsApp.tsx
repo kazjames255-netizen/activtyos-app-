@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { get as apiGet } from "@/lib/api";
+import { get as apiGet, isDemoMode } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Input, Select } from "@/components/ui";
@@ -18,6 +18,17 @@ const AV_COL = ["#c2268f", "#0f857b", "#2f6bd8", "#c06a10", "#6366f1", "#b45309"
 const avColour = (id: string) => AV_COL[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % AV_COL.length];
 const CHIP_ON = { borderColor: "#22b365", background: "#eef8f1", color: "#0f7a43" } as const;
 const CHIP_OFF = { borderColor: "#c9d6ef", background: "white", color: "#1d3a8f" } as const;
+
+// Pretend deployed team for the guided-tour demo only (venue/listing ids match
+// the staff-tour fixtures). One person is left unassigned so the tour can show
+// adding + assigning to a location and its listings.
+const DEMO_DEPLOY: LocStaff[] = [
+  { id: "d-alex", name: "Alex Rivera", role: "Site Manager", sites: ["v-mk"], listings: ["l1", "l3"] },
+  { id: "d-priya", name: "Priya Shah", role: "First Aider", sites: ["v-mk"], listings: ["l1"] },
+  { id: "d-sam", name: "Sam Patel", role: "Play Leader", sites: ["v-bl"], listings: ["l2"] },
+  { id: "d-jordan", name: "Jordan Lee", role: "Activity Instructor", sites: ["v-mk", "v-bl"], listings: ["l1", "l2"] },
+  { id: "d-grace", name: "Grace Bennett", role: "Coach", sites: [], listings: [] },
+];
 
 // Deployment — move staff around fast. Three views: by location, by staff (A–Z),
 // by listing. Assignment = which venues (sites) + which specific listings each
@@ -44,8 +55,11 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
 
   const list = venues; // real venues from the library (null while loading, [] if none)
 
-  // Load any saved staff assignments (real staff only — no demo seed).
+  // Load any saved staff assignments (real staff only — no demo seed), UNLESS
+  // we're inside a guided-tour iframe (demo mode), where we seed a small pretend
+  // team so the walkthrough can show deploying and assigning to listings.
   useEffect(() => {
+    if (isDemoMode()) { setStore({ staff: DEMO_DEPLOY }); return; }
     try { const s = JSON.parse(localStorage.getItem(STAFF_KEY) || "null"); if (s?.staff) setStore({ staff: s.staff.map((x: LocStaff) => ({ ...x, sites: x.sites ?? [], listings: x.listings ?? [] })) }); } catch { /* ignore */ }
   }, []);
 

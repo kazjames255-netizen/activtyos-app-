@@ -44,7 +44,10 @@ export const SETTINGS_LINKS: Record<string, SettingsLink[]> = {
     { icon: "🎟", label: "Vouchers", tab: "vouchers", note: "Childcare voucher and funding setup" },
   ],
   newsfeed: [{ icon: "🔔", label: "Notifications", tab: "notifications", note: "How families are alerted to new posts" }],
-  staff: [{ icon: "👥", label: "Staff & workforce", tab: "staff", note: "Roles, invites and what staff can access" }],
+  staff: [
+    { icon: "🔑", label: "Roles & permissions", tab: "roles", note: "the access roles themselves — Owner, Management, Staff — and a None / View / Edit grid setting exactly what each role can see and change in every area. This is what governs a person's rights; deployment only decides where they're rostered" },
+    { icon: "👥", label: "Staff & workforce", tab: "staff", note: "your team policy — whether a valid DBS and in-date certificates are required before someone can work, and whether only leads can assign staff to groups. The checks are enforced in the background" },
+  ],
   tasks: [{ icon: "🔔", label: "Notifications", tab: "notifications", note: "Reminders and how tasks are surfaced" }],
   trips: [{ icon: "🚌", label: "Trips & visits", tab: "trips", note: "Default consent and risk-assessment settings for trips" }],
   referrals: [{ icon: "🎁", label: "Refer a friend", tab: "refer", note: "The referral reward and how it's paid" }],
@@ -145,8 +148,9 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
       { find: "rostered as", line: "Then their job title, like First Aider or Site Manager — the coloured rows on the rota. Not in the list? Add one and it saves for everyone.", advance: "Next" },
       { find: "Where do they work", pick: ["All locations", "All listings here"], line: "Now where they work. Pick None and they get page access from their role but aren't rostered — or choose locations, then the listings inside them, each showing its season. I'll put Priya across all locations and listings.", advance: "Next" },
       { find: "Ready to send", line: "Last step reviews it all — name, role, job title and where they're deployed — then Send fires off the invite. Remember: what they can do comes from the role, not from what they're assigned here.", advance: "Deployment" },
-      { find: "By location", line: "Once people join, the Deployment tab is where you place them. Flip between By location, By staff and By listing — here you can see each site and who's on it, add someone from the dropdown, and give them the same locations and listings as the invite.", pick: ["By staff"] },
-      { find: "By staff", line: "This is what decides whose registers, ratios and schedule each person sees. Deploy them here and they show up in exactly the right places — nothing more, nothing less. That's your team, start to finish." },
+      { find: "By location", line: "Once people have joined, the Deployment tab is where you place them. By location shows each site and who's on it — here Loughton Manor has Alex, Priya and Jordan. Open a location's dropdown to add someone new to it.", advance: "By staff" },
+      { find: "By staff", pick: ["🎟"], line: "By staff lists everyone A to Z with their locations and listings as chips. Tap a location or a specific listing to turn it on or off — I'll assign a listing now — and that instantly changes which sites and programmes they're rostered for.", advance: "By listing" },
+      { find: "By listing", line: "And By listing flips it round — each listing with exactly who's on it, so you can see cover at a glance. That's the whole point: deployment decides whose registers, ratios and schedule each person sees — nothing more, nothing less. That's your team, start to finish." },
     ],
   },
   dash: {
