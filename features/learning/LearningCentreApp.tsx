@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { SEED_LIBRARY, blankCourse, type CourseDoc } from "./courseContent";
+import { CoursePlayer } from "./CoursePlayer";
+import { CourseEditor } from "./CourseEditor";
 
 // Company / Franchise Learning Centre — the training management side (the manual's
 // LCM view, compliance merged in). Four tabs: Catalogue (courses + quizzes, create
@@ -29,18 +32,11 @@ const Badge = ({ text, tone }: { text: string; tone?: Tone }) => (
   <span className={"inline-block rounded-full px-2.5 py-0.5 text-[11px] font-bold " + TONES[tone ?? STATUS_TONE[text] ?? "grey"]}>{text}</span>
 );
 
-interface Item { type: "video" | "doc"; title: string; format: string }
-interface Course { id: string; title: string; cat: string; due: string; quiz: string | null; items: Item[] }
 interface Quiz { id: string; title: string; cat: string; course: string | null; pass: number; questions: number }
 interface Created { t: string; type: "Course" | "Quiz"; extra: string }
 interface Assignment { item: string; scope: string; due: string; req: boolean }
 interface Staff { name: string; role: string; op: string; sg: string; sgq: number | null; fa: string; dbs: string; pfa: string }
 
-const SEED_COURSES: Course[] = [
-  { id: "c1", title: "Safeguarding Children (Level 2)", cat: "Mandatory", due: "30 Jun", quiz: "q1", items: [{ type: "video", title: "Intro to safeguarding", format: "MP4" }, { type: "doc", title: "Safeguarding policy + pictures", format: "PDF" }, { type: "video", title: "Reporting a concern", format: "MP4" }] },
-  { id: "c2", title: "Paediatric First Aid Refresher", cat: "Mandatory", due: "15 Jul", quiz: null, items: [{ type: "video", title: "CPR basics", format: "MP4" }, { type: "doc", title: "First aid handbook", format: "PDF" }] },
-  { id: "c3", title: "Positive Behaviour Management", cat: "Recommended", due: "", quiz: null, items: [{ type: "video", title: "De-escalation techniques", format: "MP4" }, { type: "doc", title: "Behaviour policy", format: "PDF" }] },
-];
 const SEED_QUIZZES: Quiz[] = [
   { id: "q1", title: "Safeguarding Basics Quiz", cat: "Mandatory", course: "c1", pass: 80, questions: 5 },
   { id: "q2", title: "Health & Safety Quiz", cat: "Mandatory", course: null, pass: 80, questions: 3 },
@@ -68,26 +64,34 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const [help, setHelp] = useState(false);
   const [created, setCreated] = useState<Created[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>(SEED_ASSIGNMENTS);
+  const [courses, setCourses] = useState<CourseDoc[]>(SEED_LIBRARY);
+  const [player, setPlayer] = useState<CourseDoc | null>(null);
+  const [editing, setEditing] = useState<CourseDoc | null>(null);
   const [op, setOp] = useState("all");
   const [toast, setToast] = useState<string | null>(null);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
+  const CKEY = "aos.learn.courses.v1";
 
-  // New-course/quiz modal + new-assignment modal
+  // New-quiz modal + new-assignment modal
   const [newKind, setNewKind] = useState<"course" | "quiz" | null>(null);
   const [newTitle, setNewTitle] = useState("");
   const [aOpen, setAOpen] = useState(false);
   const [aItem, setAItem] = useState(""); const [aLoc, setALoc] = useState("all"); const [aWho, setAWho] = useState("All staff"); const [aDue, setADue] = useState(""); const [aReq, setAReq] = useState(true);
 
-  useEffect(() => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) { setCreated(s.created ?? []); setAssignments(s.assignments ?? SEED_ASSIGNMENTS); } } catch { /* ignore */ } }, []);
+  useEffect(() => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s) { setCreated(s.created ?? []); setAssignments(s.assignments ?? SEED_ASSIGNMENTS); } } catch { /* ignore */ } try { const c = JSON.parse(localStorage.getItem(CKEY) || "null"); if (Array.isArray(c) && c.length) setCourses(c); } catch { /* ignore */ } }, []);
   const persist = (c: Created[], a: Assignment[]) => { setCreated(c); setAssignments(a); try { localStorage.setItem(KEY, JSON.stringify({ created: c, assignments: a })); } catch { /* ignore */ } };
+  const persistCourses = (list: CourseDoc[]) => { setCourses(list); try { localStorage.setItem(CKEY, JSON.stringify(list)); } catch { /* ignore */ } };
+  const saveCourse = (c: CourseDoc) => { persistCourses(courses.some((x) => x.id === c.id) ? courses.map((x) => (x.id === c.id ? c : x)) : [...courses, c]); setEditing(null); flash("✅ Course saved"); };
+  const deleteCourse = (id: string) => { if (typeof window !== "undefined" && !window.confirm("Delete this course? This can't be undone.")) return; persistCourses(courses.filter((x) => x.id !== id)); flash("Course deleted"); };
+  const courseMins = (c: CourseDoc) => c.lessons.reduce((n, l) => n + l.mins, 0);
 
   const catalogue = useMemo(() => {
     const out: { t: string; type: "Course" | "Quiz"; extra: string }[] = [];
-    SEED_COURSES.forEach((c) => out.push({ t: c.title, type: "Course", extra: c.quiz ? "has quiz" : `${c.items.length} items` }));
+    courses.forEach((c) => out.push({ t: c.title, type: "Course", extra: `${c.lessons.length} lessons` }));
     SEED_QUIZZES.forEach((q) => out.push({ t: q.title, type: "Quiz", extra: `${q.questions} Qs · pass ${q.pass}%` }));
     created.forEach((x) => out.push(x));
     return out;
-  }, [created]);
+  }, [created, courses]);
 
   const staff = useMemo(() => isCo ? (op === "all" ? SEED_STAFF : SEED_STAFF.filter((s) => s.op === op)) : SEED_STAFF.filter((s) => s.op === "Milton Keynes"), [isCo, op]);
   const compN = staff.filter((s) => s.sg === "Complete").length;
@@ -121,13 +125,34 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
           {/* Catalogue */}
           {tab === "cat" && (<>
             <div className="mb-3 flex flex-wrap gap-2">
-              <Button variant="primary" onClick={() => { setNewKind("course"); setNewTitle(""); }}>+ New course</Button>
+              <Button variant="primary" onClick={() => setEditing(blankCourse("c" + Date.now().toString(36)))}>+ New course</Button>
               <Button onClick={() => { setNewKind("quiz"); setNewTitle(""); }}>+ New quiz</Button>
             </div>
+            {/* Courses — interactive, editable, deletable */}
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Courses</div>
+            <div className="mb-4 flex flex-col gap-2.5">
+              {courses.map((c) => (
+                <div key={c.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
+                  <button type="button" onClick={() => setPlayer(c)} className="min-w-0 flex-1 text-left">
+                    <div className="text-[14.5px] font-extrabold text-[var(--ink)]">{c.title}</div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 text-[11.5px] text-[var(--ink-3)]"><Badge text="Course" /><Badge text={c.cat} />{c.lessons.length} lessons · ~{courseMins(c)} min · 🔊 read-aloud</div>
+                    {c.blurb && <div className="mt-1 line-clamp-1 text-[12px] text-[var(--ink-2)]">{c.blurb}</div>}
+                  </button>
+                  <div className="flex flex-none gap-1.5">
+                    <Button variant="primary" onClick={() => setPlayer(c)}>Open</Button>
+                    <Button onClick={() => setEditing(c)}>Edit</Button>
+                    <button type="button" onClick={() => deleteCourse(c.id)} title="Delete course" className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>
+                    <Button onClick={() => openAssign(c.title)}>Assign</Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {/* Standalone quizzes */}
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Quizzes</div>
             <div className="flex flex-col gap-2.5">
-              {catalogue.map((it, i) => (
+              {[...SEED_QUIZZES.map((q) => ({ t: q.title, extra: `${q.questions} Qs · pass ${q.pass}%` })), ...created.filter((x) => x.type === "Quiz").map((x) => ({ t: x.t, extra: x.extra }))].map((it, i) => (
                 <div key={it.t + i} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-4 py-3">
-                  <div className="min-w-0 flex-1"><div className="text-[14px] font-extrabold text-[var(--ink)]">{it.t}</div><div className="mt-1 flex items-center gap-2 text-[11.5px] text-[var(--ink-3)]"><Badge text={it.type} />{it.extra}</div></div>
+                  <div className="min-w-0 flex-1"><div className="text-[14px] font-extrabold text-[var(--ink)]">{it.t}</div><div className="mt-1 flex items-center gap-2 text-[11.5px] text-[var(--ink-3)]"><Badge text="Quiz" tone="grey" />{it.extra}</div></div>
                   <Button onClick={() => openAssign(it.t)}>Assign</Button>
                 </div>
               ))}
@@ -212,7 +237,10 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
         </div>
       )}
 
-      {toast && <div className="fixed bottom-5 left-1/2 z-[140] -translate-x-1/2 rounded-full bg-[#111634] px-4 py-2 text-[13px] font-bold text-white shadow-lg">{toast}</div>}
+      {toast && <div className="fixed bottom-5 left-1/2 z-[150] -translate-x-1/2 rounded-full bg-[#111634] px-4 py-2 text-[13px] font-bold text-white shadow-lg">{toast}</div>}
+
+      {player && <CoursePlayer course={player} onClose={() => setPlayer(null)} />}
+      {editing && <CourseEditor course={editing} onSave={saveCourse} onCancel={() => setEditing(null)} />}
     </div>
   );
 }
