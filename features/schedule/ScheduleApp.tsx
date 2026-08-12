@@ -352,17 +352,22 @@ export function ScheduleApp() {
       <div className="mb-3 flex flex-wrap items-center gap-2">
         {/* Season first — multi-select; it scopes the locations & listings below */}
         <div className="relative">
-          <button type="button" onClick={() => setSeasonMenu((v) => !v)} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📅 {seasonSel.length === 0 ? "All seasons" : seasonSel.length === 1 ? seasonSel[0] : `${seasonSel.length} seasons`} ▾</button>
-          {seasonMenu && (
-            <div className="absolute left-0 top-[40px] z-30 w-[220px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
+          <button type="button" onClick={() => setSeasonMenu((v) => !v)} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📅 {seasonSel.length === 0 ? "All seasons" : `${seasonSel.length} selected`} ▾</button>
+          {seasonMenu && <>
+            <div className="fixed inset-0 z-20" onClick={() => setSeasonMenu(false)} />
+            <div className="absolute left-0 top-[40px] z-30 max-h-[320px] w-[230px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white shadow-lg">
               <button type="button" onClick={() => { setSeasonSel([]); setSite("all"); setListingF("all"); }} className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-[12.5px] font-bold hover:bg-[var(--panel)]"><span className="w-4">{seasonSel.length === 0 ? "✓" : ""}</span>All seasons</button>
               {seasonOpts.length === 0 && <div className="px-3.5 py-2 text-[12px] text-[var(--ink-3)]">No seasons yet — add them in Setup → Seasons.</div>}
               {seasonOpts.map((sn) => { const on = seasonSel.includes(sn); return (
                 <button key={sn} type="button" onClick={() => { setSeasonSel((xs) => (xs.includes(sn) ? xs.filter((x) => x !== sn) : [...xs, sn])); setSite("all"); setListingF("all"); }} className="flex w-full items-center gap-2 border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2 text-left text-[12.5px] font-semibold hover:bg-[var(--panel)]" style={{ color: on ? "#0f7a43" : "var(--ink)" }}><span className="w-4">{on ? "✓" : ""}</span>{sn}</button>
               ); })}
+              <button type="button" onClick={() => setSeasonMenu(false)} className="sticky bottom-0 block w-full border-t border-[var(--line)] bg-[#1d3a8f] px-3.5 py-2 text-center text-[12.5px] font-extrabold text-white hover:bg-[#16306e]">Done</button>
             </div>
-          )}
+          </>}
         </div>
+        {seasonSel.map((sn) => (
+          <span key={sn} className="inline-flex items-center gap-1 rounded-full border border-[#bfe3cd] bg-[#eef8f1] px-2.5 py-1 text-[12px] font-bold text-[#0f7a43]">📅 {sn}<button type="button" onClick={() => { setSeasonSel((xs) => xs.filter((x) => x !== sn)); setSite("all"); setListingF("all"); }} className="text-[13px] text-[#0f7a43] hover:text-[#c0392b]">×</button></span>
+        ))}
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📍 <Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All locations</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">🎟 <Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All listings</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1">
