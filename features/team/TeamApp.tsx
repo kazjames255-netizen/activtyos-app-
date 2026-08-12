@@ -178,41 +178,51 @@ export function TeamApp() {
       {tab === "locations" ? <LocationsApp embedded /> : (
       <>
       {/* Staff usage / plan meter */}
-      <Card className="mb-3 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="text-[13px] font-extrabold text-[var(--ink)]">
-            Staff on your plan{sub?.details?.name ? ` · ${sub.details.name}` : ""}
+      <Card className="mb-3 overflow-hidden p-0">
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3.5 text-white" style={{ background: atCap ? "linear-gradient(120deg,#8a4a12,#e0742c)" : "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
+          <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl bg-white/15 text-[20px]">👥</span>
+          <div className="min-w-0">
+            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">Staff on your plan{sub?.details?.name ? ` · ${sub.details.name}` : ""}</div>
+            <div className="text-[22px] font-extrabold tabular-nums leading-tight">{staffCount}{staffLimit != null && <span className="text-white/55"> / {staffLimit}</span>}<span className="ml-1.5 text-[12.5px] font-bold text-white/70">on the team</span></div>
           </div>
-          <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{staffCount}{staffLimit != null ? ` / ${staffLimit}` : ""}</div>
+          <Link href="/company/subscription" className="ml-auto rounded-full bg-white/15 px-3.5 py-1.5 text-[12px] font-extrabold text-white transition-colors hover:bg-white/25">Manage plan →</Link>
         </div>
-        {staffLimit != null && (
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-[var(--panel)]">
-            <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: atCap ? "linear-gradient(90deg,#f0a13a,#e0742c)" : "linear-gradient(90deg,#4f8bf5,#2f6bd8)" }} />
-          </div>
-        )}
-        <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[var(--ink-3)]">
-          {atCap ? (
-            <>
-              <span className="font-bold text-[#b45309]">You&rsquo;ve reached the staff included on your plan.</span>
-              <span>Invite more and you move up a tier.</span>
-              <Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">Upgrade plan →</Link>
-            </>
-          ) : staffLimit != null ? (
-            <span>{staffLimit - staffCount} more included before your next tier.</span>
-          ) : (
-            <span>Extra staff bill a little more each month — see your plan.</span>
+        <div className="px-4 py-3">
+          {staffLimit != null && (
+            <div className="flex flex-wrap gap-1">
+              {Array.from({ length: Math.min(staffLimit, 24) }).map((_, i) => (
+                <span key={i} className="h-2.5 min-w-[8px] flex-1 rounded-full transition-colors" style={{ background: i < staffCount ? (atCap ? "#e0742c" : "#2f6bd8") : "var(--panel)" }} />
+              ))}
+            </div>
           )}
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-[12px] text-[var(--ink-3)]">
+            {atCap ? (
+              <>
+                <span className="font-bold text-[#b45309]">You&rsquo;ve reached the staff included on your plan.</span>
+                <span>Invite more and you move up a tier.</span>
+                <Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">Upgrade plan →</Link>
+              </>
+            ) : staffLimit != null ? (
+              <span><b className="text-[var(--ink)]">{staffLimit - staffCount}</b> more included before your next tier — extra staff bill a little more each month.</span>
+            ) : (
+              <span>Extra staff bill a little more each month — see your plan.</span>
+            )}
+          </div>
         </div>
       </Card>
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
 
       {/* Invite panel */}
-      <Card className="mb-4 p-4">
-        <div className="text-[14px] font-extrabold text-[var(--ink)]">Invite someone</div>
-        <p className="mt-0.5 text-[12px] text-[var(--ink-3)]">{me?.tenantName ? `${me.tenantName} — ` : ""}send it by email, or create it and share the link yourself.</p>
-
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+      <Card className="mb-4 overflow-hidden p-0">
+        <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[linear-gradient(120deg,#eef4fd,#f7f0fb)] px-4 py-3">
+          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-white text-[18px] shadow-sm">✉️</span>
+          <div><div className="text-[15px] font-extrabold text-[var(--ink)]">Invite someone</div><p className="text-[12px] text-[var(--ink-3)]">{me?.tenantName ? `${me.tenantName} — ` : ""}send it by email, or create it and share the link yourself.</p></div>
+        </div>
+        <div className="p-4">
+        <div className="grid gap-4 lg:grid-cols-[1.7fr,1fr]">
+        <div className="min-w-0">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Their email <span className="font-normal normal-case">— optional</span></label>
             <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="w-full" />
@@ -280,6 +290,32 @@ export function TeamApp() {
             <div className="mt-1 text-[11px] text-[var(--ink-3)]">Assigned people only see the registers, trips, timetable and children for these{assignMode === "locations" ? " locations" : " listings"}. A location covers every listing that runs there.</div>
           )}
         </div>
+        </div>
+
+        {/* live preview */}
+        {(() => {
+          const nm = email.trim() ? email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "New teammate";
+          const roleNm = roles.find((r) => r.id === roleId)?.name ?? "Staff";
+          const assign = assignMode === "all" ? "All listings" : assignMode === "none" ? "Not rostered — role access only" : assignMode === "locations" ? (assignIds.length ? `${assignIds.length} location${assignIds.length === 1 ? "" : "s"}` : "By location — pick some") : (assignIds.length ? `${assignIds.length} listing${assignIds.length === 1 ? "" : "s"}` : "By listing — pick some");
+          return (
+            <aside className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
+              <div className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">They&rsquo;ll get</div>
+              <div className="mt-2 overflow-hidden rounded-xl bg-white shadow-sm">
+                <div className="flex items-center gap-2.5 px-3 py-3">
+                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-[14px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>{initials(nm)}</span>
+                  <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{nm}</div><div className="truncate text-[11.5px] text-[var(--ink-3)]">{email.trim() || "no email — you share the link"}</div></div>
+                </div>
+                <div className="flex flex-wrap gap-1.5 border-t border-[var(--line-2,#eef2f8)] px-3 py-2.5">
+                  <span className="rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={roleStyle(roleId)}>{roleNm}</span>
+                  <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{jobTitle || "no job title"}</span>
+                </div>
+                <div className="border-t border-[var(--line-2,#eef2f8)] px-3 py-2 text-[11.5px] font-semibold text-[var(--ink-2)]">📍 {assign}</div>
+              </div>
+              <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-3)]">Appears under <b>Pending</b> until they log in &amp; finish onboarding — then they join the schedule.</p>
+            </aside>
+          );
+        })()}
+        </div>
 
         {capNote && (
           <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]">
@@ -292,6 +328,7 @@ export function TeamApp() {
           <Button variant="primary" disabled={busy} onClick={() => createInvite("staff")} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">＋ Send staff invite</Button>
           {canInviteFranchise && <Button disabled={busy} onClick={() => createInvite("franchise")}>＋ Invite a franchise</Button>}
           {sentNote && <span className="text-[12px] font-bold text-[#0f7a43]">✓ {sentNote}</span>}
+        </div>
         </div>
       </Card>
 
@@ -344,5 +381,6 @@ export function TeamApp() {
     </div>
   );
 }
+
 
 
