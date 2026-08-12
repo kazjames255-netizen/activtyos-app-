@@ -60,6 +60,7 @@ export function TeamApp() {
   const [copied, setCopied] = useState<string | null>(null);
   const [sentNote, setSentNote] = useState<string | null>(null);
 
+  const [invFilter, setInvFilter] = useState<"all" | "pending" | "activated">("all");
   // Invite form
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
@@ -98,7 +99,6 @@ export function TeamApp() {
     [invites, meta],
   );
   const active = rows.filter((r) => r.usedBy && r.meta.status !== "deactivated");
-  const deactivated = rows.filter((r) => r.usedBy && r.meta.status === "deactivated");
   const pending = rows.filter((r) => !r.usedBy);
 
   // Staff usage — prefer the server's number, else count accepted staff invites.
@@ -157,25 +157,6 @@ export function TeamApp() {
     !a || a.mode === "all" ? "All listings"
       : a.mode === "locations" ? `${a.ids.length} location${a.ids.length === 1 ? "" : "s"}`
         : `${a.ids.length} listing${a.ids.length === 1 ? "" : "s"}`;
-
-  const memberRow = (r: (typeof rows)[number], tone: "active" | "deactivated") => (
-    <Card key={r.token} className={"flex flex-wrap items-center gap-3 p-3 " + (tone === "deactivated" ? "opacity-60" : "")}>
-      <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[13px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#16306e)" }}>{initials(r.sentTo || r.usedBy || "?")}</span>
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{r.sentTo || r.usedBy || "Team member"}</div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
-          <span className="rounded-full px-2 py-[2px] font-extrabold" style={roleStyle(r.role === "franchise" ? "franchise" : r.meta.staffRole ?? "coach")}>{r.role === "franchise" ? "Franchise" : roleName(r.meta.staffRole)}</span>
-          {r.role === "staff" && <span className="rounded-full bg-[var(--panel)] px-2 py-[2px] font-semibold text-[var(--ink-3)]">📍 {assignLabel(r.meta.assignment)}</span>}
-          <span className="text-[var(--ink-3)]">· joined {r.createdAt.slice(0, 10)}</span>
-        </div>
-      </div>
-      {tone === "active" ? (
-        <button type="button" onClick={() => setStatus(r.token, "deactivated")} className="flex-none rounded-full border border-[#e6b3b3] bg-white px-3 py-1.5 text-[12px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Deactivate</button>
-      ) : (
-        <button type="button" onClick={() => setStatus(r.token, "active")} className="flex-none rounded-full border border-[#bfe6cf] bg-white px-3 py-1.5 text-[12px] font-bold text-[#0f7a43] hover:bg-[#eafaf0]">Reactivate</button>
-      )}
-    </Card>
-  );
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
@@ -375,55 +356,63 @@ export function TeamApp() {
         })()}
       </Card>
 
-      {/* Team */}
+      {/* Invites */}
       {!invites ? (
         <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-      ) : (
-        <div className="flex flex-col gap-4">
-          <div>
-            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Active team · {active.length}</div>
-            {active.length === 0 ? <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">No one has joined yet — invites appear below until they accept.</Card>
-              : <div className="flex flex-col gap-2">{active.map((r) => memberRow(r, "active"))}</div>}
+      ) : (() => {
+        const statusOf = (r: (typeof rows)[number]) => (!r.usedBy ? "pending" : r.meta.status === "deactivated" ? "deactivated" : "activated");
+        const shownInv = rows.filter((r) => invFilter === "all" || statusOf(r) === invFilter);
+        return (
+        <div>
+          <div className="mb-2 flex flex-wrap items-center gap-2">
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Invites · {rows.length}</div>
+            <div className="ml-1 inline-flex rounded-lg bg-[var(--panel)] p-0.5">
+              {([["all", `All ${rows.length}`], ["pending", `Pending ${pending.length}`], ["activated", `Activated ${active.length}`]] as const).map(([f, lbl]) => (
+                <button key={f} type="button" onClick={() => setInvFilter(f)} className={"rounded-md px-3 py-1 text-[12px] font-bold transition-colors " + (invFilter === f ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)]")}>{lbl}</button>
+              ))}
+            </div>
+            <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">Activated team &amp; their sites live in <b>Deployment</b>.</span>
           </div>
-
-          {pending.length > 0 && (
-            <div>
-              <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Pending invites · {pending.length}</div>
-              <div className="flex flex-col gap-2">
-                {pending.map((r) => (
+          {shownInv.length === 0 ? (
+            <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{invFilter === "activated" ? "No one has activated yet — invites show as Pending until they log in." : invFilter === "pending" ? "No pending invites — everyone's activated." : "No invites yet — send one above."}</Card>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {shownInv.map((r) => {
+                const st = statusOf(r);
+                const who = r.meta.name || r.sentTo || (r.usedBy ? "Team member" : "Shareable link");
+                const badge = st === "pending" ? { t: "Pending", bg: "#fcefd2", fg: "#b45309" } : st === "deactivated" ? { t: "Deactivated", bg: "#eef1f6", fg: "#64748b" } : { t: "✓ Account activated", bg: "#e2f4ea", fg: "#0f7a43" };
+                return (
                   <Card key={r.token} className="flex flex-wrap items-center gap-3 p-3">
-                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[#fdf6e3] text-[15px]">✉️</span>
+                    <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full text-[13px] font-extrabold" style={{ background: st === "activated" ? "#e2f4ea" : st === "pending" ? "#fdf6e3" : "#eef1f6", color: st === "activated" ? "#0f7a43" : "var(--ink-2)" }}>{st === "activated" ? initials(who) : "✉️"}</span>
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-[13px] font-bold text-[var(--ink)]">{r.sentTo || "Shareable link"}</div>
+                      <div className="truncate text-[13px] font-bold text-[var(--ink)]">{who}{r.meta.name && r.sentTo ? <span className="font-normal text-[var(--ink-3)]"> · {r.sentTo}</span> : ""}</div>
                       <div className="mt-0.5 flex flex-wrap items-center gap-1.5 text-[11.5px]">
                         <span className="rounded-full px-2 py-[2px] font-extrabold" style={roleStyle(r.role === "franchise" ? "franchise" : r.meta.staffRole ?? "coach")}>{r.role === "franchise" ? "Franchise" : roleName(r.meta.staffRole)}</span>
+                        {r.meta.jobTitle && <span className="rounded-full bg-[var(--panel)] px-2 py-[2px] font-bold text-[var(--ink-2)]">{r.meta.jobTitle}</span>}
                         {r.role === "staff" && <span className="rounded-full bg-[var(--panel)] px-2 py-[2px] font-semibold text-[var(--ink-3)]">📍 {assignLabel(r.meta.assignment)}</span>}
-                        <span className="rounded-full bg-[#fcefd2] px-2 py-[2px] font-extrabold text-[#b45309]">Pending</span>
+                        <span className="rounded-full px-2 py-[2px] font-extrabold" style={{ background: badge.bg, color: badge.fg }}>{badge.t}</span>
                       </div>
                     </div>
                     <div className="flex flex-none items-center gap-2">
-                      <Button sm onClick={() => copy(r.token)}>{copied === r.token ? "Copied!" : "Copy link"}</Button>
-                      <button type="button" onClick={() => deleteInvite(r.token)} title="Delete this invite — the link stops working" className="rounded-full border border-[#e6b3b3] bg-white px-3 py-1.5 text-[12px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Delete</button>
+                      {st === "pending" && <Button sm onClick={() => copy(r.token)}>{copied === r.token ? "Copied!" : "Copy link"}</Button>}
+                      {st === "activated" && <button type="button" onClick={() => setStatus(r.token, "deactivated")} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Deactivate</button>}
+                      {st === "deactivated" && <button type="button" onClick={() => setStatus(r.token, "active")} className="rounded-full border border-[#bfe3cd] bg-[#eef8f1] px-3 py-1.5 text-[12px] font-bold text-[#0f7a43] hover:brightness-105">Reactivate</button>}
+                      <button type="button" onClick={() => deleteInvite(r.token)} title="Remove this invite / person" className="rounded-full border border-[#e6b3b3] bg-white px-3 py-1.5 text-[12px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Delete</button>
                     </div>
                   </Card>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {deactivated.length > 0 && (
-            <div>
-              <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Deactivated · {deactivated.length}</div>
-              <div className="flex flex-col gap-2">{deactivated.map((r) => memberRow(r, "deactivated"))}</div>
+                );
+              })}
             </div>
           )}
         </div>
-      )}
+        );
+      })()}
       </>
       )}
     </div>
   );
 }
+
 
 
 
