@@ -349,9 +349,11 @@ export function ScheduleApp() {
     const st = s.staffId ? staffById[s.staffId] : null; const filled = !!st;
     // Status heat — colour is the state, not the role: green = filled/covered,
     // amber = needs staff. (The role is still named on the row label + its dot.)
+    // #6 — assigned = bold navy fill; unassigned = soft red tint (calmer when
+    // the rota has lots of open shifts, and the booked ones pop).
     const heat = filled
       ? { background: "linear-gradient(160deg,#3a6fd8 0%,#234da8 55%,#1d3a8f 100%)", borderColor: "#16306e", color: "#ffffff", boxShadow: "inset 0 1px 0 rgba(255,255,255,.22)" }
-      : { background: "linear-gradient(160deg,#e04b57 0%,#c42438 60%,#a81328 100%)", borderColor: "#8f0f20", color: "#ffffff", boxShadow: "inset 0 1px 0 rgba(255,255,255,.2)" };
+      : { background: "#fff1f2", borderColor: "#f4a6ae", color: "#b91c1c" };
     return (
       <button type="button" onClick={() => canManage && openEditGroup(s)} disabled={!canManage}
         className={"w-full rounded-lg border text-left shadow-sm transition enabled:hover:brightness-[1.04] enabled:hover:shadow-md " + (compact ? "px-1 py-1 text-[9.5px]" : "px-2 py-1.5 text-[11px]")}
@@ -572,7 +574,7 @@ export function ScheduleApp() {
           <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-white px-3.5 py-2 text-[11.5px] font-bold text-[var(--ink-2)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
             <span className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Key</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "linear-gradient(160deg,#3a6fd8,#1d3a8f)" }} />Assigned</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "linear-gradient(160deg,#e04b57,#a81328)" }} />Not assigned</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "#fff1f2", boxShadow: "inset 0 0 0 1px #f4a6ae" }} />Not assigned</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-[var(--panel)] ring-1 ring-inset ring-[var(--line)]" />No shift</span>
             {canManage && <span className="ml-auto flex items-center gap-2">
               <button type="button" onClick={seedDemo} className="rounded-full bg-[#eef4fd] px-3 py-1 text-[11.5px] font-extrabold text-[#1d3a8f] ring-1 ring-[#bcd0f5] hover:bg-[#e2ecfb]">🎨 Add sample shifts</button>
