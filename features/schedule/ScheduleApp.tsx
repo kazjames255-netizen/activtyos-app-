@@ -95,7 +95,8 @@ export function ScheduleApp() {
   const [group, setGroup] = useState<Group>("area");
   const [site, setSite] = useState("all");
   const [listingF, setListingF] = useState("all");
-  const [seasonF, setSeasonF] = useState("all");
+  const [seasonSel, setSeasonSel] = useState<string[]>([]); // [] = all seasons; season is picked first
+  const [seasonMenu, setSeasonMenu] = useState(false);
   const [q, setQ] = useState("");
   const [help, setHelp] = useState(false);
   const [canManage, setCanManage] = useState(true);
@@ -122,7 +123,7 @@ export function ScheduleApp() {
   const addRole = (siteName: string, role: string) => { setExtraRoles((p) => ({ ...p, [siteName]: [...new Set([...(p[siteName] ?? []), role])] })); setRoleMenu(null); };
   const [toast, setToast] = useState<string | null>(null);
   const [venuesR, setVenuesR] = useState<{ id: string; name: string }[]>([]);
-  const [listingsR, setListingsR] = useState<{ title: string; seasonId?: string | null }[]>([]);
+  const [listingsR, setListingsR] = useState<{ title: string; seasonId?: string | null; venueId?: string | null }[]>([]);
   const [schedView, setSchedView] = useState<"rota" | "settings">("rota");
   const [copyMenu, setCopyMenu] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -135,10 +136,15 @@ export function ScheduleApp() {
     setStore(load()); setTemplates(loadTpl());
     apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {});
     apiGet<{ venues?: { id: string; name: string }[] }>("/api/library").then((lib) => setVenuesR(lib.venues ?? [])).catch(() => {});
-    apiGet<{ title?: string; name?: string; seasonId?: string | null }[]>("/api/listings?mine=1").then((rows) => setListingsR(rows.map((r) => ({ title: r.title || r.name || "", seasonId: r.seasonId ?? null })).filter((r) => r.title))).catch(() => {});
+    apiGet<{ title?: string; name?: string; seasonId?: string | null; venueId?: string | null }[]>("/api/listings?mine=1").then((rows) => setListingsR(rows.map((r) => ({ title: r.title || r.name || "", seasonId: r.seasonId ?? null, venueId: r.venueId ?? null })).filter((r) => r.title))).catch(() => {});
   }, []);
-  // Real data drives the filters: locations from the library, listings + seasons from the operator's data.
-  const sites = useMemo(() => venuesR.map((v) => v.name), [venuesR]);
+  // Real data drives the filters. Season is picked FIRST: it scopes which locations
+  // and listings you then see (a listing carries its venueId + seasonId).
+  const seasonNameOf = (sid?: string | null) => (tenantSettings.seasons ?? []).find((s) => s.id === sid)?.name;
+  const inSeason = (sn?: string | null) => seasonSel.length === 0 || (sn != null && seasonSel.includes(sn));
+  const scopedListings = useMemo(() => listingsR.filter((l) => inSeason(seasonNameOf(l.seasonId))), [listingsR, seasonSel, tenantSettings.seasons]);
+  const scopedVenueIds = useMemo(() => new Set(scopedListings.map((l) => l.venueId).filter(Boolean) as string[]), [scopedListings]);
+  const sites = useMemo(() => (seasonSel.length ? venuesR.filter((v) => scopedVenueIds.has(v.id)) : venuesR).map((v) => v.name), [venuesR, seasonSel, scopedVenueIds]);
   const persistTpl = (next: Template[]) => { setTemplates(next); try { localStorage.setItem(TKEY, JSON.stringify(next)); } catch { /* ignore */ } };
   const persist = (s: Store) => { setStore(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
 
@@ -166,10 +172,10 @@ export function ScheduleApp() {
   }, [span, anchor, dates]);
 
   const staffById = useMemo(() => Object.fromEntries(store.staff.map((s) => [s.id, s])), [store.staff]);
-  const inPeriod = (s: Shift) => dateSet.has(s.date) && (site === "all" || s.site === site) && (listingF === "all" || s.listing === listingF) && (seasonF === "all" || s.season === seasonF);
-  const periodShifts = useMemo(() => store.shifts.filter(inPeriod), [store.shifts, dateSet, site, listingF, seasonF]);
-  const listingOpts = useMemo(() => [...new Set(listingsR.map((l) => l.title).concat(store.shifts.map((s) => s.listing).filter(Boolean) as string[]))].sort(), [listingsR, store.shifts]);
-  const seasonOpts = useMemo(() => [...new Set((tenantSettings.seasons ?? []).map((s) => s.name).concat(store.shifts.map((s) => s.season).filter(Boolean) as string[]))].sort(), [tenantSettings.seasons, store.shifts]);
+  const inPeriod = (s: Shift) => dateSet.has(s.date) && (site === "all" || s.site === site) && (listingF === "all" || s.listing === listingF) && inSeason(s.season);
+  const periodShifts = useMemo(() => store.shifts.filter(inPeriod), [store.shifts, dateSet, site, listingF, seasonSel]);
+  const listingOpts = useMemo(() => [...new Set(scopedListings.map((l) => l.title))].sort(), [scopedListings]);
+  const seasonOpts = useMemo(() => (tenantSettings.seasons ?? []).map((s) => s.name), [tenantSettings.seasons]);
 
   const staffHours = (id: string) => periodShifts.filter((s) => s.staffId === id).reduce((n, s) => n + durH(s.start, s.end), 0);
   const wagesAt = store.staff.reduce((n, st) => n + staffHours(st.id) * st.rate, 0);
@@ -279,7 +285,7 @@ export function ScheduleApp() {
   const openAdd = (site_: string, role: string, c: { date: string; hour: number | null }, staffId: string | null) => {
     setAssignOpen(false); setActionsOpen(false);
     const start = c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00";
-    setDraft({ groupIds: [], site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonF !== "all" ? seasonF : "Summer 2026", date: c.date, start, end: addMins(start, defShiftH * 60), slots: [staffId], brk: null, note: "" });
+    setDraft({ groupIds: [], site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonSel.length === 1 ? seasonSel[0] : "", date: c.date, start, end: addMins(start, defShiftH * 60), slots: [staffId], brk: null, note: "" });
   };
   // Open the editor on the whole group of shifts sharing this slot (N needed / M filled).
   const openEditGroup = (s: Shift) => {
@@ -297,6 +303,7 @@ export function ScheduleApp() {
         style={filled ? { borderColor: col, background: `${col}0f`, borderLeftWidth: 3 } : { borderColor: "var(--line)", borderStyle: "dashed", background: "var(--surface)" }}>
         {!compact && <div className="flex items-start gap-1"><span className="min-w-0 flex-1 font-extrabold text-[var(--ink)]">{to12(s.start)} – {to12(s.end)}</span>{canManage && <span role="button" onClick={(e) => { e.stopPropagation(); removeShift(s.id); }} className="flex-none text-[var(--ink-3)] hover:text-[#c0392b]">×</span>}</div>}
         <div className={"truncate " + (filled ? "font-bold text-[var(--ink)]" : "text-[var(--ink-3)]")}>{st ? (compact ? st.name.split(" ")[0] : st.name) : (compact ? "—" : "Unfilled")}</div>
+        {!compact && s.listing && <div className="truncate text-[10px] text-[var(--ink-3)]">🎟 {s.listing} <span className="text-[var(--ink-3)]">({s.site}{s.season ? ` · ${s.season}` : ""})</span></div>}
         {!compact && filled && <div className="mt-1 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-bold" style={s.out || s.in ? { background: "#e2f4ea", color: "#0f7a43" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{s.out ? `✅ Out ${to12(s.out)}` : s.in ? `🟢 In ${to12(s.in)}` : "⚪ Not in"}</div>}
         {!compact && s.locked && <div className="mt-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-white">Locked</div>}
       </button>
@@ -343,9 +350,21 @@ export function ScheduleApp() {
 
       {/* Toolbar */}
       <div className="mb-3 flex flex-wrap items-center gap-2">
+        {/* Season first — multi-select; it scopes the locations & listings below */}
+        <div className="relative">
+          <button type="button" onClick={() => setSeasonMenu((v) => !v)} className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📅 {seasonSel.length === 0 ? "All seasons" : seasonSel.length === 1 ? seasonSel[0] : `${seasonSel.length} seasons`} ▾</button>
+          {seasonMenu && (
+            <div className="absolute left-0 top-[40px] z-30 w-[220px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
+              <button type="button" onClick={() => { setSeasonSel([]); setSite("all"); setListingF("all"); }} className="flex w-full items-center gap-2 px-3.5 py-2 text-left text-[12.5px] font-bold hover:bg-[var(--panel)]"><span className="w-4">{seasonSel.length === 0 ? "✓" : ""}</span>All seasons</button>
+              {seasonOpts.length === 0 && <div className="px-3.5 py-2 text-[12px] text-[var(--ink-3)]">No seasons yet — add them in Setup → Seasons.</div>}
+              {seasonOpts.map((sn) => { const on = seasonSel.includes(sn); return (
+                <button key={sn} type="button" onClick={() => { setSeasonSel((xs) => (xs.includes(sn) ? xs.filter((x) => x !== sn) : [...xs, sn])); setSite("all"); setListingF("all"); }} className="flex w-full items-center gap-2 border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2 text-left text-[12.5px] font-semibold hover:bg-[var(--panel)]" style={{ color: on ? "#0f7a43" : "var(--ink)" }}><span className="w-4">{on ? "✓" : ""}</span>{sn}</button>
+              ); })}
+            </div>
+          )}
+        </div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📍 <Select value={site} onChange={(e) => setSite(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All locations</option>{sites.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">🎟 <Select value={listingF} onChange={(e) => setListingF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All listings</option>{listingOpts.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
-        <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[13px] font-bold text-[#1d3a8f]">📅 <Select value={seasonF} onChange={(e) => setSeasonF(e.target.value)} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[#1d3a8f] outline-none"><option value="all">All seasons</option>{seasonOpts.map((s) => <option key={s} value={s}>{s}</option>)}</Select></div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-1.5 py-1">
           <button type="button" onClick={() => nav(-1)} className="px-2 text-[15px] text-[var(--ink-3)] hover:text-[var(--ink)]">‹</button>
           <span className="min-w-[120px] text-center text-[12.5px] font-bold text-[var(--ink)]">{label}</span>
