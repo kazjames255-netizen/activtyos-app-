@@ -61,6 +61,7 @@ export function TeamApp() {
   const [sentNote, setSentNote] = useState<string | null>(null);
 
   // Invite form
+  const [step, setStep] = useState(1);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [roleId, setRoleId] = useState("coach");
@@ -117,7 +118,7 @@ export function TeamApp() {
       });
       if (role === "staff") patchMeta(r.token, { name: name.trim() || undefined, staffRole: roleId, jobTitle: jobTitle || undefined, assignment, status: "active" });
       if (r.sentTo) { setSentNote(`Invite emailed to ${r.sentTo}`); setEmail(""); setName(""); }
-      setAssignMode("all"); setAssignIds([]);
+      setAssignMode("all"); setAssignIds([]); setStep(1);
       refresh();
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Failed to create the invite";
@@ -216,129 +217,131 @@ export function TeamApp() {
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#e21d27]">{error}</div>}
 
-      {/* Invite panel */}
+      {/* Invite wizard — stepped slideshow */}
       <Card className="mb-4 overflow-hidden p-0">
-        <div className="flex items-center gap-3 border-b border-[var(--line)] bg-[linear-gradient(120deg,#eef4fd,#f7f0fb)] px-4 py-3">
-          <span className="flex h-10 w-10 flex-none items-center justify-center rounded-2xl bg-white text-[18px] shadow-sm">✉️</span>
-          <div><div className="text-[15px] font-extrabold text-[var(--ink)]">Invite someone</div><p className="text-[12px] text-[var(--ink-3)]">{me?.tenantName ? `${me.tenantName} — ` : ""}we&rsquo;ll email them a secure link to join your team.</p></div>
-        </div>
-        <div className="p-4">
-        <div className="grid gap-4 lg:grid-cols-[1.7fr,1fr]">
-        <div className="min-w-0">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #c2268f" }}>
-            <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#fbe6f3] text-[12px]">👤</span><label className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Full name</label></div>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Jamie Rivers" className="w-full" />
-          </div>
-          <div className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #2f6bd8" }}>
-            <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#eaf1fe] text-[12px]">📧</span><label className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Their email <span className="text-[#c0392b]">*</span></label></div>
-            <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="w-full" />
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">We&rsquo;ll email them a secure link to join — that&rsquo;s how they sign up. You can also copy the link once it&rsquo;s created.</div>
-          </div>
-          <div className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #7a3aa8" }}>
-            <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#f3e8fc] text-[12px]">🔑</span><label className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Access role — permissions</label></div>
-            <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="w-full">
-              {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
-            </Select>
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Sets what they can see &amp; do — edit in <Link href="/company/setup?tab=roles" className="font-bold text-[#1d3a8f] underline">Roles &amp; permissions</Link>.</div>
-          </div>
-          <div className="rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #0f857b" }}>
-            <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#e0f4f1] text-[12px]">🎽</span><label className="flex flex-1 items-center gap-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Job title — rostered as
-              <button type="button" onClick={() => { const t = window.prompt("New job title")?.trim(); if (t) { void save({ settings: { ...settings, staffRoles: [...new Set([...jobTitles, t])] } }); setJobTitle(t); } }} className="ml-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">＋ Add</button>
-            </label></div>
-            <Select value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full">
-              <option value="">— Job title —</option>
-              {jobTitles.map((j) => <option key={j} value={j}>{j}</option>)}
-            </Select>
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">The role they&rsquo;re scheduled as (Lifeguard, Site Manager…) — the coloured rows in the rota. Not listed? Use <b>＋ Add</b> and it saves for everyone.</div>
-          </div>
-        </div>
-
-        {/* Listing assignment */}
-        <div className="mt-3 rounded-xl border border-[var(--line)] bg-white p-3" style={{ boxShadow: "inset 3px 0 0 #c06a10" }}>
-          <div className="mb-1.5 flex items-center gap-2"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#fbeddb] text-[12px]">📍</span><label className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Assign to</label></div>
-          <div className="flex flex-wrap gap-1.5">
-            {([["all", "All listings"], ["locations", "By location"], ["listings", "By listing"], ["none", "None"]] as const).map(([m, label]) => (
-              <button key={m} type="button" onClick={() => { setAssignMode(m); setAssignIds([]); }} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold"
-                style={assignMode === m ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-                {label}
-              </button>
-            ))}
-          </div>
-          {assignMode === "listings" && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {listings.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No listings yet.</span>}
-              {listings.map((l) => {
-                const on = assignIds.includes(l.id);
-                return (
-                  <button key={l.id} type="button" onClick={() => toggleAssign(l.id)} className="rounded-lg border px-2.5 py-1 text-[12px] font-semibold"
-                    style={on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-                    {on ? "✓ " : ""}{l.title}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {assignMode === "locations" && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {(venues.length ? venues : DEMO_VENUES).map((v) => {
-                const on = assignIds.includes(v.id);
-                return (
-                  <button key={v.id} type="button" onClick={() => toggleAssign(v.id)} className="rounded-lg border px-2.5 py-1 text-[12px] font-semibold"
-                    style={on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
-                    {on ? "✓ " : ""}📍 {v.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
-          {assignMode === "none" ? (
-            <div className="mt-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-2)]"><b>Not rostered anywhere.</b> They won&rsquo;t appear in the schedule or on any register, but still get access to the pages their <b>role</b> allows (e.g. office / admin staff). You can deploy them to listings or locations later.</div>
-          ) : (
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">Where they&rsquo;re rostered — they show in the schedule for these{assignMode === "locations" ? " locations" : " listings"} and can be given shifts there. A location covers every listing that runs there. <b>What they can see &amp; do is set by their access role</b>, not this.</div>
-          )}
-        </div>
-        </div>
-
-        {/* live preview */}
         {(() => {
+          const STEPS = [
+            { t: "Who's joining?", i: "👋", d: "Their name and the email we'll send the invite to." },
+            { t: "What can they access?", i: "🔑", d: "Their permission level across the app." },
+            { t: "What are they rostered as?", i: "🎽", d: "Their job title — the coloured rows on the rota." },
+            { t: "Where do they work?", i: "📍", d: "Which locations or listings they're deployed to." },
+            { t: "Ready to send", i: "✉️", d: "Check it over, then send their invite." },
+          ];
+          const s = STEPS[step - 1];
           const nm = name.trim() ? name.trim() : email.trim() ? email.split("@")[0].replace(/[._-]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()) : "New teammate";
           const roleNm = roles.find((r) => r.id === roleId)?.name ?? "Staff";
-          const assign = assignMode === "all" ? "All listings" : assignMode === "none" ? "Not rostered — role access only" : assignMode === "locations" ? (assignIds.length ? `${assignIds.length} location${assignIds.length === 1 ? "" : "s"}` : "By location — pick some") : (assignIds.length ? `${assignIds.length} listing${assignIds.length === 1 ? "" : "s"}` : "By listing — pick some");
+          const assignTxt = assignMode === "all" ? "All listings" : assignMode === "none" ? "Not rostered — role access only" : assignMode === "locations" ? (assignIds.length ? `${assignIds.length} location${assignIds.length === 1 ? "" : "s"}` : "By location — pick some") : (assignIds.length ? `${assignIds.length} listing${assignIds.length === 1 ? "" : "s"}` : "By listing — pick some");
+          const pillStyle = (on: boolean) => on ? { borderColor: "#2f6bd8", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "var(--line)", color: "var(--ink-2)" };
           return (
-            <aside className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
-              <div className="text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">They&rsquo;ll get</div>
-              <div className="mt-2 overflow-hidden rounded-xl bg-white shadow-sm">
-                <div className="flex items-center gap-2.5 px-3 py-3">
-                  <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full text-[14px] font-extrabold text-white" style={{ background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>{initials(nm)}</span>
-                  <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{nm}</div><div className="truncate text-[11.5px] text-[var(--ink-3)]">{email.trim() || "no email — you share the link"}</div></div>
+          <>
+            {/* big blue header + progress */}
+            <div className="px-5 py-5 text-white sm:px-6" style={{ background: "linear-gradient(120deg,#0f2665,#2f6bd8)" }}>
+              <div className="flex items-start gap-3.5">
+                <span className="flex h-14 w-14 flex-none items-center justify-center rounded-2xl bg-white/15 text-[26px]">{s.i}</span>
+                <div className="min-w-0">
+                  <div className="text-[10.5px] font-extrabold uppercase tracking-[0.16em] text-white/55">Invite someone · Step {step} of {STEPS.length}</div>
+                  <h3 className="text-[23px] font-extrabold leading-tight sm:text-[27px]" style={{ fontFamily: "var(--ff-display)" }}>{s.t}</h3>
+                  <p className="mt-0.5 text-[12.5px] text-white/75">{s.d}</p>
                 </div>
-                <div className="flex flex-wrap gap-1.5 border-t border-[var(--line-2,#eef2f8)] px-3 py-2.5">
-                  <span className="rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={roleStyle(roleId)}>{roleNm}</span>
-                  <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{jobTitle || "no job title"}</span>
-                </div>
-                <div className="border-t border-[var(--line-2,#eef2f8)] px-3 py-2 text-[11.5px] font-semibold text-[var(--ink-2)]">📍 {assign}</div>
               </div>
-              <p className="mt-2 text-[11px] leading-relaxed text-[var(--ink-3)]">Appears under <b>Pending</b> until they log in &amp; finish onboarding — then they join the schedule.</p>
-            </aside>
+              <div className="mt-4 flex gap-1.5">
+                {STEPS.map((_, i) => (
+                  <button key={i} type="button" onClick={() => { if (i + 1 <= step || emailOk) setStep(i + 1); }} className="h-1.5 flex-1 rounded-full transition-colors" style={{ background: i < step ? "#fff" : "rgba(255,255,255,.28)" }} />
+                ))}
+              </div>
+            </div>
+
+            {/* body */}
+            <div className="min-h-[220px] px-5 py-6 sm:px-6">
+              {step === 1 && (
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <label className="block">
+                    <span className="mb-1.5 flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#fbe6f3] text-[12px]">👤</span>Full name</span>
+                    <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Jamie Rivers" className="w-full !py-2.5 !text-[15px]" />
+                  </label>
+                  <label className="block">
+                    <span className="mb-1.5 flex items-center gap-2 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span className="flex h-6 w-6 items-center justify-center rounded-lg bg-[#eaf1fe] text-[12px]">📧</span>Their email <span className="text-[#c0392b]">*</span></span>
+                    <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="w-full !py-2.5 !text-[15px]" />
+                    <span className="mt-1.5 block text-[11.5px] text-[var(--ink-3)]">We&rsquo;ll email a secure link to join — that&rsquo;s how they sign up.</span>
+                  </label>
+                </div>
+              )}
+              {step === 2 && (
+                <div className="max-w-lg">
+                  <Select value={roleId} onChange={(e) => setRoleId(e.target.value)} className="w-full !py-2.5 !text-[15px]">{roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}</Select>
+                  <div className="mt-3 flex items-center gap-2 rounded-xl bg-[var(--panel)] p-3"><span className="rounded-full px-3 py-1 text-[12px] font-extrabold" style={roleStyle(roleId)}>{roleNm}</span><span className="text-[12px] text-[var(--ink-2)]">is what {nm.split(" ")[0]} will be able to see &amp; do.</span></div>
+                  <p className="mt-2 text-[12px] text-[var(--ink-3)]">Roles &amp; what each can do are set in <Link href="/company/setup?tab=roles" className="font-bold text-[#1d3a8f] underline">Roles &amp; permissions</Link>.</p>
+                </div>
+              )}
+              {step === 3 && (
+                <div className="max-w-lg">
+                  <div className="flex items-center gap-2">
+                    <Select value={jobTitle} onChange={(e) => setJobTitle(e.target.value)} className="w-full !py-2.5 !text-[15px]"><option value="">— Job title —</option>{jobTitles.map((j) => <option key={j} value={j}>{j}</option>)}</Select>
+                    <button type="button" onClick={() => { const t = window.prompt("New job title")?.trim(); if (t) { void save({ settings: { ...settings, staffRoles: [...new Set([...jobTitles, t])] } }); setJobTitle(t); } }} className="whitespace-nowrap rounded-full border border-[var(--line)] px-3.5 py-2.5 text-[13px] font-bold text-[#1d3a8f] hover:bg-[var(--panel)]">＋ Add</button>
+                  </div>
+                  <p className="mt-2 text-[12px] text-[var(--ink-3)]">The role they&rsquo;re scheduled as (Lifeguard, Site Manager…) — the coloured rows on the rota. Not listed? Use <b>＋ Add</b> and it saves for everyone.</p>
+                </div>
+              )}
+              {step === 4 && (
+                <div>
+                  <div className="flex flex-wrap gap-2">
+                    {([["all", "All listings"], ["locations", "By location"], ["listings", "By listing"], ["none", "None"]] as const).map(([m, label]) => (
+                      <button key={m} type="button" onClick={() => { setAssignMode(m); setAssignIds([]); }} className="rounded-full border px-4 py-2 text-[13px] font-bold" style={pillStyle(assignMode === m)}>{label}</button>
+                    ))}
+                  </div>
+                  {assignMode === "listings" && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {listings.length === 0 && <span className="text-[12px] text-[var(--ink-3)]">No listings yet.</span>}
+                      {listings.map((l) => <button key={l.id} type="button" onClick={() => toggleAssign(l.id)} className="rounded-lg border px-2.5 py-1 text-[12px] font-semibold" style={pillStyle(assignIds.includes(l.id))}>{assignIds.includes(l.id) ? "✓ " : ""}{l.title}</button>)}
+                    </div>
+                  )}
+                  {assignMode === "locations" && (
+                    <div className="mt-3 flex flex-wrap gap-1.5">
+                      {(venues.length ? venues : DEMO_VENUES).map((v) => <button key={v.id} type="button" onClick={() => toggleAssign(v.id)} className="rounded-lg border px-2.5 py-1 text-[12px] font-semibold" style={pillStyle(assignIds.includes(v.id))}>{assignIds.includes(v.id) ? "✓ " : ""}📍 {v.name}</button>)}
+                    </div>
+                  )}
+                  {assignMode === "none" ? (
+                    <div className="mt-3 rounded-xl bg-[var(--panel)] px-3.5 py-3 text-[12px] text-[var(--ink-2)]"><b>Not rostered anywhere.</b> They won&rsquo;t appear in the schedule or on any register, but still get the page access their <b>role</b> allows (office / admin staff). Deploy them later from <b>Deployment</b>.</div>
+                  ) : (
+                    <p className="mt-3 text-[12px] text-[var(--ink-3)]">Where they&rsquo;re rostered — they show in the schedule for these{assignMode === "locations" ? " locations" : " listings"} and can be given shifts. <b>What they can see &amp; do is set by their access role</b>, not this.</p>
+                  )}
+                </div>
+              )}
+              {step === 5 && (
+                <div className="mx-auto max-w-md">
+                  <div className="overflow-hidden rounded-2xl border border-[var(--line)] shadow-sm">
+                    <div className="flex items-center gap-3 px-4 py-4" style={{ background: "linear-gradient(120deg,#0f2665,#2f6bd8)" }}>
+                      <span className="flex h-12 w-12 flex-none items-center justify-center rounded-full bg-white/15 text-[16px] font-extrabold text-white">{initials(nm)}</span>
+                      <div className="min-w-0"><div className="truncate text-[16px] font-extrabold text-white">{nm}</div><div className="truncate text-[12px] text-white/75">{email.trim() || "no email yet"}</div></div>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line-2,#eef2f8)] bg-white px-4 py-3">
+                      <span className="rounded-full px-2.5 py-0.5 text-[11.5px] font-extrabold" style={roleStyle(roleId)}>{roleNm}</span>
+                      <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[11.5px] font-bold text-[var(--ink-2)]">{jobTitle || "no job title"}</span>
+                      <span className="ml-auto text-[12px] font-semibold text-[var(--ink-2)]">📍 {assignTxt}</span>
+                    </div>
+                    <p className="bg-white px-4 py-2.5 text-[11.5px] leading-relaxed text-[var(--ink-3)]">We&rsquo;ll email <b>{email.trim() || "them"}</b> a secure link. They appear under <b>Pending</b> until they log in &amp; finish onboarding.</p>
+                  </div>
+                  {capNote && <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]"><span className="font-bold">{capNote}</span><Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">Upgrade plan →</Link></div>}
+                  {sentNote && <div className="mt-3 rounded-lg bg-[#eef8f1] px-3 py-2 text-[12.5px] font-bold text-[#0f7a43]">✓ {sentNote}</div>}
+                </div>
+              )}
+            </div>
+
+            {/* footer nav */}
+            <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] bg-[var(--panel)] px-5 py-3.5 sm:px-6">
+              <button type="button" onClick={() => setStep((n) => Math.max(1, n - 1))} className={"rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)] " + (step === 1 ? "invisible" : "")}>‹ Back</button>
+              {step < 5 ? (
+                <button type="button" disabled={step === 1 && !emailOk} onClick={() => setStep((n) => Math.min(5, n + 1))} className="rounded-full px-7 py-2.5 text-[14px] font-extrabold text-white shadow-sm hover:brightness-110 disabled:opacity-45" style={{ background: "linear-gradient(120deg,#0f2665,#2f6bd8)" }}>{step === 1 && !emailOk ? "Add their email to continue" : "Next ›"}</button>
+              ) : (
+                <div className="flex items-center gap-2">
+                  {canInviteFranchise && <Button disabled={busy} onClick={() => createInvite("franchise")}>Invite a franchise</Button>}
+                  <button type="button" disabled={busy || !emailOk} onClick={() => createInvite("staff")} className="rounded-full px-7 py-2.5 text-[14px] font-extrabold text-white shadow-sm hover:brightness-110 disabled:opacity-45" style={{ background: "linear-gradient(120deg,#0f7a43,#13a35c)" }}>✉️ Send invite</button>
+                </div>
+              )}
+            </div>
+          </>
           );
         })()}
-        </div>
-
-        {capNote && (
-          <div className="mt-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]">
-            <span className="font-bold">{capNote}</span>
-            <Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">Upgrade plan →</Link>
-          </div>
-        )}
-
-        <div className="mt-3.5 flex flex-wrap items-center gap-2">
-          <button type="button" disabled={busy || !emailOk} onClick={() => createInvite("staff")} className="rounded-full px-5 py-2.5 text-[13.5px] font-extrabold text-white shadow-sm transition-[filter] hover:brightness-110 disabled:opacity-50" style={{ background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>＋ Send staff invite</button>
-          {canInviteFranchise && <Button disabled={busy || !emailOk} onClick={() => createInvite("franchise")}>＋ Invite a franchise</Button>}
-          {!emailOk && <span className="text-[12px] text-[var(--ink-3)]">Add their email to send the invite.</span>}
-          {sentNote && <span className="text-[12px] font-bold text-[#0f7a43]">✓ {sentNote}</span>}
-        </div>
-        </div>
       </Card>
 
       {/* Team */}
@@ -390,6 +393,7 @@ export function TeamApp() {
     </div>
   );
 }
+
 
 
 
