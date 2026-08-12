@@ -45,8 +45,8 @@ export const SETTINGS_LINKS: Record<string, SettingsLink[]> = {
   ],
   newsfeed: [{ icon: "🔔", label: "Notifications", tab: "notifications", note: "How families are alerted to new posts" }],
   staff: [
-    { icon: "🔑", label: "Roles & permissions", tab: "roles", note: "the access roles themselves — Owner, Management, Staff — and a None / View / Edit grid setting exactly what each role can see and change in every area. This is what governs a person's rights; deployment only decides where they're rostered" },
-    { icon: "👥", label: "Staff & workforce", tab: "staff", note: "your team policy — whether a valid DBS and in-date certificates are required before someone can work, and whether only leads can assign staff to groups. The checks are enforced in the background" },
+    { icon: "🔑", label: "Roles & permissions", tab: "roles", note: "rename any role and set its None / View / Edit access per area — this is what a person can see and change" },
+    { icon: "👥", label: "Staff & workforce", tab: "staff", note: "require a valid DBS and in-date certificates before someone can work, and choose if only leads assign staff" },
   ],
   tasks: [{ icon: "🔔", label: "Notifications", tab: "notifications", note: "Reminders and how tasks are surfaced" }],
   trips: [{ icon: "🚌", label: "Trips & visits", tab: "trips", note: "Default consent and risk-assessment settings for trips" }],
@@ -144,7 +144,7 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
     doneLine: "That's it — invited, tracked from Pending to Activated, and deployed to the right location and listings.",
     steps: [
       { find: "Full name", fill: [["Jamie Rivers", "Priya Shah"], ["their@email.com", "priya@sunriseactive.co.uk"]], line: "Start with who's joining. I'll type their full name — Priya Shah — and the email we'll send the invite to. The email's required; that's how they actually sign up.", advance: "Next" },
-      { find: "What can they access", line: "Next, their access role — Owner, Management or Staff. This is what they can see and do across the app, and it's the only thing that governs their rights.", advance: "Next" },
+      { find: "What can they access", line: "Next, their access role — Owner, Management or Staff. It sets what they can see and do. You can rename any role and change its permissions in Setup.", advance: "Next" },
       { find: "rostered as", line: "Then their job title, like First Aider or Site Manager — the coloured rows on the rota. Not in the list? Add one and it saves for everyone.", advance: "Next" },
       { find: "Where do they work", pick: ["All locations", "All listings here"], line: "Now where they work. Pick None and they get page access from their role but aren't rostered — or choose locations, then the listings inside them, each showing its season. I'll put Priya across all locations and listings.", advance: "Next" },
       { find: "Ready to send", line: "Last step reviews it all — name, role, job title and where they're deployed — then Send fires off the invite. Remember: what they can do comes from the role, not from what they're assigned here.", advance: "Deployment" },
