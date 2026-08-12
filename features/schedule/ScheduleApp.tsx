@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { get as apiGet } from "@/lib/api";
+import { get as apiGet, isDemoMode } from "@/lib/api";
 import { useTenantSettings } from "@/lib/settings";
 import { SchedulingSettingsForm } from "./SchedulingSettings";
 import { Button, Card, Input, Select } from "@/components/ui";
@@ -428,6 +428,12 @@ export function ScheduleApp() {
   };
   const clearDemo = () => { persist({ ...store, staff: store.staff.filter((s) => !s.id.startsWith("demo-")), shifts: store.shifts.filter((s) => !s.id.startsWith("demo-")) }); flash("Cleared sample shifts."); };
   const hasDemo = store.shifts.some((s) => s.id.startsWith("demo-"));
+  // In the guided-tour iframe, auto-fill the rota with the sample staff + shifts
+  // once listings have loaded, so the walkthrough drives a fully populated week.
+  useEffect(() => {
+    if (isDemoMode() && store.shifts.length === 0 && scopedListings.length > 0) seedDemo();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scopedListings.length]);
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>

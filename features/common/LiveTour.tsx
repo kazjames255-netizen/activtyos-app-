@@ -220,10 +220,10 @@ export function LiveTour({ view, portal, steps: cfg }: { view: string; portal: s
       const links = SETTINGS_LINKS[view] || [];
       if (links.length) {
         showScene(settingsScene(portal, links));
-        // Say what each setting actually does (its note) — with examples —
-        // rather than just naming the tabs.
-        const detail = links.map((l) => `${l.label} — ${l.note}`).join(". ");
-        await line(`One last thing — everything on this page is set up in your Settings. ${detail}. Tap any card to jump straight there.`);
+        // Name the levers (labels only, not the whole note the card already
+        // shows) and make it a call to action, not a recap.
+        const labels = links.length === 1 ? links[0].label : links.slice(0, -1).map((l) => l.label).join(", ") + " and " + links[links.length - 1].label;
+        await line(`Before you go — this page is yours to shape. ${labels} live in Settings. Tap a card and make it work the way you run things.`);
         if (!alive()) return;
       }
       // Sign-off from the robot.

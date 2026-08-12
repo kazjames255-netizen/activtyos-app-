@@ -190,4 +190,26 @@ export const TOUR_FIXTURES: Record<string, Fixtures> = {
       { id: "l3", title: "After-school club", venueId: "v-mk", seasonId: "s-aut", status: "live", visibility: "public" },
     ],
   },
+  // The rota reads the same venues, listings and seasons; ScheduleApp then
+  // auto-seeds sample staff + shifts in demo mode so the walkthrough is populated.
+  schedule: {
+    "/api/me": { role: "company", tenantName: "Sunrise Active Camps" },
+    "/api/library": {
+      venues: [
+        { id: "v-mk", name: "Loughton Manor First School" },
+        { id: "v-bl", name: "Bletchley Leisure Centre" },
+      ],
+      settings: {
+        seasons: [
+          { id: "s-sum1", name: "Summer 1", from: "2026-07-20", to: "2026-08-14", kind: "holiday" },
+          { id: "s-aut", name: "Autumn term", from: "2026-09-01", to: "2026-10-24", kind: "term" },
+        ],
+      },
+      childQuestions: [],
+    },
+    "/api/listings": [
+      { id: "l1", title: "Summer camp — Loughton Manor", venueId: "v-mk", seasonId: "s-sum1", status: "live", visibility: "public" },
+      { id: "l2", title: "Holiday club — Bletchley", venueId: "v-bl", seasonId: "s-sum1", status: "live", visibility: "public" },
+    ],
+  },
 };

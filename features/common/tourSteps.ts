@@ -153,6 +153,25 @@ export const TOUR_STEPS: Record<string, LiveTourSteps> = {
       { find: "By listing", line: "And By listing flips it round — each listing with exactly who's on it, so you can see cover at a glance. That's the whole point: deployment decides whose registers, ratios and schedule each person sees — nothing more, nothing less. That's your team, start to finish." },
     ],
   },
+  // Schedule: drive the REAL rota — pick a season, add a shift, assign someone,
+  // note it, save, then chase availability. Cursor-only, no spotlight boxes.
+  schedule: {
+    title: "Schedule & rota",
+    noSpotlight: true,
+    introLine: "This is your rota — build the week, chase availability, and see at a glance who's covered. Let me run a shift with you.",
+    doneLine: "A shift added, assigned and saved — and staff asked for their availability. Your week, sorted.",
+    steps: [
+      { find: "Total wages", line: "Up top: the week's wage bill — at the hourly rate, and including on-cost." },
+      { find: "All seasons", click: true, pick: ["Summer 1"], line: "Season first — it scopes the whole rota to just those locations and listings. I'll pick Summer 1.", advance: "Done" },
+      { find: "First Aider", line: "The rota's by listing, a row per role. Blue means assigned, red still needs someone." },
+      { find: "First Aider", clickIn: [["＋", "First Aider"]], line: "Let's add one — I'll tap the plus on a First Aider day to open the shift." },
+      { find: "Assign staff", click: true, line: "Now assign someone to it." },
+      { find: "Auto-fill available staff", pick: ["Auto-fill available staff"], line: "Auto-fill grabs whoever's free and not double-booked.", advance: "Done" },
+      { find: "Add shift note", click: true, fill: [["Shift note", "Bring the first-aid kit"]], line: "Add a note the staff will see, then save.", advance: "Save" },
+      { find: "Request staff to confirm availability", click: true, pick: ["This week"], line: "Chasing availability? One click asks everyone who hasn't confirmed — this week or all weeks." },
+      { find: "Settings", click: true, line: "And the Settings tab tunes it all — publish alerts, shift reminders and the check-in grace." },
+    ],
+  },
   dash: {
     title: "Dashboard",
     introLine: "This is your dashboard — the first thing you see each morning. Let me walk you through it.",
