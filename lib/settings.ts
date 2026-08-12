@@ -474,6 +474,13 @@ export interface SchedulingSettings {
   onCostPct: number;
   openShiftCost: number;
   availabilityReminders: boolean;
+  // Notifications & automation
+  notifyOnPublish: "email_push" | "email" | "push" | "off";
+  autoRemindUnconfirmed: "off" | "24h" | "48h";
+  shiftReminder: "off" | "24h" | "2h";
+  checkinGraceMin: 10 | 15 | 30;
+  checkinAutoAlert: boolean;
+  autoRequestAvailability: boolean;
 }
 export const DEFAULT_SCHEDULING: SchedulingSettings = {
   firstDay: "mon", defaultShiftHours: 6, defaultBreakMins: 30, breakPaid: "unpaid",
@@ -481,6 +488,8 @@ export const DEFAULT_SCHEDULING: SchedulingSettings = {
   unconfirmedToOpen: "off", suggestionOrder: "bestfit", showLocationNames: false,
   coworkerVisibility: "all", swapShifts: true, swapApproval: true, offerShifts: true,
   onCostPct: 12.07, openShiftCost: 0, availabilityReminders: false,
+  notifyOnPublish: "email_push", autoRemindUnconfirmed: "off", shiftReminder: "off",
+  checkinGraceMin: 15, checkinAutoAlert: true, autoRequestAvailability: false,
 };
 
 /** Sensible starting roles a company can then tweak or add to. Levels match the

@@ -48,6 +48,16 @@ export function SchedulingSettingsForm() {
       <Card className="p-5">
         <SecHead>Availability</SecHead>
         <TogRow label="Send reminders" desc="Remind staff to keep their availability up to date." value={value.availabilityReminders} onChange={(v) => set("availabilityReminders", v)} />
+        <TogRow label="Auto-request availability each new period" desc="When a new week or season opens, automatically ask staff who haven't submitted to confirm their availability." value={value.autoRequestAvailability} onChange={(v) => set("autoRequestAvailability", v)} />
+        <SelRow label="Auto-chase unconfirmed staff" desc="Keep reminding staff who haven't submitted their availability until they do." value={value.autoRemindUnconfirmed} onChange={(v) => set("autoRemindUnconfirmed", v as SchedulingSettings["autoRemindUnconfirmed"])} opts={[["off", "Off — I'll chase manually"], ["24h", "Every 24 hours"], ["48h", "Every 48 hours"]]} />
+      </Card>
+
+      <Card className="p-5">
+        <SecHead>Notifications &amp; automation</SecHead>
+        <SelRow label="Notify staff when the rota is published" desc="How assigned staff are told about their shifts when you publish." value={value.notifyOnPublish} onChange={(v) => set("notifyOnPublish", v as SchedulingSettings["notifyOnPublish"])} opts={[["email_push", "Email and smartphone push"], ["email", "Email only"], ["push", "Push only"], ["off", "Don't notify"]]} />
+        <SelRow label="Shift reminder to staff" desc="Send each staff member a reminder before their shift starts." value={value.shiftReminder} onChange={(v) => set("shiftReminder", v as SchedulingSettings["shiftReminder"])} opts={[["off", "Off"], ["24h", "24 hours before"], ["2h", "2 hours before"]]} />
+        <SelRow label="Check-in grace period" desc="How long after a shift's start time before an assigned staff member who hasn't checked in shows in Check-in alerts." value={String(value.checkinGraceMin)} onChange={(v) => set("checkinGraceMin", Number(v) as SchedulingSettings["checkinGraceMin"])} opts={[["10", "10 minutes"], ["15", "15 minutes"], ["30", "30 minutes"]]} />
+        <TogRow label="Auto-flag overdue check-ins" desc="Automatically surface staff who aren't checked in past the grace period in Check-in alerts. Turn off to hide the alerts panel." value={value.checkinAutoAlert} onChange={(v) => set("checkinAutoAlert", v)} />
       </Card>
     </div>
   );

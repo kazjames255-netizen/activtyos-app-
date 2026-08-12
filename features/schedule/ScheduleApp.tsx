@@ -118,6 +118,9 @@ export function ScheduleApp() {
   const defShiftH = tenantSettings.scheduling?.defaultShiftHours ?? 6;
   const defBreakM = tenantSettings.scheduling?.defaultBreakMins ?? 30;
   const breakUnpaid = (tenantSettings.scheduling?.breakPaid ?? "unpaid") === "unpaid";
+  const checkinGrace = tenantSettings.scheduling?.checkinGraceMin ?? 15;
+  const checkinAutoAlert = tenantSettings.scheduling?.checkinAutoAlert ?? true;
+  const notifyOnPublish = tenantSettings.scheduling?.notifyOnPublish ?? "email_push";
   // Week start honours First-day-of-week (Mon default; Sun option).
   const weekStartOf = (d: Date) => { const x = new Date(d); const dow = x.getUTCDay(); const back = firstDay === "sun" ? dow : (dow + 6) % 7; x.setUTCDate(x.getUTCDate() - back); return x; };
   const addMins = (t: string, m: number) => { const [h, mm] = t.split(":").map(Number); const tot = h * 60 + mm + m; return `${String(Math.floor(tot / 60) % 24).padStart(2, "0")}:${String(tot % 60).padStart(2, "0")}`; };
@@ -191,11 +194,11 @@ export function ScheduleApp() {
   // A shift is a check-in alert only once its start time has passed by the grace
   // window (default 15 min) and the assigned person still isn't in — future
   // shifts and ones inside the grace period don't nag.
-  const CHECKIN_GRACE_MIN = 15;
+  const CHECKIN_GRACE_MIN = checkinGrace;
   const shiftStartMs = (s: Shift) => { const [y, mo, d] = s.date.split("-").map(Number); const [h, mi] = s.start.split(":").map(Number); return new Date(y, (mo || 1) - 1, d || 1, h || 0, mi || 0).getTime(); };
   const overdueMin = (s: Shift) => Math.floor((Date.now() - shiftStartMs(s)) / 60000);
   const overdueLabel = (s: Shift) => { const m = overdueMin(s); if (m < 60) return `${m} min late`; const h = Math.floor(m / 60); return `${h}h ${m % 60}m late`; };
-  const alerts = useMemo(() => periodShifts.filter((s) => s.staffId && !s.in && !s.out && Date.now() >= shiftStartMs(s) + CHECKIN_GRACE_MIN * 60000), [periodShifts]);
+  const alerts = useMemo(() => (checkinAutoAlert ? periodShifts.filter((s) => s.staffId && !s.in && !s.out && Date.now() >= shiftStartMs(s) + CHECKIN_GRACE_MIN * 60000) : []), [periodShifts, checkinAutoAlert, CHECKIN_GRACE_MIN]);
   const [alertQ, setAlertQ] = useState("");
   const shownStaff = store.staff
     .filter((s) => !q || s.name.toLowerCase().includes(q.toLowerCase()) || s.role.toLowerCase().includes(q.toLowerCase()))
@@ -322,7 +325,7 @@ export function ScheduleApp() {
     persist({ ...store, shifts: [...store.shifts, ...created] }); setTplListOpen(false); flash(`Applied “${tpl.name}” — added ${created.length} shift${created.length === 1 ? "" : "s"}.`);
   }
   function deleteTemplate(id: string) { persistTpl(templates.filter((t) => t.id !== id)); }
-  function publish() { const ids = new Set(periodShifts.filter((s) => s.staffId).map((s) => s.id)); persist({ ...store, shifts: store.shifts.map((s) => (ids.has(s.id) ? { ...s, locked: true } : s)) }); flash(`Published to ${assignedStaff.size} staff — shifts locked.`); }
+  function publish() { const ids = new Set(periodShifts.filter((s) => s.staffId).map((s) => s.id)); persist({ ...store, shifts: store.shifts.map((s) => (ids.has(s.id) ? { ...s, locked: true } : s)) }); const how = notifyOnPublish === "off" ? "no notification sent" : notifyOnPublish === "email" ? "notified by email" : notifyOnPublish === "push" ? "notified by push" : "notified by email + push"; flash(`Published to ${assignedStaff.size} staff — shifts locked · ${how}.`); }
   const openAdd = (site_: string, role: string, c: { date: string; hour: number | null }, staffId: string | null) => {
     setAssignOpen(false); setActionsOpen(false);
     const start = c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00";
@@ -482,8 +485,8 @@ export function ScheduleApp() {
           <span className="min-w-[116px] text-center text-[12.5px] font-extrabold text-[var(--ink)]">{label}</span>
           <button type="button" onClick={() => nav(1)} className="grid h-7 w-7 place-items-center rounded-full text-[15px] text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[#1d3a8f]">›</button>
         </div>
-        <button type="button" onClick={() => setShowAlerts(true)} className="relative inline-flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
-          <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#fdeecf", color: "#b45309" }}>🔔</span>Check-in alerts{alerts.length > 0 && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-extrabold text-white">{alerts.length}</span>}</button>
+        {checkinAutoAlert && <button type="button" onClick={() => setShowAlerts(true)} className="relative inline-flex items-center gap-2 rounded-full bg-white py-1 pl-1 pr-3.5 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">
+          <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#fdeecf", color: "#b45309" }}>🔔</span>Check-in alerts{alerts.length > 0 && <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#c0392b] px-1 text-[10px] font-extrabold text-white">{alerts.length}</span>}</button>}
         <div className="inline-flex items-center gap-1.5 rounded-full bg-white py-1 pl-1 pr-2 text-[13px] font-bold text-[var(--ink)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
           <span className="grid h-[26px] w-[26px] place-items-center rounded-[8px] text-[12.5px]" style={{ background: "#dcf5e8", color: "#059669" }}>🗓</span>
           <Select value={`${span}:${group}`} onChange={(e) => { const [sp, gr] = e.target.value.split(":"); setSpan(sp as Span); setGroup(gr as Group); }} className="border-0 bg-transparent p-0 text-[13px] font-bold text-[var(--ink)] outline-none">
