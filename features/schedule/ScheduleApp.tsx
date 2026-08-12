@@ -309,7 +309,7 @@ export function ScheduleApp() {
     // Status heat — colour is the state, not the role: green = filled/covered,
     // amber = needs staff. (The role is still named on the row label + its dot.)
     const heat = filled
-      ? { background: "linear-gradient(155deg,#5ff08f 0%,#16d16a 55%,#03b85c 100%)", borderColor: "#07a552", color: "#043020", boxShadow: "inset 0 1px 0 rgba(255,255,255,.45)" }
+      ? { background: "linear-gradient(155deg,#6fb4ff 0%,#2f7ef2 55%,#1b5fe0 100%)", borderColor: "#1657cf", color: "#ffffff", boxShadow: "inset 0 1px 0 rgba(255,255,255,.45)" }
       : { background: "linear-gradient(155deg,#ff7a7a 0%,#f2334f 60%,#d81f3e 100%)", borderColor: "#c8102e", color: "#ffffff", boxShadow: "inset 0 1px 0 rgba(255,255,255,.3)" };
     return (
       <button type="button" onClick={() => canManage && openEditGroup(s)} disabled={!canManage}
@@ -504,7 +504,7 @@ export function ScheduleApp() {
           {/* Status-heat key + temporary sample-data button */}
           <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-2 rounded-xl bg-white px-3.5 py-2 text-[11.5px] font-bold text-[var(--ink-2)] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04]">
             <span className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Key</span>
-            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "linear-gradient(155deg,#5ff08f,#03b85c)" }} />Assigned</span>
+            <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "linear-gradient(155deg,#6fb4ff,#1b5fe0)" }} />Assigned</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "linear-gradient(155deg,#ff7a7a,#d81f3e)" }} />Not assigned</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-[var(--panel)] ring-1 ring-inset ring-[var(--line)]" />No shift</span>
             {canManage && <span className="ml-auto flex items-center gap-2">
