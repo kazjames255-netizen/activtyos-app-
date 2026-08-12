@@ -82,7 +82,11 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const addListing = (sid: string, lid: string) => upd(sid, (s) => ({ ...s, listings: [...new Set([...s.listings, lid])] }));
 
   const seasonName = (sid?: string | null) => settings.seasons?.find((s) => s.id === sid)?.name;
-  const liveListings = useMemo(() => listings.filter((l) => (l.title || l.name) && (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived), [listings]);
+  // All the operator's listings (drafts included) minus archived — so a just-created
+  // draft still shows here. isLive marks the ones actually published/running.
+  const deployListings = useMemo(() => listings.filter((l) => (l.title || l.name) && !l.archived), [listings]);
+  const isLive = (l: Listing) => (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public";
+  const Draft = ({ l }: { l: Listing }) => (!isLive(l) ? <span className="rounded-full bg-[#fdf0e0] px-1.5 py-0.5 text-[10px] font-bold text-[#a86a00]">Draft</span> : null);
   const lTitle = (l: Listing) => l.title || l.name || "Untitled";
   const open = (vid: string) => router.push(`${pathname}?id=${encodeURIComponent(vid)}`);
   const detailVenue = list && id ? list.find((v) => v.id === id) : undefined;
@@ -116,7 +120,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
           {list.map((v) => {
             const here = staff.filter((s) => s.sites.includes(v.id));
             const notHere = staff.filter((s) => !s.sites.includes(v.id));
-            const vListings = liveListings.filter((l) => l.venueId === v.id);
+            const vListings = deployListings.filter((l) => l.venueId === v.id);
             return (
               <div key={v.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
                 <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
@@ -160,7 +164,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                     <div className="mb-1.5 flex items-center gap-2 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Listings here · {vListings.length}<a href="/company/listings" className="ml-auto normal-case text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a></div>
                     {vListings.length === 0 ? <p className="text-[12px] text-[var(--ink-3)]">No live listings run here yet.</p> : (
                       <div className="flex flex-col gap-1.5">{vListings.map((l) => { const sn = seasonName(l.seasonId); return (
-                        <div key={l.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5"><span className="text-[13px]">🎟</span><span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-[var(--ink)]">{lTitle(l)}</span>{sn && <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}</div>
+                        <div key={l.id} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5"><span className="text-[13px]">🎟</span><span className="min-w-0 flex-1 truncate text-[12.5px] font-bold text-[var(--ink)]">{lTitle(l)}</span>{sn && <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}<Draft l={l} /></div>
                       ); })}</div>
                     )}
                   </div>
@@ -178,7 +182,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
             const sNone = s.sites.length === 0 && s.listings.length === 0;
             const sAllLoc = list.length > 0 && list.every((v) => s.sites.includes(v.id));
             const sAllList = s.listings.length === 0;
-            const sScoped = liveListings.filter((l) => sAllLoc || (l.venueId && s.sites.includes(l.venueId)));
+            const sScoped = deployListings.filter((l) => sAllLoc || (l.venueId && s.sites.includes(l.venueId)));
             const summary = sNone ? "Not rostered" : (sAllLoc ? "All locations" : `${s.sites.length} location${s.sites.length === 1 ? "" : "s"}`) + (sAllList ? " · all listings" : ` · ${s.listings.length} listing${s.listings.length === 1 ? "" : "s"}`);
             return (
             <div key={s.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
@@ -206,7 +210,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
                     <div className="mb-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">② Listings {sAllLoc ? "across all locations" : "at those locations"}</div>
                     <div className="flex flex-wrap gap-1.5">
                       <button type="button" onClick={() => upd(s.id, (x) => ({ ...x, listings: [] }))} className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={sAllList ? CHIP_ON : CHIP_OFF}>{sAllList ? "✓ " : "🎟 "}All listings here</button>
-                      {sScoped.map((l) => { const on = !sAllList && has(s.listings, l.id); const sn = seasonName(l.seasonId); return <button key={l.id} type="button" onClick={() => upd(s.id, (x) => ({ ...x, listings: flip(x.listings, l.id) }))} className="inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={on ? CHIP_ON : CHIP_OFF}>{on ? "✓" : "🎟"} {lTitle(l)}{sn && <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-bold" style={{ color: "#1d3a8f" }}>📅 {sn}</span>}</button>; })}
+                      {sScoped.map((l) => { const on = !sAllList && has(s.listings, l.id); const sn = seasonName(l.seasonId); return <button key={l.id} type="button" onClick={() => upd(s.id, (x) => ({ ...x, listings: flip(x.listings, l.id) }))} className="inline-flex items-center gap-1.5 rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={on ? CHIP_ON : CHIP_OFF}>{on ? "✓" : "🎟"} {lTitle(l)}{sn && <span className="rounded-full bg-white/70 px-1.5 py-0.5 text-[10px] font-bold" style={{ color: "#1d3a8f" }}>📅 {sn}</span>}<Draft l={l} /></button>; })}
                       {sScoped.length === 0 && <span className="text-[11.5px] text-[var(--ink-3)]">No live listings here — “All listings here” covers whatever runs there.</span>}
                     </div>
                   </div>
@@ -219,7 +223,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
       /* ── BY LISTING ── */
       ) : (
         <div className="flex flex-col gap-2">
-          {liveListings.length === 0 ? <p className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No live listings yet — publish one in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p> : liveListings.map((l) => {
+          {deployListings.length === 0 ? <p className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No listings yet — create one in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p> : deployListings.map((l) => {
             const on = staff.filter((s) => s.listings.includes(l.id));
             const off = staff.filter((s) => !s.listings.includes(l.id));
             const sn = seasonName(l.seasonId);
@@ -227,7 +231,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
             return (
               <div key={l.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[13px]">🎟</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{lTitle(l)}</span>
+                  <span className="text-[13px]">🎟</span><span className="text-[14px] font-extrabold text-[var(--ink)]">{lTitle(l)}</span><Draft l={l} />
                   {sn && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">📅 {sn}</span>}
                   {venueName && <span className="text-[11.5px] text-[var(--ink-3)]">· 📍 {venueName}</span>}
                   <a href="/company/listings" className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">Edit in Listings ›</a>
