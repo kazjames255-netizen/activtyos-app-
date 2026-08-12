@@ -364,13 +364,15 @@ export function ScheduleApp() {
     ls.forEach((l, li) => {
       const siteN = venueNameOf(l.venueId); const seasonN = seasonNameOf(l.seasonId) ?? "";
       roles.forEach((role, ri) => {
+        const who = demoStaff.filter((s) => s.role === role);
         dates.forEach((d, di) => {
-          if ((di + ri + li) % 2 === 1 && di < 5) return; // sprinkle gaps, weekdays busier
+          if (di > 5) return; // leave the last day empty so a grey "no shift" tile shows too
           const start = ri === 0 ? "09:00" : "13:00"; const end = ri === 0 ? "15:00" : "17:00";
-          // ~60% get a staff member (green), the rest stay unfilled (amber)
-          const assign = (di * 3 + ri * 2 + li) % 5 < 3;
-          const who = demoStaff.filter((s) => s.role === role);
-          shifts.push({ id: `demo-${li}-${ri}-${di}`, staffId: assign && who.length ? who[di % who.length].id : null, site: siteN, role, listing: l.title, season: seasonN, date: d, start, end });
+          // Most shifts are BOOKED (green, named staff); every 4th stays unfilled
+          // (amber) so both states are visible.
+          const assign = (di + ri) % 4 !== 3;
+          const someIn = assign && di % 2 === 0; // a couple show a check-in state
+          shifts.push({ id: `demo-${li}-${ri}-${di}`, staffId: assign && who.length ? who[di % who.length].id : null, site: siteN, role, listing: l.title, season: seasonN, date: d, start, end, in: someIn ? start : undefined });
         });
       });
     });
