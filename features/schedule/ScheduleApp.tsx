@@ -108,6 +108,7 @@ export function ScheduleApp() {
   const [availWeekMode, setAvailWeekMode] = useState<"all" | "this">("all");
   const [reqOpen, setReqOpen] = useState(false); // Step 1: reveal the scope choice on click
   const [assignOpen, setAssignOpen] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false); // keep the note field open once revealed, even if cleared
   const [actionsOpen, setActionsOpen] = useState(false);
   const [extraRoles, setExtraRoles] = useState<Record<string, string[]>>({});
   const [roleMenu, setRoleMenu] = useState<string | null>(null);
@@ -260,7 +261,7 @@ export function ScheduleApp() {
   function saveDraft() {
     if (!draft) return;
     persist({ ...store, shifts: [...store.shifts.filter((s) => !draft.groupIds.includes(s.id)), ...currentRows(draft)] });
-    setDraft(null); setAssignOpen(false); setActionsOpen(false);
+    setDraft(null); setAssignOpen(false); setNoteOpen(false); setActionsOpen(false);
   }
   function deleteDraft() { if (!draft) return; persist({ ...store, shifts: store.shifts.filter((s) => !draft.groupIds.includes(s.id)) }); setDraft(null); setActionsOpen(false); setAssignOpen(false); }
   // Shift-actions menu
@@ -329,20 +330,20 @@ export function ScheduleApp() {
   const openAdd = (site_: string, role: string, c: { date: string; hour: number | null }, staffId: string | null) => {
     setAssignOpen(false); setActionsOpen(false);
     const start = c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00";
-    setDraft({ groupIds: [], site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonSel.length === 1 ? seasonSel[0] : "", date: c.date, start, end: addMins(start, defShiftH * 60), slots: [staffId], brk: null, note: "" });
+    setNoteOpen(false); setDraft({ groupIds: [], site: site_, role, listing: listingF !== "all" ? listingF : "", season: seasonSel.length === 1 ? seasonSel[0] : "", date: c.date, start, end: addMins(start, defShiftH * 60), slots: [staffId], brk: null, note: "" });
   };
   // Add a shift under a specific listing (presets its location + season).
   const openAddL = (l: { title: string; venueId?: string | null; seasonId?: string | null }, role: string, c: { date: string; hour: number | null }) => {
     setAssignOpen(false); setActionsOpen(false);
     const start = c.hour != null ? `${String(c.hour).padStart(2, "0")}:00` : "09:00";
-    setDraft({ groupIds: [], site: venueNameOf(l.venueId), role, listing: l.title, season: seasonNameOf(l.seasonId) ?? "", date: c.date, start, end: addMins(start, defShiftH * 60), slots: [null], brk: null, note: "" });
+    setNoteOpen(false); setDraft({ groupIds: [], site: venueNameOf(l.venueId), role, listing: l.title, season: seasonNameOf(l.seasonId) ?? "", date: c.date, start, end: addMins(start, defShiftH * 60), slots: [null], brk: null, note: "" });
   };
   // Open the editor on the whole group of shifts sharing this slot (N needed / M filled).
   const openEditGroup = (s: Shift) => {
     setAssignOpen(false); setActionsOpen(false);
     const group = store.shifts.filter((x) => gkey(x) === gkey(s));
     const filledFirst = [...group].sort((a, b) => Number(!!b.staffId) - Number(!!a.staffId));
-    setDraft({ groupIds: group.map((x) => x.id), site: s.site, role: s.role, listing: s.listing ?? "", season: s.season ?? "", date: s.date, start: s.start, end: s.end, slots: filledFirst.map((x) => x.staffId), brk: s.brk ?? null, note: s.note ?? "" });
+    setNoteOpen(false); setDraft({ groupIds: group.map((x) => x.id), site: s.site, role: s.role, listing: s.listing ?? "", season: s.season ?? "", date: s.date, start: s.start, end: s.end, slots: filledFirst.map((x) => x.staffId), brk: s.brk ?? null, note: s.note ?? "" });
   };
 
   const ShiftBlock = ({ s, compact }: { s: Shift; compact?: boolean }) => {
@@ -554,6 +555,7 @@ export function ScheduleApp() {
                   onMouseEnter={(e) => { const r = e.currentTarget.getBoundingClientRect(); setHover({ id: st.id, top: Math.max(64, Math.min(r.top, (typeof window !== "undefined" ? window.innerHeight : 800) - 430)), left: r.right + 10 }); }}
                   onMouseLeave={() => setHover((h) => (h?.id === st.id ? null : h))}
                   onClick={() => setAvailEdit(st)}
+                  role="button"
                   title="Click to view / edit availability"
                   className="-mx-1 flex cursor-pointer items-start gap-2 rounded-lg px-1 py-2 hover:bg-[var(--panel)]">
                   <span className="mt-0.5 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
@@ -740,13 +742,13 @@ export function ScheduleApp() {
         const shiftH = Math.max(0, durH(draft.start, draft.end) - (breakUnpaid ? brkH : 0));
         const cost = assigned.reduce((n, sid) => n + (staffById[sid]?.rate ?? 0) * shiftH, 0);
         return (
-        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[7vh]" onClick={() => { setDraft(null); setAssignOpen(false); }}>
+        <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[7vh]" onClick={() => { setDraft(null); setAssignOpen(false); setNoteOpen(false); }}>
           <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {/* header */}
             <div className="flex items-center gap-3 border-b border-[var(--line)] px-5 py-3.5">
               <span className="flex h-9 w-9 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{firstSt ? initials(firstSt.name) : "＋"}</span>
               <div className="min-w-0"><div className="truncate text-[16px] font-extrabold text-[var(--ink)]">{firstSt ? firstSt.name : (draft.groupIds.length ? "Shift" : "New shift")}{filled > 1 && <span className="text-[var(--ink-3)]"> +{filled - 1}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{draft.role} · {draft.site}</div></div>
-              <button type="button" onClick={() => { setDraft(null); setAssignOpen(false); }} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button>
+              <button type="button" onClick={() => { setDraft(null); setAssignOpen(false); setNoteOpen(false); }} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button>
             </div>
 
             {!assignOpen && !actionsOpen ? (
@@ -784,10 +786,10 @@ export function ScheduleApp() {
                 <button type="button" onClick={() => setDraft({ ...draft, brk: { from: "12:00", to: addMins("12:00", defBreakM) } })} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left"><span className="text-[15px]">☕</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">Add break</span></button>
               )}
               {/* note */}
-              {(draft.note.length > 0) ? (
+              {(noteOpen || draft.note.length > 0) ? (
                 <div className="flex items-start gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5"><span className="text-[15px]">💬</span><textarea autoFocus value={draft.note} onChange={(e) => setDraft({ ...draft, note: e.target.value })} rows={2} placeholder="Shift note — visible to assigned staff" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" /></div>
               ) : (
-                <button type="button" onClick={() => setDraft({ ...draft, note: " " })} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left"><span className="text-[15px]">💬</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">Add shift note</span></button>
+                <button type="button" onClick={() => setNoteOpen(true)} className="flex w-full items-center gap-2 border-b border-[var(--line-2,#eef2f8)] py-2.5 text-left"><span className="text-[15px]">💬</span><span className="text-[13.5px] font-bold text-[#1d3a8f]">Add shift note</span></button>
               )}
               {/* role / location / listing / season */}
               <details className="border-b border-[var(--line-2,#eef2f8)] py-2.5"><summary className="cursor-pointer list-none text-[12.5px] font-bold text-[var(--ink-2)]">⚙️ Role · location · listing · season</summary>
