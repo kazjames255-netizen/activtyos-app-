@@ -85,6 +85,7 @@ export function TeamApp() {
   const [sentNote, setSentNote] = useState<string | null>(null);
 
   const [invFilter, setInvFilter] = useState<"all" | "pending" | "activated">("all");
+  const [invQuery, setInvQuery] = useState("");
   // Invite form
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
@@ -363,7 +364,10 @@ export function TeamApp() {
         <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
       ) : (() => {
         const statusOf = (r: (typeof rows)[number]) => (!r.usedBy ? "pending" : r.meta.status === "deactivated" ? "deactivated" : "activated");
-        const shownInv = rows.filter((r) => invFilter === "all" || statusOf(r) === invFilter);
+        const q = invQuery.trim().toLowerCase();
+        const shownInv = rows
+          .filter((r) => invFilter === "all" || statusOf(r) === invFilter)
+          .filter((r) => !q || (r.meta.name ?? "").toLowerCase().includes(q) || (r.sentTo ?? "").toLowerCase().includes(q) || (r.meta.jobTitle ?? "").toLowerCase().includes(q));
         return (
         <div>
           <div className="mb-2 flex flex-wrap items-center gap-2">
@@ -373,8 +377,9 @@ export function TeamApp() {
                 <button key={f} type="button" onClick={() => setInvFilter(f)} className={"rounded-md px-3 py-1 text-[12px] font-bold transition-colors " + (invFilter === f ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)]")}>{lbl}</button>
               ))}
             </div>
-            <span className="ml-auto text-[11.5px] text-[var(--ink-3)]">Activated team &amp; their sites live in <b>Deployment</b>.</span>
+            <Input value={invQuery} onChange={(e) => setInvQuery(e.target.value)} placeholder="🔍 Search name or email" className="ml-auto w-[220px] text-[12.5px]" />
           </div>
+          <p className="mb-2 text-[11.5px] text-[var(--ink-3)]"><b>Copy link</b> grabs that person&rsquo;s sign-up link so you can send it yourself (WhatsApp, Slack, text…) — they join when they open it. Activated team &amp; their sites live in <b>Deployment</b>.</p>
           {shownInv.length === 0 ? (
             <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{invFilter === "activated" ? "No one has activated yet — invites show as Pending until they log in." : invFilter === "pending" ? "No pending invites — everyone's activated." : "No invites yet — send one above."}</Card>
           ) : (
@@ -396,7 +401,7 @@ export function TeamApp() {
                       </div>
                     </div>
                     <div className="flex flex-none items-center gap-2">
-                      {st === "pending" && <Button sm onClick={() => copy(r.token)}>{copied === r.token ? "Copied!" : "Copy link"}</Button>}
+                      {st === "pending" && <Button sm title="Copies their sign-up link — send it yourself and they join when they open it" onClick={() => copy(r.token)}>{copied === r.token ? "✓ Copied — send it to them" : "🔗 Copy invite link"}</Button>}
                       {st === "activated" && <button type="button" onClick={() => setStatus(r.token, "deactivated")} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Deactivate</button>}
                       {st === "deactivated" && <button type="button" onClick={() => setStatus(r.token, "active")} className="rounded-full border border-[#bfe3cd] bg-[#eef8f1] px-3 py-1.5 text-[12px] font-bold text-[#0f7a43] hover:brightness-105">Reactivate</button>}
                       <button type="button" onClick={() => deleteInvite(r.token)} title="Remove this invite / person" className="rounded-full border border-[#e6b3b3] bg-white px-3 py-1.5 text-[12px] font-bold text-[#c0392b] hover:bg-[#fdebec]">Delete</button>
