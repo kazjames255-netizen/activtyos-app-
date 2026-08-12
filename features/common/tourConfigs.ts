@@ -708,27 +708,45 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
     ]
   },
   "staff": {
-    "title": "Staff",
-    "introLine": "This is where you bring people onto your team — by invite.",
-    "doneLine": "And that's the whole page — invite someone, share the link, done.",
+    "title": "Team & deployment",
+    "introLine": "This is your team — invite people, watch who's joined, and deploy them to the right locations and listings.",
+    "doneLine": "That's your team — invite them, watch them activate, and deploy them where they're needed.",
     "steps": [
       {
-        "label": "Invite someone",
-        "stage": "Getting started",
-        "line": "Type someone's email and ActivityOS sends them an invite straight away; leave it blank and it just makes a link you can copy and share yourself. Company accounts can also invite a whole franchise, and that button stays hidden for everyone else.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SEND AN INVITE</div><div class=\"field ph\">their@email.com (optional)</div><div class=\"chips\"><span class=\"btn amber\">+ Invite a franchise</span><span class=\"btn\">+ Invite staff</span></div><div class=\"hint\">Add an email and the invite is emailed to them; leave it blank to just create a link to share by hand. The 'Invite a franchise' button only appears on company accounts.</div></div>"
+        "label": "Your team at a glance",
+        "stage": "Overview",
+        "line": "The tiles across the top count your team — how many people have joined, how many invites are still pending, and how many staff seats your plan allows so you know when you're near the limit.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">👥 Team · 6</span><span class=\"ochip\">⏳ Pending · 2</span><span class=\"ochip\">🎫 Seats · 6 / 10</span></div><div class=\"hint\">Square KPI tiles, like the dashboard — a quick read on your workforce.</div>"
       },
       {
-        "label": "Your invite links",
+        "label": "Invite — who & their role",
+        "stage": "Invite",
+        "line": "New people join by invite, built as a short slideshow. Step 1 is their full name and email — email is required so they can actually sign up. Step 2 is their access role (Owner, Management or Staff) which governs what they can see and do. Step 3 is their job title, like Lifeguard or Site Manager.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">1 · WHO</div><div class=\"row2\"><div><div class=\"fl\">FULL NAME</div><div class=\"field\">Priya Shah</div></div><div><div class=\"fl\">EMAIL (required)</div><div class=\"field\">priya@apfcamps.co.uk</div></div></div><div class=\"fl\">2 · ACCESS ROLE</div><div class=\"field\">Staff</div><div class=\"fl\">3 · JOB TITLE</div><div class=\"field\">First Aider</div></div>"
+      },
+      {
+        "label": "Where they'll work",
+        "stage": "Deploy",
+        "line": "Step 4 is deployment. Choose None — they still get page access from their role but aren't put on the rota — or pick one or all locations, then the listings inside them, with each listing showing the season it belongs to. Step 5 reviews it and sends. Remember: what they can do comes from their role, not from what they're assigned here.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">4 · ASSIGN TO</div><div class=\"chips\"><span class=\"ochip\">Rostered</span><span class=\"chip2\">None (access only)</span></div><div class=\"fl\">① LOCATIONS</div><div class=\"chips\"><span class=\"ochip\">milton KEYNES</span><span class=\"chip2\">All locations</span></div><div class=\"fl\">② LISTINGS</div><div class=\"chips\"><span class=\"ochip\">Summer camp · 📅 Summer 1</span></div></div>"
+      },
+      {
+        "label": "Track your invites",
         "stage": "Invites",
-        "line": "Every invite you've made is listed here with its role, a short reference code and the date. A pending one keeps a Copy link button so you can share it by hand; the moment someone signs up with it, it flips to Used.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">INVITE LINKS</div><div class=\"tkt\"><div class=\"tkhd\"><b>staff</b> <span class=\"g\">…a3f9c2b1 · 2026-08-05 · to jordan@apfcamps.co.uk</span><span class=\"tkp\">Pending</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>staff</b> <span class=\"g\">…7d2e5b90 · 2026-07-22</span><span class=\"tkp\">Used</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>franchise</b> <span class=\"g\">…9b04f1a8 · 2026-07-18</span><span class=\"tkp\">Pending</span></div></div><div class=\"chips\"><span class=\"btn\">Copy link</span></div><div class=\"hint\">Pending invites show Copy link; used invites just show 'Used'.</div></div>"
+        "line": "Every invite is listed with a live status — Pending until they sign up, then ✓ Account activated. Filter by All, Pending or Activated, search by name, and use Copy link to share an invite by hand if the email didn't reach them.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">All</span><span class=\"chip2\">Pending</span><span class=\"chip2\">Activated</span></div><div class=\"frm\"><div class=\"field ph\">🔍 Search by name</div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Shah</b> <span class=\"g\">First Aider · Staff</span><span class=\"tkp\">Pending</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Site Manager · Management</span><span class=\"tkp\">✓ Activated</span></div></div><div class=\"chips\"><span class=\"btn\">Copy link</span></div></div>"
+      },
+      {
+        "label": "Deploy your team",
+        "stage": "Deployment",
+        "line": "The Deployment tab is where you place people once they've joined. Flip between By location, By staff and By listing, add someone from the dropdown, and give them the same locations → listings assignment as the invite. This is what decides whose registers, ratios and schedule each person sees.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">By location</span><span class=\"chip2\">By staff</span><span class=\"chip2\">By listing</span></div><div class=\"frm\"><div class=\"fl\">📍 MILTON KEYNES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Summer camp · 📅 Summer 1</span></div></div><div class=\"field ph\">＋ Add staff (A–Z)…</div></div>"
       },
       {
         "label": "Where the rules live",
         "stage": "Setup",
-        "line": "The checks behind the scenes aren't set here. Whether a valid DBS and in-date certificates are required, plus the friendly note added to every invite email, all live in Setup under Staff and workforce, and are enforced for you in the background.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SETUP · STAFF AND WORKFORCE</div><div class=\"row2\"><div><div class=\"fl\">REQUIRE A VALID DBS</div><div class=\"field\">Yes</div></div><div><div class=\"fl\">KEY CERTIFICATES IN DATE</div><div class=\"field\">Yes</div></div></div><div class=\"fl\">NOTE ADDED TO INVITE EMAILS</div><div class=\"field\">Looking forward to having you on the team!</div><div class=\"hint\">Set these once in Setup — the checks are enforced by the backend and the note is added to every staff invite.</div></div>"
+        "line": "Two things sit in Setup: the access roles and exactly what each one can view or edit (Roles & permissions), plus the DBS and certificate checks under Staff and workforce. Job titles like Lifeguard are managed right here in the Staff area, and added as you invite.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SETUP · ROLES &amp; PERMISSIONS</div><div class=\"tkt\"><div class=\"tkhd\"><b>Management</b> <span class=\"g\">View / Edit across most areas</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Staff</b> <span class=\"g\">View only, assigned listings</span></div></div><div class=\"hint\">Access = the role. Job title (Lifeguard, Site Manager…) is set on the invite, here in Staff.</div></div>"
       }
     ]
   },
@@ -992,44 +1010,56 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   },
   "schedule": {
     "title": "Schedule and rota",
-    "introLine": "This is your schedule and rota, where you see who is working when across the week and build the team's shifts.",
-    "doneLine": "That is the rota. Step through the weeks, add shifts for your staff, and everyone stays in sync automatically.",
+    "introLine": "This is your rota — build the week's shifts, ask staff for their availability, and see at a glance who's covered and who still needs staff.",
+    "doneLine": "That's the rota — filter by season, build and assign shifts, chase availability and check-ins, then publish. Fine-tune it all on the Settings tab.",
     "steps": [
       {
-        "label": "Pick your week",
-        "stage": "Week",
-        "line": "Use the arrows to move a week back or forward, and This week jumps you straight back to today. The heading shows the Monday to Sunday range you are currently looking at.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">WEEK SHOWING</div><div class=\"field\">Mon 11 Aug – Sun 17 Aug</div><div class=\"chips\"><span class=\"btn ghost\">‹ Prev</span><span class=\"btn ghost\">Next ›</span><span class=\"btn amber\">This week</span></div></div>"
+        "label": "Season first, then narrow",
+        "stage": "Filter",
+        "line": "Start by choosing a season — you can pick more than one. The 📅 button opens a pop-up, and whatever you tick then scopes the whole rota so only the locations and listings in those seasons show. From there narrow by 📍 location and 🎟 listing, step weeks with the arrows, and switch the view between By area or By staff and Day / Week / Month.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">📅 Summer 1</span><span class=\"chip2\">📍 milton KEYNES</span><span class=\"chip2\">🎟 All listings</span></div><div class=\"chips\"><span class=\"btn ghost\">‹</span><span class=\"btn\">9 – 15 Aug</span><span class=\"btn ghost\">›</span><span class=\"chip2\">Week by area</span></div><div class=\"hint\">The season pop-up is multi-select — it filters the locations and listings you see.</div>"
       },
       {
-        "label": "Add a shift",
+        "label": "What the week costs",
+        "stage": "Wages",
+        "line": "A wages banner sits up top — the week's total at the plain hourly rate, and again including your predicted on-cost (employer NI, pension). It's recorded only; ActivityOS never moves money. The on-cost percentage comes from the Settings tab.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">AT HOURLY RATE</div><div class=\"field\">£486.00</div></div><div><div class=\"fl\">INCL. 12.07% ON-COST</div><div class=\"field\">£544.67</div></div></div><div class=\"hint\">Predicted labour cost for the shifts in view — display only.</div></div>"
+      },
+      {
+        "label": "The rota, by listing",
+        "stage": "Grid",
+        "line": "Each block is one of your listings, with its location and season shown small underneath, and a row for every job role. Shifts are colour-coded by state: navy means assigned to someone, soft red means it still needs staff, and grey means no shift yet. The key up top spells it out, and the hours total sits above each day.",
+        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>🎟 Summer camp Loughton Manor</b> <span class=\"g\">📍 milton KEYNES · 📅 Summer 1</span></div></div><div class=\"chips\"><span class=\"ochip\">🟦 Assigned</span><span class=\"ochip\">🟥 Not assigned</span><span class=\"chip2\">◻︎ No shift</span></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>9–3 · Alex Rivera</b></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>9–3 · Unfilled</b></div></div></div>"
+      },
+      {
+        "label": "Add & assign a shift",
         "stage": "Build",
-        "line": "If your role lets you manage the team, you get an Add a shift button. Tap it to open the form and start building out the week's rota.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"btn amber\">＋ Add a shift</span></div><div class=\"hint\">Only company, franchise and freelancer accounts can add or remove shifts.</div></div>"
+        "line": "If you manage the team, tap the ＋ in any day cell to add a shift, set its time, role, listing and season, then Assign staff. Assigned people show as chips — click the × on a chip to unassign and free the slot back to open. Auto-fill offers available, non-double-booked staff, and you can add a break or a note.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">START</div><div class=\"field\">09:00</div></div><div><div class=\"fl\">END</div><div class=\"field\">15:00</div></div></div><div class=\"fl\">ASSIGNED</div><div class=\"chips\"><span class=\"ochip\">Alex Rivera ×</span></div><div class=\"chips\"><span class=\"btn amber\">⚡ Auto-fill available staff</span></div></div>"
       },
       {
-        "label": "Fill in the details",
-        "stage": "Details",
-        "line": "Each shift needs a staff member and a date, then you set a start and end time. You can also give it a role, like lead coach, and tie it to one of your programmes.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">STAFF MEMBER</div><div class=\"field\">Priya Sharma</div><div class=\"row2\"><div><div class=\"fl\">START</div><div class=\"field\">09:00</div></div><div><div class=\"fl\">END</div><div class=\"field\">17:00</div></div></div><div class=\"fl\">ROLE</div><div class=\"field\">lead coach</div><div class=\"fl\">PROGRAMME</div><div class=\"field\">Summer Multi-Sports Camp</div></div>"
+        "label": "Ask staff for availability",
+        "stage": "Availability",
+        "line": "Step 1 in the side panel is Request staff to confirm availability — click it and pick This week or All weeks, or open one person's editor to ask just them. A red bell with a count shows how many times you've asked; it turns green once they confirm. Sort the panel by who has the most spare availability, or by cost per hour, to fill open shifts smartly.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"btn amber\">Request staff to confirm availability · 2</span></div><div class=\"chips\"><span class=\"chip2\">This week</span><span class=\"chip2\">All weeks</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Jordan Lee</b> <span class=\"g\">Requested</span><span class=\"tkp\">🔔 2</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Confirmed</span><span class=\"tkp\">🔔 ✓</span></div></div></div>"
       },
       {
-        "label": "The week at a glance",
-        "stage": "Rota",
-        "line": "Below the form sits a card for every day, Monday through Sunday. Each day lists its shifts in order of start time, so you can read the whole week at once.",
-        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>MON 11</b> <span class=\"g\">Aisha Khan 09:00–15:00 · assistant</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>TUE 12</b> <span class=\"g\">Tom Ellis 08:30–16:30 · first aider</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>WED 13</b> <span class=\"g\">— no shifts</span></div></div>"
+        "label": "Who's not checked in",
+        "stage": "Check-in",
+        "line": "Once a shift starts, anyone assigned who hasn't checked in past the grace period shows in Check-in alerts — with how late they are and how many times you've nudged them. Search by name and hit Remind. The grace period, and whether to flag late staff at all, are on the Settings tab.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"field ph\">🔍 Search staff name</div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Shah</b> <span class=\"g\">Not in · 9–3 · milton KEYNES</span><span class=\"tkp\">⏰ 20 min late</span></div></div><div class=\"chips\"><span class=\"g\">🔔 Reminded 1×</span><span class=\"btn amber\">Remind again</span></div></div>"
       },
       {
-        "label": "Each shift card",
-        "stage": "Shifts",
-        "line": "A shift card shows the staff member's name, their hours, the role and the programme they are on. If you manage the team, the little cross removes that shift.",
-        "bodyHtml": "<div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">09:00–17:00 · lead coach</span><span class=\"tkp\">×</span></div></div><div class=\"chips\"><span class=\"ochip\">Summer Multi-Sports Camp</span></div>"
+        "label": "Publish to staff",
+        "stage": "Publish",
+        "line": "When the week's ready, Publish to staff locks the shifts and tells everyone assigned. How they're told — email, push, both or not at all — is your choice on the Settings tab.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"btn amber\">Publish to staff · 4</span></div><div class=\"hint\">Locks the shifts and notifies assigned staff per your publish setting.</div></div>"
       },
       {
-        "label": "Always up to date",
-        "stage": "Live",
-        "line": "The rota updates on its own whenever anyone on the team adds or removes a shift, so the week you see is always the latest version.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chk\"><span class=\"chkbx\">✓</span> Live sync across your team</div><div class=\"hint\">Jordan Reeves just added a shift for Sat 16 Aug — it appears here instantly.</div></div>"
+        "label": "Rota vs Settings",
+        "stage": "Settings",
+        "line": "Two tabs sit at the top: Rota is everything we've walked through; Settings is where you tune it. Under Notifications & automation you choose how staff are told when you publish, a shift reminder before a start, the check-in grace period and whether to auto-flag late staff, plus auto-chasing unconfirmed availability. Basics there set your week start, default shift and break, and the on-cost percentage the wages banner uses.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SETTINGS · NOTIFICATIONS &amp; AUTOMATION</div><div class=\"tkt\"><div class=\"tkhd\"><b>Notify staff on publish</b> <span class=\"g\">Email + push</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Shift reminder</b> <span class=\"g\">2 hours before</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Check-in grace</b> <span class=\"g\">15 minutes</span></div></div><div class=\"hint\">Basics, swaps &amp; offers and the on-cost % live here too.</div></div>"
       }
     ]
   },
