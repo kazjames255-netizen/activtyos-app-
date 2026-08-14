@@ -28,6 +28,7 @@ import { EmailApp } from "@/features/email/EmailApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { LearningCentreApp } from "@/features/learning/LearningCentreApp";
+import { CredentialsApp } from "@/features/learning/CredentialsApp";
 import { MoneyOutApp } from "@/features/money/MoneyOutApp";
 import { MoneyInApp } from "@/features/money/MoneyInApp";
 import { SubscriptionApp } from "@/features/money/SubscriptionApp";
@@ -141,6 +142,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ai: () => <AiAssistant kind="operator" />,
     payroll: PayrollPlanned("company", "staff"),
     learning: LearningCentreApp,
+    credentials: CredentialsApp,
     schedule: RotaApp,
     "ho-framework": planned({
       title: "Franchise Support Framework",

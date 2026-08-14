@@ -123,6 +123,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "schedule", legacyView: "admin-schedule", label: "Staff schedule", highlight: true, icon: { type: "glyph", value: "🗓" }, badge: null },
         { view: "payroll", legacyView: "payroll", label: "Payroll", highlight: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"2.5\" y=\"6\" width=\"19\" height=\"12\" rx=\"2\"></rect><circle cx=\"12\" cy=\"12\" r=\"2.4\"></circle><path d=\"M6 9.2v5.6M18 9.2v5.6\"></path></svg>" }, badge: null },
         { view: "learning", legacyView: "learning", label: "Learning Centre", highlight: true, icon: { type: "glyph", value: "🎓" }, badge: null },
+        { view: "credentials", legacyView: "credentials", label: "Staff certificates", highlight: true, icon: { type: "glyph", value: "🎖" }, badge: null },
         { view: "documents", legacyView: "admin-documents", label: "Documents", highlight: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 3h6l5 5v11a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z\"></path><path d=\"M14 3v6h5\"></path><path d=\"M9.5 13h6M9.5 16.5h6\"></path></svg>" }, badge: null },
       ],
     },
@@ -435,7 +436,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "training", legacyView: "staff-training", label: "Learning Centre", icon: { type: "glyph", value: "◎" }, badge: null },
-        { view: "certificates", legacyView: "staff-certificates", label: "My certificates", icon: { type: "glyph", value: "🎖" }, badge: null },
+        { view: "certificates", legacyView: "staff-certificates", label: "My learning", icon: { type: "glyph", value: "🎖" }, badge: null },
         { view: "documents", legacyView: "staff-documents", label: "Documents", icon: { type: "glyph", value: "▤" }, badge: null },
         { view: "ai", legacyView: "staff-ai", label: "AI assistant", icon: { type: "glyph", value: "✦" }, badge: null },
       ],
