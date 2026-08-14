@@ -649,6 +649,20 @@ export interface TenantSettings {
     trackTraining?: boolean;      // keep staff training / certificate records
     observations?: boolean;       // enable learning observations / journeys for children
     framework?: string;           // curriculum framework label (e.g. "EYFS")
+    passMark?: number;            // default end-of-course quiz pass mark (%)
+    renewMonths?: number;         // default course renewal interval (months; 0 = never)
+    autoCert?: boolean;           // auto-issue a certificate when a course is passed
+    certLogo?: boolean;           // show the company logo on certificates
+    requirePolicyConfirm?: boolean; // required policies must be read-and-confirmed
+    selfEnrol?: boolean;          // staff can self-enrol on optional courses
+    certTemplate?: string;        // chosen certificate template id (see certificates.ts)
+    certSignatory?: string;       // name printed on the certificate signature line
+    certSignatoryRole?: string;   // role/title under the signatory name
+    certSignature?: string;       // signature image (data URL)
+    certColor?: string;           // accent colour (hex) recolouring the chosen template
+    certTitle?: string;           // heading text override (e.g. "Certificate of Achievement")
+    certShowScore?: boolean;      // show the quiz score on the certificate (default true)
+    certShowQr?: boolean;         // show the verification QR (default true)
   };
 
   /** Meals & catering (the parent-facing meal ordering). */
@@ -1103,7 +1117,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   autoEmails: { bookings: true, payments: true, paymentDue: true, paymentDueTiming: 24, sessionReminder: true, sessionTiming: 48, waitlist: true, dayOf: true, lateCollection: true, announcements: false, reviewRequests: true },
   brandColor: "#2f6bd8",
   staff: { assignByLeads: false, requireDBS: true, requireCompliance: true, defaultRatioTarget: 8, inviteMessage: "" },
-  learning: { trackTraining: true, observations: false, framework: "EYFS" },
+  learning: { trackTraining: true, observations: false, framework: "EYFS", passMark: 80, renewMonths: 12, autoCert: true, certLogo: true, requirePolicyConfirm: true, selfEnrol: false, certTemplate: "gold", certSignatory: "", certSignatoryRole: "Training Manager", certShowScore: true, certShowQr: true },
   meals: { ordering: true, showAllergens: true, orderCutoffHours: 18, menuNote: "", allergenNote: "", menuShare: "booked", cutoffWhen: "off", cutoffTime: "08:00", changeApproval: "auto" },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
   safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true, dslTitle: "Designated Safeguarding Lead (DSL)", contacts: { nspccPhone: "0808 800 5000", policePhone: "999 (emergency) / 101" } },

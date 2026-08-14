@@ -435,6 +435,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "training", legacyView: "staff-training", label: "Learning Centre", icon: { type: "glyph", value: "◎" }, badge: null },
+        { view: "certificates", legacyView: "staff-certificates", label: "My certificates", icon: { type: "glyph", value: "🎖" }, badge: null },
         { view: "documents", legacyView: "staff-documents", label: "Documents", icon: { type: "glyph", value: "▤" }, badge: null },
         { view: "ai", legacyView: "staff-ai", label: "AI assistant", icon: { type: "glyph", value: "✦" }, badge: null },
       ],

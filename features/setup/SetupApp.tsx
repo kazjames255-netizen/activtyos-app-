@@ -34,6 +34,8 @@ import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPol
 import { defaultSeasonNames, type Season } from "@/lib/seasons";
 import { SG_CATEGORIES, DEFAULT_PROTOCOL } from "@/features/incidents/safeguarding";
 import { MembershipTierCard } from "@/features/parent/MembershipsApp";
+import { CERT_TEMPLATES, CERT_ACCENTS, certTemplateOf, certificateDoc, openCertificate, CERT_SAMPLE } from "@/features/learning/certificates";
+import { useCredentials, DEMO_STAFF } from "@/features/learning/credentials";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
 // (keeps transparency via PNG when it fits, else falls back to JPEG).
@@ -1267,6 +1269,16 @@ export function SetupApp() {
       .catch(() => setListings([]));
   }, []);
 
+  const cred = useCredentials([]);
+  const credRoleOpts = Array.from(new Set([...(settings.roles ?? []).map((r) => r.name), ...(settings.staffRoles ?? [])].filter(Boolean)));
+  const toggleIn = (arr: string[] | undefined, v: string) => { const a = arr ?? []; return a.includes(v) ? a.filter((x) => x !== v) : [...a, v]; };
+  const certPreview = { ...CERT_SAMPLE, provider: settings.providerName || settings.billing?.businessName || CERT_SAMPLE.provider, signName: settings.learning?.certSignatory || CERT_SAMPLE.signName, signRole: settings.learning?.certSignatoryRole || CERT_SAMPLE.signRole, signImg: settings.learning?.certSignature, accent: settings.learning?.certColor, title: settings.learning?.certTitle || undefined, showScore: settings.learning?.certShowScore, showQr: settings.learning?.certShowQr };
+  // deep-link: /setup?tab=learning#credtypes opens the tab and scrolls to the section
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const h = window.location.hash.slice(1);
+    if (h && tab === "learning") { const el = document.getElementById(h); if (el) setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 260); }
+  }, [tab]);
   const set = <K extends keyof TenantSettings>(key: K, value: TenantSettings[K]) => {
     void save({ settings: { ...settings, [key]: value } }).then(() =>
       setSavedAt(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })),
@@ -1421,6 +1433,89 @@ export function SetupApp() {
             <Toggle on={settings.learning?.observations ?? false} onChange={(v) => set("learning", { ...settings.learning, observations: v })} labels={["On", "Off"]} />
           </Row>
           <div className="mt-3"><FieldLabel>Curriculum framework</FieldLabel><Input value={settings.learning?.framework ?? ""} placeholder="EYFS" onChange={(e) => set("learning", { ...settings.learning, framework: e.target.value })} className="w-full sm:w-64" /></div>
+
+          <div className="mt-5 mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Courses &amp; certificates</div>
+          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+            <div><FieldLabel>Default quiz pass mark (%)</FieldLabel><Input type="number" min={1} max={100} value={settings.learning?.passMark ?? 80} onChange={(e) => set("learning", { ...settings.learning, passMark: Number(e.target.value) })} className="w-full sm:w-40" /></div>
+            <div><FieldLabel>Default renewal (months, 0 = never)</FieldLabel><Input type="number" min={0} value={settings.learning?.renewMonths ?? 12} onChange={(e) => set("learning", { ...settings.learning, renewMonths: Number(e.target.value) })} className="w-full sm:w-40" /></div>
+          </div>
+          <Row label="Issue certificates automatically" hint="Give staff a certificate the moment they pass a course.">
+            <Toggle on={settings.learning?.autoCert ?? true} onChange={(v) => set("learning", { ...settings.learning, autoCert: v })} labels={["On", "Off"]} />
+          </Row>
+          <Row label="Show your logo on certificates" hint="Brand the printable/PDF certificate with your logo.">
+            <Toggle on={settings.learning?.certLogo ?? true} onChange={(v) => set("learning", { ...settings.learning, certLogo: v })} labels={["On", "Off"]} />
+          </Row>
+          <Row label="Require staff to confirm policies" hint="Required policies must be read and confirmed, with a dated record.">
+            <Toggle on={settings.learning?.requirePolicyConfirm ?? true} onChange={(v) => set("learning", { ...settings.learning, requirePolicyConfirm: v })} labels={["On", "Off"]} />
+          </Row>
+          <Row label="Staff can self-enrol on optional courses" hint="Let staff pick up optional (non-required) courses themselves.">
+            <Toggle on={settings.learning?.selfEnrol ?? false} onChange={(v) => set("learning", { ...settings.learning, selfEnrol: v })} labels={["On", "Off"]} />
+          </Row>
+          <div className="mt-5 mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Certificate design</div>
+          <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">Pick the certificate staff receive when they pass a course. It auto-fills their name, the course, the score, the completion date and — if the course renews — the expiry date.</p>
+          <div className="mb-3 flex flex-wrap gap-2.5">
+            {CERT_TEMPLATES.map((t) => { const on = (settings.learning?.certTemplate ?? "gold") === t.id; return (
+              <button key={t.id} type="button" onClick={() => set("learning", { ...settings.learning, certTemplate: t.id })} className={"w-[196px] overflow-hidden rounded-xl border text-left transition-all " + (on ? "border-transparent ring-2 ring-[#1d3a8f] ring-offset-1" : "border-[var(--line)] hover:-translate-y-0.5 hover:shadow-md")}>
+                <div className="relative h-[139px] w-full overflow-hidden bg-[#eef1f6]"><iframe title={t.name} tabIndex={-1} scrolling="no" srcDoc={certificateDoc(certPreview, t.id, false)} className="pointer-events-none absolute left-0 top-0 origin-top-left" style={{ width: 1000, height: 710, transform: "scale(0.196)" }} /></div>
+                <div className="flex items-center gap-1.5 px-2.5 py-1.5"><span className="truncate text-[11.5px] font-bold text-[var(--ink)]">{t.name}</span>{on && <span className="ml-auto text-[11px] font-extrabold text-[#1d3a8f]">✓ Chosen</span>}</div>
+              </button>
+            ); })}
+          </div>
+          <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Accent colour</div>
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {CERT_ACCENTS.map(([name, hex]) => { const on = settings.learning?.certColor === hex; return (
+              <button key={hex} type="button" title={name} aria-label={name} onClick={() => set("learning", { ...settings.learning, certColor: hex })} className={"h-8 w-8 rounded-full border-2 transition-transform hover:scale-110 " + (on ? "border-[var(--ink)]" : "border-white shadow-[0_0_0_1px_var(--line)]")} style={{ background: hex }} />
+            ); })}
+            <button type="button" onClick={() => set("learning", { ...settings.learning, certColor: undefined })} className={"rounded-full border px-2.5 py-1 text-[11px] font-bold " + (settings.learning?.certColor ? "border-[var(--line)] text-[var(--ink-2)] hover:border-[#1d3a8f]" : "border-[#1d3a8f] text-[#1d3a8f]")}>Template default</button>
+          </div>
+          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+            <div><FieldLabel>Heading text</FieldLabel><Input value={settings.learning?.certTitle ?? ""} placeholder="Certificate of Achievement" onChange={(e) => set("learning", { ...settings.learning, certTitle: e.target.value })} className="w-full" /></div>
+            <div className="flex items-end gap-5 pb-1.5">
+              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={settings.learning?.certShowScore !== false} onChange={(e) => set("learning", { ...settings.learning, certShowScore: e.target.checked })} /> Show score</label>
+              <label className="flex items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={settings.learning?.certShowQr !== false} onChange={(e) => set("learning", { ...settings.learning, certShowQr: e.target.checked })} /> Show QR</label>
+            </div>
+          </div>
+          <div className="mb-3 grid gap-3 sm:grid-cols-2">
+            <div><FieldLabel>Signatory name</FieldLabel><Input value={settings.learning?.certSignatory ?? ""} placeholder="e.g. Alex Morgan" onChange={(e) => set("learning", { ...settings.learning, certSignatory: e.target.value })} className="w-full" /></div>
+            <div><FieldLabel>Signatory role</FieldLabel><Input value={settings.learning?.certSignatoryRole ?? ""} placeholder="e.g. Training Manager" onChange={(e) => set("learning", { ...settings.learning, certSignatoryRole: e.target.value })} className="w-full" /></div>
+          </div>
+          <div className="mb-3">
+            <FieldLabel>Signature image (optional)</FieldLabel>
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ Upload signature<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = () => set("learning", { ...settings.learning, certSignature: String(r.result) }); r.readAsDataURL(f); }} /></label>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {settings.learning?.certSignature && <img src={settings.learning.certSignature} alt="Signature" className="h-9 w-auto rounded border border-[var(--line)] bg-white object-contain px-1" />}
+              {settings.learning?.certSignature && <button type="button" onClick={() => set("learning", { ...settings.learning, certSignature: undefined })} className="text-[12px] font-semibold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button>}
+            </div>
+          </div>
+          <Button variant="primary" onClick={() => openCertificate(certPreview, settings.learning?.certTemplate)}>👁 Preview full certificate</Button>
+
+          <div id="credtypes" className="mt-5 mb-1 scroll-mt-28 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff credential types</div>
+          <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">Certificates staff upload in their own area and you verify (DBS, First Aid, etc.). Add your own or delete any you don’t use.</p>
+          <div className="grid gap-2">
+            {cred.types.map((t) => (
+              <div key={t.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+                  <Input value={t.name} onChange={(e) => cred.upsertType({ ...t, name: e.target.value })} className="w-[190px] font-semibold" />
+                  {t.dbs && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]" title="Captures DBS level + Update Service number">DBS extras</span>}
+                  <label className="flex items-center gap-1.5 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={t.required} onChange={(e) => cred.upsertType({ ...t, required: e.target.checked })} /> Required</label>
+                  <label className="flex items-center gap-1.5 text-[12px] text-[var(--ink-2)]">Renew every <Input type="number" min={0} value={t.renewMonths} onChange={(e) => cred.upsertType({ ...t, renewMonths: Number(e.target.value) })} className="w-[62px]" /> months <span className="text-[var(--ink-3)]">(0 = never)</span></label>
+                  <button type="button" title="Delete credential type" onClick={() => cred.deleteType(t.id)} className="ml-auto text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
+                </div>
+                {t.required && (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[var(--line-2,#eef2f8)] pt-2">
+                    <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Required for</span>
+                    <Select value={t.applyKind ?? "all"} onChange={(e) => cred.upsertType({ ...t, applyKind: e.target.value as "all" | "roles" | "staff" })} className="max-w-[150px]"><option value="all">All staff</option><option value="roles">Job roles</option><option value="staff">Named people</option></Select>
+                    {(t.applyKind ?? "all") === "roles" && (credRoleOpts.length ? credRoleOpts.map((r) => { const on = (t.applyRoles ?? []).includes(r); return <button key={r} type="button" onClick={() => cred.upsertType({ ...t, applyRoles: toggleIn(t.applyRoles, r) })} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{r}</button>; }) : <span className="text-[11px] text-[var(--ink-3)]">Add roles in Setup → Staff roles first.</span>)}
+                    {(t.applyKind ?? "all") === "staff" && DEMO_STAFF.map((s) => { const on = (t.applyStaff ?? []).includes(s.name); return <button key={s.name} type="button" onClick={() => cred.upsertType({ ...t, applyStaff: toggleIn(t.applyStaff, s.name) })} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{s.name}</button>; })}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+          <Button className="mt-2" onClick={() => cred.upsertType({ id: "ct" + Date.now().toString(36), name: "New credential", required: false, renewMonths: 12, needsFile: true })}>+ Add credential type</Button>
+
+          <p className="mt-4 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-3)]">🔔 Reminder emails (course due, overdue chase, renewal due, unread policy, weekly manager digest) are set in the <b className="text-[var(--ink-2)]">Learning Centre → Completion → Reminders</b>.</p>
         </Section>
       )}
 

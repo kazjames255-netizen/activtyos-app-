@@ -19,6 +19,7 @@ import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
 import { StaffDashApp } from "@/features/dashboard/StaffDashApp";
+import { StaffCertsApp } from "@/features/learning/StaffCertsApp";
 import { PaymentsApp as ParentPaymentsApp } from "@/features/parent/PaymentsApp";
 import { MarketingApp } from "@/features/marketing/MarketingApp";
 import { MarketingStrategiesApp } from "@/features/marketing/MarketingStrategiesApp";
@@ -241,6 +242,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
   },
   staff: {
     dash: StaffDashApp,
+    certificates: StaffCertsApp,
     timetable: StaffTimetableApp,
     registers: RegistersApp,
     ratios: RatiosApp,
