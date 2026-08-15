@@ -390,7 +390,11 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   };
 
   const OpSelect = isCo ? (
-    <div className="mb-3 text-[12.5px] font-semibold text-[var(--ink-2)]">Location <Select value={op} onChange={(e) => setOp(e.target.value)} className="ml-1 max-w-[260px] align-middle">{OPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select></div>
+    <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
+      <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Filter by listing</span>
+      <Select value={op} onChange={(e) => setOp(e.target.value)} className="max-w-[280px]">{OPS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</Select>
+      {op !== "all" && <span className="text-[11.5px] text-[var(--ink-3)]">Showing <b className="text-[var(--ink-2)]">{op}</b> only</span>}
+    </div>
   ) : <div className="mb-3 text-[12.5px] text-[var(--ink-3)]">Scope: <b className="text-[var(--ink-2)]">Milton Keynes</b> (your franchise)</div>;
 
   return (
