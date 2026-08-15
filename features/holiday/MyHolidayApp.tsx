@@ -77,7 +77,7 @@ export function MyHolidayApp() {
 
   if (rolled) return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="My holiday" icon="🏖" lede="Your holiday pay is included in your wages — you can still book time off, it's just unpaid on the day." actions={<Button variant="primary" onClick={() => setReqOpen(true)}>+ Book time off</Button>} />
+      <PageHero title="My time off" icon="🏖" lede="Your holiday pay is included in your wages — you can still book time off, it's just unpaid on the day." actions={<Button variant="primary" onClick={() => setReqOpen(true)}>+ Book time off</Button>} />
       <Card className="p-5">
         <div className="flex items-start gap-3">
           <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#eef4fd] text-[20px]">💷</div>
@@ -100,7 +100,7 @@ export function MyHolidayApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="My holiday" icon="🏖" lede="Request time off, track what's left, and see your absence history. Approvals go to your manager." actions={<Button variant="primary" onClick={() => setReqOpen(true)}>+ Request time off</Button>} />
+      <PageHero title="My time off" icon="🏖" lede="Request time off, track what's left, and see your absence history. Approvals go to your manager." actions={<Button variant="primary" onClick={() => setReqOpen(true)}>+ Request time off</Button>} />
 
       <div className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
         {/* summary */}

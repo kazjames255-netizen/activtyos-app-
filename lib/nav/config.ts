@@ -121,7 +121,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "staff", legacyView: "admin-staff", label: "Staff", highlight: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"9\" cy=\"8\" r=\"3\"></circle><path d=\"M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6\"></path><path d=\"M16 6.4a3 3 0 0 1 0 5.8M21 20c0-2.4-1.4-4.5-3.5-5.5\"></path></svg>" }, badge: null },
         { view: "schedule", legacyView: "admin-schedule", label: "Staff schedule", highlight: true, icon: { type: "glyph", value: "🗓" }, badge: null },
-        { view: "holiday", legacyView: "admin-holiday", label: "Holiday planner", highlight: true, icon: { type: "glyph", value: "🏖" }, badge: null },
+        { view: "holiday", legacyView: "admin-holiday", label: "Leave & absence", highlight: true, icon: { type: "glyph", value: "🏖" }, badge: null },
         { view: "payroll", legacyView: "payroll", label: "Payroll", highlight: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"2.5\" y=\"6\" width=\"19\" height=\"12\" rx=\"2\"></rect><circle cx=\"12\" cy=\"12\" r=\"2.4\"></circle><path d=\"M6 9.2v5.6M18 9.2v5.6\"></path></svg>" }, badge: null },
         { view: "learning", legacyView: "learning", label: "Learning Centre", highlight: true, icon: { type: "glyph", value: "🎓" }, badge: null },
         { view: "credentials", legacyView: "credentials", label: "Staff certificates", highlight: true, icon: { type: "glyph", value: "🎖" }, badge: null },
@@ -215,7 +215,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "staff", legacyView: "franchise-staff", label: "Staff", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block\"><circle cx=\"9\" cy=\"8\" r=\"3\"></circle><path d=\"M3.5 19a5.5 5.5 0 0 1 11 0\"></path><path d=\"M16 5.5a3 3 0 0 1 0 5.8M20.5 19a5.5 5.5 0 0 0-4-5.3\"></path></svg>" }, badge: null },
         { view: "payroll", legacyView: "franchise-payroll", label: "Payroll", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"2.5\" y=\"6\" width=\"19\" height=\"12\" rx=\"2\"></rect><circle cx=\"12\" cy=\"12\" r=\"2.4\"></circle><path d=\"M6 9.2v5.6M18 9.2v5.6\"></path></svg>" }, badge: null },
-        { view: "holiday", legacyView: "franchise-holiday", label: "Holiday planner", icon: { type: "glyph", value: "🏖" }, badge: null },
+        { view: "holiday", legacyView: "franchise-holiday", label: "Leave & absence", icon: { type: "glyph", value: "🏖" }, badge: null },
         { view: "compliance", legacyView: "franchise-compliance", label: "Learning Centre1", icon: { type: "glyph", value: "◎" }, badge: null },
       ],
     },
@@ -327,7 +327,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "meals", legacyView: "freelancer-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
         { view: "ratios", legacyView: "freelancer-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
         { view: "trips", legacyView: "freelancer-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
-        { view: "holiday", legacyView: "freelancer-holiday", label: "Holiday planner", icon: { type: "glyph", value: "🏖" }, badge: null },
+        { view: "holiday", legacyView: "freelancer-holiday", label: "Leave & absence", icon: { type: "glyph", value: "🏖" }, badge: null },
         { view: "calendar", legacyView: "cal-freelancer", label: "Events calendar", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"4.5\" width=\"18\" height=\"16\" rx=\"2\"></rect><path d=\"M3 9.5h18M8 3v3M16 3v3\"></path></svg>" }, badge: null },
         { view: "timetable", legacyView: "freelancer-timetable", label: "Activity timetable", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"13\" height=\"13\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"3\" y=\"3\" width=\"18\" height=\"18\" rx=\"2\"></rect><path d=\"M3 9h18M9 3v18\"></path></svg>" }, badge: null },
         { view: "tasks", legacyView: "freelancer-tasks", label: "Task manager", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l3 3 9-9\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10\"></path></svg>" }, badge: null },
@@ -411,7 +411,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "schedule", legacyView: "staff-schedule", label: "My schedule", icon: { type: "glyph", value: "▦" }, badge: null },
         { view: "availability", legacyView: "staff-availability", label: "My availability", icon: { type: "glyph", value: "⏱" }, badge: null },
-        { view: "holiday", legacyView: "staff-holiday", label: "My holiday", icon: { type: "glyph", value: "🏖" }, badge: null },
+        { view: "holiday", legacyView: "staff-holiday", label: "My time off", icon: { type: "glyph", value: "🏖" }, badge: null },
         { view: "tasks", legacyView: "staff-tasks", label: "Task manager", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l3 3 9-9\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10\"></path></svg>" }, badge: null },
       ],
     },

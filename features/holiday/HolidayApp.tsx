@@ -43,6 +43,7 @@ export function HolidayApp() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [edit, setEdit] = useState<Absence | null>(null);
   const [profEdit, setProfEdit] = useState<LeaveProfile | null>(null);
+  const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => { setProfiles(loadProfiles()); setAbsences(loadAbsences()); setPolicy(loadPolicy()); }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2600); };
@@ -55,6 +56,8 @@ export function HolidayApp() {
   const summaryOf = (id: string) => summarise(profileOf(id), policy, absences);
   const decide = (id: string, status: Absence["status"], note?: string) => { persistAbs(absences.map((x) => (x.id === id ? { ...x, status, decidedBy: "You", decidedAt: new Date().toISOString(), note } : x))); };
   const bulkMethod = (m: "accrued" | "rolled-up") => { persistProfiles(profiles.map((p) => ({ ...p, holidayPay: m }))); flash(m === "rolled-up" ? "Everyone set to holiday included in pay (12.07%)." : "Everyone set to booking paid leave."); };
+  const blankAbsence = (): Absence => ({ id: "", staffId: "", name: "", kind: "annual", start: isoDate(new Date()), end: isoDate(new Date()), half: null, days: 0, status: "approved", requestedAt: new Date().toISOString(), decidedBy: "You" });
+  const addLeave = (x: Absence) => { persistAbs([{ ...x, id: crypto.randomUUID() }, ...absences]); setAdding(false); flash(`Leave added for ${(x.name || "").split(" ")[0]}.`); };
 
   const pending = absences.filter((a) => a.status === "pending").sort((a, b) => (a.start < b.start ? -1 : 1));
   const ly = leaveYear(policy);
@@ -62,7 +65,7 @@ export function HolidayApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="Holiday planner" icon="🏖" lede="Approve time off, see who's off and who needs covering, track everyone's entitlement, and keep the rota in step. Entitlement follows UK law (5.6 weeks, capped at 28 days)." />
+      <PageHero title="Leave & absence" icon="🏖" lede="Approve time off, manage sickness & SSP, see who's off and who needs covering, track everyone's entitlement, and keep the rota in step. Follows UK law (5.6 weeks holiday capped at 28 days; SSP from day 1)." />
 
       {/* summary strip */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -80,11 +83,14 @@ export function HolidayApp() {
         ))}
       </div>
 
-      {/* tabs */}
-      <div className="mt-4 inline-flex flex-wrap gap-1 rounded-full bg-white p-1 shadow-sm">
-        {([["requests", `📋 Requests${pending.length ? ` (${pending.length})` : ""}`], ["off", "🗓 Who's off"], ["allowances", "📊 Allowances"], ["settings", "⚙️ Settings"]] as [Tab, string][]).map(([k, l]) => (
-          <button key={k} type="button" onClick={() => setTab(k)} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold ${tab === k ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{l}</button>
-        ))}
+      {/* tabs + add leave */}
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <div className="inline-flex flex-wrap gap-1 rounded-full bg-white p-1 shadow-sm">
+          {([["requests", `📋 Requests${pending.length ? ` (${pending.length})` : ""}`], ["off", "🗓 Who's off"], ["allowances", "📊 Allowances"], ["settings", "⚙️ Settings"]] as [Tab, string][]).map(([k, l]) => (
+            <button key={k} type="button" onClick={() => setTab(k)} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold ${tab === k ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{l}</button>
+          ))}
+        </div>
+        <Button variant="primary" className="ml-auto" onClick={() => setAdding(true)}>+ Add leave</Button>
       </div>
 
       {/* ── REQUESTS ─────────────────────────────────────────────────────── */}
@@ -272,24 +278,34 @@ export function HolidayApp() {
         </div>
       )}
 
-      {edit && <AbsenceEditor abs={edit} region={policy.region} sickRule={sickNotifyRuleText(policy)} onSave={(a) => { persistAbs(absences.map((x) => (x.id === a.id ? a : x))); setEdit(null); flash("Request updated."); }} onClose={() => setEdit(null)} />}
+      {edit && <AbsenceEditor abs={edit} region={policy.region} sickRule={sickNotifyRuleText(policy)} profiles={profiles} policy={policy} absences={absences} onSave={(a) => { persistAbs(absences.map((x) => (x.id === a.id ? a : x))); setEdit(null); flash("Request updated."); }} onClose={() => setEdit(null)} />}
+      {adding && <AbsenceEditor abs={blankAbsence()} isNew region={policy.region} sickRule={sickNotifyRuleText(policy)} profiles={profiles} policy={policy} absences={absences} onSave={addLeave} onClose={() => setAdding(false)} />}
       {profEdit && <ProfileEditor prof={profEdit} policy={policy} onSave={(p) => { persistProfiles(profiles.map((x) => (x.id === p.id ? p : x))); setProfEdit(null); flash(`${p.name.split(" ")[0]}'s entitlement saved.`); }} onClose={() => setProfEdit(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
 }
 
-function AbsenceEditor({ abs, region, sickRule, onSave, onClose }: { abs: Absence; region: HolidayPolicy["region"]; sickRule: string; onSave: (a: Absence) => void; onClose: () => void }) {
+function AbsenceEditor({ abs, region, sickRule, isNew, profiles, policy, absences, onSave, onClose }: { abs: Absence; region: HolidayPolicy["region"]; sickRule: string; isNew?: boolean; profiles?: LeaveProfile[]; policy?: HolidayPolicy; absences?: Absence[]; onSave: (a: Absence) => void; onClose: () => void }) {
   const [a, setA] = useState<Absence>(abs);
   const single = a.start === a.end;
   const days = workingDays(a.start, a.end, { half: single ? a.half : null, region });
   const set = (patch: Partial<Absence>) => setA((x) => ({ ...x, ...patch }));
+  const prof = (profiles || []).find((p) => p.id === a.staffId);
+  const rolled = prof?.holidayPay === "rolled-up";
+  const summary = policy && absences && prof && !rolled ? summarise(prof, policy, absences) : null;
+  const first = (a.name || "They").split(" ")[0];
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{a.name}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{isNew ? "Add leave" : a.name}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
+          {isNew && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={a.staffId} onChange={(e) => { const p = (profiles || []).find((x) => x.id === e.target.value); set({ staffId: e.target.value, name: p?.name || "" }); }} className="w-full"><option value="">Choose a person…</option>{(profiles || []).map((p) => <option key={p.id} value={p.id}>{p.name}{p.role ? ` · ${p.role}` : ""}</option>)}</Select></label>}
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={a.kind} onChange={(e) => set({ kind: e.target.value as AbsenceKind })} className="w-full">{KINDS.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {KIND_META[k].label}</option>)}</Select></label>
+          {/* entitlement — so the manager sees what they've got before booking annual leave */}
+          {a.staffId && (rolled
+            ? <div className="rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">💷 {first}&rsquo;s holiday is <b>included in their pay</b> (12.07% rolled-up) — no bookable allowance.</div>
+            : summary && <div className="rounded-lg bg-[#eef7ee] px-3 py-2 text-[11.5px] font-semibold text-[#0f7a43]">{first} has <b>{summary.remaining} of {summary.total}</b> holiday days left this year{a.kind === "annual" ? <> → <b>{round1(summary.remaining - days)}</b> after this booking{summary.remaining - days < 0 ? " ⚠ over allowance" : ""}</> : ""}{summary.pendingAnnual > 0 ? ` · ${summary.pendingAnnual} pending` : ""}</div>)}
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">From</span><Input type="date" value={a.start} onChange={(e) => set({ start: e.target.value, end: e.target.value > a.end ? e.target.value : a.end })} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">To</span><Input type="date" value={a.end} min={a.start} onChange={(e) => set({ end: e.target.value })} className="w-full" /></label>
@@ -302,9 +318,10 @@ function AbsenceEditor({ abs, region, sickRule, onSave, onClose }: { abs: Absenc
             {a.awe != null && a.awe >= 0 && <div className="mt-1.5 rounded-lg bg-[#eef4fd] px-2.5 py-1.5 text-[11px] font-semibold text-[#1d3a8f]">Weekly SSP ≈ <b>£{sspWeekly(a.awe).toFixed(2)}</b> — the lower of £{SSP_WEEKLY.toFixed(2)} and 80% of £{a.awe.toFixed(2)}. Split across the shifts they were due that week.</div>}
             <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">SSP is <b>not</b> based on the shift they missed — it&rsquo;s 80% of their <b>8-week average</b> (weeks they earned £0 dilute it), capped at £{SSP_WEEKLY.toFixed(2)}. Only owed for <b>rota&rsquo;d</b> shifts; report rule: <b>{sickRule}</b>.</div>
           </div>}
+          {isNew && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Status</span><Select value={a.status} onChange={(e) => set({ status: e.target.value as Absence["status"] })} className="w-full"><option value="approved">Approved (add directly)</option><option value="pending">Pending (needs approval)</option></Select></label>}
           <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[12px] font-semibold text-[#1d3a8f]">{days} working day{days === 1 ? "" : "s"} (weekends &amp; bank holidays excluded)</div>
         </div>
-        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onSave({ ...a, days })}>Save</Button></div>
+        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={isNew && !a.staffId} onClick={() => onSave({ ...a, days, ...(a.kind === "sickness" && !a.ssp ? { ssp: "eligible" as const } : {}) })}>Save</Button></div>
       </div>
     </div>
   );
