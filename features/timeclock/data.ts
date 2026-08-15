@@ -26,10 +26,15 @@ export interface ClockRecord {
   events: ClockEvent[];
   day: string;          // ISO date these events belong to
 }
+// Global pay policy (the default for everyone; a per-row payBasis overrides it):
+//  actual              — pay the hours they actually clocked
+//  scheduled           — pay their scheduled hours flat (ignore clock times)
+//  scheduled-less-late — pay scheduled hours MINUS any lateness (early arrival adds nothing)
+export type PayPolicy = "actual" | "scheduled" | "scheduled-less-late";
 // A "lead" (label configurable) can see everyone working at their own listing.
-export interface ClockSettings { autoDeductLate: boolean; graceMin: number; rounding: 0 | 5 | 15; leadLabel: string }
+export interface ClockSettings { payPolicy: PayPolicy; autoPayOvertime: boolean; graceMin: number; rounding: 0 | 5 | 15; leadLabel: string }
 
-export const DEFAULT_CLOCK_SETTINGS: ClockSettings = { autoDeductLate: false, graceMin: 5, rounding: 0, leadLabel: "Lead" };
+export const DEFAULT_CLOCK_SETTINGS: ClockSettings = { payPolicy: "actual", autoPayOvertime: false, graceMin: 5, rounding: 0, leadLabel: "Lead" };
 export const CLOCK_KEY = "aos.timeclock.v1";
 export const CLOCK_SETTINGS_KEY = "aos.timeclock.settings.v1";
 const ROTA_KEY = "aos.rota.v5";

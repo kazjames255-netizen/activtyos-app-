@@ -41,10 +41,16 @@ export function TimesheetsApp() {
     const late = r.lateMin || 0;
     const lateOver = Math.max(0, late - settings.graceMin);
     const rate = rateFor(r.name);
+    const overtime = schedH ? Math.max(0, Math.round((workedH - schedH) * 100) / 100) : 0;
     const override = !!r.payBasis;
-    const deduction = !override && settings.autoDeductLate && lateOver > 0 ? (lateOver / 60) * rate : 0;
-    const payH = override ? payHours(r, settings.rounding) : (settings.autoDeductLate ? workedH : (schedH || workedH));
-    return { workedH, schedH, late, lateOver, rate, deduction, payH, override };
+    let payH: number;
+    if (override) payH = payHours(r, settings.rounding);
+    else if (settings.payPolicy === "scheduled") payH = schedH || workedH;
+    else if (settings.payPolicy === "scheduled-less-late") payH = Math.max(0, (schedH || workedH) - lateOver / 60);
+    else payH = settings.autoPayOvertime ? workedH : (schedH ? Math.min(workedH, schedH) : workedH); // "actual"
+    const otPaid = !override && settings.payPolicy === "actual" && settings.autoPayOvertime && overtime > 0;
+    const otUnpaid = !override && overtime > 0 && !otPaid;
+    return { workedH, schedH, late, lateOver, rate, overtime, otPaid, otUnpaid, payH, override };
   };
   const tsPeople = people.filter((r) => r.clockInAt); // anyone who clocked in today
 
@@ -93,9 +99,9 @@ export function TimesheetsApp() {
 
       {tab === "sheets" && (
         <Card className="mt-4 p-4">
-          <div className="mb-2 text-[12px] text-[var(--ink-3)]">Today&rsquo;s clocked hours. {settings.autoDeductLate ? <b>Late auto-deduct is ON</b> : "Late auto-deduct is off"} · grace {settings.graceMin} min{settings.rounding ? ` · rounded to ${settings.rounding} min` : ""}. Approved hours flow to the pay run.</div>
+          <div className="mb-2 text-[12px] text-[var(--ink-3)]">Today&rsquo;s clocked hours. Pay policy: <b>{settings.payPolicy === "scheduled" ? "scheduled hours" : settings.payPolicy === "scheduled-less-late" ? "scheduled, less lateness" : settings.autoPayOvertime ? "actual worked (overtime paid)" : "actual, capped at scheduled"}</b> · grace {settings.graceMin} min{settings.rounding ? ` · rounded to ${settings.rounding} min` : ""}. Overtime marked <b>*</b> is above scheduled and unpaid until approved. Approved hours flow to the pay run.</div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-center font-extrabold">In</th><th className="px-3 py-2.5 text-center font-extrabold">Out</th><th className="px-3 py-2.5 text-center font-extrabold">Break</th><th className="px-3 py-2.5 text-right font-extrabold">Worked</th><th className="px-3 py-2.5 text-right font-extrabold">Sched.</th><th className="px-3 py-2.5 text-center font-extrabold">Late</th><th className="px-3 py-2.5 text-right font-extrabold">Deduct</th><th className="px-3 py-2.5 text-right font-extrabold">Pay hrs</th><th className="px-3 py-2.5"></th></tr></thead>
+            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-center font-extrabold">In</th><th className="px-3 py-2.5 text-center font-extrabold">Out</th><th className="px-3 py-2.5 text-center font-extrabold">Break</th><th className="px-3 py-2.5 text-right font-extrabold">Worked</th><th className="px-3 py-2.5 text-right font-extrabold">Sched.</th><th className="px-3 py-2.5 text-center font-extrabold">Late</th><th className="px-3 py-2.5 text-right font-extrabold">Overtime</th><th className="px-3 py-2.5 text-right font-extrabold">Pay hrs</th><th className="px-3 py-2.5"></th></tr></thead>
               <tbody>{tsPeople.length === 0 ? <tr><td colSpan={10} className="p-6 text-center text-[13px] text-[var(--ink-3)]">No clock-ins today yet.</td></tr> : tsPeople.map((r) => { const s = sheet(r); return (
                 <tr key={r.id} className="border-t border-[var(--line-2,#eef2f8)]">
                   <td className="px-3 py-2 font-bold text-[var(--ink)]">{r.name}{r.approved && <span className="ml-1.5 rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9.5px] font-bold text-[#0f7a43]">approved</span>}</td>
@@ -105,7 +111,7 @@ export function TimesheetsApp() {
                   <td className="px-3 py-2 text-right font-bold tabular-nums text-[var(--ink)]">{s.workedH.toFixed(2)}h</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-3)]">{s.schedH ? s.schedH.toFixed(2) + "h" : "—"}</td>
                   <td className="px-3 py-2 text-center tabular-nums">{s.late ? <span className={s.lateOver > 0 ? "font-bold text-[#c0392b]" : "text-[var(--ink-3)]"}>{s.late}m</span> : "—"}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{s.deduction > 0 ? "−" + gbp(s.deduction) : "—"}</td>
+                  <td className="px-3 py-2 text-right tabular-nums">{s.overtime > 0 ? <span className={s.otPaid ? "font-bold text-[#0f7a43]" : "font-bold text-[#8a5a09]"}>+{s.overtime.toFixed(2)}h{s.otUnpaid ? " *" : ""}</span> : "—"}</td>
                   <td className="px-3 py-2 text-right font-extrabold tabular-nums text-[#0f7a43]">{s.payH.toFixed(2)}h{s.override && <span className="ml-1 rounded bg-[#eef4fd] px-1 py-0.5 text-[9px] font-bold text-[#1d3a8f] align-middle">{r.payBasis === "scheduled" ? "sched" : r.payBasis === "custom" ? "set" : "edit"}</span>}</td>
                   <td className="px-3 py-2 text-right"><div className="inline-flex gap-1.5"><button type="button" onClick={() => setEdit(r)} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">✏️</button><button type="button" onClick={() => { setAll(setApproved(all, r.id, !r.approved)); flash(r.approved ? "Approval removed." : `${r.name.split(" ")[0]}'s hours approved.`); }} className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold ${r.approved ? "border-[#0f7a43] text-[#0f7a43]" : "border-[var(--line)] text-[#1d3a8f] hover:border-[#1d3a8f]"}`}>{r.approved ? "✓ Approved" : "Approve"}</button></div></td>
                 </tr>
@@ -120,7 +126,15 @@ export function TimesheetsApp() {
         <div className="mt-4 grid gap-4 lg:grid-cols-2">
           <Card className="p-4">
             <div className="mb-3 text-[14px] font-extrabold text-[var(--ink)]">Clock &amp; timesheet rules</div>
-            <label className="flex cursor-pointer items-start gap-2 rounded-lg bg-[var(--panel)] px-3 py-2.5"><input type="checkbox" checked={settings.autoDeductLate} onChange={(e) => saveSettings({ ...settings, autoDeductLate: e.target.checked })} className="mt-0.5 h-4 w-4 accent-[#1d3a8f]" /><span className="text-[12.5px] text-[var(--ink)]"><b>Auto-deduct wages for late clock-in</b><br /><span className="text-[11.5px] text-[var(--ink-3)]">When on, a late arrival (beyond the grace period) reduces paid hours by the lateness. When off, they&rsquo;re paid their scheduled hours regardless.</span></span></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Default pay policy (everyone)</span>
+              <Select value={settings.payPolicy} onChange={(e) => saveSettings({ ...settings, payPolicy: e.target.value as ClockSettings["payPolicy"] })} className="w-full">
+                <option value="actual">Actual worked hours (from the clock)</option>
+                <option value="scheduled">Scheduled (normal) hours — ignore the clock</option>
+                <option value="scheduled-less-late">Scheduled hours, less any lateness</option>
+              </Select>
+              <span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">{settings.payPolicy === "actual" ? "Pay exactly what they clocked. Overtime (over scheduled) is only auto-paid if the toggle below is on — otherwise it's flagged for approval." : settings.payPolicy === "scheduled" ? "Pay their scheduled hours flat — clock times don't change pay (they're just a record + who's-in board)." : "Pay scheduled hours minus late minutes. Arriving early adds nothing; leaving early / arriving late docks pay."}</span>
+            </label>
+            {settings.payPolicy === "actual" && <label className="mt-2 flex cursor-pointer items-start gap-2 rounded-lg bg-[var(--panel)] px-3 py-2.5"><input type="checkbox" checked={settings.autoPayOvertime} onChange={(e) => saveSettings({ ...settings, autoPayOvertime: e.target.checked })} className="mt-0.5 h-4 w-4 accent-[#1d3a8f]" /><span className="text-[12.5px] text-[var(--ink)]"><b>Auto-pay overtime</b><br /><span className="text-[11.5px] text-[var(--ink-3)]">On: hours worked beyond the scheduled shift are paid automatically. Off: pay is capped at scheduled and the extra shows as overtime to approve per person.</span></span></label>}
             <div className="mt-3 grid grid-cols-2 gap-2">
               <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Grace period (min)</span><Select value={String(settings.graceMin)} onChange={(e) => saveSettings({ ...settings, graceMin: Number(e.target.value) })} className="w-full">{[0, 3, 5, 10, 15].map((n) => <option key={n} value={n}>{n} min</option>)}</Select></label>
               <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Round hours to</span><Select value={String(settings.rounding)} onChange={(e) => saveSettings({ ...settings, rounding: Number(e.target.value) as ClockSettings["rounding"] })} className="w-full"><option value="0">Exact</option><option value="5">Nearest 5 min</option><option value="15">Nearest 15 min</option></Select></label>
@@ -133,7 +147,8 @@ export function TimesheetsApp() {
             <ul className="space-y-2 text-[12.5px] leading-relaxed text-[var(--ink-2)]">
               <li>• Staff <b>clock in/out</b> and take breaks from their app; you see it live under <b>Who&rsquo;s in</b> and on the <b>Dashboard</b>.</li>
               <li>• Each clock stamps that person&rsquo;s <b>rota shift</b>, so the Schedule&rsquo;s check-in state and Payroll&rsquo;s actual hours update automatically.</li>
-              <li>• <b>Late auto-deduct</b> is optional — some teams dock late minutes, others don&rsquo;t. Toggle it above.</li>
+              <li>• <b>Pay policy</b> sets how the clock affects pay for everyone — pay actual hours, pay scheduled flat, or pay scheduled less lateness. <b>Overtime</b> (over scheduled) is shown and only auto-paid if you turn it on.</li>
+              <li>• Override any one person on their timesheet row (✏️) — actual / scheduled / a set number of hours.</li>
               <li className="text-[var(--ink-3)]">Demo matches people by name. A shared-device <b>kiosk</b> (PIN) and <b>geofence</b> verification are the backend build.</li>
             </ul>
           </Card>
