@@ -26,7 +26,7 @@ const PROFILE_TWEAKS: Record<string, Partial<LeaveProfile>> = {
   "Marcus Bell": { allowanceDays: 25, carriedOver: 3, daysPerWeek: 5 },
   "Jess Patel": { daysPerWeek: 4 },                       // part-time → statutory 22.4
   "Aisha Rahman": { allowanceDays: 25, daysPerWeek: 5 },
-  "Tom Lewis": { daysPerWeek: 3 },                        // part-time → statutory 16.8
+  "Tom Lewis": { daysPerWeek: 3, holidayPay: "rolled-up" }, // seasonal/casual → holiday included in pay (12.07%)
   "Priya Khan": { daysPerWeek: 5, startDate: undefined },
   "Dan Reed": { allowanceDays: 28, carriedOver: 2, daysPerWeek: 5 },
 };

@@ -53,6 +53,23 @@ export function MyHolidayApp() {
   };
   const cancel = (id: string) => { if (window.confirm("Cancel this request?")) persistAbs(absences.map((x) => (x.id === id ? { ...x, status: "cancelled" as const } : x))); };
 
+  // seasonal / irregular staff whose holiday is INCLUDED IN PAY don't get the
+  // request-holiday flow — their leave is paid as they earn it (12.07% rolled-up).
+  const rolled = me.holidayPay === "rolled-up";
+  if (rolled) return (
+    <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
+      <PageHero title="My holiday" icon="🏖" lede="Your holiday is included in your pay." />
+      <Card className="mx-auto max-w-xl p-6 text-center">
+        <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-[#eef4fd] text-[26px]">💷</div>
+        <div className="text-[16px] font-extrabold text-[var(--ink)]">Holiday pay is included in your wages</div>
+        <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-[var(--ink-2)]">You&rsquo;re paid your holiday as you earn it — an extra <b>12.07%</b> is added to every payslip as a separate <b>Holiday pay</b> line, so you don&rsquo;t build up days to book here.</p>
+        <p className="mx-auto mt-2 max-w-md text-[12px] text-[var(--ink-3)]">You can still take time off — just let your manager know directly. Check the <b>Holiday pay</b> line on your payslips in <b>My payslips</b>.</p>
+        {nph && <div className="mt-4 inline-block rounded-xl bg-[var(--panel)] px-4 py-2 text-[12.5px] font-semibold text-[#1d3a8f]">Next public holiday · {nph.name} · {new Date(`${nph.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long" })}</div>}
+      </Card>
+      {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
+    </div>
+  );
+
   const counter = (kind: AbsenceKind, value: number) => { const km = KIND_META[kind]; return (
     <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2.5"><span className="grid h-7 w-7 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span><div><div className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{value}</div><div className="text-[10.5px] font-semibold text-[var(--ink-3)]">{km.label}</div></div></div>
   ); };

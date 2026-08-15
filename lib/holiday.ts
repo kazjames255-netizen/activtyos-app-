@@ -53,7 +53,12 @@ export interface LeaveProfile {
   allowanceDays?: number;       // overrides the computed allowance
   carriedOver?: number;         // days carried in from last year
   startDate?: string;           // employment start (for first-year accrual)
+  // "accrued" (default) = books paid time off; "rolled-up" = holiday is INCLUDED
+  // IN PAY at 12.07% (legal for irregular/part-year staff from Apr 2024). Rolled-up
+  // staff don't book paid leave — payroll adds a separate 12.07% line instead.
+  holidayPay?: "accrued" | "rolled-up";
 }
+export const isRolledUp = (p?: { holidayPay?: "accrued" | "rolled-up" }) => p?.holidayPay === "rolled-up";
 
 export const HOLIDAY_ABSENCES_KEY = "aos.holiday.absences.v1";
 export const HOLIDAY_POLICY_KEY = "aos.holiday.policy.v1";

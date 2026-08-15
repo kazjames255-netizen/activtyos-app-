@@ -123,7 +123,7 @@ const FREQ_LABEL: Record<Freq, string> = { weekly: "Weekly", fortnightly: "Fortn
 // or a manual entry) instead of contracted; taxCode/niCat override the master;
 // additions are taxable (added to gross), deductions come off net after tax;
 // override.{paye,eeNi,eePen} force a statutory figure.
-function computeLine(e: Emp, a: { hours?: number | null; rate?: number | null; taxCode?: string; niCat?: string; additions?: AdjItem[]; deductions?: AdjItem[]; override?: { paye?: number | null; eeNi?: number | null; eePen?: number | null } } = {}, freq: Freq = "monthly"): Line {
+function computeLine(e: Emp, a: { hours?: number | null; rate?: number | null; taxCode?: string; niCat?: string; additions?: AdjItem[]; deductions?: AdjItem[]; override?: { paye?: number | null; eeNi?: number | null; eePen?: number | null }; rolledUp?: boolean } = {}, freq: Freq = "monthly"): Line {
   const ppy = PPY[freq];
   const taxCode = a.taxCode || e.taxCode, niCat = a.niCat || e.niCat;
   const rate = a.rate != null ? a.rate : e.rate; // e.g. the Schedule's own rate in rota mode
@@ -131,7 +131,10 @@ function computeLine(e: Emp, a: { hours?: number | null; rate?: number | null; t
   const useH = a.hours != null && e.basis === "hour";
   const periodHours = e.basis === "hour" ? (useH ? (a.hours as number) : contractedHours) : 0;
   const basePayM = r2(e.basis === "hour" ? rate * periodHours : e.rate / ppy);
-  const addM = sumItems(a.additions), dedM = sumItems(a.deductions);
+  // rolled-up holiday pay: a separate, itemised 12.07% line on the pay for hours worked
+  const holidayAdd: AdjItem[] = a.rolledUp ? [{ id: "__holpay", label: "Holiday pay (12.07% rolled-up)", amount: r2(basePayM * 0.1207) }] : [];
+  const additions = [...holidayAdd, ...(a.additions || [])];
+  const addM = sumItems(additions), dedM = sumItems(a.deductions);
   const grossM = r2(basePayM + addM); const grossA = grossM * ppy;
   const ov = a.override || {};
   const payeM = ov.paye != null ? r2(ov.paye) : r2(payeAnnual(grossA, taxCode) / ppy);
@@ -141,7 +144,7 @@ function computeLine(e: Emp, a: { hours?: number | null; rate?: number | null; t
   const eePenM = ov.eePen != null ? r2(ov.eePen) : (e.pension ? r2(qeM * 0.05) : 0);
   const erPenM = e.pension ? r2(qeM * 0.03) : 0;
   const hoursM = r2(periodHours);
-  return { id: e.id, name: e.name, role: e.role, op: e.op, basis: e.basis, rate, hpw: e.hpw, weeks: e.weeks || 52, taxCode, niCat, freqLabel: FREQ_LABEL[freq], hoursM, basePayM, addM, dedM, additions: a.additions || [], deductions: a.deductions || [], manual: { paye: ov.paye != null, eeNi: ov.eeNi != null, eePen: ov.eePen != null }, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: r2(grossM - payeM - eeNiM - eePenM - dedM) };
+  return { id: e.id, name: e.name, role: e.role, op: e.op, basis: e.basis, rate, hpw: e.hpw, weeks: e.weeks || 52, taxCode, niCat, freqLabel: FREQ_LABEL[freq], hoursM, basePayM, addM, dedM, additions, deductions: a.deductions || [], manual: { paye: ov.paye != null, eeNi: ov.eeNi != null, eePen: ov.eePen != null }, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: r2(grossM - payeM - eeNiM - eePenM - dedM) };
 }
 
 // ── Link to the Schedule / rota ─────────────────────────────────────────────
@@ -238,6 +241,9 @@ export function PayrollApp() {
   const rotaHoursFor = (e: Emp) => rota.byName[e.name.trim().toLowerCase()];
   const rotaRateFor = (e: Emp) => rota.rateByName[e.name.trim().toLowerCase()]; // rate the Schedule uses for this person
   const scheduleWageFor = (e: Emp) => { const h = rotaHoursFor(e); const r = rotaRateFor(e) ?? e.rate; return h != null ? h * r : undefined; };
+  // staff whose holiday is INCLUDED IN PAY (rolled-up 12.07%), from the Holiday planner
+  const rolledUpNames = useMemo(() => { try { const arr = JSON.parse(localStorage.getItem("aos.holiday.profiles.v1") || "[]"); return new Set((Array.isArray(arr) ? arr : []).filter((p: { holidayPay?: string }) => p.holidayPay === "rolled-up").map((p: { name: string }) => p.name.trim().toLowerCase())); } catch { return new Set<string>(); } }, [tab]);
+  const isRolledUp = (e: Emp) => rolledUpNames.has(e.name.trim().toLowerCase());
   // each employee is paid from contracted hours OR the rota (their own setting);
   // salaried staff are always contracted (a salary isn't hours-driven)
   const empSource = (e: Emp): "contracted" | "rota" => (e.basis === "year" ? "contracted" : (e.paidFrom || "contracted"));
@@ -253,7 +259,7 @@ export function PayrollApp() {
     return empSource(e) === "rota" ? (rotaHoursFor(e) ?? 0) : undefined;
   };
   // when paid from the rota, also pay at the Schedule's own rate so the run mirrors the Schedule's wage
-  const lineFor = (e: Emp): Line => { const a = adjOf(e.id); const rate = empSource(e) === "rota" && a?.hours == null ? rotaRateFor(e) : undefined; return computeLine(e, { hours: baseHours(e), rate, taxCode: a?.taxCode, niCat: a?.niCat, additions: a?.additions, deductions: a?.deductions, override: a?.override }, freq); };
+  const lineFor = (e: Emp): Line => { const a = adjOf(e.id); const rate = empSource(e) === "rota" && a?.hours == null ? rotaRateFor(e) : undefined; return computeLine(e, { hours: baseHours(e), rate, taxCode: a?.taxCode, niCat: a?.niCat, additions: a?.additions, deductions: a?.deductions, override: a?.override, rolledUp: isRolledUp(e) }, freq); };
   const lines = emps.map(lineFor);
   const isAdjusted = (e: Emp) => { const a = adjOf(e.id); return !!a && (a.hours != null || !!a.taxCode || !!a.niCat || !!(a.additions?.length) || !!(a.deductions?.length) || a.override?.paye != null || a.override?.eeNi != null || a.override?.eePen != null); };
   const rotaEmps = emps.filter((e) => empSource(e) === "rota");
