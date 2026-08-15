@@ -9,12 +9,13 @@
 // sensitive-data storage + retention is Amir's (see handoff). Reuses the same
 // staff roster as the Staff-certificates area.
 import { useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
-import { DEMO_STAFF } from "@/features/learning/credentials";
+import { DEMO_STAFF, useCredentials, credStatus, CredBadge, appliesTo as credAppliesTo, openCredFile } from "@/features/learning/credentials";
 
 // ——— model ———
-type FieldType = "text" | "tel" | "email" | "date" | "textarea" | "select" | "file" | "checkbox" | "check";
+type FieldType = "text" | "tel" | "email" | "date" | "textarea" | "select" | "file" | "checkbox" | "check" | "addresses" | "certs";
 export interface OnboardField {
   id: string; section: string; label: string; type: FieldType; required: boolean;
   applyKind: "all" | "roles" | "staff"; applyRoles?: string[]; applyStaff?: string[];
@@ -78,7 +79,7 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("address2", "personal", "Address line 2", "text"),
   F("town", "personal", "Town / city", "text", true),
   F("postcode", "personal", "Postcode", "text", true),
-  F("addrHistory", "personal", "Address history (last 5 years)", "textarea", false, { hint: "Needed for DBS" }),
+  F("addrHistory", "personal", "Previous addresses (last 5 years)", "addresses", false, { hint: "Optional if your current address covers the last 5 years — otherwise add each previous address." }),
   F("phone", "personal", "Mobile number", "tel", true),
   F("email", "personal", "Personal email", "email", true, { fromInvite: true }),
 
@@ -89,6 +90,7 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("rtwCheck", "rtw", "Right to work verified", "check", true, { gate: true }),
 
   F("idDocs", "dbs", "ID documents seen", "text", true, { hint: "e.g. passport + proof of address" }),
+  F("idFile", "dbs", "ID document (upload)", "file", true),
   F("idCheck", "dbs", "Identity verified", "check", true),
   F("dbsCert", "dbs", "Enhanced DBS certificate no.", "text"),
   F("dbsIssue", "dbs", "DBS issue date", "date"),
@@ -113,11 +115,13 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("employHistory", "refs", "Employment history + gaps explained", "textarea"),
   F("refsCheck", "refs", "References received & satisfactory", "check", true, { gate: true }),
 
-  F("qualifications", "quals", "Qualifications held", "textarea"),
+  F("roleCerts", "quals", "Certificates required for this role", "certs", false),
+  F("qualifications", "quals", "Other qualifications held", "textarea"),
   F("qualDocs", "quals", "Certificate uploads", "file"),
   F("interviewNotes", "quals", "Safer-recruitment interview notes", "textarea"),
 
   F("p45", "payroll", "P45 / Starter checklist", "select", true, { options: ["P45 provided", "Starter checklist", "N/A"] }),
+  F("p45File", "payroll", "P45 / starter checklist (upload)", "file"),
   F("taxStatement", "payroll", "Starter statement (A/B/C)", "select", false, { options: ["A — first job", "B — other job/pension", "C — has another job"] }),
   F("studentLoan", "payroll", "Student / postgraduate loan", "checkbox"),
   F("bank", "payroll", "Bank sort code / account", "text", false, { sensitive: true, hint: "Staff enter this themselves" }),
@@ -151,12 +155,17 @@ export function fieldApplies(f: OnboardField, name: string, role?: string, extra
   return (f.applyRoles ?? []).some((r) => { const rl = r.toLowerCase(), sr = (role ?? "").toLowerCase(); return !!sr && (rl.includes(sr) || sr.includes(rl.split(/[ /]/)[0])); });
 }
 export function satisfied(f: OnboardField, val?: OnboardValue): boolean {
+  if (f.type === "certs") return true; // informational — pulled from the certificates area
   if (!val) return false;
   if (f.type === "checkbox") return val.v === "yes";
   if (f.type === "check") return val.status === "verified";
   if (f.type === "file") return !!val.fileData;
+  if (f.type === "addresses") { try { return (JSON.parse(val.v || "[]") as unknown[]).length > 0; } catch { return false; } }
   return !!(val.v && val.v.trim());
 }
+// parsed address-history entries
+interface AddrEntry { line1: string; line2: string; town: string; postcode: string; from: string; to: string }
+const parseAddrs = (v?: string): AddrEntry[] => { try { const a = JSON.parse(v || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } };
 
 function useOnboarding() {
   const [fields, setFields] = useState<OnboardField[]>(DEFAULT_FIELDS);
@@ -180,13 +189,42 @@ const CHECK_LABEL: Record<string, string> = { todo: "To do", requested: "Request
 const esc = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
 const printWindow = (html: string) => { if (typeof window === "undefined") return; const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); } };
 const displayVal = (f: OnboardField, val?: OnboardValue): string => {
+  if (f.type === "certs") return ""; // shown in its own area, not the pack table
   if (!val) return "";
   if (f.type === "check") return CHECK_LABEL[val.status ?? "todo"];
   if (f.type === "checkbox") return val.v === "yes" ? "Yes" : "";
   if (f.type === "file") return val.fileName ? "📎 " + val.fileName : val.fileData ? "uploaded" : "";
+  if (f.type === "addresses") { const a = parseAddrs(val.v); return a.length ? a.map((x) => `${x.line1}, ${x.town} ${x.postcode} (${x.from}–${x.to})`).join("; ") : ""; }
   return val.v ?? "";
 };
 const PRINT_CSS = `body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:26px}h1{font-size:20px;margin:0 0 2px}.sub{color:#6b7086;font-size:12px;margin-bottom:14px}h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#3557b7;border-bottom:1px solid #e5e7f0;padding-bottom:4px;margin:18px 0 6px}table{width:100%;border-collapse:collapse;font-size:12px}td{padding:5px 8px;border-top:1px solid #eef1f7;vertical-align:top}td.k{color:#6b7086;width:44%}td.v{font-weight:600}.miss{color:#c0392b;font-weight:600}.ok{color:#0f7a43}.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:10.5px;font-weight:700}.verified{background:#e6f4ea;color:#0f7a43}.na{color:#94a3b8}.doc{page-break-before:always;padding-top:14px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.doc object,.doc iframe{width:100%;height:940px;border:1px solid #e5e7f0;border-radius:6px}.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:800}.cleared{background:#e6f4ea;color:#0f7a43}.hold{background:#fdf3e0;color:#8a5a09}@media print{body{padding:0 6mm}}`;
+
+// Address-history repeater — "Add previous address" with the same address fields
+// + a from/to range. Optional (only if the current address doesn't cover 5 years).
+function AddressList({ value, onChange }: { value?: string; onChange: (json: string) => void }) {
+  const list = parseAddrs(value);
+  const write = (l: AddrEntry[]) => onChange(JSON.stringify(l));
+  const set = (i: number, k: keyof AddrEntry, v: string) => write(list.map((a, j) => (j === i ? { ...a, [k]: v } : a)));
+  const add = () => write([...list, { line1: "", line2: "", town: "", postcode: "", from: "", to: "" }]);
+  return (
+    <div className="space-y-2">
+      {list.map((a, i) => (
+        <div key={i} className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
+          <div className="mb-1 flex items-center"><span className="text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">Previous address {i + 1}</span><button type="button" onClick={() => write(list.filter((_, j) => j !== i))} className="ml-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button></div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <Input value={a.line1} onChange={(e) => set(i, "line1", e.target.value)} placeholder="Address line 1" className="col-span-2" />
+            <Input value={a.line2} onChange={(e) => set(i, "line2", e.target.value)} placeholder="Address line 2" className="col-span-2" />
+            <Input value={a.town} onChange={(e) => set(i, "town", e.target.value)} placeholder="Town / city" />
+            <Input value={a.postcode} onChange={(e) => set(i, "postcode", e.target.value)} placeholder="Postcode" />
+            <label className="text-[10px] font-bold text-[var(--ink-3)]">From<Input type="month" value={a.from} onChange={(e) => set(i, "from", e.target.value)} className="w-full" /></label>
+            <label className="text-[10px] font-bold text-[var(--ink-3)]">To<Input type="month" value={a.to} onChange={(e) => set(i, "to", e.target.value)} className="w-full" /></label>
+          </div>
+        </div>
+      ))}
+      <Button onClick={add}>+ Add {list.length ? "another" : "previous"} address</Button>
+    </div>
+  );
+}
 
 export function OnboardingPanel() {
   const { settings } = useSettings();
@@ -197,6 +235,9 @@ export function OnboardingPanel() {
   const [mode, setMode] = useState<"records" | "scr">("records");
   const [showDecl, setShowDecl] = useState(false);
   const [step, setStep] = useState(0);
+  const cred = useCredentials(DEMO_STAFF);
+  const router = useRouter();
+  const portal = (usePathname() || "/company").split("/")[1] || "company";
   const provider = settings.providerName || settings.billing?.businessName || "Your company";
 
   const staffOf = (name: string) => DEMO_STAFF.find((s) => s.name === name);
@@ -254,7 +295,7 @@ export function OnboardingPanel() {
   const sectionDone = (sid: string) => { const fs = appl.filter((f) => f.section === sid); return { d: fs.filter((f) => satisfied(f, rec.values[f.id])).length, t: fs.length }; };
 
   const fieldCard = (f: OnboardField) => { const val = rec.values[f.id]; const ok = satisfied(f, val); return (
-    <div key={f.id} className={"rounded-xl border p-3 " + (f.type === "textarea" ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)] bg-[var(--surface)]")}>
+    <div key={f.id} className={"rounded-xl border p-3 " + (f.type === "textarea" || f.type === "addresses" || f.type === "certs" ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)] bg-[var(--surface)]")}>
       <label className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{f.label}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title="Sensitive — stored securely" className="text-[10px]">🔒</span>}{f.fromInvite && <span title="Set when the sign-up link was sent — staff can't edit; the company can" className="rounded bg-[#eaf1ff] px-1 text-[8.5px] font-bold uppercase text-[#1d54c4]">🔗 from invite</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">added</span>}</label>
       {f.type === "check" ? (
         <div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st })} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{st}</button>)}</div>
@@ -266,6 +307,27 @@ export function OnboardingPanel() {
         const opts = f.options ?? []; const v = val?.v ?? ""; const inList = opts.includes(v);
         const selectVal = inList ? v : (v && f.other ? "Other" : ""); const showOther = !!f.other && selectVal === "Other";
         return (<div className="space-y-1.5"><Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">Choose…</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Select>{showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder="Type it here…" className="w-full" />}</div>);
+      })() : f.type === "addresses" ? (
+        <AddressList value={val?.v} onChange={(json) => setVal(f.id, { v: json })} />
+      ) : f.type === "certs" ? (() => {
+        const roleReq = cred.types.filter((t) => credAppliesTo(t, sel, staff?.role));
+        let alsoIds: string[] = []; try { alsoIds = JSON.parse(val?.v || "[]"); } catch { alsoIds = []; }
+        const also = cred.types.filter((t) => alsoIds.includes(t.id) && !roleReq.some((r) => r.id === t.id));
+        const remaining = cred.types.filter((t) => !roleReq.some((r) => r.id === t.id) && !alsoIds.includes(t.id));
+        const setAlso = (ids: string[]) => setVal(f.id, { v: JSON.stringify(ids) });
+        const chip = (t: { id: string; name: string }, removable: boolean) => { const rr = cred.recordFor(sel, t.id); return (
+          <span key={t.id} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5">
+            <button type="button" onClick={() => rr?.fileData && openCredFile(rr.fileData)} title={rr?.fileData ? "View uploaded certificate" : ""} className="text-[11.5px] font-bold text-[var(--ink)]">{t.name}</button>
+            <CredBadge s={credStatus(rr)} />
+            {removable && <button type="button" onClick={() => setAlso(alsoIds.filter((x) => x !== t.id))} className="text-[var(--ink-3)] hover:text-[#c0392b]">×</button>}
+          </span>); };
+        return (
+          <div className="space-y-2">
+            <div className="flex flex-wrap gap-1.5">{roleReq.length ? roleReq.map((t) => chip(t, false)) : <span className="text-[12px] text-[var(--ink-3)]">No certificates set as required for {staff?.role || "this role"}.</span>}{also.map((t) => chip(t, true))}</div>
+            {remaining.length > 0 && <Select value="" onChange={(e) => { if (e.target.value) setAlso([...alsoIds, e.target.value]); }} className="max-w-[300px]"><option value="">＋ Add a certificate from the cert area…</option>{remaining.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>}
+            <div className="text-[10.5px] text-[var(--ink-3)]">Set which role needs which certificate in <button type="button" onClick={() => router.push(`/${portal}/setup?tab=learning#credtypes`)} className="font-bold text-[#1d3a8f] underline hover:text-[#16297a]">Setup → Learning</button>. Staff upload these under <b>Team → Staff certificates</b>.</div>
+          </div>
+        );
       })() : f.type === "textarea" ? (
         <textarea value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} rows={2} className="w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[#1d3a8f]" />
       ) : (
