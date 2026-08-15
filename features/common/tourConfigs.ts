@@ -768,6 +768,81 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       }
     ]
   },
+  "staff-applications": {
+    "title": "Applications — recruit",
+    "introLine": "This tab is recruitment — build application forms, advertise the role and pay, send them out, and review who applies before anyone reaches onboarding.",
+    "doneLine": "That's Applications — build a form, send it far and wide, and accept the right people straight into onboarding with their details carried over.",
+    "steps": [
+      {
+        "label": "Build & send an application",
+        "stage": "Forms",
+        "line": "Build one or more editable application forms — add your own fields and mark which ones carry into onboarding later. Duplicate a form to spin up a variant in a click. Then Send: copy a public link to post on a job board or socials, or email a candidate directly.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">📝 APPLICATION FORM</div><div class=\"tkt\"><div class=\"tkhd\"><b>Standard application</b> <span class=\"g\">17 fields · 12 carry into onboarding</span></div></div><div class=\"chips\"><span class=\"ochip\">Edit</span><span class=\"ochip\">Duplicate</span><span class=\"ochip\">📨 Send</span></div><div class=\"fl\">SEND</div><div class=\"chips\"><span class=\"ochip\">🔗 Copy public link</span><span class=\"chip2\">✉️ Email a candidate</span></div></div>"
+      },
+      {
+        "label": "Advertise the role & pay",
+        "stage": "Forms",
+        "line": "Each form can carry an optional job summary and the pay — per hour, per day, an annual salary or a range. Candidates see it when they open the link, so your advert and your application form are one and the same.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">JOB SUMMARY (OPTIONAL)</div><div class=\"field\">Multi-sports coach for our holiday camps — deliver fun, safe sessions for 5–11s.</div><div class=\"row2\"><div><div class=\"fl\">PAY</div><div class=\"field\">Per hour</div></div><div><div class=\"fl\">RATE</div><div class=\"field\">£12–14</div></div></div><div class=\"hint\">Shown to candidates on the application — advert and form in one.</div></div>"
+      },
+      {
+        "label": "Review, reject or accept",
+        "stage": "Review",
+        "line": "Each application opens in full. Reject with a reason that's kept on file, or Accept and Send onboarding link — the same secure sign-up link. Anything they already gave you, like references, address and qualifications, carries straight into onboarding, so they never fill it in twice.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkhd\"><b>Chloe Adams</b> <span class=\"g\">Coach · applied 13 Aug</span><span class=\"tkp\">NEW</span></div><div class=\"row2\"><div><div class=\"fl\">REFERENCES ↳</div><div class=\"field\">Sam Okafor · Dana Patel</div></div><div><div class=\"fl\">RIGHT TO WORK</div><div class=\"field\">Yes</div></div></div><div class=\"chips\"><span class=\"btn amber\">✓ Accept</span><span class=\"chip2\">Reject with reason</span></div><div class=\"hint\">Accept → 📨 Send onboarding link. Fields marked ↳ carry over automatically.</div></div>"
+      }
+    ]
+  },
+  "staff-onboarding": {
+    "title": "Onboarding — safer recruitment",
+    "introLine": "This tab is the safer-recruitment record each new starter completes — a colour-coded slideshow, gated so nobody starts until the essential checks are verified.",
+    "doneLine": "That's Onboarding — a complete safer-recruitment record, configurable per role, that clears someone to start and feeds their availability and certificates onward.",
+    "steps": [
+      {
+        "label": "The onboarding record",
+        "stage": "Record",
+        "line": "Onboarding is a colour-coded slideshow — personal details, right to work, identity and DBS, references, qualifications, payroll, availability and the policies they sign. Right-to-work, DBS and references are gated: until all three are verified the person is On hold and cannot work in regulated activity, then it flips to Cleared to start.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">👤 Personal</span><span class=\"ochip\">🛂 Right to work</span><span class=\"ochip\">🪪 DBS</span><span class=\"ochip\">📋 References</span><span class=\"chip2\">💷 Payroll</span><span class=\"chip2\">📅 Availability</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Step 3 of 9 · Identity &amp; DBS</b> <span class=\"g\">6 / 8 complete</span><span class=\"tkp\">⏳ On hold</span></div></div><div class=\"hint\">On hold until Right to work, DBS &amp; References are Verified — then ✓ Cleared to start.</div></div>"
+      },
+      {
+        "label": "You decide what's required",
+        "stage": "Requirements",
+        "line": "Nothing is fixed. In Requirements you toggle each item and set who it applies to — all staff, certain roles, or named people. So an office admin can skip the DBS and it won't show for them; and you can still add any one item to a single person.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">⚙ REQUIREMENTS</div><div class=\"tkt\"><div class=\"tkhd\"><b>DBS cleared</b> <span class=\"g\">Required · Applies to: Certain roles</span></div></div><div class=\"chips\"><span class=\"chip2\">🔑 Owner / Admin</span><span class=\"ochip\">Manager</span><span class=\"ochip\">Coach / Staff</span></div><div class=\"hint\">Untick a role and DBS hides for them.</div></div>"
+      },
+      {
+        "label": "Availability & certificates flow on",
+        "stage": "Onward",
+        "line": "Their weekly availability grid carries over to the Schedule, so the rota knows when they can work. Their DBS and First Aid live alongside the Staff certificates area — tracked once, with expiry reminders and a Single Central Record for inspections.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">📅 WEEKLY AVAILABILITY → SCHEDULE</div><div class=\"chips\"><span class=\"ochip\">Mon AM</span><span class=\"ochip\">Mon PM</span><span class=\"chip2\">Tue</span><span class=\"ochip\">Wed PM</span><span class=\"ochip\">Sat AM</span></div><div class=\"fl\">🎖 CERTIFICATES</div><div class=\"tkt\"><div class=\"tkhd\"><b>DBS · Paediatric First Aid</b> <span class=\"g\">also in Staff certificates</span><span class=\"tkp\">Valid</span></div></div></div>"
+      },
+      {
+        "label": "Export & Single Central Record",
+        "stage": "Records",
+        "line": "When you need to prove it, export a per-person onboarding pack with their documents attached, or the whole-team Single Central Record for Ofsted — with the option to show when each check was verified and the ID method used.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">🖨️ Export pack</span><span class=\"ochip\">📑 Single Central Record</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Marcus Bell</b> <span class=\"g\">DBS Verified · 14 Aug · Passport</span><span class=\"tkp\">Cleared</span></div></div><div class=\"hint\">Toggle Dates &amp; methods to include when each check was verified.</div></div>"
+      }
+    ]
+  },
+  "staff-deployment": {
+    "title": "Deployment — place your team",
+    "introLine": "This tab places activated staff onto your locations and listings — which is what decides what each person actually sees and does day to day.",
+    "doneLine": "That's Deployment — put people where they work, and everything from registers to listing-specific risk assessments follows automatically.",
+    "steps": [
+      {
+        "label": "Place people on work",
+        "stage": "Deploy",
+        "line": "Once someone's activated, place them on your locations and the listings inside them — flip between By location, By staff and By listing, and add someone from the dropdown. Each listing shows the season it belongs to.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">By location</span><span class=\"chip2\">By staff</span><span class=\"chip2\">By listing</span></div><div class=\"frm\"><div class=\"fl\">📍 MILTON KEYNES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Summer camp · 📅 Summer 1</span></div></div><div class=\"field ph\">＋ Add staff (A–Z)…</div></div>"
+      },
+      {
+        "label": "What deployment controls",
+        "stage": "Impact",
+        "line": "Deployment is what decides whose registers, ratios and schedule each person sees — and it's the moment a listing-specific risk assessment reaches them in their Documents. Access still comes from their role; deployment decides where that access is pointed.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Registers · Ratios · Schedule</b> <span class=\"g\">scoped to their listings</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📋 Trampoline Trip — Risk Assessment</b> <span class=\"g\">delivered once deployed</span><span class=\"tkp\">To read</span></div></div><div class=\"hint\">Role = what they can do. Deployment = where.</div></div>"
+      }
+    ]
+  },
   "tasks": {
     "title": "Task manager",
     "introLine": "This is your operational to-do list — proper tasks tied to real camps, bookings and compliance, all pulled into one tidy inbox no matter how many companies you coach for.",

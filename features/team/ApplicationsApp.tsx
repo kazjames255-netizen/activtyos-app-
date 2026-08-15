@@ -13,7 +13,9 @@ import { useSettings } from "@/lib/settings";
 import { DEFAULT_FIELDS } from "./OnboardingApp";
 
 type AField = { id: string; label: string; type: "text" | "textarea" | "email" | "tel" | "date" | "select"; required: boolean; options?: string[]; mapsTo?: string };
-interface AppForm { id: string; name: string; fields: AField[] }
+interface AppForm { id: string; name: string; fields: AField[]; summary?: string; payKind?: string; payAmount?: string }
+const PAY_KINDS = ["Not stated", "Per hour", "Per day", "Annual salary", "Range"];
+const payLabel = (f: AppForm) => f.payKind && f.payKind !== "Not stated" && f.payAmount ? `${f.payAmount}${f.payKind === "Per hour" ? "/hour" : f.payKind === "Per day" ? "/day" : f.payKind === "Annual salary" ? "/year" : ""}` : "";
 interface Application { id: string; formId: string; name: string; email: string; answers: Record<string, string>; submittedAt: string; status: "new" | "accepted" | "rejected"; rejectReason?: string; onboardingSent?: boolean }
 
 const FORMS_KEY = "aos.team.appforms.v1";
@@ -167,7 +169,7 @@ export function ApplicationsPanel() {
           {forms.map((form) => (
             <Card key={form.id} className="flex flex-wrap items-center gap-3 p-3.5">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[18px]">📝</span>
-              <div className="min-w-0 flex-1"><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{form.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{form.fields.length} fields · {form.fields.filter((x) => x.mapsTo).length} carry into onboarding</div></div>
+              <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{form.name}</span>{payLabel(form) && <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">💷 {payLabel(form)}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{form.fields.length} fields · {form.fields.filter((x) => x.mapsTo).length} carry into onboarding{form.summary ? " · has job summary" : ""}</div></div>
               <Button onClick={() => setSendOpen(true)}>Send</Button>
               <Button onClick={() => setEditForm(form)}>Edit</Button>
               <Button onClick={() => { const clone: AppForm = { id: "form_" + Date.now().toString(36), name: form.name + " (copy)", fields: form.fields.map((x) => ({ ...x })) }; saveForms([...forms, clone]); setEditForm(clone); }}>Duplicate</Button>
@@ -198,7 +200,10 @@ function SendModal({ forms, onSent, onClose }: { forms: AppForm[]; onSent: (m: s
         <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Send an application</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <p className="mb-3 text-[12px] text-[var(--ink-3)]">Candidates fill it in and their application lands in <b>Applications</b> for you to review.</p>
 
-        <label className="mb-3 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Which form to send</span><Select value={formId} onChange={(e) => setFormId(e.target.value)} className="w-full">{forms.map((f) => <option key={f.id} value={f.id}>{f.name} · {f.fields.length} fields</option>)}</Select></label>
+        <label className="mb-2 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Which form to send</span><Select value={formId} onChange={(e) => setFormId(e.target.value)} className="w-full">{forms.map((f) => <option key={f.id} value={f.id}>{f.name} · {f.fields.length} fields</option>)}</Select></label>
+        {(() => { const sf = forms.find((x) => x.id === formId); if (!sf || (!sf.summary && !payLabel(sf))) return null; return (
+          <div className="mb-3 rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Candidates will see</div>{sf.summary && <div className="text-[12px] text-[var(--ink-2)]">{sf.summary}</div>}{payLabel(sf) && <div className="mt-0.5 text-[12px] font-bold text-[#0f7a43]">💷 {payLabel(sf)}</div>}</div>
+        ); })()}
 
         <div className="mb-3 rounded-xl border border-[var(--line)] p-3">
           <div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🔗 Share a link</div>
@@ -232,6 +237,14 @@ function FormEditor({ form, jobTitles, onSave, onClose }: { form: AppForm; jobTi
         <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Edit application form</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div></div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Form name</span><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="w-full" /></label>
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Job summary &amp; pay (optional)</div>
+            <textarea value={f.summary ?? ""} onChange={(e) => setF({ ...f, summary: e.target.value })} rows={2} placeholder="Short description of the role — shown to candidates on the application." className="mb-2 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+            <div className="flex flex-wrap items-center gap-2">
+              <label className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-3)]">PAY<Select value={f.payKind ?? "Not stated"} onChange={(e) => setF({ ...f, payKind: e.target.value })} className="max-w-[150px]">{PAY_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</Select></label>
+              {f.payKind && f.payKind !== "Not stated" && <div className="flex items-center gap-1"><span className="text-[13px] font-bold text-[var(--ink-3)]">£</span><Input value={(f.payAmount ?? "").replace(/^£/, "")} onChange={(e) => setF({ ...f, payAmount: e.target.value ? "£" + e.target.value.replace(/^£/, "") : "" })} placeholder={f.payKind === "Annual salary" ? "24,000" : f.payKind === "Range" ? "12–14/hour" : "12.50"} className="w-[130px]" /></div>}
+            </div>
+          </div>
           <div className="space-y-1.5">
             {f.fields.map((fl) => (
               <div key={fl.id} className="rounded-lg border border-[var(--line)] p-2.5">

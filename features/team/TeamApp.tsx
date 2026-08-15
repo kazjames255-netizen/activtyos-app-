@@ -11,6 +11,7 @@ import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { LocationsApp } from "@/features/locations/LocationsApp";
 import { OnboardingPanel } from "@/features/team/OnboardingApp";
 import { ApplicationsPanel } from "@/features/team/ApplicationsApp";
+import { TourLauncher } from "@/features/common/TourLauncher";
 
 // ── Team & invites (company / franchise) ──────────────────────────────────
 // Invite people, give each a role (from Setup → Roles & permissions) and the
@@ -188,10 +189,14 @@ export function TeamApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <div className="mb-3"><h2 className="text-[22px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Team &amp; invites</h2><p className="text-[12.5px] text-[var(--ink-3)]">Invite people, give them a role and where they work.</p></div>
 
-      <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
-        {([["team", "Team members"], ["applications", "Applications"], ["onboarding", "Onboarding"], ["locations", "Deployment"]] as const).map(([t, lbl]) => (
-          <button key={t} type="button" onClick={() => setTab(t)} className={"rounded-lg px-4 py-1.5 text-[13px] font-bold transition-colors " + (tab === t ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>
-        ))}
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <div className="inline-flex rounded-xl bg-[var(--panel)] p-1">
+          {([["team", "Team members"], ["applications", "Applications"], ["onboarding", "Onboarding"], ["locations", "Deployment"]] as const).map(([t, lbl]) => (
+            <button key={t} type="button" onClick={() => setTab(t)} className={"rounded-lg px-4 py-1.5 text-[13px] font-bold transition-colors " + (tab === t ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>
+          ))}
+        </div>
+        {/* Each tab has its own guided walkthrough. */}
+        <div className="ml-auto"><TourLauncher view={{ team: "staff", applications: "staff-applications", onboarding: "staff-onboarding", locations: "staff-deployment" }[tab]} /></div>
       </div>
 
       {tab === "applications" ? <ApplicationsPanel /> : tab === "onboarding" ? <OnboardingPanel /> : tab === "locations" ? <LocationsApp embedded /> : (

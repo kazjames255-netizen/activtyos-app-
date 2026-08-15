@@ -8,7 +8,7 @@ import { TOUR_CONFIGS } from "./tourConfigs";
 
 // Pages that render their own "How it works" launcher inside the page — skip the
 // central injection for them so it isn't shown twice.
-const SELF_HOSTED = new Set(["customers", "ratios", "newsfeed", "tasks", "bookings", "messages", "listings", "blocks"]);
+const SELF_HOSTED = new Set(["customers", "ratios", "newsfeed", "tasks", "bookings", "messages", "listings", "blocks", "staff"]);
 
 // Drops the "How it works ▸ Watch walkthrough" launcher button at the top of a
 // provider page. Clicking it opens the walkthrough in a popup (see
