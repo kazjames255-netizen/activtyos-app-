@@ -26,6 +26,7 @@ import { MarketingStrategiesApp } from "@/features/marketing/MarketingStrategies
 import { ReferralsApp } from "@/features/referrals/ReferralsApp";
 import { EmailApp } from "@/features/email/EmailApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
+import { StaffDocsApp } from "@/features/documents/StaffDocsApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { LearningCentreApp } from "@/features/learning/LearningCentreApp";
 import { CredentialsApp } from "@/features/learning/CredentialsApp";
@@ -245,6 +246,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
   staff: {
     dash: StaffDashApp,
     certificates: StaffCertsApp,
+    documents: StaffDocsApp,
     timetable: StaffTimetableApp,
     registers: RegistersApp,
     ratios: RatiosApp,
@@ -260,7 +262,6 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     trips: TripsApp,
     schedule: RotaApp,
     messages: () => <MessagesApp mode="operator" />,
-    documents: DocumentsApp,
     compliance: ComplianceApp,
     account: AccountApp,
     privacy: PrivacyApp,

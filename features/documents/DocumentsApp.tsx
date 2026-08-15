@@ -17,8 +17,8 @@ type DocCat = "Policy" | "Risk assessment" | "Handbook" | "Procedure" | "Insuran
 const CATS: DocCat[] = ["Policy", "Risk assessment", "Handbook", "Procedure", "Insurance", "Form", "Certificate", "Other"];
 const CAT_ICON: Record<DocCat, string> = { Policy: "📘", "Risk assessment": "⚠️", Handbook: "📗", Procedure: "🧭", Insurance: "🛡️", Form: "🗒️", Certificate: "🎖️", Other: "📄" };
 
-interface DocVersion { version: number; fileName?: string; fileData?: string; at: string }
-interface DocItem {
+export interface DocVersion { version: number; fileName?: string; fileData?: string; at: string }
+export interface DocItem {
   id: string; title: string; category: DocCat;
   fileName?: string; fileData?: string; version: number; uploadedAt: string; expiry?: string;
   all: boolean; roles: string[]; titles: string[]; listings: string[];
@@ -29,15 +29,18 @@ interface DocItem {
 // backend library — see handoff)
 const DEMO_LISTINGS = ["Easter Multi-Sports Camp", "After-School Football Club", "Summer Holiday Club — Milton Keynes", "Gymnastics Saturday Club", "Swim Squad"];
 
-const KEY = "aos.docs.library.v2";
+export const DOCS_KEY = "aos.docs.library.v2";
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const plusMonths = (m: number) => { const d = new Date(); d.setMonth(d.getMonth() + m); return iso(d); };
-const daysUntil = (d?: string) => { if (!d) return null; const t = new Date(d + "T00:00:00").getTime(); const now = new Date(); now.setHours(0, 0, 0, 0); return Math.round((t - now.getTime()) / 86400000); };
-const fmt = (d?: string) => { if (!d) return "—"; const x = new Date(d + "T00:00:00"); return isNaN(+x) ? d : x.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+export const docDaysUntil = (d?: string) => { if (!d) return null; const t = new Date(d + "T00:00:00").getTime(); const now = new Date(); now.setHours(0, 0, 0, 0); return Math.round((t - now.getTime()) / 86400000); };
+const daysUntil = docDaysUntil;
+export const docFmt = (d?: string) => { if (!d) return "—"; const x = new Date(d + "T00:00:00"); return isNaN(+x) ? d : x.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+const fmt = docFmt;
 const esc = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
 
 const POLICY_BODY = (title: string) => `This document sets out ${title.toLowerCase()} for our setting. It applies to all staff, volunteers, students and contractors and should be read in full during induction.\n\n1. Purpose & scope — why this document exists and who it covers.\n2. Roles & responsibilities — who is accountable and what everyone must do.\n3. Procedures — the step-by-step actions to follow, including in an emergency.\n4. Recording & reporting — what must be written down and who to tell.\n5. Review — this document is reviewed at least annually or after any incident.\n\nBy confirming you have read this document you agree to follow it at all times.`;
 
+export function seedDocs(): DocItem[] { return seed(); }
 function seed(): DocItem[] {
   const now = iso(new Date());
   const mk = (title: string, category: DocCat, months: number, all: boolean, extra: Partial<DocItem> = {}): DocItem => ({ id: title.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 30), title, category, version: 1, uploadedAt: now, expiry: months ? plusMonths(months) : undefined, all, roles: [], titles: [], listings: [], history: [], seededBody: POLICY_BODY(title), ...extra });
@@ -57,21 +60,21 @@ function seed(): DocItem[] {
 
 function useDocs() {
   const [docs, setDocs] = useState<DocItem[]>(seed);
-  useEffect(() => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (Array.isArray(s) && s.length) setDocs(s); } catch { /* ignore */ } }, []);
-  const save = (d: DocItem[]) => { setDocs(d); try { localStorage.setItem(KEY, JSON.stringify(d)); } catch { /* ignore */ } };
+  useEffect(() => { try { const s = JSON.parse(localStorage.getItem(DOCS_KEY) || "null"); if (Array.isArray(s) && s.length) setDocs(s); } catch { /* ignore */ } }, []);
+  const save = (d: DocItem[]) => { setDocs(d); try { localStorage.setItem(DOCS_KEY, JSON.stringify(d)); } catch { /* ignore */ } };
   const upsert = (d: DocItem) => save(docs.some((x) => x.id === d.id) ? docs.map((x) => (x.id === d.id ? d : x)) : [...docs, d]);
   const remove = (id: string) => save(docs.filter((x) => x.id !== id));
   return { docs, upsert, remove };
 }
 
-const openDoc = (d: DocItem) => {
+export const openDoc = (d: DocItem) => {
   if (typeof window === "undefined") return;
   if (d.fileData) { const w = window.open(); if (w) w.document.write(`<iframe src="${d.fileData}" style="border:0;width:100vw;height:100vh"></iframe>`); return; }
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(d.title)}</title><style>body{font-family:'Times New Roman',Georgia,serif;color:#1a1c2b;max-width:720px;margin:0 auto;padding:54px 40px;line-height:1.6}.ey{font-family:-apple-system,Arial;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#3f7ae0;font-weight:800}h1{font-size:26px;margin:.1em 0 .1em}.meta{font-family:-apple-system,Arial;color:#6b7086;font-size:12px;border-bottom:1px solid #e5e7f0;padding-bottom:12px;margin-bottom:18px}pre{white-space:pre-wrap;font-family:inherit;font-size:15px}.wm{position:fixed;top:44%;left:0;right:0;text-align:center;font-family:-apple-system,Arial;font-size:60px;color:#eef1f6;font-weight:800;transform:rotate(-18deg);z-index:-1}</style></head><body><div class="wm">SAMPLE</div><div class="ey">${esc(d.category)}</div><h1>${esc(d.title)}</h1><div class="meta">Version ${d.version} · Uploaded ${fmt(d.uploadedAt)}${d.expiry ? " · Review by " + fmt(d.expiry) : ""}</div><pre>${esc(d.seededBody || "")}</pre><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   const w = window.open(); if (w) { w.document.write(html); w.document.close(); }
 };
 
-function statusOf(d: DocItem): { label: string; tone: string } {
+export function statusOf(d: DocItem): { label: string; tone: string } {
   const dl = daysUntil(d.expiry);
   if (dl == null) return { label: "No review date", tone: "bg-[#eef1f6] text-[#64748b]" };
   if (dl < 0) return { label: "Expired", tone: "bg-[#fdecec] text-[#c0392b]" };
