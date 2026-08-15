@@ -15,7 +15,7 @@ import { useSettings } from "@/lib/settings";
 import { DEMO_STAFF, useCredentials, credStatus, CredBadge, appliesTo as credAppliesTo, openCredFile } from "@/features/learning/credentials";
 
 // ——— model ———
-type FieldType = "text" | "tel" | "email" | "date" | "textarea" | "select" | "file" | "checkbox" | "check" | "addresses" | "certs" | "jobtitle" | "pay" | "readdoc";
+type FieldType = "text" | "tel" | "email" | "date" | "textarea" | "select" | "file" | "checkbox" | "check" | "addresses" | "certs" | "jobtitle" | "pay" | "readdoc" | "availability";
 export interface OnboardField {
   id: string; section: string; label: string; type: FieldType; required: boolean;
   applyKind: "all" | "roles" | "staff"; applyRoles?: string[]; applyStaff?: string[];
@@ -60,6 +60,7 @@ export const SECTIONS: [string, string, string][] = [
   ["refs", "References & history", "📋"],
   ["quals", "Qualifications & training", "🎓"],
   ["payroll", "Payroll & HMRC", "💷"],
+  ["availability", "Availability", "📅"],
   ["emergency", "Emergency & health", "🚑"],
   ["agreements", "Agreements & policies", "✍️"],
 ];
@@ -71,6 +72,7 @@ const SECTION_STYLE: Record<string, { grad: string; ink: string; soft: string }>
   refs: { grad: "linear-gradient(135deg,#b45309,#f59e0b)", ink: "#b45309", soft: "#fdf3e0" },
   quals: { grad: "linear-gradient(135deg,#166534,#37b26a)", ink: "#0f7a43", soft: "#eaf8f0" },
   payroll: { grad: "linear-gradient(135deg,#9d174d,#f43f5e)", ink: "#be123c", soft: "#fdecec" },
+  availability: { grad: "linear-gradient(135deg,#0369a1,#22d3ee)", ink: "#0369a1", soft: "#e0f5fb" },
   emergency: { grad: "linear-gradient(135deg,#b91c1c,#ef4444)", ink: "#c0392b", soft: "#fdeceb" },
   agreements: { grad: "linear-gradient(135deg,#334155,#64748b)", ink: "#475569", soft: "#eef1f6" },
 };
@@ -138,6 +140,8 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("hours", "payroll", "Contracted hours", "text"),
   F("payRate", "payroll", "Pay rate", "pay", false, { sensitive: true }),
 
+  F("availability", "availability", "Weekly availability", "availability", false, { hint: "The days & times you can work — this feeds the Schedule / rota." }),
+
   F("emergName", "emergency", "Emergency contact name", "text", true),
   F("emergPhone", "emergency", "Emergency contact phone", "tel", true),
   F("emergRel", "emergency", "Relationship", "text"),
@@ -168,12 +172,18 @@ export function satisfied(f: OnboardField, val?: OnboardValue): boolean {
   if (f.type === "check") return val.status === "verified";
   if (f.type === "file") return !!val.fileData;
   if (f.type === "pay") return !!parsePay(val.v).amount;
+  if (f.type === "availability") return Object.values(parseAvail(val.v)).some((a) => a.length > 0);
   if (f.type === "addresses") { try { return (JSON.parse(val.v || "[]") as unknown[]).length > 0; } catch { return false; } }
   return !!(val.v && val.v.trim());
 }
 // parsed address-history entries
 interface AddrEntry { line1: string; line2: string; town: string; postcode: string; from: string; to: string }
 const parseAddrs = (v?: string): AddrEntry[] => { try { const a = JSON.parse(v || "[]"); return Array.isArray(a) ? a : []; } catch { return []; } };
+// weekly availability { Mon: ["AM","PM"], … } — feeds the Schedule / rota
+const AVAIL_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const AVAIL_SLOTS = ["AM", "PM", "Eve"];
+const AVAIL_KEY = "aos.staff.availability.v1";
+const parseAvail = (v?: string): Record<string, string[]> => { try { const a = JSON.parse(v || "{}"); return a && typeof a === "object" ? a : {}; } catch { return {}; } };
 
 function useOnboarding() {
   const [fields, setFields] = useState<OnboardField[]>(DEFAULT_FIELDS);
@@ -203,6 +213,7 @@ const displayVal = (f: OnboardField, val?: OnboardValue): string => {
   if (f.type === "checkbox") return val.v === "yes" ? "Yes" : "";
   if (f.type === "readdoc") return (val.v === "yes" ? "Read & confirmed" : "Not read yet") + (val.fileName ? " · 📎 " + val.fileName : "");
   if (f.type === "pay") { const p = parsePay(val.v); if (!p.amount) return ""; const d = payDerived(p); return `${gbp(parseFloat(p.amount))} ${p.basis === "year" ? "/year" : p.basis === "day" ? "/day" : "/hour"}${p.auto ? ` (≈ ${gbp(d.hourly)}/hr · ${gbp(d.annual)}/yr)` : ""}`; }
+  if (f.type === "availability") { const av = parseAvail(val.v); const on = AVAIL_DAYS.filter((d) => av[d]?.length); return on.length ? on.map((d) => `${d} ${av[d].join("/")}`).join(", ") : ""; }
   if (f.type === "file") return val.fileName ? "📎 " + val.fileName : val.fileData ? "uploaded" : "";
   if (f.type === "addresses") { const a = parseAddrs(val.v); return a.length ? a.map((x) => `${x.line1}, ${x.town} ${x.postcode} (${x.from}–${x.to})`).join("; ") : ""; }
   return val.v ?? "";
@@ -309,7 +320,7 @@ export function OnboardingPanel() {
   const sectionDone = (sid: string) => { const fs = appl.filter((f) => f.section === sid); return { d: fs.filter((f) => satisfied(f, rec.values[f.id])).length, t: fs.length }; };
 
   const fieldCard = (f: OnboardField) => { const val = rec.values[f.id]; const ok = satisfied(f, val); return (
-    <div key={f.id} className={"rounded-xl border p-3 " + (f.type === "textarea" || f.type === "addresses" || f.type === "certs" ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)] bg-[var(--surface)]")}>
+    <div key={f.id} className={"rounded-xl border p-3 " + (f.type === "textarea" || f.type === "addresses" || f.type === "certs" || f.type === "availability" ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)] bg-[var(--surface)]")}>
       <label className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{f.label}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title="Sensitive — stored securely" className="text-[10px]">🔒</span>}{f.fromInvite && <span title="Set when the sign-up link was sent — staff can't edit; the company can" className="rounded bg-[#eaf1ff] px-1 text-[8.5px] font-bold uppercase text-[#1d54c4]">🔗 from invite</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">added</span>}</label>
       {f.type === "check" ? (
         <div><div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st, at: st === "verified" ? nowIso() : val?.at })} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{st}</button>)}</div>{val?.status === "verified" && val?.at && <div className="mt-1 text-[10px] text-[var(--ink-3)]">Verified {fmtStamp(val.at)}</div>}</div>
@@ -344,6 +355,21 @@ export function OnboardingPanel() {
         const opts = f.options ?? []; const v = val?.v ?? ""; const inList = opts.includes(v);
         const selectVal = inList ? v : (v && f.other ? "Other" : ""); const showOther = !!f.other && selectVal === "Other";
         return (<div className="space-y-1.5"><Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">Choose…</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Select>{showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder="Type it here…" className="w-full" />}</div>);
+      })() : f.type === "availability" ? (() => {
+        const av = parseAvail(val?.v);
+        const write = (next: Record<string, string[]>) => { setVal(f.id, { v: JSON.stringify(next) }); try { const all = JSON.parse(localStorage.getItem(AVAIL_KEY) || "{}"); all[sel] = next; localStorage.setItem(AVAIL_KEY, JSON.stringify(all)); } catch { /* ignore */ } };
+        const toggle = (day: string, slot: string) => { const cur = av[day] || []; write({ ...av, [day]: cur.includes(slot) ? cur.filter((s) => s !== slot) : [...cur, slot] }); };
+        return (
+          <div className="space-y-1">
+            {AVAIL_DAYS.map((day) => (
+              <div key={day} className="flex items-center gap-1.5">
+                <span className="w-9 text-[11.5px] font-bold text-[var(--ink-2)]">{day}</span>
+                {AVAIL_SLOTS.map((slot) => { const on = (av[day] || []).includes(slot); return <button key={slot} type="button" onClick={() => toggle(day, slot)} className={"rounded-lg px-3 py-1 text-[11px] font-bold transition-colors " + (on ? "bg-[#0369a1] text-white" : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{slot}</button>; })}
+              </div>
+            ))}
+            <div className="pt-0.5 text-[10px] text-[var(--ink-3)]">Tap the times you can work. This carries over to the <b>Schedule</b>.</div>
+          </div>
+        );
       })() : f.type === "addresses" ? (
         <AddressList value={val?.v} onChange={(json) => setVal(f.id, { v: json })} />
       ) : f.type === "certs" ? (() => {
