@@ -41,7 +41,18 @@ export const FB_META: Record<FeedbackKind, { label: string; icon: string; tone: 
 export interface FeedbackNote { id: string; staffId: string; name: string; kind: FeedbackKind; text: string; at: string; by?: string }
 
 export type PIPStatus = "open" | "met" | "extended" | "escalated" | "closed";
-export interface PIP { id: string; staffId: string; name: string; concern: string; actions: string; support: string; start: string; end: string; status: PIPStatus }
+export const PIP_STATUS_LABEL: Record<PIPStatus, string> = { open: "Active", met: "Targets met", extended: "Extended", escalated: "Escalated", closed: "Closed" };
+export const PIP_STATUS_TONE: Record<PIPStatus, string> = { open: "#f59e0b", met: "#0f7a43", extended: "#3f7ae0", escalated: "#c0392b", closed: "#64748b" };
+export interface PIPTarget { id: string; text: string; measure?: string; met: boolean }
+export interface PIPCheckIn { id: string; date: string; note: string }
+export interface PIP {
+  id: string; staffId: string; name: string; role?: string; op?: string;
+  concern: string; support: string; consequence?: string; owner?: string; reviewId?: string;
+  targets: PIPTarget[]; checkIns: PIPCheckIn[];
+  start: string; end: string; status: PIPStatus;
+  actions?: string; // legacy free-text, superseded by targets
+}
+export const pipProgress = (p: PIP) => { const t = p.targets || []; return t.length ? Math.round((t.filter((x) => x.met).length / t.length) * 100) : 0; };
 
 // 9-box: performance (x) × potential (y), each low/medium/high (1..3)
 export interface Talent { staffId: string; performance: 1 | 2 | 3; potential: 1 | 2 | 3 }

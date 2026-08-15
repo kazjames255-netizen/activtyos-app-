@@ -9,9 +9,10 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
-  type Review, type ReviewTemplate, type FeedbackNote, type PIP, type Talent, type ReviewKind, type Rating, type FeedbackKind, type BoxDef, type Goal,
-  KIND_LABEL, STATUS_LABEL, RATING_LABEL, GOAL_STATUS_LABEL, FB_META, NINEBOX, overallScore, isOverdue, daysUntil, fmtDate, isoDate, bradfordTone,
+  type Review, type ReviewTemplate, type FeedbackNote, type PIP, type Talent, type ReviewKind, type Rating, type FeedbackKind, type BoxDef, type Goal, type PIPTarget, type PIPCheckIn,
+  KIND_LABEL, STATUS_LABEL, RATING_LABEL, GOAL_STATUS_LABEL, PIP_STATUS_LABEL, PIP_STATUS_TONE, FB_META, NINEBOX, overallScore, isOverdue, daysUntil, fmtDate, isoDate, bradfordTone, pipProgress,
 } from "@/lib/appraisals";
+import { useSettings, DEFAULT_ROLES } from "@/lib/settings";
 import {
   loadReviews, saveReviews, loadTemplates, saveTemplates, loadFeedback, saveFeedback, loadPIPs, savePIPs, loadTalent, saveTalent,
   loadBoxes, saveBoxes, resetBoxes, BOX_TONES, templateFor, signalsFor, slug,
@@ -37,7 +38,10 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
   const [fbType, setFbType] = useState<"all" | FeedbackKind>("all");
   const [fbEditId, setFbEditId] = useState<string | null>(null);
   const [fbDraft, setFbDraft] = useState("");
+  const [pipEdit, setPipEdit] = useState<PIP | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const { settings } = useSettings();
+  const roleNames = useMemo(() => [...new Set([...(settings.roles?.length ? settings.roles : DEFAULT_ROLES).map((r) => r.name), ...DEMO_STAFF.map((s) => s.role)])], [settings.roles]);
   useEffect(() => { setReviews(loadReviews()); setTemplates(loadTemplates()); setFeedback(loadFeedback()); setPips(loadPIPs()); setTalent(loadTalent()); setBoxes(loadBoxes()); }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
   const persistR = (r: Review[]) => { setReviews(r); saveReviews(r); };
@@ -131,31 +135,39 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
 
       {/* ── TEMPLATES ── */}
       {sub === "templates" && (
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">{templates.map((tpl) => (
+        <>
+        <div className="mt-4 mb-3 flex flex-wrap items-center gap-2 rounded-xl bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">
+          <span>📌 The competency set a review uses is chosen by the staff member&rsquo;s <b>role</b> — so different roles get different appraisals.</span>
+          <Button variant="primary" className="ml-auto" onClick={() => persistTpl([...templates, { id: uid(), name: "New appraisal", role: roleNames.find((rn) => !templates.some((t) => t.role === rn)) || "", competencies: [{ id: uid(), label: "New competency" }] }])}>+ New template</Button>
+        </div>
+        <div className="grid gap-4 lg:grid-cols-2">{templates.map((tpl) => (
           <Card key={tpl.id} className="p-4">
-            <div className="mb-2 flex items-center gap-2"><Input value={tpl.name} onChange={(e) => persistTpl(templates.map((t) => t.id === tpl.id ? { ...t, name: e.target.value } : t))} className="flex-1 font-bold" />{tpl.role && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{tpl.role}</span>}</div>
+            <div className="mb-2 flex items-center gap-2"><Input value={tpl.name} onChange={(e) => persistTpl(templates.map((t) => t.id === tpl.id ? { ...t, name: e.target.value } : t))} className="flex-1 font-bold" /><Select value={tpl.role || ""} onChange={(e) => persistTpl(templates.map((t) => t.id === tpl.id ? { ...t, role: e.target.value || undefined } : t))} className="w-40 text-[12px]" title="Which role uses this template"><option value="">Any role</option>{roleNames.map((rn) => <option key={rn} value={rn}>{rn}</option>)}</Select><button type="button" onClick={() => persistTpl(templates.filter((t) => t.id !== tpl.id))} className="px-1 text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]" title="Delete template">×</button></div>
             <div className="space-y-1.5">{tpl.competencies.map((c) => (
               <div key={c.id} className="flex items-center gap-2"><Input value={c.label} onChange={(e) => persistTpl(templates.map((t) => t.id === tpl.id ? { ...t, competencies: t.competencies.map((x) => x.id === c.id ? { ...x, label: e.target.value } : x) } : t))} className="flex-1 text-[12.5px]" /><button type="button" onClick={() => persistTpl(templates.map((t) => t.id === tpl.id ? { ...t, competencies: t.competencies.filter((x) => x.id !== c.id) } : t))} className="px-1 text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button></div>
             ))}</div>
             <button type="button" onClick={() => persistTpl(templates.map((t) => t.id === tpl.id ? { ...t, competencies: [...t.competencies, { id: uid(), label: "New competency" }] } : t))} className="mt-2 text-[12px] font-bold text-[#1d3a8f] hover:underline">+ Add competency</button>
           </Card>
         ))}</div>
+        </>
       )}
 
       {/* ── PIP ── */}
       {sub === "pip" && (
         <Card className="mt-4 p-4">
-          <div className="mb-3 flex items-center gap-2"><div className="text-[13px] font-extrabold text-[var(--ink)]">Performance improvement plans</div><Button className="ml-auto" onClick={() => persistP([{ id: uid(), staffId: "", name: "", concern: "", actions: "", support: "", start: isoDate(new Date()), end: isoDate(new Date(Date.now() + 30 * 86400000)), status: "open" }, ...pips])}>+ New PIP</Button></div>
-          {pips.length === 0 ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No PIPs — hopefully none needed.</div> : <div className="space-y-3">{pips.filter((p) => inOp(DEMO_STAFF.find((s) => slug(s.name) === p.staffId)?.op) || !p.staffId).map((p) => (
-            <div key={p.id} className="rounded-xl border border-[var(--line)] p-3">
-              <div className="mb-2 flex flex-wrap items-center gap-2"><Select value={p.staffId} onChange={(e) => { const s = DEMO_STAFF.find((x) => slug(x.name) === e.target.value); persistP(pips.map((x) => x.id === p.id ? { ...x, staffId: e.target.value, name: s?.name || "" } : x)); }} className="w-48"><option value="">Choose staff…</option>{DEMO_STAFF.map((s) => <option key={s.name} value={slug(s.name)}>{s.name}</option>)}</Select><Select value={p.status} onChange={(e) => persistP(pips.map((x) => x.id === p.id ? { ...x, status: e.target.value as PIP["status"] } : x))} className="w-32">{["open", "met", "extended", "escalated", "closed"].map((s) => <option key={s} value={s}>{s}</option>)}</Select><span className="ml-auto text-[11px] text-[var(--ink-3)]">{fmtDate(p.start)} → {fmtDate(p.end)}</span><button type="button" onClick={() => persistP(pips.filter((x) => x.id !== p.id))} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button></div>
-              <div className="grid gap-2 sm:grid-cols-3">
-                <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Concern</span><textarea value={p.concern} onChange={(e) => persistP(pips.map((x) => x.id === p.id ? { ...x, concern: e.target.value } : x))} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /></label>
-                <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Actions required</span><textarea value={p.actions} onChange={(e) => persistP(pips.map((x) => x.id === p.id ? { ...x, actions: e.target.value } : x))} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /></label>
-                <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Support offered</span><textarea value={p.support} onChange={(e) => persistP(pips.map((x) => x.id === p.id ? { ...x, support: e.target.value } : x))} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /></label>
+          <div className="mb-3 flex items-center gap-2"><div><div className="text-[13px] font-extrabold text-[var(--ink)]">Performance improvement plans</div><div className="text-[11px] text-[var(--ink-3)]">Structured, time-bound plans with measurable targets, support and dated check-ins.</div></div><Button variant="primary" className="ml-auto" onClick={() => setPipEdit({ id: uid(), staffId: "", name: "", concern: "", support: "", consequence: "If targets aren't met by the review date, the plan may be extended once or escalated to a formal capability process.", owner: "", targets: [], checkIns: [], start: isoDate(new Date()), end: isoDate(new Date(Date.now() + 30 * 86400000)), status: "open" })}>+ New PIP</Button></div>
+          {pips.length === 0 ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No PIPs — hopefully none needed. A PIP is a fair, documented way to turn performance around.</div> : <div className="space-y-2.5">{pips.filter((p) => inOp(DEMO_STAFF.find((s) => slug(s.name) === p.staffId)?.op) || !p.staffId).map((p) => { const pct = pipProgress(p); const left = daysUntil(p.end); return (
+            <button key={p.id} type="button" onClick={() => setPipEdit(p)} className="block w-full rounded-xl border border-[var(--line)] p-3 text-left hover:border-[#1d3a8f]">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{p.name ? initials(p.name) : "—"}</span>
+                <div><div className="text-[13px] font-bold text-[var(--ink)]">{p.name || "Unassigned"}</div><div className="text-[10.5px] text-[var(--ink-3)]">{p.role || "—"}{p.op ? ` · ${p.op}` : ""}</div></div>
+                <span className="rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: PIP_STATUS_TONE[p.status] + "1a", color: PIP_STATUS_TONE[p.status] }}>{PIP_STATUS_LABEL[p.status]}</span>
+                <span className="ml-auto text-[11px] text-[var(--ink-3)]">{fmtDate(p.start)} → {fmtDate(p.end)}{p.status === "open" ? ` · ${left < 0 ? `${-left}d overdue` : `${left}d left`}` : ""}</span>
               </div>
-            </div>
-          ))}</div>}
+              {p.concern && <div className="mt-1.5 truncate text-[12px] text-[var(--ink-2)]">{p.concern}</div>}
+              <div className="mt-2 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${pct}%`, background: PIP_STATUS_TONE[p.status] }} /></div><span className="text-[10.5px] font-bold tabular-nums text-[var(--ink-3)]">{p.targets.filter((t) => t.met).length}/{p.targets.length} targets</span></div>
+            </button>
+          ); })}</div>}
         </Card>
       )}
 
@@ -196,6 +208,10 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
       {edit && <ReviewEditor rev={edit} onSave={(r) => { persistR(reviews.map((x) => x.id === r.id ? r : x)); setEdit(null); flash("Review saved."); }} onClose={() => setEdit(null)} />}
       {newRev && <NewReview onCreate={(r) => { persistR([r, ...reviews]); setNewRev(false); setEdit(r); }} onClose={() => setNewRev(false)} />}
       {fbAdd && <AddFeedback onAdd={(f) => { persistF([f, ...feedback]); setFbAdd(false); flash("Note logged."); }} onClose={() => setFbAdd(false)} />}
+      {pipEdit && <PIPEditor pip={pipEdit} reviews={reviews}
+        onSave={(p) => { persistP(pips.some((x) => x.id === p.id) ? pips.map((x) => x.id === p.id ? p : x) : [p, ...pips]); setPipEdit(null); flash("PIP saved."); }}
+        onDelete={() => { persistP(pips.filter((x) => x.id !== pipEdit.id)); setPipEdit(null); flash("PIP removed."); }}
+        onClose={() => setPipEdit(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </>
   );
@@ -309,6 +325,66 @@ function PlacePopover({ name, role, perf, pot, score, suggest, boxes, onMove, on
           <button type="button" onClick={onOpenReview} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Open review →</button>
           <div className="ml-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => { onMove(p, q); if (note.trim()) onLogNote(note.trim()); onClose(); }}>Save</Button></div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// ── PIP editor ───────────────────────────────────────────────────────────────
+function PIPEditor({ pip, reviews, onSave, onDelete, onClose }: { pip: PIP; reviews: Review[]; onSave: (p: PIP) => void; onDelete: () => void; onClose: () => void }) {
+  const [p, setP] = useState<PIP>(pip);
+  const set = (patch: Partial<PIP>) => setP((x) => ({ ...x, ...patch }));
+  const setTarget = (id: string, patch: Partial<PIPTarget>) => set({ targets: p.targets.map((t) => t.id === id ? { ...t, ...patch } : t) });
+  const staffReviews = reviews.filter((r) => r.staffId === p.staffId);
+  const pct = pipProgress(p);
+  const setDuration = (days: number) => { const s = new Date(`${p.start}T00:00:00`); s.setDate(s.getDate() + days); set({ end: isoDate(s) }); };
+  const [chk, setChk] = useState("");
+  return (
+    <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose} style={LIGHT_PALETTE}>
+      <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[16px] font-extrabold text-[var(--ink)]">Performance improvement plan</h3><span className="ml-auto rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: PIP_STATUS_TONE[p.status] + "1a", color: PIP_STATUS_TONE[p.status] }}>{PIP_STATUS_LABEL[p.status]} · {pct}%</span><button type="button" onClick={onClose} className="text-[18px] text-[var(--ink-3)]">×</button></div>
+
+        {/* who + dates + status */}
+        <div className="grid gap-2 sm:grid-cols-2">
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={p.staffId} onChange={(e) => { const s = DEMO_STAFF.find((x) => slug(x.name) === e.target.value); set({ staffId: e.target.value, name: s?.name || "", role: s?.role, op: s?.op }); }} className="w-full"><option value="">Choose staff…</option>{DEMO_STAFF.map((s) => <option key={s.name} value={slug(s.name)}>{s.name} · {s.role}</option>)}</Select></label>
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Plan owner</span><Input value={p.owner || ""} onChange={(e) => set({ owner: e.target.value })} placeholder="e.g. Site lead" className="w-full" /></label>
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Start</span><Input type="date" value={p.start} onChange={(e) => set({ start: e.target.value })} className="w-full" /></label>
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Review by</span><Input type="date" value={p.end} onChange={(e) => set({ end: e.target.value })} className="w-full" /></label>
+        </div>
+        <div className="mt-1.5 flex flex-wrap items-center gap-1.5"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Duration</span>{[30, 60, 90].map((d) => <button key={d} type="button" onClick={() => setDuration(d)} className="rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] hover:bg-[#e2e8f4]">{d} days</button>)}</div>
+
+        {/* concern */}
+        <label className="mt-3 block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Concern — why the plan is needed</span><textarea value={p.concern} onChange={(e) => set({ concern: e.target.value })} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12.5px]" /></label>
+
+        {/* targets */}
+        <div className="mt-3 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🎯 Targets to meet</span><span className="text-[10.5px] text-[var(--ink-3)]">{p.targets.filter((t) => t.met).length}/{p.targets.length} met</span><button type="button" onClick={() => set({ targets: [...p.targets, { id: uid(), text: "", measure: "", met: false }] })} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add target</button></div>
+        <div className="mt-1 space-y-1.5">{p.targets.map((t) => (
+          <div key={t.id} className="flex items-start gap-2 rounded-lg border border-[var(--line)] p-2">
+            <button type="button" onClick={() => setTarget(t.id, { met: !t.met })} className={`mt-0.5 grid h-5 w-5 shrink-0 place-items-center rounded-md text-[11px] font-bold ${t.met ? "bg-[#0f7a43] text-white" : "bg-[var(--panel)] text-transparent hover:text-[var(--ink-3)]"}`}>✓</button>
+            <div className="flex-1 space-y-1"><Input value={t.text} onChange={(e) => setTarget(t.id, { text: e.target.value })} placeholder="Target — what must improve" className="w-full text-[12.5px] font-semibold" /><Input value={t.measure || ""} onChange={(e) => setTarget(t.id, { measure: e.target.value })} placeholder="How it's measured / evidence" className="w-full text-[11.5px]" /></div>
+            <button type="button" onClick={() => set({ targets: p.targets.filter((x) => x.id !== t.id) })} className="px-1 text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button>
+          </div>
+        ))}{p.targets.length === 0 && <div className="text-[11.5px] text-[var(--ink-3)]">Add clear, measurable targets.</div>}</div>
+
+        {/* support + consequence */}
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Support & resources offered</span><textarea value={p.support} onChange={(e) => set({ support: e.target.value })} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /></label>
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">If targets aren't met</span><textarea value={p.consequence || ""} onChange={(e) => set({ consequence: e.target.value })} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /></label>
+        </div>
+
+        {/* check-in log */}
+        <div className="mt-3 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🗓️ Check-ins</div>
+        <div className="mt-1 space-y-1">{[...p.checkIns].sort((a, b) => (a.date < b.date ? 1 : -1)).map((c) => (
+          <div key={c.id} className="flex items-start gap-2 rounded-lg bg-[var(--panel)] p-2 text-[12px]"><span className="shrink-0 font-bold text-[var(--ink-2)]">{fmtDate(c.date)}</span><span className="flex-1 text-[var(--ink-2)]">{c.note}</span><button type="button" onClick={() => set({ checkIns: p.checkIns.filter((x) => x.id !== c.id) })} className="text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button></div>
+        ))}</div>
+        <div className="mt-1 flex gap-2"><Input value={chk} onChange={(e) => setChk(e.target.value)} placeholder="Log a check-in note…" className="flex-1 text-[12px]" /><Button onClick={() => { if (chk.trim()) { set({ checkIns: [...p.checkIns, { id: uid(), date: isoDate(new Date()), note: chk.trim() }] }); setChk(""); } }}>Add</Button></div>
+
+        {/* link to review + status + actions */}
+        <div className="mt-4 grid gap-2 border-t border-[var(--line)] pt-3 sm:grid-cols-2">
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Linked review</span><Select value={p.reviewId || ""} onChange={(e) => set({ reviewId: e.target.value || undefined })} className="w-full text-[12px]"><option value="">— none —</option>{staffReviews.map((r) => <option key={r.id} value={r.id}>{KIND_LABEL[r.kind]} · {fmtDate(r.due)}</option>)}</Select></label>
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Outcome / status</span><Select value={p.status} onChange={(e) => set({ status: e.target.value as PIP["status"] })} className="w-full text-[12px]">{(Object.keys(PIP_STATUS_LABEL) as PIP["status"][]).map((s) => <option key={s} value={s}>{PIP_STATUS_LABEL[s]}</option>)}</Select></label>
+        </div>
+        <div className="mt-3 flex items-center gap-2"><button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Delete plan</button><div className="ml-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!p.staffId} onClick={() => onSave(p)}>Save PIP</Button></div></div>
       </div>
     </div>
   );

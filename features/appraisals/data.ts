@@ -70,9 +70,24 @@ export const saveFeedback = (f: FeedbackNote[]) => write(FK, f);
 // ── PIPs ────────────────────────────────────────────────────────────────────
 export function seedPIPs(): PIP[] {
   const now = new Date(); const d = (off: number) => { const x = new Date(now); x.setDate(x.getDate() + off); return isoDate(x); };
-  return [{ id: uid(), staffId: slug("Priya Khan"), name: "Priya Khan", concern: "Repeated lateness and an overdue safeguarding refresher.", actions: "Arrive 10 min before each shift; complete Safeguarding L2 by the end of the month.", support: "Weekly 1:1 with the site lead; time allocated for training.", start: d(-7), end: d(23), status: "open" }];
+  const s = DEMO_STAFF.find((x) => x.name === "Priya Khan");
+  return [{
+    id: uid(), staffId: slug("Priya Khan"), name: "Priya Khan", role: s?.role, op: s?.op,
+    concern: "Repeated lateness and an overdue safeguarding refresher are affecting the team and cover.",
+    support: "Weekly 1:1 with the site lead; paid time allocated for training; buddy on shift.",
+    consequence: "If targets aren't met by the review date, the plan may be extended once or escalated to a formal capability process.",
+    owner: "Site lead",
+    targets: [
+      { id: uid(), text: "Arrive at least 10 minutes before every shift", measure: "Clock-in record shows no late marks", met: false },
+      { id: uid(), text: "Complete Safeguarding Level 2 refresher", measure: "Certificate uploaded to Documents", met: true },
+      { id: uid(), text: "No unexplained absences", measure: "All absence pre-agreed or self-certified", met: false },
+    ],
+    checkIns: [{ id: uid(), date: d(-3), note: "First check-in — safeguarding booked; two on-time shifts this week. Encouraged." }],
+    start: d(-7), end: d(23), status: "open",
+  }];
 }
-export const loadPIPs = (): PIP[] => { const s = read<PIP[]>(PK); return Array.isArray(s) ? s : seedPIPs(); };
+const normalisePIP = (p: PIP): PIP => ({ ...p, targets: Array.isArray(p.targets) ? p.targets : [], checkIns: Array.isArray(p.checkIns) ? p.checkIns : [] });
+export const loadPIPs = (): PIP[] => { const s = read<PIP[]>(PK); return (Array.isArray(s) ? s : seedPIPs()).map(normalisePIP); };
 export const savePIPs = (p: PIP[]) => write(PK, p);
 
 // ── Talent (9-box) ──────────────────────────────────────────────────────────
