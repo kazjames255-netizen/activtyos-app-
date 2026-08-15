@@ -32,4 +32,10 @@ yours.
 6. **Bank holidays**: use the official gov.uk bank-holidays JSON feed (`https://www.gov.uk/bank-holidays.json`) by division (england-and-wales / scotland / northern-ireland) instead of the hardcoded table; refresh yearly.
 7. **Audit + data protection**: absence reasons/sickness are special-category-adjacent — access-log, retain per policy, and gate sickness detail behind the manager role.
 
-Ties to [[roles-permissions]] (approval permission), the schedule/rota persistence item, and payroll (holiday pay / SSP).
+## Statutory pay reference (front-end shows the framework; payroll computes it)
+Each absence carries a **pay treatment** (`Absence.pay`: normal / ssp / statutory / unpaid / toil), defaulted per type and manager-overridable. The front end explains and (for SSP) estimates; the actual £ + HMRC recovery + RTI run through payroll.
+- **SSP** (2026/27): from day 1, all employees, no LEL/waiting days. Weekly = min(£123.25, 80% × AWE over the prior 8 weeks — a **frozen relevant period**, not rolling). Daily = weekly ÷ qualifying (rota'd) days that week. Only owed for scheduled shifts. Max **28 weeks**; **linked periods** if gap ≤ 56 days (don't recalc AWE, don't reset the 28-wk clock). `Absence.awe` + `sspWeekly()` estimate it.
+- **Family pay** (2026/27, flat rate **£194.32/wk** for SMP/SPP/ShPP/SAP): SMP = 52 wks leave / 39 wks pay (6 wks @ 90% AWE, then 33 wks @ min(£194.32, 90% AWE)); SPP = 2 wks @ min(£194.32, 90%); eligibility ~26 wks' service by the 15th wk before EWC + AWE ≥ £129. Statutory **parental** leave = up to 18 wks/child, unpaid. Surfaced via `familyLeaveNote()`.
+- OWED (Amir): the real SSP/SMP/SPP/ShPP calculators + HMRC recovery + RTI, the 8-week AWE pulled from pay history, qualifying-days from the rota, the 28-week + linked-period tracker, and **auto-AWE** feeding the sickness estimator. Rates change every April — make them config, not hardcoded.
+
+Ties to [[roles-permissions]] (approval permission), the schedule/rota persistence item, and payroll (holiday pay / SSP / statutory family pay).

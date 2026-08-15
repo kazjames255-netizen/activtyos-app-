@@ -12,7 +12,7 @@ import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
   KIND_META, summarise, conflicts, annualAllowance, statutoryDays, leaveYear,
   workingDays, fmtRange, isoDate, round1, isBankHoliday, sickPayNote, sickNotifyRuleText, sspWeekly, SSP_WEEKLY,
-  type PayTreatment, defaultPayTreatment, PAY_TREATMENT,
+  type PayTreatment, defaultPayTreatment, PAY_TREATMENT, familyLeaveNote,
 } from "@/lib/holiday";
 import { loadPolicy, savePolicy, loadProfiles, saveProfiles, loadAbsences, saveAbsences } from "./data";
 
@@ -314,6 +314,7 @@ function AbsenceEditor({ abs, region, sickRule, isNew, profiles, policy, absence
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Pay for this leave</span><Select value={pay} onChange={(e) => set({ pay: e.target.value as PayTreatment })} className="w-full">{(["normal", "ssp", "statutory", "toil", "unpaid"] as PayTreatment[]).map((t) => <option key={t} value={t}>{PAY_TREATMENT[t].label}</option>)}</Select></label>
             <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">{PAY_TREATMENT[pay].note}{a.pay == null ? " (default for this type — change if needed)" : ""}</div>
           </div>
+          {familyLeaveNote(a.kind) && <div className="rounded-lg bg-[#fdf1f7] px-3 py-2 text-[11px] leading-relaxed font-medium text-[#9d174d]">🍼 {familyLeaveNote(a.kind)}</div>}
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">From</span><Input type="date" value={a.start} onChange={(e) => set({ start: e.target.value, end: e.target.value > a.end ? e.target.value : a.end })} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">To</span><Input type="date" value={a.end} min={a.start} onChange={(e) => set({ end: e.target.value })} className="w-full" /></label>

@@ -133,10 +133,20 @@ export function defaultPayTreatment(kind: AbsenceKind, opts?: { rolled?: boolean
     default: return "normal";
   }
 }
+// Statutory family leave/pay (SMP/SPP/ShPP/SAP), 2026/27. The flat rate is the
+// same for all of them. Actual amounts + HMRC recovery are run via payroll.
+export const STATUTORY_FAMILY_RATE = 194.32; // £/week from April 2026
+export const FAMILY_LEL = 129;               // AWE eligibility floor (2026/27)
+export function familyLeaveNote(kind: AbsenceKind): string {
+  if (kind === "maternity") return `Statutory Maternity / Paternity Pay — run through payroll (recoverable from HMRC). Maternity: 52 weeks' leave, 39 weeks' pay — first 6 weeks at 90% of average weekly earnings, then 33 weeks at the lower of £${STATUTORY_FAMILY_RATE.toFixed(2)}/wk or 90%. Paternity: 2 weeks at the lower of £${STATUTORY_FAMILY_RATE.toFixed(2)} or 90%. Eligibility: ~26 weeks' service by the 15th week before the due date, and AWE ≥ £${FAMILY_LEL}.`;
+  if (kind === "parental") return `Statutory (unpaid) parental leave — up to 18 weeks per child (max 4 weeks a year), normally UNPAID. Shared Parental Leave/Pay is a separate paid scheme (statutory rate £${STATUTORY_FAMILY_RATE.toFixed(2)}).`;
+  return "";
+}
+
 export const PAY_TREATMENT: Record<PayTreatment, { label: string; note: string }> = {
   normal: { label: "Paid — normal pay", note: "Paid at their normal rate (for variable hours, a 52-week average)." },
   ssp: { label: "Statutory Sick Pay", note: "SSP only, for rota'd shifts — amount from the 8-week average below (add company sick pay if your policy offers it)." },
-  statutory: { label: "Statutory pay (SMP / SPP / ShPP)", note: "Maternity/paternity/shared parental pay is a separate statutory scheme run through payroll — not normal pay." },
+  statutory: { label: "Statutory pay (SMP / SPP / ShPP)", note: `Family pay is a statutory scheme run through payroll (flat rate £${STATUTORY_FAMILY_RATE.toFixed(2)}/wk 2026/27) — not normal pay.` },
   unpaid: { label: "Unpaid", note: "No pay for these days." },
   toil: { label: "Time off in lieu — no extra pay", note: "They're taking back hours already worked, so it's normal pay with no extra cost." },
 };
