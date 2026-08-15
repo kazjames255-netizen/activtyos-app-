@@ -55,6 +55,17 @@ export const SECTIONS: [string, string, string][] = [
   ["emergency", "Emergency & health", "🚑"],
   ["agreements", "Agreements & policies", "✍️"],
 ];
+// rich per-section colour for the slideshow header
+const SECTION_STYLE: Record<string, { grad: string; ink: string; soft: string }> = {
+  personal: { grad: "linear-gradient(135deg,#1d3a8f,#3f7ae0)", ink: "#1d3a8f", soft: "#eef4fd" },
+  rtw: { grad: "linear-gradient(135deg,#0e7d74,#22b4a6)", ink: "#0f766e", soft: "#e1f5ee" },
+  dbs: { grad: "linear-gradient(135deg,#5b21b6,#a855f7)", ink: "#6d28d9", soft: "#f3effe" },
+  refs: { grad: "linear-gradient(135deg,#b45309,#f59e0b)", ink: "#b45309", soft: "#fdf3e0" },
+  quals: { grad: "linear-gradient(135deg,#166534,#37b26a)", ink: "#0f7a43", soft: "#eaf8f0" },
+  payroll: { grad: "linear-gradient(135deg,#9d174d,#f43f5e)", ink: "#be123c", soft: "#fdecec" },
+  emergency: { grad: "linear-gradient(135deg,#b91c1c,#ef4444)", ink: "#c0392b", soft: "#fdeceb" },
+  agreements: { grad: "linear-gradient(135deg,#334155,#64748b)", ink: "#475569", soft: "#eef1f6" },
+};
 
 const F = (id: string, section: string, label: string, type: FieldType, required = false, x: Partial<OnboardField> = {}): OnboardField => ({ id, section, label, type, required, applyKind: "all", ...x });
 
@@ -185,6 +196,7 @@ export function OnboardingPanel() {
   const [addOpen, setAddOpen] = useState(false);
   const [mode, setMode] = useState<"records" | "scr">("records");
   const [showDecl, setShowDecl] = useState(false);
+  const [step, setStep] = useState(0);
   const provider = settings.providerName || settings.billing?.businessName || "Your company";
 
   const staffOf = (name: string) => DEMO_STAFF.find((s) => s.name === name);
@@ -196,6 +208,7 @@ export function OnboardingPanel() {
     if (r.values.fullName?.v == null) seed.fullName = { v: s.name };
     if (r.values.jobTitle?.v == null) seed.jobTitle = { v: s.role };
     if (Object.keys(seed).length) ob.upsertRecord({ ...r, values: { ...r.values, ...seed } });
+    setStep(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel]);
   const applicable = (name: string, role?: string, extra: string[] = []) => ob.fields.filter((f) => fieldApplies(f, name, role, extra));
@@ -204,7 +217,6 @@ export function OnboardingPanel() {
 
   const staff = staffOf(sel); const rec = ob.recordFor(sel); const appl = applicable(sel, staff?.role, rec.extra);
   const cleared = appl.filter((f) => f.gate).every((f) => satisfied(f, rec.values[f.id]));
-  const outstanding = appl.filter((f) => f.required && !satisfied(f, rec.values[f.id]));
   const setVal = (fieldId: string, patch: Partial<OnboardValue>) => ob.upsertRecord({ ...rec, values: { ...rec.values, [fieldId]: { ...rec.values[fieldId], ...patch } } });
   const hiddenFields = ob.fields.filter((f) => !fieldApplies(f, sel, staff?.role, rec.extra));
 
@@ -231,6 +243,37 @@ export function OnboardingPanel() {
     const body = DEMO_STAFF.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Yes" : "On hold"}</span></td></tr>`; }).join("");
     printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Single Central Record — ${esc(provider)}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(provider)} — Single Central Record</h1><div class="sub">Safer-recruitment checks · Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
   };
+
+  // ——— slideshow (one section per step) ———
+  const gateOutstanding = appl.filter((f) => f.gate && !satisfied(f, rec.values[f.id]));
+  const activeSections = SECTIONS.filter(([sid]) => appl.some((f) => f.section === sid));
+  const curStep = Math.min(step, Math.max(0, activeSections.length - 1));
+  const [curSid, curLabel, curIcon] = activeSections[curStep] ?? ["personal", "Personal", "👤"];
+  const stepFields = appl.filter((f) => f.section === curSid);
+  const style = SECTION_STYLE[curSid] ?? SECTION_STYLE.personal;
+  const sectionDone = (sid: string) => { const fs = appl.filter((f) => f.section === sid); return { d: fs.filter((f) => satisfied(f, rec.values[f.id])).length, t: fs.length }; };
+
+  const fieldCard = (f: OnboardField) => { const val = rec.values[f.id]; const ok = satisfied(f, val); return (
+    <div key={f.id} className={"rounded-xl border p-3 " + (f.type === "textarea" ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)] bg-[var(--surface)]")}>
+      <label className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{f.label}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title="Sensitive — stored securely" className="text-[10px]">🔒</span>}{f.fromInvite && <span title="Set when the sign-up link was sent — staff can't edit; the company can" className="rounded bg-[#eaf1ff] px-1 text-[8.5px] font-bold uppercase text-[#1d54c4]">🔗 from invite</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">added</span>}</label>
+      {f.type === "check" ? (
+        <div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st })} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{st}</button>)}</div>
+      ) : f.type === "checkbox" ? (
+        <div className="flex flex-wrap items-center gap-3"><label className="flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-[var(--ink)]"><input type="checkbox" checked={val?.v === "yes"} onChange={(e) => setVal(f.id, { v: e.target.checked ? "yes" : "" })} className="h-4 w-4 accent-[#1d3a8f]" /> Yes, signed</label>{f.declaration && <button type="button" onClick={() => setShowDecl(true)} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">📄 See / print example</button>}</div>
+      ) : f.type === "file" ? (
+        <div className="flex flex-wrap items-center gap-2"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ Upload<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileName: file.name }); r.readAsDataURL(file); }} /></label>{val?.fileName && <button type="button" onClick={() => openFile(val.fileData)} className="max-w-[170px] truncate text-[12px] font-bold text-[#1d3a8f] hover:underline">📎 {val.fileName}</button>}</div>
+      ) : f.type === "select" ? (() => {
+        const opts = f.options ?? []; const v = val?.v ?? ""; const inList = opts.includes(v);
+        const selectVal = inList ? v : (v && f.other ? "Other" : ""); const showOther = !!f.other && selectVal === "Other";
+        return (<div className="space-y-1.5"><Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">Choose…</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Select>{showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder="Type it here…" className="w-full" />}</div>);
+      })() : f.type === "textarea" ? (
+        <textarea value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} rows={2} className="w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[#1d3a8f]" />
+      ) : (
+        <Input type={f.type === "date" ? "date" : f.type === "tel" ? "tel" : f.type === "email" ? "email" : "text"} value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full" />
+      )}
+      {f.hint && <div className="mt-1 text-[10.5px] text-[var(--ink-3)]">{f.hint}</div>}
+    </div>
+  ); };
 
   return (
     <div>
@@ -278,62 +321,56 @@ export function OnboardingPanel() {
           ); })}
         </div>
 
-        {/* form */}
-        <div className="min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
+        {/* form — colourful slideshow, one section per step */}
+        <div className="min-w-0 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-4 py-3">
             <div><div className="text-[16px] font-extrabold text-[var(--ink)]">{sel}</div><div className="text-[12px] text-[var(--ink-3)]">{staff?.role} · {staff?.op}</div></div>
             <div className="ml-auto flex items-center gap-2">
               {cleared ? <span className="rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a43]">✓ Cleared to start</span> : <span className="rounded-full bg-[#fdf3e0] px-2.5 py-1 text-[11.5px] font-extrabold text-[#8a5a09]">⏳ Start on hold</span>}
               <Button onClick={exportPack}>🖨️ Export pack</Button>
             </div>
           </div>
-          {!cleared && <div className="mb-3 rounded-xl border border-[#f3cfa6] bg-[#fdf3e0] px-3.5 py-2 text-[12px] font-semibold text-[#8a4b09]">Cannot start in regulated activity until Right to work, DBS and References are verified.</div>}
-          {outstanding.length > 0 && <div className="mb-3 text-[12px] text-[var(--ink-3)]"><b className="text-[#c0392b]">{outstanding.length}</b> required item{outstanding.length === 1 ? "" : "s"} still outstanding.</div>}
 
-          {SECTIONS.map(([sid, slabel, sicon]) => { const fs = appl.filter((f) => f.section === sid); if (!fs.length) return null; return (
-            <div key={sid} className="mb-4">
-              <h4 className="mb-2 flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">{sicon} {slabel}</h4>
-              <div className="grid gap-2.5 sm:grid-cols-2">
-                {fs.map((f) => { const val = rec.values[f.id]; const ok = satisfied(f, val); return (
-                  <div key={f.id} className={"rounded-lg border p-2.5 " + (f.type === "textarea" ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)]")}>
-                    <label className="mb-1 flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{f.label}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title="Sensitive — stored securely" className="text-[10px]">🔒</span>}{f.fromInvite && <span title="Set when the sign-up link was sent — staff can't edit; the company can" className="rounded bg-[#eaf1ff] px-1 text-[8.5px] font-bold uppercase text-[#1d54c4]">🔗 from invite</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">added</span>}</label>
-                    {f.type === "check" ? (
-                      <div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st })} className={"rounded-full px-2 py-0.5 text-[10.5px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{st}</button>)}</div>
-                    ) : f.type === "checkbox" ? (
-                      <div className="flex flex-wrap items-center gap-3"><label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[var(--ink)]"><input type="checkbox" checked={val?.v === "yes"} onChange={(e) => setVal(f.id, { v: e.target.checked ? "yes" : "" })} className="h-4 w-4 accent-[#1d3a8f]" /> Yes, signed</label>{f.declaration && <button type="button" onClick={() => setShowDecl(true)} className="text-[11px] font-bold text-[#1d3a8f] hover:underline">📄 See / print example</button>}</div>
-                    ) : f.type === "file" ? (
-                      <div className="flex flex-wrap items-center gap-2"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ Upload<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileName: file.name }); r.readAsDataURL(file); }} /></label>{val?.fileName && <button type="button" onClick={() => openFile(val.fileData)} className="max-w-[150px] truncate text-[11.5px] font-bold text-[#1d3a8f] hover:underline">📎 {val.fileName}</button>}</div>
-                    ) : f.type === "select" ? (() => {
-                      const opts = f.options ?? []; const v = val?.v ?? ""; const inList = opts.includes(v);
-                      const selectVal = inList ? v : (v && f.other ? "Other" : ""); const showOther = !!f.other && selectVal === "Other";
-                      return (
-                        <div className="space-y-1.5">
-                          <Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">Choose…</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Select>
-                          {showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder="Type it here…" className="w-full" />}
-                        </div>
-                      );
-                    })() : f.type === "textarea" ? (
-                      <textarea value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} rows={2} className="w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
-                    ) : (
-                      <Input type={f.type === "date" ? "date" : f.type === "tel" ? "tel" : f.type === "email" ? "email" : "text"} value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full" />
-                    )}
-                    {f.hint && <div className="mt-1 text-[10px] text-[var(--ink-3)]">{f.hint}</div>}
-                  </div>
-                ); })}
-              </div>
-            </div>
-          ); })}
-
-          {/* add a normally-hidden item to this person */}
-          <div className="relative mt-1">
-            <Button onClick={() => setAddOpen((v) => !v)}>+ Add an item for {sel.split(" ")[0]}</Button>
-            {addOpen && (
-              <div className="absolute z-20 mt-1 max-h-[260px] w-[280px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
-                {hiddenFields.length ? hiddenFields.map((f) => <button key={f.id} type="button" onClick={() => { ob.upsertRecord({ ...rec, extra: [...rec.extra, f.id] }); setAddOpen(false); }} className="block w-full truncate rounded-lg px-3 py-1.5 text-left text-[12px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.label} <span className="text-[10px] text-[var(--ink-3)]">· {SECTIONS.find((s) => s[0] === f.section)?.[1]}</span></button>) : <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">Every item already applies to {sel.split(" ")[0]}.</div>}
-              </div>
-            )}
+          {/* step rail */}
+          <div className="flex flex-wrap gap-1.5 px-4 pt-3">
+            {activeSections.map(([sid, slabel, sicon], i) => { const sd = sectionDone(sid); const done = sd.t > 0 && sd.d === sd.t; const on = i === curStep; const st = SECTION_STYLE[sid] ?? SECTION_STYLE.personal; return (
+              <button key={sid} type="button" onClick={() => setStep(i)} className={"flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold transition-all " + (on ? "text-white shadow-md" : done ? "bg-[#e6f4ea] text-[#0f7a43]" : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")} style={on ? { background: st.grad } : undefined}><span>{done && !on ? "✓" : sicon}</span><span className="hidden md:inline">{slabel}</span></button>
+            ); })}
           </div>
-          <p className="mt-3 text-[11px] text-[var(--ink-3)]">Certificates (DBS, First Aid) are also tracked in <b>Team → Staff certificates</b>. Sensitive fields (🔒) need secure storage &amp; retention — on the backend list.</p>
+
+          {/* big gradient step header */}
+          <div className="relative m-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_18px_40px_-24px_rgba(16,32,90,.6)]" style={{ background: style.grad }}>
+            <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 400 120" preserveAspectRatio="xMidYMid slice" aria-hidden><circle cx="372" cy="16" r="60" fill="#fff" opacity="0.09" /><circle cx="330" cy="120" r="40" fill="#fff" opacity="0.07" /></svg>
+            <div className="relative flex items-center gap-3">
+              <div className="grid h-14 w-14 flex-none place-items-center rounded-2xl bg-white/20 text-[28px] leading-none backdrop-blur">{curIcon}</div>
+              <div className="min-w-0"><div className="text-[10.5px] font-bold uppercase tracking-[0.12em] text-white/80">Step {curStep + 1} of {activeSections.length}</div><div className="text-[20px] font-extrabold leading-tight" style={{ textWrap: "balance" } as React.CSSProperties}>{curLabel}</div></div>
+              <div className="ml-auto flex-none text-right"><div className="text-[24px] font-extrabold leading-none tabular-nums">{sectionDone(curSid).d}/{sectionDone(curSid).t}</div><div className="mt-0.5 text-[10px] text-white/80">completed</div></div>
+            </div>
+          </div>
+
+          {/* specific cleared / on-hold banner */}
+          {cleared ? <div className="mx-4 mb-3 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] px-3.5 py-2 text-[12px] font-semibold text-[#0f7a43]">✓ All safer-recruitment checks verified — cleared to start.</div>
+            : gateOutstanding.length > 0 && <div className="mx-4 mb-3 rounded-xl border border-[#f3cfa6] bg-[#fdf3e0] px-3.5 py-2 text-[12px] font-semibold text-[#8a4b09]">⏳ Not cleared yet — still to verify: {gateOutstanding.map((f) => f.label).join(" · ")}.</div>}
+
+          {/* this step's fields */}
+          <div className="grid gap-2.5 px-4 sm:grid-cols-2">{stepFields.map(fieldCard)}</div>
+
+          {/* nav */}
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-4 py-3">
+            <Button disabled={curStep === 0} onClick={() => setStep((s) => Math.max(0, s - 1))}>← Back</Button>
+            <div className="relative">
+              <Button onClick={() => setAddOpen((v) => !v)}>+ Add item</Button>
+              {addOpen && (
+                <div className="absolute bottom-full z-20 mb-1 max-h-[260px] w-[280px] overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
+                  {hiddenFields.length ? hiddenFields.map((f) => <button key={f.id} type="button" onClick={() => { ob.upsertRecord({ ...rec, extra: [...rec.extra, f.id] }); setAddOpen(false); }} className="block w-full truncate rounded-lg px-3 py-1.5 text-left text-[12px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.label} <span className="text-[10px] text-[var(--ink-3)]">· {SECTIONS.find((s) => s[0] === f.section)?.[1]}</span></button>) : <div className="px-3 py-2 text-[12px] text-[var(--ink-3)]">Every item already applies to {sel.split(" ")[0]}.</div>}
+                </div>
+              )}
+            </div>
+            {curStep < activeSections.length - 1
+              ? <Button variant="primary" className="ml-auto" onClick={() => setStep((s) => Math.min(activeSections.length - 1, s + 1))}>Next: {activeSections[curStep + 1][1]} →</Button>
+              : <span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">Final step ✓</span>}
+          </div>
+          <p className="px-4 pb-4 text-[11px] text-[var(--ink-3)]">Certificates (DBS, First Aid) are also tracked in <b>Team → Staff certificates</b>. Sensitive fields (🔒) need secure storage &amp; retention — on the backend list.</p>
         </div>
       </div>
       )}
