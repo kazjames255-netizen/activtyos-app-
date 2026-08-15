@@ -11,7 +11,7 @@ import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
   KIND_META, summarise, conflicts, annualAllowance, statutoryDays, leaveYear,
-  workingDays, fmtRange, isoDate, round1, isBankHoliday, sickPayNote, SSP_WEEKLY,
+  workingDays, fmtRange, isoDate, round1, isBankHoliday, sickPayNote, sickNotifyRuleText, SSP_WEEKLY,
 } from "@/lib/holiday";
 import { loadPolicy, savePolicy, loadProfiles, saveProfiles, loadAbsences, saveAbsences } from "./data";
 
@@ -104,7 +104,7 @@ export function HolidayApp() {
                       <div className="min-w-[160px]">
                         <div className="text-[13.5px] font-extrabold text-[#1d3a8f]">{a.name}</div>
                         <div className="text-[12px] text-[var(--ink-2)]">{km.label}</div>
-                        <div className="text-[12.5px] font-semibold text-[var(--ink)]">{fmtRange(a.start, a.end)}{a.half ? ` · ${a.half} half-day` : ""} <span className="font-normal text-[var(--ink-3)]">({a.days} day{a.days === 1 ? "" : "s"})</span>{a.paid === false && <span className="ml-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b] align-middle">unpaid</span>}</div>
+                        <div className="text-[12.5px] font-semibold text-[var(--ink)]">{fmtRange(a.start, a.end)}{a.half ? ` · ${a.half} half-day` : ""} <span className="font-normal text-[var(--ink-3)]">({a.days} day{a.days === 1 ? "" : "s"})</span>{a.paid === false && <span className="ml-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b] align-middle">unpaid</span>}{a.kind === "sickness" && <span className={`ml-1.5 rounded-full px-1.5 py-0.5 text-[9.5px] font-bold align-middle ${a.ssp === "withheld" ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#e6f4ea] text-[#0f7a43]"}`}>SSP {a.ssp === "withheld" ? "withheld" : "eligible"}</span>}</div>
                         {a.reason && <div className="mt-0.5 text-[11.5px] italic text-[var(--ink-3)]">“{a.reason}”</div>}
                       </div>
                       <div className="min-w-[190px] flex-1 rounded-xl bg-[#f2f7ff] p-2.5 text-[12px] text-[var(--ink-2)]">
@@ -247,6 +247,14 @@ export function HolidayApp() {
                   <Select value={policy.sickPay} onChange={(e) => persistPolicy({ ...policy, sickPay: e.target.value as HolidayPolicy["sickPay"] })} className="w-full"><option value="ssp">Statutory Sick Pay only (the legal minimum)</option><option value="enhanced">Company sick pay — full pay first, then SSP</option></Select></label>
                 {policy.sickPay === "enhanced" && <label className="mt-2 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Days on full pay before SSP</span><Input inputMode="numeric" value={String(policy.enhancedDays)} onChange={(e) => persistPolicy({ ...policy, enhancedDays: Math.max(0, parseInt(e.target.value) || 0) })} className="w-full" /></label>}
                 <div className="mt-2 rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">{sickPayNote(policy)}</div>
+                {/* how much notice triggers SSP for a missed shift */}
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Sickness reporting</span><Select value={policy.sickNotifyMode} onChange={(e) => persistPolicy({ ...policy, sickNotifyMode: e.target.value as HolidayPolicy["sickNotifyMode"] })} className="w-full"><option value="hours">Hours before shift</option><option value="time">By a time on the day</option></Select></label>
+                  {policy.sickNotifyMode === "hours"
+                    ? <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Hours before shift</span><Input inputMode="decimal" value={String(policy.sickNotifyHours)} onChange={(e) => persistPolicy({ ...policy, sickNotifyHours: Math.max(0, parseFloat(e.target.value) || 0) })} className="w-full" /></label>
+                    : <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Notify by (time)</span><Input type="time" value={policy.sickNotifyTime} onChange={(e) => persistPolicy({ ...policy, sickNotifyTime: e.target.value || "09:00" })} className="w-full" /></label>}
+                </div>
+                <div className="mt-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">Staff must report sickness <b>{sickNotifyRuleText(policy)}</b>. Reported in time → SSP applies. Reported late → you can withhold SSP for those days (override on each sickness record). SSP is only owed for <b>shifts they were rota&rsquo;d to work</b>.</div>
               </div>
             </div>
           </Card>
@@ -263,14 +271,14 @@ export function HolidayApp() {
         </div>
       )}
 
-      {edit && <AbsenceEditor abs={edit} region={policy.region} onSave={(a) => { persistAbs(absences.map((x) => (x.id === a.id ? a : x))); setEdit(null); flash("Request updated."); }} onClose={() => setEdit(null)} />}
+      {edit && <AbsenceEditor abs={edit} region={policy.region} sickRule={sickNotifyRuleText(policy)} onSave={(a) => { persistAbs(absences.map((x) => (x.id === a.id ? a : x))); setEdit(null); flash("Request updated."); }} onClose={() => setEdit(null)} />}
       {profEdit && <ProfileEditor prof={profEdit} policy={policy} onSave={(p) => { persistProfiles(profiles.map((x) => (x.id === p.id ? p : x))); setProfEdit(null); flash(`${p.name.split(" ")[0]}'s entitlement saved.`); }} onClose={() => setProfEdit(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
 }
 
-function AbsenceEditor({ abs, region, onSave, onClose }: { abs: Absence; region: HolidayPolicy["region"]; onSave: (a: Absence) => void; onClose: () => void }) {
+function AbsenceEditor({ abs, region, sickRule, onSave, onClose }: { abs: Absence; region: HolidayPolicy["region"]; sickRule: string; onSave: (a: Absence) => void; onClose: () => void }) {
   const [a, setA] = useState<Absence>(abs);
   const single = a.start === a.end;
   const days = workingDays(a.start, a.end, { half: single ? a.half : null, region });
@@ -287,6 +295,10 @@ function AbsenceEditor({ abs, region, onSave, onClose }: { abs: Absence; region:
           </div>
           {single && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Half day</span><Select value={a.half || ""} onChange={(e) => set({ half: (e.target.value || null) as Absence["half"] })} className="w-full"><option value="">Full day</option><option value="am">Morning (AM)</option><option value="pm">Afternoon (PM)</option></Select></label>}
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason / note</span><Input value={a.reason || ""} onChange={(e) => set({ reason: e.target.value })} className="w-full" /></label>
+          {a.kind === "sickness" && <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Statutory Sick Pay</span><Select value={a.ssp || "eligible"} onChange={(e) => set({ ssp: e.target.value as Absence["ssp"] })} className="w-full"><option value="eligible">Eligible — reported in time</option><option value="withheld">Withheld — reported late</option></Select></label>
+            <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Rule: report sickness <b>{sickRule}</b>. SSP is only owed for shifts they were rota&rsquo;d to work; withhold for days they told you late.</div>
+          </div>}
           <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[12px] font-semibold text-[#1d3a8f]">{days} working day{days === 1 ? "" : "s"} (weekends &amp; bank holidays excluded)</div>
         </div>
         <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onSave({ ...a, days })}>Save</Button></div>

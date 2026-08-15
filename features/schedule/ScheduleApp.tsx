@@ -459,6 +459,13 @@ export function ScheduleApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Staff schedule" icon="🗓" lede="Build the rota by location & role or by team member, across day / week / month — with wages and on-cost." />
 
+      {(span === "2w" || span === "4w" || span === "month") && (
+        <div className="mb-3 flex items-start gap-2 rounded-xl border border-[#f0d9b5] bg-[#fffaf0] px-3 py-2.5 text-[11.5px] font-semibold text-[#8a5a09]">
+          <span className="text-[14px] leading-none">💡</span>
+          <span>Casual / zero-hours tip: publish just <b>one week at a time</b>. Sick pay (SSP) is only owed for shifts a person was actually rota&rsquo;d — so scheduling weeks ahead commits you to more qualifying days than you may need.</span>
+        </div>
+      )}
+
       {/* Wages — always above the Rota/Settings tabs */}
       <div className="relative mb-3 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(22,48,110,0.55)]" style={{ background: "linear-gradient(125deg,#132a63 0%,#1d3a8f 46%,#2f6bd8 100%)" }}>
         <div className="pointer-events-none absolute -right-10 -top-16 h-52 w-52 rounded-full bg-white/10 blur-2xl" />

@@ -29,6 +29,7 @@ export interface Absence {
   decidedAt?: string;
   note?: string;        // approver's decline reason / note
   paid?: boolean;       // false = unpaid (e.g. rolled-up staff taking already-paid leave)
+  ssp?: "eligible" | "withheld"; // sickness only: whether SSP is paid (withheld = late notice)
 }
 
 // Per-tenant leave policy (defaults sit in the store; editable in Settings).
@@ -46,6 +47,12 @@ export interface HolidayPolicy {
   // "enhanced" = full pay for `enhancedDays` days, then SSP.
   sickPay: "ssp" | "enhanced";
   enhancedDays: number;
+  // Sickness reporting rule: how much notice a person must give to be paid SSP
+  // for a missed shift. "hours" = at least N hours before the shift; "time" = by
+  // a cut-off time on the day. Late notice = SSP can be withheld for those days.
+  sickNotifyMode: "hours" | "time";
+  sickNotifyHours: number;
+  sickNotifyTime: string; // "HH:MM"
 }
 
 // Statutory Sick Pay. From 6 April 2026 the Lower Earnings Limit and the 3
@@ -89,7 +96,17 @@ export const DEFAULT_POLICY: HolidayPolicy = {
   allowanceBasis: "statutory", customDays: 28, bankHolidaysExtra: false,
   carryOverMax: 5, region: "eng-wal", sickThreshold: 4,
   sickPay: "ssp", enhancedDays: 5,
+  sickNotifyMode: "hours", sickNotifyHours: 1, sickNotifyTime: "09:00",
 };
+// e.g. "at least 1 hour before the shift" / "by 9:00am on the day"
+export function sickNotifyRuleText(p: Pick<HolidayPolicy, "sickNotifyMode" | "sickNotifyHours" | "sickNotifyTime">): string {
+  if (p.sickNotifyMode === "time") {
+    const [h, m] = (p.sickNotifyTime || "09:00").split(":").map(Number);
+    const ap = h < 12 ? "am" : "pm"; const hh = ((h + 11) % 12) + 1;
+    return `by ${hh}:${String(m || 0).padStart(2, "0")}${ap} on the day`;
+  }
+  return `at least ${p.sickNotifyHours} hour${p.sickNotifyHours === 1 ? "" : "s"} before the shift`;
+}
 
 export const KIND_META: Record<AbsenceKind, { label: string; icon: string; tone: string; countsAllowance: boolean }> = {
   annual: { label: "Annual leave", icon: "🌴", tone: "#0ea5e9", countsAllowance: true },

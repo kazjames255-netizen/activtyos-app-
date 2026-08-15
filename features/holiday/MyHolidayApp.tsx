@@ -9,7 +9,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
-  KIND_META, summarise, workingDays, fmtRange, isoDate, nextPublicHoliday, leaveYear, sickPayNote,
+  KIND_META, summarise, workingDays, fmtRange, isoDate, nextPublicHoliday, leaveYear, sickPayNote, sickNotifyRuleText,
 } from "@/lib/holiday";
 import { loadPolicy, loadProfiles, loadAbsences, saveAbsences, slug } from "./data";
 
@@ -50,11 +50,11 @@ export function MyHolidayApp() {
   const nph = nextPublicHoliday(isoDate(new Date()), policy.region);
   const otherDays = s.byKind.other + s.byKind.unpaid + s.byKind.maternity + s.byKind.parental;
 
-  const sickNote = sickPayNote(policy);
+  const sickNote = `${sickPayNote(policy)} Tell your manager ${sickNotifyRuleText(policy)} so your sick pay isn't affected.`;
   const submit = (a: Omit<Absence, "id" | "staffId" | "name" | "status" | "requestedAt" | "days"> & { days: number }) => {
     // only ANNUAL leave is unpaid-because-rolled-up; sickness is SSP-paid, etc.
     const paid = a.kind === "unpaid" ? false : rolled && a.kind === "annual" ? false : true;
-    const abs: Absence = { id: crypto.randomUUID(), staffId: ME_ID, name: ME, status: "pending", requestedAt: new Date().toISOString(), ...a, paid };
+    const abs: Absence = { id: crypto.randomUUID(), staffId: ME_ID, name: ME, status: "pending", requestedAt: new Date().toISOString(), ...a, paid, ...(a.kind === "sickness" ? { ssp: "eligible" as const } : {}) };
     persistAbs([abs, ...absences]); setReqOpen(false); flash("✅ Request sent to your manager.");
   };
   const cancel = (id: string) => { if (window.confirm("Cancel this request?")) persistAbs(absences.map((x) => (x.id === id ? { ...x, status: "cancelled" as const } : x))); };
