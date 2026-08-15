@@ -27,6 +27,7 @@ import { ReferralsApp } from "@/features/referrals/ReferralsApp";
 import { EmailApp } from "@/features/email/EmailApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
 import { StaffDocsApp } from "@/features/documents/StaffDocsApp";
+import { PayrollApp } from "@/features/payroll/PayrollApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { LearningCentreApp } from "@/features/learning/LearningCentreApp";
 import { CredentialsApp } from "@/features/learning/CredentialsApp";
@@ -74,16 +75,6 @@ import { AiAssistant } from "@/features/ai/AiApp";
 // Roadmap areas — honest "Planned" pages until the real feature lands
 // (never the old prototype's canned data). Swap for a real component here
 // when built; the nav item needs no change.
-const PayrollPlanned = (portal: string, scheduleView: string) =>
-  planned({
-    title: "Payroll",
-    blurb: "Hours from the rota, rates per role, and a run-ready payroll export each month.",
-    links: [
-      { href: `/${portal}/${scheduleView}`, label: portal === "company" ? "Team & invites" : "Schedule", hint: "who works, and when" },
-      { href: `/${portal}/finance`, label: "Finances", hint: "money in and out today" },
-    ],
-  });
-
 /**
  * Views that have a true React implementation — which is now ALL of them:
  * every slug in lib/nav/config.ts must be registered here (an unregistered
@@ -141,7 +132,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     account: AccountApp,
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="operator" />,
-    payroll: PayrollPlanned("company", "staff"),
+    payroll: PayrollApp,
     learning: LearningCentreApp,
     credentials: CredentialsApp,
     schedule: RotaApp,
@@ -198,7 +189,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     account: AccountApp,
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="operator" />,
-    payroll: PayrollPlanned("franchise", "schedule"),
+    payroll: PayrollApp,
     moments2: MomentsApp,
   },
   freelancer: {
