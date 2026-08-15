@@ -30,6 +30,8 @@ import { StaffDocsApp } from "@/features/documents/StaffDocsApp";
 import { StaffPayslipsApp } from "@/features/payroll/StaffPayslipsApp";
 import { HolidayApp } from "@/features/holiday/HolidayApp";
 import { MyHolidayApp } from "@/features/holiday/MyHolidayApp";
+import { TimeClockApp } from "@/features/timeclock/TimeClockApp";
+import { TimesheetsApp } from "@/features/timeclock/TimesheetsApp";
 import { PayrollApp } from "@/features/payroll/PayrollApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { LearningCentreApp } from "@/features/learning/LearningCentreApp";
@@ -137,6 +139,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ai: () => <AiAssistant kind="operator" />,
     payroll: PayrollApp,
     holiday: HolidayApp,
+    timesheets: TimesheetsApp,
     learning: LearningCentreApp,
     credentials: CredentialsApp,
     schedule: RotaApp,
@@ -195,12 +198,14 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ai: () => <AiAssistant kind="operator" />,
     payroll: PayrollApp,
     holiday: HolidayApp,
+    timesheets: TimesheetsApp,
     moments2: MomentsApp,
   },
   freelancer: {
     dash: DashboardApp,
     setup: SetupApp,
     holiday: HolidayApp,
+    timesheets: TimesheetsApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,
     blocks: BlocksApp,
@@ -266,6 +271,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ai: () => <AiAssistant kind="staff" />,
     availability: AvailabilityApp,
     holiday: MyHolidayApp,
+    clockinout: TimeClockApp,
     expenses: planned({
       title: "My expenses",
       blurb: "Snap a receipt, claim it back, and track what's been reimbursed.",

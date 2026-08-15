@@ -8,6 +8,7 @@ import { money, collectedNet } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { useSettings } from "@/lib/settings";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
+import { LiveClockCard } from "@/features/timeclock/LiveClockCard";
 import { Badge } from "@/components/ui";
 
 interface Dash {
@@ -450,6 +451,9 @@ export function DashboardApp() {
           grad={d.money.outstanding > 0 ? GRAD.pink : GRAD.green}
         />
       </div>
+
+      {/* live clock-in board */}
+      <div className="mt-3"><LiveClockCard /></div>
 
       {/* Today · Live listings · Tasks today — three across */}
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
