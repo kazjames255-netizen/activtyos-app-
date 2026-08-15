@@ -12,11 +12,14 @@ import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_FIELDS } from "./OnboardingApp";
 
-type AField = { id: string; label: string; type: "text" | "textarea" | "email" | "tel" | "date" | "select" | "file"; required: boolean; options?: string[]; mapsTo?: string };
+type AField = { id: string; label: string; type: "text" | "textarea" | "email" | "tel" | "date" | "select" | "file" | "locations"; required: boolean; options?: string[]; mapsTo?: string };
+// the provider's sites — applicants pick one or more they can work at (demo; real
+// locations come from the backend). Deployment to specific listings happens later.
+const APP_LOCATIONS = ["Milton Keynes", "Northampton", "Bedford", "Company-owned (Head Office)"];
 interface AppForm { id: string; name: string; fields: AField[]; summary?: string; payKind?: string; payAmount?: string }
 const PAY_KINDS = ["Not stated", "Per hour", "Per day", "Annual salary", "Range"];
 const payLabel = (f: AppForm) => f.payKind && f.payKind !== "Not stated" && f.payAmount ? `${f.payAmount}${f.payKind === "Per hour" ? "/hour" : f.payKind === "Per day" ? "/day" : f.payKind === "Annual salary" ? "/year" : ""}` : "";
-interface Application { id: string; formId: string; name: string; email: string; answers: Record<string, string>; files?: Record<string, { name: string; data: string }>; submittedAt: string; status: "new" | "accepted" | "rejected"; rejectReason?: string; onboardingSent?: boolean }
+interface Application { id: string; formId: string; name: string; email: string; answers: Record<string, string>; files?: Record<string, { name: string; data: string }>; locations?: string[]; submittedAt: string; status: "new" | "accepted" | "rejected"; rejectReason?: string; onboardingSent?: boolean }
 const openFile = (dataUrl?: string) => { if (!dataUrl || typeof window === "undefined") return; const w = window.open(); if (w) w.document.write(`<iframe src="${dataUrl}" style="border:0;width:100vw;height:100vh"></iframe>`); };
 const SAMPLE_PDF = "data:text/html,<body style='font-family:Georgia;padding:60px;max-width:640px;margin:auto'><h2>Sample uploaded document</h2><p>This is a placeholder for the document the applicant attached. Real uploads are stored and viewed here once the backend is wired.</p></body>";
 
@@ -38,6 +41,7 @@ function defaultForm(): AppForm {
       F("postcode", "Postcode", "text", false, "postcode"),
       F("nationality", "Nationality", "text", false, "nationality"),
       F("position", "Position applied for", "text", false, "jobTitle"),
+      F("locations", "Location(s) you can work at", "locations", true),
       F("experience", "Relevant experience", "textarea", false),
       F("qualifications", "Qualifications", "textarea", false, "qualifications"),
       F("idFile", "Photo ID (upload)", "file", false, "idFile"),
@@ -58,8 +62,8 @@ function defaultForm(): AppForm {
 function seedApps(): Application[] {
   const day = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString(); };
   return [
-    { id: "a1", formId: "standard", name: "Chloe Adams", email: "chloe.adams@example.com", submittedAt: day(2), status: "new", answers: { fullName: "Chloe Adams", email: "chloe.adams@example.com", phone: "07700 900321", address1: "14 Elm Road", town: "Milton Keynes", postcode: "MK9 2AA", nationality: "British", position: "Coach", experience: "3 years coaching multi-sports holiday camps.", qualifications: "Level 2 Multi-Skills, Paediatric First Aid", ref1Name: "Sam Okafor", ref1Email: "sam.o@oldclub.example", ref1Phone: "07700 900654", ref2Name: "Dana Patel", ref2Email: "dana.p@school.example", rtw: "Yes", why: "I love helping kids build confidence through sport." }, files: { idFile: { name: "chloe-passport.pdf", data: SAMPLE_PDF }, dbsFile: { name: "chloe-dbs.pdf", data: SAMPLE_PDF }, qualDocs: { name: "chloe-certificates.pdf", data: SAMPLE_PDF } } },
-    { id: "a2", formId: "standard", name: "Ben Carter", email: "ben.carter@example.com", submittedAt: day(1), status: "new", answers: { fullName: "Ben Carter", email: "ben.carter@example.com", phone: "07700 900112", address1: "9 Oak Avenue", town: "Northampton", postcode: "NN1 3BB", nationality: "British", position: "Activity Instructor", experience: "Lifeguard + swim teaching, 2 years.", qualifications: "NPLQ, Swim Teacher L2", ref1Name: "Priya Shah", ref1Email: "priya@pool.example", rtw: "Yes", why: "Keen to move into a year-round role." }, files: { idFile: { name: "ben-driving-licence.jpg", data: SAMPLE_PDF }, rtwEvidence: { name: "ben-share-code.pdf", data: SAMPLE_PDF } } },
+    { id: "a1", formId: "standard", name: "Chloe Adams", email: "chloe.adams@example.com", submittedAt: day(2), status: "new", answers: { fullName: "Chloe Adams", email: "chloe.adams@example.com", phone: "07700 900321", address1: "14 Elm Road", town: "Milton Keynes", postcode: "MK9 2AA", nationality: "British", position: "Coach", experience: "3 years coaching multi-sports holiday camps.", qualifications: "Level 2 Multi-Skills, Paediatric First Aid", ref1Name: "Sam Okafor", ref1Email: "sam.o@oldclub.example", ref1Phone: "07700 900654", ref2Name: "Dana Patel", ref2Email: "dana.p@school.example", rtw: "Yes", why: "I love helping kids build confidence through sport." }, files: { idFile: { name: "chloe-passport.pdf", data: SAMPLE_PDF }, dbsFile: { name: "chloe-dbs.pdf", data: SAMPLE_PDF }, qualDocs: { name: "chloe-certificates.pdf", data: SAMPLE_PDF } }, locations: ["Milton Keynes"] },
+    { id: "a2", formId: "standard", name: "Ben Carter", email: "ben.carter@example.com", submittedAt: day(1), status: "new", answers: { fullName: "Ben Carter", email: "ben.carter@example.com", phone: "07700 900112", address1: "9 Oak Avenue", town: "Northampton", postcode: "NN1 3BB", nationality: "British", position: "Activity Instructor", experience: "Lifeguard + swim teaching, 2 years.", qualifications: "NPLQ, Swim Teacher L2", ref1Name: "Priya Shah", ref1Email: "priya@pool.example", rtw: "Yes", why: "Keen to move into a year-round role." }, files: { idFile: { name: "ben-driving-licence.jpg", data: SAMPLE_PDF }, rtwEvidence: { name: "ben-share-code.pdf", data: SAMPLE_PDF } }, locations: ["Northampton", "Bedford"] },
     { id: "a3", formId: "standard", name: "Amir Hussain", email: "amir.h@example.com", submittedAt: day(5), status: "rejected", rejectReason: "No relevant experience / no DBS on file.", answers: { fullName: "Amir Hussain", email: "amir.h@example.com", phone: "07700 900999", position: "Coach", experience: "Retail background.", rtw: "Yes" } },
   ];
 }
@@ -90,6 +94,9 @@ export function ApplicationsPanel() {
   const [forms, setForms] = useState<AppForm[]>([defaultForm()]);
   const [apps, setApps] = useState<Application[]>(seedApps);
   const [sel, setSel] = useState<string | null>(null);
+  const [applView, setApplView] = useState<"cards" | "table">("cards");
+  const [locFilter, setLocFilter] = useState("all");
+  const [rowOpen, setRowOpen] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [editForm, setEditForm] = useState<AppForm | null>(null);
   const [sendOpen, setSendOpen] = useState(false);
@@ -109,6 +116,43 @@ export function ApplicationsPanel() {
   const reject = (a: Application) => { setStatus(a.id, { status: "rejected", rejectReason: reason.trim() || "Not suitable at this time." }); setReason(""); };
   const sendOnboarding = (a: Application) => { const f = formOf(a.formId); carryOver({ ...a, status: "accepted" }, f); setStatus(a.id, { status: "accepted", onboardingSent: true }); flash(`📨 Onboarding link sent to ${a.name}. Their references, address & details from the application will pre-fill — they won't be asked again.`); };
   const newCount = apps.filter((a) => a.status === "new").length;
+  const filtered = locFilter === "all" ? apps : apps.filter((a) => (a.locations ?? []).includes(locFilter));
+
+  // full application detail — used by the cards pane and the table drawer
+  const detailBody = (app: Application) => { const f = formOf(app.formId); return (
+    <>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div><div className="text-[16px] font-extrabold text-[var(--ink)]">{app.name}</div><div className="text-[12px] text-[var(--ink-3)]">{app.email} · applied {fmtDate(app.submittedAt)}</div></div>
+        <span className={"ml-auto rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase " + STATUS_TONE[app.status]}>{app.status}</span>
+      </div>
+      {(app.locations?.length ?? 0) > 0 && <div className="mb-3 flex flex-wrap items-center gap-1.5"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">📍 Locations</span>{app.locations!.map((l) => <span key={l} className="rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[11px] font-bold text-[#1d54c4]">{l}</span>)}</div>}
+      <div className="mb-3 grid gap-2 sm:grid-cols-2">
+        {f.fields.map((fl) => { const v = app.answers[fl.id]; const file = app.files?.[fl.id]; if (!v && !file) return null; return (
+          <div key={fl.id} className={"rounded-lg bg-[var(--panel)] px-3 py-2 " + (fl.type === "textarea" ? "sm:col-span-2" : "")}>
+            <div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{fl.label}{fl.mapsTo && <span title="Carries into onboarding" className="ml-1 text-[#0f7a43]">↳</span>}</div>
+            {file ? <button type="button" onClick={() => openFile(file.data)} className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 {file.name} · View</button> : <div className="text-[12.5px] font-semibold text-[var(--ink)]">{v}</div>}
+          </div>
+        ); })}
+      </div>
+      <div className="mb-3 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] px-3.5 py-2 text-[11.5px] leading-relaxed text-[#0f7a43]">↳ Fields marked with an arrow are also part of onboarding — when you accept &amp; send the onboarding link, they <b>carry over automatically</b> so {app.name.split(" ")[0]} won&rsquo;t be asked again.</div>
+      {app.status === "rejected" && app.rejectReason && <div className="mb-3 rounded-xl bg-[#fdecec] px-3.5 py-2 text-[12px] font-semibold text-[#c0392b]">Rejected: {app.rejectReason}</div>}
+      {app.status === "accepted" ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a43]">✓ Accepted</span>
+          <Button variant="primary" onClick={() => sendOnboarding(app)}>{app.onboardingSent ? "Resend onboarding link" : "📨 Send onboarding link"}</Button>
+          <button type="button" onClick={() => setStatus(app.id, { status: "new", onboardingSent: false })} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:underline">Undo</button>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => accept(app)}>✓ Accept</Button><span className="text-[11.5px] text-[var(--ink-3)]">then send the onboarding link</span></div>
+          <div className="rounded-xl border border-[var(--line)] p-2.5">
+            <div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">Reject with a reason</div>
+            <div className="flex flex-wrap items-center gap-2"><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (kept on file)…" className="min-w-[200px] flex-1" /><Button onClick={() => reject(app)}>Reject</Button></div>
+          </div>
+        </div>
+      )}
+    </>
+  ); };
 
   return (
     <div>
@@ -121,59 +165,62 @@ export function ApplicationsPanel() {
         <Button variant="primary" className="ml-auto" onClick={() => setSendOpen(true)}>📨 Send application</Button>
       </div>
 
-      {tab === "received" ? (
-        <div className="grid gap-3 md:grid-cols-[280px_1fr]">
-          <div className="space-y-2">
-            {apps.map((a) => (
-              <button key={a.id} type="button" onClick={() => setSel(a.id)} className={"block w-full rounded-xl border p-3 text-left transition-colors " + (sel === a.id ? "border-[#1d3a8f] bg-[#eef4ff]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#1d3a8f]")}>
-                <div className="flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{a.name}</span><span className={"ml-auto rounded-full px-2 py-0.5 text-[9.5px] font-extrabold uppercase " + STATUS_TONE[a.status]}>{a.status}{a.onboardingSent ? " · sent" : ""}</span></div>
-                <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{a.answers.position || "—"} · applied {fmtDate(a.submittedAt)}</div>
-              </button>
+      {tab === "received" ? (<>
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <label className="text-[12px] font-bold text-[var(--ink-3)]">📍 Location</label>
+          <Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="max-w-[240px]"><option value="all">All locations</option>{APP_LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}</Select>
+          <span className="text-[11.5px] text-[var(--ink-3)]">{filtered.length} application{filtered.length === 1 ? "" : "s"}</span>
+          <div className="ml-auto inline-flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
+            {([["cards", "🗂 Cards"], ["table", "▤ Table"]] as const).map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setApplView(k)} className={"rounded-full px-3 py-1 text-[12px] font-bold transition-colors " + (applView === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
             ))}
-            {apps.length === 0 && <Card className="p-4 text-center text-[12.5px] text-[var(--ink-3)]">No applications yet.</Card>}
-          </div>
-
-          <div className="min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-            {!app ? <div className="grid h-full min-h-[200px] place-items-center text-[13px] text-[var(--ink-3)]">Select an application to review.</div> : (() => {
-              const f = formOf(app.formId);
-              return (<>
-                <div className="mb-3 flex flex-wrap items-center gap-2">
-                  <div><div className="text-[16px] font-extrabold text-[var(--ink)]">{app.name}</div><div className="text-[12px] text-[var(--ink-3)]">{app.email} · applied {fmtDate(app.submittedAt)}</div></div>
-                  <span className={"ml-auto rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase " + STATUS_TONE[app.status]}>{app.status}</span>
-                </div>
-
-                <div className="mb-3 grid gap-2 sm:grid-cols-2">
-                  {f.fields.map((fl) => { const v = app.answers[fl.id]; const file = app.files?.[fl.id]; if (!v && !file) return null; return (
-                    <div key={fl.id} className={"rounded-lg bg-[var(--panel)] px-3 py-2 " + (fl.type === "textarea" ? "sm:col-span-2" : "")}>
-                      <div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{fl.label}{fl.mapsTo && <span title="Carries into onboarding" className="ml-1 text-[#0f7a43]">↳</span>}</div>
-                      {file ? <button type="button" onClick={() => openFile(file.data)} className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 {file.name} · View</button> : <div className="text-[12.5px] font-semibold text-[var(--ink)]">{v}</div>}
-                    </div>
-                  ); })}
-                </div>
-
-                <div className="mb-3 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] px-3.5 py-2 text-[11.5px] leading-relaxed text-[#0f7a43]">↳ Fields marked with an arrow are also part of onboarding — when you accept &amp; send the onboarding link, they <b>carry over automatically</b> so {app.name.split(" ")[0]} won&rsquo;t be asked again.</div>
-
-                {app.status === "rejected" && app.rejectReason && <div className="mb-3 rounded-xl bg-[#fdecec] px-3.5 py-2 text-[12px] font-semibold text-[#c0392b]">Rejected: {app.rejectReason}</div>}
-
-                {app.status === "accepted" ? (
-                  <div className="flex flex-wrap items-center gap-2">
-                    <span className="rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a43]">✓ Accepted</span>
-                    <Button variant="primary" onClick={() => sendOnboarding(app)}>{app.onboardingSent ? "Resend onboarding link" : "📨 Send onboarding link"}</Button>
-                    <button type="button" onClick={() => setStatus(app.id, { status: "new", onboardingSent: false })} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:underline">Undo</button>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    <div className="flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => accept(app)}>✓ Accept</Button><span className="text-[11.5px] text-[var(--ink-3)]">then send the onboarding link</span></div>
-                    <div className="rounded-xl border border-[var(--line)] p-2.5">
-                      <div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">Reject with a reason</div>
-                      <div className="flex flex-wrap items-center gap-2"><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (kept on file)…" className="min-w-[200px] flex-1" /><Button onClick={() => reject(app)}>Reject</Button></div>
-                    </div>
-                  </div>
-                )}
-              </>);
-            })()}
           </div>
         </div>
+
+        {applView === "table" ? (
+          <div className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
+            <table className="w-full text-[13px]">
+              <thead><tr className="border-b border-[var(--line)] bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Status</th><th className="px-3 py-2.5 font-extrabold">Submitted</th><th className="px-3 py-2.5 font-extrabold">Name</th><th className="px-3 py-2.5 font-extrabold">Position</th><th className="px-3 py-2.5 font-extrabold">Location(s)</th><th className="px-3 py-2.5 font-extrabold">Docs</th><th className="px-3 py-2.5"></th></tr></thead>
+              <tbody>{filtered.map((a) => (
+                <tr key={a.id} className="cursor-pointer border-t border-[var(--line-2,#eef2f8)] hover:bg-[var(--panel)]" onClick={() => setRowOpen(a.id)}>
+                  <td className="px-3 py-2.5"><span className={"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase " + STATUS_TONE[a.status]}>● {a.status}{a.onboardingSent ? " · sent" : ""}</span></td>
+                  <td className="whitespace-nowrap px-3 py-2.5 text-[var(--ink-2)] tabular-nums">{fmtDate(a.submittedAt)}</td>
+                  <td className="px-3 py-2.5 font-bold text-[var(--ink)]">{a.name}</td>
+                  <td className="px-3 py-2.5 text-[var(--ink-2)]">{a.answers.position || "—"}</td>
+                  <td className="px-3 py-2.5"><div className="flex flex-wrap gap-1">{(a.locations ?? []).map((l) => <span key={l} className="rounded-full bg-[#eaf1ff] px-1.5 py-0.5 text-[10px] font-bold text-[#1d54c4]">{l}</span>)}{!(a.locations ?? []).length && <span className="text-[var(--ink-3)]">—</span>}</div></td>
+                  <td className="px-3 py-2.5 text-[var(--ink-3)]">{Object.keys(a.files ?? {}).length ? `📎 ${Object.keys(a.files ?? {}).length}` : "—"}</td>
+                  <td className="px-3 py-2.5 text-right"><span className="text-[12px] font-bold text-[#1d3a8f]">Open →</span></td>
+                </tr>
+              ))}
+              {filtered.length === 0 && <tr><td colSpan={7} className="px-3 py-8 text-center text-[12.5px] text-[var(--ink-3)]">No applications match.</td></tr>}</tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="grid gap-3 md:grid-cols-[280px_1fr]">
+            <div className="space-y-2">
+              {filtered.map((a) => (
+                <button key={a.id} type="button" onClick={() => setSel(a.id)} className={"block w-full rounded-xl border p-3 text-left transition-colors " + (sel === a.id ? "border-[#1d3a8f] bg-[#eef4ff]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#1d3a8f]")}>
+                  <div className="flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{a.name}</span><span className={"ml-auto rounded-full px-2 py-0.5 text-[9.5px] font-extrabold uppercase " + STATUS_TONE[a.status]}>{a.status}{a.onboardingSent ? " · sent" : ""}</span></div>
+                  <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{a.answers.position || "—"} · applied {fmtDate(a.submittedAt)}{(a.locations?.length ?? 0) ? ` · 📍 ${a.locations!.join(", ")}` : ""}</div>
+                </button>
+              ))}
+              {filtered.length === 0 && <Card className="p-4 text-center text-[12.5px] text-[var(--ink-3)]">No applications match.</Card>}
+            </div>
+            <div className="min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+              {!app ? <div className="grid h-full min-h-[200px] place-items-center text-[13px] text-[var(--ink-3)]">Select an application to review.</div> : detailBody(app)}
+            </div>
+          </div>
+        )}
+
+        {rowOpen && (() => { const a = apps.find((x) => x.id === rowOpen); if (!a) return null; return (
+          <div className="fixed inset-0 z-[141] flex justify-end bg-black/45" onClick={() => setRowOpen(null)}>
+            <div className="h-full w-full max-w-lg overflow-y-auto bg-[var(--surface)] p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
+              <div className="mb-2 flex justify-end"><button type="button" onClick={() => setRowOpen(null)} className="text-[20px] text-[var(--ink-3)] hover:text-[var(--ink)]">×</button></div>
+              {detailBody(a)}
+            </div>
+          </div>);
+        })()}
+      </>
       ) : (
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => setEditForm({ id: "form_" + Date.now().toString(36), name: "New application form", fields: [] })}>+ New application form</Button><span className="text-[11.5px] text-[var(--ink-3)]">Build one or more editable forms to send to candidates.</span></div>
@@ -261,7 +308,7 @@ function FormEditor({ form, jobTitles, onSave, onClose }: { form: AppForm; jobTi
               <div key={fl.id} className="rounded-lg border border-[var(--line)] p-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Input value={fl.label} onChange={(e) => patch(fl.id, { label: e.target.value })} className="min-w-[150px] flex-1" />
-                  <Select value={fl.type} onChange={(e) => patch(fl.id, { type: e.target.value as AField["type"] })} className="max-w-[130px]"><option value="text">Text</option><option value="textarea">Long text</option><option value="email">Email</option><option value="tel">Phone</option><option value="date">Date</option><option value="select">Dropdown</option><option value="file">File upload</option></Select>
+                  <Select value={fl.type} onChange={(e) => patch(fl.id, { type: e.target.value as AField["type"] })} className="max-w-[130px]"><option value="text">Text</option><option value="textarea">Long text</option><option value="email">Email</option><option value="tel">Phone</option><option value="date">Date</option><option value="select">Dropdown</option><option value="file">File upload</option><option value="locations">Location multi-select</option></Select>
                   <label className="flex items-center gap-1 text-[11px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={fl.required} onChange={(e) => patch(fl.id, { required: e.target.checked })} className="h-3.5 w-3.5 accent-[#1d3a8f]" />Req</label>
                   <button type="button" onClick={() => setF((x) => ({ ...x, fields: x.fields.filter((y) => y.id !== fl.id) }))} className="text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                 </div>
