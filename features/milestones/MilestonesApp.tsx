@@ -47,7 +47,25 @@ const MILE_CSS = `
 @keyframes mile-bob { 0%,100% { transform: translateY(0) } 50% { transform: translateY(-4px) } }
 @keyframes mile-pop { 0% { transform: scale(.5); opacity: 0 } 60% { transform: scale(1.15) } 100% { transform: scale(1); opacity: 1 } }
 @keyframes mile-fall { 0% { transform: translateY(-12px) rotate(0); opacity: 1 } 100% { transform: translateY(70px) rotate(220deg); opacity: 0 } }
-@media (prefers-reduced-motion: reduce) { .mile-anim { animation: none !important } }`;
+@keyframes mile-spin { to { transform: rotate(360deg) } }
+@keyframes mile-drift { 0%,100% { transform: translateX(0) } 50% { transform: translateX(16px) } }
+@keyframes mile-sway { 0%,100% { transform: rotate(-2deg) } 50% { transform: rotate(2deg) } }
+@keyframes mile-draw { to { stroke-dashoffset: 0 } }
+.mile-svg text { font-family: var(--ff-display), system-ui, sans-serif }
+@media (prefers-reduced-motion: reduce) { .mile-anim, .mile-svg [style*="animation"] { animation: none !important } }`;
+
+// little SVG scenery pieces
+function Pine({ x, y, s = 1 }: { x: number; y: number; s?: number }) {
+  return (<g transform={`translate(${x} ${y}) scale(${s})`} style={{ transformOrigin: `${x}px ${y}px` }}>
+    <rect x={-3} y={4} width={6} height={12} rx={2} fill="#8a5a2b" />
+    <polygon points="0,-26 14,2 -14,2" fill="#3f8f5f" /><polygon points="0,-16 12,10 -12,10" fill="#4fa06a" /><polygon points="0,-6 10,18 -10,18" fill="#5cb277" />
+  </g>);
+}
+function Cloud({ x, y, s = 1, delay = 0 }: { x: number; y: number; s?: number; delay?: number }) {
+  return (<g transform={`translate(${x} ${y}) scale(${s})`} style={{ animation: `mile-drift ${9 + delay}s ease-in-out ${delay}s infinite` }} opacity={0.92}>
+    <ellipse cx={0} cy={0} rx={22} ry={13} fill="#fff" /><ellipse cx={18} cy={4} rx={16} ry={11} fill="#fff" /><ellipse cx={-16} cy={4} rx={14} ry={10} fill="#fff" />
+  </g>);
+}
 
 function FranchiseTimeline({ phases, prog, onProg, onNewSeason }: { phases: MPhase[]; prog: MProgress; onProg: (p: MProgress) => void; onNewSeason: () => void }) {
   const overall = overallPct(phases, prog);
@@ -84,8 +102,8 @@ function FranchiseTimeline({ phases, prog, onProg, onNewSeason }: { phases: MPha
         </div>
       </div>
 
-      {/* the winding trail map */}
-      <TrailMap phases={phases} prog={prog} hereIdx={hereIdx} overall={overall} selId={sel.id} onSelect={setSelId} />
+      {/* the illustrated adventure map */}
+      <AdventureMap phases={phases} prog={prog} hereIdx={hereIdx} overall={overall} selId={sel.id} onSelect={setSelId} />
 
       {/* selected phase panel */}
       <div className="mt-2 overflow-hidden rounded-2xl border-2 bg-white shadow-sm" style={{ borderColor: selTone + "40" }}>
@@ -123,45 +141,80 @@ function FranchiseTimeline({ phases, prog, onProg, onNewSeason }: { phases: MPha
   );
 }
 
-// Winding "treasure map" — phases threaded along a serpentine SVG path.
-function TrailMap({ phases, prog, hereIdx, overall, selId, onSelect }: { phases: MPhase[]; prog: MProgress; hereIdx: number; overall: number; selId: string; onSelect: (id: string) => void }) {
-  const W = 480, padTop = 60, rowH = 138, padBottom = 104;
+// Illustrated adventure map — phases as signposts along a winding trail through
+// a hand-drawn landscape (sky, sun, clouds, hills, trees, summit).
+function AdventureMap({ phases, prog, hereIdx, overall, selId, onSelect, compact = false }: { phases: MPhase[]; prog: MProgress; hereIdx: number; overall: number; selId: string; onSelect: (id: string) => void; compact?: boolean }) {
+  const W = 480, padTop = 118, rowH = 150, padBottom = 150;
   const n = phases.length;
-  const pts = phases.map((_, i) => ({ x: i % 2 === 0 ? 118 : 362, y: padTop + i * rowH }));
+  const pts = phases.map((_, i) => ({ x: i % 2 === 0 ? 122 : 358, y: padTop + i * rowH }));
   const finish = { x: 240, y: padTop + (n - 1) * rowH + padBottom };
   const all = [...pts, finish];
-  const H = finish.y + 30;
+  const H = finish.y + 40;
   let d = `M ${all[0].x} ${all[0].y}`;
   for (let i = 1; i < all.length; i++) { const midY = (all[i - 1].y + all[i].y) / 2; d += ` C ${all[i - 1].x} ${midY} ${all[i].x} ${midY} ${all[i].x} ${all[i].y}`; }
   const done100 = overall === 100;
+  // deterministic scenery placement
+  const trees = [[26, 0.2], [458, 0.31], [34, 0.47], [452, 0.58], [24, 0.72], [456, 0.83]].map(([x, f]) => ({ x, y: f * H, s: 0.8 + ((x * 7 + f * 13) % 5) / 10 }));
+  const ridges = [0.14, 0.4, 0.66].map((f) => f * H);
+
   return (
-    <div className="relative mx-auto mt-4 w-full overflow-hidden rounded-3xl p-2" style={{ maxWidth: W + 24, background: "radial-gradient(120% 90% at 50% 0%, #f0f7f4 0%, #eef2fb 60%, #ffffff 100%)", boxShadow: "inset 0 0 0 1px var(--line)" }}>
+    <div className="relative mx-auto mt-4 w-full overflow-hidden rounded-[26px]" style={{ maxWidth: compact ? W : W + 60, boxShadow: "0 10px 30px rgba(20,40,90,.14), inset 0 0 0 1px rgba(255,255,255,.5)" }}>
       <div className="relative mx-auto w-full" style={{ maxWidth: W }}>
-        <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" aria-hidden>
-          <defs><linearGradient id="mile-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#1d3a8f" /><stop offset="1" stopColor="#0e7490" /></linearGradient></defs>
-          <path d={d} fill="none" stroke="#c8d2e4" strokeWidth="7" strokeLinecap="round" strokeDasharray="0.1 15" opacity="0.85" />
-          <path d={d} fill="none" stroke="url(#mile-grad)" strokeWidth="7" strokeLinecap="round" pathLength={100} strokeDasharray={100} strokeDashoffset={100 - overall} style={{ transition: "stroke-dashoffset .7s ease" }} />
+        <svg viewBox={`0 0 ${W} ${H}`} className="mile-svg block h-auto w-full" aria-hidden>
+          <defs>
+            <linearGradient id="mile-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#bfe3ff" /><stop offset="0.28" stopColor="#dcefff" /><stop offset="0.5" stopColor="#e9f6df" /><stop offset="1" stopColor="#cdeeb8" /></linearGradient>
+            <linearGradient id="mile-trail" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#3b6fe0" /><stop offset="1" stopColor="#0e9488" /></linearGradient>
+            <radialGradient id="mile-sung" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stopColor="#ffe27a" /><stop offset="1" stopColor="#ffc93c" /></radialGradient>
+          </defs>
+
+          {/* sky + meadow */}
+          <rect x="0" y="0" width={W} height={H} fill="url(#mile-sky)" />
+          {/* sun */}
+          <g style={{ transformOrigin: "70px 74px", animation: "mile-spin 60s linear infinite" }}>{Array.from({ length: 12 }).map((_, k) => { const a = (k * Math.PI) / 6; return <line key={k} x1={70 + Math.cos(a) * 30} y1={74 + Math.sin(a) * 30} x2={70 + Math.cos(a) * 40} y2={74 + Math.sin(a) * 40} stroke="#ffd451" strokeWidth="4" strokeLinecap="round" />; })}</g>
+          <circle cx="70" cy="74" r="24" fill="url(#mile-sung)" />
+          {/* clouds */}
+          <Cloud x={330} y={70} s={1} delay={0} /><Cloud x={200} y={128} s={0.8} delay={2} /><Cloud x={410} y={150} s={0.7} delay={4} />
+          {/* rolling ridges for depth */}
+          {ridges.map((ry, k) => <path key={k} d={`M 0 ${ry} Q 120 ${ry - 34} 240 ${ry} T 480 ${ry} V ${H} H 0 Z`} fill={["#bfe6a8", "#a9dc93", "#93d17e"][k]} opacity={0.5 - k * 0.08} />)}
+          {/* trees */}
+          {trees.map((t, k) => <Pine key={k} x={t.x} y={t.y} s={t.s} />)}
+          {/* summit behind finish */}
+          <g><polygon points={`${finish.x - 78},${finish.y + 20} ${finish.x},${finish.y - 84} ${finish.x + 78},${finish.y + 20}`} fill="#8ea2c4" /><polygon points={`${finish.x - 26},${finish.y - 40} ${finish.x},${finish.y - 84} ${finish.x + 26},${finish.y - 40} ${finish.x + 10},${finish.y - 46} ${finish.x - 2},${finish.y - 36} ${finish.x - 14},${finish.y - 46}`} fill="#fff" /></g>
+
+          {/* the trail */}
+          <path d={d} fill="none" stroke="#ffffff" strokeWidth="15" strokeLinecap="round" opacity="0.55" />
+          <path d={d} fill="none" stroke="#e7d3a8" strokeWidth="11" strokeLinecap="round" />
+          <path d={d} fill="none" stroke="#c79a5c" strokeWidth="11" strokeLinecap="round" strokeDasharray="0.1 20" opacity="0.65" />
+          <path d={d} fill="none" stroke="url(#mile-trail)" strokeWidth="7" strokeLinecap="round" pathLength={100} strokeDasharray={100} strokeDashoffset={100 - overall} style={{ transition: "stroke-dashoffset .8s ease" }} />
         </svg>
 
-        {/* phase stops */}
-        {phases.map((p, i) => { const { x, y } = pts[i]; const done = phaseComplete(p, prog); const here = i === hereIdx && !done; const tone = WHEN_TONE[p.when]; const active = selId === p.id; const pct = phasePct(p, prog);
+        {/* START banner */}
+        <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${(pts[0].x / W) * 100}%`, top: `${((pts[0].y - 44) / H) * 100}%` }}><span className="rounded-full bg-white/90 px-2.5 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-[#1d3a8f] shadow ring-1 ring-black/5">⛳ Start</span></div>
+
+        {/* phase signposts */}
+        {phases.map((p, i) => { const { x, y } = pts[i]; const done = phaseComplete(p, prog); const here = i === hereIdx && !done; const tone = WHEN_TONE[p.when]; const active = selId === p.id; const pct = phasePct(p, prog); const left = x < W / 2;
           return (
             <div key={p.id} className="absolute" style={{ left: `${(x / W) * 100}%`, top: `${(y / H) * 100}%`, transform: "translate(-50%,-50%)" }}>
-              {here && <span className="mile-anim absolute -top-7 left-1/2 -translate-x-1/2 text-[18px]" style={{ animation: "mile-bob 1.4s ease-in-out infinite" }}>🚩</span>}
-              <button type="button" onClick={() => onSelect(p.id)} className="mile-anim grid h-14 w-14 place-items-center rounded-full text-[22px] font-bold" style={{ background: done ? tone : "#fff", color: done ? "#fff" : tone, boxShadow: `0 3px 8px ${tone}55${active ? `, 0 0 0 3px #fff, 0 0 0 6px ${tone}` : ", 0 0 0 3px #fff"}`, ["--g" as string]: `${tone}66`, animation: here ? "mile-pulse 1.8s infinite" : undefined, transform: active ? "scale(1.1)" : undefined }}>{done ? "✓" : p.icon}</button>
-              <div className="absolute left-1/2 top-full mt-1 w-28 -translate-x-1/2 text-center">
-                <div className="text-[11px] font-extrabold leading-tight" style={{ color: active ? tone : "var(--ink-2)" }}>{p.title}</div>
-                <div className="mx-auto mt-0.5 inline-block rounded-full bg-white/80 px-1.5 text-[9.5px] font-bold tabular-nums text-[var(--ink-3)] ring-1 ring-black/5">{pct}%</div>
+              {here && <span className="absolute -top-8 left-1/2 -translate-x-1/2 text-[20px]" style={{ animation: "mile-bob 1.4s ease-in-out infinite" }}>🥾</span>}
+              <button type="button" onClick={() => onSelect(p.id)} aria-label={p.title} className="mile-anim relative grid h-[52px] w-[52px] place-items-center rounded-full text-[21px] font-bold transition-transform" style={{ background: done ? tone : "#fff", color: done ? "#fff" : tone, boxShadow: `0 4px 10px ${tone}55, 0 0 0 4px #fff${active ? `, 0 0 0 7px ${tone}` : ""}`, ["--g" as string]: `${tone}66`, animation: here ? "mile-pulse 1.8s infinite" : undefined, transform: active ? "scale(1.12)" : undefined }}>
+                {done ? "✓" : p.icon}
+                {done && <span className="absolute -right-1 -top-1 grid h-4 w-4 place-items-center rounded-full bg-white text-[9px]" style={{ color: tone }}>★</span>}
+              </button>
+              {/* signpost label */}
+              <div className={`absolute top-1/2 w-[120px] -translate-y-1/2 ${left ? "left-[62px] text-left" : "right-[62px] text-right"}`}>
+                <div className={`inline-block max-w-full rounded-lg bg-white/92 px-2 py-1 shadow-sm ring-1 ring-black/5 ${active ? "ring-2" : ""}`} style={{ ["--tw-ring-color" as string]: active ? tone : undefined }}>
+                  <div className="truncate text-[11.5px] font-extrabold leading-tight" style={{ color: active ? tone : "var(--ink)" }}>{p.title}</div>
+                  <div className="text-[9px] font-bold uppercase tracking-wide" style={{ color: tone }}>{done ? "Done ✓" : `${pct}%`}</div>
+                </div>
               </div>
             </div>
           );
         })}
 
-        {/* start + finish */}
-        <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${(pts[0].x / W) * 100}%`, top: `${((pts[0].y - 40) / H) * 100}%` }}><span className="rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white shadow">Start</span></div>
+        {/* FINISH */}
         <div className="absolute" style={{ left: `${(finish.x / W) * 100}%`, top: `${(finish.y / H) * 100}%`, transform: "translate(-50%,-50%)" }}>
-          <div className={`grid h-14 w-14 place-items-center rounded-full text-[24px] ${done100 ? "mile-anim" : ""}`} style={{ background: done100 ? "linear-gradient(135deg,#f59e0b,#d97706)" : "#fff", boxShadow: done100 ? "0 4px 14px #f59e0b66, 0 0 0 3px #fff" : "0 3px 8px #64748b33, 0 0 0 3px #fff", animation: done100 ? "mile-pop .5s ease" : undefined }}>{done100 ? "🏆" : "🎁"}</div>
-          <div className="absolute left-1/2 top-full mt-1 w-32 -translate-x-1/2 text-center text-[11px] font-extrabold" style={{ color: done100 ? "#b45309" : "var(--ink-3)" }}>{done100 ? "Season complete!" : "Finish the season"}</div>
+          <div className={`grid h-[54px] w-[54px] place-items-center rounded-full text-[26px] ${done100 ? "mile-anim" : ""}`} style={{ background: done100 ? "linear-gradient(135deg,#ffd24d,#f59e0b)" : "#fff", boxShadow: done100 ? "0 6px 18px #f59e0b77, 0 0 0 4px #fff" : "0 4px 10px #64748b33, 0 0 0 4px #fff", animation: done100 ? "mile-pop .5s ease" : undefined }}>{done100 ? "🏆" : "🏁"}</div>
+          <div className="absolute left-1/2 top-full mt-1 w-36 -translate-x-1/2 text-center text-[11.5px] font-extrabold" style={{ color: done100 ? "#b45309" : "var(--ink-2)" }}>{done100 ? "Season conquered!" : "Reach the summit"}</div>
         </div>
       </div>
     </div>
@@ -197,15 +250,33 @@ function HOEditor({ phases, onChange, onReset, flash }: { phases: MPhase[]; onCh
   const setPhase = (id: string, patch: Partial<MPhase>) => onChange(phases.map((p) => p.id === id ? { ...p, ...patch } : p));
   const setStep = (pid: string, sid: string, patch: Partial<MStep>) => onChange(phases.map((p) => p.id === pid ? { ...p, steps: p.steps.map((s) => s.id === sid ? { ...s, ...patch } : s) } : p));
   const totalSteps = phases.reduce((a, p) => a + p.steps.length, 0);
+  const [showPreview, setShowPreview] = useState(true);
+  const [selId, setSelId] = useState<string | null>(null);
+  // demo progress so the preview looks alive: 1st phase done, 2nd half-done
+  const demoProg = useMemo<MProgress>(() => {
+    const oneTime: string[] = [], season: string[] = [];
+    phases.forEach((p, i) => { if (i === 0) (p.recurring ? season : oneTime).push(...p.steps.map((s) => s.id)); else if (i === 1) (p.recurring ? season : oneTime).push(...p.steps.slice(0, Math.ceil(p.steps.length / 2)).map((s) => s.id)); });
+    return { season: "Preview", doneSeason: season, doneOneTime: oneTime };
+  }, [phases]);
+  const demoOverall = overallPct(phases, demoProg);
+  const demoHere = currentPhaseIndex(phases, demoProg);
   return (
     <>
       <div className="mt-4 mb-3 flex flex-wrap items-center gap-2">
-        <span className="text-[12px] text-[var(--ink-3)]">{phases.length} phases · {totalSteps} steps. This is what every franchise sees as their live timeline.</span>
+        <span className="text-[12px] text-[var(--ink-3)]">{phases.length} phases · {totalSteps} steps. This is the adventure map every franchise sees.</span>
         <div className="ml-auto flex gap-2">
+          <Button onClick={() => setShowPreview((v) => !v)}>{showPreview ? "Hide preview" : "👀 Preview map"}</Button>
           <Button onClick={onReset}>Reset to default</Button>
           <Button variant="primary" onClick={() => onChange([...phases, { id: newId(), title: "New phase", subtitle: "", when: "before", recurring: true, icon: "📌", steps: [] }])}>＋ Add phase</Button>
         </div>
       </div>
+
+      {showPreview && phases.length > 0 && (
+        <div className="mb-4 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <div className="mb-1 flex items-center gap-2"><span className="rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-white">Live preview</span><span className="text-[11.5px] text-[var(--ink-3)]">Exactly what a franchise sees — edits below update it instantly.</span></div>
+          <AdventureMap phases={phases} prog={demoProg} hereIdx={demoHere} overall={demoOverall} selId={selId ?? ""} onSelect={setSelId} compact />
+        </div>
+      )}
       <div className="space-y-3">{phases.map((p, pi) => (
         <Card key={p.id} className="p-4" style={{ borderLeft: `4px solid ${WHEN_TONE[p.when]}` }}>
           <div className="flex flex-wrap items-center gap-2">
