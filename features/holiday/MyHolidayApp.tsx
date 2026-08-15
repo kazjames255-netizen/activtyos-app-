@@ -9,7 +9,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
-  KIND_META, summarise, workingDays, fmtRange, isoDate, nextPublicHoliday, leaveYear, sickPayNote, sickNotifyRuleText,
+  KIND_META, summarise, workingDays, fmtRange, isoDate, nextPublicHoliday, leaveYear,
 } from "@/lib/holiday";
 import { loadPolicy, loadProfiles, loadAbsences, saveAbsences, slug } from "./data";
 
@@ -50,7 +50,6 @@ export function MyHolidayApp() {
   const nph = nextPublicHoliday(isoDate(new Date()), policy.region);
   const otherDays = s.byKind.other + s.byKind.unpaid + s.byKind.maternity + s.byKind.parental;
 
-  const sickNote = `${sickPayNote(policy)} Tell your manager ${sickNotifyRuleText(policy)} so your sick pay isn't affected.`;
   const submit = (a: Omit<Absence, "id" | "staffId" | "name" | "status" | "requestedAt" | "days"> & { days: number }) => {
     // only ANNUAL leave is unpaid-because-rolled-up; sickness is SSP-paid, etc.
     const paid = a.kind === "unpaid" ? false : rolled && a.kind === "annual" ? false : true;
@@ -90,7 +89,7 @@ export function MyHolidayApp() {
         </div>
       </Card>
       {historyRows}
-      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} rolled sickNote={sickNote} onSubmit={submit} onClose={() => setReqOpen(false)} />}
+      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} rolled onSubmit={submit} onClose={() => setReqOpen(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
@@ -155,13 +154,13 @@ export function MyHolidayApp() {
         </Card>
       )}
 
-      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} sickNote={sickNote} onSubmit={submit} onClose={() => setReqOpen(false)} />}
+      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} onSubmit={submit} onClose={() => setReqOpen(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
 }
 
-function RequestModal({ region, remaining, rolled, sickNote, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; rolled?: boolean; sickNote?: string; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; reason?: string; days: number }) => void; onClose: () => void }) {
+function RequestModal({ region, remaining, rolled, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; rolled?: boolean; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; reason?: string; days: number }) => void; onClose: () => void }) {
   const today = isoDate(new Date());
   const [kind, setKind] = useState<AbsenceKind>("annual");
   const [start, setStart] = useState(today);
@@ -173,8 +172,9 @@ function RequestModal({ region, remaining, rolled, sickNote, onSubmit, onClose }
   const rolledUnpaid = rolled && kind === "annual"; // holiday already paid via rolled-up
   const overBudget = !rolledUnpaid && kind === "annual" && days > remaining;
   // context note that depends on the type chosen
-  const context = kind === "sickness" ? { tone: "bg-[#eef4fd] text-[#1d3a8f]", text: `🤒 ${sickNote || "Sick leave — Statutory Sick Pay may apply."}` }
-    : rolledUnpaid ? { tone: "bg-[#fdf3e0] text-[#8a5a09]", text: "💷 Your holiday pay is included in your wages (12.07% rolled-up), so these days are unpaid — you've already been paid for them." }
+  // NB: we deliberately show NO sick-pay / SSP messaging to staff — sick pay only
+  // ever surfaces on the payslip, so booking sickness never advertises an amount.
+  const context = rolledUnpaid ? { tone: "bg-[#fdf3e0] text-[#8a5a09]", text: "💷 Your holiday pay is included in your wages (12.07% rolled-up), so these days are unpaid — you've already been paid for them." }
     : kind === "unpaid" ? { tone: "bg-[#eef1f6] text-[#64748b]", text: "◻️ Unpaid leave — no pay for these days." }
     : null;
   return (
