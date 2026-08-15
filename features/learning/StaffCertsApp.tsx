@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
-import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, fmtDate, daysUntil, type CredRecord } from "./credentials";
+import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, fmtDate, daysUntil, type CredRecord, type CredType } from "./credentials";
 import { SEED_LIBRARY, type CourseDoc } from "./courseContent";
 import { CoursePlayer } from "./CoursePlayer";
 
@@ -38,9 +38,38 @@ export function StaffCertsApp() {
 
   const mine = (typeId: string) => cred.recordFor(ME, typeId);
   const shownTypes = cred.types.filter((t) => appliesTo(t, ME, ME_ROLE) || mine(t.id));
+  // compulsory for me (set by the provider in Setup) vs anything else I hold
   const requiredTypes = cred.types.filter((t) => t.required && appliesTo(t, ME, ME_ROLE));
+  const requiredShown = shownTypes.filter((t) => t.required && appliesTo(t, ME, ME_ROLE));
+  const optionalShown = shownTypes.filter((t) => !(t.required && appliesTo(t, ME, ME_ROLE)));
+  const outstanding = requiredShown.filter((t) => credStatus(mine(t.id)) !== "Valid");
   const validReq = requiredTypes.filter((t) => credStatus(mine(t.id)) === "Valid").length;
   const pct = requiredTypes.length ? Math.round((validReq / requiredTypes.length) * 100) : 100;
+
+  const certCard = (t: CredType) => {
+    const r = mine(t.id); const st = credStatus(r); const dl = daysUntil(r?.expiry);
+    return (
+      <Card key={t.id} className="p-3.5">
+        <div className="mb-1.5 flex items-center gap-2">
+          <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{t.name}</span>
+          {t.required && appliesTo(t, ME, ME_ROLE) ? <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[10px] font-bold text-[#c0392b]">Required</span> : <span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#64748b]">Optional</span>}
+          <span className="ml-auto"><CredBadge s={st} /></span>
+        </div>
+        {r ? (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[var(--ink-3)]">
+            <span>Issued <b className="text-[var(--ink-2)]">{fmtDate(r.issue)}</b></span>
+            <span>Expires <b className="text-[var(--ink-2)]">{fmtDate(r.expiry)}</b>{dl != null && dl >= 0 && dl <= 60 ? <span className="font-bold text-[#b45309]"> · {dl}d left</span> : null}{dl != null && dl < 0 ? <span className="font-bold text-[#c0392b]"> · expired</span> : null}</span>
+            {r.verified === "pending" && <span className="font-semibold text-[#1d54c4]">Awaiting verification</span>}
+            {r.verified === "rejected" && <span className="font-semibold text-[#c0392b]">Rejected — please re-upload</span>}
+          </div>
+        ) : <div className="text-[12px] font-semibold text-[#c0392b]">{t.required && appliesTo(t, ME, ME_ROLE) ? "Required — not uploaded yet" : "Not uploaded yet."}</div>}
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {r?.fileData && <Button onClick={() => openCredFile(r.fileData)}>📎 View</Button>}
+          <Button variant={r ? undefined : "primary"} onClick={() => setEdit(r ?? blankRecord(ME, t.id))}>{r ? (st === "Expiring" || st === "Expired" ? "🔄 Renew" : "Update") : "⬆ Upload"}</Button>
+        </div>
+      </Card>
+    );
+  };
 
   // courses assigned to me (all-staff, my role, or by name)
   const myCourses = asns.filter((a) => a.kind === "all" || (a.kind === "roles" && roleMatch(a.roles)) || (a.kind === "staff" && a.staff.includes(ME)))
@@ -61,38 +90,32 @@ export function StaffCertsApp() {
       {view === "certs" && (<>
         <Card className="mb-3 p-4">
           <div className="flex flex-wrap items-center gap-3">
-            <div><div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">Your compliance</div><div className="text-[13px] text-[var(--ink-3)]">{validReq} of {requiredTypes.length} required certificates valid</div></div>
-            <div className="min-w-[140px] flex-1"><div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full bg-[#0f9d58] transition-all" style={{ width: `${pct}%` }} /></div></div>
+            <div><div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">Your compliance</div><div className="text-[13px] text-[var(--ink-3)]">{validReq} of {requiredTypes.length} required certificate{requiredTypes.length === 1 ? "" : "s"} valid</div></div>
+            <div className="min-w-[140px] flex-1"><div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className={"h-full rounded-full transition-all " + (pct === 100 ? "bg-[#0f9d58]" : "bg-[#b45309]")} style={{ width: `${pct}%` }} /></div></div>
             <span className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{pct}%</span>
           </div>
+          {outstanding.length > 0 && (
+            <div className="mt-3 rounded-xl border border-[#f3cfa6] bg-[#fdf3e0] px-3.5 py-2.5">
+              <div className="text-[12.5px] font-extrabold text-[#8a4b09]">⚠ {outstanding.length} required certificate{outstanding.length === 1 ? "" : "s"} need{outstanding.length === 1 ? "s" : ""} your attention</div>
+              <div className="mt-0.5 text-[12px] text-[#8a4b09]">{outstanding.map((t) => `${t.name} (${credStatus(mine(t.id))})`).join(" · ")}</div>
+            </div>
+          )}
         </Card>
-        <div className="grid gap-2.5 sm:grid-cols-2">
-          {shownTypes.map((t) => {
-            const r = mine(t.id); const st = credStatus(r); const dl = daysUntil(r?.expiry);
-            return (
-              <Card key={t.id} className="p-3.5">
-                <div className="mb-1.5 flex items-center gap-2">
-                  <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{t.name}</span>
-                  {t.required ? <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[10px] font-bold text-[#c0392b]">Required</span> : <span className="rounded-full bg-[#eef1f6] px-2 py-0.5 text-[10px] font-bold text-[#64748b]">Optional</span>}
-                  <span className="ml-auto"><CredBadge s={st} /></span>
-                </div>
-                {r ? (
-                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-[12px] text-[var(--ink-3)]">
-                    <span>Issued <b className="text-[var(--ink-2)]">{fmtDate(r.issue)}</b></span>
-                    <span>Expires <b className="text-[var(--ink-2)]">{fmtDate(r.expiry)}</b>{dl != null && dl >= 0 && dl <= 60 ? <span className="font-bold text-[#b45309]"> · {dl}d left</span> : null}{dl != null && dl < 0 ? <span className="font-bold text-[#c0392b]"> · expired</span> : null}</span>
-                    {r.verified === "pending" && <span className="font-semibold text-[#1d54c4]">Awaiting verification</span>}
-                    {r.verified === "rejected" && <span className="font-semibold text-[#c0392b]">Rejected — please re-upload</span>}
-                  </div>
-                ) : <div className="text-[12px] text-[var(--ink-3)]">Not uploaded yet.</div>}
-                <div className="mt-2.5 flex flex-wrap gap-2">
-                  {r?.fileData && <Button onClick={() => openCredFile(r.fileData)}>📎 View</Button>}
-                  <Button variant={r ? undefined : "primary"} onClick={() => setEdit(r ?? blankRecord(ME, t.id))}>{r ? (st === "Expiring" || st === "Expired" ? "🔄 Renew" : "Update") : "⬆ Upload"}</Button>
-                </div>
-              </Card>
-            );
-          })}
+
+        <div className="mb-1.5 flex items-center gap-2">
+          <h3 className="text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">Required by your provider</h3>
+          <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[10px] font-bold text-[#c0392b]">Compulsory for your role</span>
         </div>
-        <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Your manager keeps the single verified record. Missing or expiring credentials show on their dashboard and in reminders.</p>
+        {requiredShown.length ? (
+          <div className="grid gap-2.5 sm:grid-cols-2">{requiredShown.map(certCard)}</div>
+        ) : <Card className="p-4 text-center text-[12.5px] text-[var(--ink-3)]">Your provider hasn't set any compulsory certificates for your role.</Card>}
+
+        {optionalShown.length > 0 && (<>
+          <h3 className="mb-1.5 mt-4 text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">Other credentials</h3>
+          <div className="grid gap-2.5 sm:grid-cols-2">{optionalShown.map(certCard)}</div>
+        </>)}
+
+        <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Which certificates are compulsory is set by your provider in Setup. Your manager keeps the single verified record — missing or expiring ones show on their dashboard and trigger reminders.</p>
       </>)}
 
       {view === "courses" && (

@@ -1270,7 +1270,6 @@ export function SetupApp() {
   }, []);
 
   const cred = useCredentials([]);
-  const credRoleOpts = Array.from(new Set([...(settings.roles ?? []).map((r) => r.name), ...(settings.staffRoles ?? [])].filter(Boolean)));
   const toggleIn = (arr: string[] | undefined, v: string) => { const a = arr ?? []; return a.includes(v) ? a.filter((x) => x !== v) : [...a, v]; };
   const certPreview = { ...CERT_SAMPLE, provider: settings.providerName || settings.billing?.businessName || CERT_SAMPLE.provider, signName: settings.learning?.certSignatory || CERT_SAMPLE.signName, signRole: settings.learning?.certSignatoryRole || CERT_SAMPLE.signRole, signImg: settings.learning?.certSignature, accent: settings.learning?.certColor, title: settings.learning?.certTitle || undefined, showScore: settings.learning?.certShowScore, showQr: settings.learning?.certShowQr };
   // deep-link: /setup?tab=learning#credtypes opens the tab and scrolls to the section
@@ -1505,8 +1504,19 @@ export function SetupApp() {
                 {t.required && (
                   <div className="mt-2 flex flex-wrap items-center gap-2 border-t border-[var(--line-2,#eef2f8)] pt-2">
                     <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Required for</span>
-                    <Select value={t.applyKind ?? "all"} onChange={(e) => cred.upsertType({ ...t, applyKind: e.target.value as "all" | "roles" | "staff" })} className="max-w-[150px]"><option value="all">All staff</option><option value="roles">Job roles</option><option value="staff">Named people</option></Select>
-                    {(t.applyKind ?? "all") === "roles" && (credRoleOpts.length ? credRoleOpts.map((r) => { const on = (t.applyRoles ?? []).includes(r); return <button key={r} type="button" onClick={() => cred.upsertType({ ...t, applyRoles: toggleIn(t.applyRoles, r) })} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{r}</button>; }) : <span className="text-[11px] text-[var(--ink-3)]">Add roles in Setup → Staff roles first.</span>)}
+                    <Select value={t.applyKind ?? "all"} onChange={(e) => cred.upsertType({ ...t, applyKind: e.target.value as "all" | "roles" | "staff" })} className="max-w-[170px]"><option value="all">All staff</option><option value="roles">Role or job title</option><option value="staff">Named people</option></Select>
+                    {(t.applyKind ?? "all") === "roles" && (() => {
+                      const access = (settings.roles ?? []).map((r) => r.name).filter(Boolean);
+                      const titles = (settings.staffRoles ?? []).filter(Boolean);
+                      if (!access.length && !titles.length) return <span className="text-[11px] text-[var(--ink-3)]">Add access roles in Setup → Roles &amp; permissions, or job titles in Setup → Staff roles first.</span>;
+                      const chip = (r: string) => { const on = (t.applyRoles ?? []).includes(r); return <button key={r} type="button" onClick={() => cred.upsertType({ ...t, applyRoles: toggleIn(t.applyRoles, r) })} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{r}</button>; };
+                      return (
+                        <div className="w-full space-y-1.5">
+                          {access.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="mr-0.5 inline-flex items-center rounded bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#5b6577]" title="Access role / permission — what the person can do in ActivityOS">🔑 Access role</span>{access.map(chip)}</div>}
+                          {titles.length > 0 && <div className="flex flex-wrap items-center gap-1.5"><span className="mr-0.5 inline-flex items-center rounded bg-[#eaf1ff] px-1.5 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[#1d54c4]" title="Job title — the person's role on the ground">🧑‍🏫 Job title</span>{titles.map(chip)}</div>}
+                        </div>
+                      );
+                    })()}
                     {(t.applyKind ?? "all") === "staff" && DEMO_STAFF.map((s) => { const on = (t.applyStaff ?? []).includes(s.name); return <button key={s.name} type="button" onClick={() => cred.upsertType({ ...t, applyStaff: toggleIn(t.applyStaff, s.name) })} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{s.name}</button>; })}
                   </div>
                 )}

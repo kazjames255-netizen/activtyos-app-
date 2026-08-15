@@ -25,6 +25,7 @@ export function CredentialsApp() {
   const [statusFilter, setStatusFilter] = useState<CredStatus | "all">("all");
   const [edit, setEdit] = useState<CredRecord | null>(null);
   const [cell, setCell] = useState<{ staff: string; typeId: string } | null>(null);
+  const [profile, setProfile] = useState<{ name: string; role: string; op: string } | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
 
   const staff = op === "all" ? DEMO_STAFF : DEMO_STAFF.filter((s) => s.op === op);
@@ -68,11 +69,11 @@ export function CredentialsApp() {
         </div>
 
         <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-          <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-left text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th>{visTypes.map((t) => <th key={t.id} title={t.required ? "Required for: " + targetLabel(t) : "Optional"} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{t.name}{t.required && <span className="ml-0.5 text-[#c0392b]">*</span>}</th>)}</tr></thead>
+          <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-left text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th>{visTypes.map((t) => <th key={t.id} title={t.required ? "Required for: " + targetLabel(t) : "Optional"} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{t.name}{t.required && <span className="ml-0.5 text-[#c0392b]">*</span>}</th>)}{showCourses && <th className="px-3 py-2.5 font-extrabold">📚 Internal courses</th>}</tr></thead>
             <tbody>{rows.map((s) => (
-              <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>{visTypes.map((t) => { const r = cred.recordFor(s.name, t.id); if (!appliesTo(t, s.name, s.role) && !r) return <td key={t.id} className="px-3 py-2 text-[var(--ink-3)]" title="Not required for this staff member">—</td>; return <td key={t.id} className="px-3 py-2"><button type="button" onClick={() => setCell({ staff: s.name, typeId: t.id })} className="transition-opacity hover:opacity-70"><CredBadge s={credStatus(r)} /></button></td>; })}</tr>
+              <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2.5"><button type="button" onClick={() => setProfile({ name: s.name, role: s.role, op: s.op })} className="font-bold text-[#1d3a8f] hover:underline" title="Open full profile">{s.name}</button></td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>{visTypes.map((t) => { const r = cred.recordFor(s.name, t.id); if (!appliesTo(t, s.name, s.role) && !r) return <td key={t.id} className="px-3 py-2 text-[var(--ink-3)]" title="Not required for this staff member">—</td>; return <td key={t.id} className="px-3 py-2"><button type="button" onClick={() => setCell({ staff: s.name, typeId: t.id })} className="transition-opacity hover:opacity-70"><CredBadge s={credStatus(r)} /></button></td>; })}{showCourses && <td className="px-3 py-2"><div className="flex max-w-[320px] flex-wrap gap-1">{completionsFor(s.name).length ? completionsFor(s.name).map((d) => <button key={d.courseId} type="button" onClick={() => downloadCourseCertificate(s.name, d, settings)} title={`Download certificate · ${d.score}% · ${fmtDate(d.date)}`} className="max-w-[200px] truncate rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f] hover:bg-[#dbe7ff]">{d.title}</button>) : <span className="text-[11px] text-[var(--ink-3)]">—</span>}</div></td>}</tr>
             ))}
-            {rows.length === 0 && <tr><td colSpan={visTypes.length + 2} className="px-3 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No staff match this filter.</td></tr>}</tbody>
+            {rows.length === 0 && <tr><td colSpan={visTypes.length + (showCourses ? 3 : 2)} className="px-3 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No staff match this filter.</td></tr>}</tbody>
           </table>
         </div>
         <p className="mt-2 text-[11px] text-[var(--ink-3)]"><span className="text-[#c0392b]">*</span> required. Manage credential types &amp; who they apply to in <button type="button" onClick={() => router.push(`/${portal}/setup?tab=learning#credtypes`)} className="font-bold text-[#1d3a8f] underline hover:text-[#16297a]">Setup → Learning</button>.</p>
@@ -110,6 +111,73 @@ export function CredentialsApp() {
           <p className="mt-3 text-[11px] text-[var(--ink-3)]">Assign more training in the <button type="button" onClick={() => router.push(`/${portal}/learning`)} className="font-bold text-[#1d3a8f] underline hover:text-[#16297a]">Learning Centre</button>. Certificates use your chosen template &amp; branding from Setup → Learning.</p>
         </Card>
       )}
+
+      {profile && (() => {
+        const applic = cred.types.filter((t) => appliesTo(t, profile.name, profile.role) || cred.recordFor(profile.name, t.id));
+        const reqTypes = cred.types.filter((t) => t.required && appliesTo(t, profile.name, profile.role));
+        const validReq = reqTypes.filter((t) => credStatus(cred.recordFor(profile.name, t.id)) === "Valid").length;
+        const pc = reqTypes.length ? Math.round((validReq / reqTypes.length) * 100) : 100;
+        const outstanding = reqTypes.filter((t) => credStatus(cred.recordFor(profile.name, t.id)) !== "Valid");
+        const done = completionsFor(profile.name);
+        return (
+          <div className="fixed inset-0 z-[139] flex justify-end bg-black/45" onClick={() => setProfile(null)}>
+            <div className="h-full w-full max-w-lg overflow-y-auto bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
+              <div className="mb-1 flex items-start gap-2">
+                <div><h3 className="text-[18px] font-extrabold text-[var(--ink)]">{profile.name}</h3><div className="text-[12.5px] text-[var(--ink-3)]">{profile.role} · {profile.op}</div></div>
+                <button type="button" onClick={() => setProfile(null)} className="ml-auto text-[20px] text-[var(--ink-3)] hover:text-[var(--ink)]">×</button>
+              </div>
+
+              <div className="my-3 rounded-xl border border-[var(--line)] p-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex-1"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">Compliance</div><div className="text-[12.5px] text-[var(--ink-3)]">{validReq} of {reqTypes.length} required valid</div></div>
+                  <div className="min-w-[120px] flex-1"><div className="h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className={"h-full rounded-full " + (pc === 100 ? "bg-[#0f9d58]" : "bg-[#b45309]")} style={{ width: `${pc}%` }} /></div></div>
+                  <span className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{pc}%</span>
+                </div>
+                {outstanding.length > 0 && <div className="mt-2 text-[12px] font-semibold text-[#8a4b09]">⚠ Needs attention: {outstanding.map((t) => `${t.name} (${credStatus(cred.recordFor(profile.name, t.id))})`).join(" · ")}</div>}
+              </div>
+
+              <h4 className="mb-1.5 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">Certificates</h4>
+              <div className="space-y-1.5">
+                {applic.map((t) => { const r = cred.recordFor(profile.name, t.id); const st = credStatus(r); const dl = daysUntil(r?.expiry); const fs = credFiles(r); return (
+                  <div key={t.id} className="rounded-lg border border-[var(--line)] p-2.5">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[12.5px] font-bold text-[var(--ink)]">{t.name}</span>
+                      {t.required && appliesTo(t, profile.name, profile.role) ? <span className="rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9px] font-bold text-[#c0392b]">Required</span> : <span className="rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-bold text-[#64748b]">Optional</span>}
+                      <span className="ml-auto"><CredBadge s={st} /></span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11.5px] text-[var(--ink-3)]">
+                      {r?.issue && <span>Issued <b className="text-[var(--ink-2)]">{fmtDate(r.issue)}</b></span>}
+                      {r?.expiry && <span>Expires <b className="text-[var(--ink-2)]">{fmtDate(r.expiry)}</b>{dl != null && dl >= 0 && dl <= 60 ? <span className="text-[#b45309]"> · {dl}d</span> : null}{dl != null && dl < 0 ? <span className="text-[#c0392b]"> · expired</span> : null}</span>}
+                      {!r && <span className="font-semibold text-[#c0392b]">Not on file</span>}
+                    </div>
+                    <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      {fs.map((f, i) => <button key={i} type="button" onClick={() => openCredFile(f.data)} className="text-[11px] font-bold text-[#1d3a8f] hover:underline">📎 {i === fs.length - 1 ? "Current" : "Older"}</button>)}
+                      {r && st === "Pending" && <button type="button" onClick={() => cred.upsertRecord({ ...r, verified: "verified" })} className="text-[11px] font-bold text-[#0f7a43] hover:underline">✓ Verify</button>}
+                      <button type="button" onClick={() => setEdit(r ?? blankRecord(profile.name, t.id))} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{r ? "Edit" : "Add"}</button>
+                    </div>
+                  </div>
+                ); })}
+                {!applic.length && <div className="text-[12px] text-[var(--ink-3)]">No credentials apply to this person.</div>}
+              </div>
+
+              <h4 className="mb-1.5 mt-4 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">📚 Internal courses completed</h4>
+              {done.length ? (
+                <div className="space-y-1.5">
+                  {done.map((d) => (
+                    <div key={d.courseId} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5">
+                      <span className="truncate text-[12.5px] font-bold text-[var(--ink)]">{d.title}</span>
+                      <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-extrabold text-[#0f7a43] tabular-nums">{d.score}%</span>
+                      <span className="text-[10.5px] text-[var(--ink-3)]">{fmtDate(d.date)}</span>
+                      <button type="button" onClick={() => downloadCourseCertificate(profile.name, d, settings)} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">⬇ Certificate</button>
+                    </div>
+                  ))}
+                </div>
+              ) : <div className="text-[12px] text-[var(--ink-3)]">No internal courses completed yet.</div>}
+
+              <div className="mt-4 flex gap-2"><Button variant="primary" onClick={() => setEdit(blankRecord(profile.name, cred.types[0]?.id ?? ""))}>+ Add certificate</Button><Button onClick={() => setProfile(null)}>Close</Button></div>
+            </div>
+          </div>);
+      })()}
 
       {edit && <CredEditor rec={edit} types={cred.types} staffList={DEMO_STAFF} onSave={(r) => { cred.upsertRecord(r); setEdit(null); }} onClose={() => setEdit(null)} />}
 
