@@ -7,6 +7,7 @@ import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { SEED_LIBRARY, blankCourse, activeQuizVersion, quizVersions, QUIZ_VERSION_LABELS, type CourseDoc } from "./courseContent";
 import { CoursePlayer } from "./CoursePlayer";
+import { CourseHero } from "./courseArt";
 import { openCertificate, makeRef } from "./certificates";
 import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel as credTargetLabel, exportCredsPdf, fmtDate as fmtCredDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
 import { useRouter } from "next/navigation";
@@ -351,16 +352,14 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
     const cat = CAT_BY_KEY[catOf(c)] ?? CATEGORIES[0];
     const catLabel = !isPlatform(c.id) && c.category ? c.category : cat.label;
     return (
-      <div key={c.id} className="group relative overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition-all hover:-translate-y-0.5 hover:shadow-[0_20px_40px_-24px_rgba(16,32,90,.5)]">
-        <div className="h-1.5 w-full" style={{ background: cat.grad }} />
-        <div className="flex gap-3 p-3.5">
-          <button type="button" onClick={() => setPlayer(c)} title="Preview course" className="flex-none self-start transition-transform group-hover:scale-[1.03]"><CourseCover cover={c.cover} catKey={catOf(c)} size={64} /></button>
+      <div key={c.id} className="group relative flex flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] transition-all hover:-translate-y-0.5 hover:shadow-[0_22px_44px_-24px_rgba(16,32,90,.5)]">
+        <button type="button" onClick={() => setPlayer(c)} title="Preview course" className="block w-full overflow-hidden text-left">
+          <div className="transition-transform duration-300 group-hover:scale-[1.04]"><CourseHero cover={c.cover} grad={cat.grad} level={m.level} /></div>
+        </button>
+        <div className="flex min-w-0 flex-1 flex-col p-3.5">
           <div className="min-w-0 flex-1">
-            <div className="flex items-start gap-2">
-              <button type="button" onClick={() => setPlayer(c)} className="min-w-0 flex-1 text-left"><div className="text-[14.5px] font-extrabold leading-tight text-[var(--ink)]">{c.title}</div></button>
-              <Badge text={m.level} tone={LEVEL_TONE[m.level]} />
-            </div>
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <button type="button" onClick={() => setPlayer(c)} className="min-w-0 text-left"><div className="text-[15px] font-extrabold leading-tight text-[var(--ink)]" style={{ textWrap: "balance" } as React.CSSProperties}>{c.title}</div></button>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
               <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: cat.soft, color: cat.ink }}>{cat.icon} {catLabel}</span>
               <span className="text-[11px] text-[var(--ink-3)]">{c.lessons.length} lessons · ~{courseMins(c)} min{aq.qs.length > 0 ? ` · ${aq.qs.length}-Q quiz` : ""} · 🔊</span>
             </div>
