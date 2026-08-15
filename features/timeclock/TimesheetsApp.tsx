@@ -21,13 +21,15 @@ export function TimesheetsApp() {
   const [all, setAll] = useState<Record<string, ClockRecord>>({});
   const [settings, setSettings] = useState<ClockSettings>(loadClockSettings);
   const [q, setQ] = useState("");
+  const [locFilter, setLocFilter] = useState("all");
   const [edit, setEdit] = useState<ClockRecord | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => { setAll(loadClock()); setSettings(loadClockSettings()); }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
   const saveSettings = (s: ClockSettings) => { setSettings(s); saveClockSettings(s); };
 
-  const people = useMemo(() => Object.values(all).filter((r) => !q || r.name.toLowerCase().includes(q.toLowerCase())), [all, q]);
+  const locations = useMemo(() => [...new Set(Object.values(all).map((r) => r.op).filter(Boolean) as string[])].sort(), [all]);
+  const people = useMemo(() => Object.values(all).filter((r) => (!q || r.name.toLowerCase().includes(q.toLowerCase())) && (locFilter === "all" || r.op === locFilter)), [all, q, locFilter]);
   const inNow = people.filter((r) => r.status === "in");
   const onBreak = people.filter((r) => r.status === "break");
   const out = people.filter((r) => r.status === "out");
@@ -106,7 +108,7 @@ export function TimesheetsApp() {
         );
         return (
           <Card className="mt-4 p-4">
-            <div className="flex items-center gap-2"><div className="text-[13px] font-extrabold text-[var(--ink)]">Who&rsquo;s in — live</div><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by employee…" className="ml-auto w-52 rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] outline-none focus:border-[#1d3a8f]" /></div>
+            <div className="flex flex-wrap items-center gap-2"><div className="text-[13px] font-extrabold text-[var(--ink)]">Who&rsquo;s in — live</div><Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="ml-auto"><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by employee…" className="w-52 rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] outline-none focus:border-[#1d3a8f]" /></div>
             {section("🟢 Clocked in", "#0f7a43", inNow, "No one clocked in.")}
             {section("⏸ On break", "#f59e0b", onBreak, "Nobody on a break.")}
             <div className="mt-4">
@@ -122,6 +124,7 @@ export function TimesheetsApp() {
 
       {tab === "sheets" && (
         <Card className="mt-4 p-4">
+          <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Timesheets · today</span><Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="ml-auto"><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select></div>
           <div className="mb-2 text-[12px] text-[var(--ink-3)]">Today&rsquo;s clocked hours. Pay policy: <b>{settings.payPolicy === "scheduled" ? "scheduled hours" : settings.payPolicy === "scheduled-less-late" ? "scheduled, less lateness" : settings.autoPayOvertime ? "actual worked (overtime paid)" : "actual, capped at scheduled"}</b> · grace {settings.graceMin} min{settings.rounding ? ` · rounded to ${settings.rounding} min` : ""}. Overtime marked <b>*</b> is above scheduled and unpaid until approved. Approved hours flow to the pay run.</div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
             <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-center font-extrabold">In</th><th className="px-3 py-2.5 text-center font-extrabold">Out</th><th className="px-3 py-2.5 text-center font-extrabold">Break</th><th className="px-3 py-2.5 text-right font-extrabold">Worked</th><th className="px-3 py-2.5 text-right font-extrabold">Sched.</th><th className="px-3 py-2.5 text-center font-extrabold">Late</th><th className="px-3 py-2.5 text-right font-extrabold">Overtime</th><th className="px-3 py-2.5 text-right font-extrabold">Pay hrs</th><th className="px-3 py-2.5"></th></tr></thead>
