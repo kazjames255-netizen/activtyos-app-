@@ -15,7 +15,7 @@ import { useSettings } from "@/lib/settings";
 import { DEMO_STAFF, useCredentials, credStatus, CredBadge, appliesTo as credAppliesTo, openCredFile } from "@/features/learning/credentials";
 
 // ——— model ———
-type FieldType = "text" | "tel" | "email" | "date" | "textarea" | "select" | "file" | "checkbox" | "check" | "addresses" | "certs";
+type FieldType = "text" | "tel" | "email" | "date" | "textarea" | "select" | "file" | "checkbox" | "check" | "addresses" | "certs" | "jobtitle" | "pay" | "readdoc";
 export interface OnboardField {
   id: string; section: string; label: string; type: FieldType; required: boolean;
   applyKind: "all" | "roles" | "staff"; applyRoles?: string[]; applyStaff?: string[];
@@ -43,7 +43,14 @@ I declare that:
 I understand that providing false information may lead to withdrawal of any offer of employment or to dismissal, and may be a criminal offence.
 
 Signed: ______________________________   Print name: ______________________________   Date: ____________`;
-export interface OnboardValue { v?: string; fileData?: string; fileName?: string; status?: "todo" | "requested" | "received" | "verified" }
+export interface OnboardValue { v?: string; fileData?: string; fileName?: string; status?: "todo" | "requested" | "received" | "verified"; at?: string }
+const nowIso = () => { try { return new Date().toISOString(); } catch { return ""; } };
+const fmtStamp = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+// pay value = { basis, amount, hpw, auto }
+interface PayVal { basis: "hour" | "day" | "year"; amount: string; hpw: string; auto: boolean }
+const parsePay = (v?: string): PayVal => { try { const p = JSON.parse(v || "{}"); return { basis: p.basis || "hour", amount: p.amount || "", hpw: p.hpw || "", auto: p.auto !== false }; } catch { return { basis: "hour", amount: "", hpw: "", auto: true }; } };
+const payDerived = (p: PayVal) => { const a = parseFloat(p.amount) || 0; const h = parseFloat(p.hpw) || 0; const annual = p.basis === "year" ? a : p.basis === "hour" ? a * h * 52 : a * 260 /* ~working days/yr */; const hourly = p.basis === "hour" ? a : h ? annual / (h * 52) : 0; return { hourly, annual, monthly: annual / 12 }; };
+const gbp = (n: number) => n ? "£" + n.toLocaleString("en-GB", { maximumFractionDigits: n < 100 ? 2 : 0 }) : "£0";
 export interface OnboardRecord { staff: string; values: Record<string, OnboardValue>; extra: string[] }
 
 export const SECTIONS: [string, string, string][] = [
@@ -89,7 +96,7 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("rtwEvidence", "rtw", "Right-to-work evidence (upload)", "file"),
   F("rtwCheck", "rtw", "Right to work verified", "check", true, { gate: true }),
 
-  F("idDocs", "dbs", "ID documents seen", "text", true, { hint: "e.g. passport + proof of address" }),
+  F("idMethod", "dbs", "ID method", "select", true, { options: ["Passport", "Driving licence (photocard)", "Birth certificate + proof of address", "BRP / eVisa", "National ID card"], other: true }),
   F("idFile", "dbs", "ID document (upload)", "file", true),
   F("idCheck", "dbs", "Identity verified", "check", true),
   F("dbsCert", "dbs", "Enhanced DBS certificate no.", "text"),
@@ -126,22 +133,22 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("studentLoan", "payroll", "Student / postgraduate loan", "checkbox"),
   F("bank", "payroll", "Bank sort code / account", "text", false, { sensitive: true, hint: "Staff enter this themselves" }),
   F("pension", "payroll", "Pension auto-enrolment", "checkbox"),
-  F("jobTitle", "payroll", "Job title", "text", false, { fromInvite: true }),
+  F("jobTitle", "payroll", "Job title", "jobtitle", false, { fromInvite: true }),
   F("startDate", "payroll", "Start date", "date", true),
   F("hours", "payroll", "Contracted hours", "text"),
-  F("payRate", "payroll", "Pay rate", "text", false, { sensitive: true }),
+  F("payRate", "payroll", "Pay rate", "pay", false, { sensitive: true }),
 
   F("emergName", "emergency", "Emergency contact name", "text", true),
   F("emergPhone", "emergency", "Emergency contact phone", "tel", true),
   F("emergRel", "emergency", "Relationship", "text"),
   F("medical", "emergency", "Medical / allergies / adjustments", "textarea", false, { sensitive: true }),
 
-  F("contract", "agreements", "Employment contract signed", "checkbox", true),
-  F("handbook", "agreements", "Staff handbook acknowledged", "checkbox"),
-  F("safeguardingPolicy", "agreements", "Safeguarding policy read", "checkbox", true),
-  F("codeOfConduct", "agreements", "Code of conduct signed", "checkbox"),
-  F("dataPrivacy", "agreements", "Privacy notice acknowledged", "checkbox"),
-  F("kcsie", "agreements", "KCSIE Part 1 read", "checkbox"),
+  F("contract", "agreements", "Employment contract", "readdoc", true),
+  F("handbook", "agreements", "Staff handbook", "readdoc"),
+  F("safeguardingPolicy", "agreements", "Safeguarding & Child Protection policy", "readdoc", true),
+  F("codeOfConduct", "agreements", "Code of conduct", "readdoc"),
+  F("dataPrivacy", "agreements", "Privacy notice", "readdoc"),
+  F("kcsie", "agreements", "KCSIE Part 1", "readdoc"),
 ];
 
 const FKEY = "aos.team.onboardfields.v1";
@@ -157,9 +164,10 @@ export function fieldApplies(f: OnboardField, name: string, role?: string, extra
 export function satisfied(f: OnboardField, val?: OnboardValue): boolean {
   if (f.type === "certs") return true; // informational — pulled from the certificates area
   if (!val) return false;
-  if (f.type === "checkbox") return val.v === "yes";
+  if (f.type === "checkbox" || f.type === "readdoc") return val.v === "yes";
   if (f.type === "check") return val.status === "verified";
   if (f.type === "file") return !!val.fileData;
+  if (f.type === "pay") return !!parsePay(val.v).amount;
   if (f.type === "addresses") { try { return (JSON.parse(val.v || "[]") as unknown[]).length > 0; } catch { return false; } }
   return !!(val.v && val.v.trim());
 }
@@ -191,8 +199,10 @@ const printWindow = (html: string) => { if (typeof window === "undefined") retur
 const displayVal = (f: OnboardField, val?: OnboardValue): string => {
   if (f.type === "certs") return ""; // shown in its own area, not the pack table
   if (!val) return "";
-  if (f.type === "check") return CHECK_LABEL[val.status ?? "todo"];
+  if (f.type === "check") return CHECK_LABEL[val.status ?? "todo"] + (val.at ? " · " + fmtStamp(val.at) : "");
   if (f.type === "checkbox") return val.v === "yes" ? "Yes" : "";
+  if (f.type === "readdoc") return (val.v === "yes" ? "Read & confirmed" : "Not read yet") + (val.fileName ? " · 📎 " + val.fileName : "");
+  if (f.type === "pay") { const p = parsePay(val.v); if (!p.amount) return ""; const d = payDerived(p); return `${gbp(parseFloat(p.amount))} ${p.basis === "year" ? "/year" : p.basis === "day" ? "/day" : "/hour"}${p.auto ? ` (≈ ${gbp(d.hourly)}/hr · ${gbp(d.annual)}/yr)` : ""}`; }
   if (f.type === "file") return val.fileName ? "📎 " + val.fileName : val.fileData ? "uploaded" : "";
   if (f.type === "addresses") { const a = parseAddrs(val.v); return a.length ? a.map((x) => `${x.line1}, ${x.town} ${x.postcode} (${x.from}–${x.to})`).join("; ") : ""; }
   return val.v ?? "";
@@ -234,10 +244,12 @@ export function OnboardingPanel() {
   const [addOpen, setAddOpen] = useState(false);
   const [mode, setMode] = useState<"records" | "scr">("records");
   const [showDecl, setShowDecl] = useState(false);
+  const [scrDetail, setScrDetail] = useState(false);
   const [step, setStep] = useState(0);
   const cred = useCredentials(DEMO_STAFF);
   const router = useRouter();
   const portal = (usePathname() || "/company").split("/")[1] || "company";
+  const jobTitles = settings.staffRoles ?? [];
   const provider = settings.providerName || settings.billing?.businessName || "Your company";
 
   const staffOf = (name: string) => DEMO_STAFF.find((s) => s.name === name);
@@ -271,18 +283,20 @@ export function OnboardingPanel() {
 
   // ——— Single Central Record: one row per staff, the Ofsted checks ———
   const SCR_COLS: [string, string][] = [["idCheck", "Identity"], ["rtwCheck", "Right to work"], ["dbsCheck", "DBS cleared"], ["overseas", "Overseas"], ["refsCheck", "References"], ["disqual", "Disqual. decl."]];
-  const scrCell = (name: string, role: string | undefined, extra: string[], id: string) => {
+  const scrCell = (name: string, role: string | undefined, extra: string[], id: string, detail = false) => {
     const f = ob.fields.find((x) => x.id === id); if (!f) return { txt: "—", cls: "na" };
     if (!fieldApplies(f, name, role, extra)) return { txt: "N/A", cls: "na" };
     const v = ob.recordFor(name).values[id];
-    if (f.type === "check") return v?.status === "verified" ? { txt: "Verified", cls: "verified" } : { txt: CHECK_LABEL[v?.status ?? "todo"], cls: "miss" };
-    if (f.type === "checkbox") return v?.v === "yes" ? { txt: "Yes", cls: "ok" } : { txt: "No", cls: "miss" };
+    if (f.type === "check") return v?.status === "verified" ? { txt: "Verified" + (detail && v.at ? " · " + fmtStamp(v.at) : ""), cls: "verified" } : { txt: CHECK_LABEL[v?.status ?? "todo"], cls: "miss" };
+    if (f.type === "checkbox" || f.type === "readdoc") return v?.v === "yes" ? { txt: "Yes", cls: "ok" } : { txt: "No", cls: "miss" };
     return v?.v ? { txt: v.v, cls: "ok" } : { txt: "—", cls: "miss" };
   };
+  const METHOD_COLS: [string, string][] = [["idMethod", "ID method"], ["rtwMethod", "RTW method"]];
   const exportSCR = () => {
-    const head = `<tr><td class="k">Staff</td><td class="k">Role</td><td class="k">Location</td>${SCR_COLS.map(([, l]) => `<td class="k">${esc(l)}</td>`).join("")}<td class="k">DBS no.</td><td class="k">Cleared</td></tr>`;
-    const body = DEMO_STAFF.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Yes" : "On hold"}</span></td></tr>`; }).join("");
-    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Single Central Record — ${esc(provider)}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(provider)} — Single Central Record</h1><div class="sub">Safer-recruitment checks · Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
+    const cols = scrDetail ? [...SCR_COLS, ...METHOD_COLS] : SCR_COLS;
+    const head = `<tr><td class="k">Staff</td><td class="k">Role</td><td class="k">Location</td>${cols.map(([, l]) => `<td class="k">${esc(l)}</td>`).join("")}<td class="k">DBS no.</td><td class="k">Cleared</td></tr>`;
+    const body = DEMO_STAFF.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id, scrDetail); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const methods = scrDetail ? METHOD_COLS.map(([id]) => `<td>${esc(r.values[id]?.v || "—")}</td>`).join("") : ""; const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}${methods}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Yes" : "On hold"}</span></td></tr>`; }).join("");
+    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Single Central Record — ${esc(provider)}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(provider)} — Single Central Record</h1><div class="sub">Safer-recruitment checks${scrDetail ? " · with verified dates & methods" : ""} · Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
   };
 
   // ——— slideshow (one section per step) ———
@@ -298,9 +312,32 @@ export function OnboardingPanel() {
     <div key={f.id} className={"rounded-xl border p-3 " + (f.type === "textarea" || f.type === "addresses" || f.type === "certs" ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)] bg-[var(--surface)]")}>
       <label className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{f.label}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title="Sensitive — stored securely" className="text-[10px]">🔒</span>}{f.fromInvite && <span title="Set when the sign-up link was sent — staff can't edit; the company can" className="rounded bg-[#eaf1ff] px-1 text-[8.5px] font-bold uppercase text-[#1d54c4]">🔗 from invite</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">added</span>}</label>
       {f.type === "check" ? (
-        <div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st })} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{st}</button>)}</div>
-      ) : f.type === "checkbox" ? (
-        <div className="flex flex-wrap items-center gap-3"><label className="flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-[var(--ink)]"><input type="checkbox" checked={val?.v === "yes"} onChange={(e) => setVal(f.id, { v: e.target.checked ? "yes" : "" })} className="h-4 w-4 accent-[#1d3a8f]" /> Yes, signed</label>{f.declaration && <button type="button" onClick={() => setShowDecl(true)} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">📄 See / print example</button>}</div>
+        <div><div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st, at: st === "verified" ? nowIso() : val?.at })} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{st}</button>)}</div>{val?.status === "verified" && val?.at && <div className="mt-1 text-[10px] text-[var(--ink-3)]">Verified {fmtStamp(val.at)}</div>}</div>
+      ) : f.type === "jobtitle" ? (() => {
+        const v = val?.v ?? ""; const inList = jobTitles.includes(v); const selectVal = inList ? v : (v ? "Other" : "");
+        return (<div className="space-y-1.5">{jobTitles.length ? <Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">Choose job title…</option>{jobTitles.map((o) => <option key={o} value={o}>{o}</option>)}<option value="Other">Other…</option></Select> : <Input value={v} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full" />}{selectVal === "Other" && <Input value={inList ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder="Type job title…" className="w-full" />}<div className="text-[10px] text-[var(--ink-3)]">Manage job titles in Setup → Staff roles.</div></div>);
+      })() : f.type === "pay" ? (() => {
+        const p = parsePay(val?.v); const d = payDerived(p); const write = (patch: Partial<PayVal>) => setVal(f.id, { v: JSON.stringify({ ...p, ...patch }) });
+        return (
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Select value={p.basis} onChange={(e) => write({ basis: e.target.value as PayVal["basis"] })} className="max-w-[130px]"><option value="hour">Per hour</option><option value="day">Per day</option><option value="year">Annual salary</option></Select>
+              <div className="flex items-center gap-1"><span className="text-[13px] font-bold text-[var(--ink-3)]">£</span><Input inputMode="decimal" value={p.amount} onChange={(e) => write({ amount: e.target.value })} placeholder="0.00" className="w-[110px]" /></div>
+              <div className="flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]"><Input inputMode="decimal" value={p.hpw} onChange={(e) => write({ hpw: e.target.value })} placeholder="hrs" className="w-[64px]" />hrs/week</div>
+              <label className="flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"><span onClick={() => write({ auto: !p.auto })} className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (p.auto ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (p.auto ? "translate-x-3" : "")} /></span>Auto-calc</label>
+            </div>
+            {p.auto && p.amount && <div className="rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">≈ {gbp(d.hourly)}/hour · {gbp(d.annual)}/year · {gbp(d.monthly)}/month</div>}
+          </div>
+        );
+      })() : f.type === "readdoc" ? (
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {val?.fileData ? <button type="button" onClick={() => openFile(val.fileData)} className="rounded-lg border border-[#1d3a8f] bg-[#eef4ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">📄 View document</button> : <span className="text-[11.5px] text-[var(--ink-3)]">No document attached yet.</span>}
+            <label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{val?.fileData ? "Replace" : "⬆ Attach"}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileName: file.name }); r.readAsDataURL(file); }} /></label>
+          </div>
+          <label className="flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-[var(--ink)]"><input type="checkbox" checked={val?.v === "yes"} onChange={(e) => setVal(f.id, { v: e.target.checked ? "yes" : "", at: e.target.checked ? nowIso() : undefined })} className="h-4 w-4 accent-[#0f7a43]" /> I have read &amp; understood this</label>
+          {val?.v === "yes" && val?.at && <div className="text-[10px] text-[var(--ink-3)]">Confirmed {fmtStamp(val.at)}</div>}
+        </div>
       ) : f.type === "file" ? (
         <div className="flex flex-wrap items-center gap-2"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ Upload<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileName: file.name }); r.readAsDataURL(file); }} /></label>{val?.fileName && <button type="button" onClick={() => openFile(val.fileData)} className="max-w-[170px] truncate text-[12px] font-bold text-[#1d3a8f] hover:underline">📎 {val.fileName}</button>}</div>
       ) : f.type === "select" ? (() => {
@@ -352,16 +389,18 @@ export function OnboardingPanel() {
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div><div className="text-[14px] font-extrabold text-[var(--ink)]">Single Central Record</div><div className="text-[12px] text-[var(--ink-3)]">The Ofsted-style summary of safer-recruitment checks across your team.</div></div>
-            <Button variant="primary" className="ml-auto" onClick={exportSCR}>🖨️ Print / export</Button>
+            <button type="button" onClick={() => setScrDetail((v) => !v)} className={"ml-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors " + (scrDetail ? "border-[#1d3a8f] bg-[#eaf1ff] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:border-[#1d3a8f]")}><span className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (scrDetail ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (scrDetail ? "translate-x-3" : "")} /></span>Dates &amp; methods</button>
+            <Button variant="primary" onClick={exportSCR}>🖨️ Print / export</Button>
           </div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
             <table className="w-full text-[12.5px]">
-              <thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Role</th><th className="px-3 py-2.5 font-extrabold">Location</th>{SCR_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}<th className="px-3 py-2.5 font-extrabold">DBS no.</th><th className="px-3 py-2.5 font-extrabold">Cleared</th></tr></thead>
+              <thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Role</th><th className="px-3 py-2.5 font-extrabold">Location</th>{SCR_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}{scrDetail && METHOD_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}<th className="px-3 py-2.5 font-extrabold">DBS no.</th><th className="px-3 py-2.5 font-extrabold">Cleared</th></tr></thead>
               <tbody>{DEMO_STAFF.map((s) => { const r = ob.recordFor(s.name); const cl = clearedOf(s.name); return (
                 <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]">
                   <td className="px-3 py-2.5"><button type="button" onClick={() => { setSel(s.name); setMode("records"); }} className="font-bold text-[#1d3a8f] hover:underline">{s.name}</button></td>
                   <td className="px-3 py-2.5 text-[var(--ink-2)]">{s.role}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>
-                  {SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id); const tone = c.cls === "verified" || c.cls === "ok" ? "bg-[#e6f4ea] text-[#0f7a43]" : c.cls === "na" ? "bg-[#eef1f6] text-[#94a3b8]" : "bg-[#fdecec] text-[#c0392b]"; return <td key={id} className="px-3 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-[10.5px] font-bold " + tone}>{c.txt}</span></td>; })}
+                  {SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id, scrDetail); const tone = c.cls === "verified" || c.cls === "ok" ? "bg-[#e6f4ea] text-[#0f7a43]" : c.cls === "na" ? "bg-[#eef1f6] text-[#94a3b8]" : "bg-[#fdecec] text-[#c0392b]"; return <td key={id} className="px-3 py-2"><span className={"inline-block whitespace-nowrap rounded-full px-2 py-0.5 text-[10.5px] font-bold " + tone}>{c.txt}</span></td>; })}
+                  {scrDetail && METHOD_COLS.map(([id]) => <td key={id} className="whitespace-nowrap px-3 py-2.5 text-[var(--ink-2)]">{r.values[id]?.v || "—"}</td>)}
                   <td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{r.values.dbsCert?.v || "—"}</td>
                   <td className="px-3 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-[10.5px] font-extrabold " + (cl ? "bg-[#e6f4ea] text-[#0f7a43]" : "bg-[#fdf3e0] text-[#8a5a09]")}>{cl ? "Yes" : "On hold"}</span></td>
                 </tr>
