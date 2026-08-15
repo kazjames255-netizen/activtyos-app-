@@ -12,6 +12,7 @@ import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
   KIND_META, summarise, conflicts, annualAllowance, statutoryDays, leaveYear,
   workingDays, fmtRange, isoDate, round1, isBankHoliday, sickPayNote, sickNotifyRuleText, sspWeekly, SSP_WEEKLY,
+  type PayTreatment, defaultPayTreatment, PAY_TREATMENT,
 } from "@/lib/holiday";
 import { loadPolicy, savePolicy, loadProfiles, saveProfiles, loadAbsences, saveAbsences } from "./data";
 
@@ -295,17 +296,24 @@ function AbsenceEditor({ abs, region, sickRule, isNew, profiles, policy, absence
   const rolled = prof?.holidayPay === "rolled-up";
   const summary = policy && absences && prof && !rolled ? summarise(prof, policy, absences) : null;
   const first = (a.name || "They").split(" ")[0];
+  // effective pay treatment: a manual override wins, else the default for the type
+  const pay: PayTreatment = a.pay ?? defaultPayTreatment(a.kind, { rolled });
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{isNew ? "Add leave" : a.name}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           {isNew && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={a.staffId} onChange={(e) => { const p = (profiles || []).find((x) => x.id === e.target.value); set({ staffId: e.target.value, name: p?.name || "" }); }} className="w-full"><option value="">Choose a person…</option>{(profiles || []).map((p) => <option key={p.id} value={p.id}>{p.name}{p.role ? ` · ${p.role}` : ""}</option>)}</Select></label>}
-          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={a.kind} onChange={(e) => set({ kind: e.target.value as AbsenceKind })} className="w-full">{KINDS.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {KIND_META[k].label}</option>)}</Select></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={a.kind} onChange={(e) => set({ kind: e.target.value as AbsenceKind, pay: undefined })} className="w-full">{KINDS.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {KIND_META[k].label}</option>)}</Select></label>
           {/* entitlement — so the manager sees what they've got before booking annual leave */}
           {a.staffId && (rolled
             ? <div className="rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">💷 {first}&rsquo;s holiday is <b>included in their pay</b> (12.07% rolled-up) — no bookable allowance.</div>
             : summary && <div className="rounded-lg bg-[#eef7ee] px-3 py-2 text-[11.5px] font-semibold text-[#0f7a43]">{first} has <b>{summary.remaining} of {summary.total}</b> holiday days left this year{a.kind === "annual" ? <> → <b>{round1(summary.remaining - days)}</b> after this booking{summary.remaining - days < 0 ? " ⚠ over allowance" : ""}</> : ""}{summary.pendingAnnual > 0 ? ` · ${summary.pendingAnnual} pending` : ""}</div>)}
+          {/* pay treatment — how this type is paid, defaulted per type, overridable */}
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Pay for this leave</span><Select value={pay} onChange={(e) => set({ pay: e.target.value as PayTreatment })} className="w-full">{(["normal", "ssp", "statutory", "toil", "unpaid"] as PayTreatment[]).map((t) => <option key={t} value={t}>{PAY_TREATMENT[t].label}</option>)}</Select></label>
+            <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">{PAY_TREATMENT[pay].note}{a.pay == null ? " (default for this type — change if needed)" : ""}</div>
+          </div>
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">From</span><Input type="date" value={a.start} onChange={(e) => set({ start: e.target.value, end: e.target.value > a.end ? e.target.value : a.end })} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">To</span><Input type="date" value={a.end} min={a.start} onChange={(e) => set({ end: e.target.value })} className="w-full" /></label>
@@ -321,7 +329,7 @@ function AbsenceEditor({ abs, region, sickRule, isNew, profiles, policy, absence
           {isNew && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Status</span><Select value={a.status} onChange={(e) => set({ status: e.target.value as Absence["status"] })} className="w-full"><option value="approved">Approved (add directly)</option><option value="pending">Pending (needs approval)</option></Select></label>}
           <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[12px] font-semibold text-[#1d3a8f]">{days} working day{days === 1 ? "" : "s"} (weekends &amp; bank holidays excluded)</div>
         </div>
-        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={isNew && !a.staffId} onClick={() => onSave({ ...a, days, ...(a.kind === "sickness" && !a.ssp ? { ssp: "eligible" as const } : {}) })}>Save</Button></div>
+        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={isNew && !a.staffId} onClick={() => onSave({ ...a, days, pay, paid: pay !== "unpaid", ...(a.kind === "sickness" && !a.ssp ? { ssp: "eligible" as const } : {}) })}>Save</Button></div>
       </div>
     </div>
   );

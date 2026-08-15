@@ -28,7 +28,8 @@ export interface Absence {
   decidedBy?: string;
   decidedAt?: string;
   note?: string;        // approver's decline reason / note
-  paid?: boolean;       // false = unpaid (e.g. rolled-up staff taking already-paid leave)
+  paid?: boolean;       // false = unpaid (derived from `pay`; kept for existing chips)
+  pay?: PayTreatment;   // how this leave is paid (defaults per type, manager-overridable)
   ssp?: "eligible" | "withheld"; // sickness only: whether SSP is paid (withheld = late notice)
   awe?: number;         // sickness only: average weekly earnings over the prior 8 weeks
 }
@@ -113,6 +114,32 @@ export function sickNotifyRuleText(p: Pick<HolidayPolicy, "sickNotifyMode" | "si
   }
   return `at least ${p.sickNotifyHours} hour${p.sickNotifyHours === 1 ? "" : "s"} before the shift`;
 }
+
+// How a leave type is paid. "normal" = full pay (annual leave, TOIL taken);
+// "ssp" = Statutory Sick Pay only; "statutory" = SMP/SPP/ShPP run via payroll;
+// "unpaid" = no pay; "toil" = time back for hours already worked (no extra pay).
+export type PayTreatment = "normal" | "ssp" | "statutory" | "unpaid" | "toil";
+// The sensible default for a type (manager can override). Rolled-up staff take
+// ANNUAL leave unpaid (already paid via 12.07%); statutory parental leave (the
+// 18-week entitlement) is unpaid; maternity/paternity is statutory pay.
+export function defaultPayTreatment(kind: AbsenceKind, opts?: { rolled?: boolean }): PayTreatment {
+  switch (kind) {
+    case "annual": return opts?.rolled ? "unpaid" : "normal";
+    case "sickness": return "ssp";
+    case "toil": return "toil";
+    case "maternity": return "statutory";
+    case "parental": return "unpaid";
+    case "unpaid": return "unpaid";
+    default: return "normal";
+  }
+}
+export const PAY_TREATMENT: Record<PayTreatment, { label: string; note: string }> = {
+  normal: { label: "Paid — normal pay", note: "Paid at their normal rate (for variable hours, a 52-week average)." },
+  ssp: { label: "Statutory Sick Pay", note: "SSP only, for rota'd shifts — amount from the 8-week average below (add company sick pay if your policy offers it)." },
+  statutory: { label: "Statutory pay (SMP / SPP / ShPP)", note: "Maternity/paternity/shared parental pay is a separate statutory scheme run through payroll — not normal pay." },
+  unpaid: { label: "Unpaid", note: "No pay for these days." },
+  toil: { label: "Time off in lieu — no extra pay", note: "They're taking back hours already worked, so it's normal pay with no extra cost." },
+};
 
 export const KIND_META: Record<AbsenceKind, { label: string; icon: string; tone: string; countsAllowance: boolean }> = {
   annual: { label: "Annual leave", icon: "🌴", tone: "#0ea5e9", countsAllowance: true },
