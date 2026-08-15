@@ -31,6 +31,7 @@ import { StaffPayslipsApp } from "@/features/payroll/StaffPayslipsApp";
 import { HolidayApp } from "@/features/holiday/HolidayApp";
 import { MyHolidayApp } from "@/features/holiday/MyHolidayApp";
 import { MyAppraisalsApp } from "@/features/appraisals/MyAppraisalsApp";
+import { MilestonesApp } from "@/features/milestones/MilestonesApp";
 import { TimeClockApp } from "@/features/timeclock/TimeClockApp";
 import { TimesheetsApp } from "@/features/timeclock/TimesheetsApp";
 import { PayrollApp } from "@/features/payroll/PayrollApp";
@@ -144,11 +145,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     learning: LearningCentreApp,
     credentials: CredentialsApp,
     schedule: RotaApp,
-    "ho-framework": planned({
-      title: "Franchise Support Framework",
-      blurb: "The head-office playbook per franchise: support visits, standards checks and improvement plans in one place.",
-      links: [{ href: "/company/staff", label: "Team & invites", hint: "your franchises live here" }],
-    }),
+    "ho-framework": () => <MilestonesApp mode="ho" />,
     // Routable aliases so old links don't 404 — the sidebar shows only the
     // canonical item, but the slug still resolves to the real view.
     registers: RegistersApp,
@@ -164,6 +161,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     blocks: BlocksApp,
     timetable: TimetableApp,
     staff: TeamApp,
+    milestones: () => <MilestonesApp mode="franchise" />,
     registers: RegistersApp,
     ratios: RatiosApp,
     incidents: () => <LogConcernApp />,
