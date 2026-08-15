@@ -5,6 +5,7 @@
 //    each expandable to its sub-targets with start/end dates and completion bars.
 //  • mode="ho": head-office editor for the master template + a live roadmap preview.
 import { useMemo, useState, useEffect } from "react";
+import Link from "next/link";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
@@ -64,6 +65,8 @@ function Roadmap({ phases, prog, onProg, onNewSeason, readOnly = false }: { phas
   const totalSteps = phases.reduce((a, p) => a + p.steps.length, 0);
   const doneSteps = phases.reduce((a, p) => a + phaseDone(p, prog), 0);
   const [open, setOpen] = useState<string | null>(phases[currentPhaseIndex(phases, prog)]?.id ?? null);
+  const [view, setView] = useState<"slides" | "roadmap">("slides");
+  const [idx, setIdx] = useState(currentPhaseIndex(phases, prog));
   const [edit, setEdit] = useState<{ p: MPhase; s: MStep } | null>(null);
   const setStep = (id: string, patch: Partial<MProgress["steps"][string]>) => onProg({ ...prog, steps: { ...prog.steps, [id]: { ...(prog.steps[id] || { pct: 0 }), ...patch } } });
 
@@ -82,11 +85,18 @@ function Roadmap({ phases, prog, onProg, onNewSeason, readOnly = false }: { phas
           <div className="text-[11.5px] text-[var(--ink-3)]">{prog.season} · {doneSteps}/{totalSteps} sub-targets complete</div>
         </div>
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
-          {(["setup", "before", "during", "after", "clubs"] as MPhaseWhen[]).filter((w) => phases.some((p) => p.when === w)).map((w) => <span key={w} className="inline-flex items-center gap-1 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-2)]"><span className="h-2 w-2 rounded-full" style={{ background: WHEN_TONE[w] }} />{WHEN_LABEL[w].split(" ·")[0].split(" ")[0]}</span>)}
+          <div className="inline-flex rounded-lg bg-[var(--panel)] p-0.5">
+            {([["slides", "🎞 Slides"], ["roadmap", "▦ Roadmap"]] as const).map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setView(k)} className={`rounded-md px-2.5 py-1 text-[11.5px] font-bold ${view === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]"}`}>{l}</button>
+            ))}
+          </div>
           {!readOnly && <Button onClick={onNewSeason} className="ml-1">＋ New season</Button>}
         </div>
       </div>
 
+      {view === "slides" && <Slides phases={phases} prog={prog} idx={idx} setIdx={setIdx} readOnly={readOnly} onEdit={(p, s) => setEdit({ p, s })} />}
+
+      {view === "roadmap" && (<>
       {/* month axis */}
       <div className="flex items-end px-4 pt-2">
         <div className={`${LEFT} shrink-0`} />
@@ -143,9 +153,79 @@ function Roadmap({ phases, prog, onProg, onNewSeason, readOnly = false }: { phas
           );
         })}
       </div>
+      </>)}
 
       {edit && <StepBarEditor phase={edit.p} step={edit.s} state={prog.steps[edit.s.id]} onChange={(patch) => setStep(edit.s.id, patch)} onClose={() => setEdit(null)} />}
     </Card>
+  );
+}
+
+// ── Slides view — one milestone at a time ────────────────────────────────────
+function Slides({ phases, prog, idx, setIdx, onEdit, readOnly = false }: { phases: MPhase[]; prog: MProgress; idx: number; setIdx: (i: number) => void; onEdit: (p: MPhase, s: MStep) => void; readOnly?: boolean }) {
+  const n = phases.length;
+  const cur = Math.min(idx, n - 1);
+  const p = phases[cur]; if (!p) return null;
+  const tone = WHEN_TONE[p.when]; const win = phaseWindow(p, prog); const pc = phasePct(p, prog); const done = phaseComplete(p, prog);
+  return (
+    <div className="p-4">
+      {/* stepper — key milestones left → right */}
+      <div className="relative flex items-start justify-between gap-1">
+        <div className="absolute left-[7%] right-[7%] top-5 h-1 rounded-full bg-[var(--panel)]" />
+        <div className="absolute left-[7%] top-5 h-1 rounded-full bg-[#1d3a8f] transition-[width] duration-300" style={{ width: `${n > 1 ? (cur / (n - 1)) * 86 : 0}%` }} />
+        {phases.map((ph, i) => { const t = WHEN_TONE[ph.when]; const d = phaseComplete(ph, prog); const active = i === cur; const ppc = phasePct(ph, prog);
+          return (
+            <button key={ph.id} type="button" onClick={() => setIdx(i)} className="relative z-10 flex flex-1 flex-col items-center gap-1">
+              <span className="grid h-10 w-10 place-items-center rounded-full text-[17px] font-bold transition-transform" style={{ background: d ? t : "#fff", color: d ? "#fff" : t, boxShadow: `0 2px 6px ${t}44, 0 0 0 3px #fff${active ? `, 0 0 0 5px ${t}` : ""}`, transform: active ? "scale(1.08)" : undefined }}>{d ? "✓" : ph.icon}</span>
+              <span className="max-w-[92px] text-center text-[10px] font-bold leading-tight" style={{ color: active ? t : "var(--ink-2)" }}>{ph.title}</span>
+              <span className="text-[9px] font-bold tabular-nums text-[var(--ink-3)]">{ppc}%</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* the slide — selected milestone + its actions */}
+      <div className="mt-4 overflow-hidden rounded-2xl border-2 bg-white" style={{ borderColor: tone + "40" }}>
+        <div className="flex flex-wrap items-center gap-3 px-4 py-3" style={{ background: tone + "0f" }}>
+          <span className="grid h-11 w-11 place-items-center rounded-xl text-[22px]" style={{ background: tone + "1f" }}>{p.icon}</span>
+          <div className="min-w-0">
+            <div className="flex items-center gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]">{p.title}</span><span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: done ? "#e6f4ea" : tone + "1f", color: done ? "#0f7a43" : tone }}>{done ? "Complete ✓" : `${pc}%`}</span></div>
+            <div className="text-[11.5px] text-[var(--ink-3)]">{p.subtitle || WHEN_LABEL[p.when]}{win ? ` · ${fmtShort(isoDate(win.start))} – ${fmtShort(isoDate(win.end))}` : ""}</div>
+          </div>
+          <span className="ml-auto text-[11px] font-bold text-[var(--ink-3)]">Milestone {cur + 1} of {n}</span>
+        </div>
+        <div className="h-1.5 bg-[var(--panel)]"><div className="h-full transition-[width] duration-500" style={{ width: `${pc}%`, background: tone }} /></div>
+
+        {/* actions */}
+        <div className="space-y-2 p-4">
+          <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Actions ({phaseDone(p, prog)}/{p.steps.length} done)</div>
+          {p.steps.map((s) => { const st = prog.steps[s.id]; const sp = stepPct(prog, s.id); const sdone = sp >= 100;
+            return (
+              <div key={s.id} onClick={() => !readOnly && onEdit(p, s)} className={`rounded-xl border p-3 ${readOnly ? "" : "cursor-pointer hover:border-[color:var(--t)]"}`} style={{ ["--t" as string]: tone, borderColor: sdone ? tone + "40" : "var(--line)", background: sdone ? tone + "08" : undefined }}>
+                <div className="flex items-center gap-2.5">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold text-white" style={{ background: sdone ? tone : "var(--panel)", color: sdone ? "#fff" : "transparent" }}>✓</span>
+                  <span className={`text-[13px] font-bold ${sdone ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{s.title}</span>
+                  <span className="ml-auto text-[10.5px] font-bold text-[var(--ink-3)]">{st?.start ? `${fmtShort(st.start)} – ${fmtShort(st.end)}` : "no dates"}</span>
+                </div>
+                {s.detail && <div className="mt-0.5 pl-[30px] text-[11px] text-[var(--ink-3)]">{s.detail}</div>}
+                <div className="mt-1.5 flex items-center gap-2 pl-[30px]">
+                  <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full transition-[width]" style={{ width: `${sp}%`, background: tone }} /></div>
+                  <span className="text-[10px] font-bold tabular-nums text-[var(--ink-3)]">{sp}%</span>
+                </div>
+                {!!s.links?.length && <div className="mt-1.5 flex flex-wrap gap-1.5 pl-[30px]">{s.links.map((l) => <Link key={l.href + l.label} href={l.href} onClick={(e) => e.stopPropagation()} className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold text-white hover:opacity-90" style={{ background: tone }}>{l.label} →</Link>)}</div>}
+              </div>
+            );
+          })}
+          {p.steps.length === 0 && <div className="py-2 text-center text-[12px] text-[var(--ink-3)]">No actions in this milestone yet.</div>}
+        </div>
+      </div>
+
+      {/* prev / next */}
+      <div className="mt-3 flex items-center justify-between">
+        <Button onClick={() => setIdx(Math.max(0, cur - 1))} disabled={cur === 0}>← Previous</Button>
+        <div className="flex gap-1">{phases.map((_, i) => <button key={i} type="button" onClick={() => setIdx(i)} className="h-2 rounded-full transition-all" style={{ width: i === cur ? 18 : 8, background: i === cur ? tone : "var(--line)" }} />)}</div>
+        <Button variant="primary" onClick={() => setIdx(Math.min(n - 1, cur + 1))} disabled={cur === n - 1}>Next →</Button>
+      </div>
+    </div>
   );
 }
 
