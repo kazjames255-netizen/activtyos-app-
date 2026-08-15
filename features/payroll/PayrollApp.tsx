@@ -12,20 +12,68 @@ import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { DEMO_STAFF } from "@/features/learning/credentials";
 
-// ——— UK tax/NI estimate helpers (2024/25-ish; clearly an estimate) ———
-const PA = 12570, BASIC_LIMIT = 50270, HIGHER_LIMIT = 125140;
-const payeAnnual = (g: number) => { const t = Math.max(0, g - PA); const basic = Math.min(t, BASIC_LIMIT - PA) * 0.2; const higher = Math.min(Math.max(0, t - (BASIC_LIMIT - PA)), HIGHER_LIMIT - BASIC_LIMIT) * 0.4; const add = Math.max(0, t - (HIGHER_LIMIT - PA)) * 0.45; return basic + higher + add; };
-const eeNiAnnual = (g: number) => { const PT = 12570, UEL = 50270; return Math.min(Math.max(0, g - PT), UEL - PT) * 0.08 + Math.max(0, g - UEL) * 0.02; };
-const erNiAnnual = (g: number) => Math.max(0, g - 9100) * 0.138;
+// ——— UK PAYE / NI / pension ESTIMATE helpers (2026/27; rest-of-UK bands) ———
+const r2 = (n: number) => Math.round((n || 0) * 100) / 100;
 const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const gbp0 = (n: number) => "£" + Math.round(n || 0).toLocaleString("en-GB");
+const escH = (s: unknown = "") => String(s ?? "").replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
 
-interface Emp { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; taxCode: string; niCat: string; pension: boolean }
-interface Line { id: string; name: string; role: string; op: string; grossM: number; payeM: number; eeNiM: number; erNiM: number; eePenM: number; erPenM: number; netM: number }
-interface PayRun { id: string; period: string; paidOn: string; lines: Line[]; status: "draft" | "approved" }
+// annual PAYE from gross + tax code — parses the allowance, BR/D0/D1/NT and K
+// codes, and the £100k personal-allowance taper. Rest-of-UK bands (S/C prefixes
+// are stripped; a real Scottish/Welsh calc is backend). Estimate only.
+function payeAnnual(gross: number, taxCodeRaw = "1257L"): number {
+  const code = String(taxCodeRaw).toUpperCase().replace(/\s|W1|M1|X/g, "").replace(/^[SC]/, "");
+  if (code === "NT") return 0;
+  if (code === "BR") return gross * 0.20;
+  if (code === "D0") return gross * 0.40;
+  if (code === "D1") return gross * 0.45;
+  let taxable: number;
+  if (code.startsWith("K")) taxable = gross + (parseInt(code.slice(1)) || 0) * 10; // K = extra taxable, no allowance
+  else { const num = parseInt(code.replace(/[^0-9]/g, "")) || 1257; const pa = Math.max(0, num * 10 - Math.max(0, gross - 100000) / 2); taxable = Math.max(0, gross - pa); }
+  const basic = Math.min(taxable, 37700) * 0.20;
+  const higher = Math.min(Math.max(0, taxable - 37700), 112570 - 37700) * 0.40;
+  const add = Math.max(0, taxable - 112570) * 0.45;
+  return basic + higher + add;
+}
+function eeNiAnnual(gross: number, cat = "A"): number {
+  if (cat === "C") return 0; // over State Pension age
+  const PT = 12570, UEL = 50270;
+  return Math.min(Math.max(0, gross - PT), UEL - PT) * 0.08 + Math.max(0, gross - UEL) * 0.02;
+}
+function erNiAnnual(gross: number, cat = "A"): number {
+  if (cat === "M" || cat === "H") return Math.max(0, gross - 50270) * 0.15; // under-21 / apprentice under-25: 0% to UST
+  return Math.max(0, gross - 5000) * 0.15; // 2025/26+ : 15% above the £5,000 secondary threshold
+}
+const qePension = (annualGross: number) => Math.min(Math.max(annualGross - 6240, 0), 50270 - 6240); // qualifying earnings band
 
-const EKEY = "aos.payroll.employees.v1";
-const RKEY = "aos.payroll.runs.v1";
+interface Emp { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; pension: boolean }
+export interface Line { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; hoursM: number; grossM: number; payeM: number; eeNiM: number; erNiM: number; eePenM: number; erPenM: number; netM: number }
+export interface PayRun { id: string; period: string; paidOn: string; lines: Line[]; status: "draft" | "approved" }
+export const PAYROLL_RUNS_KEY = "aos.payroll.runs.v1";
+
+// Standalone payslip window — shared by the operator Payroll view and the staff
+// My-payslips view. YTD is summed from every run the employee appears in.
+export function openPayslip(l: Line, period: string, paidOn: string, provider: string, runs: PayRun[]) {
+  if (typeof window === "undefined") return;
+  const ytdL = runs.flatMap((r) => r.lines).filter((x) => x.id === l.id);
+  const ytd = (k: keyof Line) => ytdL.reduce((a, x) => a + (typeof x[k] === "number" ? (x[k] as number) : 0), 0);
+  const paid = new Date(paidOn); const mo = paid.getMonth();
+  const taxMonth = ((mo - 3 + 12) % 12) + 1; const taxYearStart = mo >= 3 ? paid.getFullYear() : paid.getFullYear() - 1;
+  const ty = `${taxYearStart}/${String((taxYearStart + 1) % 100).padStart(2, "0")}`;
+  const row = (k: string, v: string, strong = false) => `<tr><td>${escH(k)}</td><td style="text-align:right${strong ? ";font-weight:800" : ""}">${escH(v)}</td></tr>`;
+  const pays = l.basis === "hour" ? row(`Basic pay · ${l.hoursM} hrs @ £${l.rate.toFixed(2)}`, gbp(l.grossM)) : row("Salary", gbp(l.grossM));
+  const html = `<!doctype html><html><head><meta charset="utf-8"><title>Payslip — ${escH(l.name)}</title><style>body{font-family:-apple-system,'Segoe UI',Arial,sans-serif;color:#1a1c2b;max-width:660px;margin:0 auto;padding:40px}h1{font-size:20px;margin:0}.tag{display:inline-block;background:#fdf3e0;color:#8a5a09;border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:800;margin-bottom:6px}.sub{color:#6b7086;font-size:12px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;font-size:12px;color:#4a4763;margin:14px 0;border-top:1px solid #e5e7f0;padding-top:12px}.meta b{color:#1a1c2b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#3557b7;border-bottom:1px solid #e5e7f0;padding-bottom:4px}table{width:100%;border-collapse:collapse;font-size:13px}td{padding:5px 0;border-top:1px solid #eef1f7}.net{background:#eef4fd;border-radius:10px;padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}.net b{font-size:22px;color:#1d3a8f}.est{font-size:11px;color:#8a92a8;margin-top:14px}@media print{body{padding:0}}</style></head><body>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><span class="tag">Estimated payslip · pay preview</span><h1>${escH(provider)}</h1><div class="sub">Payslip · ${escH(period)} · paid ${escH(paid.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))}</div></div><div style="text-align:right"><div style="font-weight:800">${escH(l.name)}</div><div class="sub">${escH(l.role)} · ${escH(l.op)}</div></div></div>
+    <div class="meta"><div>Tax code · <b>${escH(l.taxCode)}</b></div><div>NI category · <b>${escH(l.niCat)}</b></div><div>Tax period · <b>Month ${taxMonth} · ${escH(ty)}</b></div><div>Frequency · <b>Monthly</b></div></div>
+    <div class="grid"><div><h3>Payments</h3><table>${pays}</table></div><div><h3>Deductions</h3><table>${row("PAYE tax (est.)", gbp(l.payeM))}${row("Employee NI (est.)", gbp(l.eeNiM))}${row("Pension — auto-enrolment", gbp(l.eePenM))}</table></div></div>
+    <div class="net"><span>Net pay · BACS</span><b>${gbp(l.netM)}</b></div>
+    <div class="grid"><div><h3>Year to date (${escH(ty)})</h3><table>${row("Gross", gbp(ytd("grossM")))}${row("PAYE", gbp(ytd("payeM")))}${row("Employee NI", gbp(ytd("eeNiM")))}${row("Pension", gbp(ytd("eePenM")))}${row("Net", gbp(ytd("netM")), true)}</table></div><div><h3>Employer costs</h3><table>${row("Employer NI (est.)", gbp(l.erNiM))}${row("Employer pension", gbp(l.erPenM))}${row("Total cost to employer", gbp(l.grossM + l.erNiM + l.erPenM), true)}</table></div></div>
+    <div class="est">⚠ This is an ESTIMATE for planning, not a statutory itemised pay statement. PAYE, NI and pension are computed on simplified UK 2026/27 rest-of-UK bands using tax code ${escH(l.taxCode)}; pension is 5%/3% of qualifying earnings. Your real payslip is produced by the payroll provider from the RTI/HMRC submission (student loans, statutory pay, Scottish/Welsh bands etc. not modelled here).</div>
+    <script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
+  const w = window.open(); if (w) { w.document.write(html); w.document.close(); }
+}
+const EKEY = "aos.payroll.employees.v2"; // v2 — added weeks/year, stable ids
+const RKEY = PAYROLL_RUNS_KEY;
 const IKEY = "aos.payroll.integrations.v1";
 
 const DEMO_PAY: Record<string, Partial<Emp>> = {
@@ -46,16 +94,19 @@ function seedEmployees(): Emp[] {
     const rec = onb.find((r) => r.staff === s.name);
     let basis = d.basis as "hour" | "year", rate = d.rate as number, hpw = d.hpw as number;
     try { const p = JSON.parse(rec?.values?.payRate?.v || "null"); if (p?.amount) { basis = p.basis === "year" ? "year" : "hour"; rate = parseFloat(String(p.amount).replace(/[£,]/g, "")) || rate; hpw = parseFloat(p.hpw) || hpw; } } catch { /* ignore */ }
-    return { id: s.name, name: s.name, role: s.role, op: s.op, basis, rate, hpw, taxCode: "1257L", niCat: "A", pension: d.pension ?? true };
+    const id = typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "emp_" + s.name.replace(/\s/g, "");
+    return { id, name: s.name, role: s.role, op: s.op, basis, rate, hpw, weeks: basis === "hour" ? 45 : 52, taxCode: "1257L", niCat: "A", pension: d.pension ?? true };
   });
 }
 
-const grossMonthly = (e: Emp) => e.basis === "year" ? e.rate / 12 : e.rate * e.hpw * 52 / 12;
+const grossMonthly = (e: Emp) => e.basis === "year" ? e.rate / 12 : e.rate * e.hpw * (e.weeks || 52) / 12;
 function computeLine(e: Emp): Line {
-  const grossM = grossMonthly(e); const grossA = grossM * 12;
-  const payeM = payeAnnual(grossA) / 12, eeNiM = eeNiAnnual(grossA) / 12, erNiM = erNiAnnual(grossA) / 12;
-  const eePenM = e.pension ? grossM * 0.05 : 0, erPenM = e.pension ? grossM * 0.03 : 0;
-  return { id: e.id, name: e.name, role: e.role, op: e.op, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: grossM - payeM - eeNiM - eePenM };
+  const grossM = r2(grossMonthly(e)); const grossA = grossM * 12;
+  const payeM = r2(payeAnnual(grossA, e.taxCode) / 12), eeNiM = r2(eeNiAnnual(grossA, e.niCat) / 12), erNiM = r2(erNiAnnual(grossA, e.niCat) / 12);
+  const qeM = qePension(grossA) / 12;
+  const eePenM = e.pension ? r2(qeM * 0.05) : 0, erPenM = e.pension ? r2(qeM * 0.03) : 0;
+  const hoursM = e.basis === "hour" ? r2(e.hpw * (e.weeks || 52) / 12) : 0;
+  return { id: e.id, name: e.name, role: e.role, op: e.op, basis: e.basis, rate: e.rate, hpw: e.hpw, weeks: e.weeks || 52, taxCode: e.taxCode, niCat: e.niCat, hoursM, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: r2(grossM - payeM - eeNiM - eePenM) };
 }
 
 const monthLabel = (d: Date) => d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
@@ -93,28 +144,20 @@ export function PayrollApp() {
 
   const runPayroll = () => {
     const now = new Date(); const period = monthLabel(now);
+    if (runs.some((r) => r.period === period) && !window.confirm(`A payroll run for ${period} already exists. Approve another? Both are kept (a payroll record is never overwritten).`)) return;
     const run: PayRun = { id: "pr_" + now.getTime().toString(36), period, paidOn: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10), lines, status: "approved" };
-    saveRuns([run, ...runs.filter((r) => r.period !== period)]);
+    saveRuns([run, ...runs]); // never delete a prior run — versioned history
     flash(`✅ ${period} payroll run — ${lines.length} payslips generated (${gbp0(totalNet)} net).`);
     setTab("payslips");
   };
 
-  const openPayslip = (l: Line, period: string, paidOn: string) => {
-    if (typeof window === "undefined") return;
-    const row = (k: string, v: string, strong = false) => `<tr><td>${k}</td><td style="text-align:right${strong ? ";font-weight:800" : ""}">${v}</td></tr>`;
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Payslip — ${l.name}</title><style>body{font-family:-apple-system,'Segoe UI',Arial,sans-serif;color:#1a1c2b;max-width:640px;margin:0 auto;padding:40px}h1{font-size:20px;margin:0}.sub{color:#6b7086;font-size:12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:18px 0}h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#3557b7;border-bottom:1px solid #e5e7f0;padding-bottom:4px}table{width:100%;border-collapse:collapse;font-size:13px}td{padding:5px 0;border-top:1px solid #eef1f7}.net{background:#eef4fd;border-radius:10px;padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}.net b{font-size:22px;color:#1d3a8f}.est{font-size:11px;color:#8a92a8;margin-top:12px}@media print{body{padding:0}}</style></head><body>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><h1>${provider}</h1><div class="sub">Payslip · ${period} · paid ${new Date(paidOn).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</div></div><div style="text-align:right"><div style="font-weight:800">${l.name}</div><div class="sub">${l.role} · ${l.op}</div></div></div>
-      <div class="grid"><div><h3>Payments</h3><table>${row("Gross pay", gbp(l.grossM))}</table></div><div><h3>Deductions</h3><table>${row("PAYE tax (est.)", gbp(l.payeM))}${row("National Insurance (est.)", gbp(l.eeNiM))}${row("Pension (5%)", gbp(l.eePenM))}</table></div></div>
-      <div class="net"><span>Net pay</span><b>${gbp(l.netM)}</b></div>
-      <table style="margin-top:16px"><tr><td colspan="2"><h3 style="margin-bottom:0">Employer costs</h3></td></tr>${row("Employer NI (est.)", gbp(l.erNiM))}${row("Employer pension (3%)", gbp(l.erPenM))}${row("Total cost to employer", gbp(l.grossM + l.erNiM + l.erPenM), true)}</table>
-      <div class="est">⚠ PAYE, NI and pension figures are estimates for planning. Your real payslip is calculated by the payroll provider using your tax code (${l.id ? "1257L" : ""}) and RTI submission.</div>
-      <script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
-    const w = window.open(); if (w) { w.document.write(html); w.document.close(); }
-  };
+  const showPayslip = (l: Line, period: string, paidOn: string) => openPayslip(l, period, paidOn, provider, runs);
 
   const exportCsv = () => {
-    const rows = [["Employee", "Role", "Location", "Gross", "PAYE", "EE NI", "Pension", "Net", "ER NI", "ER Pension"], ...lines.map((l) => [l.name, l.role, l.op, l.grossM, l.payeM, l.eeNiM, l.eePenM, l.netM, l.erNiM, l.erPenM].map((x) => typeof x === "number" ? x.toFixed(2) : x))];
-    const csv = rows.map((r) => r.join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+    // guard against CSV/formula injection: quote, and neutralise leading =,+,-,@
+    const cell = (x: string | number) => { let s = typeof x === "number" ? x.toFixed(2) : String(x ?? ""); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const rows = [["Employee", "Role", "Location", "Gross", "PAYE", "EE NI", "Pension", "Net", "ER NI", "ER Pension"], ...lines.map((l) => [l.name, l.role, l.op, l.grossM, l.payeM, l.eeNiM, l.eePenM, l.netM, l.erNiM, l.erPenM])];
+    const csv = rows.map((r) => r.map(cell).join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `payroll-${monthLabel(new Date())}.csv`; a.click(); URL.revokeObjectURL(url);
   };
 
@@ -183,7 +226,7 @@ export function PayrollApp() {
               <div key={r.id}>
                 <div className="mb-1.5 flex items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{r.period}</span><span className="text-[11.5px] text-[var(--ink-3)]">paid {new Date(r.paidOn).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })} · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span></div>
                 <div className="grid gap-1.5 sm:grid-cols-2">{r.lines.map((l) => (
-                  <button key={l.id} type="button" onClick={() => openPayslip(l, r.period, r.paidOn)} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-left hover:border-[#1d3a8f]"><span className="text-[12.5px] font-bold text-[var(--ink)]">{l.name}</span><span className="text-[11px] text-[var(--ink-3)]">{l.role}</span><span className="ml-auto text-[12px] font-extrabold tabular-nums text-[#0f7a43]">{gbp(l.netM)}</span><span className="text-[11px] font-bold text-[#1d3a8f]">🧾 Payslip</span></button>
+                  <button key={l.id} type="button" onClick={() => showPayslip(l, r.period, r.paidOn)} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-2 text-left hover:border-[#1d3a8f]"><span className="text-[12.5px] font-bold text-[var(--ink)]">{l.name}</span><span className="text-[11px] text-[var(--ink-3)]">{l.role}</span><span className="ml-auto text-[12px] font-extrabold tabular-nums text-[#0f7a43]">{gbp(l.netM)}</span><span className="text-[11px] font-bold text-[#1d3a8f]">🧾 Payslip</span></button>
                 ))}</div>
               </div>
             ))}</div>
@@ -209,7 +252,7 @@ export function PayrollApp() {
 
       {edit && <EmpEditor emp={edit} onSave={(e) => { saveEmps(emps.map((x) => (x.id === e.id ? e : x))); setEdit(null); }} onClose={() => setEdit(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
-      <p className="mt-4 text-[11px] text-[var(--ink-3)]">⚠ PAYE, National Insurance and pension figures are <b>estimates for planning</b> (UK 2024/25 bands). Your real payroll — exact tax codes, RTI submission to HMRC and payslip production — is handled by your payroll provider / the accounting integration.</p>
+      <p className="mt-4 text-[11px] text-[var(--ink-3)]">⚠ PAYE, National Insurance and pension are <b>estimates for planning</b> (UK 2026/27, rest-of-UK bands; employer NI 15% over £5,000; pension on qualifying earnings). Tax code &amp; NI category are applied; <b>not</b> modelled: Scottish/Welsh bands, student loans, statutory pay (SSP/SMP), Employment Allowance and RTI. The real payroll — exact calc, RTI/HMRC filing and statutory payslips — is your payroll provider / the accounting integration.</p>
     </div>
   );
 }
@@ -226,6 +269,7 @@ function EmpEditor({ emp, onSave, onClose }: { emp: Emp; onSave: (e: Emp) => voi
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{e.basis === "year" ? "Salary (£/yr)" : "Rate (£/hr)"}</span><Input inputMode="decimal" value={String(e.rate)} onChange={(ev) => setE({ ...e, rate: parseFloat(ev.target.value) || 0 })} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Hours / week</span><Input inputMode="decimal" value={String(e.hpw)} onChange={(ev) => setE({ ...e, hpw: parseFloat(ev.target.value) || 0 })} disabled={e.basis === "year"} className="w-full" /></label>
           </div>
+          {e.basis === "hour" && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Weeks / year <span className="normal-case text-[var(--ink-3)]">(52 = all year · 38–45 = term-time / seasonal)</span></span><Input inputMode="decimal" value={String(e.weeks)} onChange={(ev) => setE({ ...e, weeks: parseFloat(ev.target.value) || 52 })} className="w-full" /></label>}
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Tax code</span><Input value={e.taxCode} onChange={(ev) => setE({ ...e, taxCode: ev.target.value })} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">NI category</span><Select value={e.niCat} onChange={(ev) => setE({ ...e, niCat: ev.target.value })} className="w-full">{["A", "B", "C", "H", "M"].map((c) => <option key={c} value={c}>{c}</option>)}</Select></label>

@@ -27,6 +27,7 @@ import { ReferralsApp } from "@/features/referrals/ReferralsApp";
 import { EmailApp } from "@/features/email/EmailApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
 import { StaffDocsApp } from "@/features/documents/StaffDocsApp";
+import { StaffPayslipsApp } from "@/features/payroll/StaffPayslipsApp";
 import { PayrollApp } from "@/features/payroll/PayrollApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { LearningCentreApp } from "@/features/learning/LearningCentreApp";
@@ -238,6 +239,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     dash: StaffDashApp,
     certificates: StaffCertsApp,
     documents: StaffDocsApp,
+    payslips: StaffPayslipsApp,
     timetable: StaffTimetableApp,
     registers: RegistersApp,
     ratios: RatiosApp,
