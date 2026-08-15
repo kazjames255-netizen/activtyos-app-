@@ -64,7 +64,7 @@ interface Application { id: string; formId: string; name: string; email: string;
 const openFile = (dataUrl?: string) => { if (!dataUrl || typeof window === "undefined") return; const w = window.open(); if (w) w.document.write(`<iframe src="${dataUrl}" style="border:0;width:100vw;height:100vh"></iframe>`); };
 const SAMPLE_PDF = "data:text/html,<body style='font-family:Georgia;padding:60px;max-width:640px;margin:auto'><h2>Sample uploaded document</h2><p>This is a placeholder for the document the applicant attached. Real uploads are stored and viewed here once the backend is wired.</p></body>";
 
-const FORMS_KEY = "aos.team.appforms.v1";
+const FORMS_KEY = "aos.team.appforms.v2"; // bumped — v1 held the old short form
 const APPS_KEY = "aos.team.applications.v1";
 const ONBOARD_RECORDS_KEY = "aos.team.onboardrecords.v1";
 
@@ -291,7 +291,7 @@ export function ApplicationsPanel() {
       </>
       ) : (
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => setEditForm({ id: "form_" + Date.now().toString(36), name: "New application form", fields: [] })}>+ New application form</Button><span className="text-[11.5px] text-[var(--ink-3)]">Build one or more editable forms to send to candidates.</span></div>
+          <div className="flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => setEditForm({ id: "form_" + Date.now().toString(36), name: "New application form", fields: [] })}>+ New application form</Button><Button onClick={() => { if (window.confirm("Reset the standard form back to the full master template? This replaces the 'standard' form.")) saveForms([defaultForm(), ...forms.filter((x) => x.id !== "standard")]); }}>↺ Reset master template</Button><span className="text-[11.5px] text-[var(--ink-3)]">Build one or more editable forms to send to candidates.</span></div>
           {forms.map((form) => (
             <Card key={form.id} className="flex flex-wrap items-center gap-3 p-3.5">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[18px]">📝</span>
