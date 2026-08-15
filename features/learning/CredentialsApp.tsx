@@ -8,7 +8,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Card, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
-import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel, exportCredsPdf, DEMO_STAFF, fmtDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
+import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel, exportCredsPdf, credFiles, DEMO_STAFF, fmtDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
 
 const OPS: [string, string][] = [["all", "All locations"], ["Company-owned", "Company-owned (Head Office)"], ["Milton Keynes", "Milton Keynes"], ["Northampton", "Northampton"], ["Bedford", "Bedford"]];
 
@@ -73,7 +73,7 @@ export function CredentialsApp() {
         <p className="mt-2 text-[11px] text-[var(--ink-3)]"><span className="text-[#c0392b]">*</span> required. Manage credential types &amp; who they apply to in <button type="button" onClick={() => router.push(`/${portal}/setup?tab=learning#credtypes`)} className="font-bold text-[#1d3a8f] underline hover:text-[#16297a]">Setup → Learning</button>.</p>
       </Card>
 
-      {edit && <CredEditor rec={edit} types={cred.types} onSave={(r) => { cred.upsertRecord(r); setEdit(null); }} onClose={() => setEdit(null)} />}
+      {edit && <CredEditor rec={edit} types={cred.types} staffList={DEMO_STAFF} onSave={(r) => { cred.upsertRecord(r); setEdit(null); }} onClose={() => setEdit(null)} />}
 
       {cell && (() => {
         const t = cred.types.find((x) => x.id === cell.typeId); const r = cred.recordFor(cell.staff, cell.typeId); const st = credStatus(r); const dl = daysUntil(r?.expiry);
@@ -90,7 +90,14 @@ export function CredentialsApp() {
                   {r.number && <div className="rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Number</div><div className="font-bold text-[var(--ink)]">{r.number}</div></div>}
                   {t?.dbs && r.dbsLevel && <div className="col-span-2 rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">DBS</div><div className="font-bold text-[var(--ink)]">{r.dbsLevel}{r.dbsUpdate ? " · on Update Service" : ""}{r.dbsUpdateNo ? " · " + r.dbsUpdateNo : ""}</div></div>}
                 </div>
-                {r.fileData && <button type="button" onClick={() => openCredFile(r.fileData)} className="mt-2 w-full rounded-lg border border-[var(--line)] px-3 py-2 text-[12.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 View {r.fileName || "certificate"}</button>}
+                {credFiles(r).length > 0 && (() => { const fs = credFiles(r); return (
+                  <div className="mt-2 space-y-1">
+                    <div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Document{fs.length > 1 ? `s · ${fs.length} versions` : ""}</div>
+                    {fs.slice().reverse().map((f, i) => { const latest = i === 0; return (
+                      <button key={i} type="button" onClick={() => openCredFile(f.data)} className="flex w-full items-center gap-2 rounded-lg border border-[var(--line)] px-3 py-1.5 text-left text-[12px] font-semibold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 <span className="truncate">{f.name}</span>{latest ? <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">Current</span> : <span className="rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#64748b]">Older</span>}{f.at && <span className="ml-auto text-[10px] font-normal text-[var(--ink-3)]">{fmtDate(f.at.slice(0, 10))}</span>}</button>
+                    ); })}
+                  </div>
+                ); })()}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   {r.verified !== "verified" && <Button variant="primary" onClick={() => cred.upsertRecord({ ...r, verified: "verified" })}>✓ Verify</Button>}
                   {r.verified !== "rejected" && <Button onClick={() => cred.upsertRecord({ ...r, verified: "rejected" })}>Reject</Button>}

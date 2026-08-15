@@ -32,14 +32,25 @@ export function appliesTo(t: CredType, staffName: string, staffRole?: string): b
   return true;
 }
 export const targetLabel = (t: CredType): string => { const k = t.applyKind ?? "all"; if (k === "all") return "All staff"; if (k === "roles") return (t.applyRoles ?? []).join(", ") || "no roles"; return (t.applyStaff ?? []).join(", ") || "no staff"; };
+export interface CredFile { name: string; data: string; at: string }
 export interface CredRecord {
   id: string; staff: string; typeId: string;
   issue?: string; expiry?: string; issuer?: string; number?: string;
-  fileData?: string; fileName?: string;
+  fileData?: string; fileName?: string; // the CURRENT (latest) document — mirrors files[last]
+  files?: CredFile[]; // full upload history, oldest → newest
   verified: "pending" | "verified" | "rejected"; note?: string;
   dbsLevel?: string; dbsUpdate?: boolean; dbsUpdateNo?: string; // DBS extras
   updatedAt?: string;
 }
+
+// Full document history for a record — seeds a single entry from the legacy
+// fileData if the record predates versioning. Newest last.
+export const credFiles = (r?: CredRecord): CredFile[] => {
+  if (!r) return [];
+  if (r.files && r.files.length) return r.files;
+  if (r.fileData) return [{ name: r.fileName || "certificate", data: r.fileData, at: r.updatedAt || r.issue || "" }];
+  return [];
+};
 
 export const CRED_TKEY = "aos.learn.credtypes.v1";
 export const CRED_RKEY = "aos.learn.credrecords.v1";
@@ -143,16 +154,33 @@ export function openCredFile(dataUrl?: string) {
 }
 
 // ——— add / edit a record (used by staff + manager) ———
-export function CredEditor({ rec, types, lockStaff, onSave, onClose }: { rec: CredRecord; types: CredType[]; lockStaff?: boolean; onSave: (r: CredRecord) => void; onClose: () => void }) {
+export function CredEditor({ rec, types, lockStaff, staffList, onSave, onClose }: { rec: CredRecord; types: CredType[]; lockStaff?: boolean; staffList?: { name: string }[]; onSave: (r: CredRecord) => void; onClose: () => void }) {
   const [r, setR] = useState<CredRecord>(rec);
+  const [staffQ, setStaffQ] = useState("");
+  const [staffOpen, setStaffOpen] = useState(false);
   const type = types.find((t) => t.id === r.typeId) ?? types[0];
+  const files = credFiles(r);
   const autoExpiry = () => { if (r.issue && type?.renewMonths) setR({ ...r, expiry: iso(addMonths(new Date(r.issue + "T00:00:00"), type.renewMonths)) }); };
+  const addFile = (f: File) => { const rd = new FileReader(); rd.onload = () => { const nf: CredFile = { name: f.name, data: String(rd.result), at: iso(new Date()) }; setR((p) => ({ ...p, files: [...credFiles(p), nf], fileData: nf.data, fileName: nf.name })); }; rd.readAsDataURL(f); };
+  const removeFile = (idx: number) => setR((p) => { const list = credFiles(p).filter((_, i) => i !== idx); const last = list[list.length - 1]; return { ...p, files: list, fileData: last?.data, fileName: last?.name }; });
+  const opts = (staffList ?? []).filter((s) => s.name.toLowerCase().includes(staffQ.toLowerCase()));
   return createPortal(
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[6vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rec.issue || rec.fileData ? "Edit certificate" : "Add certificate"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rec.issue || files.length ? "Edit certificate" : "Add certificate"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
-          {!lockStaff && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff member</span><Input value={r.staff} onChange={(e) => setR({ ...r, staff: e.target.value })} className="w-full" /></label>}
+          {!lockStaff && (staffList && staffList.length ? (
+            <div className="relative"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff member</span>
+              <button type="button" onClick={() => { setStaffOpen((v) => !v); setStaffQ(""); }} className="flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-left text-[13px] font-semibold text-[var(--ink)] hover:border-[#1d3a8f]">{r.staff || <span className="text-[var(--ink-3)]">Choose staff…</span>}<span className="text-[var(--ink-3)]">▾</span></button>
+              {staffOpen && (
+                <div className="absolute z-10 mt-1 max-h-[260px] w-full overflow-y-auto rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
+                  <input autoFocus value={staffQ} onChange={(e) => setStaffQ(e.target.value)} placeholder="Search name…" className="mb-1 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[#1d3a8f]" />
+                  {opts.map((s) => <button key={s.name} type="button" onClick={() => { setR({ ...r, staff: s.name }); setStaffOpen(false); }} className={"block w-full truncate rounded-lg px-2.5 py-1.5 text-left text-[13px] font-semibold hover:bg-[var(--panel)] " + (s.name === r.staff ? "text-[#1d3a8f]" : "text-[var(--ink-2)]")}>{s.name === r.staff ? "✓ " : ""}{s.name}</button>)}
+                  {!opts.length && <div className="px-2.5 py-2 text-[12px] text-[var(--ink-3)]">No match.</div>}
+                </div>
+              )}
+            </div>
+          ) : <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff member</span><Input value={r.staff} onChange={(e) => setR({ ...r, staff: e.target.value })} className="w-full" /></label>)}
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Credential</span><Select value={r.typeId} onChange={(e) => setR({ ...r, typeId: e.target.value })} className="w-full">{types.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select></label>
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Issued</span><Input type="date" value={r.issue ?? ""} onChange={(e) => setR({ ...r, issue: e.target.value })} onBlur={autoExpiry} className="w-full" /></label>
@@ -172,12 +200,22 @@ export function CredEditor({ rec, types, lockStaff, onSave, onClose }: { rec: Cr
               <label className="mt-2 flex items-center gap-2 text-[12px] font-semibold text-[var(--ink-2)]"><input type="checkbox" checked={!!r.dbsUpdate} onChange={(e) => setR({ ...r, dbsUpdate: e.target.checked })} /> Registered with the DBS Update Service</label>
             </div>
           )}
-          <div><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Certificate file</span>
-            <div className="flex flex-wrap items-center gap-2">
-              <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ Upload<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const rd = new FileReader(); rd.onload = () => setR({ ...r, fileData: String(rd.result), fileName: f.name }); rd.readAsDataURL(f); }} /></label>
-              {r.fileName && <span className="max-w-[180px] truncate text-[12px] text-[var(--ink-2)]">📎 {r.fileName}</span>}
-              {r.fileData && <button type="button" onClick={() => setR({ ...r, fileData: undefined, fileName: undefined })} className="text-[12px] font-semibold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button>}
-            </div>
+          <div><span className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Certificate file{files.length > 1 ? ` · ${files.length} versions` : ""}</span>
+            {files.length > 0 && (
+              <div className="mb-2 space-y-1">
+                {files.map((f, i) => { const latest = i === files.length - 1; return (
+                  <div key={i} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5">
+                    <span className="truncate text-[12px] font-semibold text-[var(--ink-2)]">📎 {f.name}</span>
+                    {latest ? <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">Current</span> : <span className="rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9px] font-bold uppercase text-[#64748b]">Older</span>}
+                    {f.at && <span className="text-[10px] text-[var(--ink-3)]">{fmtDate(f.at.slice(0, 10))}</span>}
+                    <button type="button" onClick={() => openCredFile(f.data)} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">View</button>
+                    <button type="button" title="Remove this version" onClick={() => removeFile(i)} className="text-[12px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
+                  </div>
+                ); })}
+              </div>
+            )}
+            <label className="inline-flex cursor-pointer items-center rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {files.length ? "Upload new version" : "Upload"}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) addFile(f); e.target.value = ""; }} /></label>
+            {files.length > 1 && <p className="mt-1 text-[10.5px] text-[var(--ink-3)]">A new upload is kept as a new version — older ones stay viewable here. The newest is used everywhere else.</p>}
           </div>
         </div>
         <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!r.staff.trim() || !r.typeId} onClick={() => onSave({ ...r, updatedAt: iso(new Date()) })}>Save</Button></div>
