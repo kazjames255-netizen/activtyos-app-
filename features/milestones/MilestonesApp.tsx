@@ -84,23 +84,8 @@ function FranchiseTimeline({ phases, prog, onProg, onNewSeason }: { phases: MPha
         </div>
       </div>
 
-      {/* the trail */}
-      <div className="mt-4 overflow-x-auto pb-2">
-        <div className="relative flex gap-3 px-6 pt-7" style={{ minWidth: Math.max(phases.length * 128, 320) }}>
-          <div className="absolute left-8 right-8 top-[52px] h-2 rounded-full bg-[var(--panel)]" />
-          <div className="absolute left-8 top-[52px] h-2 rounded-full transition-[width] duration-500" style={{ width: `calc((100% - 4rem) * ${overall / 100})`, background: "linear-gradient(90deg,#1d3a8f,#0e7490)" }} />
-          {phases.map((p, i) => { const done = phaseComplete(p, prog); const here = i === hereIdx && !done; const tone = WHEN_TONE[p.when]; const active = sel.id === p.id; const pct = phasePct(p, prog);
-            return (
-              <button key={p.id} type="button" onClick={() => setSelId(p.id)} className="relative z-10 flex flex-1 flex-col items-center gap-1.5">
-                {here && <span className="mile-anim absolute -top-6 text-[16px]" style={{ animation: "mile-bob 1.4s ease-in-out infinite" }}>🚩</span>}
-                <span className="mile-anim grid h-12 w-12 place-items-center rounded-full text-[19px] font-bold transition-transform" style={{ background: done ? tone : "#fff", color: done ? "#fff" : tone, boxShadow: `0 2px 6px ${tone}44${active ? `, 0 0 0 3px #fff, 0 0 0 6px ${tone}` : ""}`, ["--g" as string]: `${tone}66`, animation: here ? "mile-pulse 1.8s infinite" : undefined, transform: active ? "scale(1.08)" : undefined }}>{done ? "✓" : p.icon}</span>
-                <span className={`text-center text-[11px] font-extrabold leading-tight ${active ? "text-[var(--ink)]" : "text-[var(--ink-2)]"}`} style={{ color: active ? tone : undefined }}>{p.title}</span>
-                <span className="rounded-full bg-[var(--panel)] px-1.5 text-[9.5px] font-bold text-[var(--ink-3)] tabular-nums">{pct}%</span>
-              </button>
-            );
-          })}
-        </div>
-      </div>
+      {/* the winding trail map */}
+      <TrailMap phases={phases} prog={prog} hereIdx={hereIdx} overall={overall} selId={sel.id} onSelect={setSelId} />
 
       {/* selected phase panel */}
       <div className="mt-2 overflow-hidden rounded-2xl border-2 bg-white shadow-sm" style={{ borderColor: selTone + "40" }}>
@@ -135,6 +120,51 @@ function FranchiseTimeline({ phases, prog, onProg, onNewSeason }: { phases: MPha
         </div>
       </div>
     </>
+  );
+}
+
+// Winding "treasure map" — phases threaded along a serpentine SVG path.
+function TrailMap({ phases, prog, hereIdx, overall, selId, onSelect }: { phases: MPhase[]; prog: MProgress; hereIdx: number; overall: number; selId: string; onSelect: (id: string) => void }) {
+  const W = 480, padTop = 60, rowH = 138, padBottom = 104;
+  const n = phases.length;
+  const pts = phases.map((_, i) => ({ x: i % 2 === 0 ? 118 : 362, y: padTop + i * rowH }));
+  const finish = { x: 240, y: padTop + (n - 1) * rowH + padBottom };
+  const all = [...pts, finish];
+  const H = finish.y + 30;
+  let d = `M ${all[0].x} ${all[0].y}`;
+  for (let i = 1; i < all.length; i++) { const midY = (all[i - 1].y + all[i].y) / 2; d += ` C ${all[i - 1].x} ${midY} ${all[i].x} ${midY} ${all[i].x} ${all[i].y}`; }
+  const done100 = overall === 100;
+  return (
+    <div className="relative mx-auto mt-4 w-full overflow-hidden rounded-3xl p-2" style={{ maxWidth: W + 24, background: "radial-gradient(120% 90% at 50% 0%, #f0f7f4 0%, #eef2fb 60%, #ffffff 100%)", boxShadow: "inset 0 0 0 1px var(--line)" }}>
+      <div className="relative mx-auto w-full" style={{ maxWidth: W }}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="block h-auto w-full" aria-hidden>
+          <defs><linearGradient id="mile-grad" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#1d3a8f" /><stop offset="1" stopColor="#0e7490" /></linearGradient></defs>
+          <path d={d} fill="none" stroke="#c8d2e4" strokeWidth="7" strokeLinecap="round" strokeDasharray="0.1 15" opacity="0.85" />
+          <path d={d} fill="none" stroke="url(#mile-grad)" strokeWidth="7" strokeLinecap="round" pathLength={100} strokeDasharray={100} strokeDashoffset={100 - overall} style={{ transition: "stroke-dashoffset .7s ease" }} />
+        </svg>
+
+        {/* phase stops */}
+        {phases.map((p, i) => { const { x, y } = pts[i]; const done = phaseComplete(p, prog); const here = i === hereIdx && !done; const tone = WHEN_TONE[p.when]; const active = selId === p.id; const pct = phasePct(p, prog);
+          return (
+            <div key={p.id} className="absolute" style={{ left: `${(x / W) * 100}%`, top: `${(y / H) * 100}%`, transform: "translate(-50%,-50%)" }}>
+              {here && <span className="mile-anim absolute -top-7 left-1/2 -translate-x-1/2 text-[18px]" style={{ animation: "mile-bob 1.4s ease-in-out infinite" }}>🚩</span>}
+              <button type="button" onClick={() => onSelect(p.id)} className="mile-anim grid h-14 w-14 place-items-center rounded-full text-[22px] font-bold" style={{ background: done ? tone : "#fff", color: done ? "#fff" : tone, boxShadow: `0 3px 8px ${tone}55${active ? `, 0 0 0 3px #fff, 0 0 0 6px ${tone}` : ", 0 0 0 3px #fff"}`, ["--g" as string]: `${tone}66`, animation: here ? "mile-pulse 1.8s infinite" : undefined, transform: active ? "scale(1.1)" : undefined }}>{done ? "✓" : p.icon}</button>
+              <div className="absolute left-1/2 top-full mt-1 w-28 -translate-x-1/2 text-center">
+                <div className="text-[11px] font-extrabold leading-tight" style={{ color: active ? tone : "var(--ink-2)" }}>{p.title}</div>
+                <div className="mx-auto mt-0.5 inline-block rounded-full bg-white/80 px-1.5 text-[9.5px] font-bold tabular-nums text-[var(--ink-3)] ring-1 ring-black/5">{pct}%</div>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* start + finish */}
+        <div className="absolute -translate-x-1/2 -translate-y-1/2" style={{ left: `${(pts[0].x / W) * 100}%`, top: `${((pts[0].y - 40) / H) * 100}%` }}><span className="rounded-full bg-[#1d3a8f] px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-white shadow">Start</span></div>
+        <div className="absolute" style={{ left: `${(finish.x / W) * 100}%`, top: `${(finish.y / H) * 100}%`, transform: "translate(-50%,-50%)" }}>
+          <div className={`grid h-14 w-14 place-items-center rounded-full text-[24px] ${done100 ? "mile-anim" : ""}`} style={{ background: done100 ? "linear-gradient(135deg,#f59e0b,#d97706)" : "#fff", boxShadow: done100 ? "0 4px 14px #f59e0b66, 0 0 0 3px #fff" : "0 3px 8px #64748b33, 0 0 0 3px #fff", animation: done100 ? "mile-pop .5s ease" : undefined }}>{done100 ? "🏆" : "🎁"}</div>
+          <div className="absolute left-1/2 top-full mt-1 w-32 -translate-x-1/2 text-center text-[11px] font-extrabold" style={{ color: done100 ? "#b45309" : "var(--ink-3)" }}>{done100 ? "Season complete!" : "Finish the season"}</div>
+        </div>
+      </div>
+    </div>
   );
 }
 
