@@ -170,6 +170,7 @@ export function ApplicationsPanel() {
               <div className="min-w-0 flex-1"><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{form.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{form.fields.length} fields · {form.fields.filter((x) => x.mapsTo).length} carry into onboarding</div></div>
               <Button onClick={() => setSendOpen(true)}>Send</Button>
               <Button onClick={() => setEditForm(form)}>Edit</Button>
+              <Button onClick={() => { const clone: AppForm = { id: "form_" + Date.now().toString(36), name: form.name + " (copy)", fields: form.fields.map((x) => ({ ...x })) }; saveForms([...forms, clone]); setEditForm(clone); }}>Duplicate</Button>
               {forms.length > 1 && <button type="button" title="Delete" onClick={() => { if (window.confirm(`Delete “${form.name}”?`)) saveForms(forms.filter((x) => x.id !== form.id)); }} className="rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>}
             </Card>
           ))}
@@ -197,7 +198,7 @@ function SendModal({ forms, onSent, onClose }: { forms: AppForm[]; onSent: (m: s
         <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Send an application</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <p className="mb-3 text-[12px] text-[var(--ink-3)]">Candidates fill it in and their application lands in <b>Applications</b> for you to review.</p>
 
-        {forms.length > 1 && <label className="mb-3 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Which form</span><Select value={formId} onChange={(e) => setFormId(e.target.value)} className="w-full">{forms.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select></label>}
+        <label className="mb-3 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Which form to send</span><Select value={formId} onChange={(e) => setFormId(e.target.value)} className="w-full">{forms.map((f) => <option key={f.id} value={f.id}>{f.name} · {f.fields.length} fields</option>)}</Select></label>
 
         <div className="mb-3 rounded-xl border border-[var(--line)] p-3">
           <div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🔗 Share a link</div>
