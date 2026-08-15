@@ -30,6 +30,7 @@ export interface Absence {
   note?: string;        // approver's decline reason / note
   paid?: boolean;       // false = unpaid (e.g. rolled-up staff taking already-paid leave)
   ssp?: "eligible" | "withheld"; // sickness only: whether SSP is paid (withheld = late notice)
+  awe?: number;         // sickness only: average weekly earnings over the prior 8 weeks
 }
 
 // Per-tenant leave policy (defaults sit in the store; editable in Settings).
@@ -62,9 +63,14 @@ export interface HolidayPolicy {
 export const SSP_WEEKLY = 123.25;
 export const SSP_PCT = 0.8;
 export const SSP_MAX_WEEKS = 28;
+// Weekly SSP = the LOWER of the flat rate and 80% of Average Weekly Earnings.
+// AWE is the average over the previous 8 weeks (the "relevant period") — weeks a
+// casual worker earned £0 dilute it, so a barely-worked casual is owed very
+// little. SSP is NOT based on the value of the shift(s) they missed.
+export const sspWeekly = (awe: number) => Math.min(SSP_WEEKLY, +(SSP_PCT * (awe || 0)).toFixed(2));
 // A plain-English sick-pay line for a given policy.
 export function sickPayNote(policy: Pick<HolidayPolicy, "sickPay" | "enhancedDays">): string {
-  const ssp = `Statutory Sick Pay — £${SSP_WEEKLY.toFixed(2)}/week or 80% of normal weekly pay (whichever is lower), from day 1`;
+  const ssp = `Statutory Sick Pay — £${SSP_WEEKLY.toFixed(2)}/week or 80% of average weekly earnings (last 8 weeks), whichever is lower, from day 1`;
   return policy.sickPay === "enhanced"
     ? `Company sick pay: full pay for the first ${policy.enhancedDays} day${policy.enhancedDays === 1 ? "" : "s"}, then ${ssp}.`
     : `${ssp}. No company top-up.`;

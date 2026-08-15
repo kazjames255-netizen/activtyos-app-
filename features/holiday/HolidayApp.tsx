@@ -11,7 +11,7 @@ import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
   KIND_META, summarise, conflicts, annualAllowance, statutoryDays, leaveYear,
-  workingDays, fmtRange, isoDate, round1, isBankHoliday, sickPayNote, sickNotifyRuleText, SSP_WEEKLY,
+  workingDays, fmtRange, isoDate, round1, isBankHoliday, sickPayNote, sickNotifyRuleText, sspWeekly, SSP_WEEKLY,
 } from "@/lib/holiday";
 import { loadPolicy, savePolicy, loadProfiles, saveProfiles, loadAbsences, saveAbsences } from "./data";
 
@@ -264,7 +264,8 @@ export function HolidayApp() {
               <li>• <b>Hourly &amp; casual staff still get holiday</b> — being paid by the hour does <b>not</b> remove it. You can&rsquo;t switch it off; you can only pay it as rolled-up 12.07% (still paid) or as booked days.</li>
               <li>• Almost all workers get <b>5.6 weeks&rsquo; paid holiday a year</b> — a 5-day week = <b>28 days</b>, capped at 28.</li>
               <li>• <b>Part-time</b> is pro-rata (days/week × 5.6): {[3, 4, 5].map((n) => `${n}d→${statutoryDays(n)}`).join(" · ")}. <b>Irregular / part-year</b> staff accrue <b>12.07%</b> of hours worked.</li>
-              <li>• <b>Sick pay:</b> since <b>April 2026</b> Statutory Sick Pay is payable from <b>day 1</b> to <b>all employees</b> (the earnings threshold &amp; 3 waiting days were abolished) — <b>£{SSP_WEEKLY.toFixed(2)}/week or 80% of pay, whichever is lower</b>. This applies to casual/zero-hours staff too; you can add company sick pay on top, but not below SSP.</li>
+              <li>• <b>Sick pay:</b> since <b>April 2026</b> Statutory Sick Pay is payable from <b>day 1</b> to <b>all employees</b> (earnings threshold &amp; 3 waiting days abolished) — the <b>lower of £{SSP_WEEKLY.toFixed(2)}/week or 80% of average weekly earnings over the last 8 weeks</b>.</li>
+              <li>• That 8-week average is your protection with casuals: a coach who did <b>one £400 week</b> then 7 empty weeks has an AWE of ~£50, so SSP ≈ <b>£{sspWeekly(50).toFixed(2)}/week</b> — not £400. SSP is owed only for <b>rota&rsquo;d</b> shifts, never future ones.</li>
               <li className="text-[var(--ink-3)]">Bank-holiday dates are England &amp; Wales; Scotland/NI differ. Estimate for planning, not legal advice.</li>
             </ul>
           </Card>
@@ -297,7 +298,9 @@ function AbsenceEditor({ abs, region, sickRule, onSave, onClose }: { abs: Absenc
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason / note</span><Input value={a.reason || ""} onChange={(e) => set({ reason: e.target.value })} className="w-full" /></label>
           {a.kind === "sickness" && <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Statutory Sick Pay</span><Select value={a.ssp || "eligible"} onChange={(e) => set({ ssp: e.target.value as Absence["ssp"] })} className="w-full"><option value="eligible">Eligible — reported in time</option><option value="withheld">Withheld — reported late</option></Select></label>
-            <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Rule: report sickness <b>{sickRule}</b>. SSP is only owed for shifts they were rota&rsquo;d to work; withhold for days they told you late.</div>
+            <label className="mt-2 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Average weekly earnings <span className="normal-case text-[var(--ink-3)]">(their last 8 weeks ÷ 8)</span></span><Input inputMode="decimal" value={a.awe != null ? String(a.awe) : ""} placeholder="£ per week" onChange={(e) => set({ awe: e.target.value.trim() === "" ? undefined : parseFloat(e.target.value) })} className="w-full" /></label>
+            {a.awe != null && a.awe >= 0 && <div className="mt-1.5 rounded-lg bg-[#eef4fd] px-2.5 py-1.5 text-[11px] font-semibold text-[#1d3a8f]">Weekly SSP ≈ <b>£{sspWeekly(a.awe).toFixed(2)}</b> — the lower of £{SSP_WEEKLY.toFixed(2)} and 80% of £{a.awe.toFixed(2)}. Split across the shifts they were due that week.</div>}
+            <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">SSP is <b>not</b> based on the shift they missed — it&rsquo;s 80% of their <b>8-week average</b> (weeks they earned £0 dilute it), capped at £{SSP_WEEKLY.toFixed(2)}. Only owed for <b>rota&rsquo;d</b> shifts; report rule: <b>{sickRule}</b>.</div>
           </div>}
           <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[12px] font-semibold text-[#1d3a8f]">{days} working day{days === 1 ? "" : "s"} (weekends &amp; bank holidays excluded)</div>
         </div>
