@@ -46,14 +46,14 @@ function erNiAnnual(gross: number, cat = "A"): number {
 }
 const qePension = (annualGross: number) => Math.min(Math.max(annualGross - 6240, 0), 50270 - 6240); // qualifying earnings band
 
-interface Emp { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; pension: boolean }
+interface Emp { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; pension: boolean; paidFrom?: "contracted" | "rota" }
 // A one-off addition (taxable — overtime/bonus/holiday pay) or after-tax deduction (advance/other) on a single pay run.
 export interface AdjItem { id: string; label: string; amount: number }
 // Per-employee, per-period overrides applied in the pay run — everything editable
 // without touching the employee master record.
 export interface Adjust { hours?: number | null; taxCode?: string; niCat?: string; additions?: AdjItem[]; deductions?: AdjItem[]; override?: { paye?: number | null; eeNi?: number | null; eePen?: number | null } }
-export interface Line { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; hoursM: number; basePayM: number; addM: number; dedM: number; additions: AdjItem[]; deductions: AdjItem[]; manual: { paye: boolean; eeNi: boolean; eePen: boolean }; grossM: number; payeM: number; eeNiM: number; erNiM: number; eePenM: number; erPenM: number; netM: number }
-export interface PayRun { id: string; period: string; paidOn: string; lines: Line[]; status: "draft" | "approved"; hoursBasis?: "contracted" | "rota" }
+export interface Line { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; freqLabel?: string; hoursM: number; basePayM: number; addM: number; dedM: number; additions: AdjItem[]; deductions: AdjItem[]; manual: { paye: boolean; eeNi: boolean; eePen: boolean }; grossM: number; payeM: number; eeNiM: number; erNiM: number; eePenM: number; erPenM: number; netM: number }
+export interface PayRun { id: string; period: string; paidOn: string; lines: Line[]; status: "draft" | "approved"; hoursBasis?: "contracted" | "rota"; freq?: Freq }
 export const PAYROLL_RUNS_KEY = "aos.payroll.runs.v1";
 
 // Standalone payslip window — shared by the operator Payroll view and the staff
@@ -65,6 +65,9 @@ export function openPayslip(l: Line, period: string, paidOn: string, provider: s
   const paid = new Date(paidOn); const mo = paid.getMonth();
   const taxMonth = ((mo - 3 + 12) % 12) + 1; const taxYearStart = mo >= 3 ? paid.getFullYear() : paid.getFullYear() - 1;
   const ty = `${taxYearStart}/${String((taxYearStart + 1) % 100).padStart(2, "0")}`;
+  const freqLabel = l.freqLabel || "Monthly";
+  const taxWeek = Math.min(53, Math.max(1, Math.floor((Date.UTC(paid.getFullYear(), paid.getMonth(), paid.getDate()) - Date.UTC(taxYearStart, 3, 6)) / (7 * 86400000)) + 1));
+  const taxPeriod = freqLabel === "Weekly" ? `Week ${taxWeek} · ${ty}` : freqLabel === "Monthly" ? `Month ${taxMonth} · ${ty}` : `${freqLabel} · ${ty}`;
   const row = (k: string, v: string, strong = false) => `<tr><td>${escH(k)}</td><td style="text-align:right${strong ? ";font-weight:800" : ""}">${escH(v)}</td></tr>`;
   const basePay = l.basePayM ?? l.grossM;
   const baseRow = l.basis === "hour" ? row(`Basic pay · ${l.hoursM} hrs @ £${l.rate.toFixed(2)}`, gbp(basePay)) : row("Salary", gbp(basePay));
@@ -72,7 +75,7 @@ export function openPayslip(l: Line, period: string, paidOn: string, provider: s
   const deds = row("PAYE tax (est.)", gbp(l.payeM)) + row("Employee NI (est.)", gbp(l.eeNiM)) + row("Pension — auto-enrolment", gbp(l.eePenM)) + (l.deductions || []).map((x) => row(x.label || "Deduction", gbp(x.amount))).join("");
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Payslip — ${escH(l.name)}</title><style>body{font-family:-apple-system,'Segoe UI',Arial,sans-serif;color:#1a1c2b;max-width:660px;margin:0 auto;padding:40px}h1{font-size:20px;margin:0}.tag{display:inline-block;background:#fdf3e0;color:#8a5a09;border-radius:99px;padding:2px 9px;font-size:10.5px;font-weight:800;margin-bottom:6px}.sub{color:#6b7086;font-size:12px}.meta{display:grid;grid-template-columns:1fr 1fr;gap:2px 18px;font-size:12px;color:#4a4763;margin:14px 0;border-top:1px solid #e5e7f0;padding-top:12px}.meta b{color:#1a1c2b}.grid{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:16px 0}h3{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:#3557b7;border-bottom:1px solid #e5e7f0;padding-bottom:4px}table{width:100%;border-collapse:collapse;font-size:13px}td{padding:5px 0;border-top:1px solid #eef1f7}.net{background:#eef4fd;border-radius:10px;padding:14px;margin-top:14px;display:flex;justify-content:space-between;align-items:center}.net b{font-size:22px;color:#1d3a8f}.est{font-size:11px;color:#8a92a8;margin-top:14px}@media print{body{padding:0}}</style></head><body>
     <div style="display:flex;justify-content:space-between;align-items:flex-start"><div><span class="tag">Estimated payslip · pay preview</span><h1>${escH(provider)}</h1><div class="sub">Payslip · ${escH(period)} · paid ${escH(paid.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }))}</div></div><div style="text-align:right"><div style="font-weight:800">${escH(l.name)}</div><div class="sub">${escH(l.role)} · ${escH(l.op)}</div></div></div>
-    <div class="meta"><div>Tax code · <b>${escH(l.taxCode)}</b></div><div>NI category · <b>${escH(l.niCat)}</b></div><div>Tax period · <b>Month ${taxMonth} · ${escH(ty)}</b></div><div>Frequency · <b>Monthly</b></div></div>
+    <div class="meta"><div>Tax code · <b>${escH(l.taxCode)}</b></div><div>NI category · <b>${escH(l.niCat)}</b></div><div>Tax period · <b>${escH(taxPeriod)}</b></div><div>Frequency · <b>${escH(freqLabel)}</b></div></div>
     <div class="grid"><div><h3>Payments</h3><table>${pays}${(l.additions || []).length ? row("Gross pay", gbp(l.grossM), true) : ""}</table></div><div><h3>Deductions</h3><table>${deds}</table></div></div>
     <div class="net"><span>Net pay · BACS</span><b>${gbp(l.netM)}</b></div>
     <div class="grid"><div><h3>Year to date (${escH(ty)})</h3><table>${row("Gross", gbp(ytd("grossM")))}${row("PAYE", gbp(ytd("payeM")))}${row("Employee NI", gbp(ytd("eeNiM")))}${row("Pension", gbp(ytd("eePenM")))}${row("Net", gbp(ytd("netM")), true)}</table></div><div><h3>Employer costs</h3><table>${row("Employer NI (est.)", gbp(l.erNiM))}${row("Employer pension", gbp(l.erPenM))}${row("Total cost to employer", gbp(l.grossM + l.erNiM + l.erPenM), true)}</table></div></div>
@@ -110,27 +113,35 @@ function seedEmployees(): Emp[] {
 
 const grossMonthly = (e: Emp) => e.basis === "year" ? e.rate / 12 : e.rate * e.hpw * (e.weeks || 52) / 12;
 const sumItems = (a?: AdjItem[]) => r2((a || []).reduce((n, x) => n + (Number(x.amount) || 0), 0));
-// computeLine estimates one month for one employee, applying any per-run
-// adjustments: `hours` pays an hourly person by actual hours (from the Schedule
-// or a manual entry) instead of contracted hpw; taxCode/niCat override the
-// master for this run; additions are taxable (added to gross), deductions come
-// off net after tax; override.{paye,eeNi,eePen} force a statutory figure.
-function computeLine(e: Emp, a: { hours?: number | null; rate?: number | null; taxCode?: string; niCat?: string; additions?: AdjItem[]; deductions?: AdjItem[]; override?: { paye?: number | null; eeNi?: number | null; eePen?: number | null } } = {}): Line {
+// Pay frequency: how often a run pays, and how many fall in a tax year (the
+// divisor that turns an annual PAYE/NI/pension figure into one period's amount).
+export type Freq = "weekly" | "fortnightly" | "fourweekly" | "monthly";
+const PPY: Record<Freq, number> = { weekly: 52, fortnightly: 26, fourweekly: 13, monthly: 12 };
+const FREQ_LABEL: Record<Freq, string> = { weekly: "Weekly", fortnightly: "Fortnightly", fourweekly: "4-weekly", monthly: "Monthly" };
+// computeLine estimates ONE PERIOD for one employee at pay frequency `freq`.
+// Adjustments: `hours` pays an hourly person by actual hours (from the Schedule
+// or a manual entry) instead of contracted; taxCode/niCat override the master;
+// additions are taxable (added to gross), deductions come off net after tax;
+// override.{paye,eeNi,eePen} force a statutory figure.
+function computeLine(e: Emp, a: { hours?: number | null; rate?: number | null; taxCode?: string; niCat?: string; additions?: AdjItem[]; deductions?: AdjItem[]; override?: { paye?: number | null; eeNi?: number | null; eePen?: number | null } } = {}, freq: Freq = "monthly"): Line {
+  const ppy = PPY[freq];
   const taxCode = a.taxCode || e.taxCode, niCat = a.niCat || e.niCat;
   const rate = a.rate != null ? a.rate : e.rate; // e.g. the Schedule's own rate in rota mode
+  const contractedHours = e.basis === "hour" ? (e.hpw * (e.weeks || 52)) / ppy : 0; // avg contracted hours in one period
   const useH = a.hours != null && e.basis === "hour";
-  const basePayM = r2(useH ? rate * (a.hours as number) : grossMonthly(e));
+  const periodHours = e.basis === "hour" ? (useH ? (a.hours as number) : contractedHours) : 0;
+  const basePayM = r2(e.basis === "hour" ? rate * periodHours : e.rate / ppy);
   const addM = sumItems(a.additions), dedM = sumItems(a.deductions);
-  const grossM = r2(basePayM + addM); const grossA = grossM * 12;
+  const grossM = r2(basePayM + addM); const grossA = grossM * ppy;
   const ov = a.override || {};
-  const payeM = ov.paye != null ? r2(ov.paye) : r2(payeAnnual(grossA, taxCode) / 12);
-  const eeNiM = ov.eeNi != null ? r2(ov.eeNi) : r2(eeNiAnnual(grossA, niCat) / 12);
-  const erNiM = r2(erNiAnnual(grossA, niCat) / 12);
-  const qeM = qePension(grossA) / 12;
+  const payeM = ov.paye != null ? r2(ov.paye) : r2(payeAnnual(grossA, taxCode) / ppy);
+  const eeNiM = ov.eeNi != null ? r2(ov.eeNi) : r2(eeNiAnnual(grossA, niCat) / ppy);
+  const erNiM = r2(erNiAnnual(grossA, niCat) / ppy);
+  const qeM = qePension(grossA) / ppy;
   const eePenM = ov.eePen != null ? r2(ov.eePen) : (e.pension ? r2(qeM * 0.05) : 0);
   const erPenM = e.pension ? r2(qeM * 0.03) : 0;
-  const hoursM = e.basis === "hour" ? r2(useH ? (a.hours as number) : e.hpw * (e.weeks || 52) / 12) : 0;
-  return { id: e.id, name: e.name, role: e.role, op: e.op, basis: e.basis, rate, hpw: e.hpw, weeks: e.weeks || 52, taxCode, niCat, hoursM, basePayM, addM, dedM, additions: a.additions || [], deductions: a.deductions || [], manual: { paye: ov.paye != null, eeNi: ov.eeNi != null, eePen: ov.eePen != null }, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: r2(grossM - payeM - eeNiM - eePenM - dedM) };
+  const hoursM = r2(periodHours);
+  return { id: e.id, name: e.name, role: e.role, op: e.op, basis: e.basis, rate, hpw: e.hpw, weeks: e.weeks || 52, taxCode, niCat, freqLabel: FREQ_LABEL[freq], hoursM, basePayM, addM, dedM, additions: a.additions || [], deductions: a.deductions || [], manual: { paye: ov.paye != null, eeNi: ov.eeNi != null, eePen: ov.eePen != null }, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: r2(grossM - payeM - eeNiM - eePenM - dedM) };
 }
 
 // ── Link to the Schedule / rota ─────────────────────────────────────────────
@@ -146,7 +157,8 @@ const shiftHours = (s: { start: string; end: string; in?: string; out?: string; 
   const brk = s.brk ? Math.max(0, rhm(s.brk.to) - rhm(s.brk.from)) : 0;
   return Math.max(0, gross - brk) / 60;
 };
-function rotaHoursForMonth(d: Date): { byName: Record<string, number>; rateByName: Record<string, number>; hasData: boolean } {
+// rostered hours per staff member for shifts whose date falls in [startISO, endISO]
+function rotaHoursForRange(startISO: string, endISO: string): { byName: Record<string, number>; rateByName: Record<string, number>; hasData: boolean } {
   const byName: Record<string, number> = {}; const rateByName: Record<string, number> = {};
   if (typeof window === "undefined") return { byName, rateByName, hasData: false };
   let store: { staff?: { id: string; name: string; rate?: number }[]; shifts?: { staffId: string | null; date: string; start: string; end: string; in?: string; out?: string; brk?: { from: string; to: string } }[] } | null = null;
@@ -154,15 +166,36 @@ function rotaHoursForMonth(d: Date): { byName: Record<string, number>; rateByNam
   if (!store || !Array.isArray(store.shifts) || !Array.isArray(store.staff)) return { byName, rateByName, hasData: false };
   const idToName: Record<string, string> = {};
   store.staff.forEach((s) => { const nm = (s.name || "").trim().toLowerCase(); idToName[s.id] = s.name; if (nm && s.rate) rateByName[nm] = s.rate; });
-  const y = d.getFullYear(), mo = d.getMonth();
   for (const sh of store.shifts) {
-    if (!sh.staffId || !sh.date) continue;
-    const dd = new Date(`${sh.date}T00:00:00`);
-    if (dd.getFullYear() !== y || dd.getMonth() !== mo) continue;
+    if (!sh.staffId || !sh.date || sh.date < startISO || sh.date > endISO) continue;
     const nm = (idToName[sh.staffId] || "").trim().toLowerCase();
     if (nm) byName[nm] = (byName[nm] || 0) + shiftHours(sh);
   }
   return { byName, rateByName, hasData: store.shifts.length > 0 };
+}
+
+// The pay period for an anchor date at a given frequency: monthly = calendar
+// month; weekly/fortnightly/4-weekly = a window ending on the anchor's Sunday.
+const isoD = (d: Date) => d.toISOString().slice(0, 10);
+const fmtD = (d: Date) => d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+function periodWindow(anchor: Date, freq: Freq): { start: string; end: string; label: string; paidOn: string } {
+  if (freq === "monthly") {
+    const s = new Date(anchor.getFullYear(), anchor.getMonth(), 1);
+    const e = new Date(anchor.getFullYear(), anchor.getMonth() + 1, 0);
+    return { start: isoD(s), end: isoD(e), label: monthLabel(anchor), paidOn: isoD(e) };
+  }
+  const days = freq === "weekly" ? 7 : freq === "fortnightly" ? 14 : 28;
+  const end = new Date(anchor); end.setDate(end.getDate() + ((7 - end.getDay()) % 7)); // this week's Sunday
+  const start = new Date(end); start.setDate(start.getDate() - (days - 1));
+  const label = `${FREQ_LABEL[freq]} · ${fmtD(start)} – ${fmtD(end)}`;
+  return { start: isoD(start), end: isoD(end), label, paidOn: isoD(end) };
+}
+// step the anchor one whole period forward (+1) or back (−1)
+function stepAnchor(anchor: Date, freq: Freq, dir: number): Date {
+  const d = new Date(anchor);
+  if (freq === "monthly") d.setMonth(d.getMonth() + dir);
+  else d.setDate(d.getDate() + dir * (freq === "weekly" ? 7 : freq === "fortnightly" ? 14 : 28));
+  return d;
 }
 
 const monthLabel = (d: Date) => d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
@@ -182,7 +215,8 @@ export function PayrollApp() {
   const [edit, setEdit] = useState<Emp | null>(null);
   const [adjEmp, setAdjEmp] = useState<Emp | null>(null); // employee whose pay-run adjustments are being edited
   const [toast, setToast] = useState<string | null>(null);
-  const [hoursSource, setHoursSource] = useState<"contracted" | "rota">("contracted");
+  const [freq, setFreq] = useState<Freq>("monthly");
+  const [anchor, setAnchor] = useState<Date>(() => new Date());
   const [adjust, setAdjust] = useState<Record<string, Record<string, Adjust>>>({}); // period -> empId -> Adjust
   useEffect(() => {
     try { const e = JSON.parse(localStorage.getItem(EKEY) || "null"); if (Array.isArray(e) && e.length) setEmps(e); } catch { /* ignore */ }
@@ -196,42 +230,47 @@ export function PayrollApp() {
   const saveAdjust = (a: Record<string, Record<string, Adjust>>) => { setAdjust(a); try { localStorage.setItem(ADJKEY, JSON.stringify(a)); } catch { /* ignore */ } };
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2800); };
 
-  // actual rostered hours for this month, read from the Schedule (refreshed when
-  // switching hours mode or re-entering the pay-run tab)
-  const period = monthLabel(new Date());
-  const rota = useMemo(() => rotaHoursForMonth(new Date()), [hoursSource, tab]);
+  // the pay period (window + label) for the chosen frequency & anchor date
+  const win = useMemo(() => periodWindow(anchor, freq), [anchor, freq]);
+  const period = win.label;
+  // rostered hours for this period's window, read from the Schedule
+  const rota = useMemo(() => rotaHoursForRange(win.start, win.end), [win.start, win.end, tab]);
   const rotaHoursFor = (e: Emp) => rota.byName[e.name.trim().toLowerCase()];
   const rotaRateFor = (e: Emp) => rota.rateByName[e.name.trim().toLowerCase()]; // rate the Schedule uses for this person
-  // the Schedule's own monthly wage for this person (rostered hours × Schedule rate)
   const scheduleWageFor = (e: Emp) => { const h = rotaHoursFor(e); const r = rotaRateFor(e) ?? e.rate; return h != null ? h * r : undefined; };
+  // each employee is paid from contracted hours OR the rota (their own setting);
+  // salaried staff are always contracted (a salary isn't hours-driven)
+  const empSource = (e: Emp): "contracted" | "rota" => (e.basis === "year" ? "contracted" : (e.paidFrom || "contracted"));
+  const setSource = (id: string, src: "contracted" | "rota") => saveEmps(emps.map((x) => (x.id === id ? { ...x, paidFrom: src } : x)));
+  const bulkSource = (src: "contracted" | "rota") => saveEmps(emps.map((x) => (x.basis === "hour" ? { ...x, paidFrom: src } : x)));
   const periodAdj = adjust[period] || {};
   const adjOf = (id: string): Adjust | undefined => periodAdj[id];
-  // base monthly hours for an hourly employee: a manual per-run override wins,
-  // else rostered hours in rota mode, else contracted (undefined = use hpw)
+  // base hours for an hourly employee this period: a manual per-run override
+  // wins, else rostered hours if paid from the rota, else contracted (undefined)
   const baseHours = (e: Emp): number | null | undefined => {
     const a = adjOf(e.id);
     if (a?.hours != null) return a.hours;
-    return hoursSource === "rota" ? (rotaHoursFor(e) ?? 0) : undefined;
+    return empSource(e) === "rota" ? (rotaHoursFor(e) ?? 0) : undefined;
   };
-  // in rota mode, also pay at the Schedule's own rate (when it has one) so the pay run mirrors the Schedule's wage figure
-  const lineFor = (e: Emp): Line => { const a = adjOf(e.id); const rate = hoursSource === "rota" && a?.hours == null ? rotaRateFor(e) : undefined; return computeLine(e, { hours: baseHours(e), rate, taxCode: a?.taxCode, niCat: a?.niCat, additions: a?.additions, deductions: a?.deductions, override: a?.override }); };
+  // when paid from the rota, also pay at the Schedule's own rate so the run mirrors the Schedule's wage
+  const lineFor = (e: Emp): Line => { const a = adjOf(e.id); const rate = empSource(e) === "rota" && a?.hours == null ? rotaRateFor(e) : undefined; return computeLine(e, { hours: baseHours(e), rate, taxCode: a?.taxCode, niCat: a?.niCat, additions: a?.additions, deductions: a?.deductions, override: a?.override }, freq); };
   const lines = emps.map(lineFor);
   const isAdjusted = (e: Emp) => { const a = adjOf(e.id); return !!a && (a.hours != null || !!a.taxCode || !!a.niCat || !!(a.additions?.length) || !!(a.deductions?.length) || a.override?.paye != null || a.override?.eeNi != null || a.override?.eePen != null); };
-  const zeroHourNames = hoursSource === "rota" ? emps.filter((e) => e.basis === "hour" && !((baseHours(e) ?? 0) > 0)).map((e) => e.name) : [];
+  const rotaEmps = emps.filter((e) => empSource(e) === "rota");
+  const zeroHourNames = rotaEmps.filter((e) => e.basis === "hour" && !((baseHours(e) ?? 0) > 0)).map((e) => e.name);
   const setEmpAdjust = (id: string, a: Adjust | null) => { const next = { ...adjust, [period]: { ...periodAdj } }; if (a) next[period][id] = a; else delete next[period][id]; if (Object.keys(next[period]).length === 0) delete next[period]; saveAdjust(next); };
   const totalGross = lines.reduce((a, l) => a + l.grossM, 0);
   const totalNet = lines.reduce((a, l) => a + l.netM, 0);
   const totalErCost = lines.reduce((a, l) => a + l.grossM + l.erNiM + l.erPenM, 0);
   const totalPaye = lines.reduce((a, l) => a + l.payeM, 0);
-  const nextPay = (() => { const d = new Date(); d.setMonth(d.getMonth() + 1, 0); return d; })(); // month-end
+  const nextPay = new Date(`${win.paidOn}T00:00:00`);
 
   const runPayroll = () => {
-    const now = new Date(); const period = monthLabel(now);
-    if (hoursSource === "rota" && zeroHourNames.length && !window.confirm(`${zeroHourNames.length} hourly staff have no rostered hours for ${period} (${zeroHourNames.join(", ")}). They'll be paid £0. Approve anyway?`)) return;
+    if (zeroHourNames.length && !window.confirm(`${zeroHourNames.length} rota-paid staff have no rostered hours for ${period} (${zeroHourNames.join(", ")}). They'll be paid £0. Approve anyway?`)) return;
     if (runs.some((r) => r.period === period) && !window.confirm(`A payroll run for ${period} already exists. Approve another? Both are kept (a payroll record is never overwritten).`)) return;
-    const run: PayRun = { id: "pr_" + now.getTime().toString(36), period, paidOn: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10), lines, status: "approved", hoursBasis: hoursSource };
+    const run: PayRun = { id: "pr_" + Date.now().toString(36), period, paidOn: win.paidOn, lines, status: "approved", hoursBasis: rotaEmps.length ? "rota" : "contracted", freq };
     saveRuns([run, ...runs]); // never delete a prior run — versioned history
-    flash(`✅ ${period} payroll run — ${lines.length} payslips generated (${gbp0(totalNet)} net · ${hoursSource === "rota" ? "actual rostered hours" : "contracted hours"}).`);
+    flash(`✅ ${period} — ${lines.length} payslips generated (${gbp0(totalNet)} net · ${FREQ_LABEL[freq]}).`);
     setTab("payslips");
   };
 
@@ -240,7 +279,7 @@ export function PayrollApp() {
   const exportCsv = () => {
     // guard against CSV/formula injection: quote, and neutralise leading =,+,-,@
     const cell = (x: string | number) => { let s = typeof x === "number" ? x.toFixed(2) : String(x ?? ""); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const rows = [["Employee", "Role", "Location", "Hours", "Hours basis", "Base pay", "Additions", "Deductions", "Tax code", "NI cat", "Gross", "PAYE", "EE NI", "Pension", "Net", "ER NI", "ER Pension"], ...lines.map((l) => [l.name, l.role, l.op, l.basis === "year" ? "" : l.hoursM, l.basis === "year" ? "salary" : hoursSource, l.basePayM, l.addM, l.dedM, l.taxCode, l.niCat, l.grossM, l.payeM, l.eeNiM, l.eePenM, l.netM, l.erNiM, l.erPenM])];
+    const rows = [["Employee", "Role", "Location", "Frequency", "Period", "Hours", "Hours basis", "Base pay", "Additions", "Deductions", "Tax code", "NI cat", "Gross", "PAYE", "EE NI", "Pension", "Net", "ER NI", "ER Pension"], ...lines.map((l, i) => [l.name, l.role, l.op, FREQ_LABEL[freq], period, l.basis === "year" ? "" : l.hoursM, l.basis === "year" ? "salary" : empSource(emps[i]), l.basePayM, l.addM, l.dedM, l.taxCode, l.niCat, l.grossM, l.payeM, l.eeNiM, l.eePenM, l.netM, l.erNiM, l.erPenM])];
     const csv = rows.map((r) => r.map(cell).join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `payroll-${monthLabel(new Date())}.csv`; a.click(); URL.revokeObjectURL(url);
   };
@@ -255,7 +294,7 @@ export function PayrollApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="Payroll" icon="💷" lede="Your monthly pay runs — hours & rates from onboarding, estimated PAYE, NI and pension, branded payslips, and one-tap export to your accounting software." />
+      <PageHero title="Payroll" icon="💷" lede="Weekly or monthly pay runs — hours from contracts or the Schedule, estimated PAYE, NI and pension, fully editable, branded payslips, and one-tap export to your accounting software." />
 
       <div className="mb-3 inline-flex flex-wrap gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
         {([["overview", "📊 Overview"], ["employees", "👥 Employees"], ["run", "▶ Pay run"], ["payslips", "🧾 Payslips"], ["integrations", "🔌 Integrations"]] as const).map(([k, l]) => (
@@ -265,13 +304,13 @@ export function PayrollApp() {
 
       {tab === "overview" && (<>
         <div className="mb-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-          {tile("This month · gross", gbp0(totalGross), `${emps.length} employees`, "linear-gradient(135deg,#1d3a8f,#3f7ae0)")}
+          {tile(`This ${freq === "monthly" ? "month" : "period"} · gross`, gbp0(totalGross), `${emps.length} employees · ${FREQ_LABEL[freq]}`, "linear-gradient(135deg,#1d3a8f,#3f7ae0)")}
           {tile("Net to pay", gbp0(totalNet), "after tax, NI & pension", "linear-gradient(135deg,#166534,#37b26a)")}
           {tile("PAYE + NI to HMRC", gbp0(totalPaye + lines.reduce((a, l) => a + l.eeNiM + l.erNiM, 0)), "estimated liability", "linear-gradient(135deg,#9d174d,#f43f5e)")}
           {tile("Total employer cost", gbp0(totalErCost), "incl. employer NI & pension", "linear-gradient(135deg,#334155,#64748b)")}
         </div>
         <Card className="p-4">
-          <div className="flex flex-wrap items-center gap-2"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">Next pay day</div><div className="text-[12px] text-[var(--ink-3)]">{nextPay.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · monthly</div></div><Button variant="primary" className="ml-auto" onClick={() => setTab("run")}>▶ Run this month&rsquo;s payroll</Button></div>
+          <div className="flex flex-wrap items-center gap-2"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">Next pay day</div><div className="text-[12px] text-[var(--ink-3)]">{nextPay.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · {FREQ_LABEL[freq]} · {period}</div></div><Button variant="primary" className="ml-auto" onClick={() => setTab("run")}>▶ Run payroll</Button></div>
           {runs.length > 0 && <div className="mt-3 border-t border-[var(--line)] pt-3"><div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Recent runs</div>{runs.slice(0, 3).map((r) => <div key={r.id} className="flex items-center gap-2 py-1 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{r.period}</span><span className="text-[var(--ink-3)]">{r.lines.length} payslips · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span><span className="ml-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">{r.status}</span></div>)}</div>}
         </Card>
       </>)}
@@ -291,31 +330,46 @@ export function PayrollApp() {
 
       {tab === "run" && (
         <Card className="p-4">
-          <div className="mb-3 flex flex-wrap items-center gap-2"><div><div className="text-[14px] font-extrabold text-[var(--ink)]">Pay run · {monthLabel(new Date())}</div><div className="text-[12px] text-[var(--ink-3)]">Review, then approve to generate payslips. Figures are estimates.</div></div><div className="ml-auto flex gap-2"><Button onClick={exportCsv}>⬇ Export CSV</Button><Button variant="primary" onClick={runPayroll}>✓ Approve &amp; generate payslips</Button></div></div>
+          <div className="mb-3 flex flex-wrap items-center gap-2"><div><div className="text-[14px] font-extrabold text-[var(--ink)]">Pay run</div><div className="text-[12px] text-[var(--ink-3)]">Review, then approve to generate payslips. Figures are estimates.</div></div><div className="ml-auto flex gap-2"><Button onClick={exportCsv}>⬇ Export CSV</Button><Button variant="primary" onClick={runPayroll}>✓ Approve &amp; generate payslips</Button></div></div>
 
-          {/* Hours source — contracted vs actual rostered hours from the Schedule */}
-          <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Hourly pay from</span>
+          {/* Frequency + period picker */}
+          <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+            <div className="flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Frequency</span>
               <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)]">
-                {([["contracted", "Contracted hours"], ["rota", "Rostered hours (from Schedule)"]] as const).map(([k, lab]) => (
-                  <button key={k} type="button" onClick={() => setHoursSource(k)} className={`px-3 py-1.5 text-[12px] font-bold ${hoursSource === k ? "bg-[#1d3a8f] text-white" : "bg-white text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{lab}</button>
+                {(["weekly", "fortnightly", "fourweekly", "monthly"] as Freq[]).map((f) => (
+                  <button key={f} type="button" onClick={() => setFreq(f)} className={`px-2.5 py-1.5 text-[11.5px] font-bold ${freq === f ? "bg-[#1d3a8f] text-white" : "bg-white text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{FREQ_LABEL[f]}</button>
                 ))}
               </div>
-              <span className="text-[11.5px] text-[var(--ink-3)]">{hoursSource === "rota" ? "Actual shift hours (check-in/out where logged, less unpaid breaks) for this month." : "Each person's contracted hours/week. Salaried staff are unaffected either way."}</span>
             </div>
-            {hoursSource === "rota" && !rota.hasData && <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">No shifts found in the Schedule yet — build this month&rsquo;s rota in the Schedule area, or switch back to contracted hours.</div>}
-            {hoursSource === "rota" && rota.hasData && (() => { const hrly = emps.filter((e) => e.basis === "hour"); const totH = hrly.reduce((n, e) => n + (rotaHoursFor(e) ?? 0), 0); const totW = hrly.reduce((n, e) => n + (scheduleWageFor(e) ?? 0), 0); return <div className="mt-2 rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">↩ Pulled from your Schedule for {period}: <b>{r2(totH)}h</b> rostered across hourly staff → <b>{gbp0(totW)}</b> at Schedule rates. That&rsquo;s the pay basis below (before tax, NI &amp; pension).</div>; })()}
-            {hoursSource === "rota" && rota.hasData && zeroHourNames.length > 0 && <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">⚠ No rostered hours this month for: {zeroHourNames.join(", ")} — they&rsquo;ll show £0. Add their shifts in the Schedule, or approve as-is.</div>}
+            <div className="flex items-center gap-1.5"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Period</span>
+              <button type="button" onClick={() => setAnchor(stepAnchor(anchor, freq, -1))} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">‹</button>
+              <span className="min-w-[150px] text-center text-[12.5px] font-bold text-[var(--ink)]">{period}</span>
+              <button type="button" onClick={() => setAnchor(stepAnchor(anchor, freq, 1))} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[13px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">›</button>
+              <button type="button" onClick={() => setAnchor(new Date())} className="ml-1 text-[11px] font-bold text-[#1d3a8f] hover:underline">Today</button>
+            </div>
+            <span className="text-[11px] text-[var(--ink-3)]">Paid {nextPay.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span>
           </div>
 
-          <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">Everything is editable per person, per month — click <b>Edit</b> on a row to change hours, tax code, NI category, add overtime/bonus or deductions, or override PAYE/NI/pension. Net always recalculates. Nothing here changes the employee&rsquo;s master record.</div>
+          {/* Per-employee hours source — mix contracted (e.g. admin) and rostered (from Schedule) */}
+          <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Hourly staff paid from</span>
+              <span className="text-[11.5px] text-[var(--ink-3)]">Set per person on each row — mix and match. Set all hourly:</span>
+              <button type="button" onClick={() => bulkSource("contracted")} className="rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">Contracted</button>
+              <button type="button" onClick={() => bulkSource("rota")} className="rounded-full border border-[var(--line)] px-2.5 py-0.5 text-[11px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">Rostered (Schedule)</button>
+            </div>
+            {rotaEmps.length > 0 && !rota.hasData && <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">Some staff are set to Rostered, but no shifts are in the Schedule for {period} — build the rota, or set them to Contracted.</div>}
+            {rotaEmps.length > 0 && rota.hasData && (() => { const totH = rotaEmps.reduce((n, e) => n + (rotaHoursFor(e) ?? 0), 0); const totW = rotaEmps.reduce((n, e) => n + (scheduleWageFor(e) ?? 0), 0); return <div className="mt-2 rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">↩ Pulled from your Schedule for {period}: <b>{r2(totH)}h</b> rostered across {rotaEmps.length} staff → <b>{gbp0(totW)}</b> at Schedule rates (the pay basis before tax, NI &amp; pension).</div>; })()}
+            {rotaEmps.length > 0 && rota.hasData && zeroHourNames.length > 0 && <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">⚠ No rostered hours for: {zeroHourNames.join(", ")} — they&rsquo;ll show £0. Add their shifts, set them to Contracted, or approve as-is.</div>}
+          </div>
+
+          <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">Everything is editable per person, per period — click <b>Edit</b> on a row to change hours, tax code, NI category, add overtime/bonus or deductions, or override PAYE/NI/pension. Net always recalculates. Nothing here changes the employee&rsquo;s master record.</div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
             <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-right font-extrabold">Hours</th><th className="px-3 py-2.5 text-right font-extrabold">Gross</th><th className="px-3 py-2.5 text-right font-extrabold">PAYE</th><th className="px-3 py-2.5 text-right font-extrabold">NI</th><th className="px-3 py-2.5 text-right font-extrabold">Pension</th><th className="px-3 py-2.5 text-right font-extrabold">Net</th><th className="px-3 py-2.5 text-right font-extrabold">Er cost</th><th className="px-3 py-2.5 text-right font-extrabold"></th></tr></thead>
               <tbody>{lines.map((l, i) => { const e = emps[i]; const man = (on: boolean) => on ? <sup className="ml-0.5 text-[8px] font-black text-[#b45309]" title="Manual override">M</sup> : null; return (
                 <tr key={l.id} className="border-t border-[var(--line-2,#eef2f8)]">
                   <td className="px-3 py-2 font-bold text-[var(--ink)]">{l.name}{isAdjusted(e) && <span className="ml-1.5 rounded-full bg-[#fdf3e0] px-1.5 py-0.5 text-[9.5px] font-bold text-[#8a5a09] align-middle">adjusted</span>}{(l.addM > 0 || l.dedM > 0) && <div className="mt-0.5 text-[10px] font-semibold text-[var(--ink-3)]">{l.addM > 0 && <span className="text-[#0f7a43]">+{gbp(l.addM)} additions</span>}{l.addM > 0 && l.dedM > 0 && " · "}{l.dedM > 0 && <span className="text-[#c0392b]">−{gbp(l.dedM)} deductions</span>}</div>}</td>
-                  <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-2)]">{l.basis === "year" ? <span className="text-[var(--ink-3)]">Salary</span> : <>{l.hoursM}h {adjOf(e.id)?.hours != null ? <span className="ml-1 rounded bg-[#fdf3e0] px-1 py-0.5 text-[9.5px] font-bold text-[#8a5a09] align-middle">manual</span> : hoursSource === "rota" ? <span className="ml-1 rounded bg-[#e7edfb] px-1 py-0.5 text-[9.5px] font-bold text-[#1d3a8f] align-middle">rota</span> : <span className="ml-1 rounded bg-[#eef1f6] px-1 py-0.5 text-[9.5px] font-bold text-[#64748b] align-middle">contract</span>}</>}</td>
+                  <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-2)]">{l.basis === "year" ? <span className="text-[var(--ink-3)]">Salary</span> : <div className="flex items-center justify-end gap-1.5">{adjOf(e.id)?.hours != null && <span className="rounded bg-[#fdf3e0] px-1 py-0.5 text-[9.5px] font-bold text-[#8a5a09]" title="Manual hours">manual</span>}<span>{l.hoursM}h</span><button type="button" onClick={() => setSource(e.id, empSource(e) === "rota" ? "contracted" : "rota")} title="Click to switch this person between contracted and rostered hours" className={`rounded px-1 py-0.5 text-[9.5px] font-bold ${empSource(e) === "rota" ? "bg-[#e7edfb] text-[#1d3a8f]" : "bg-[#eef1f6] text-[#64748b]"}`}>{empSource(e) === "rota" ? "rota ⇄" : "contract ⇄"}</button></div>}</td>
                   <td className="px-3 py-2 text-right tabular-nums">{gbp(l.grossM)}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.payeM)}{man(l.manual.paye)}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.eeNiM)}{man(l.manual.eeNi)}</td>
@@ -363,7 +417,7 @@ export function PayrollApp() {
       )}
 
       {edit && <EmpEditor emp={edit} onSave={(e) => { saveEmps(emps.map((x) => (x.id === e.id ? e : x))); setEdit(null); }} onClose={() => setEdit(null)} />}
-      {adjEmp && <RunAdjust emp={adjEmp} period={period} value={adjOf(adjEmp.id)} rotaHours={rotaHoursFor(adjEmp)} rotaRate={rotaRateFor(adjEmp)} hoursSource={hoursSource} onSave={(a) => { setEmpAdjust(adjEmp.id, a); setAdjEmp(null); }} onClose={() => setAdjEmp(null)} />}
+      {adjEmp && <RunAdjust emp={adjEmp} period={period} freq={freq} value={adjOf(adjEmp.id)} rotaHours={rotaHoursFor(adjEmp)} rotaRate={rotaRateFor(adjEmp)} hoursSource={empSource(adjEmp)} onSave={(a) => { setEmpAdjust(adjEmp.id, a); setAdjEmp(null); }} onClose={() => setAdjEmp(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
       <p className="mt-4 text-[11px] text-[var(--ink-3)]">⚠ PAYE, National Insurance and pension are <b>estimates for planning</b> (UK 2026/27, rest-of-UK bands; employer NI 15% over £5,000; pension on qualifying earnings). Tax code &amp; NI category are applied; <b>not</b> modelled: Scottish/Welsh bands, student loans, statutory pay (SSP/SMP), Employment Allowance and RTI. The real payroll — exact calc, RTI/HMRC filing and statutory payslips — is your payroll provider / the accounting integration.</p>
     </div>
@@ -383,6 +437,7 @@ function EmpEditor({ emp, onSave, onClose }: { emp: Emp; onSave: (e: Emp) => voi
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Hours / week</span><Input inputMode="decimal" value={String(e.hpw)} onChange={(ev) => setE({ ...e, hpw: parseFloat(ev.target.value) || 0 })} disabled={e.basis === "year"} className="w-full" /></label>
           </div>
           {e.basis === "hour" && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Weeks / year <span className="normal-case text-[var(--ink-3)]">(52 = all year · 38–45 = term-time / seasonal)</span></span><Input inputMode="decimal" value={String(e.weeks)} onChange={(ev) => setE({ ...e, weeks: parseFloat(ev.target.value) || 52 })} className="w-full" /></label>}
+          {e.basis === "hour" && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Paid from <span className="normal-case text-[var(--ink-3)]">(admin/office staff → Contracted; coaches on the rota → Rostered)</span></span><Select value={e.paidFrom || "contracted"} onChange={(ev) => setE({ ...e, paidFrom: ev.target.value as "contracted" | "rota" })} className="w-full"><option value="contracted">Contracted hours</option><option value="rota">Rostered hours (from Schedule)</option></Select></label>}
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Tax code</span><Input value={e.taxCode} onChange={(ev) => setE({ ...e, taxCode: ev.target.value })} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">NI category</span><Select value={e.niCat} onChange={(ev) => setE({ ...e, niCat: ev.target.value })} className="w-full">{["A", "B", "C", "H", "M"].map((c) => <option key={c} value={c}>{c}</option>)}</Select></label>
@@ -399,15 +454,15 @@ function EmpEditor({ emp, onSave, onClose }: { emp: Emp; onSave: (e: Emp) => voi
 // Per-run adjustments for one employee: hours / tax code / NI / additions /
 // deductions / manual PAYE-NI-pension overrides. Everything editable; net always
 // recalculates. Saves to the period's adjustment store, not the master record.
-function RunAdjust({ emp, period, value, rotaHours, rotaRate, hoursSource, onSave, onClose }: { emp: Emp; period: string; value?: Adjust; rotaHours?: number; rotaRate?: number; hoursSource: "contracted" | "rota"; onSave: (a: Adjust | null) => void; onClose: () => void }) {
+function RunAdjust({ emp, period, freq, value, rotaHours, rotaRate, hoursSource, onSave, onClose }: { emp: Emp; period: string; freq: Freq; value?: Adjust; rotaHours?: number; rotaRate?: number; hoursSource: "contracted" | "rota"; onSave: (a: Adjust | null) => void; onClose: () => void }) {
   const [d, setD] = useState<Adjust>(() => ({ hours: value?.hours ?? null, taxCode: value?.taxCode ?? "", niCat: value?.niCat ?? "", additions: value?.additions ? value.additions.map((x) => ({ ...x })) : [], deductions: value?.deductions ? value.deductions.map((x) => ({ ...x })) : [], override: { paye: value?.override?.paye ?? null, eeNi: value?.override?.eeNi ?? null, eePen: value?.override?.eePen ?? null } }));
   const [showManual, setShowManual] = useState(!!(value?.override && (value.override.paye != null || value.override.eeNi != null || value.override.eePen != null)));
-  const contracted = emp.basis === "hour" ? r2(emp.hpw * (emp.weeks || 52) / 12) : 0;
+  const contracted = emp.basis === "hour" ? r2(emp.hpw * (emp.weeks || 52) / PPY[freq]) : 0;
   const sourceHours = hoursSource === "rota" ? (rotaHours ?? 0) : contracted;
   const num = (s: string) => { const n = parseFloat(s); return Number.isNaN(n) ? 0 : n; };
 
   const eff = { hours: d.hours != null ? d.hours : (hoursSource === "rota" ? (rotaHours ?? 0) : undefined), rate: hoursSource === "rota" && d.hours == null ? rotaRate : undefined, taxCode: d.taxCode || undefined, niCat: d.niCat || undefined, additions: d.additions, deductions: d.deductions, override: d.override };
-  const pl = computeLine(emp, eff);
+  const pl = computeLine(emp, eff, freq);
 
   const setItems = (key: "additions" | "deductions", items: AdjItem[]) => setD({ ...d, [key]: items });
   const addItem = (key: "additions" | "deductions", label = "") => setItems(key, [...(d[key] || []), { id: crypto.randomUUID(), label, amount: 0 }]);
@@ -451,7 +506,7 @@ function RunAdjust({ emp, period, value, rotaHours, rotaRate, hoursSource, onSav
               <Input inputMode="decimal" value={d.hours != null ? String(d.hours) : ""} placeholder={`${sourceHours} (from ${hoursSource === "rota" ? "Schedule" : "contract"})`} onChange={(ev) => setD({ ...d, hours: ev.target.value.trim() === "" ? null : num(ev.target.value) })} className="w-full" />
               <span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">Schedule: <b>{rotaHours != null ? `${r2(rotaHours)}h` : "no shifts"}</b> · Contracted: <b>{contracted}h</b>{hoursSource === "rota" && rotaRate ? ` · Schedule rate £${rotaRate.toFixed(2)}/hr` : ""}. Leave blank to use the {hoursSource === "rota" ? "rostered" : "contracted"} figure.</span>
             </label>
-          ) : <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Salaried — {gbp0(emp.rate / 12)}/month base. Add a bonus or deduction below.</div>}
+          ) : <div className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] text-[var(--ink-3)]">Salaried — {gbp0(emp.rate / PPY[freq])} base per {FREQ_LABEL[freq].toLowerCase()} period. Add a bonus or deduction below.</div>}
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className={lbl}>Tax code (this run)</span><Input value={d.taxCode} placeholder={emp.taxCode} onChange={(ev) => setD({ ...d, taxCode: ev.target.value })} className="w-full" /></label>
             <label className="block"><span className={lbl}>NI category</span><Select value={d.niCat || ""} onChange={(ev) => setD({ ...d, niCat: ev.target.value })} className="w-full"><option value="">{emp.niCat} (default)</option>{["A", "B", "C", "H", "M"].map((c) => <option key={c} value={c}>{c}</option>)}</Select></label>
