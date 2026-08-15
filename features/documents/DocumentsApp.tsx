@@ -223,6 +223,11 @@ function DocEditor({ doc, roles, titles, onSave, onClose }: { doc: DocItem; role
                 <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">📋 Specific listings</div><div className="flex flex-wrap gap-1.5">{DEMO_LISTINGS.map((l) => chip(d.listings.includes(l), () => toggle("listings", l), l))}</div><div className="mt-1 text-[10px] text-[var(--ink-3)]">Use this for a risk assessment that applies to one activity only.</div></div>
               </div>
             )}
+            <div className="mt-2 rounded-lg border border-[#cfe0f5] bg-[#eef4fd] px-3 py-2 text-[11px] leading-relaxed text-[#1d3a8f]">
+              <b>⏱ When will staff see this?</b><br />
+              • Assigned to <b>all staff</b>, <b>🔑 permission roles</b> or <b>🧑‍🏫 job titles</b> → they read it during <b>onboarding, as soon as they first log in</b> (their role/title is set when you send the invite).<br />
+              • Assigned to a <b>📋 specific listing</b> → it appears <b>only once they&rsquo;re deployed to that listing</b> (deployment happens after they sign up), in their <b>Documents</b> area.
+            </div>
           </div>
         </div>
         <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ml-auto" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!d.title.trim()} onClick={() => onSave(d)}>Save document</Button></div>
