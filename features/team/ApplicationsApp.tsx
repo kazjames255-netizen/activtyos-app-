@@ -79,6 +79,7 @@ export function ApplicationsPanel() {
   const [sel, setSel] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [editForm, setEditForm] = useState<AppForm | null>(null);
+  const [sendOpen, setSendOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => {
     try { const f = JSON.parse(localStorage.getItem(FORMS_KEY) || "null"); if (Array.isArray(f) && f.length) setForms(f); } catch { /* ignore */ }
@@ -104,6 +105,7 @@ export function ApplicationsPanel() {
             <button key={k} type="button" onClick={() => setTab(k)} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (tab === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
           ))}
         </div>
+        <Button variant="primary" className="ml-auto" onClick={() => setSendOpen(true)}>📨 Send application</Button>
       </div>
 
       {tab === "received" ? (
@@ -166,7 +168,7 @@ export function ApplicationsPanel() {
             <Card key={form.id} className="flex flex-wrap items-center gap-3 p-3.5">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[18px]">📝</span>
               <div className="min-w-0 flex-1"><div className="text-[13.5px] font-extrabold text-[var(--ink)]">{form.name}</div><div className="text-[11.5px] text-[var(--ink-3)]">{form.fields.length} fields · {form.fields.filter((x) => x.mapsTo).length} carry into onboarding</div></div>
-              <Button onClick={() => flash(`🔗 Application link copied — send it to candidates (demo). Real link + email come from the backend.`)}>Send application</Button>
+              <Button onClick={() => setSendOpen(true)}>Send</Button>
               <Button onClick={() => setEditForm(form)}>Edit</Button>
               {forms.length > 1 && <button type="button" title="Delete" onClick={() => { if (window.confirm(`Delete “${form.name}”?`)) saveForms(forms.filter((x) => x.id !== form.id)); }} className="rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>}
             </Card>
@@ -174,8 +176,44 @@ export function ApplicationsPanel() {
         </div>
       )}
 
+      {sendOpen && <SendModal forms={forms} onSent={flash} onClose={() => setSendOpen(false)} />}
       {editForm && <FormEditor form={editForm} jobTitles={settings.staffRoles ?? []} onSave={(fm) => { saveForms(forms.some((x) => x.id === fm.id) ? forms.map((x) => (x.id === fm.id ? fm : x)) : [...forms, fm]); setEditForm(null); }} onClose={() => setEditForm(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
+    </div>
+  );
+}
+
+// Send an application form: share a public link, or email a specific candidate.
+function SendModal({ forms, onSent, onClose }: { forms: AppForm[]; onSent: (m: string) => void; onClose: () => void }) {
+  const [formId, setFormId] = useState(forms[0]?.id ?? "");
+  const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [copied, setCopied] = useState(false);
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const link = `${origin}/apply/${formId}`;
+  const copy = () => { try { navigator.clipboard?.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ } };
+  const emailIt = () => { if (!email.trim()) return; onClose(); onSent(`📨 Application invite sent to ${name.trim() || email.trim()} — when they apply it lands in Applications.`); };
+  return (
+    <div className="fixed inset-0 z-[141] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
+      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Send an application</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <p className="mb-3 text-[12px] text-[var(--ink-3)]">Candidates fill it in and their application lands in <b>Applications</b> for you to review.</p>
+
+        {forms.length > 1 && <label className="mb-3 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Which form</span><Select value={formId} onChange={(e) => setFormId(e.target.value)} className="w-full">{forms.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}</Select></label>}
+
+        <div className="mb-3 rounded-xl border border-[var(--line)] p-3">
+          <div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🔗 Share a link</div>
+          <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Post it on a job board, your website or socials — anyone with the link can apply.</div>
+          <div className="flex items-center gap-2"><Input value={link} readOnly className="flex-1 text-[12px]" onFocus={(e) => e.currentTarget.select()} /><Button onClick={copy}>{copied ? "Copied ✓" : "Copy"}</Button></div>
+        </div>
+
+        <div className="rounded-xl border border-[var(--line)] p-3">
+          <div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">✉️ Or email a candidate</div>
+          <div className="grid gap-2">
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Their name (optional)" className="w-full" />
+            <div className="flex items-center gap-2"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="flex-1" /><Button variant="primary" disabled={!email.trim()} onClick={emailIt}>Send</Button></div>
+          </div>
+        </div>
+        <p className="mt-3 text-[11px] text-[var(--ink-3)]">Demo: the link + email send are wired to the backend (Amir). The <b>/apply</b> page candidates fill in is the backend piece.</p>
+      </div>
     </div>
   );
 }
