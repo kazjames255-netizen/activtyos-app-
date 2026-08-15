@@ -5,12 +5,12 @@
 // is evidence-based. Matched to people by name (demo). Backend owed.
 import { DEMO_STAFF } from "@/features/learning/credentials";
 import {
-  type Review, type ReviewTemplate, type FeedbackNote, type PIP, type Talent, type Competency,
-  type ReviewKind, isoDate, bradford,
+  type Review, type ReviewTemplate, type FeedbackNote, type PIP, type Talent, type Competency, type BoxDef,
+  type ReviewKind, isoDate, bradford, NINEBOX,
 } from "@/lib/appraisals";
 
 export const slug = (name: string) => name.trim().toLowerCase().replace(/\s+/g, "-");
-const RK = "aos.appraisals.reviews.v1", TK = "aos.appraisals.templates.v1", FK = "aos.appraisals.feedback.v1", PK = "aos.appraisals.pips.v1", LK = "aos.appraisals.talent.v1";
+const RK = "aos.appraisals.reviews.v1", TK = "aos.appraisals.templates.v1", FK = "aos.appraisals.feedback.v1", PK = "aos.appraisals.pips.v1", LK = "aos.appraisals.talent.v1", BK = "aos.appraisals.boxes.v1";
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } };
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "id" + Math.floor(performance.now() * 1000));
@@ -82,6 +82,12 @@ export function seedTalent(): Talent[] {
 }
 export const loadTalent = (): Talent[] => { const s = read<Talent[]>(LK); return Array.isArray(s) && s.length ? s : seedTalent(); };
 export const saveTalent = (t: Talent[]) => write(LK, t);
+
+// ── 9-box categories (editable) ─────────────────────────────────────────────
+export const loadBoxes = (): Record<string, BoxDef> => { const s = read<Record<string, BoxDef>>(BK); return s && Object.keys(s).length === 9 ? s : { ...NINEBOX }; };
+export const saveBoxes = (b: Record<string, BoxDef>) => write(BK, b);
+export const resetBoxes = () => write(BK, { ...NINEBOX });
+export const BOX_TONES = ["#0f7a43", "#12b76a", "#3f7ae0", "#64748b", "#f59e0b", "#c0392b"];
 
 // ── Data-informed signals (pulled from the other areas) ─────────────────────
 export interface Signals { late: number; sicknessDays: number; sicknessSpells: number; bradford: number; dbs: string; pfa: string }

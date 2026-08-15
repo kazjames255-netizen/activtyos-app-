@@ -9,12 +9,12 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
-  type Review, type ReviewTemplate, type FeedbackNote, type PIP, type Talent, type ReviewKind, type Rating, type FeedbackKind,
-  KIND_LABEL, STATUS_LABEL, RATING_LABEL, FB_META, NINEBOX, nineBoxCell, overallScore, isOverdue, daysUntil, fmtDate, isoDate, bradfordTone,
+  type Review, type ReviewTemplate, type FeedbackNote, type PIP, type Talent, type ReviewKind, type Rating, type FeedbackKind, type BoxDef, type Goal,
+  KIND_LABEL, STATUS_LABEL, RATING_LABEL, GOAL_STATUS_LABEL, FB_META, NINEBOX, overallScore, isOverdue, daysUntil, fmtDate, isoDate, bradfordTone,
 } from "@/lib/appraisals";
 import {
   loadReviews, saveReviews, loadTemplates, saveTemplates, loadFeedback, saveFeedback, loadPIPs, savePIPs, loadTalent, saveTalent,
-  templateFor, signalsFor, slug,
+  loadBoxes, saveBoxes, resetBoxes, BOX_TONES, templateFor, signalsFor, slug,
 } from "./data";
 import { DEMO_STAFF } from "@/features/learning/credentials";
 
@@ -29,18 +29,23 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
   const [feedback, setFeedback] = useState<FeedbackNote[]>([]);
   const [pips, setPips] = useState<PIP[]>([]);
   const [talent, setTalent] = useState<Talent[]>([]);
+  const [boxes, setBoxes] = useState<Record<string, BoxDef>>(NINEBOX);
   const [op, setOp] = useState("all");
   const [edit, setEdit] = useState<Review | null>(null);
   const [newRev, setNewRev] = useState(false);
   const [fbAdd, setFbAdd] = useState(false);
+  const [fbType, setFbType] = useState<"all" | FeedbackKind>("all");
+  const [fbEditId, setFbEditId] = useState<string | null>(null);
+  const [fbDraft, setFbDraft] = useState("");
   const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => { setReviews(loadReviews()); setTemplates(loadTemplates()); setFeedback(loadFeedback()); setPips(loadPIPs()); setTalent(loadTalent()); }, []);
+  useEffect(() => { setReviews(loadReviews()); setTemplates(loadTemplates()); setFeedback(loadFeedback()); setPips(loadPIPs()); setTalent(loadTalent()); setBoxes(loadBoxes()); }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
   const persistR = (r: Review[]) => { setReviews(r); saveReviews(r); };
   const persistF = (f: FeedbackNote[]) => { setFeedback(f); saveFeedback(f); };
   const persistP = (p: PIP[]) => { setPips(p); savePIPs(p); };
   const persistT = (t: Talent[]) => { setTalent(t); saveTalent(t); };
   const persistTpl = (t: ReviewTemplate[]) => { setTemplates(t); saveTemplates(t); };
+  const persistBoxes = (b: Record<string, BoxDef>) => { setBoxes(b); saveBoxes(b); };
 
   const locations = useMemo(() => [...new Set(DEMO_STAFF.map((s) => s.op))].sort(), []);
   const inOp = (opv?: string) => op === "all" || opv === op;
@@ -91,20 +96,35 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
       )}
 
       {/* ── FEEDBACK ── */}
-      {sub === "feedback" && (
+      {sub === "feedback" && (() => {
+        const rows = feedback.filter((f) => inOp(DEMO_STAFF.find((s) => slug(s.name) === f.staffId)?.op) && (fbType === "all" || f.kind === fbType)).sort((a, b) => (a.at < b.at ? 1 : -1));
+        return (
         <Card className="mt-4 p-0">
-          <div className="border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Ongoing feedback & supervision — logged any time, ready for the next review</div>
-          <div className="divide-y divide-[var(--line)]">{feedback.filter((f) => inOp(DEMO_STAFF.find((s) => slug(s.name) === f.staffId)?.op)).sort((a, b) => (a.at < b.at ? 1 : -1)).map((f) => { const m = FB_META[f.kind]; return (
-            <div key={f.id} className="flex items-start gap-3 px-4 py-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[14px]" style={{ background: m.tone + "1a" }}>{m.icon}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{f.name}</span><span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: m.tone + "1a", color: m.tone }}>{m.label}</span><span className="ml-auto text-[10.5px] text-[var(--ink-3)]">{new Date(f.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span></div><div className="mt-0.5 text-[12px] text-[var(--ink-2)]">{f.text}</div></div></div>
+          <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
+            <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Ongoing feedback & supervision</span>
+            <div className="ml-auto inline-flex gap-1">
+              {([["all", "All"], ["kudos", "🌟 Kudos"], ["concern", "⚠️ Concern"], ["supervision", "🗒️ Supervision"]] as [("all" | FeedbackKind), string][]).map(([k, l]) => (
+                <button key={k} type="button" onClick={() => setFbType(k)} className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${fbType === k ? "bg-[#1d3a8f] text-white" : "bg-white text-[var(--ink-2)] ring-1 ring-black/5 hover:bg-[#f2f5fb]"}`}>{l}</button>
+              ))}
+            </div>
+          </div>
+          <div className="divide-y divide-[var(--line)]">{rows.map((f) => { const m = FB_META[f.kind]; const editing = fbEditId === f.id; return (
+            <div key={f.id} className="group flex items-start gap-3 px-4 py-3"><span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg text-[14px]" style={{ background: m.tone + "1a" }}>{m.icon}</span><div className="min-w-0 flex-1"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{f.name}</span><span className="rounded-full px-1.5 py-0.5 text-[9.5px] font-bold" style={{ background: m.tone + "1a", color: m.tone }}>{m.label}</span><span className="ml-auto text-[10.5px] text-[var(--ink-3)]">{new Date(f.at).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
+              {!editing && <><button type="button" onClick={() => { setFbEditId(f.id); setFbDraft(f.text); }} className="text-[11px] font-bold text-[#1d3a8f] opacity-0 hover:underline group-hover:opacity-100">Edit</button><button type="button" onClick={() => { persistF(feedback.filter((x) => x.id !== f.id)); flash("Note deleted."); }} className="text-[11px] font-bold text-[var(--ink-3)] opacity-0 hover:text-[#c0392b] group-hover:opacity-100">Delete</button></>}
+            </div>
+            {editing ? <div className="mt-1"><textarea value={fbDraft} onChange={(e) => setFbDraft(e.target.value)} rows={2} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /><div className="mt-1 flex justify-end gap-2"><Button onClick={() => setFbEditId(null)}>Cancel</Button><Button variant="primary" onClick={() => { persistF(feedback.map((x) => x.id === f.id ? { ...x, text: fbDraft.trim() } : x)); setFbEditId(null); flash("Note updated."); }}>Save</Button></div></div>
+              : <div className="mt-0.5 text-[12px] text-[var(--ink-2)]">{f.text}</div>}
+            </div></div>
           ); })}</div>
-          {feedback.length === 0 && <div className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">No notes yet.</div>}
+          {rows.length === 0 && <div className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">No notes{fbType !== "all" ? " of this type" : ""} yet.</div>}
         </Card>
-      )}
+        );
+      })()}
 
       {/* ── TALENT 9-BOX ── */}
       {sub === "talent" && (
-        <TalentGrid talent={talent.filter((t) => inOp(DEMO_STAFF.find((s) => slug(s.name) === t.staffId)?.op))} reviews={reviews}
-          onMove={(id, perf, pot) => { persistT(talent.map((x) => x.staffId === id ? { ...x, performance: perf, potential: pot } : x)); const s = DEMO_STAFF.find((x) => slug(x.name) === id); flash(`${s?.name.split(" ")[0]} → ${NINEBOX[`${perf}-${pot}`].label}`); }}
+        <TalentGrid talent={talent.filter((t) => inOp(DEMO_STAFF.find((s) => slug(s.name) === t.staffId)?.op))} reviews={reviews} boxes={boxes}
+          onMove={(id, perf, pot) => { persistT(talent.map((x) => x.staffId === id ? { ...x, performance: perf, potential: pot } : x)); const s = DEMO_STAFF.find((x) => slug(x.name) === id); flash(`${s?.name.split(" ")[0]} → ${boxes[`${perf}-${pot}`].label}`); }}
           onOpenReview={(id) => { const r = reviews.filter((x) => x.staffId === id).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]; if (r) setEdit(r); else flash("No review yet — start one on the Reviews tab."); }}
           onLogNote={(name, text) => { persistF([{ id: uid(), staffId: slug(name), name, kind: "supervision", text, at: new Date().toISOString(), by: "You" }, ...feedback]); flash("Note logged."); }} />
       )}
@@ -151,6 +171,23 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
           </ul>
         </Card>
       )}
+
+      {sub === "settings" && (
+        <Card className="mt-4 p-4">
+          <div className="mb-1 flex items-center gap-2"><div className="text-[14px] font-extrabold text-[var(--ink)]">Talent-grid categories</div><button type="button" onClick={() => { resetBoxes(); setBoxes(loadBoxes()); flash("Categories reset to default."); }} className="ml-auto text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Reset to default</button></div>
+          <div className="mb-3 text-[11.5px] text-[var(--ink-3)]">Rename each box, reword its recommended action, and pick a colour. These are what appear on the 9-box grid.</div>
+          <div className="grid gap-2 sm:grid-cols-3">
+            {([3, 2, 1] as const).flatMap((pot) => ([1, 2, 3] as const).map((perf) => { const key = `${perf}-${pot}`; const b = boxes[key]; return (
+              <div key={key} className="rounded-xl border p-2.5" style={{ borderColor: b.tone + "55", background: b.tone + "0d" }}>
+                <div className="mb-1 text-[9px] font-bold uppercase text-[var(--ink-3)]">P{perf} · Pot{pot}</div>
+                <Input value={b.label} onChange={(e) => persistBoxes({ ...boxes, [key]: { ...b, label: e.target.value } })} className="mb-1.5 text-[12px] font-bold" />
+                <textarea value={b.action} onChange={(e) => persistBoxes({ ...boxes, [key]: { ...b, action: e.target.value } })} rows={2} className="w-full rounded-lg border border-[var(--line)] p-1.5 text-[11px]" />
+                <div className="mt-1.5 flex gap-1">{BOX_TONES.map((t) => <button key={t} type="button" onClick={() => persistBoxes({ ...boxes, [key]: { ...b, tone: t } })} className={`h-5 w-5 rounded-full ${b.tone === t ? "ring-2 ring-offset-1 ring-[var(--ink-2)]" : ""}`} style={{ background: t }} title={t} />)}</div>
+              </div>
+            ); }))}
+          </div>
+        </Card>
+      )}
     </>
   );
 
@@ -176,8 +213,8 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
 const suggestPerf = (score: number | null): 1 | 2 | 3 | null => (score == null ? null : score >= 4 ? 3 : score >= 2.5 ? 2 : 1);
 const LMH = { 1: "Low", 2: "Med", 3: "High" } as const;
 
-function TalentGrid({ talent, reviews, onMove, onOpenReview, onLogNote }: {
-  talent: Talent[]; reviews: Review[];
+function TalentGrid({ talent, reviews, boxes, onMove, onOpenReview, onLogNote }: {
+  talent: Talent[]; reviews: Review[]; boxes: Record<string, BoxDef>;
   onMove: (id: string, perf: 1 | 2 | 3, pot: 1 | 2 | 3) => void;
   onOpenReview: (id: string) => void; onLogNote: (name: string, text: string) => void;
 }) {
@@ -204,7 +241,7 @@ function TalentGrid({ talent, reviews, onMove, onOpenReview, onLogNote }: {
                   <div className="text-[11px] font-extrabold text-[var(--ink-2)]">{POT_LABEL[pot]}</div>
                 </div>
                 {([1, 2, 3] as const).map((perf) => {
-                  const key = `${perf}-${pot}`; const cell = NINEBOX[key];
+                  const key = `${perf}-${pot}`; const cell = boxes[key];
                   const here = talent.filter((t) => t.performance === perf && t.potential === pot);
                   const isOver = over === key;
                   return (
@@ -228,7 +265,7 @@ function TalentGrid({ talent, reviews, onMove, onOpenReview, onLogNote }: {
                             onClick={() => setPlace(t.staffId)}
                             className="flex w-full cursor-grab items-center gap-1.5 rounded-lg bg-white p-1.5 text-left shadow-sm ring-1 ring-black/5 hover:ring-[color:var(--ink-3)] active:cursor-grabbing">
                             <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--panel)] text-[9px] font-extrabold text-[var(--ink-2)]">{s.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("")}</span>
-                            <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-bold text-[var(--ink)]">{s.name}</span><span className="block truncate text-[9px] text-[var(--ink-3)]">{s.role}{mismatch ? ` · ⚑ ${NINEBOX[`${sug}-${pot}`].label}` : ""}</span></span>
+                            <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-bold text-[var(--ink)]">{s.name}</span><span className="block truncate text-[9px] text-[var(--ink-3)]">{s.role}{mismatch ? ` · ⚑ ${boxes[`${sug}-${pot}`].label}` : ""}</span></span>
                             {sc != null && <span className="shrink-0 rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[9.5px] font-extrabold text-[#1d3a8f]">{sc}</span>}
                           </button>
                         );
@@ -245,19 +282,19 @@ function TalentGrid({ talent, reviews, onMove, onOpenReview, onLogNote }: {
         </div>
       </div>
       {place && (() => { const s = staffOf(place); if (!s) return null; const t = talent.find((x) => x.staffId === place); const sc = scoreFor(place); const sug = suggestPerf(sc);
-        return <PlacePopover name={s.name} role={s.role} perf={t?.performance ?? 2} pot={t?.potential ?? 2} score={sc} suggest={sug}
+        return <PlacePopover name={s.name} role={s.role} perf={t?.performance ?? 2} pot={t?.potential ?? 2} score={sc} suggest={sug} boxes={boxes}
           onMove={(perf, pot) => onMove(place, perf, pot)} onOpenReview={() => { onOpenReview(place); setPlace(null); }} onLogNote={(txt) => onLogNote(s.name, txt)} onClose={() => setPlace(null)} />;
       })()}
     </Card>
   );
 }
 
-function PlacePopover({ name, role, perf, pot, score, suggest, onMove, onOpenReview, onLogNote, onClose }: {
-  name: string; role: string; perf: 1 | 2 | 3; pot: 1 | 2 | 3; score: number | null; suggest: 1 | 2 | 3 | null;
+function PlacePopover({ name, role, perf, pot, score, suggest, boxes, onMove, onOpenReview, onLogNote, onClose }: {
+  name: string; role: string; perf: 1 | 2 | 3; pot: 1 | 2 | 3; score: number | null; suggest: 1 | 2 | 3 | null; boxes: Record<string, BoxDef>;
   onMove: (perf: 1 | 2 | 3, pot: 1 | 2 | 3) => void; onOpenReview: () => void; onLogNote: (text: string) => void; onClose: () => void;
 }) {
   const [p, setP] = useState<1 | 2 | 3>(perf); const [q, setQ] = useState<1 | 2 | 3>(pot); const [note, setNote] = useState("");
-  const cell = NINEBOX[`${p}-${q}`];
+  const cell = boxes[`${p}-${q}`];
   const Row = ({ label, val, set, hint }: { label: string; val: 1 | 2 | 3; set: (n: 1 | 2 | 3) => void; hint?: 1 | 2 | 3 | null }) => (
     <div className="flex items-center gap-2"><span className="w-20 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{label}</span><div className="flex gap-1">{([1, 2, 3] as const).map((n) => <button key={n} type="button" onClick={() => set(n)} className={`h-8 w-14 rounded-lg text-[11px] font-bold ${val === n ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-2)] hover:bg-[#e2e8f4]"}`}>{LMH[n]}{hint === n && val !== n ? " ⚑" : ""}</button>)}</div></div>
   );
@@ -312,9 +349,18 @@ function ReviewEditor({ rev, onSave, onClose }: { rev: Review; onSave: (r: Revie
 
         {/* goals */}
         <div className="mt-3 flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🎯 Goals & objectives</div><button type="button" onClick={addGoal} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add goal</button></div>
-        <div className="mt-1 space-y-1.5">{r.goals.map((g) => (
-          <div key={g.id} className="flex items-center gap-2"><Input value={g.title} onChange={(e) => setGoal(g.id, { title: e.target.value })} placeholder="SMART objective" className="flex-1 text-[12.5px]" /><Input type="date" value={g.due || ""} onChange={(e) => setGoal(g.id, { due: e.target.value })} className="w-36" /><Select value={g.status} onChange={(e) => setGoal(g.id, { status: e.target.value as Review["goals"][number]["status"] })} className="w-28">{["open", "progress", "done", "carried"].map((s) => <option key={s} value={s}>{s}</option>)}</Select><button type="button" onClick={() => set({ goals: r.goals.filter((x) => x.id !== g.id) })} className="px-1 text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button></div>
-        ))}{r.goals.length === 0 && <div className="text-[11.5px] text-[var(--ink-3)]">No goals set yet.</div>}</div>
+        <div className="mt-1 space-y-2">{r.goals.map((g) => { const pct = g.status === "done" ? 100 : (g.progress ?? 0); return (
+          <div key={g.id} className="rounded-xl border border-[var(--line)] p-2.5">
+            <div className="flex items-center gap-2"><Input value={g.title} onChange={(e) => setGoal(g.id, { title: e.target.value })} placeholder="SMART objective — e.g. Mentor two new coaches by term end" className="flex-1 text-[12.5px] font-semibold" /><Select value={g.status} onChange={(e) => setGoal(g.id, { status: e.target.value as Goal["status"] })} className="w-32 text-[12px]">{(Object.keys(GOAL_STATUS_LABEL) as Goal["status"][]).map((s) => <option key={s} value={s}>{GOAL_STATUS_LABEL[s]}</option>)}</Select><button type="button" onClick={() => set({ goals: r.goals.filter((x) => x.id !== g.id) })} className="px-1 text-[15px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button></div>
+            <textarea value={g.detail || ""} onChange={(e) => setGoal(g.id, { detail: e.target.value })} rows={2} placeholder="What good looks like, how it'll be measured, support needed…" className="mt-1.5 w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" />
+            <div className="mt-1.5 flex flex-wrap items-center gap-3">
+              <div className="flex min-w-[160px] flex-1 items-center gap-2"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Progress</span><input type="range" min={0} max={100} step={5} value={pct} disabled={g.status === "done"} onChange={(e) => setGoal(g.id, { progress: Number(e.target.value) })} className="flex-1 accent-[#1d3a8f]" /><span className="w-9 text-right text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{pct}%</span></div>
+              <label className="flex items-center gap-1 text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Links to<Select value={g.compId || ""} onChange={(e) => setGoal(g.id, { compId: e.target.value || undefined })} className="text-[11px] font-normal normal-case"><option value="">— competency —</option>{tpl.competencies.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}</Select></label>
+              <label className="flex items-center gap-1 text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Target<Input type="date" value={g.due || ""} onChange={(e) => setGoal(g.id, { due: e.target.value })} className="w-36 text-[11px]" /></label>
+            </div>
+            <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full bg-[#1d3a8f] transition-[width]" style={{ width: `${pct}%` }} /></div>
+          </div>
+        ); })}{r.goals.length === 0 && <div className="text-[11.5px] text-[var(--ink-3)]">No goals set yet — add SMART objectives to work on before the next review.</div>}</div>
 
         {/* probation outcome */}
         {r.kind === "probation" && <label className="mt-3 block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Probation outcome</span><Select value={r.probationOutcome || ""} onChange={(e) => set({ probationOutcome: (e.target.value || undefined) as Review["probationOutcome"] })} className="w-full"><option value="">Not decided</option><option value="pass">✓ Pass — confirm in post</option><option value="extend">Extend probation</option><option value="fail">Do not confirm</option></Select></label>}

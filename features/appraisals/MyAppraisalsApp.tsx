@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
-import { type Review, type Rating, KIND_LABEL, STATUS_LABEL, RATING_LABEL, fmtDate, daysUntil, isOverdue, overallScore } from "@/lib/appraisals";
+import { type Review, type Rating, KIND_LABEL, STATUS_LABEL, RATING_LABEL, GOAL_STATUS_LABEL, fmtDate, daysUntil, isOverdue, overallScore } from "@/lib/appraisals";
 import { loadReviews, saveReviews, templateFor, slug } from "./data";
 
 const ME = "Marcus Bell";
@@ -42,7 +42,7 @@ export function MyAppraisalsApp() {
         <Card className="p-4">
           <div className="mb-2 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">🎯 My goals</div>
           {goals.length === 0 ? <div className="text-[12.5px] text-[var(--ink-3)]">No open goals right now.</div> : <div className="space-y-2">{goals.map((g) => (
-            <div key={g.id} className="rounded-xl border border-[var(--line)] p-2.5"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{g.title || "Untitled goal"}</span><span className="ml-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{g.status}</span></div><div className="mt-0.5 text-[10.5px] text-[var(--ink-3)]">{g.from}{g.due ? ` · target ${fmtDate(g.due)}` : ""}</div>{typeof g.progress === "number" && <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full bg-[#1d3a8f]" style={{ width: `${g.progress}%` }} /></div>}</div>
+            <div key={g.id} className="rounded-xl border border-[var(--line)] p-2.5"><div className="flex items-center gap-2"><span className="text-[12.5px] font-bold text-[var(--ink)]">{g.title || "Untitled goal"}</span><span className="ml-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{GOAL_STATUS_LABEL[g.status]}</span></div>{g.detail && <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{g.detail}</div>}<div className="mt-0.5 text-[10.5px] text-[var(--ink-3)]">{g.from}{g.due ? ` · target ${fmtDate(g.due)}` : ""}</div>{(typeof g.progress === "number" || g.status === "done") && <div className="mt-1.5 flex items-center gap-2"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full bg-[#1d3a8f]" style={{ width: `${g.status === "done" ? 100 : g.progress}%` }} /></div><span className="text-[10px] font-bold tabular-nums text-[var(--ink-3)]">{g.status === "done" ? 100 : g.progress}%</span></div>}</div>
           ))}</div>}
         </Card>
 

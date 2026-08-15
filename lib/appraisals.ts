@@ -18,7 +18,9 @@ export type ReviewStatus = "scheduled" | "self" | "manager" | "signoff" | "compl
 export const STATUS_LABEL: Record<ReviewStatus, string> = { scheduled: "Scheduled", self: "Self-assessment", manager: "Manager review", signoff: "Awaiting sign-off", complete: "Complete" };
 
 export interface CompScore { id: string; rating?: Rating; note?: string }
-export interface Goal { id: string; title: string; detail?: string; due?: string; status: "open" | "progress" | "done" | "carried"; progress?: number }
+export interface Goal { id: string; title: string; detail?: string; due?: string; status: "open" | "progress" | "done" | "carried"; progress?: number; compId?: string }
+export const GOAL_STATUS_LABEL: Record<Goal["status"], string> = { open: "Not started", progress: "In progress", done: "Achieved", carried: "Carried over" };
+export type BoxDef = { label: string; tone: string; action: string };
 export interface Review {
   id: string; staffId: string; name: string; role?: string; op?: string;
   kind: ReviewKind; templateId?: string; due: string; status: ReviewStatus;
