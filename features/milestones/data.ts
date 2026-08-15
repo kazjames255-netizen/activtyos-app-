@@ -39,7 +39,7 @@ export function seedTemplate(): MPhase[] {
       step("Share moments with parents", "Post photos and highlights during the day.", [{ label: "Moments", href: "/franchise/moments" }]),
       step("Close the register each day", "Sign children out and close the day's register.", [{ label: "Registers", href: "/franchise/registers" }]),
     ] },
-    { id: uid(), title: "Wrap & review", subtitle: "After the season — close it out and learn from it.", when: "after", recurring: true, icon: "✅", steps: [
+    { id: uid(), title: "Wrap & review", subtitle: "After the season — close it out and learn from it.", when: "after", recurring: true, icon: "📊", steps: [
       step("Reconcile income & expenses", "Match takings and costs; check the season's numbers.", [{ label: "Reconciliation", href: "/franchise/reconciliation" }, { label: "Finance", href: "/franchise/finance" }]),
       step("Run payroll", "Approve hours and pay your team.", [{ label: "Payroll", href: "/franchise/payroll" }]),
       step("Send a parent feedback survey", "Gather reviews and NPS while it's fresh.", [{ label: "Email", href: "/franchise/email" }]),
