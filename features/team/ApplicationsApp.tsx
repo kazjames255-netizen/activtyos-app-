@@ -16,9 +16,50 @@ type AField = { id: string; label: string; type: "text" | "textarea" | "email" |
 // the provider's sites — applicants pick one or more they can work at (demo; real
 // locations come from the backend). Deployment to specific listings happens later.
 const APP_LOCATIONS = ["Milton Keynes", "Northampton", "Bedford", "Company-owned (Head Office)"];
-interface AppForm { id: string; name: string; fields: AField[]; summary?: string; payKind?: string; payAmount?: string }
+interface AppForm { id: string; name: string; fields: AField[]; summary?: string; payKind?: string; payAmount?: string; logo?: string; accent?: string }
+const escH = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
 const PAY_KINDS = ["Not stated", "Per hour", "Per day", "Annual salary", "Range"];
 const payLabel = (f: AppForm) => f.payKind && f.payKind !== "Not stated" && f.payAmount ? `${f.payAmount}${f.payKind === "Per hour" ? "/hour" : f.payKind === "Per day" ? "/day" : f.payKind === "Annual salary" ? "/year" : ""}` : "";
+
+// Nice-looking applicant preview — opens the form branded as a candidate sees it.
+function previewForm(form: AppForm, provider: string) {
+  if (typeof window === "undefined") return;
+  const accent = form.accent || "#1d3a8f";
+  const pay = payLabel(form);
+  const field = (fl: AField) => {
+    const req = fl.required ? '<span class="rq">*</span>' : "";
+    let ctrl = "";
+    if (fl.type === "textarea") ctrl = '<textarea class="in" rows="3" placeholder="Your answer…"></textarea>';
+    else if (fl.type === "select") ctrl = `<select class="in"><option value="">Choose…</option>${(fl.options ?? []).map((o) => `<option>${escH(o)}</option>`).join("")}</select>`;
+    else if (fl.type === "file") ctrl = '<div class="file"><span class="fbtn">⬆ Upload</span> or drag a file here</div>';
+    else if (fl.type === "locations") ctrl = `<div class="locs">${APP_LOCATIONS.map((l) => `<label class="lc"><input type="checkbox"> ${escH(l)}</label>`).join("")}</div>`;
+    else ctrl = `<input class="in" type="${fl.type === "date" ? "date" : fl.type === "tel" ? "tel" : fl.type === "email" ? "email" : "text"}" placeholder="${fl.type === "email" ? "you@email.com" : fl.type === "tel" ? "07…" : ""}">`;
+    return `<div class="fld"><label class="lb">${escH(fl.label)}${req}</label>${ctrl}</div>`;
+  };
+  const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escH(form.name)} — Apply</title><style>
+    :root{--a:${accent}}*{box-sizing:border-box}body{margin:0;background:#eef2f9;font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b}
+    .wrap{max-width:680px;margin:0 auto;padding:30px 16px 60px}
+    .card{background:#fff;border-radius:20px;overflow:hidden;box-shadow:0 30px 70px -40px rgba(16,32,90,.5)}
+    .hero{background:linear-gradient(135deg,var(--a),color-mix(in srgb,var(--a) 55%,#ffffff));color:#fff;padding:26px 28px}
+    .logo{height:46px;background:#fff;border-radius:9px;padding:5px;display:block;margin-bottom:12px}
+    .prov{font-size:11px;font-weight:800;letter-spacing:.14em;text-transform:uppercase;opacity:.92}
+    h1{font-size:24px;margin:.2em 0 .1em}
+    .pay{display:inline-block;background:rgba(255,255,255,.22);border-radius:99px;padding:4px 12px;font-size:12.5px;font-weight:800;margin-top:6px}
+    .sum{font-size:13.5px;line-height:1.55;opacity:.95;margin-top:8px}
+    form{padding:22px 28px}
+    .fld{margin-bottom:16px}.lb{display:block;font-size:12.5px;font-weight:800;color:#3a4a68;margin-bottom:6px}.rq{color:#c0392b;margin-left:3px}
+    .in{width:100%;border:1px solid #d9e0ee;border-radius:10px;padding:10px 12px;font-size:14px;font-family:inherit;background:#fff}.in:focus{outline:none;border-color:var(--a)}textarea.in{resize:vertical}
+    .file{border:1.5px dashed #cdd6e8;border-radius:10px;padding:12px;font-size:12.5px;color:#8a92a8}.fbtn{color:var(--a);font-weight:800}
+    .locs{display:flex;flex-wrap:wrap;gap:8px}.lc{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;background:#f4f6fb;border:1px solid #e6ebf5;border-radius:10px;padding:7px 11px}
+    .submit{width:100%;background:var(--a);color:#fff;border:0;border-radius:12px;padding:13px;font-size:15px;font-weight:800;cursor:pointer;margin-top:6px}
+    .foot{text-align:center;font-size:11px;color:#8a92a8;margin-top:14px}
+    .badge{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:#111634;color:#fff;font-size:11.5px;font-weight:800;padding:6px 14px;border-radius:99px;opacity:.92;z-index:9}
+  </style></head><body><div class="badge">👁 Applicant preview — what candidates see</div><div class="wrap"><div class="card">
+    <div class="hero">${form.logo ? `<img class="logo" src="${form.logo}"/>` : ""}<div class="prov">${escH(provider)}</div><h1>${escH(form.name)}</h1>${pay ? `<span class="pay">💷 ${escH(pay)}</span>` : ""}${form.summary ? `<div class="sum">${escH(form.summary)}</div>` : ""}</div>
+    <form onsubmit="return false">${form.fields.map(field).join("")}<button class="submit" type="button">Submit application</button><div class="foot">Powered by ActivityOS</div></form>
+  </div></div></body></html>`;
+  const w = window.open(); if (w) { w.document.write(html); w.document.close(); }
+}
 interface Application { id: string; formId: string; name: string; email: string; answers: Record<string, string>; files?: Record<string, { name: string; data: string }>; locations?: string[]; submittedAt: string; status: "new" | "accepted" | "rejected"; rejectReason?: string; onboardingSent?: boolean }
 const openFile = (dataUrl?: string) => { if (!dataUrl || typeof window === "undefined") return; const w = window.open(); if (w) w.document.write(`<iframe src="${dataUrl}" style="border:0;width:100vw;height:100vh"></iframe>`); };
 const SAMPLE_PDF = "data:text/html,<body style='font-family:Georgia;padding:60px;max-width:640px;margin:auto'><h2>Sample uploaded document</h2><p>This is a placeholder for the document the applicant attached. Real uploads are stored and viewed here once the backend is wired.</p></body>";
@@ -29,32 +70,58 @@ const ONBOARD_RECORDS_KEY = "aos.team.onboardrecords.v1";
 
 const F = (id: string, label: string, type: AField["type"], required = false, mapsTo?: string, options?: string[]): AField => ({ id, label, type, required, mapsTo, options });
 
+// The master template — a comprehensive UK children's-activity application form.
+// Fully editable; fields with mapsTo pre-fill onboarding on accept.
 function defaultForm(): AppForm {
   return {
-    id: "standard", name: "Standard application",
+    id: "standard", name: "Standard application", accent: "#1d3a8f",
+    summary: "Thanks for your interest in joining our team! Please complete this application in full — it should take about 10 minutes. Fields marked * are required.",
+    payKind: "Not stated",
     fields: [
+      // — about you —
       F("fullName", "Full name", "text", true, "fullName"),
+      F("prevNames", "Previous / known-as names", "text", false, "prevNames"),
+      F("dob", "Date of birth", "date", false, "dob"),
       F("email", "Email", "email", true, "email"),
-      F("phone", "Phone", "tel", true, "phone"),
-      F("address1", "Address", "text", false, "address1"),
+      F("phone", "Mobile number", "tel", true, "phone"),
+      F("address1", "Address line 1", "text", false, "address1"),
       F("town", "Town / city", "text", false, "town"),
       F("postcode", "Postcode", "text", false, "postcode"),
       F("nationality", "Nationality", "text", false, "nationality"),
+      // — the role —
       F("position", "Position applied for", "text", false, "jobTitle"),
       F("locations", "Location(s) you can work at", "locations", true),
+      F("hours", "Hours / days you're looking for", "text", false, "hours"),
+      F("startDate", "Earliest start date", "date", false, "startDate"),
+      F("why", "Why do you want this role?", "textarea", false),
+      // — experience & qualifications —
       F("experience", "Relevant experience", "textarea", false),
-      F("qualifications", "Qualifications", "textarea", false, "qualifications"),
-      F("idFile", "Photo ID (upload)", "file", false, "idFile"),
-      F("rtwEvidence", "Right-to-work document (upload)", "file", false, "rtwEvidence"),
-      F("dbsFile", "DBS certificate, if held (upload)", "file", false, "dbsFile"),
+      F("qualifications", "Qualifications & training", "textarea", false, "qualifications"),
       F("qualDocs", "Qualification certificates (upload)", "file", false, "qualDocs"),
-      F("ref1Name", "Reference 1 — name", "text", false, "ref1Name"),
+      // — right to work —
+      F("rtw", "Do you have the right to work in the UK?", "select", true, undefined, ["Yes", "Not yet / need sponsorship"]),
+      F("shareCode", "Right-to-work share code (if applicable)", "text", false, "shareCode"),
+      F("rtwEvidence", "Right-to-work document (upload)", "file", false, "rtwEvidence"),
+      F("idFile", "Photo ID (upload)", "file", false, "idFile"),
+      // — safeguarding self-declaration —
+      F("disqualQ", "Are you disqualified from working with children? (Childcare Disqualification Regs)", "select", true, undefined, ["No", "Yes"]),
+      F("convictions", "Do you have any unspent convictions or cautions? (this post is exempt from the Rehabilitation of Offenders Act)", "select", true, undefined, ["No", "Yes — will disclose"]),
+      F("dbsHeld", "Do you hold a current enhanced DBS?", "select", false, undefined, ["No", "Yes", "Yes — on the Update Service"]),
+      F("dbsFile", "DBS certificate, if held (upload)", "file", false, "dbsFile"),
+      // — references —
+      F("ref1Name", "Reference 1 — name", "text", true, "ref1Name"),
+      F("ref1Org", "Reference 1 — organisation", "text", false, "ref1Org"),
       F("ref1Email", "Reference 1 — email", "email", false, "ref1Email"),
       F("ref1Phone", "Reference 1 — phone", "tel", false, "ref1Phone"),
-      F("ref2Name", "Reference 2 — name", "text", false, "ref2Name"),
+      F("ref2Name", "Reference 2 — name", "text", true, "ref2Name"),
+      F("ref2Org", "Reference 2 — organisation", "text", false, "ref2Org"),
       F("ref2Email", "Reference 2 — email", "email", false, "ref2Email"),
-      F("rtw", "Do you have the right to work in the UK?", "select", true, undefined, ["Yes", "Not yet / need sponsorship"]),
-      F("why", "Why do you want this role?", "textarea", false),
+      F("employHistory", "Employment history & any gaps", "textarea", false, "employHistory"),
+      // — emergency & extras —
+      F("emergName", "Emergency contact — name", "text", false, "emergName"),
+      F("emergPhone", "Emergency contact — phone", "tel", false, "emergPhone"),
+      F("heardVia", "How did you hear about this role?", "text", false),
+      F("cv", "Upload your CV (optional)", "file", false),
     ],
   };
 }
@@ -90,6 +157,7 @@ function carryOver(app: Application, form: AppForm) {
 
 export function ApplicationsPanel() {
   const { settings } = useSettings();
+  const provider = settings.providerName || settings.billing?.businessName || "Your company";
   const [tab, setTab] = useState<"received" | "forms">("received");
   const [forms, setForms] = useState<AppForm[]>([defaultForm()]);
   const [apps, setApps] = useState<Application[]>(seedApps);
@@ -228,6 +296,7 @@ export function ApplicationsPanel() {
             <Card key={form.id} className="flex flex-wrap items-center gap-3 p-3.5">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[18px]">📝</span>
               <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{form.name}</span>{payLabel(form) && <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">💷 {payLabel(form)}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{form.fields.length} fields · {form.fields.filter((x) => x.mapsTo).length} carry into onboarding{form.summary ? " · has job summary" : ""}</div></div>
+              <Button onClick={() => previewForm(form, provider)}>👁 Preview</Button>
               <Button onClick={() => setSendOpen(true)}>Send</Button>
               <Button onClick={() => setEditForm(form)}>Edit</Button>
               <Button onClick={() => { const clone: AppForm = { id: "form_" + Date.now().toString(36), name: form.name + " (copy)", fields: form.fields.map((x) => ({ ...x })) }; saveForms([...forms, clone]); setEditForm(clone); }}>Duplicate</Button>
@@ -238,7 +307,7 @@ export function ApplicationsPanel() {
       )}
 
       {sendOpen && <SendModal forms={forms} onSent={flash} onClose={() => setSendOpen(false)} />}
-      {editForm && <FormEditor form={editForm} jobTitles={settings.staffRoles ?? []} onSave={(fm) => { saveForms(forms.some((x) => x.id === fm.id) ? forms.map((x) => (x.id === fm.id ? fm : x)) : [...forms, fm]); setEditForm(null); }} onClose={() => setEditForm(null)} />}
+      {editForm && <FormEditor form={editForm} jobTitles={settings.staffRoles ?? []} provider={provider} onSave={(fm) => { saveForms(forms.some((x) => x.id === fm.id) ? forms.map((x) => (x.id === fm.id ? fm : x)) : [...forms, fm]); setEditForm(null); }} onClose={() => setEditForm(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
@@ -284,7 +353,7 @@ function SendModal({ forms, onSent, onClose }: { forms: AppForm[]; onSent: (m: s
 
 const ONBOARD_TARGETS: [string, string][] = DEFAULT_FIELDS.filter((f) => ["text", "tel", "email", "date", "textarea", "select", "jobtitle", "file"].includes(f.type)).map((f) => [f.id, f.label]);
 
-function FormEditor({ form, jobTitles, onSave, onClose }: { form: AppForm; jobTitles: string[]; onSave: (f: AppForm) => void; onClose: () => void }) {
+function FormEditor({ form, jobTitles, provider, onSave, onClose }: { form: AppForm; jobTitles: string[]; provider: string; onSave: (f: AppForm) => void; onClose: () => void }) {
   const [f, setF] = useState<AppForm>(form);
   const [nl, setNl] = useState("");
   const patch = (id: string, p: Partial<AField>) => setF((x) => ({ ...x, fields: x.fields.map((fl) => (fl.id === id ? { ...fl, ...p } : fl)) }));
@@ -292,9 +361,16 @@ function FormEditor({ form, jobTitles, onSave, onClose }: { form: AppForm; jobTi
   return (
     <div className="fixed inset-0 z-[141] flex justify-center overflow-y-auto bg-black/45 p-4 pt-[4vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Edit application form</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div></div>
+        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Edit application form</h3><Button className="ml-auto" onClick={() => previewForm(f, provider)}>👁 Preview</Button><button type="button" onClick={onClose} className="text-[18px] text-[var(--ink-3)]">×</button></div></div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Form name</span><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="w-full" /></label>
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
+            <div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Branding</div>
+            {f.logo ? <img src={f.logo} alt="logo" className="h-9 rounded bg-white p-0.5" /> : <span className="text-[11.5px] text-[var(--ink-3)]">No logo</span>}
+            <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {f.logo ? "Replace logo" : "Upload logo"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setF({ ...f, logo: String(r.result) }); r.readAsDataURL(file); }} /></label>
+            {f.logo && <button type="button" onClick={() => setF({ ...f, logo: undefined })} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button>}
+            <label className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-3)]">Colour<input type="color" value={f.accent ?? "#1d3a8f"} onChange={(e) => setF({ ...f, accent: e.target.value })} className="h-7 w-9 cursor-pointer rounded border border-[var(--line)] bg-transparent p-0.5" /></label>
+          </div>
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
             <div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Job summary &amp; pay (optional)</div>
             <textarea value={f.summary ?? ""} onChange={(e) => setF({ ...f, summary: e.target.value })} rows={2} placeholder="Short description of the role — shown to candidates on the application." className="mb-2 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
