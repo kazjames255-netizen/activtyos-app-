@@ -22,7 +22,20 @@ it as their live checklist with progress. Front-end demo built; backend below.
 - Nav: company item renamed to **Milestones** (highlighted); new highlighted
   franchise item under the dashboard.
 
+## Three-level model (milestone → task → actions)
+Each **task** (`MStep`) can hold a checklist of **actions** (`MAction`, HO-defined).
+A franchise fills per-action state in progress (`StepState.actions[actId]` =
+`{ done, assignee, due, taskId }`). A task's completion **rolls up** from its
+actions (`stepPctEff`) when it has any, else its own `pct`. Each action can be
+**pushed into the Task Manager** — the front-end already POSTs `/api/tasks`
+`{ t, who, due, prio:"med", status:"todo", cat:"Milestones" }` and stores the
+returned id in `taskId` (shows "In Task Manager ↗").
+
 ## Backend needed
+0. **Task Manager link (built, needs polish)** — pushed actions create real tasks
+   via `/api/tasks`. Add: a back-link on the created task to the milestone/action;
+   two-way status sync (ticking the action ↔ completing the task); de-dupe on
+   re-push; and pass a proper `link`/assignee-id instead of a display name.
 1. **Persistence & scoping** — the master template is one per **head-office/brand**;
    progress is one per **franchise (tenant)**. Replace the two localStorage keys.
 2. **Publish/versioning** — when HO edits the template, franchises should pick up

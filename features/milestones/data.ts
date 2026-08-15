@@ -9,7 +9,7 @@ const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } };
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "id" + Math.floor(performance.now() * 1000));
 
-const step = (title: string, detail: string, links: { label: string; href: string }[] = []): MStep => ({ id: uid(), title, detail, links });
+const step = (title: string, detail: string, links: { label: string; href: string }[] = [], actions: string[] = []): MStep => ({ id: uid(), title, detail, links, actions: actions.map((t) => ({ id: uid(), title: t })) });
 type MStep = MPhase["steps"][number];
 
 // A sensible default plan HO can then edit. Deep links use /franchise/* routes.
@@ -27,13 +27,13 @@ export function seedTemplate(): MPhase[] {
       step("Open bookings & publish the timetable", "Build blocks and put the timetable live for parents.", [{ label: "Blocks", href: "/franchise/blocks" }, { label: "Timetable", href: "/franchise/timetable" }]),
       step("Build the staff rota & check ratios", "Roster staff to sessions and confirm you're within ratios.", [{ label: "Schedule", href: "/franchise/schedule" }, { label: "Ratios", href: "/franchise/ratios" }]),
       step("Complete risk assessments", "Venue and activity risk assessments signed off.", [{ label: "Compliance", href: "/franchise/compliance" }]),
-      step("Order & pack kit and resources", "Stock-check, order what's short and pack the camp boxes.", [{ label: "Inventory", href: "/franchise/inventory" }]),
+      step("Order & pack kit and resources", "Stock-check, order what's short and pack the camp boxes.", [{ label: "Inventory", href: "/franchise/inventory" }], ["Run a stock-check against the kit list", "Order anything short", "Pack a box per group", "Load first-aid kits & spill kit", "Check the equipment is safe & clean"]),
       step("Print registers", "Registers ready for each group and day.", [{ label: "Registers", href: "/franchise/registers" }]),
       step("Send parents pre-camp info", "What to bring, drop-off/pick-up and key info.", [{ label: "Messages", href: "/franchise/messages" }, { label: "Email", href: "/franchise/email" }]),
       step("Confirm meals & allergens", "Menu set and allergens cross-checked against bookings.", [{ label: "Meals", href: "/franchise/meals" }]),
     ] },
     { id: uid(), title: "Camp week — on the ground", subtitle: "During the camp — the daily running rhythm.", when: "during", recurring: true, icon: "⛺", steps: [
-      step("Take sign-in on the register", "Mark children in at drop-off and track who's present.", [{ label: "Registers", href: "/franchise/registers" }]),
+      step("Take sign-in on the register", "Mark children in at drop-off and track who's present.", [{ label: "Registers", href: "/franchise/registers" }], ["Greet each family at the door", "Mark the child present", "Confirm collection password", "Note allergies & medication", "Flag any no-shows to the office"]),
       step("Keep ratios right on the day", "Adjust staffing live if numbers change.", [{ label: "Ratios", href: "/franchise/ratios" }]),
       step("Log medication & incidents", "Record any medication given and any accidents/incidents.", [{ label: "Medication", href: "/franchise/medication" }, { label: "Incidents", href: "/franchise/incidents" }]),
       step("Share moments with parents", "Post photos and highlights during the day.", [{ label: "Moments", href: "/franchise/moments" }]),
@@ -66,12 +66,19 @@ const PHASE_WIN: Record<MPhaseWhen, [number, number]> = { setup: [-46, -4], befo
 export function seedProgress(phases: MPhase[]): MProgress {
   const now = new Date(); const day = 86400000; const addD = (n: number) => isoDate(new Date(now.getTime() + n * day));
   const steps: Record<string, StepState> = {};
+  const who = ["Alex Rivera", "Sam Carter", "Jamie Cole"];
   phases.forEach((p, pi) => {
     const [a, b] = PHASE_WIN[p.when] || [0, 21]; const span = b - a; const nn = p.steps.length || 1;
     p.steps.forEach((s, i) => {
       const seg = span / nn; const st = a + i * seg; const en = st + seg * 0.82;
       const pct = pi === 0 ? 100 : pi === 1 ? (i < Math.floor(nn / 2) ? 100 : i === Math.floor(nn / 2) ? 55 : 15) : pi === 2 ? (i === 0 ? 20 : 0) : 0;
-      steps[s.id] = { start: addD(Math.round(st)), end: addD(Math.round(en)), pct };
+      const cell: StepState = { start: addD(Math.round(st)), end: addD(Math.round(en)), pct };
+      // demo action states: assign each action + tick a share of them done
+      if (s.actions?.length) {
+        const done = Math.round((pct / 100) * s.actions.length);
+        cell.actions = Object.fromEntries(s.actions.map((act, k) => [act.id, { done: k < done, assignee: who[k % who.length], due: addD(Math.round(st + k)) }]));
+      }
+      steps[s.id] = cell;
     });
   });
   return { season: "This season", steps };

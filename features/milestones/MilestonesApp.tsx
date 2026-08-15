@@ -6,13 +6,18 @@
 //    and their actions (tasks) right on the map via popups. One surface, no form.
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
+import { post as apiPost } from "@/lib/api";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
-  type MPhase, type MStep, type MStepLink, type MProgress, type StepState, type MPhaseWhen,
-  WHEN_LABEL, WHEN_TONE, phaseDone, phasePct, phaseComplete, overallPct, currentPhaseIndex, phaseWindow, stepPct, dparse, fmtShort, isoDate,
+  type MPhase, type MStep, type MStepLink, type MAction, type MProgress, type StepState, type ActState, type MPhaseWhen,
+  WHEN_LABEL, WHEN_TONE, phaseDone, phasePct, phaseComplete, overallPct, currentPhaseIndex, phaseWindow, stepPct, stepPctEff, actState, actionsDone, dparse, fmtShort, isoDate,
 } from "@/lib/milestones";
 import { loadTemplate, saveTemplate, resetTemplate, loadProgress, saveProgress, seedProgress, newId } from "./data";
+import { DEMO_STAFF } from "@/features/learning/credentials";
+
+const STAFF = ["Alex Rivera", "Sam Carter", "Jamie Cole", ...DEMO_STAFF.map((s) => s.name)];
+const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").slice(0, 2).toUpperCase();
 
 const move = <T,>(arr: T[], i: number, dir: -1 | 1): T[] => { const j = i + dir; if (j < 0 || j >= arr.length) return arr; const c = [...arr]; [c[i], c[j]] = [c[j], c[i]]; return c; };
 const addDaysISO = (base: string | undefined, n: number) => { const d = base ? new Date(`${base}T00:00:00`) : new Date(); d.setDate(d.getDate() + n); return isoDate(d); };
@@ -75,6 +80,15 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
   const [editPhase, setEditPhase] = useState<MPhase | null>(null);
   const [editAction, setEditAction] = useState<{ p: MPhase; s: MStep } | null>(null);
   const setStep = (id: string, patch: Partial<StepState>) => onProg({ ...prog, steps: { ...prog.steps, [id]: { ...(prog.steps[id] || { pct: 0 }), ...patch } } });
+  const setAct = (stepId: string, actId: string, patch: Partial<ActState>) => { const cur = prog.steps[stepId] || { pct: 0 }; onProg({ ...prog, steps: { ...prog.steps, [stepId]: { ...cur, actions: { ...(cur.actions || {}), [actId]: { ...(cur.actions?.[actId] || {}), ...patch } } } } }); };
+  const pushAction = async (step: MStep, action: MAction) => {
+    const stA = prog.steps[step.id]?.actions?.[action.id] || {};
+    try {
+      const created = await apiPost<{ id: string }>("/api/tasks", { t: action.title, who: stA.assignee || undefined, due: stA.due || null, prio: "med", status: "todo", cat: "Milestones" });
+      setAct(step.id, action.id, { taskId: created?.id || "queued" });
+      flash?.("Added to the Task Manager.");
+    } catch { flash?.("Couldn't reach the Task Manager."); }
+  };
 
   // template mutators
   const setStepMeta = (pid: string, sid: string, patch: Partial<MStep>) => onTemplate?.(phases.map((p) => p.id === pid ? { ...p, steps: p.steps.map((s) => s.id === sid ? { ...s, ...patch } : s) } : p));
@@ -141,7 +155,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
                     ) : <div className="absolute left-0 top-1/2 -translate-y-1/2 text-[10px] italic text-[var(--ink-3)]">— add dates to the tasks —</div>}
                   </div>
                 </div>
-                {isOpen && p.steps.map((s) => { const st = prog.steps[s.id]; const sp = stepPct(prog, s.id); const a = dparse(st?.start), b = dparse(st?.end); const sdone = sp >= 100;
+                {isOpen && p.steps.map((s) => { const st = prog.steps[s.id]; const sp = stepPctEff(s, prog); const a = dparse(st?.start), b = dparse(st?.end); const sdone = sp >= 100;
                   return (
                     <div key={s.id} className="flex items-stretch border-t border-dashed border-[var(--line)]">
                       <button type="button" onClick={() => setEditAction({ p, s })} className={`${LEFT} flex shrink-0 items-center gap-1.5 py-2 pl-6 pr-2 text-left hover:bg-[var(--panel)]`}>
@@ -169,11 +183,15 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
       </>)}
 
       {editPhase && <PhaseEditor phase={editPhase} phases={phases} onChange={(patch) => onTemplate?.(phases.map((p) => p.id === editPhase.id ? { ...p, ...patch } : p))} onMove={(dir) => { const i = phases.findIndex((p) => p.id === editPhase.id); onTemplate?.(move(phases, i, dir)); }} onDelete={() => { delPhase(editPhase.id); setEditPhase(null); flash?.("Milestone removed."); }} onClose={() => setEditPhase(null)} />}
-      {editAction && <ActionEditor phase={editAction.p} step={editAction.s} state={prog.steps[editAction.s.id]}
-        onMeta={editable ? (patch) => setStepMeta(editAction.p.id, editAction.s.id, patch) : undefined}
-        onSchedule={editable ? undefined : (patch) => setStep(editAction.s.id, patch)}
-        onDelete={editable ? () => { delStep(editAction.p.id, editAction.s.id); setEditAction(null); } : undefined}
-        onClose={() => setEditAction(null)} />}
+      {editAction && (() => { const p = phases.find((x) => x.id === editAction.p.id) || editAction.p; const s = p.steps.find((x) => x.id === editAction.s.id) || editAction.s;
+        return <ActionEditor phase={p} step={s} state={prog.steps[s.id]}
+          onMeta={editable ? (patch) => setStepMeta(p.id, s.id, patch) : undefined}
+          onSchedule={editable ? undefined : (patch) => setStep(s.id, patch)}
+          onActState={editable ? undefined : (aid, patch) => setAct(s.id, aid, patch)}
+          onPush={editable ? undefined : (a) => pushAction(s, a)}
+          onDelete={editable ? () => { delStep(p.id, s.id); setEditAction(null); } : undefined}
+          onClose={() => setEditAction(null)} />;
+      })()}
     </Card>
   );
 }
@@ -224,7 +242,9 @@ function Slide({ phase: p, prog, cur, n, editable, onEditAction, onEditPhase, on
 
       <div className="space-y-2 p-4">
         <div className="flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{editable ? "Tasks" : "Actions"} ({phaseDone(p, prog)}/{p.steps.length} done)</div>{editable && <button type="button" onClick={() => onAddAction(p)} className="ml-auto rounded-lg bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#e6ecfa]">＋ Add task</button>}</div>
-        {p.steps.map((s) => { const st = prog.steps[s.id]; const sp = stepPct(prog, s.id); const sdone = sp >= 100;
+        {p.steps.map((s) => { const st = prog.steps[s.id]; const sp = stepPctEff(s, prog); const sdone = sp >= 100; const acts = s.actions || [];
+          const assignees = [...new Set(acts.map((a) => st?.actions?.[a.id]?.assignee).filter(Boolean) as string[])];
+          const pushed = acts.filter((a) => st?.actions?.[a.id]?.taskId).length;
           return (
             <div key={s.id} onClick={() => onEditAction(p, s)} className="cursor-pointer rounded-xl border p-3 transition-shadow hover:shadow-sm" style={{ borderColor: sdone ? tone + "40" : "var(--line)", background: sdone ? tone + "0a" : undefined }}>
               <div className="flex items-center gap-2.5">
@@ -234,6 +254,13 @@ function Slide({ phase: p, prog, cur, n, editable, onEditAction, onEditPhase, on
               </div>
               {s.detail && <div className="mt-0.5 pl-[30px] text-[11px] text-[var(--ink-3)]">{s.detail}</div>}
               <div className="mt-1.5 flex items-center gap-2 pl-[30px]"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full transition-[width]" style={{ width: `${sp}%`, background: gradBar(p.when) }} /></div><span className="text-[10px] font-bold tabular-nums text-[var(--ink-3)]">{sp}%</span></div>
+              {acts.length > 0 && (
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-[30px]">
+                  <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-2)]">☑ {actionsDone(s, prog)}/{acts.length} actions</span>
+                  {assignees.length > 0 && <span className="flex -space-x-1.5">{assignees.slice(0, 4).map((nm) => <span key={nm} title={nm} className="grid h-5 w-5 place-items-center rounded-full text-[8px] font-extrabold text-white ring-2 ring-white" style={{ background: grad(p.when) }}>{initials(nm)}</span>)}</span>}
+                  {pushed > 0 && <span className="text-[10px] font-bold text-[#0f7a43]">↗ {pushed} in Task Manager</span>}
+                </div>
+              )}
               {!!s.links?.length && <div className="mt-1.5 flex flex-wrap gap-1.5 pl-[30px]">{s.links.map((l) => <Link key={l.href + l.label} href={l.href} onClick={(e) => e.stopPropagation()} className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold text-white hover:opacity-90" style={{ background: grad(p.when) }}>{l.label} →</Link>)}</div>}
             </div>
           );
@@ -288,13 +315,15 @@ function PhaseEditor({ phase, phases, onChange, onMove, onDelete, onClose }: { p
   );
 }
 
-function ActionEditor({ phase, step, state, onMeta, onSchedule, onDelete, onClose }: { phase: MPhase; step: MStep; state?: StepState; onMeta?: (patch: Partial<MStep>) => void; onSchedule?: (patch: Partial<StepState>) => void; onDelete?: () => void; onClose: () => void }) {
+function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPush, onDelete, onClose }: { phase: MPhase; step: MStep; state?: StepState; onMeta?: (patch: Partial<MStep>) => void; onSchedule?: (patch: Partial<StepState>) => void; onActState?: (actId: string, patch: Partial<ActState>) => void; onPush?: (a: MAction) => void; onDelete?: () => void; onClose: () => void }) {
   const tone = WHEN_TONE[phase.when];
   const start = state?.start || ""; const end = state?.end || ""; const pct = state?.pct ?? 0;
-  const links = step.links || [];
+  const links = step.links || []; const actions = step.actions || [];
+  const doneCt = actions.filter((a) => state?.actions?.[a.id]?.done).length;
+  const derived = actions.length ? Math.round((doneCt / actions.length) * 100) : pct;
   return (
-    <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[10vh]" onClick={onClose} style={LIGHT_PALETTE}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
+      <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex items-center gap-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-white" style={{ background: grad(phase.when) }}>{phase.title}</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
 
         {onMeta ? (<>
@@ -312,6 +341,13 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onDelete, onClos
               <button type="button" onClick={() => onMeta({ links: [...links, { label: "Open", href: "/franchise/" }] })} className="text-[11px] font-bold text-[#1d3a8f] hover:underline">+ link</button>
             </div>
           </div>
+          {/* HO defines the checklist of actions inside the task */}
+          <div className="mt-3"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Actions (checklist inside this task)</span>
+            <div className="space-y-1">{actions.map((a, ai) => (
+              <div key={a.id} className="flex items-center gap-1.5"><span className="text-[var(--ink-3)]">•</span><Input value={a.title} onChange={(e) => onMeta({ actions: actions.map((x, k) => k === ai ? { ...x, title: e.target.value } : x) })} className="flex-1 text-[12px]" /><button type="button" onClick={() => onMeta({ actions: actions.filter((_, k) => k !== ai) })} className="px-1 text-[14px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button></div>
+            ))}</div>
+            <button type="button" onClick={() => onMeta({ actions: [...actions, { id: newId(), title: "New action" }] })} className="mt-1 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add action</button>
+          </div>
         </>) : <h3 className="text-[15px] font-extrabold text-[var(--ink)]">{step.title}</h3>}
 
         {onSchedule && (<>
@@ -319,17 +355,38 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onDelete, onClos
             <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Start</span><Input type="date" value={start} onChange={(e) => onSchedule({ start: e.target.value, end: end || addDaysISO(e.target.value, 7) })} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Target end</span><Input type="date" value={end} onChange={(e) => onSchedule({ end: e.target.value, start: start || addDaysISO(e.target.value, -7) })} className="w-full" /></label>
           </div>
-          <div className="mt-3">
-            <div className="mb-1 flex items-center justify-between text-[10px] font-extrabold uppercase text-[var(--ink-3)]"><span>Completion</span><span className="tabular-nums" style={{ color: tone }}>{pct}%</span></div>
-            <input type="range" min={0} max={100} step={5} value={pct} onChange={(e) => onSchedule({ pct: Number(e.target.value) })} className="w-full" style={{ accentColor: tone }} />
-            <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full transition-[width]" style={{ width: `${pct}%`, background: gradBar(phase.when) }} /></div>
-          </div>
+          {actions.length > 0 ? (
+            <div className="mt-3">
+              <div className="mb-1.5 flex items-center justify-between"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Actions — who &amp; when</span><span className="text-[11px] font-bold tabular-nums" style={{ color: tone }}>{doneCt}/{actions.length} · {derived}%</span></div>
+              <div className="space-y-1.5">{actions.map((a) => { const asx = state?.actions?.[a.id] || {}; return (
+                <div key={a.id} className="rounded-lg border border-[var(--line)] p-2">
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={() => onActState?.(a.id, { done: !asx.done })} className="grid h-5 w-5 shrink-0 place-items-center rounded-md text-[11px] font-bold" style={{ background: asx.done ? tone : "var(--panel)", color: asx.done ? "#fff" : "transparent" }}>✓</button>
+                    <span className={`flex-1 text-[12.5px] font-semibold ${asx.done ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{a.title}</span>
+                  </div>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-7">
+                    <Select value={asx.assignee || ""} onChange={(e) => onActState?.(a.id, { assignee: e.target.value || undefined })} className="text-[11px]"><option value="">Unassigned</option>{STAFF.map((nm) => <option key={nm} value={nm}>{nm}</option>)}</Select>
+                    <Input type="date" value={asx.due || ""} onChange={(e) => onActState?.(a.id, { due: e.target.value })} className="w-[130px] text-[11px]" />
+                    {asx.taskId ? <Link href="/franchise/tasks" className="text-[10.5px] font-bold text-[#0f7a43]">✓ In Task Manager ↗</Link>
+                      : <button type="button" onClick={() => onPush?.(a)} className="rounded-md bg-[#eef4fd] px-2 py-1 text-[10.5px] font-bold text-[#1d3a8f] hover:bg-[#e0eaff]">↗ Add to Task Manager</button>}
+                  </div>
+                </div>
+              ); })}</div>
+              <div className="mt-1.5 text-[10px] text-[var(--ink-3)]">Completion rolls up from the actions ticked above.</div>
+            </div>
+          ) : (
+            <div className="mt-3">
+              <div className="mb-1 flex items-center justify-between text-[10px] font-extrabold uppercase text-[var(--ink-3)]"><span>Completion</span><span className="tabular-nums" style={{ color: tone }}>{pct}%</span></div>
+              <input type="range" min={0} max={100} step={5} value={pct} onChange={(e) => onSchedule({ pct: Number(e.target.value) })} className="w-full" style={{ accentColor: tone }} />
+              <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full transition-[width]" style={{ width: `${pct}%`, background: gradBar(phase.when) }} /></div>
+            </div>
+          )}
         </>)}
 
         <div className="mt-4 flex items-center gap-2">
           {onDelete && <button type="button" onClick={onDelete} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Delete task</button>}
           <div className="ml-auto flex gap-2">
-            {onSchedule && <Button onClick={() => onSchedule({ pct: 100 })}>Mark done</Button>}
+            {onSchedule && actions.length === 0 && <Button onClick={() => onSchedule({ pct: 100 })}>Mark done</Button>}
             <Button variant="primary" onClick={onClose}>Done</Button>
           </div>
         </div>

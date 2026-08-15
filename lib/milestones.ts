@@ -5,7 +5,10 @@
 // starting clubs) persist. Front-end demo model; backend owed.
 
 export interface MStepLink { label: string; href: string }
-export interface MStep { id: string; title: string; detail?: string; links?: MStepLink[] }
+// A task's checklist item — HO defines the title; a franchise fills in who/when,
+// ticks it off, and can optionally push it into the Task Manager.
+export interface MAction { id: string; title: string }
+export interface MStep { id: string; title: string; detail?: string; links?: MStepLink[]; actions?: MAction[] }
 
 export type MPhaseWhen = "setup" | "before" | "during" | "after" | "clubs";
 export const WHEN_LABEL: Record<MPhaseWhen, string> = {
@@ -21,19 +24,28 @@ export interface MPhase { id: string; title: string; subtitle?: string; when: MP
 
 // Progress: each step (sub-target) carries a start/end date and a completion %,
 // so the roadmap plots them as dated bars. Recurring phases reset each season.
-export interface StepState { start?: string; end?: string; pct: number }
+// Per-action state a franchise fills in (who / when / done / pushed-to-tasks).
+export interface ActState { done?: boolean; assignee?: string; due?: string; taskId?: string }
+export interface StepState { start?: string; end?: string; pct: number; actions?: Record<string, ActState> }
 export interface MProgress { season: string; steps: Record<string, StepState> }
 
 export const emptyProgress = (season: string): MProgress => ({ season, steps: {} });
 export const stepState = (prog: MProgress, id: string): StepState => prog.steps[id] || { pct: 0 };
+export const actState = (prog: MProgress, stepId: string, actId: string): ActState => prog.steps[stepId]?.actions?.[actId] || {};
 export const stepPct = (prog: MProgress, id: string) => prog.steps[id]?.pct ?? 0;
+export const actionsDone = (step: MStep, prog: MProgress) => (step.actions || []).filter((a) => prog.steps[step.id]?.actions?.[a.id]?.done).length;
+// A task's effective completion: derived from its actions if it has any, else its own %.
+export const stepPctEff = (step: MStep, prog: MProgress) => {
+  const acts = step.actions || [];
+  return acts.length ? Math.round((actionsDone(step, prog) / acts.length) * 100) : (prog.steps[step.id]?.pct ?? 0);
+};
 export const isStepDone = (_p: MPhase, stepId: string, prog: MProgress) => stepPct(prog, stepId) >= 100;
-export const phaseDone = (p: MPhase, prog: MProgress) => p.steps.filter((s) => stepPct(prog, s.id) >= 100).length;
-export const phasePct = (p: MPhase, prog: MProgress) => (p.steps.length ? Math.round(p.steps.reduce((a, s) => a + stepPct(prog, s.id), 0) / p.steps.length) : 0);
+export const phaseDone = (p: MPhase, prog: MProgress) => p.steps.filter((s) => stepPctEff(s, prog) >= 100).length;
+export const phasePct = (p: MPhase, prog: MProgress) => (p.steps.length ? Math.round(p.steps.reduce((a, s) => a + stepPctEff(s, prog), 0) / p.steps.length) : 0);
 export const phaseComplete = (p: MPhase, prog: MProgress) => p.steps.length > 0 && phaseDone(p, prog) === p.steps.length;
 export function overallPct(phases: MPhase[], prog: MProgress) {
   const all = phases.flatMap((p) => p.steps);
-  return all.length ? Math.round(all.reduce((a, s) => a + stepPct(prog, s.id), 0) / all.length) : 0;
+  return all.length ? Math.round(all.reduce((a, s) => a + stepPctEff(s, prog), 0) / all.length) : 0;
 }
 export function currentPhaseIndex(phases: MPhase[], prog: MProgress) {
   const i = phases.findIndex((p) => !phaseComplete(p, prog));
