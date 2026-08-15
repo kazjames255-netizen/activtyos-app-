@@ -708,45 +708,63 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
     ]
   },
   "staff": {
-    "title": "Team & deployment",
-    "introLine": "This is your team — invite people, watch who's joined, and deploy them to the right locations and listings.",
-    "doneLine": "That's your team — invite them, watch them activate, and deploy them where they're needed.",
+    "title": "Team & invites — hire to deploy",
+    "introLine": "This is your whole people hub, laid out across four tabs that follow one person's journey — Team members, Applications, Onboarding and Deployment. Let's walk a single hire all the way through: they apply, you review, they onboard, they're cleared, and you deploy them.",
+    "doneLine": "That's the full loop — recruit in Applications, run the safer-recruitment record in Onboarding, then place them in Deployment. Everything they give you flows forward, so nobody ever types the same thing twice.",
     "steps": [
       {
-        "label": "Your team at a glance",
+        "label": "Four tabs, one journey",
         "stage": "Overview",
-        "line": "The tiles across the top count your team — how many people have joined, how many invites are still pending, and how many staff seats your plan allows so you know when you're near the limit.",
-        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">👥 Team · 6</span><span class=\"ochip\">⏳ Pending · 2</span><span class=\"ochip\">🎫 Seats · 6 / 10</span></div><div class=\"hint\">Square KPI tiles, like the dashboard — a quick read on your workforce.</div>"
+        "line": "Everything about your people lives here across four tabs. Team members is your roster and invites. Applications is where you recruit. Onboarding is the safer-recruitment record they complete. Deployment places them on your locations and listings. The tiles up top count your team, your pending invites and how many staff seats your plan allows.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">Team members</span><span class=\"chip2\">Applications</span><span class=\"chip2\">Onboarding</span><span class=\"chip2\">Deployment</span></div><div class=\"chips\"><span class=\"ochip\">👥 Team · 6</span><span class=\"ochip\">⏳ Pending · 2</span><span class=\"ochip\">🎫 Seats · 6 / 10</span></div><div class=\"hint\">The four tabs follow one person: recruit → onboard → deploy.</div>"
       },
       {
-        "label": "Invite — who & their role",
-        "stage": "Invite",
-        "line": "New people join by invite, built as a short slideshow. Step 1 is their full name and email — email is required so they can actually sign up. Step 2 is their access role (Owner, Management or Staff) which governs what they can see and do. Step 3 is their job title, like Lifeguard or Site Manager.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">1 · WHO</div><div class=\"row2\"><div><div class=\"fl\">FULL NAME</div><div class=\"field\">Priya Shah</div></div><div><div class=\"fl\">EMAIL (required)</div><div class=\"field\">priya@apfcamps.co.uk</div></div></div><div class=\"fl\">2 · ACCESS ROLE</div><div class=\"field\">Staff</div><div class=\"fl\">3 · JOB TITLE</div><div class=\"field\">First Aider</div></div>"
+        "label": "Build & send an application",
+        "stage": "Applications",
+        "line": "Recruitment starts in Applications. Build one or more editable application forms — add your own fields and, crucially, mark which ones carry into onboarding later. Duplicate a form to spin up a variant in a click. Then hit Send application: copy a public link to post on a job board or socials, or email a candidate directly. Whatever they submit lands back in this tab.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">📝 APPLICATION FORM</div><div class=\"tkt\"><div class=\"tkhd\"><b>Standard application</b> <span class=\"g\">17 fields · 12 carry into onboarding</span></div></div><div class=\"chips\"><span class=\"ochip\">Edit</span><span class=\"ochip\">Duplicate</span><span class=\"ochip\">📨 Send</span></div><div class=\"fl\">SEND</div><div class=\"chips\"><span class=\"ochip\">🔗 Copy public link</span><span class=\"chip2\">✉️ Email a candidate</span></div></div>"
       },
       {
-        "label": "Where they'll work",
-        "stage": "Deploy",
-        "line": "Step 4 is deployment. Choose None — they still get page access from their role but aren't put on the rota — or pick one or all locations, then the listings inside them, with each listing showing the season it belongs to. Step 5 reviews it and sends. Remember: what they can do comes from their role, not from what they're assigned here.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">4 · ASSIGN TO</div><div class=\"chips\"><span class=\"ochip\">Rostered</span><span class=\"chip2\">None (access only)</span></div><div class=\"fl\">① LOCATIONS</div><div class=\"chips\"><span class=\"ochip\">milton KEYNES</span><span class=\"chip2\">All locations</span></div><div class=\"fl\">② LISTINGS</div><div class=\"chips\"><span class=\"ochip\">Summer camp · 📅 Summer 1</span></div></div>"
+        "label": "Review, reject or accept",
+        "stage": "Applications",
+        "line": "Each application opens in full. Not right for you? Reject with a reason that's kept on file. A good fit? Accept, then Send onboarding link — the very same secure sign-up link. And here's the clever bit: anything they already gave you, like their references, address and qualifications, carries straight into their onboarding, so they never fill it in twice.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkhd\"><b>Chloe Adams</b> <span class=\"g\">Coach · applied 13 Aug</span><span class=\"tkp\">NEW</span></div><div class=\"row2\"><div><div class=\"fl\">REFERENCES ↳</div><div class=\"field\">Sam Okafor · Dana Patel</div></div><div><div class=\"fl\">RIGHT TO WORK</div><div class=\"field\">Yes</div></div></div><div class=\"chips\"><span class=\"btn amber\">✓ Accept</span><span class=\"chip2\">Reject with reason</span></div><div class=\"hint\">Accept → 📨 Send onboarding link. Fields marked ↳ carry into onboarding automatically — no re-typing.</div></div>"
+      },
+      {
+        "label": "The onboarding record",
+        "stage": "Onboarding",
+        "line": "Onboarding is a colour-coded slideshow they work through — personal details, right to work, identity and DBS, references, qualifications, payroll, availability, and the policies they sign. Each section shows what's done. Right-to-work, DBS and references are gated: until all three are verified the person reads Start on hold and cannot work in regulated activity — then it flips to Cleared to start.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">👤 Personal</span><span class=\"ochip\">🛂 Right to work</span><span class=\"ochip\">🪪 DBS</span><span class=\"ochip\">📋 References</span><span class=\"chip2\">💷 Payroll</span><span class=\"chip2\">📅 Availability</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Step 3 of 9 · Identity &amp; DBS</b> <span class=\"g\">6 / 8 complete</span><span class=\"tkp\">⏳ On hold</span></div></div><div class=\"hint\">On hold until Right to work, DBS &amp; References are all Verified — then ✓ Cleared to start.</div></div>"
+      },
+      {
+        "label": "You decide what's required",
+        "stage": "Onboarding",
+        "line": "Nothing is fixed. In Requirements you toggle each item on or off and set who it applies to — all staff, certain roles, or named people. So an office admin can skip the DBS entirely and it simply won't show for them. And if one person needs a one-off extra, you can add any item just to them.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">⚙ REQUIREMENTS</div><div class=\"tkt\"><div class=\"tkhd\"><b>DBS cleared</b> <span class=\"g\">Required · Applies to: Certain roles</span></div></div><div class=\"chips\"><span class=\"chip2\">🔑 Owner / Admin</span><span class=\"ochip\">Manager</span><span class=\"ochip\">Coach / Staff</span></div><div class=\"hint\">Untick a role and DBS hides for them — but you can still add any item to one individual.</div></div>"
+      },
+      {
+        "label": "Availability & certificates flow on",
+        "stage": "Onboarding",
+        "line": "Two things onboarding feeds forward. Their weekly availability grid carries over to the Schedule, so the rota knows when they can work. And their DBS and First Aid live alongside the Staff certificates area — you track each qualification once, with expiry reminders and a Single Central Record for inspections.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">📅 WEEKLY AVAILABILITY → SCHEDULE</div><div class=\"chips\"><span class=\"ochip\">Mon AM</span><span class=\"ochip\">Mon PM</span><span class=\"chip2\">Tue</span><span class=\"ochip\">Wed PM</span><span class=\"ochip\">Sat AM</span></div><div class=\"fl\">🎖 CERTIFICATES</div><div class=\"tkt\"><div class=\"tkhd\"><b>DBS · Paediatric First Aid</b> <span class=\"g\">also in Team → Staff certificates</span><span class=\"tkp\">Valid</span></div></div></div>"
+      },
+      {
+        "label": "Policies & documents",
+        "stage": "Documents",
+        "line": "Policies and risk assessments live in Documents. Assign each to all staff, to permission roles, to job titles, or to a specific listing. Role and title documents are read during onboarding, the moment they first log in — but a listing's risk assessment only appears once the person is deployed there. The Read receipts view shows exactly who's read what, so you can chase anyone outstanding.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">📁 DOCUMENT · ASSIGN TO</div><div class=\"chips\"><span class=\"ochip\">All staff</span><span class=\"chip2\">🔑 Roles</span><span class=\"chip2\">🧑‍🏫 Job titles</span><span class=\"chip2\">📋 A listing</span></div><div class=\"hint\">Role/title docs read at onboarding on first login; a listing's risk assessment appears once they're deployed there.</div><div class=\"tkt\"><div class=\"tkhd\"><b>Read receipts</b> <span class=\"g\">who's read what</span><span class=\"tkp\">Chase unread</span></div></div></div>"
       },
       {
         "label": "Track your invites",
-        "stage": "Invites",
-        "line": "Every invite is listed with a live status — Pending until they sign up, then ✓ Account activated. Filter by All, Pending or Activated, search by name, and use Copy link to share an invite by hand if the email didn't reach them.",
+        "stage": "Team members",
+        "line": "Back on Team members, everyone you've invited is listed with a live status — Pending until they sign up, then Account activated. Filter by All, Pending or Activated, search by name, and use Copy link to hand an invite over yourself if the email didn't reach them.",
         "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">All</span><span class=\"chip2\">Pending</span><span class=\"chip2\">Activated</span></div><div class=\"frm\"><div class=\"field ph\">🔍 Search by name</div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Shah</b> <span class=\"g\">First Aider · Staff</span><span class=\"tkp\">Pending</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Site Manager · Management</span><span class=\"tkp\">✓ Activated</span></div></div><div class=\"chips\"><span class=\"btn\">Copy link</span></div></div>"
       },
       {
-        "label": "Deploy your team",
+        "label": "Deploy them to work",
         "stage": "Deployment",
-        "line": "The Deployment tab is where you place people once they've joined. Flip between By location, By staff and By listing, add someone from the dropdown, and give them the same locations → listings assignment as the invite. This is what decides whose registers, ratios and schedule each person sees.",
-        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">By location</span><span class=\"chip2\">By staff</span><span class=\"chip2\">By listing</span></div><div class=\"frm\"><div class=\"fl\">📍 MILTON KEYNES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Summer camp · 📅 Summer 1</span></div></div><div class=\"field ph\">＋ Add staff (A–Z)…</div></div>"
-      },
-      {
-        "label": "Where the rules live",
-        "stage": "Setup",
-        "line": "Two things sit in Setup: the access roles and exactly what each one can view or edit (Roles & permissions), plus the DBS and certificate checks under Staff and workforce. Job titles like Lifeguard are managed right here in the Staff area, and added as you invite.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SETUP · ROLES &amp; PERMISSIONS</div><div class=\"tkt\"><div class=\"tkhd\"><b>Management</b> <span class=\"g\">View / Edit across most areas</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Staff</b> <span class=\"g\">View only, assigned listings</span></div></div><div class=\"hint\">Access = the role. Job title (Lifeguard, Site Manager…) is set on the invite, here in Staff.</div></div>"
+        "line": "Finally, Deployment. Once someone's activated, place them on your locations and the listings inside them — flip between By location, By staff and By listing. This is what decides whose registers, ratios and schedule each person sees, and it's the moment any listing-specific risk assessment reaches them. Apply, accept, onboard, clear, deploy — that's the whole journey.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">By location</span><span class=\"chip2\">By staff</span><span class=\"chip2\">By listing</span></div><div class=\"frm\"><div class=\"fl\">📍 MILTON KEYNES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Summer camp · 📅 Summer 1</span></div></div><div class=\"field ph\">＋ Add staff (A–Z)…</div><div class=\"hint\">Deployment decides whose registers, ratios &amp; schedule they see — and delivers listing-specific risk assessments.</div></div>"
       }
     ]
   },
@@ -1314,7 +1332,7 @@ TOUR_CONFIGS.medication.settings = [{"icon":"💊","label":"Medication settings"
 TOUR_CONFIGS.trips.settings = [{"icon":"🚌","label":"Trips and visits","tab":"trips","note":"parent notify, consent and your ratio target"}];
 TOUR_CONFIGS.calendar.settings = [{"icon":"🗓️","label":"Calendar settings","tab":"calendar","note":"event categories and reminder timing"}];
 TOUR_CONFIGS.inventory.settings = [{"icon":"📦","label":"Inventory settings","tab":"inventory","note":"categories, locations and low-stock alerts"}];
-TOUR_CONFIGS.staff.settings = [{"icon":"👷","label":"Staff and workforce","tab":"staff","note":"roles, invites and permissions"}];
+TOUR_CONFIGS.staff.settings = [{"icon":"🔑","label":"Roles & permissions","tab":"roles","note":"access roles and what each can view or edit"},{"icon":"👷","label":"Staff roles","tab":"staff","note":"job titles like Lifeguard, and DBS/cert checks"},{"icon":"🎓","label":"Learning","tab":"learning","note":"credential types & who each applies to"}];
 TOUR_CONFIGS.schedule.settings = [{"icon":"👷","label":"Staff and workforce","tab":"staff","note":"your team and their roles"}];
 TOUR_CONFIGS.finance.settings = [{"icon":"💷","label":"Money settings","tab":"money","note":"how income and payouts are figured"}];
 TOUR_CONFIGS.expenses.settings = [{"icon":"💷","label":"Money settings","tab":"money","note":"expense categories and defaults"}];
