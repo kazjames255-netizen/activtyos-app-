@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
+import { CERT_FONTS, renderCert, type CertData } from "./certificates";
 
 export interface CredType {
   id: string; name: string; required: boolean; renewMonths: number; needsFile: boolean; dbs?: boolean;
@@ -120,6 +121,38 @@ export function exportCredsPdf(staff: { name: string; op: string }[], types: Cre
     .doc{page-break-before:always;padding-top:16px}.dh{font-weight:700;font-size:14px;margin-bottom:8px;border-bottom:1px solid #e5e7f0;padding-bottom:6px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.pdfdoc{display:block;width:100%;height:960px;border:1px solid #e5e7f0;border-radius:6px}
     @media print{body{padding:0 6mm}}
   </style></head><body><h1>${e(provider)} — Credential register</h1><div class="sub">Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}${withDocs ? " · with certificate documents" : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
+  const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); }
+}
+
+// Configurable export pack — chosen staff × chosen credential types, optionally
+// with the uploaded documents, and optionally a completion certificate page per
+// selected course. courseCerts are pre-built CertData (see courseCertData);
+// renderCert draws each with the provider's chosen template so the pack matches
+// the individual downloads.
+export function exportCredsPack(params: {
+  staff: { name: string; op: string }[]; types: CredType[];
+  getRec: (name: string, typeId: string) => CredRecord | undefined;
+  provider: string; withDocs: boolean;
+  courseCerts?: { data: CertData; templateId?: string }[];
+}) {
+  if (typeof window === "undefined") return;
+  const { staff, types, getRec, provider, withDocs, courseCerts = [] } = params;
+  const e = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
+  const head = `<tr><th>Staff</th><th>Location</th>${types.map((t) => `<th>${e(t.name)}</th>`).join("")}</tr>`;
+  const body = staff.map((s) => `<tr><td><b>${e(s.name)}</b></td><td>${e(s.op)}</td>${types.map((t) => { const r = getRec(s.name, t.id); const st = credStatus(r); return `<td class="st ${st}">${st}${r?.expiry ? `<span class="d">exp ${e(fmtDate(r.expiry))}</span>` : ""}</td>`; }).join("")}</tr>`).join("");
+  let docs = "";
+  if (withDocs) staff.forEach((s) => types.forEach((t) => { const r = getRec(s.name, t.id); if (r?.fileData) { const img = r.fileData.startsWith("data:image"); docs += `<div class="doc"><div class="dh">${e(s.name)} — ${e(t.name)}${r.number ? " · " + e(r.number) : ""}${r.fileName ? ` · ${e(r.fileName)}` : ""}</div>${img ? `<img src="${r.fileData}"/>` : `<object data="${r.fileData}" type="application/pdf" class="pdfdoc"><iframe src="${r.fileData}" class="pdfdoc"></iframe></object>`}</div>`; } }));
+  const certPages = courseCerts.map(({ data, templateId }) => `<div class="certpage">${renderCert(data, templateId)}</div>`).join("");
+  const needFonts = courseCerts.length ? CERT_FONTS : "";
+  const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Credential pack — ${e(provider)}</title>${needFonts}<style>
+    body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:26px}
+    h1{font-size:20px;margin:0 0 2px}.sub{color:#6b7086;font-size:12px;margin-bottom:16px}
+    table{width:100%;border-collapse:collapse;font-size:11.5px}th{background:#f1f4fb;text-align:left;padding:7px 8px;font-size:10px;text-transform:uppercase;letter-spacing:.04em;color:#6b7086;border-bottom:1px solid #e5e7f0}td{padding:7px 8px;border-top:1px solid #eef1f7;vertical-align:top}
+    .st{font-weight:700}.st .d{display:block;font-weight:400;font-size:10px;color:#8b93ad}.Valid{color:#0f7a43}.Expiring{color:#b45309}.Expired{color:#c0392b}.Rejected{color:#c0392b}.Pending{color:#1d54c4}.Missing{color:#94a3b8}
+    .doc{page-break-before:always;padding-top:16px}.dh{font-weight:700;font-size:14px;margin-bottom:8px;border-bottom:1px solid #e5e7f0;padding-bottom:6px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.pdfdoc{display:block;width:100%;height:960px;border:1px solid #e5e7f0;border-radius:6px}
+    .certpage{page-break-before:always;transform:scale(.82);transform-origin:top center}
+    @media print{body{padding:0 6mm}}
+  </style></head><body><h1>${e(provider)} — Credential pack</h1><div class="sub">Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · ${staff.length} staff · ${types.length} credential${types.length === 1 ? "" : "s"}${withDocs ? " · with documents" : ""}${courseCerts.length ? ` · ${courseCerts.length} course certificate${courseCerts.length === 1 ? "" : "s"}` : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}${certPages}<script>window.onload=function(){setTimeout(function(){window.print()},${courseCerts.length ? 650 : 400})}</script></body></html>`;
   const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); }
 }
 

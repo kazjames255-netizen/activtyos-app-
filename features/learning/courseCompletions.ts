@@ -27,15 +27,16 @@ export function completionsFor(staffName: string): CourseDone[] {
 
 const fmtLong = (isoDate: string) => { const d = new Date(isoDate + "T00:00:00"); return isNaN(+d) ? isoDate : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }); };
 
-// Download the completion certificate for one staff+course, styled with the
-// provider's chosen certificate template/branding from Setup → Learning.
-export function downloadCourseCertificate(staffName: string, done: CourseDone, settings: TenantSettings) {
+// Build the CertData for one staff+course, styled with the provider's chosen
+// certificate template/branding from Setup → Learning. Shared by the single
+// download and the bulk export pack.
+export function courseCertData(staffName: string, done: CourseDone, settings: TenantSettings): CertData {
   const course = SEED_LIBRARY.find((c) => c.id === done.courseId);
   const rm = course?.renewMonths ?? settings.learning?.renewMonths ?? 0;
   const issued = new Date(done.date + "T00:00:00");
   const exp = rm ? new Date(issued.getFullYear(), issued.getMonth() + rm, issued.getDate()) : null;
   const l = settings.learning;
-  const data: CertData = {
+  return {
     name: staffName || "Team member", course: done.title, pct: done.score,
     date: fmtLong(done.date), expiry: exp ? exp.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }) : undefined,
     provider: settings.providerName || settings.billing?.businessName || "Your organisation",
@@ -44,5 +45,12 @@ export function downloadCourseCertificate(staffName: string, done: CourseDone, s
     signImg: l?.certSignature, signName: l?.certSignatory, signRole: l?.certSignatoryRole,
     accent: l?.certColor, title: l?.certTitle || undefined, showScore: l?.certShowScore, showQr: l?.certShowQr,
   };
-  openCertificate(data, l?.certTemplate);
 }
+
+// Download the completion certificate for one staff+course (opens the print view).
+export function downloadCourseCertificate(staffName: string, done: CourseDone, settings: TenantSettings) {
+  openCertificate(courseCertData(staffName, done, settings), settings.learning?.certTemplate);
+}
+
+// The template id the provider chose (for the bulk pack to match single downloads).
+export const courseCertTemplate = (settings: TenantSettings) => settings.learning?.certTemplate;

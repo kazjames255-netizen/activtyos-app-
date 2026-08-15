@@ -219,11 +219,18 @@ export const CERT_ACCENTS: [string, string][] = [
   ["Burgundy", "#8a1f3d"], ["Plum", "#6d28d9"], ["Charcoal", "#334155"], ["Bronze", "#9a6a2f"], ["Rose", "#c1466f"],
 ];
 
-export function certificateDoc(d: CertData, templateId?: string, print = true): string {
+// Google Fonts used by the certificate templates — shared so the bulk export
+// pack can load them once and inline many cert pages.
+export const CERT_FONTS = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Great+Vibes&family=Josefin+Sans:wght@400;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">`;
+
+// The inner certificate markup for one record + template (no document wrapper).
+export function renderCert(d: CertData, templateId?: string): string {
   const tpl = certTemplateOf(templateId);
-  const inner = tpl.render(d, d.accent || tpl.accent);
-  const fonts = `<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Great+Vibes&family=Josefin+Sans:wght@400;600;700&family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">`;
-  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Certificate — ${esc(d.course)}</title>${fonts}<style>*{margin:0;box-sizing:border-box}html,body{background:#eef1f6}body{padding:18px}@media print{body{background:#fff;padding:0}}@page{size:landscape;margin:8mm}</style></head><body>${inner}${print ? `<script>window.onload=function(){setTimeout(function(){window.print()},450)}</script>` : ""}</body></html>`;
+  return tpl.render(d, d.accent || tpl.accent);
+}
+
+export function certificateDoc(d: CertData, templateId?: string, print = true): string {
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Certificate — ${esc(d.course)}</title>${CERT_FONTS}<style>*{margin:0;box-sizing:border-box}html,body{background:#eef1f6}body{padding:18px}@media print{body{background:#fff;padding:0}}@page{size:landscape;margin:8mm}</style></head><body>${renderCert(d, templateId)}${print ? `<script>window.onload=function(){setTimeout(function(){window.print()},450)}</script>` : ""}</body></html>`;
 }
 
 export function openCertificate(d: CertData, templateId?: string) {

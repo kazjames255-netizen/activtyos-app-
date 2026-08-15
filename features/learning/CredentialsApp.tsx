@@ -9,8 +9,8 @@ import { useRouter, usePathname } from "next/navigation";
 import { Button, Card, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
-import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel, exportCredsPdf, credFiles, DEMO_STAFF, fmtDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
-import { completionsFor, downloadCourseCertificate } from "./courseCompletions";
+import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel, exportCredsPdf, exportCredsPack, credFiles, DEMO_STAFF, fmtDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
+import { completionsFor, downloadCourseCertificate, courseCertData, courseCertTemplate } from "./courseCompletions";
 
 const OPS: [string, string][] = [["all", "All locations"], ["Company-owned", "Company-owned (Head Office)"], ["Milton Keynes", "Milton Keynes"], ["Northampton", "Northampton"], ["Bedford", "Bedford"]];
 
@@ -27,6 +27,12 @@ export function CredentialsApp() {
   const [cell, setCell] = useState<{ staff: string; typeId: string } | null>(null);
   const [profile, setProfile] = useState<{ name: string; role: string; op: string } | null>(null);
   const [exportOpen, setExportOpen] = useState(false);
+  const [packCfg, setPackCfg] = useState(false);
+  const [xStaff, setXStaff] = useState<Set<string>>(new Set());
+  const [xTypes, setXTypes] = useState<Set<string>>(new Set());
+  const [xDocs, setXDocs] = useState(true);
+  const [xCourses, setXCourses] = useState(false);
+  const [xCourseIds, setXCourseIds] = useState<Set<string>>(new Set());
 
   const staff = op === "all" ? DEMO_STAFF : DEMO_STAFF.filter((s) => s.op === op);
   const visTypes = typeFilter === "all" ? cred.types : cred.types.filter((t) => t.id === typeFilter);
@@ -34,6 +40,18 @@ export function CredentialsApp() {
   const cnt = (st: CredStatus) => st === "Missing" ? cells.filter((c) => c.st === "Missing" && c.req && c.applies).length : cells.filter((c) => c.st === st).length;
   const rows = staff.filter((s) => statusFilter === "all" || visTypes.some((t) => { const st = credStatus(cred.recordFor(s.name, t.id)); if (st !== statusFilter) return false; return statusFilter === "Missing" ? t.required && appliesTo(t, s.name, s.role) : true; }));
   const csv = () => { const e = (v: string | number) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }; const rowsCsv = [["Staff", "Location", ...cred.types.map((t) => t.name)], ...staff.map((s) => [s.name, s.op, ...cred.types.map((t) => credStatus(cred.recordFor(s.name, t.id)))])].map((r) => r.map(e).join(",")).join("\n"); const url = URL.createObjectURL(new Blob([rowsCsv], { type: "text/csv" })); const a = document.createElement("a"); a.href = url; a.download = "staff-credentials.csv"; a.click(); URL.revokeObjectURL(url); };
+  const providerName = settings.providerName || settings.billing?.businessName || "Your company";
+  // distinct completed courses across the staff currently in scope
+  const courseOpts = Array.from(new Map(staff.flatMap((s) => completionsFor(s.name)).map((d) => [d.courseId, d.title])).entries());
+  const openPack = () => { setXStaff(new Set(staff.map((s) => s.name))); setXTypes(new Set(cred.types.map((t) => t.id))); setXDocs(true); setXCourses(false); setXCourseIds(new Set(courseOpts.map(([id]) => id))); setPackCfg(true); setExportOpen(false); };
+  const runPack = () => {
+    const selStaff = staff.filter((s) => xStaff.has(s.name));
+    const selTypes = cred.types.filter((t) => xTypes.has(t.id));
+    const courseCerts = xCourses ? selStaff.flatMap((s) => completionsFor(s.name).filter((d) => xCourseIds.has(d.courseId)).map((d) => ({ data: courseCertData(s.name, d, settings), templateId: courseCertTemplate(settings) }))) : [];
+    exportCredsPack({ staff: selStaff, types: selTypes, getRec: cred.recordFor, provider: providerName, withDocs: xDocs, courseCerts });
+    setPackCfg(false);
+  };
+  const toggleSet = (set: Set<string>, fn: (s: Set<string>) => void, v: string) => { const n = new Set(set); n.has(v) ? n.delete(v) : n.add(v); fn(n); };
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
@@ -57,7 +75,7 @@ export function CredentialsApp() {
             <Button onClick={() => setExportOpen((v) => !v)}>⬇ Export ▾</Button>
             {exportOpen && (
               <div className="absolute z-20 mt-1 w-[240px] rounded-xl border border-[var(--line)] bg-white p-1 shadow-xl">
-                {([["CSV (spreadsheet)", () => csv()], ["PDF — register only", () => exportCredsPdf(staff, cred.types, cred.recordFor, "Your company", false)], ["PDF — with certificate docs", () => exportCredsPdf(staff, cred.types, cred.recordFor, "Your company", true)]] as const).map(([lbl, fn]) => (
+                {([["CSV (spreadsheet)", () => csv()], ["PDF — register only", () => exportCredsPdf(staff, cred.types, cred.recordFor, providerName, false)], ["PDF — with docs / courses…", () => openPack()]] as const).map(([lbl, fn]) => (
                   <button key={lbl} type="button" onClick={() => { fn(); setExportOpen(false); }} className="block w-full rounded-lg px-3 py-2 text-left text-[12.5px] font-semibold text-[var(--ink-2)] hover:bg-[var(--panel)]">{lbl}</button>
                 ))}
               </div>
@@ -111,6 +129,47 @@ export function CredentialsApp() {
           <p className="mt-3 text-[11px] text-[var(--ink-3)]">Assign more training in the <button type="button" onClick={() => router.push(`/${portal}/learning`)} className="font-bold text-[#1d3a8f] underline hover:text-[#16297a]">Learning Centre</button>. Certificates use your chosen template &amp; branding from Setup → Learning.</p>
         </Card>
       )}
+
+      {packCfg && (() => {
+        const nCerts = xCourses ? staff.filter((s) => xStaff.has(s.name)).reduce((n, s) => n + completionsFor(s.name).filter((d) => xCourseIds.has(d.courseId)).length, 0) : 0;
+        const allStaff = xStaff.size === staff.length; const allTypes = xTypes.size === cred.types.length; const allCourses = xCourseIds.size === courseOpts.length;
+        const row = (checked: boolean, onClick: () => void, label: React.ReactNode, sub?: string) => (
+          <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-[var(--panel)]"><input type="checkbox" checked={checked} onChange={onClick} className="h-4 w-4 flex-none accent-[#1d3a8f]" /><span className="text-[13px] font-semibold text-[var(--ink)]">{label}</span>{sub && <span className="text-[11.5px] text-[var(--ink-3)]">{sub}</span>}</label>
+        );
+        return (
+          <div className="fixed inset-0 z-[141] flex justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setPackCfg(false)}>
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
+              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Build export pack</h3><button type="button" onClick={() => setPackCfg(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+              <p className="mb-3 text-[12px] text-[var(--ink-3)]">Choose exactly who and what goes into the PDF. {op !== "all" ? `Scoped to ${op}.` : "All locations."}</p>
+
+              <div className="mb-3">
+                <div className="mb-1 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff</span><button type="button" onClick={() => setXStaff(allStaff ? new Set() : new Set(staff.map((s) => s.name)))} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{allStaff ? "Clear all" : "Select all"}</button></div>
+                <div className="max-h-[168px] overflow-y-auto rounded-lg border border-[var(--line)] p-1">{staff.map((s) => row(xStaff.has(s.name), () => toggleSet(xStaff, setXStaff, s.name), s.name, s.op))}</div>
+              </div>
+
+              <div className="mb-3">
+                <div className="mb-1 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Credentials</span><button type="button" onClick={() => setXTypes(allTypes ? new Set() : new Set(cred.types.map((t) => t.id)))} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{allTypes ? "Clear all" : "Select all"}</button></div>
+                <div className="max-h-[150px] overflow-y-auto rounded-lg border border-[var(--line)] p-1">{cred.types.map((t) => row(xTypes.has(t.id), () => toggleSet(xTypes, setXTypes, t.id), t.name, t.required ? "required" : undefined))}</div>
+              </div>
+
+              <label className="mb-2 flex cursor-pointer items-center gap-2.5 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={xDocs} onChange={() => setXDocs((v) => !v)} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[13px] font-bold text-[var(--ink)]">Attach uploaded certificate files</span></label>
+
+              <label className="mb-2 flex cursor-pointer items-center gap-2.5 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={xCourses} onChange={() => setXCourses((v) => !v)} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[13px] font-bold text-[var(--ink)]">Include internal course certificates</span></label>
+              {xCourses && (courseOpts.length ? (
+                <div className="mb-3 ml-1">
+                  <div className="mb-1 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Which courses</span><button type="button" onClick={() => setXCourseIds(allCourses ? new Set() : new Set(courseOpts.map(([id]) => id)))} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{allCourses ? "Clear all" : "Select all"}</button></div>
+                  <div className="max-h-[150px] overflow-y-auto rounded-lg border border-[var(--line)] p-1">{courseOpts.map(([id, title]) => row(xCourseIds.has(id), () => toggleSet(xCourseIds, setXCourseIds, id), title))}</div>
+                </div>
+              ) : <p className="mb-3 ml-1 text-[12px] text-[var(--ink-3)]">No completed courses among the selected staff.</p>)}
+
+              <div className="mt-3 flex items-center gap-2 border-t border-[var(--line)] pt-3">
+                <span className="text-[11.5px] text-[var(--ink-3)]">{xStaff.size} staff · {xTypes.size} credential{xTypes.size === 1 ? "" : "s"}{xCourses ? ` · ${nCerts} course cert${nCerts === 1 ? "" : "s"}` : ""}</span>
+                <Button onClick={() => setPackCfg(false)} className="ml-auto">Cancel</Button>
+                <Button variant="primary" disabled={!xStaff.size || !xTypes.size} onClick={runPack}>⬇ Generate PDF</Button>
+              </div>
+            </div>
+          </div>);
+      })()}
 
       {profile && (() => {
         const applic = cred.types.filter((t) => appliesTo(t, profile.name, profile.role) || cred.recordFor(profile.name, t.id));
