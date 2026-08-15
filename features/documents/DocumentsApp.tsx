@@ -12,6 +12,14 @@ import { useEffect, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
+import { DEMO_STAFF } from "@/features/learning/credentials";
+
+// who's deployed to which listing (demo — real deployment lives in Team →
+// Deployment after activation). Used to decide who a listing-scoped doc reaches.
+const DEMO_DEPLOY: Record<string, string[]> = { "Marcus Bell": ["After-School Football Club"], "Jess Patel": ["After-School Football Club", "Gymnastics Saturday Club"], "Aisha Rahman": ["Summer Holiday Club — Milton Keynes"] };
+const roleMatch = (list: string[], me?: string) => !!me && list.some((r) => { const rl = r.toLowerCase(), m = me.toLowerCase(); return rl.includes(m) || m.includes(rl.split(/[ /]/)[0]); });
+const docAppliesToStaff = (d: DocItem, staff: { name: string; role: string }) => d.all || roleMatch(d.roles, staff.role) || roleMatch(d.titles, staff.role) || d.listings.some((l) => (DEMO_DEPLOY[staff.name] ?? []).includes(l));
+const READ_KEY = "aos.docs.read.v1";
 
 type DocCat = "Policy" | "Risk assessment" | "Handbook" | "Procedure" | "Insurance" | "Form" | "Certificate" | "Other";
 const CATS: DocCat[] = ["Policy", "Risk assessment", "Handbook", "Procedure", "Insurance", "Form", "Certificate", "Other"];
@@ -91,6 +99,11 @@ export function DocumentsApp() {
   const [q, setQ] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "expiring" | "expired">("all");
   const [edit, setEdit] = useState<DocItem | null>(null);
+  const [mode, setMode] = useState<"library" | "receipts">("library");
+  const [reads, setReads] = useState<Record<string, Record<string, string>>>({});
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => { try { const r = JSON.parse(localStorage.getItem(READ_KEY) || "null"); if (r && typeof r === "object") setReads(r); } catch { /* ignore */ } }, [mode]);
+  const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2600); };
 
   const expiring = docs.filter((d) => { const dl = daysUntil(d.expiry); return dl != null && dl >= 0 && dl <= 60; }).length;
   const expired = docs.filter((d) => { const dl = daysUntil(d.expiry); return dl != null && dl < 0; }).length;
@@ -102,6 +115,38 @@ export function DocumentsApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Documents" icon="📁" lede="Your policies, risk assessments, handbooks and insurance — versioned, with review dates, assigned to roles, job titles or specific listings." />
 
+      <div className="mb-3 inline-flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
+        {([["library", "📁 Library"], ["receipts", "✅ Read receipts"]] as const).map(([k, l]) => (
+          <button key={k} type="button" onClick={() => setMode(k)} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (mode === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
+        ))}
+      </div>
+
+      {mode === "receipts" ? (
+        <Card className="p-4">
+          {(() => {
+            const cells = DEMO_STAFF.flatMap((s) => docs.filter((d) => docAppliesToStaff(d, s)).map((d) => ({ read: !!reads[s.name]?.[d.id] })));
+            const unread = cells.filter((c) => !c.read).length;
+            return (<>
+              <div className="mb-3 flex flex-wrap items-center gap-2">
+                <div><div className="text-[14px] font-extrabold text-[var(--ink)]">Who has read what</div><div className="text-[12px] text-[var(--ink-3)]">{cells.length - unread} of {cells.length} confirmations across the team · <b className="text-[#c0392b]">{unread}</b> outstanding</div></div>
+                <Button variant="primary" className="ml-auto" disabled={!unread} onClick={() => flash(`🔔 Reminder sent to staff with unread documents`)}>Chase unread</Button>
+              </div>
+              <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+                <table className="w-full text-[12.5px]">
+                  <thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th>{docs.map((d) => <th key={d.id} title={d.title} className="px-2 py-2.5 font-extrabold"><div className="w-[64px] truncate">{d.title}</div></th>)}</tr></thead>
+                  <tbody>{DEMO_STAFF.map((s) => (
+                    <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]">
+                      <td className="whitespace-nowrap px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}<span className="ml-1 text-[10.5px] font-normal text-[var(--ink-3)]">{s.role}</span></td>
+                      {docs.map((d) => { const applies = docAppliesToStaff(d, s); const at = reads[s.name]?.[d.id]; if (!applies) return <td key={d.id} className="px-2 py-2 text-center text-[var(--ink-3)]" title="Not assigned to this person">—</td>; return <td key={d.id} className="px-2 py-2 text-center">{at ? <span title={`Confirmed ${docFmt(at.slice(0, 10))}`} className="inline-block rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-bold text-[#0f7a43]">✓ {docFmt(at.slice(0, 10)).replace(/ \d{4}$/, "")}</span> : <span className="inline-block rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[10px] font-bold text-[#c0392b]">Unread</span>}</td>; })}
+                    </tr>
+                  ))}</tbody>
+                </table>
+              </div>
+              <p className="mt-2 text-[11px] text-[var(--ink-3)]"><b>—</b> = not assigned to that person (by role, job title or listing). Staff confirm reading in their own <b>Documents</b> area.</p>
+            </>);
+          })()}
+        </Card>
+      ) : (<>
       <div className="mb-3 grid grid-cols-3 gap-2.5">
         {([["all", "documents", "#1d54c4", "#eaf1ff", "📁", docs.length], ["expiring", "review soon", "#b45309", "#fdf3e0", "⏳", expiring], ["expired", "out of date", "#c0392b", "#fdeceb", "⛔", expired]] as const).map(([k, lbl, col, bg, icon, n]) => { const on = statusFilter === k; return (
           <button key={k} type="button" onClick={() => setStatusFilter(k === "all" ? "all" : on ? "all" : k)} className={"flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{n}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
@@ -135,8 +180,10 @@ export function DocumentsApp() {
         </div>
         <p className="mt-3 text-[11px] text-[var(--ink-3)]">Sample documents shown are placeholders — upload your own to replace them. A risk assessment specific to one activity? Assign it to that <b>listing</b> when adding it.</p>
       </Card>
+      </>)}
 
       {edit && <DocEditor doc={edit} roles={roles} titles={titles} onSave={(d) => { upsert(d); setEdit(null); }} onClose={() => setEdit(null)} />}
+      {toast && <div className="fixed bottom-5 left-1/2 z-[150] -translate-x-1/2 rounded-full bg-[#111634] px-4 py-2 text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
 }
