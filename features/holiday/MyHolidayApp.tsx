@@ -15,7 +15,7 @@ import { loadPolicy, loadProfiles, loadAbsences, saveAbsences, slug } from "./da
 
 const ME = "Marcus Bell";
 const ME_ID = slug(ME);
-const KINDS: AbsenceKind[] = ["annual", "sickness", "toil", "unpaid", "other"];
+const KINDS: AbsenceKind[] = ["annual", "sickness", "toil", "unpaid", "maternity", "adoption", "parental", "bereavement", "other"];
 
 function Ring({ value, total, label }: { value: number; total: number; label: string }) {
   const pct = total > 0 ? Math.max(0, Math.min(1, value / total)) : 0; const R = 34, C = 2 * Math.PI * R;

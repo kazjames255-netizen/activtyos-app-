@@ -9,7 +9,7 @@
 // each month. Statutory carry-over is limited (the 1.6-week portion by
 // agreement). Bank-holiday dates below are England & Wales; Scotland/NI differ.
 
-export type AbsenceKind = "annual" | "sickness" | "toil" | "unpaid" | "maternity" | "parental" | "other";
+export type AbsenceKind = "annual" | "sickness" | "toil" | "unpaid" | "maternity" | "adoption" | "parental" | "bereavement" | "other";
 export type AbsenceStatus = "pending" | "approved" | "declined" | "cancelled";
 export type Region = "eng-wal" | "scotland" | "ni";
 
@@ -130,6 +130,8 @@ export function defaultPayTreatment(kind: AbsenceKind, opts?: { rolled?: boolean
     case "sickness": return "ssp";
     case "toil": return "toil";
     case "maternity": return "statutory";
+    case "adoption": return "statutory";
+    case "bereavement": return "statutory"; // Jack's Law paid; other bereavement often compassionate — override per policy
     case "parental": return "unpaid";
     case "unpaid": return "unpaid";
     default: return "normal";
@@ -141,14 +143,16 @@ export const STATUTORY_FAMILY_RATE = 194.32; // £/week from April 2026
 export const FAMILY_LEL = 129;               // AWE eligibility floor (2026/27)
 export function familyLeaveNote(kind: AbsenceKind): string {
   if (kind === "maternity") return `Statutory Maternity / Paternity Pay — run through payroll (recoverable from HMRC). Maternity: 52 weeks' leave, 39 weeks' pay — first 6 weeks at 90% of average weekly earnings, then 33 weeks at the lower of £${STATUTORY_FAMILY_RATE.toFixed(2)}/wk or 90%. Paternity: 2 weeks at the lower of £${STATUTORY_FAMILY_RATE.toFixed(2)} or 90%. Eligibility: ~26 weeks' service by the 15th week before the due date, and AWE ≥ £${FAMILY_LEL}.`;
+  if (kind === "adoption") return `Statutory Adoption Leave — 52 weeks; Statutory Adoption Pay 39 weeks (first 6 weeks at 90% of AWE, then 33 weeks at the lower of £${STATUTORY_FAMILY_RATE.toFixed(2)}/wk or 90%). Eligibility: ~26 weeks' service by the matching week + AWE ≥ £${FAMILY_LEL}. Run via payroll.`;
   if (kind === "parental") return `Statutory (unpaid) parental leave — up to 18 weeks per child (max 4 weeks a year), normally UNPAID. Shared Parental Leave/Pay is a separate paid scheme (statutory rate £${STATUTORY_FAMILY_RATE.toFixed(2)}).`;
+  if (kind === "bereavement") return `Parental Bereavement Leave ("Jack's Law") — 2 weeks, a day-one right, for losing a child under 18 (or stillbirth after 24 weeks). Statutory Parental Bereavement Pay = lower of £${STATUTORY_FAMILY_RATE.toFixed(2)}/wk or 90% AWE (needs ~26 weeks' service + AWE ≥ £${FAMILY_LEL}). For OTHER relatives there is no statutory PAID leave yet — only reasonable UNPAID time off for a dependant emergency (usually 1–2 days); a wider day-one bereavement right (≥1 week) is expected ~2027. Set the pay treatment to match your compassionate-leave policy.`;
   return "";
 }
 
 export const PAY_TREATMENT: Record<PayTreatment, { label: string; note: string }> = {
   normal: { label: "Paid — normal pay", note: "Paid at their normal rate (for variable hours, a 52-week average)." },
   ssp: { label: "Statutory Sick Pay", note: "SSP only, for rota'd shifts — amount from the 8-week average below (add company sick pay if your policy offers it)." },
-  statutory: { label: "Statutory pay (SMP / SPP / ShPP)", note: `Family pay is a statutory scheme run through payroll (flat rate £${STATUTORY_FAMILY_RATE.toFixed(2)}/wk 2026/27) — not normal pay.` },
+  statutory: { label: "Statutory pay (SMP / SPP / adoption / bereavement)", note: `Statutory family/bereavement pay is run through payroll (flat rate £${STATUTORY_FAMILY_RATE.toFixed(2)}/wk 2026/27) — not normal pay.` },
   unpaid: { label: "Unpaid", note: "No pay for these days." },
   toil: { label: "Time off in lieu — no extra pay", note: "They're taking back hours already worked, so it's normal pay with no extra cost." },
 };
@@ -159,7 +163,9 @@ export const KIND_META: Record<AbsenceKind, { label: string; icon: string; tone:
   toil: { label: "Time off in lieu", icon: "⏳", tone: "#8b5cf6", countsAllowance: false },
   unpaid: { label: "Unpaid leave", icon: "◻️", tone: "#64748b", countsAllowance: false },
   maternity: { label: "Maternity / paternity", icon: "🍼", tone: "#ec4899", countsAllowance: false },
+  adoption: { label: "Adoption", icon: "🧸", tone: "#0d9488", countsAllowance: false },
   parental: { label: "Parental leave", icon: "👶", tone: "#14b8a6", countsAllowance: false },
+  bereavement: { label: "Bereavement", icon: "🕊️", tone: "#64748b", countsAllowance: false },
   other: { label: "Other", icon: "🗓️", tone: "#6366f1", countsAllowance: false },
 };
 
@@ -269,7 +275,7 @@ export function summarise(profile: LeaveProfile, policy: HolidayPolicy, absences
   const { start, end } = leaveYear(policy, ref);
   const today = isoDate(ref);
   const mine = absences.filter((a) => a.staffId === profile.id && a.status !== "declined" && a.status !== "cancelled" && a.start >= start && a.start <= end);
-  const byKind = { annual: 0, sickness: 0, toil: 0, unpaid: 0, maternity: 0, parental: 0, other: 0 } as Record<AbsenceKind, number>;
+  const byKind = { annual: 0, sickness: 0, toil: 0, unpaid: 0, maternity: 0, adoption: 0, parental: 0, bereavement: 0, other: 0 } as Record<AbsenceKind, number>;
   let takenAnnual = 0, bookedAnnual = 0, pendingAnnual = 0;
   for (const a of mine) {
     if (a.status === "approved") byKind[a.kind] += a.days;
