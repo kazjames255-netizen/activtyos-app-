@@ -5,11 +5,11 @@
 // optional auto-deduction), and settings. Actual hours feed the pay run. Demo
 // store; real payroll posting + kiosk/geofence are Amir's (docs/timeclock-handoff.md).
 import { useEffect, useMemo, useState } from "react";
-import { Card, Select } from "@/components/ui";
+import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type ClockRecord, type ClockSettings, loadClock, loadClockSettings, saveClockSettings,
-  offToday, workedMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, rateFor, setApproved,
+  offToday, workedMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, rateFor, setApproved, editRecord, payHours,
 } from "./data";
 
 const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -21,6 +21,7 @@ export function TimesheetsApp() {
   const [all, setAll] = useState<Record<string, ClockRecord>>({});
   const [settings, setSettings] = useState<ClockSettings>(loadClockSettings);
   const [q, setQ] = useState("");
+  const [edit, setEdit] = useState<ClockRecord | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => { setAll(loadClock()); setSettings(loadClockSettings()); }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
@@ -40,9 +41,10 @@ export function TimesheetsApp() {
     const late = r.lateMin || 0;
     const lateOver = Math.max(0, late - settings.graceMin);
     const rate = rateFor(r.name);
-    const deduction = settings.autoDeductLate && lateOver > 0 ? (lateOver / 60) * rate : 0;
-    const payH = settings.autoDeductLate ? workedH : (schedH || workedH);
-    return { workedH, schedH, late, lateOver, rate, deduction, payH };
+    const override = !!r.payBasis;
+    const deduction = !override && settings.autoDeductLate && lateOver > 0 ? (lateOver / 60) * rate : 0;
+    const payH = override ? payHours(r, settings.rounding) : (settings.autoDeductLate ? workedH : (schedH || workedH));
+    return { workedH, schedH, late, lateOver, rate, deduction, payH, override };
   };
   const tsPeople = people.filter((r) => r.clockInAt); // anyone who clocked in today
 
@@ -104,8 +106,8 @@ export function TimesheetsApp() {
                   <td className="px-3 py-2 text-right tabular-nums text-[var(--ink-3)]">{s.schedH ? s.schedH.toFixed(2) + "h" : "—"}</td>
                   <td className="px-3 py-2 text-center tabular-nums">{s.late ? <span className={s.lateOver > 0 ? "font-bold text-[#c0392b]" : "text-[var(--ink-3)]"}>{s.late}m</span> : "—"}</td>
                   <td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{s.deduction > 0 ? "−" + gbp(s.deduction) : "—"}</td>
-                  <td className="px-3 py-2 text-right font-extrabold tabular-nums text-[#0f7a43]">{s.payH.toFixed(2)}h</td>
-                  <td className="px-3 py-2 text-right"><button type="button" onClick={() => { setAll(setApproved(all, r.id, !r.approved)); flash(r.approved ? "Approval removed." : `${r.name.split(" ")[0]}'s hours approved.`); }} className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold ${r.approved ? "border-[#0f7a43] text-[#0f7a43]" : "border-[var(--line)] text-[#1d3a8f] hover:border-[#1d3a8f]"}`}>{r.approved ? "✓ Approved" : "Approve"}</button></td>
+                  <td className="px-3 py-2 text-right font-extrabold tabular-nums text-[#0f7a43]">{s.payH.toFixed(2)}h{s.override && <span className="ml-1 rounded bg-[#eef4fd] px-1 py-0.5 text-[9px] font-bold text-[#1d3a8f] align-middle">{r.payBasis === "scheduled" ? "sched" : r.payBasis === "custom" ? "set" : "edit"}</span>}</td>
+                  <td className="px-3 py-2 text-right"><div className="inline-flex gap-1.5"><button type="button" onClick={() => setEdit(r)} className="rounded-lg border border-[var(--line)] px-2 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">✏️</button><button type="button" onClick={() => { setAll(setApproved(all, r.id, !r.approved)); flash(r.approved ? "Approval removed." : `${r.name.split(" ")[0]}'s hours approved.`); }} className={`rounded-lg border px-2.5 py-1 text-[11.5px] font-bold ${r.approved ? "border-[#0f7a43] text-[#0f7a43]" : "border-[var(--line)] text-[#1d3a8f] hover:border-[#1d3a8f]"}`}>{r.approved ? "✓ Approved" : "Approve"}</button></div></td>
                 </tr>
               ); })}</tbody>
             </table>
@@ -123,6 +125,7 @@ export function TimesheetsApp() {
               <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Grace period (min)</span><Select value={String(settings.graceMin)} onChange={(e) => saveSettings({ ...settings, graceMin: Number(e.target.value) })} className="w-full">{[0, 3, 5, 10, 15].map((n) => <option key={n} value={n}>{n} min</option>)}</Select></label>
               <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Round hours to</span><Select value={String(settings.rounding)} onChange={(e) => saveSettings({ ...settings, rounding: Number(e.target.value) as ClockSettings["rounding"] })} className="w-full"><option value="0">Exact</option><option value="5">Nearest 5 min</option><option value="15">Nearest 15 min</option></Select></label>
             </div>
+            <label className="mt-3 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">&ldquo;Lead&rdquo; role name</span><Input value={settings.leadLabel} onChange={(e) => saveSettings({ ...settings, leadLabel: e.target.value || "Lead" })} className="w-full" /><span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">Staff with this role see everyone working at their own listing (in their Clock in/out screen). Rename it to whatever you call your site leads (e.g. &ldquo;Site manager&rdquo;).</span></label>
             <div className="mt-3 rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">Approved hours feed the Payroll pay run automatically (Rostered-hours mode reads the clocked in/out).</div>
           </Card>
           <Card className="p-4">
@@ -137,7 +140,39 @@ export function TimesheetsApp() {
         </div>
       )}
 
+      {edit && <TimesheetEditor rec={edit} onSave={(patch) => { setAll(editRecord(all, edit.id, patch)); setEdit(null); flash("Timesheet updated."); }} onClose={() => setEdit(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
+    </div>
+  );
+}
+
+// yyyy-mm-dd for building ISO from a HH:MM time input on the record's day
+const toISO = (day: string, hm: string) => (hm ? new Date(`${day}T${hm}:00`).toISOString() : undefined);
+function TimesheetEditor({ rec, onSave, onClose }: { rec: ClockRecord; onSave: (patch: Partial<ClockRecord>) => void; onClose: () => void }) {
+  const day = rec.day;
+  const [inHm, setInHm] = useState(rec.clockInAt ? hhmm(rec.clockInAt) : "");
+  const [outHm, setOutHm] = useState(rec.clockOutAt ? hhmm(rec.clockOutAt) : "");
+  const [breakMin, setBreakMin] = useState(Math.round((rec.breakMs || 0) / 60000));
+  const [basis, setBasis] = useState<"actual" | "scheduled" | "custom">(rec.payBasis || "actual");
+  const [custom, setCustom] = useState(rec.payHoursOverride != null ? String(rec.payHoursOverride) : "");
+  const [note, setNote] = useState(rec.editNote || "");
+  return (
+    <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
+      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rec.name}</h3><span className="text-[12px] text-[var(--ink-3)]">· edit timesheet</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="grid gap-2.5">
+          <div className="grid grid-cols-3 gap-2">
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Clock in</span><Input type="time" value={inHm} onChange={(e) => setInHm(e.target.value)} className="w-full" /></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Clock out</span><Input type="time" value={outHm} onChange={(e) => setOutHm(e.target.value)} className="w-full" /></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Break (min)</span><Input inputMode="numeric" value={String(breakMin)} onChange={(e) => setBreakMin(parseInt(e.target.value) || 0)} className="w-full" /></label>
+          </div>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Pay this shift as</span><Select value={basis} onChange={(e) => setBasis(e.target.value as "actual" | "scheduled" | "custom")} className="w-full"><option value="actual">Actual worked hours</option><option value="scheduled">Scheduled (normal) hours</option><option value="custom">A set number of hours</option></Select></label>
+          {basis === "custom" && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Hours to pay</span><Input inputMode="decimal" value={custom} placeholder="e.g. 7.5" onChange={(e) => setCustom(e.target.value)} className="w-full" /></label>}
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason / note</span><Input value={note} placeholder="why the times/pay were changed" onChange={(e) => setNote(e.target.value)} className="w-full" /></label>
+          <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">{basis === "actual" ? "Paid on the clocked in/out (minus break)." : basis === "scheduled" ? "Paid their scheduled hours regardless of when they clocked in." : `Paid ${custom || "—"} hours flat.`}</div>
+        </div>
+        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onSave({ clockInAt: toISO(day, inHm), clockOutAt: toISO(day, outHm), breakMs: Math.max(0, breakMin) * 60000, payBasis: basis, payHoursOverride: basis === "custom" ? (parseFloat(custom) || 0) : undefined, editNote: note || undefined })}>Save</Button></div>
+      </div>
     </div>
   );
 }

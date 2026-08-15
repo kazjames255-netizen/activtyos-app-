@@ -20,12 +20,16 @@ export interface ClockRecord {
   lateMin?: number;     // minutes late vs the scheduled shift start
   loc?: string;         // where they clocked in (label)
   approved?: boolean;   // timesheet approved for payroll
+  payBasis?: "actual" | "scheduled" | "custom"; // how to pay this shift (manager override)
+  payHoursOverride?: number; // hours when payBasis === "custom"
+  editNote?: string;    // manager's reason for editing times/pay
   events: ClockEvent[];
   day: string;          // ISO date these events belong to
 }
-export interface ClockSettings { autoDeductLate: boolean; graceMin: number; rounding: 0 | 5 | 15 }
+// A "lead" (label configurable) can see everyone working at their own listing.
+export interface ClockSettings { autoDeductLate: boolean; graceMin: number; rounding: 0 | 5 | 15; leadLabel: string }
 
-export const DEFAULT_CLOCK_SETTINGS: ClockSettings = { autoDeductLate: false, graceMin: 5, rounding: 0 };
+export const DEFAULT_CLOCK_SETTINGS: ClockSettings = { autoDeductLate: false, graceMin: 5, rounding: 0, leadLabel: "Lead" };
 export const CLOCK_KEY = "aos.timeclock.v1";
 export const CLOCK_SETTINGS_KEY = "aos.timeclock.settings.v1";
 const ROTA_KEY = "aos.rota.v5";
@@ -132,3 +136,18 @@ export function workedMs(r: ClockRecord, now = Date.now()): number {
 }
 export const roundHours = (h: number, rounding: 0 | 5 | 15) => (rounding ? Math.round((h * 60) / rounding) * rounding / 60 : h);
 export function setApproved(all: Record<string, ClockRecord>, id: string, approved: boolean): Record<string, ClockRecord> { return mutate(all, id, (r) => { r.approved = approved; }); }
+// Manager edit of a timesheet row (times / break / pay basis). Recomputes lateMin.
+export function editRecord(all: Record<string, ClockRecord>, id: string, patch: Partial<ClockRecord>): Record<string, ClockRecord> {
+  return mutate(all, id, (r) => {
+    Object.assign(r, patch);
+    if (patch.clockInAt && r.clockInAt) { const sh = shiftToday(r.name); const hm = new Date(r.clockInAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); r.lateMin = sh ? Math.max(0, mins(hm) - mins(sh.start)) : 0; }
+  });
+}
+// worked hours before the pay-basis choice (rounded)
+export function payHours(r: ClockRecord, rounding: 0 | 5 | 15): number {
+  const worked = roundHours(workedMs(r) / 3600000, rounding);
+  const sched = scheduledHoursToday(r.name);
+  if (r.payBasis === "scheduled") return sched || worked;
+  if (r.payBasis === "custom") return r.payHoursOverride ?? worked;
+  return worked; // "actual" (default)
+}

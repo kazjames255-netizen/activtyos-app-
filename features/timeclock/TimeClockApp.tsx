@@ -7,7 +7,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
-  type ClockRecord, loadClock, slug, clockIn, clockOut, startBreak, endBreak,
+  type ClockRecord, loadClock, loadClockSettings, slug, clockIn, clockOut, startBreak, endBreak,
   workedMs, fmtDur, hhmm, sinceLabel, shiftToday,
 } from "./data";
 
@@ -42,6 +42,10 @@ export function TimeClockApp() {
   const others = useMemo(() => Object.values(all).filter((r) => r.id !== ME_ID), [all]);
   const inNow = others.filter((r) => r.status === "in").length;
   const onBreak = others.filter((r) => r.status === "break").length;
+  // leads see everyone working at their own listing (role name configurable)
+  const leadLabel = loadClockSettings().leadLabel;
+  const isLead = (me.role || "").toLowerCase() === leadLabel.toLowerCase();
+  const teamHere = others.filter((r) => r.op && r.op === me.op && r.status !== "out");
 
   const statusMeta = status === "in" ? { label: "Clocked in", tone: "#0f7a43", bg: "#e6f4ea", dot: "#12b76a" }
     : status === "break" ? { label: "On break", tone: "#8a5a09", bg: "#fdf3e0", dot: "#f59e0b" }
@@ -106,6 +110,19 @@ export function TimeClockApp() {
               <div key={r.id} className="flex items-center gap-2 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-semibold text-[var(--ink)]">{r.name}</span>{r.op && <span className="text-[var(--ink-3)]">· {r.op}</span>}<span className="ml-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : sinceLabel(r.clockInAt)}</span></div>
             ))}</div>
           </Card>
+
+          {/* Lead view — everyone working at this person's own listing */}
+          {isLead && (
+            <Card className="p-4">
+              <div className="mb-1 flex items-center gap-2"><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-extrabold text-[#1d3a8f]">{leadLabel}</span><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Your team on shift</span></div>
+              <p className="mb-2 text-[11px] text-[var(--ink-3)]">As a <b>{leadLabel}</b> you can see everyone working at <b>{me.op || "your listing"}</b>.</p>
+              {teamHere.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">No one from your listing is clocked in yet.</div> : (
+                <div className="divide-y divide-[var(--line)]">{teamHere.map((r) => (
+                  <div key={r.id} className="flex items-center gap-2 py-1.5 text-[12.5px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-bold text-[var(--ink)]">{r.name}</span><span className="text-[var(--ink-3)]">{r.role}</span><span className="ml-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : `in ${hhmm(r.clockInAt)}`}{r.lateMin ? <span className="ml-1 text-[#c0392b]">late</span> : ""}</span></div>
+                ))}</div>
+              )}
+            </Card>
+          )}
         </div>
       </div>
     </div>
