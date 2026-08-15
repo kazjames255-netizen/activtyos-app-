@@ -8,15 +8,19 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Card, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { useSettings } from "@/lib/settings";
 import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel, exportCredsPdf, credFiles, DEMO_STAFF, fmtDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
+import { completionsFor, downloadCourseCertificate } from "./courseCompletions";
 
 const OPS: [string, string][] = [["all", "All locations"], ["Company-owned", "Company-owned (Head Office)"], ["Milton Keynes", "Milton Keynes"], ["Northampton", "Northampton"], ["Bedford", "Bedford"]];
 
 export function CredentialsApp() {
   const cred = useCredentials(DEMO_STAFF);
+  const { settings } = useSettings();
   const router = useRouter();
   const portal = (usePathname() || "/company").split("/")[1] || "company";
   const [op, setOp] = useState("all");
+  const [showCourses, setShowCourses] = useState(false);
   const [typeFilter, setTypeFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState<CredStatus | "all">("all");
   const [edit, setEdit] = useState<CredRecord | null>(null);
@@ -38,6 +42,7 @@ export function CredentialsApp() {
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <label className="text-[12px] font-bold text-[var(--ink-3)]">Location</label>
           <Select value={op} onChange={(e) => setOp(e.target.value)} className="max-w-[240px]">{OPS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}</Select>
+          <button type="button" onClick={() => setShowCourses((v) => !v)} className={"ml-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-colors " + (showCourses ? "border-[#1d3a8f] bg-[#eaf1ff] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:border-[#1d3a8f]")}><span className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (showCourses ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (showCourses ? "translate-x-3" : "")} /></span>📚 Internal courses</button>
         </div>
 
         <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
@@ -72,6 +77,39 @@ export function CredentialsApp() {
         </div>
         <p className="mt-2 text-[11px] text-[var(--ink-3)]"><span className="text-[#c0392b]">*</span> required. Manage credential types &amp; who they apply to in <button type="button" onClick={() => router.push(`/${portal}/setup?tab=learning#credtypes`)} className="font-bold text-[#1d3a8f] underline hover:text-[#16297a]">Setup → Learning</button>.</p>
       </Card>
+
+      {showCourses && (
+        <Card className="mt-3 p-4">
+          <div className="mb-3 flex items-center gap-2">
+            <h3 className="text-[14px] font-extrabold text-[var(--ink)]">📚 Internal courses completed</h3>
+            <span className="rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[11px] font-bold text-[#1d3a8f]">ActivityOS training</span>
+          </div>
+          <div className="grid gap-2.5">
+            {staff.map((s) => { const done = completionsFor(s.name); return (
+              <div key={s.name} className="rounded-xl border border-[var(--line)] p-3">
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{s.name}</span>
+                  <span className="text-[11.5px] text-[var(--ink-3)]">{s.role} · {s.op}</span>
+                  <span className="ml-auto text-[11.5px] font-bold text-[var(--ink-2)]">{done.length} completed</span>
+                </div>
+                {done.length ? (
+                  <div className="flex flex-wrap gap-2">
+                    {done.map((d) => (
+                      <button key={d.courseId} type="button" onClick={() => downloadCourseCertificate(s.name, d, settings)} title="Download the completion certificate (PDF)" className="group inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-left hover:border-[#1d3a8f]">
+                        <span className="max-w-[220px] truncate text-[12px] font-bold text-[var(--ink)]">{d.title}</span>
+                        <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-extrabold text-[#0f7a43] tabular-nums">{d.score}%</span>
+                        <span className="text-[10.5px] text-[var(--ink-3)]">{fmtDate(d.date)}</span>
+                        <span className="text-[11px] font-bold text-[#1d3a8f] group-hover:underline">⬇ Certificate</span>
+                      </button>
+                    ))}
+                  </div>
+                ) : <p className="text-[12px] text-[var(--ink-3)]">No internal courses completed yet.</p>}
+              </div>
+            ); })}
+          </div>
+          <p className="mt-3 text-[11px] text-[var(--ink-3)]">Assign more training in the <button type="button" onClick={() => router.push(`/${portal}/learning`)} className="font-bold text-[#1d3a8f] underline hover:text-[#16297a]">Learning Centre</button>. Certificates use your chosen template &amp; branding from Setup → Learning.</p>
+        </Card>
+      )}
 
       {edit && <CredEditor rec={edit} types={cred.types} staffList={DEMO_STAFF} onSave={(r) => { cred.upsertRecord(r); setEdit(null); }} onClose={() => setEdit(null)} />}
 
