@@ -65,6 +65,22 @@ const loadTpl = (): Template[] => { try { return JSON.parse(localStorage.getItem
 const empty = (): Store => ({ staff: [], shifts: [], sites: [] });
 const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.shifts ? v : empty(); } catch { return empty(); } };
 
+// Approved holiday/absence pulled from the Holiday planner (aos.holiday.absences.v1)
+// → a Set of `${nameLower}|${date}` so a person on leave can't be rostered.
+function loadApprovedLeave(): Set<string> {
+  const set = new Set<string>();
+  try {
+    const arr = JSON.parse(localStorage.getItem("aos.holiday.absences.v1") || "[]");
+    if (Array.isArray(arr)) for (const a of arr) {
+      if (!a || a.status !== "approved" || !a.name || !a.start || !a.end) continue;
+      const nm = String(a.name).trim().toLowerCase();
+      let d = a.start as string, guard = 0;
+      while (d <= a.end && guard++ < 400) { set.add(`${nm}|${d}`); d = addDays(d, 1); }
+    }
+  } catch { /* ignore */ }
+  return set;
+}
+
 type Span = "day" | "week" | "2w" | "4w" | "month";
 type Group = "area" | "staff";
 const SPANS: [Span, string][] = [["day", "Day"], ["week", "Week"], ["2w", "2 Weeks"], ["4w", "4 Weeks"], ["month", "Month"]];
@@ -177,6 +193,9 @@ export function ScheduleApp() {
   }, [span, anchor, dates]);
 
   const staffById = useMemo(() => Object.fromEntries(store.staff.map((s) => [s.id, s])), [store.staff]);
+  // approved leave from the Holiday planner (recomputed when the assign panel opens / period changes)
+  const onLeaveSet = useMemo(() => loadApprovedLeave(), [assignOpen, anchor, span]);
+  const onLeave = (name: string, date: string) => onLeaveSet.has(`${name.trim().toLowerCase()}|${date}`);
   const inPeriod = (s: Shift) => dateSet.has(s.date) && (site === "all" || s.site === site) && (listingF === "all" || s.listing === listingF) && inSeason(s.season);
   const periodShifts = useMemo(() => store.shifts.filter(inPeriod), [store.shifts, dateSet, site, listingF, seasonSel]);
   const listingOpts = useMemo(() => [...new Set(scopedListings.map((l) => l.title))].sort(), [scopedListings]);
@@ -286,7 +305,7 @@ export function ScheduleApp() {
     const taken = new Set(draft.slots.filter(Boolean) as string[]);
     const busy = (sid: string) => store.shifts.some((s) => s.staffId === sid && s.date === draft.date && !draft.groupIds.includes(s.id));
     const pool = store.staff
-      .filter((s) => !taken.has(s.id) && !busy(s.id) && dayAvail(s, draft.date).ok)
+      .filter((s) => !taken.has(s.id) && !busy(s.id) && !onLeave(s.name, draft.date) && dayAvail(s, draft.date).ok)
       .sort((a, b) => Number(b.role === draft.role) - Number(a.role === draft.role));
     const slots = draft.slots.slice(); let pi = 0;
     for (let i = 0; i < slots.length && pi < pool.length; i++) if (!slots[i]) { slots[i] = pool[pi++].id; }
@@ -307,7 +326,7 @@ export function ScheduleApp() {
     const next = store.shifts.map((s) => ({ ...s })); let filled = 0;
     for (const u of next.filter((s) => inPeriod(s) && !s.staffId)) {
       const busy = (sid: string) => next.some((x) => x.staffId === sid && x.date === u.date && overlaps(x, u));
-      const cand = [...confirmed].sort((a, b) => Number(b.role === u.role) - Number(a.role === u.role)).find((c) => !busy(c.id));
+      const cand = [...confirmed].sort((a, b) => Number(b.role === u.role) - Number(a.role === u.role)).find((c) => !busy(c.id) && !onLeave(c.name, u.date));
       if (cand) { u.staffId = cand.id; filled++; }
     }
     persist({ ...store, shifts: next });
@@ -817,15 +836,16 @@ export function ScheduleApp() {
               <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">Staff already on a shift that day (here or at another location) can&rsquo;t be double-booked.</p>
               <div className="flex max-h-[46vh] flex-col divide-y divide-[var(--line-2,#eef2f8)] overflow-y-auto">
                 {[...store.staff]
-                  .map((st) => ({ st, on: draft.slots.includes(st.id), av: dayAvail(st, draft.date), busy: store.shifts.some((s) => s.staffId === st.id && s.date === draft.date && !draft.groupIds.includes(s.id)) }))
-                  .sort((a, b) => Number(b.on) - Number(a.on) || Number(b.av.ok) - Number(a.av.ok) || Number(a.busy) - Number(b.busy))
-                  .map(({ st, on, av, busy }) => {
-                    const blocked = busy && !on;
+                  .map((st) => ({ st, on: draft.slots.includes(st.id), av: dayAvail(st, draft.date), busy: store.shifts.some((s) => s.staffId === st.id && s.date === draft.date && !draft.groupIds.includes(s.id)), leave: onLeave(st.name, draft.date) }))
+                  .sort((a, b) => Number(b.on) - Number(a.on) || Number(a.leave) - Number(b.leave) || Number(b.av.ok) - Number(a.av.ok) || Number(a.busy) - Number(b.busy))
+                  .map(({ st, on, av, busy, leave }) => {
+                    const blocked = (busy || leave) && !on;
+                    const sub = leave ? "🏖 On approved leave" : busy ? "On another shift this day" : av.label;
                     return (
                     <button key={st.id} type="button" disabled={blocked} onClick={() => toggleAssign(st.id)}
                       className={"flex items-center gap-3 py-2.5 text-left transition-colors " + (on ? "bg-[#eef4fd]" : "enabled:hover:bg-[var(--panel)]") + (blocked ? " opacity-45" : "")}>
                       <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
-                      <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{st.name}</div><div className="text-[12px] font-semibold" style={{ color: blocked ? "var(--ink-3)" : av.ok ? "#0f7a43" : "var(--ink-3)" }}>{blocked ? "On another shift this day" : av.label} · £{st.rate.toFixed(2)}/hr</div></div>
+                      <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{st.name}</div><div className="text-[12px] font-semibold" style={{ color: blocked ? (leave ? "#b45309" : "var(--ink-3)") : av.ok ? "#0f7a43" : "var(--ink-3)" }}>{sub} · £{st.rate.toFixed(2)}/hr</div></div>
                       {on && <span className="text-[16px] font-extrabold text-[#1d3a8f]">✓</span>}
                     </button>
                   ); })}

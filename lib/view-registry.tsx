@@ -28,6 +28,8 @@ import { EmailApp } from "@/features/email/EmailApp";
 import { DocumentsApp } from "@/features/documents/DocumentsApp";
 import { StaffDocsApp } from "@/features/documents/StaffDocsApp";
 import { StaffPayslipsApp } from "@/features/payroll/StaffPayslipsApp";
+import { HolidayApp } from "@/features/holiday/HolidayApp";
+import { MyHolidayApp } from "@/features/holiday/MyHolidayApp";
 import { PayrollApp } from "@/features/payroll/PayrollApp";
 import { ComplianceApp } from "@/features/compliance/ComplianceApp";
 import { LearningCentreApp } from "@/features/learning/LearningCentreApp";
@@ -134,6 +136,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="operator" />,
     payroll: PayrollApp,
+    holiday: HolidayApp,
     learning: LearningCentreApp,
     credentials: CredentialsApp,
     schedule: RotaApp,
@@ -191,11 +194,13 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="operator" />,
     payroll: PayrollApp,
+    holiday: HolidayApp,
     moments2: MomentsApp,
   },
   freelancer: {
     dash: DashboardApp,
     setup: SetupApp,
+    holiday: HolidayApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,
     blocks: BlocksApp,
@@ -260,11 +265,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="staff" />,
     availability: AvailabilityApp,
-    holiday: planned({
-      title: "My holiday",
-      blurb: "Request time off and see what's approved, with the rota kept in step automatically.",
-      links: [{ href: "/staff/schedule", label: "Schedule", hint: "your shifts as they stand" }],
-    }),
+    holiday: MyHolidayApp,
     expenses: planned({
       title: "My expenses",
       blurb: "Snap a receipt, claim it back, and track what's been reimbursed.",
