@@ -309,7 +309,10 @@ function AbsenceEditor({ abs, region, sickRule, isNew, profiles, policy, absence
           {/* entitlement — so the manager sees what they've got before booking annual leave */}
           {a.staffId && (rolled
             ? <div className="rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">💷 {first}&rsquo;s holiday is <b>included in their pay</b> (12.07% rolled-up) — no bookable allowance.</div>
-            : summary && <div className="rounded-lg bg-[#eef7ee] px-3 py-2 text-[11.5px] font-semibold text-[#0f7a43]">{first} has <b>{summary.remaining} of {summary.total}</b> holiday days left this year{a.kind === "annual" ? <> → <b>{round1(summary.remaining - days)}</b> after this booking{summary.remaining - days < 0 ? " ⚠ over allowance" : ""}</> : ""}{summary.pendingAnnual > 0 ? ` · ${summary.pendingAnnual} pending` : ""}</div>)}
+            : summary && <div className="rounded-lg bg-[#eef7ee] px-3 py-2 text-[#0f7a43]">
+                <div className="text-[11.5px] font-bold">{first} · <b>{summary.remaining} of {summary.total}</b> holiday days left{a.kind === "annual" ? <> → <b>{round1(summary.remaining - days)}</b> after this{summary.remaining - days < 0 ? " ⚠ over allowance" : ""}</> : ""}</div>
+                <div className="mt-1 flex flex-wrap gap-x-2.5 gap-y-0.5 text-[10.5px] font-semibold text-[var(--ink-2)]"><span>Taken <b>{summary.takenAnnual}</b></span><span>Booked <b>{summary.bookedAnnual}</b></span><span>Pending <b>{summary.pendingAnnual}</b></span>{summary.carriedOver > 0 && <span>incl. {summary.carriedOver} carried</span>}</div>
+              </div>)}
           {/* pay treatment — how this type is paid, defaulted per type, overridable */}
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Pay for this leave</span><Select value={pay} onChange={(e) => set({ pay: e.target.value as PayTreatment })} className="w-full">{(["normal", "ssp", "statutory", "toil", "unpaid"] as PayTreatment[]).map((t) => <option key={t} value={t}>{PAY_TREATMENT[t].label}</option>)}</Select></label>
