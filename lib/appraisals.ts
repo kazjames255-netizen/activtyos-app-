@@ -43,10 +43,10 @@ export interface PIP { id: string; staffId: string; name: string; concern: strin
 
 // 9-box: performance (x) × potential (y), each low/medium/high (1..3)
 export interface Talent { staffId: string; performance: 1 | 2 | 3; potential: 1 | 2 | 3 }
-export const NINEBOX: Record<string, { label: string; tone: string }> = {
-  "3-3": { label: "Star", tone: "#0f7a43" }, "3-2": { label: "High performer", tone: "#12b76a" }, "3-1": { label: "Trusted pro", tone: "#3f7ae0" },
-  "2-3": { label: "High potential", tone: "#12b76a" }, "2-2": { label: "Core", tone: "#3f7ae0" }, "2-1": { label: "Effective", tone: "#64748b" },
-  "1-3": { label: "Enigma / develop", tone: "#f59e0b" }, "1-2": { label: "Inconsistent", tone: "#f59e0b" }, "1-1": { label: "Under-performing", tone: "#c0392b" },
+export const NINEBOX: Record<string, { label: string; tone: string; action: string }> = {
+  "3-3": { label: "Star", tone: "#0f7a43", action: "Stretch & retain — succession candidate" }, "3-2": { label: "High performer", tone: "#12b76a", action: "Grow — give more scope" }, "3-1": { label: "Trusted pro", tone: "#3f7ae0", action: "Reward & keep doing what works" },
+  "2-3": { label: "High potential", tone: "#12b76a", action: "Invest — coach toward a bigger role" }, "2-2": { label: "Core", tone: "#3f7ae0", action: "Develop steadily — the backbone" }, "2-1": { label: "Effective", tone: "#64748b", action: "Maintain — recognise reliability" },
+  "1-3": { label: "Enigma / develop", tone: "#f59e0b", action: "Diagnose the block — new role or support?" }, "1-2": { label: "Inconsistent", tone: "#f59e0b", action: "Set clear expectations & follow up" }, "1-1": { label: "Under-performing", tone: "#c0392b", action: "Consider a PIP — act, don't ignore" },
 };
 export const nineBoxCell = (t: { performance: number; potential: number }) => NINEBOX[`${t.performance}-${t.potential}`];
 

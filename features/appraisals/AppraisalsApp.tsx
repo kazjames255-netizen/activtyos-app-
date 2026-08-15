@@ -5,7 +5,7 @@
 // feedback/supervision log, a 9-box talent grid, editable templates, and PIPs.
 // Embedded as a Team tab next to Deployment. Demo store; backend owed
 // (docs/appraisals-handoff.md).
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
@@ -103,20 +103,10 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
 
       {/* ── TALENT 9-BOX ── */}
       {sub === "talent" && (
-        <Card className="mt-4 p-4">
-          <div className="mb-3 text-[12px] text-[var(--ink-3)]">Nine-box grid — <b>performance</b> (→) against <b>potential</b> (↑). Click a person to move them.</div>
-          <div className="overflow-x-auto"><div className="grid min-w-[560px] grid-cols-3 gap-2">
-            {[3, 2, 1].map((pot) => [1, 2, 3].map((perf) => { const cell = NINEBOX[`${perf}-${pot}`]; const here = talent.filter((t) => inOp(DEMO_STAFF.find((s) => slug(s.name) === t.staffId)?.op) && t.performance === perf && t.potential === pot); return (
-              <div key={`${perf}-${pot}`} className="min-h-[92px] rounded-xl border p-2" style={{ borderColor: cell.tone + "55", background: cell.tone + "0f" }}>
-                <div className="mb-1 text-[9.5px] font-extrabold uppercase" style={{ color: cell.tone }}>{cell.label}</div>
-                <div className="flex flex-wrap gap-1">{here.map((t) => { const s = DEMO_STAFF.find((x) => slug(x.name) === t.staffId); return (
-                  <button key={t.staffId} type="button" onClick={() => { const nextPerf = ((perf % 3) + 1) as 1 | 2 | 3; persistT(talent.map((x) => x.staffId === t.staffId ? { ...x, performance: nextPerf } : x)); flash(`${s?.name.split(" ")[0]} → ${NINEBOX[`${nextPerf}-${pot}`].label}`); }} className="rounded-full bg-white px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink)] shadow-sm ring-1 ring-black/5" title="Click to shift performance">{s?.name}</button>
-                ); })}</div>
-              </div>
-            ); }))}
-          </div></div>
-          <div className="mt-2 flex justify-between text-[10px] font-bold text-[var(--ink-3)]"><span>← lower performance</span><span>higher performance →</span></div>
-        </Card>
+        <TalentGrid talent={talent.filter((t) => inOp(DEMO_STAFF.find((s) => slug(s.name) === t.staffId)?.op))} reviews={reviews}
+          onMove={(id, perf, pot) => { persistT(talent.map((x) => x.staffId === id ? { ...x, performance: perf, potential: pot } : x)); const s = DEMO_STAFF.find((x) => slug(x.name) === id); flash(`${s?.name.split(" ")[0]} → ${NINEBOX[`${perf}-${pot}`].label}`); }}
+          onOpenReview={(id) => { const r = reviews.filter((x) => x.staffId === id).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]; if (r) setEdit(r); else flash("No review yet — start one on the Reviews tab."); }}
+          onLogNote={(name, text) => { persistF([{ id: uid(), staffId: slug(name), name, kind: "supervision", text, at: new Date().toISOString(), by: "You" }, ...feedback]); flash("Note logged."); }} />
       )}
 
       {/* ── TEMPLATES ── */}
@@ -178,6 +168,111 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Appraisals & performance" icon="📋" lede="Review cycles, two-sided appraisals with real lateness/absence/training signals, goals, a feedback log, a 9-box talent grid and PIPs — all in one place." />
       {Body}{modals}
+    </div>
+  );
+}
+
+// ── Talent 9-box ─────────────────────────────────────────────────────────────
+const suggestPerf = (score: number | null): 1 | 2 | 3 | null => (score == null ? null : score >= 4 ? 3 : score >= 2.5 ? 2 : 1);
+const LMH = { 1: "Low", 2: "Med", 3: "High" } as const;
+
+function TalentGrid({ talent, reviews, onMove, onOpenReview, onLogNote }: {
+  talent: Talent[]; reviews: Review[];
+  onMove: (id: string, perf: 1 | 2 | 3, pot: 1 | 2 | 3) => void;
+  onOpenReview: (id: string) => void; onLogNote: (name: string, text: string) => void;
+}) {
+  const [drag, setDrag] = useState<string | null>(null);
+  const [over, setOver] = useState<string | null>(null);
+  const [place, setPlace] = useState<string | null>(null);
+  const scoreFor = (id: string) => { const r = reviews.filter((x) => x.staffId === id).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]; return r ? overallScore(r) : null; };
+  const staffOf = (id: string) => DEMO_STAFF.find((s) => slug(s.name) === id);
+  const POT_LABEL = { 3: "High", 2: "Medium", 1: "Low" } as const;
+  const PERF_LABEL = { 1: "Low", 2: "Medium", 3: "High" } as const;
+  return (
+    <Card className="mt-4 p-4">
+      <div className="mb-3 flex flex-wrap items-center gap-2 text-[12px] text-[var(--ink-3)]">
+        <span>Nine-box — <b>performance</b> → against <b>potential</b> ↑. <b>Drag</b> a card to move, or <b>click</b> it to place, add a note or open the review.</span>
+        <span className="ml-auto rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)]">⚑ review score suggests another box</span>
+      </div>
+      <div className="overflow-x-auto">
+        <div className="min-w-[620px]">
+          <div className="grid gap-2" style={{ gridTemplateColumns: "64px repeat(3, minmax(0,1fr))" }}>
+            {([3, 2, 1] as const).map((pot, ri) => (
+              <Fragment key={pot}>
+                <div className="flex flex-col items-end justify-center pr-1 text-right">
+                  {ri === 0 && <div className="mb-1 text-[9px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Potential ↑</div>}
+                  <div className="text-[11px] font-extrabold text-[var(--ink-2)]">{POT_LABEL[pot]}</div>
+                </div>
+                {([1, 2, 3] as const).map((perf) => {
+                  const key = `${perf}-${pot}`; const cell = NINEBOX[key];
+                  const here = talent.filter((t) => t.performance === perf && t.potential === pot);
+                  const isOver = over === key;
+                  return (
+                    <div key={key}
+                      onDragOver={(e) => { e.preventDefault(); setOver(key); }} onDragLeave={() => setOver((o) => (o === key ? null : o))}
+                      onDrop={(e) => { e.preventDefault(); const id = e.dataTransfer.getData("text/id") || drag; if (id) onMove(id, perf, pot); setDrag(null); setOver(null); }}
+                      className={`min-h-[104px] rounded-xl border p-2 transition-colors ${here.length === 0 ? "opacity-70" : ""}`}
+                      style={{ borderColor: isOver ? cell.tone : cell.tone + "55", background: isOver ? cell.tone + "24" : cell.tone + "0f", borderWidth: isOver ? 2 : 1 }}>
+                      <div className="mb-1 flex items-center gap-1">
+                        <span className="text-[9.5px] font-extrabold uppercase" style={{ color: cell.tone }}>{cell.label}</span>
+                        {here.length > 0 && <span className="rounded-full bg-white px-1.5 text-[9px] font-bold text-[var(--ink-2)] ring-1 ring-black/5">{here.length}</span>}
+                      </div>
+                      <div className="mb-1.5 text-[9px] leading-tight text-[var(--ink-3)]">{cell.action}</div>
+                      <div className="space-y-1">{here.map((t) => {
+                        const s = staffOf(t.staffId); if (!s) return null;
+                        const sc = scoreFor(t.staffId); const sug = suggestPerf(sc); const mismatch = sug != null && sug !== t.performance;
+                        return (
+                          <button key={t.staffId} type="button" draggable
+                            onDragStart={(e) => { setDrag(t.staffId); e.dataTransfer.setData("text/id", t.staffId); e.dataTransfer.effectAllowed = "move"; }}
+                            onDragEnd={() => { setDrag(null); setOver(null); }}
+                            onClick={() => setPlace(t.staffId)}
+                            className="flex w-full cursor-grab items-center gap-1.5 rounded-lg bg-white p-1.5 text-left shadow-sm ring-1 ring-black/5 hover:ring-[color:var(--ink-3)] active:cursor-grabbing">
+                            <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-[var(--panel)] text-[9px] font-extrabold text-[var(--ink-2)]">{s.name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("")}</span>
+                            <span className="min-w-0 flex-1"><span className="block truncate text-[11px] font-bold text-[var(--ink)]">{s.name}</span><span className="block truncate text-[9px] text-[var(--ink-3)]">{s.role}{mismatch ? ` · ⚑ ${NINEBOX[`${sug}-${pot}`].label}` : ""}</span></span>
+                            {sc != null && <span className="shrink-0 rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[9.5px] font-extrabold text-[#1d3a8f]">{sc}</span>}
+                          </button>
+                        );
+                      })}</div>
+                    </div>
+                  );
+                })}
+              </Fragment>
+            ))}
+            <div />
+            {([1, 2, 3] as const).map((perf) => <div key={perf} className="pt-0.5 text-center text-[11px] font-extrabold text-[var(--ink-2)]">{PERF_LABEL[perf]}</div>)}
+          </div>
+          <div className="mt-0.5 text-center text-[9px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Performance →</div>
+        </div>
+      </div>
+      {place && (() => { const s = staffOf(place); if (!s) return null; const t = talent.find((x) => x.staffId === place); const sc = scoreFor(place); const sug = suggestPerf(sc);
+        return <PlacePopover name={s.name} role={s.role} perf={t?.performance ?? 2} pot={t?.potential ?? 2} score={sc} suggest={sug}
+          onMove={(perf, pot) => onMove(place, perf, pot)} onOpenReview={() => { onOpenReview(place); setPlace(null); }} onLogNote={(txt) => onLogNote(s.name, txt)} onClose={() => setPlace(null)} />;
+      })()}
+    </Card>
+  );
+}
+
+function PlacePopover({ name, role, perf, pot, score, suggest, onMove, onOpenReview, onLogNote, onClose }: {
+  name: string; role: string; perf: 1 | 2 | 3; pot: 1 | 2 | 3; score: number | null; suggest: 1 | 2 | 3 | null;
+  onMove: (perf: 1 | 2 | 3, pot: 1 | 2 | 3) => void; onOpenReview: () => void; onLogNote: (text: string) => void; onClose: () => void;
+}) {
+  const [p, setP] = useState<1 | 2 | 3>(perf); const [q, setQ] = useState<1 | 2 | 3>(pot); const [note, setNote] = useState("");
+  const cell = NINEBOX[`${p}-${q}`];
+  const Row = ({ label, val, set, hint }: { label: string; val: 1 | 2 | 3; set: (n: 1 | 2 | 3) => void; hint?: 1 | 2 | 3 | null }) => (
+    <div className="flex items-center gap-2"><span className="w-20 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{label}</span><div className="flex gap-1">{([1, 2, 3] as const).map((n) => <button key={n} type="button" onClick={() => set(n)} className={`h-8 w-14 rounded-lg text-[11px] font-bold ${val === n ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-2)] hover:bg-[#e2e8f4]"}`}>{LMH[n]}{hint === n && val !== n ? " ⚑" : ""}</button>)}</div></div>
+  );
+  return (
+    <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[14vh]" onClick={onClose} style={LIGHT_PALETTE}>
+      <div className="w-full max-w-sm rounded-2xl bg-white p-4 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-2 flex items-center gap-2"><h3 className="text-[14px] font-extrabold text-[var(--ink)]">{name}</h3><span className="text-[11px] text-[var(--ink-3)]">{role}</span>{score != null && <span className="ml-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">Review {score}/5</span>}<button type="button" onClick={onClose} className="text-[17px] text-[var(--ink-3)]">×</button></div>
+        <div className="space-y-2"><Row label="Performance" val={p} set={setP} hint={suggest} /><Row label="Potential" val={q} set={setQ} /></div>
+        <div className="mt-2 rounded-lg p-2 text-[11px] font-semibold" style={{ background: cell.tone + "14", color: cell.tone }}>{cell.label} — <span className="font-normal text-[var(--ink-2)]">{cell.action}</span>{suggest != null && suggest !== p && <div className="mt-0.5 text-[10px] font-normal text-[var(--ink-3)]">⚑ Their latest review score suggests {({ 1: "Low", 2: "Medium", 3: "High" } as const)[suggest]} performance.</div>}</div>
+        <label className="mt-2 block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Add a note (optional)</span><textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Why this placement…" className="w-full rounded-lg border border-[var(--line)] p-2 text-[12px]" /></label>
+        <div className="mt-3 flex items-center gap-2">
+          <button type="button" onClick={onOpenReview} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Open review →</button>
+          <div className="ml-auto flex gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => { onMove(p, q); if (note.trim()) onLogNote(note.trim()); onClose(); }}>Save</Button></div>
+        </div>
+      </div>
     </div>
   );
 }
