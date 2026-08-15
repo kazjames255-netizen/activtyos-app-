@@ -6,7 +6,7 @@
 // payslips, and accounting integrations (QuickBooks / Xero / Sage). All figures
 // are estimates for planning — real RTI/HMRC filing, exact tax codes and the live
 // accounting sync are the backend/integration piece (Amir). Demo stores.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
@@ -48,7 +48,7 @@ const qePension = (annualGross: number) => Math.min(Math.max(annualGross - 6240,
 
 interface Emp { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; pension: boolean }
 export interface Line { id: string; name: string; role: string; op: string; basis: "hour" | "year"; rate: number; hpw: number; weeks: number; taxCode: string; niCat: string; hoursM: number; grossM: number; payeM: number; eeNiM: number; erNiM: number; eePenM: number; erPenM: number; netM: number }
-export interface PayRun { id: string; period: string; paidOn: string; lines: Line[]; status: "draft" | "approved" }
+export interface PayRun { id: string; period: string; paidOn: string; lines: Line[]; status: "draft" | "approved"; hoursBasis?: "contracted" | "rota" }
 export const PAYROLL_RUNS_KEY = "aos.payroll.runs.v1";
 
 // Standalone payslip window — shared by the operator Payroll view and the staff
@@ -100,13 +100,49 @@ function seedEmployees(): Emp[] {
 }
 
 const grossMonthly = (e: Emp) => e.basis === "year" ? e.rate / 12 : e.rate * e.hpw * (e.weeks || 52) / 12;
-function computeLine(e: Emp): Line {
-  const grossM = r2(grossMonthly(e)); const grossA = grossM * 12;
+// computeLine estimates one month. Pass monthlyHoursOverride to pay an hourly
+// person by ACTUAL rostered hours (from the Schedule) instead of contracted
+// hpw; salaried staff are unaffected (a salary isn't hours-driven).
+function computeLine(e: Emp, monthlyHoursOverride?: number): Line {
+  const useH = monthlyHoursOverride != null && e.basis === "hour";
+  const grossM = r2(useH ? e.rate * (monthlyHoursOverride as number) : grossMonthly(e)); const grossA = grossM * 12;
   const payeM = r2(payeAnnual(grossA, e.taxCode) / 12), eeNiM = r2(eeNiAnnual(grossA, e.niCat) / 12), erNiM = r2(erNiAnnual(grossA, e.niCat) / 12);
   const qeM = qePension(grossA) / 12;
   const eePenM = e.pension ? r2(qeM * 0.05) : 0, erPenM = e.pension ? r2(qeM * 0.03) : 0;
-  const hoursM = e.basis === "hour" ? r2(e.hpw * (e.weeks || 52) / 12) : 0;
+  const hoursM = e.basis === "hour" ? r2(useH ? (monthlyHoursOverride as number) : e.hpw * (e.weeks || 52) / 12) : 0;
   return { id: e.id, name: e.name, role: e.role, op: e.op, basis: e.basis, rate: e.rate, hpw: e.hpw, weeks: e.weeks || 52, taxCode: e.taxCode, niCat: e.niCat, hoursM, grossM, payeM, eeNiM, erNiM, eePenM, erPenM, netM: r2(grossM - payeM - eeNiM - eePenM) };
+}
+
+// ── Link to the Schedule / rota ─────────────────────────────────────────────
+// Sums a staff member's ACTUAL rostered hours for a month from the Schedule's
+// demo store (aos.rota.v5): prefers real check-in/out (in/out) over planned
+// start/end and subtracts an unpaid break. Matched to payroll employees by name
+// — the demo stand-in for a shared staff id (server-side link is Amir's; see
+// docs/payroll-integrations-handoff.md).
+const ROTA_KEY = "aos.rota.v5";
+const rhm = (t: string) => { const [h, m] = (t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
+const shiftHours = (s: { start: string; end: string; in?: string; out?: string; brk?: { from: string; to: string } }) => {
+  const gross = Math.max(0, rhm(s.out || s.end) - rhm(s.in || s.start));
+  const brk = s.brk ? Math.max(0, rhm(s.brk.to) - rhm(s.brk.from)) : 0;
+  return Math.max(0, gross - brk) / 60;
+};
+function rotaHoursForMonth(d: Date): { byName: Record<string, number>; hasData: boolean } {
+  const byName: Record<string, number> = {};
+  if (typeof window === "undefined") return { byName, hasData: false };
+  let store: { staff?: { id: string; name: string }[]; shifts?: { staffId: string | null; date: string; start: string; end: string; in?: string; out?: string; brk?: { from: string; to: string } }[] } | null = null;
+  try { store = JSON.parse(localStorage.getItem(ROTA_KEY) || "null"); } catch { /* ignore */ }
+  if (!store || !Array.isArray(store.shifts) || !Array.isArray(store.staff)) return { byName, hasData: false };
+  const idToName: Record<string, string> = {};
+  store.staff.forEach((s) => { idToName[s.id] = s.name; });
+  const y = d.getFullYear(), mo = d.getMonth();
+  for (const sh of store.shifts) {
+    if (!sh.staffId || !sh.date) continue;
+    const dd = new Date(`${sh.date}T00:00:00`);
+    if (dd.getFullYear() !== y || dd.getMonth() !== mo) continue;
+    const nm = (idToName[sh.staffId] || "").trim().toLowerCase();
+    if (nm) byName[nm] = (byName[nm] || 0) + shiftHours(sh);
+  }
+  return { byName, hasData: store.shifts.length > 0 };
 }
 
 const monthLabel = (d: Date) => d.toLocaleDateString("en-GB", { month: "long", year: "numeric" });
@@ -125,6 +161,7 @@ export function PayrollApp() {
   const [conn, setConn] = useState<Record<string, boolean>>({});
   const [edit, setEdit] = useState<Emp | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [hoursSource, setHoursSource] = useState<"contracted" | "rota">("contracted");
   useEffect(() => {
     try { const e = JSON.parse(localStorage.getItem(EKEY) || "null"); if (Array.isArray(e) && e.length) setEmps(e); } catch { /* ignore */ }
     try { const r = JSON.parse(localStorage.getItem(RKEY) || "null"); if (Array.isArray(r)) setRuns(r); } catch { /* ignore */ }
@@ -135,7 +172,12 @@ export function PayrollApp() {
   const saveConn = (c: Record<string, boolean>) => { setConn(c); try { localStorage.setItem(IKEY, JSON.stringify(c)); } catch { /* ignore */ } };
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2800); };
 
-  const lines = emps.map(computeLine);
+  // actual rostered hours for this month, read from the Schedule (refreshed when
+  // switching hours mode or re-entering the pay-run tab)
+  const rota = useMemo(() => rotaHoursForMonth(new Date()), [hoursSource, tab]);
+  const rotaHoursFor = (e: Emp) => rota.byName[e.name.trim().toLowerCase()];
+  const lines = emps.map((e) => computeLine(e, hoursSource === "rota" ? (rotaHoursFor(e) ?? 0) : undefined));
+  const zeroHourNames = hoursSource === "rota" ? emps.filter((e) => e.basis === "hour" && !(rotaHoursFor(e) > 0)).map((e) => e.name) : [];
   const totalGross = lines.reduce((a, l) => a + l.grossM, 0);
   const totalNet = lines.reduce((a, l) => a + l.netM, 0);
   const totalErCost = lines.reduce((a, l) => a + l.grossM + l.erNiM + l.erPenM, 0);
@@ -144,10 +186,11 @@ export function PayrollApp() {
 
   const runPayroll = () => {
     const now = new Date(); const period = monthLabel(now);
+    if (hoursSource === "rota" && zeroHourNames.length && !window.confirm(`${zeroHourNames.length} hourly staff have no rostered hours for ${period} (${zeroHourNames.join(", ")}). They'll be paid £0. Approve anyway?`)) return;
     if (runs.some((r) => r.period === period) && !window.confirm(`A payroll run for ${period} already exists. Approve another? Both are kept (a payroll record is never overwritten).`)) return;
-    const run: PayRun = { id: "pr_" + now.getTime().toString(36), period, paidOn: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10), lines, status: "approved" };
+    const run: PayRun = { id: "pr_" + now.getTime().toString(36), period, paidOn: new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().slice(0, 10), lines, status: "approved", hoursBasis: hoursSource };
     saveRuns([run, ...runs]); // never delete a prior run — versioned history
-    flash(`✅ ${period} payroll run — ${lines.length} payslips generated (${gbp0(totalNet)} net).`);
+    flash(`✅ ${period} payroll run — ${lines.length} payslips generated (${gbp0(totalNet)} net · ${hoursSource === "rota" ? "actual rostered hours" : "contracted hours"}).`);
     setTab("payslips");
   };
 
@@ -156,7 +199,7 @@ export function PayrollApp() {
   const exportCsv = () => {
     // guard against CSV/formula injection: quote, and neutralise leading =,+,-,@
     const cell = (x: string | number) => { let s = typeof x === "number" ? x.toFixed(2) : String(x ?? ""); if (/^[=+\-@]/.test(s)) s = "'" + s; return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const rows = [["Employee", "Role", "Location", "Gross", "PAYE", "EE NI", "Pension", "Net", "ER NI", "ER Pension"], ...lines.map((l) => [l.name, l.role, l.op, l.grossM, l.payeM, l.eeNiM, l.eePenM, l.netM, l.erNiM, l.erPenM])];
+    const rows = [["Employee", "Role", "Location", "Hours", "Hours basis", "Gross", "PAYE", "EE NI", "Pension", "Net", "ER NI", "ER Pension"], ...lines.map((l) => [l.name, l.role, l.op, l.basis === "year" ? "" : l.hoursM, l.basis === "year" ? "salary" : hoursSource, l.grossM, l.payeM, l.eeNiM, l.eePenM, l.netM, l.erNiM, l.erPenM])];
     const csv = rows.map((r) => r.map(cell).join(",")).join("\n"); const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `payroll-${monthLabel(new Date())}.csv`; a.click(); URL.revokeObjectURL(url);
   };
@@ -208,12 +251,28 @@ export function PayrollApp() {
       {tab === "run" && (
         <Card className="p-4">
           <div className="mb-3 flex flex-wrap items-center gap-2"><div><div className="text-[14px] font-extrabold text-[var(--ink)]">Pay run · {monthLabel(new Date())}</div><div className="text-[12px] text-[var(--ink-3)]">Review, then approve to generate payslips. Figures are estimates.</div></div><div className="ml-auto flex gap-2"><Button onClick={exportCsv}>⬇ Export CSV</Button><Button variant="primary" onClick={runPayroll}>✓ Approve &amp; generate payslips</Button></div></div>
+
+          {/* Hours source — contracted vs actual rostered hours from the Schedule */}
+          <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Hourly pay from</span>
+              <div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)]">
+                {([["contracted", "Contracted hours"], ["rota", "Rostered hours (from Schedule)"]] as const).map(([k, lab]) => (
+                  <button key={k} type="button" onClick={() => setHoursSource(k)} className={`px-3 py-1.5 text-[12px] font-bold ${hoursSource === k ? "bg-[#1d3a8f] text-white" : "bg-white text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{lab}</button>
+                ))}
+              </div>
+              <span className="text-[11.5px] text-[var(--ink-3)]">{hoursSource === "rota" ? "Actual shift hours (check-in/out where logged, less unpaid breaks) for this month." : "Each person's contracted hours/week. Salaried staff are unaffected either way."}</span>
+            </div>
+            {hoursSource === "rota" && !rota.hasData && <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">No shifts found in the Schedule yet — build this month&rsquo;s rota in the Schedule area, or switch back to contracted hours.</div>}
+            {hoursSource === "rota" && rota.hasData && zeroHourNames.length > 0 && <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">⚠ No rostered hours this month for: {zeroHourNames.join(", ")} — they&rsquo;ll show £0. Add their shifts in the Schedule, or approve as-is.</div>}
+          </div>
+
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
-            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-right font-extrabold">Gross</th><th className="px-3 py-2.5 text-right font-extrabold">PAYE</th><th className="px-3 py-2.5 text-right font-extrabold">NI</th><th className="px-3 py-2.5 text-right font-extrabold">Pension</th><th className="px-3 py-2.5 text-right font-extrabold">Net</th><th className="px-3 py-2.5 text-right font-extrabold">Er cost</th></tr></thead>
+            <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-right font-extrabold">Hours</th><th className="px-3 py-2.5 text-right font-extrabold">Gross</th><th className="px-3 py-2.5 text-right font-extrabold">PAYE</th><th className="px-3 py-2.5 text-right font-extrabold">NI</th><th className="px-3 py-2.5 text-right font-extrabold">Pension</th><th className="px-3 py-2.5 text-right font-extrabold">Net</th><th className="px-3 py-2.5 text-right font-extrabold">Er cost</th></tr></thead>
               <tbody>{lines.map((l) => (
-                <tr key={l.id} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2 font-bold text-[var(--ink)]">{l.name}</td><td className="px-3 py-2 text-right tabular-nums">{gbp(l.grossM)}</td><td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.payeM)}</td><td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.eeNiM)}</td><td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.eePenM)}</td><td className="px-3 py-2 text-right font-extrabold tabular-nums text-[#0f7a43]">{gbp(l.netM)}</td><td className="px-3 py-2 text-right tabular-nums text-[var(--ink-3)]">{gbp(l.grossM + l.erNiM + l.erPenM)}</td></tr>
+                <tr key={l.id} className="border-t border-[var(--line-2,#eef2f8)]"><td className="px-3 py-2 font-bold text-[var(--ink)]">{l.name}</td><td className="px-3 py-2 text-right tabular-nums text-[var(--ink-2)]">{l.basis === "year" ? <span className="text-[var(--ink-3)]">Salary</span> : <>{l.hoursM}h {hoursSource === "rota" ? <span className="ml-1 rounded bg-[#e7edfb] px-1 py-0.5 text-[9.5px] font-bold text-[#1d3a8f] align-middle">rota</span> : <span className="ml-1 rounded bg-[#eef1f6] px-1 py-0.5 text-[9.5px] font-bold text-[#64748b] align-middle">contract</span>}</>}</td><td className="px-3 py-2 text-right tabular-nums">{gbp(l.grossM)}</td><td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.payeM)}</td><td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.eeNiM)}</td><td className="px-3 py-2 text-right tabular-nums text-[#c0392b]">{gbp(l.eePenM)}</td><td className="px-3 py-2 text-right font-extrabold tabular-nums text-[#0f7a43]">{gbp(l.netM)}</td><td className="px-3 py-2 text-right tabular-nums text-[var(--ink-3)]">{gbp(l.grossM + l.erNiM + l.erPenM)}</td></tr>
               ))}
-              <tr className="border-t-2 border-[var(--line)] bg-[var(--panel)] font-extrabold"><td className="px-3 py-2.5">Totals</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(totalGross)}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(totalPaye)}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(lines.reduce((a, l) => a + l.eeNiM, 0))}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(lines.reduce((a, l) => a + l.eePenM, 0))}</td><td className="px-3 py-2.5 text-right tabular-nums text-[#0f7a43]">{gbp(totalNet)}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(totalErCost)}</td></tr></tbody>
+              <tr className="border-t-2 border-[var(--line)] bg-[var(--panel)] font-extrabold"><td className="px-3 py-2.5">Totals</td><td className="px-3 py-2.5 text-right tabular-nums text-[var(--ink-3)]">{lines.filter((l) => l.basis === "hour").reduce((a, l) => a + l.hoursM, 0).toFixed(1)}h</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(totalGross)}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(totalPaye)}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(lines.reduce((a, l) => a + l.eeNiM, 0))}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(lines.reduce((a, l) => a + l.eePenM, 0))}</td><td className="px-3 py-2.5 text-right tabular-nums text-[#0f7a43]">{gbp(totalNet)}</td><td className="px-3 py-2.5 text-right tabular-nums">{gbp(totalErCost)}</td></tr></tbody>
             </table>
           </div>
         </Card>
