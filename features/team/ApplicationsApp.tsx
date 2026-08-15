@@ -12,11 +12,13 @@ import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_FIELDS } from "./OnboardingApp";
 
-type AField = { id: string; label: string; type: "text" | "textarea" | "email" | "tel" | "date" | "select"; required: boolean; options?: string[]; mapsTo?: string };
+type AField = { id: string; label: string; type: "text" | "textarea" | "email" | "tel" | "date" | "select" | "file"; required: boolean; options?: string[]; mapsTo?: string };
 interface AppForm { id: string; name: string; fields: AField[]; summary?: string; payKind?: string; payAmount?: string }
 const PAY_KINDS = ["Not stated", "Per hour", "Per day", "Annual salary", "Range"];
 const payLabel = (f: AppForm) => f.payKind && f.payKind !== "Not stated" && f.payAmount ? `${f.payAmount}${f.payKind === "Per hour" ? "/hour" : f.payKind === "Per day" ? "/day" : f.payKind === "Annual salary" ? "/year" : ""}` : "";
-interface Application { id: string; formId: string; name: string; email: string; answers: Record<string, string>; submittedAt: string; status: "new" | "accepted" | "rejected"; rejectReason?: string; onboardingSent?: boolean }
+interface Application { id: string; formId: string; name: string; email: string; answers: Record<string, string>; files?: Record<string, { name: string; data: string }>; submittedAt: string; status: "new" | "accepted" | "rejected"; rejectReason?: string; onboardingSent?: boolean }
+const openFile = (dataUrl?: string) => { if (!dataUrl || typeof window === "undefined") return; const w = window.open(); if (w) w.document.write(`<iframe src="${dataUrl}" style="border:0;width:100vw;height:100vh"></iframe>`); };
+const SAMPLE_PDF = "data:text/html,<body style='font-family:Georgia;padding:60px;max-width:640px;margin:auto'><h2>Sample uploaded document</h2><p>This is a placeholder for the document the applicant attached. Real uploads are stored and viewed here once the backend is wired.</p></body>";
 
 const FORMS_KEY = "aos.team.appforms.v1";
 const APPS_KEY = "aos.team.applications.v1";
@@ -38,6 +40,10 @@ function defaultForm(): AppForm {
       F("position", "Position applied for", "text", false, "jobTitle"),
       F("experience", "Relevant experience", "textarea", false),
       F("qualifications", "Qualifications", "textarea", false, "qualifications"),
+      F("idFile", "Photo ID (upload)", "file", false, "idFile"),
+      F("rtwEvidence", "Right-to-work document (upload)", "file", false, "rtwEvidence"),
+      F("dbsFile", "DBS certificate, if held (upload)", "file", false, "dbsFile"),
+      F("qualDocs", "Qualification certificates (upload)", "file", false, "qualDocs"),
       F("ref1Name", "Reference 1 — name", "text", false, "ref1Name"),
       F("ref1Email", "Reference 1 — email", "email", false, "ref1Email"),
       F("ref1Phone", "Reference 1 — phone", "tel", false, "ref1Phone"),
@@ -52,8 +58,8 @@ function defaultForm(): AppForm {
 function seedApps(): Application[] {
   const day = (n: number) => { const d = new Date(); d.setDate(d.getDate() - n); return d.toISOString(); };
   return [
-    { id: "a1", formId: "standard", name: "Chloe Adams", email: "chloe.adams@example.com", submittedAt: day(2), status: "new", answers: { fullName: "Chloe Adams", email: "chloe.adams@example.com", phone: "07700 900321", address1: "14 Elm Road", town: "Milton Keynes", postcode: "MK9 2AA", nationality: "British", position: "Coach", experience: "3 years coaching multi-sports holiday camps.", qualifications: "Level 2 Multi-Skills, Paediatric First Aid", ref1Name: "Sam Okafor", ref1Email: "sam.o@oldclub.example", ref1Phone: "07700 900654", ref2Name: "Dana Patel", ref2Email: "dana.p@school.example", rtw: "Yes", why: "I love helping kids build confidence through sport." } },
-    { id: "a2", formId: "standard", name: "Ben Carter", email: "ben.carter@example.com", submittedAt: day(1), status: "new", answers: { fullName: "Ben Carter", email: "ben.carter@example.com", phone: "07700 900112", address1: "9 Oak Avenue", town: "Northampton", postcode: "NN1 3BB", nationality: "British", position: "Activity Instructor", experience: "Lifeguard + swim teaching, 2 years.", qualifications: "NPLQ, Swim Teacher L2", ref1Name: "Priya Shah", ref1Email: "priya@pool.example", rtw: "Yes", why: "Keen to move into a year-round role." } },
+    { id: "a1", formId: "standard", name: "Chloe Adams", email: "chloe.adams@example.com", submittedAt: day(2), status: "new", answers: { fullName: "Chloe Adams", email: "chloe.adams@example.com", phone: "07700 900321", address1: "14 Elm Road", town: "Milton Keynes", postcode: "MK9 2AA", nationality: "British", position: "Coach", experience: "3 years coaching multi-sports holiday camps.", qualifications: "Level 2 Multi-Skills, Paediatric First Aid", ref1Name: "Sam Okafor", ref1Email: "sam.o@oldclub.example", ref1Phone: "07700 900654", ref2Name: "Dana Patel", ref2Email: "dana.p@school.example", rtw: "Yes", why: "I love helping kids build confidence through sport." }, files: { idFile: { name: "chloe-passport.pdf", data: SAMPLE_PDF }, dbsFile: { name: "chloe-dbs.pdf", data: SAMPLE_PDF }, qualDocs: { name: "chloe-certificates.pdf", data: SAMPLE_PDF } } },
+    { id: "a2", formId: "standard", name: "Ben Carter", email: "ben.carter@example.com", submittedAt: day(1), status: "new", answers: { fullName: "Ben Carter", email: "ben.carter@example.com", phone: "07700 900112", address1: "9 Oak Avenue", town: "Northampton", postcode: "NN1 3BB", nationality: "British", position: "Activity Instructor", experience: "Lifeguard + swim teaching, 2 years.", qualifications: "NPLQ, Swim Teacher L2", ref1Name: "Priya Shah", ref1Email: "priya@pool.example", rtw: "Yes", why: "Keen to move into a year-round role." }, files: { idFile: { name: "ben-driving-licence.jpg", data: SAMPLE_PDF }, rtwEvidence: { name: "ben-share-code.pdf", data: SAMPLE_PDF } } },
     { id: "a3", formId: "standard", name: "Amir Hussain", email: "amir.h@example.com", submittedAt: day(5), status: "rejected", rejectReason: "No relevant experience / no DBS on file.", answers: { fullName: "Amir Hussain", email: "amir.h@example.com", phone: "07700 900999", position: "Coach", experience: "Retail background.", rtw: "Yes" } },
   ];
 }
@@ -64,10 +70,15 @@ const STATUS_TONE: Record<string, string> = { new: "bg-[#e6efff] text-[#1d54c4]"
 // carry an accepted application's answers into the applicant's onboarding record
 function carryOver(app: Application, form: AppForm) {
   try {
-    const list: { staff: string; values: Record<string, { v?: string }>; extra: string[] }[] = JSON.parse(localStorage.getItem(ONBOARD_RECORDS_KEY) || "[]");
+    const list: { staff: string; values: Record<string, { v?: string; fileData?: string; fileName?: string }>; extra: string[] }[] = JSON.parse(localStorage.getItem(ONBOARD_RECORDS_KEY) || "[]");
     const idx = list.findIndex((r) => r.staff === app.name);
     const rec = idx >= 0 ? list[idx] : { staff: app.name, values: {}, extra: [] };
-    for (const f of form.fields) { if (f.mapsTo && app.answers[f.id]) rec.values[f.mapsTo] = { v: app.answers[f.id] }; }
+    for (const f of form.fields) {
+      if (!f.mapsTo) continue;
+      const file = app.files?.[f.id];
+      if (file) rec.values[f.mapsTo] = { fileData: file.data, fileName: file.name };
+      else if (app.answers[f.id]) rec.values[f.mapsTo] = { v: app.answers[f.id] };
+    }
     if (idx >= 0) list[idx] = rec; else list.push(rec);
     localStorage.setItem(ONBOARD_RECORDS_KEY, JSON.stringify(list));
   } catch { /* ignore */ }
@@ -132,10 +143,10 @@ export function ApplicationsPanel() {
                 </div>
 
                 <div className="mb-3 grid gap-2 sm:grid-cols-2">
-                  {f.fields.map((fl) => { const v = app.answers[fl.id]; if (!v) return null; return (
+                  {f.fields.map((fl) => { const v = app.answers[fl.id]; const file = app.files?.[fl.id]; if (!v && !file) return null; return (
                     <div key={fl.id} className={"rounded-lg bg-[var(--panel)] px-3 py-2 " + (fl.type === "textarea" ? "sm:col-span-2" : "")}>
                       <div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{fl.label}{fl.mapsTo && <span title="Carries into onboarding" className="ml-1 text-[#0f7a43]">↳</span>}</div>
-                      <div className="text-[12.5px] font-semibold text-[var(--ink)]">{v}</div>
+                      {file ? <button type="button" onClick={() => openFile(file.data)} className="mt-0.5 inline-flex items-center gap-1 rounded-md border border-[var(--line)] bg-white px-2 py-1 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">📎 {file.name} · View</button> : <div className="text-[12.5px] font-semibold text-[var(--ink)]">{v}</div>}
                     </div>
                   ); })}
                 </div>
@@ -224,7 +235,7 @@ function SendModal({ forms, onSent, onClose }: { forms: AppForm[]; onSent: (m: s
   );
 }
 
-const ONBOARD_TARGETS: [string, string][] = DEFAULT_FIELDS.filter((f) => ["text", "tel", "email", "date", "textarea", "select", "jobtitle"].includes(f.type)).map((f) => [f.id, f.label]);
+const ONBOARD_TARGETS: [string, string][] = DEFAULT_FIELDS.filter((f) => ["text", "tel", "email", "date", "textarea", "select", "jobtitle", "file"].includes(f.type)).map((f) => [f.id, f.label]);
 
 function FormEditor({ form, jobTitles, onSave, onClose }: { form: AppForm; jobTitles: string[]; onSave: (f: AppForm) => void; onClose: () => void }) {
   const [f, setF] = useState<AppForm>(form);
@@ -250,7 +261,7 @@ function FormEditor({ form, jobTitles, onSave, onClose }: { form: AppForm; jobTi
               <div key={fl.id} className="rounded-lg border border-[var(--line)] p-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Input value={fl.label} onChange={(e) => patch(fl.id, { label: e.target.value })} className="min-w-[150px] flex-1" />
-                  <Select value={fl.type} onChange={(e) => patch(fl.id, { type: e.target.value as AField["type"] })} className="max-w-[120px]"><option value="text">Text</option><option value="textarea">Long text</option><option value="email">Email</option><option value="tel">Phone</option><option value="date">Date</option><option value="select">Dropdown</option></Select>
+                  <Select value={fl.type} onChange={(e) => patch(fl.id, { type: e.target.value as AField["type"] })} className="max-w-[130px]"><option value="text">Text</option><option value="textarea">Long text</option><option value="email">Email</option><option value="tel">Phone</option><option value="date">Date</option><option value="select">Dropdown</option><option value="file">File upload</option></Select>
                   <label className="flex items-center gap-1 text-[11px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={fl.required} onChange={(e) => patch(fl.id, { required: e.target.checked })} className="h-3.5 w-3.5 accent-[#1d3a8f]" />Req</label>
                   <button type="button" onClick={() => setF((x) => ({ ...x, fields: x.fields.filter((y) => y.id !== fl.id) }))} className="text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                 </div>
