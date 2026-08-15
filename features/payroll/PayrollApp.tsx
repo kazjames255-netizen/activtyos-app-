@@ -11,6 +11,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { DEMO_STAFF } from "@/features/learning/credentials";
+import { loadProfiles as loadHolidayProfiles } from "@/features/holiday/data";
 
 // ——— UK PAYE / NI / pension ESTIMATE helpers (2026/27; rest-of-UK bands) ———
 const r2 = (n: number) => Math.round((n || 0) * 100) / 100;
@@ -241,8 +242,9 @@ export function PayrollApp() {
   const rotaHoursFor = (e: Emp) => rota.byName[e.name.trim().toLowerCase()];
   const rotaRateFor = (e: Emp) => rota.rateByName[e.name.trim().toLowerCase()]; // rate the Schedule uses for this person
   const scheduleWageFor = (e: Emp) => { const h = rotaHoursFor(e); const r = rotaRateFor(e) ?? e.rate; return h != null ? h * r : undefined; };
-  // staff whose holiday is INCLUDED IN PAY (rolled-up 12.07%), from the Holiday planner
-  const rolledUpNames = useMemo(() => { try { const arr = JSON.parse(localStorage.getItem("aos.holiday.profiles.v1") || "[]"); return new Set((Array.isArray(arr) ? arr : []).filter((p: { holidayPay?: string }) => p.holidayPay === "rolled-up").map((p: { name: string }) => p.name.trim().toLowerCase())); } catch { return new Set<string>(); } }, [tab]);
+  // staff whose holiday is INCLUDED IN PAY (rolled-up 12.07%), from the Holiday
+  // planner (loadProfiles falls back to the seed, so it works before that page is opened)
+  const rolledUpNames = useMemo(() => { try { return new Set(loadHolidayProfiles().filter((p) => p.holidayPay === "rolled-up").map((p) => p.name.trim().toLowerCase())); } catch { return new Set<string>(); } }, [tab]);
   const isRolledUp = (e: Emp) => rolledUpNames.has(e.name.trim().toLowerCase());
   // each employee is paid from contracted hours OR the rota (their own setting);
   // salaried staff are always contracted (a salary isn't hours-driven)
