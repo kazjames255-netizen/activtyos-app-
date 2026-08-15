@@ -28,6 +28,7 @@ export interface Absence {
   decidedBy?: string;
   decidedAt?: string;
   note?: string;        // approver's decline reason / note
+  paid?: boolean;       // false = unpaid (e.g. rolled-up staff taking already-paid leave)
 }
 
 // Per-tenant leave policy (defaults sit in the store; editable in Settings).

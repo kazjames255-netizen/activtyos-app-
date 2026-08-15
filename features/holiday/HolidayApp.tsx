@@ -103,11 +103,11 @@ export function HolidayApp() {
                       <div className="min-w-[160px]">
                         <div className="text-[13.5px] font-extrabold text-[#1d3a8f]">{a.name}</div>
                         <div className="text-[12px] text-[var(--ink-2)]">{km.label}</div>
-                        <div className="text-[12.5px] font-semibold text-[var(--ink)]">{fmtRange(a.start, a.end)}{a.half ? ` · ${a.half} half-day` : ""} <span className="font-normal text-[var(--ink-3)]">({a.days} day{a.days === 1 ? "" : "s"})</span></div>
+                        <div className="text-[12.5px] font-semibold text-[var(--ink)]">{fmtRange(a.start, a.end)}{a.half ? ` · ${a.half} half-day` : ""} <span className="font-normal text-[var(--ink-3)]">({a.days} day{a.days === 1 ? "" : "s"})</span>{a.paid === false && <span className="ml-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b] align-middle">unpaid</span>}</div>
                         {a.reason && <div className="mt-0.5 text-[11.5px] italic text-[var(--ink-3)]">“{a.reason}”</div>}
                       </div>
                       <div className="min-w-[190px] flex-1 rounded-xl bg-[#f2f7ff] p-2.5 text-[12px] text-[var(--ink-2)]">
-                        {a.kind === "annual" ? <><b>{a.name.split(" ")[0]}</b> will have <b>{after} / {s.total} days</b> left once approved</> : <><b>{km.label}</b> — doesn&rsquo;t use annual-leave allowance</>}
+                        {a.paid === false ? <><b>Unpaid</b> — holiday is included in their pay (12.07% rolled-up), so no allowance is used</> : a.kind === "annual" ? <><b>{a.name.split(" ")[0]}</b> will have <b>{after} / {s.total} days</b> left once approved</> : <><b>{km.label}</b> — doesn&rsquo;t use annual-leave allowance</>}
                         <div className="mt-1">{cf.length === 0 ? <span className="font-semibold text-[#0f7a43]">✓ No conflicts</span> : <button type="button" onClick={() => setExpanded((p) => { const n = new Set(p); n.has(a.id) ? n.delete(a.id) : n.add(a.id); return n; })} className="font-bold text-[#b45309] hover:underline">🚩 {open ? "Hide" : "Show"} conflicts ({cf.length})</button>}</div>
                       </div>
                       <div className="flex shrink-0 gap-1.5">

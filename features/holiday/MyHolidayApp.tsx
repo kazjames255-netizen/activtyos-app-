@@ -41,6 +41,9 @@ export function MyHolidayApp() {
   const persistAbs = (a: Absence[]) => { setAbsences(a); saveAbsences(a); };
 
   const me = profiles.find((p) => p.id === ME_ID) || { id: ME_ID, name: ME } as LeaveProfile;
+  // rolled-up = holiday INCLUDED IN PAY. They can still take time off (a legal
+  // right), but it's UNPAID at the point of taking (already paid via 12.07%).
+  const rolled = me.holidayPay === "rolled-up";
   const s = useMemo(() => summarise(me, policy, absences), [me, policy, absences]);
   const mine = absences.filter((a) => a.staffId === ME_ID).sort((a, b) => (a.start < b.start ? 1 : -1));
   const ly = leaveYear(policy);
@@ -48,24 +51,43 @@ export function MyHolidayApp() {
   const otherDays = s.byKind.other + s.byKind.unpaid + s.byKind.maternity + s.byKind.parental;
 
   const submit = (a: Omit<Absence, "id" | "staffId" | "name" | "status" | "requestedAt" | "days"> & { days: number }) => {
-    const abs: Absence = { id: crypto.randomUUID(), staffId: ME_ID, name: ME, status: "pending", requestedAt: new Date().toISOString(), ...a };
+    const abs: Absence = { id: crypto.randomUUID(), staffId: ME_ID, name: ME, status: "pending", requestedAt: new Date().toISOString(), ...a, paid: rolled ? false : true };
     persistAbs([abs, ...absences]); setReqOpen(false); flash("✅ Request sent to your manager.");
   };
   const cancel = (id: string) => { if (window.confirm("Cancel this request?")) persistAbs(absences.map((x) => (x.id === id ? { ...x, status: "cancelled" as const } : x))); };
 
-  // seasonal / irregular staff whose holiday is INCLUDED IN PAY don't get the
-  // request-holiday flow — their leave is paid as they earn it (12.07% rolled-up).
-  const rolled = me.holidayPay === "rolled-up";
+  const historyRows = (
+    <Card className="mt-4 p-0">
+      <div className="border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">My time off</div>
+      {mine.length === 0 ? <div className="p-8 text-center text-[13px] text-[var(--ink-3)]">No time off booked yet.</div> : (
+        <div className="divide-y divide-[var(--line)]">{mine.map((a) => { const km = KIND_META[a.kind]; const tone = a.status === "approved" ? "bg-[#e6f4ea] text-[#0f7a43]" : a.status === "pending" ? "bg-[#fdf3e0] text-[#8a5a09]" : "bg-[#eef1f6] text-[#64748b]"; return (
+          <div key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+            <span className="grid h-8 w-8 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span>
+            <div className="min-w-[150px]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{km.label}{a.paid === false && <span className="ml-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b]">unpaid</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{fmtRange(a.start, a.end)}{a.half ? ` · ${a.half}` : ""} · {a.days}d</div></div>
+            {a.note && <div className="text-[11.5px] italic text-[var(--ink-3)]">“{a.note}”</div>}
+            <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${tone}`}>{a.status}</span>
+            {a.status === "pending" && <button type="button" onClick={() => cancel(a.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Cancel</button>}
+          </div>
+        ); })}</div>
+      )}
+    </Card>
+  );
+
   if (rolled) return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="My holiday" icon="🏖" lede="Your holiday is included in your pay." />
-      <Card className="mx-auto max-w-xl p-6 text-center">
-        <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-[#eef4fd] text-[26px]">💷</div>
-        <div className="text-[16px] font-extrabold text-[var(--ink)]">Holiday pay is included in your wages</div>
-        <p className="mx-auto mt-2 max-w-md text-[13px] leading-relaxed text-[var(--ink-2)]">You&rsquo;re paid your holiday as you earn it — an extra <b>12.07%</b> is added to every payslip as a separate <b>Holiday pay</b> line, so you don&rsquo;t build up days to book here.</p>
-        <p className="mx-auto mt-2 max-w-md text-[12px] text-[var(--ink-3)]">You can still take time off — just let your manager know directly. Check the <b>Holiday pay</b> line on your payslips in <b>My payslips</b>.</p>
-        {nph && <div className="mt-4 inline-block rounded-xl bg-[var(--panel)] px-4 py-2 text-[12.5px] font-semibold text-[#1d3a8f]">Next public holiday · {nph.name} · {new Date(`${nph.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long" })}</div>}
+      <PageHero title="My holiday" icon="🏖" lede="Your holiday pay is included in your wages — you can still book time off, it's just unpaid on the day." actions={<Button variant="primary" onClick={() => setReqOpen(true)}>+ Book time off</Button>} />
+      <Card className="p-5">
+        <div className="flex items-start gap-3">
+          <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-[#eef4fd] text-[20px]">💷</div>
+          <div>
+            <div className="text-[14px] font-extrabold text-[var(--ink)]">Holiday pay is included in your wages</div>
+            <p className="mt-1 max-w-xl text-[12.5px] leading-relaxed text-[var(--ink-2)]">You&rsquo;re paid your holiday as you earn it — an extra <b>12.07%</b> is added to every payslip as a separate <b>Holiday pay</b> line (see <b>My payslips</b>). You can still <b>book time off</b> whenever you need it — because it&rsquo;s already been paid, those days are <b>unpaid</b> at the time you take them.</p>
+            {nph && <div className="mt-2 inline-block rounded-lg bg-[var(--panel)] px-3 py-1.5 text-[12px] font-semibold text-[#1d3a8f]">Next public holiday · {nph.name} · {new Date(`${nph.date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "long" })}</div>}
+          </div>
+        </div>
       </Card>
+      {historyRows}
+      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} unpaid onSubmit={submit} onClose={() => setReqOpen(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
@@ -136,7 +158,7 @@ export function MyHolidayApp() {
   );
 }
 
-function RequestModal({ region, remaining, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; reason?: string; days: number }) => void; onClose: () => void }) {
+function RequestModal({ region, remaining, unpaid, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; unpaid?: boolean; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; reason?: string; days: number }) => void; onClose: () => void }) {
   const today = isoDate(new Date());
   const [kind, setKind] = useState<AbsenceKind>("annual");
   const [start, setStart] = useState(today);
@@ -145,11 +167,12 @@ function RequestModal({ region, remaining, onSubmit, onClose }: { region: Holida
   const [reason, setReason] = useState("");
   const single = start === end;
   const days = workingDays(start, end, { half: single ? (half || null) : null, region });
-  const overBudget = kind === "annual" && days > remaining;
+  const overBudget = !unpaid && kind === "annual" && days > remaining;
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Request time off</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{unpaid ? "Book time off" : "Request time off"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        {unpaid && <div className="mb-3 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">💷 Your holiday pay is included in your wages (12.07% rolled-up), so these days are <b>unpaid</b> — you&rsquo;ve already been paid for them.</div>}
         <div className="grid gap-2.5">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={kind} onChange={(e) => setKind(e.target.value as AbsenceKind)} className="w-full">{KINDS.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {KIND_META[k].label}</option>)}</Select></label>
           <div className="grid grid-cols-2 gap-2">
@@ -158,7 +181,7 @@ function RequestModal({ region, remaining, onSubmit, onClose }: { region: Holida
           </div>
           {single && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Half day</span><Select value={half} onChange={(e) => setHalf(e.target.value as "am" | "pm" | "")} className="w-full"><option value="">Full day</option><option value="am">Morning (AM)</option><option value="pm">Afternoon (PM)</option></Select></label>}
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason (optional)</span><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. family trip" className="w-full" /></label>
-          <div className={`rounded-lg px-3 py-2 text-[12px] font-semibold ${overBudget ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{days} working day{days === 1 ? "" : "s"}{kind === "annual" ? ` · ${remaining} left before this` : ""}{overBudget ? " — more than your remaining allowance" : ""}</div>
+          <div className={`rounded-lg px-3 py-2 text-[12px] font-semibold ${overBudget ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{days} working day{days === 1 ? "" : "s"}{unpaid ? " · unpaid (already in your pay)" : kind === "annual" ? ` · ${remaining} left before this` : ""}{overBudget ? " — more than your remaining allowance" : ""}</div>
         </div>
         <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={days <= 0} onClick={() => onSubmit({ kind, start, end, half: single ? (half || null) : null, reason: reason || undefined, days })}>Send request</Button></div>
       </div>
