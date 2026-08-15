@@ -20,7 +20,7 @@ export interface ClockRecord {
   lateMin?: number;     // minutes late vs the scheduled shift start
   loc?: string;         // where they clocked in (label)
   approved?: boolean;   // timesheet approved for payroll
-  payBasis?: "actual" | "scheduled" | "custom"; // how to pay this shift (manager override)
+  payBasis?: "actual" | "scheduled" | "scheduled-less-late" | "custom"; // how to pay this shift (manager override) — mirrors the global pay policy + "set hours"
   payHoursOverride?: number; // hours when payBasis === "custom"
   editNote?: string;    // manager's reason for editing times/pay
   events: ClockEvent[];
@@ -148,11 +148,12 @@ export function editRecord(all: Record<string, ClockRecord>, id: string, patch: 
     if (patch.clockInAt && r.clockInAt) { const sh = shiftToday(r.name); const hm = new Date(r.clockInAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); r.lateMin = sh ? Math.max(0, mins(hm) - mins(sh.start)) : 0; }
   });
 }
-// worked hours before the pay-basis choice (rounded)
-export function payHours(r: ClockRecord, rounding: 0 | 5 | 15): number {
+// pay hours for an explicit per-row override (lateOverH = late minutes over grace, in hours)
+export function payHours(r: ClockRecord, rounding: 0 | 5 | 15, lateOverH = 0): number {
   const worked = roundHours(workedMs(r) / 3600000, rounding);
   const sched = scheduledHoursToday(r.name);
   if (r.payBasis === "scheduled") return sched || worked;
+  if (r.payBasis === "scheduled-less-late") return Math.max(0, (sched || worked) - lateOverH);
   if (r.payBasis === "custom") return r.payHoursOverride ?? worked;
-  return worked; // "actual" (default)
+  return worked; // "actual" — full worked hours (explicit manager choice, uncapped)
 }

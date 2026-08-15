@@ -9,7 +9,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type ClockRecord, type ClockSettings, loadClock, loadClockSettings, saveClockSettings,
-  offToday, workedMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, rateFor, setApproved, editRecord, payHours,
+  offToday, workedMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, rateFor, setApproved, editRecord, payHours, clockOut,
 } from "./data";
 
 const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -44,7 +44,7 @@ export function TimesheetsApp() {
     const overtime = schedH ? Math.max(0, Math.round((workedH - schedH) * 100) / 100) : 0;
     const override = !!r.payBasis;
     let payH: number;
-    if (override) payH = payHours(r, settings.rounding);
+    if (override) payH = payHours(r, settings.rounding, lateOver / 60);
     else if (settings.payPolicy === "scheduled") payH = schedH || workedH;
     else if (settings.payPolicy === "scheduled-less-late") payH = Math.max(0, (schedH || workedH) - lateOver / 60);
     else payH = settings.autoPayOvertime ? workedH : (schedH ? Math.min(workedH, schedH) : workedH); // "actual"
@@ -54,17 +54,27 @@ export function TimesheetsApp() {
   };
   const tsPeople = people.filter((r) => r.clockInAt); // anyone who clocked in today
 
-  const groupRow = (r: ClockRecord, tone: string) => (
-    <div key={r.id} className="flex items-center gap-3 px-4 py-2.5">
-      <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-[var(--panel)] text-[11px] font-extrabold text-[var(--ink-2)]">{initials(r.name)}</span>
-      <div className="min-w-0"><div className="truncate text-[13px] font-bold text-[var(--ink)]">{r.name}</div><div className="text-[11px] text-[var(--ink-3)]">{r.role}{r.op ? ` · ${r.op}` : ""}</div></div>
-      <span className="ml-auto text-right text-[11.5px]" style={{ color: tone }}>
-        {r.status === "in" && <>in · {sinceLabel(r.clockInAt)}{r.lateMin ? <span className="ml-1 text-[#c0392b]">(late {r.lateMin}m)</span> : ""}</>}
-        {r.status === "break" && <>on break · {sinceLabel(r.breakStart)}</>}
-        {r.status === "out" && (r.clockInAt ? <span className="text-[var(--ink-3)]">worked {fmtDur(workedMs(r))}</span> : <span className="text-[var(--ink-3)]">not in today</span>)}
-      </span>
-    </div>
-  );
+  const clockOutPerson = (r: ClockRecord) => { setAll(clockOut(all, r.id, r.name)); flash(`${r.name.split(" ")[0]} clocked out.`); };
+  // BrightHR-style person card
+  const personCard = (r: ClockRecord) => {
+    const footTone = r.status === "in" ? { bg: "#fdeef6", fg: "#c11574" } : r.status === "break" ? { bg: "#fdf3e0", fg: "#8a5a09" } : { bg: "var(--panel)", fg: "var(--ink-3)" };
+    const foot = r.status === "in" ? `${hhmm(r.clockInAt)} — Clocked in${r.lateMin ? ` · ${r.lateMin}m late` : ""}${r.loc ? ` · ${r.loc.startsWith("📍") ? "Location" : r.loc}` : ""}`
+      : r.status === "break" ? `On break since ${hhmm(r.breakStart)}`
+      : r.clockInAt ? `Worked ${fmtDur(workedMs(r))} today` : "Not clocked in today";
+    return (
+      <div key={r.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
+        <div className="flex items-start gap-2.5 p-3">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#eef4fd] text-[12px] font-extrabold text-[#1d3a8f]">{initials(r.name)}</span>
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13.5px] font-extrabold text-[#1d3a8f]">{r.name}</div>
+            <div className="truncate text-[11.5px] text-[var(--ink-3)]">{r.role}{r.op ? ` · ${r.op}` : ""}</div>
+            {(r.status === "in" || r.status === "break") && <button type="button" onClick={() => clockOutPerson(r)} className="mt-1 text-[12px] font-bold text-[#e6007e] hover:underline">Clock out</button>}
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold" style={{ background: footTone.bg, color: footTone.fg }}><span>⏱</span>{foot}</div>
+      </div>
+    );
+  };
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
@@ -86,16 +96,29 @@ export function TimesheetsApp() {
         ))}
       </div>
 
-      {tab === "in" && (
-        <div className="mt-4 grid gap-4 lg:grid-cols-2">
-          <Card className="p-0"><div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[#0f7a43]">🟢 Clocked in ({inNow.length})</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter…" className="ml-auto w-32 rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11.5px] outline-none focus:border-[#1d3a8f]" /></div>{inNow.length === 0 ? <div className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">No one clocked in.</div> : <div className="divide-y divide-[var(--line)]">{inNow.map((r) => groupRow(r, "#0f7a43"))}</div>}</Card>
-          <div className="grid gap-4">
-            <Card className="p-0"><div className="border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#8a5a09]">⏸ On break ({onBreak.length})</div>{onBreak.length === 0 ? <div className="p-4 text-center text-[12.5px] text-[var(--ink-3)]">Nobody on a break.</div> : <div className="divide-y divide-[var(--line)]">{onBreak.map((r) => groupRow(r, "#8a5a09"))}</div>}</Card>
-            <Card className="p-0"><div className="border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#8b5cf6]">🏖 Off today ({off.length})</div>{off.length === 0 ? <div className="p-4 text-center text-[12.5px] text-[var(--ink-3)]">Nobody booked off.</div> : <div className="divide-y divide-[var(--line)]">{off.map((o) => <div key={o.name} className="flex items-center gap-2 px-4 py-2.5 text-[12.5px]"><span>🏖</span><span className="font-bold text-[var(--ink)]">{o.name}</span><span className="ml-auto text-[var(--ink-3)]">{o.kind}</span></div>)}</div>}</Card>
-            <Card className="p-0"><div className="border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Clocked out ({out.filter((r) => !offNames.has(r.name.trim().toLowerCase())).length})</div><div className="divide-y divide-[var(--line)]">{out.filter((r) => !offNames.has(r.name.trim().toLowerCase())).map((r) => groupRow(r, "#94a3b8"))}</div></Card>
+      {tab === "in" && (() => {
+        const outVisible = out.filter((r) => !offNames.has(r.name.trim().toLowerCase()));
+        const section = (label: string, color: string, list: ClockRecord[], empty: string) => (
+          <div className="mt-4">
+            <div className="mb-2 flex items-center gap-2"><span className="text-[12px] font-extrabold uppercase tracking-wide" style={{ color }}>{label}</span><span className="grid h-[18px] min-w-[18px] place-items-center rounded-full px-1.5 text-[10.5px] font-extrabold text-white" style={{ background: color }}>{list.length}</span></div>
+            {list.length === 0 ? <div className="rounded-2xl border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">{empty}</div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{list.map((r) => personCard(r))}</div>}
           </div>
-        </div>
-      )}
+        );
+        return (
+          <Card className="mt-4 p-4">
+            <div className="flex items-center gap-2"><div className="text-[13px] font-extrabold text-[var(--ink)]">Who&rsquo;s in — live</div><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by employee…" className="ml-auto w-52 rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] outline-none focus:border-[#1d3a8f]" /></div>
+            {section("🟢 Clocked in", "#0f7a43", inNow, "No one clocked in.")}
+            {section("⏸ On break", "#f59e0b", onBreak, "Nobody on a break.")}
+            <div className="mt-4">
+              <div className="mb-2 flex items-center gap-2"><span className="text-[12px] font-extrabold uppercase tracking-wide text-[#8b5cf6]">🏖 Off today</span><span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#8b5cf6] px-1.5 text-[10.5px] font-extrabold text-white">{off.length}</span></div>
+              {off.length === 0 ? <div className="rounded-2xl border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">Nobody booked off.</div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{off.map((o) => (
+                <div key={o.name} className="flex items-center gap-2.5 rounded-2xl border border-[var(--line)] bg-white p-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f3ecfb] text-[16px]">🏖</span><div className="min-w-0"><div className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{o.name}</div><div className="text-[11.5px] text-[#8b5cf6]">On leave · {o.kind}</div></div></div>
+              ))}</div>}
+            </div>
+            {section("Clocked out", "#94a3b8", outVisible, "Everyone's clocked out or off.")}
+          </Card>
+        );
+      })()}
 
       {tab === "sheets" && (
         <Card className="mt-4 p-4">
@@ -168,7 +191,7 @@ function TimesheetEditor({ rec, onSave, onClose }: { rec: ClockRecord; onSave: (
   const [inHm, setInHm] = useState(rec.clockInAt ? hhmm(rec.clockInAt) : "");
   const [outHm, setOutHm] = useState(rec.clockOutAt ? hhmm(rec.clockOutAt) : "");
   const [breakMin, setBreakMin] = useState(Math.round((rec.breakMs || 0) / 60000));
-  const [basis, setBasis] = useState<"actual" | "scheduled" | "custom">(rec.payBasis || "actual");
+  const [basis, setBasis] = useState<"actual" | "scheduled" | "scheduled-less-late" | "custom">(rec.payBasis || "actual");
   const [custom, setCustom] = useState(rec.payHoursOverride != null ? String(rec.payHoursOverride) : "");
   const [note, setNote] = useState(rec.editNote || "");
   return (
@@ -181,10 +204,10 @@ function TimesheetEditor({ rec, onSave, onClose }: { rec: ClockRecord; onSave: (
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Clock out</span><Input type="time" value={outHm} onChange={(e) => setOutHm(e.target.value)} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Break (min)</span><Input inputMode="numeric" value={String(breakMin)} onChange={(e) => setBreakMin(parseInt(e.target.value) || 0)} className="w-full" /></label>
           </div>
-          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Pay this shift as</span><Select value={basis} onChange={(e) => setBasis(e.target.value as "actual" | "scheduled" | "custom")} className="w-full"><option value="actual">Actual worked hours</option><option value="scheduled">Scheduled (normal) hours</option><option value="custom">A set number of hours</option></Select></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Pay this shift as</span><Select value={basis} onChange={(e) => setBasis(e.target.value as typeof basis)} className="w-full"><option value="actual">Actual worked hours</option><option value="scheduled">Scheduled (normal) hours</option><option value="scheduled-less-late">Scheduled hours, less any lateness</option><option value="custom">A set number of hours</option></Select></label>
           {basis === "custom" && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Hours to pay</span><Input inputMode="decimal" value={custom} placeholder="e.g. 7.5" onChange={(e) => setCustom(e.target.value)} className="w-full" /></label>}
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason / note</span><Input value={note} placeholder="why the times/pay were changed" onChange={(e) => setNote(e.target.value)} className="w-full" /></label>
-          <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">{basis === "actual" ? "Paid on the clocked in/out (minus break)." : basis === "scheduled" ? "Paid their scheduled hours regardless of when they clocked in." : `Paid ${custom || "—"} hours flat.`}</div>
+          <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">{basis === "actual" ? "Paid on the clocked in/out (minus break)." : basis === "scheduled" ? "Paid their scheduled hours regardless of when they clocked in." : basis === "scheduled-less-late" ? "Paid scheduled hours minus any lateness (early arrival adds nothing)." : `Paid ${custom || "—"} hours flat.`}</div>
         </div>
         <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onSave({ clockInAt: toISO(day, inHm), clockOutAt: toISO(day, outHm), breakMs: Math.max(0, breakMin) * 60000, payBasis: basis, payHoursOverride: basis === "custom" ? (parseFloat(custom) || 0) : undefined, editNote: note || undefined })}>Save</Button></div>
       </div>
