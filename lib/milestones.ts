@@ -19,22 +19,33 @@ export const WHEN_TONE: Record<MPhaseWhen, string> = { setup: "#1d3a8f", before:
 
 export interface MPhase { id: string; title: string; subtitle?: string; when: MPhaseWhen; recurring: boolean; icon: string; steps: MStep[] }
 
-// Progress: recurring phases are scored against the current season; one-time
-// phases are scored once (persist across seasons).
-export interface MProgress { season: string; doneSeason: string[]; doneOneTime: string[] }
+// Progress: each step (sub-target) carries a start/end date and a completion %,
+// so the roadmap plots them as dated bars. Recurring phases reset each season.
+export interface StepState { start?: string; end?: string; pct: number }
+export interface MProgress { season: string; steps: Record<string, StepState> }
 
-export const emptyProgress = (season: string): MProgress => ({ season, doneSeason: [], doneOneTime: [] });
-export const isStepDone = (p: MPhase, stepId: string, prog: MProgress) => (p.recurring ? prog.doneSeason : prog.doneOneTime).includes(stepId);
-export const phaseDone = (p: MPhase, prog: MProgress) => { const set = p.recurring ? prog.doneSeason : prog.doneOneTime; return p.steps.filter((s) => set.includes(s.id)).length; };
-export const phasePct = (p: MPhase, prog: MProgress) => (p.steps.length ? Math.round((phaseDone(p, prog) / p.steps.length) * 100) : 0);
+export const emptyProgress = (season: string): MProgress => ({ season, steps: {} });
+export const stepState = (prog: MProgress, id: string): StepState => prog.steps[id] || { pct: 0 };
+export const stepPct = (prog: MProgress, id: string) => prog.steps[id]?.pct ?? 0;
+export const isStepDone = (_p: MPhase, stepId: string, prog: MProgress) => stepPct(prog, stepId) >= 100;
+export const phaseDone = (p: MPhase, prog: MProgress) => p.steps.filter((s) => stepPct(prog, s.id) >= 100).length;
+export const phasePct = (p: MPhase, prog: MProgress) => (p.steps.length ? Math.round(p.steps.reduce((a, s) => a + stepPct(prog, s.id), 0) / p.steps.length) : 0);
 export const phaseComplete = (p: MPhase, prog: MProgress) => p.steps.length > 0 && phaseDone(p, prog) === p.steps.length;
 export function overallPct(phases: MPhase[], prog: MProgress) {
-  const total = phases.reduce((a, p) => a + p.steps.length, 0);
-  const done = phases.reduce((a, p) => a + phaseDone(p, prog), 0);
-  return total ? Math.round((done / total) * 100) : 0;
+  const all = phases.flatMap((p) => p.steps);
+  return all.length ? Math.round(all.reduce((a, s) => a + stepPct(prog, s.id), 0) / all.length) : 0;
 }
-// The phase a franchise is "at" — first incomplete phase (index), else last.
 export function currentPhaseIndex(phases: MPhase[], prog: MProgress) {
   const i = phases.findIndex((p) => !phaseComplete(p, prog));
   return i === -1 ? phases.length - 1 : i;
+}
+// Date helpers + a phase's overall date window (earliest start → latest end).
+export const isoDate = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+export const dparse = (s?: string): Date | null => (s ? new Date(`${s}T00:00:00`) : null);
+export const fmtShort = (s?: string) => { const d = dparse(s); return d ? d.toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "—"; };
+export function phaseWindow(p: MPhase, prog: MProgress): { start: Date; end: Date } | null {
+  const starts: number[] = [], ends: number[] = [];
+  p.steps.forEach((s) => { const st = prog.steps[s.id]; const a = dparse(st?.start), b = dparse(st?.end); if (a) starts.push(a.getTime()); if (b) ends.push(b.getTime()); });
+  if (!starts.length || !ends.length) return null;
+  return { start: new Date(Math.min(...starts)), end: new Date(Math.max(...ends)) };
 }

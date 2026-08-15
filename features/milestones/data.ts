@@ -2,7 +2,7 @@
 
 // Milestones store: the head-office master template + each franchise's progress.
 // Demo localStorage; backend owed (docs/milestones-handoff.md).
-import { type MPhase, type MProgress, emptyProgress } from "@/lib/milestones";
+import { type MPhase, type MProgress, type MPhaseWhen, type StepState, isoDate } from "@/lib/milestones";
 
 const TK = "aos.milestones.template.v1", PK = "aos.milestones.progress.v1";
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
@@ -59,7 +59,27 @@ export const loadTemplate = (): MPhase[] => { const s = read<MPhase[]>(TK); retu
 export const saveTemplate = (p: MPhase[]) => write(TK, p);
 export const resetTemplate = () => write(TK, seedTemplate());
 
-const defaultSeason = "This season";
-export const loadProgress = (): MProgress => { const s = read<MProgress>(PK); return s && s.season ? { season: s.season, doneSeason: s.doneSeason || [], doneOneTime: s.doneOneTime || [] } : emptyProgress(defaultSeason); };
+// Seed a realistic dated plan: setup in the weeks before, then plan → run → wrap
+// around "today", with clubs running across the term. Completion tapers off into
+// the future so the roadmap reads as work-in-progress.
+const PHASE_WIN: Record<MPhaseWhen, [number, number]> = { setup: [-46, -4], before: [-16, 6], during: [6, 16], after: [16, 26], clubs: [2, 46] };
+export function seedProgress(phases: MPhase[]): MProgress {
+  const now = new Date(); const day = 86400000; const addD = (n: number) => isoDate(new Date(now.getTime() + n * day));
+  const steps: Record<string, StepState> = {};
+  phases.forEach((p, pi) => {
+    const [a, b] = PHASE_WIN[p.when] || [0, 21]; const span = b - a; const nn = p.steps.length || 1;
+    p.steps.forEach((s, i) => {
+      const seg = span / nn; const st = a + i * seg; const en = st + seg * 0.82;
+      const pct = pi === 0 ? 100 : pi === 1 ? (i < Math.floor(nn / 2) ? 100 : i === Math.floor(nn / 2) ? 55 : 15) : pi === 2 ? (i === 0 ? 20 : 0) : 0;
+      steps[s.id] = { start: addD(Math.round(st)), end: addD(Math.round(en)), pct };
+    });
+  });
+  return { season: "This season", steps };
+}
+export const loadProgress = (phases?: MPhase[]): MProgress => {
+  const s = read<MProgress>(PK);
+  if (s && s.steps && typeof s.steps === "object") return { season: s.season || "This season", steps: s.steps };
+  return phases ? seedProgress(phases) : { season: "This season", steps: {} };
+};
 export const saveProgress = (p: MProgress) => write(PK, p);
 export { uid as newId };
