@@ -11,7 +11,7 @@ import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
   KIND_META, summarise, conflicts, annualAllowance, statutoryDays, leaveYear,
-  workingDays, fmtRange, isoDate, round1, isBankHoliday,
+  workingDays, fmtRange, isoDate, round1, isBankHoliday, sickPayNote, SSP_WEEKLY,
 } from "@/lib/holiday";
 import { loadPolicy, savePolicy, loadProfiles, saveProfiles, loadAbsences, saveAbsences } from "./data";
 
@@ -54,6 +54,7 @@ export function HolidayApp() {
   const profileOf = (id: string) => profiles.find((p) => p.id === id) || { id, name: id } as LeaveProfile;
   const summaryOf = (id: string) => summarise(profileOf(id), policy, absences);
   const decide = (id: string, status: Absence["status"], note?: string) => { persistAbs(absences.map((x) => (x.id === id ? { ...x, status, decidedBy: "You", decidedAt: new Date().toISOString(), note } : x))); };
+  const bulkMethod = (m: "accrued" | "rolled-up") => { persistProfiles(profiles.map((p) => ({ ...p, holidayPay: m }))); flash(m === "rolled-up" ? "Everyone set to holiday included in pay (12.07%)." : "Everyone set to booking paid leave."); };
 
   const pending = absences.filter((a) => a.status === "pending").sort((a, b) => (a.start < b.start ? -1 : 1));
   const ly = leaveYear(policy);
@@ -189,6 +190,13 @@ export function HolidayApp() {
       {tab === "allowances" && (
         <Card className="mt-4 p-4">
           <div className="mb-3 text-[12px] text-[var(--ink-3)]">Statutory entitlement is <b>5.6 weeks × days worked/week, capped at 28 days</b> ({ly.label}). Set a higher contractual allowance or a part-time pattern per person; carry-over is capped at {policy.carryOverMax} days.</div>
+          {/* bulk: set everyone's holiday-pay method at once */}
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2.5">
+            <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Set everyone&rsquo;s holiday pay</span>
+            <button type="button" onClick={() => bulkMethod("accrued")} className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">📅 Books paid leave</button>
+            <button type="button" onClick={() => bulkMethod("rolled-up")} className="rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#8a5a09]">💷 Included in pay (12.07%)</button>
+            <span className="text-[11px] text-[var(--ink-3)]">Included-in-pay suits casual / seasonal hourly staff. You can still override any one person on their row.</span>
+          </div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
             <table className="w-full text-[12.5px]"><thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Employee</th><th className="px-3 py-2.5 text-center font-extrabold">Days/wk</th><th className="px-3 py-2.5 text-center font-extrabold">Basis</th><th className="px-3 py-2.5 text-center font-extrabold">Holiday pay</th><th className="px-3 py-2.5 text-right font-extrabold">Allowance</th><th className="px-3 py-2.5 text-right font-extrabold">Carried</th><th className="px-3 py-2.5 text-right font-extrabold">Taken</th><th className="px-3 py-2.5 text-right font-extrabold">Booked</th><th className="px-3 py-2.5 text-right font-extrabold">Remaining</th><th className="px-3 py-2.5"></th></tr></thead>
             <tbody>{profiles.map((p) => { const s = summaryOf(p.id); const dpw = p.daysPerWeek ?? policy.daysPerWeek; const custom = p.allowanceDays != null || policy.allowanceBasis === "custom"; const pct = s.total > 0 ? Math.round(((s.takenAnnual + s.bookedAnnual) / s.total) * 100) : 0; const rolled = p.holidayPay === "rolled-up"; return (
@@ -232,18 +240,24 @@ export function HolidayApp() {
                 <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Bank-holiday region</span><Select value={policy.region} onChange={(e) => persistPolicy({ ...policy, region: e.target.value as HolidayPolicy["region"] })} className="w-full"><option value="eng-wal">England &amp; Wales</option><option value="scotland">Scotland</option><option value="ni">Northern Ireland</option></Select></label>
               </div>
               <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={policy.bankHolidaysExtra} onChange={(e) => persistPolicy({ ...policy, bankHolidaysExtra: e.target.checked })} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[12.5px] font-semibold text-[var(--ink)]">Bank holidays are given <b>on top</b> of the allowance</span></label>
+
+              {/* Sick pay */}
+              <div className="border-t border-[var(--line)] pt-3">
+                <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Sick pay</span>
+                  <Select value={policy.sickPay} onChange={(e) => persistPolicy({ ...policy, sickPay: e.target.value as HolidayPolicy["sickPay"] })} className="w-full"><option value="ssp">Statutory Sick Pay only (the legal minimum)</option><option value="enhanced">Company sick pay — full pay first, then SSP</option></Select></label>
+                {policy.sickPay === "enhanced" && <label className="mt-2 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Days on full pay before SSP</span><Input inputMode="numeric" value={String(policy.enhancedDays)} onChange={(e) => persistPolicy({ ...policy, enhancedDays: Math.max(0, parseInt(e.target.value) || 0) })} className="w-full" /></label>}
+                <div className="mt-2 rounded-lg bg-[#eef4fd] px-3 py-2 text-[11.5px] font-semibold text-[#1d3a8f]">{sickPayNote(policy)}</div>
+              </div>
             </div>
           </Card>
           <Card className="p-4">
             <div className="mb-2 text-[14px] font-extrabold text-[var(--ink)]">📖 The law, in short</div>
             <ul className="space-y-2 text-[12.5px] leading-relaxed text-[var(--ink-2)]">
-              <li>• Almost all workers get <b>5.6 weeks&rsquo; paid holiday a year</b> — for a 5-day week that&rsquo;s <b>28 days</b>.</li>
-              <li>• Entitlement is <b>capped at 28 days</b> — a 6-day-week worker still only gets 28 statutory.</li>
-              <li>• <b>Part-time</b> is pro-rata: days worked/week × 5.6 (e.g. 3 days → 16.8 days). This tool computes it: {[3, 4, 5].map((n) => `${n}d→${statutoryDays(n)}`).join(" · ")}.</li>
-              <li>• <b>Bank holidays</b> aren&rsquo;t automatically extra — an employer may include them or add them on top (toggle at left).</li>
-              <li>• <b>First year:</b> leave accrues 1/12 of the annual entitlement each month (set a start date on the person).</li>
-              <li>• <b>Irregular / part-year</b> staff accrue <b>12.07%</b> of hours worked.</li>
-              <li className="text-[var(--ink-3)]">Bank-holiday dates are England &amp; Wales; Scotland/NI differ. This is an estimate for planning, not legal advice.</li>
+              <li>• <b>Hourly &amp; casual staff still get holiday</b> — being paid by the hour does <b>not</b> remove it. You can&rsquo;t switch it off; you can only pay it as rolled-up 12.07% (still paid) or as booked days.</li>
+              <li>• Almost all workers get <b>5.6 weeks&rsquo; paid holiday a year</b> — a 5-day week = <b>28 days</b>, capped at 28.</li>
+              <li>• <b>Part-time</b> is pro-rata (days/week × 5.6): {[3, 4, 5].map((n) => `${n}d→${statutoryDays(n)}`).join(" · ")}. <b>Irregular / part-year</b> staff accrue <b>12.07%</b> of hours worked.</li>
+              <li>• <b>Sick pay:</b> since <b>April 2026</b> Statutory Sick Pay is payable from <b>day 1</b> to <b>all employees</b> (the earnings threshold &amp; 3 waiting days were abolished) — <b>£{SSP_WEEKLY.toFixed(2)}/week or 80% of pay, whichever is lower</b>. This applies to casual/zero-hours staff too; you can add company sick pay on top, but not below SSP.</li>
+              <li className="text-[var(--ink-3)]">Bank-holiday dates are England &amp; Wales; Scotland/NI differ. Estimate for planning, not legal advice.</li>
             </ul>
           </Card>
         </div>

@@ -9,7 +9,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
-  KIND_META, summarise, workingDays, fmtRange, isoDate, nextPublicHoliday, leaveYear,
+  KIND_META, summarise, workingDays, fmtRange, isoDate, nextPublicHoliday, leaveYear, sickPayNote,
 } from "@/lib/holiday";
 import { loadPolicy, loadProfiles, loadAbsences, saveAbsences, slug } from "./data";
 
@@ -50,8 +50,11 @@ export function MyHolidayApp() {
   const nph = nextPublicHoliday(isoDate(new Date()), policy.region);
   const otherDays = s.byKind.other + s.byKind.unpaid + s.byKind.maternity + s.byKind.parental;
 
+  const sickNote = sickPayNote(policy);
   const submit = (a: Omit<Absence, "id" | "staffId" | "name" | "status" | "requestedAt" | "days"> & { days: number }) => {
-    const abs: Absence = { id: crypto.randomUUID(), staffId: ME_ID, name: ME, status: "pending", requestedAt: new Date().toISOString(), ...a, paid: rolled ? false : true };
+    // only ANNUAL leave is unpaid-because-rolled-up; sickness is SSP-paid, etc.
+    const paid = a.kind === "unpaid" ? false : rolled && a.kind === "annual" ? false : true;
+    const abs: Absence = { id: crypto.randomUUID(), staffId: ME_ID, name: ME, status: "pending", requestedAt: new Date().toISOString(), ...a, paid };
     persistAbs([abs, ...absences]); setReqOpen(false); flash("✅ Request sent to your manager.");
   };
   const cancel = (id: string) => { if (window.confirm("Cancel this request?")) persistAbs(absences.map((x) => (x.id === id ? { ...x, status: "cancelled" as const } : x))); };
@@ -87,7 +90,7 @@ export function MyHolidayApp() {
         </div>
       </Card>
       {historyRows}
-      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} unpaid onSubmit={submit} onClose={() => setReqOpen(false)} />}
+      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} rolled sickNote={sickNote} onSubmit={submit} onClose={() => setReqOpen(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
@@ -152,13 +155,13 @@ export function MyHolidayApp() {
         </Card>
       )}
 
-      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} onSubmit={submit} onClose={() => setReqOpen(false)} />}
+      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} sickNote={sickNote} onSubmit={submit} onClose={() => setReqOpen(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
 }
 
-function RequestModal({ region, remaining, unpaid, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; unpaid?: boolean; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; reason?: string; days: number }) => void; onClose: () => void }) {
+function RequestModal({ region, remaining, rolled, sickNote, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; rolled?: boolean; sickNote?: string; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; reason?: string; days: number }) => void; onClose: () => void }) {
   const today = isoDate(new Date());
   const [kind, setKind] = useState<AbsenceKind>("annual");
   const [start, setStart] = useState(today);
@@ -167,12 +170,17 @@ function RequestModal({ region, remaining, unpaid, onSubmit, onClose }: { region
   const [reason, setReason] = useState("");
   const single = start === end;
   const days = workingDays(start, end, { half: single ? (half || null) : null, region });
-  const overBudget = !unpaid && kind === "annual" && days > remaining;
+  const rolledUnpaid = rolled && kind === "annual"; // holiday already paid via rolled-up
+  const overBudget = !rolledUnpaid && kind === "annual" && days > remaining;
+  // context note that depends on the type chosen
+  const context = kind === "sickness" ? { tone: "bg-[#eef4fd] text-[#1d3a8f]", text: `🤒 ${sickNote || "Sick leave — Statutory Sick Pay may apply."}` }
+    : rolledUnpaid ? { tone: "bg-[#fdf3e0] text-[#8a5a09]", text: "💷 Your holiday pay is included in your wages (12.07% rolled-up), so these days are unpaid — you've already been paid for them." }
+    : kind === "unpaid" ? { tone: "bg-[#eef1f6] text-[#64748b]", text: "◻️ Unpaid leave — no pay for these days." }
+    : null;
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{unpaid ? "Book time off" : "Request time off"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
-        {unpaid && <div className="mb-3 rounded-lg bg-[#fdf3e0] px-3 py-2 text-[11.5px] font-semibold text-[#8a5a09]">💷 Your holiday pay is included in your wages (12.07% rolled-up), so these days are <b>unpaid</b> — you&rsquo;ve already been paid for them.</div>}
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rolled ? "Book time off" : "Request time off"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={kind} onChange={(e) => setKind(e.target.value as AbsenceKind)} className="w-full">{KINDS.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {KIND_META[k].label}</option>)}</Select></label>
           <div className="grid grid-cols-2 gap-2">
@@ -181,7 +189,8 @@ function RequestModal({ region, remaining, unpaid, onSubmit, onClose }: { region
           </div>
           {single && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Half day</span><Select value={half} onChange={(e) => setHalf(e.target.value as "am" | "pm" | "")} className="w-full"><option value="">Full day</option><option value="am">Morning (AM)</option><option value="pm">Afternoon (PM)</option></Select></label>}
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason (optional)</span><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. family trip" className="w-full" /></label>
-          <div className={`rounded-lg px-3 py-2 text-[12px] font-semibold ${overBudget ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{days} working day{days === 1 ? "" : "s"}{unpaid ? " · unpaid (already in your pay)" : kind === "annual" ? ` · ${remaining} left before this` : ""}{overBudget ? " — more than your remaining allowance" : ""}</div>
+          {context && <div className={`rounded-lg px-3 py-2 text-[11.5px] font-semibold ${context.tone}`}>{context.text}</div>}
+          <div className={`rounded-lg px-3 py-2 text-[12px] font-semibold ${overBudget ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{days} working day{days === 1 ? "" : "s"}{rolledUnpaid ? " · unpaid (already in your pay)" : kind === "annual" ? ` · ${remaining} left before this` : ""}{overBudget ? " — more than your remaining allowance" : ""}</div>
         </div>
         <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={days <= 0} onClick={() => onSubmit({ kind, start, end, half: single ? (half || null) : null, reason: reason || undefined, days })}>Send request</Button></div>
       </div>

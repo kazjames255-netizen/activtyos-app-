@@ -42,6 +42,25 @@ export interface HolidayPolicy {
   carryOverMax: number;         // max days that may carry into the next year
   region: Region;
   sickThreshold: number;        // Bradford-style "flag at N sick days" (soft)
+  // Company sick-pay policy ON TOP of the statutory floor. "ssp" = statutory only;
+  // "enhanced" = full pay for `enhancedDays` days, then SSP.
+  sickPay: "ssp" | "enhanced";
+  enhancedDays: number;
+}
+
+// Statutory Sick Pay. From 6 April 2026 the Lower Earnings Limit and the 3
+// waiting days were ABOLISHED — SSP is now payable from day 1 to ALL employees
+// (incl. casual/zero-hours), at £123.25/week OR 80% of normal weekly earnings,
+// whichever is lower. Max 28 weeks. (2026/27 figures.)
+export const SSP_WEEKLY = 123.25;
+export const SSP_PCT = 0.8;
+export const SSP_MAX_WEEKS = 28;
+// A plain-English sick-pay line for a given policy.
+export function sickPayNote(policy: Pick<HolidayPolicy, "sickPay" | "enhancedDays">): string {
+  const ssp = `Statutory Sick Pay — £${SSP_WEEKLY.toFixed(2)}/week or 80% of normal weekly pay (whichever is lower), from day 1`;
+  return policy.sickPay === "enhanced"
+    ? `Company sick pay: full pay for the first ${policy.enhancedDays} day${policy.enhancedDays === 1 ? "" : "s"}, then ${ssp}.`
+    : `${ssp}. No company top-up.`;
 }
 
 // Per-employee record layered over the roster (allowance overrides, start date).
@@ -69,6 +88,7 @@ export const DEFAULT_POLICY: HolidayPolicy = {
   leaveYearStartMonth: 1, leaveYearStartDay: 1, daysPerWeek: 5,
   allowanceBasis: "statutory", customDays: 28, bankHolidaysExtra: false,
   carryOverMax: 5, region: "eng-wal", sickThreshold: 4,
+  sickPay: "ssp", enhancedDays: 5,
 };
 
 export const KIND_META: Record<AbsenceKind, { label: string; icon: string; tone: string; countsAllowance: boolean }> = {
