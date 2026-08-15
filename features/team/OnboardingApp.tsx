@@ -130,6 +130,18 @@ function useOnboarding() {
 const openFile = (dataUrl?: string) => { if (!dataUrl || typeof window === "undefined") return; const w = window.open(); if (w) w.document.write(`<iframe src="${dataUrl}" style="border:0;width:100vw;height:100vh"></iframe>`); };
 const STATUS_TONE: Record<string, string> = { todo: "bg-[#eef1f6] text-[#64748b]", requested: "bg-[#fef3d6] text-[#8a5a09]", received: "bg-[#e6efff] text-[#1d54c4]", verified: "bg-[#e6f4ea] text-[#0f7a43]" };
 const STATUS_SEQ = ["todo", "requested", "received", "verified"] as const;
+const CHECK_LABEL: Record<string, string> = { todo: "To do", requested: "Requested", received: "Received", verified: "Verified" };
+
+const esc = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
+const printWindow = (html: string) => { if (typeof window === "undefined") return; const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); } };
+const displayVal = (f: OnboardField, val?: OnboardValue): string => {
+  if (!val) return "";
+  if (f.type === "check") return CHECK_LABEL[val.status ?? "todo"];
+  if (f.type === "checkbox") return val.v === "yes" ? "Yes" : "";
+  if (f.type === "file") return val.fileName ? "📎 " + val.fileName : val.fileData ? "uploaded" : "";
+  return val.v ?? "";
+};
+const PRINT_CSS = `body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:26px}h1{font-size:20px;margin:0 0 2px}.sub{color:#6b7086;font-size:12px;margin-bottom:14px}h2{font-size:13px;text-transform:uppercase;letter-spacing:.05em;color:#3557b7;border-bottom:1px solid #e5e7f0;padding-bottom:4px;margin:18px 0 6px}table{width:100%;border-collapse:collapse;font-size:12px}td{padding:5px 8px;border-top:1px solid #eef1f7;vertical-align:top}td.k{color:#6b7086;width:44%}td.v{font-weight:600}.miss{color:#c0392b;font-weight:600}.ok{color:#0f7a43}.pill{display:inline-block;padding:1px 8px;border-radius:99px;font-size:10.5px;font-weight:700}.verified{background:#e6f4ea;color:#0f7a43}.na{color:#94a3b8}.doc{page-break-before:always;padding-top:14px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.doc object,.doc iframe{width:100%;height:940px;border:1px solid #e5e7f0;border-radius:6px}.badge{display:inline-block;padding:2px 10px;border-radius:99px;font-size:11px;font-weight:800}.cleared{background:#e6f4ea;color:#0f7a43}.hold{background:#fdf3e0;color:#8a5a09}@media print{body{padding:0 6mm}}`;
 
 export function OnboardingPanel() {
   const { settings } = useSettings();
@@ -137,6 +149,8 @@ export function OnboardingPanel() {
   const [sel, setSel] = useState<string>(DEMO_STAFF[0]?.name ?? "");
   const [cfg, setCfg] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+  const [mode, setMode] = useState<"records" | "scr">("records");
+  const provider = settings.providerName || settings.billing?.businessName || "Your company";
 
   const staffOf = (name: string) => DEMO_STAFF.find((s) => s.name === name);
   const applicable = (name: string, role?: string, extra: string[] = []) => ob.fields.filter((f) => fieldApplies(f, name, role, extra));
@@ -149,13 +163,64 @@ export function OnboardingPanel() {
   const setVal = (fieldId: string, patch: Partial<OnboardValue>) => ob.upsertRecord({ ...rec, values: { ...rec.values, [fieldId]: { ...rec.values[fieldId], ...patch } } });
   const hiddenFields = ob.fields.filter((f) => !fieldApplies(f, sel, staff?.role, rec.extra));
 
+  // ——— export one staff member's full onboarding pack ———
+  const exportPack = () => {
+    const clr = cleared;
+    const secs = SECTIONS.map(([sid, slabel]) => { const fs = appl.filter((f) => f.section === sid); if (!fs.length) return ""; const rows = fs.map((f) => { const v = rec.values[f.id]; const d = displayVal(f, v); const ok = satisfied(f, v); return `<tr><td class="k">${esc(f.label)}${f.required ? " *" : ""}</td><td class="v ${d ? (ok ? "ok" : "") : "miss"}">${d ? esc(d) : "—"}</td></tr>`; }).join(""); return `<h2>${esc(slabel)}</h2><table>${rows}</table>`; }).join("");
+    const docs = appl.map((f) => { const v = rec.values[f.id]; if (!v?.fileData) return ""; const img = v.fileData.startsWith("data:image"); return `<div class="doc"><h2>${esc(f.label)} — ${esc(v.fileName || "file")}</h2>${img ? `<img src="${v.fileData}"/>` : `<object data="${v.fileData}" type="application/pdf"><iframe src="${v.fileData}"></iframe></object>`}</div>`; }).join("");
+    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Onboarding — ${esc(sel)}</title><style>${PRINT_CSS}</style></head><body><h1>${esc(provider)} — Onboarding record</h1><div class="sub">${esc(sel)} · ${esc(staff?.role ?? "")} · ${esc(staff?.op ?? "")} · <span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Cleared to start" : "Start on hold"}</span> · Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</div>${secs}${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
+  };
+
+  // ——— Single Central Record: one row per staff, the Ofsted checks ———
+  const SCR_COLS: [string, string][] = [["idCheck", "Identity"], ["rtwCheck", "Right to work"], ["dbsCheck", "DBS cleared"], ["overseas", "Overseas"], ["refsCheck", "References"], ["disqual", "Disqual. decl."]];
+  const scrCell = (name: string, role: string | undefined, extra: string[], id: string) => {
+    const f = ob.fields.find((x) => x.id === id); if (!f) return { txt: "—", cls: "na" };
+    if (!fieldApplies(f, name, role, extra)) return { txt: "N/A", cls: "na" };
+    const v = ob.recordFor(name).values[id];
+    if (f.type === "check") return v?.status === "verified" ? { txt: "Verified", cls: "verified" } : { txt: CHECK_LABEL[v?.status ?? "todo"], cls: "miss" };
+    if (f.type === "checkbox") return v?.v === "yes" ? { txt: "Yes", cls: "ok" } : { txt: "No", cls: "miss" };
+    return v?.v ? { txt: v.v, cls: "ok" } : { txt: "—", cls: "miss" };
+  };
+  const exportSCR = () => {
+    const head = `<tr><td class="k">Staff</td><td class="k">Role</td><td class="k">Location</td>${SCR_COLS.map(([, l]) => `<td class="k">${esc(l)}</td>`).join("")}<td class="k">DBS no.</td><td class="k">Cleared</td></tr>`;
+    const body = DEMO_STAFF.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Yes" : "On hold"}</span></td></tr>`; }).join("");
+    printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Single Central Record — ${esc(provider)}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(provider)} — Single Central Record</h1><div class="sub">Safer-recruitment checks · Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
+  };
+
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="text-[13px] text-[var(--ink-3)]">New-starter & safer-recruitment record. Which items are required, and who they apply to, is set in <b>Requirements</b>.</div>
+        <div className="inline-flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
+          {([["records", "🗂 Onboarding records"], ["scr", "📑 Single Central Record"]] as const).map(([k, l]) => (
+            <button key={k} type="button" onClick={() => setMode(k)} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (mode === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
+          ))}
+        </div>
         <Button className="ml-auto" onClick={() => setCfg(true)}>⚙ Requirements</Button>
       </div>
 
+      {mode === "scr" ? (
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            <div><div className="text-[14px] font-extrabold text-[var(--ink)]">Single Central Record</div><div className="text-[12px] text-[var(--ink-3)]">The Ofsted-style summary of safer-recruitment checks across your team.</div></div>
+            <Button variant="primary" className="ml-auto" onClick={exportSCR}>🖨️ Print / export</Button>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
+            <table className="w-full text-[12.5px]">
+              <thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Role</th><th className="px-3 py-2.5 font-extrabold">Location</th>{SCR_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}<th className="px-3 py-2.5 font-extrabold">DBS no.</th><th className="px-3 py-2.5 font-extrabold">Cleared</th></tr></thead>
+              <tbody>{DEMO_STAFF.map((s) => { const r = ob.recordFor(s.name); const cl = clearedOf(s.name); return (
+                <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]">
+                  <td className="px-3 py-2.5"><button type="button" onClick={() => { setSel(s.name); setMode("records"); }} className="font-bold text-[#1d3a8f] hover:underline">{s.name}</button></td>
+                  <td className="px-3 py-2.5 text-[var(--ink-2)]">{s.role}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>
+                  {SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id); const tone = c.cls === "verified" || c.cls === "ok" ? "bg-[#e6f4ea] text-[#0f7a43]" : c.cls === "na" ? "bg-[#eef1f6] text-[#94a3b8]" : "bg-[#fdecec] text-[#c0392b]"; return <td key={id} className="px-3 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-[10.5px] font-bold " + tone}>{c.txt}</span></td>; })}
+                  <td className="px-3 py-2.5 tabular-nums text-[var(--ink-2)]">{r.values.dbsCert?.v || "—"}</td>
+                  <td className="px-3 py-2"><span className={"inline-block rounded-full px-2 py-0.5 text-[10.5px] font-extrabold " + (cl ? "bg-[#e6f4ea] text-[#0f7a43]" : "bg-[#fdf3e0] text-[#8a5a09]")}>{cl ? "Yes" : "On hold"}</span></td>
+                </tr>
+              ); })}</tbody>
+            </table>
+          </div>
+          <p className="mt-2 text-[11px] text-[var(--ink-3)]"><b>N/A</b> = not required for that person&rsquo;s role (set in Requirements). Click a name to open their full record.</p>
+        </div>
+      ) : (
       <div className="grid gap-3 md:grid-cols-[260px_1fr]">
         {/* roster */}
         <div className="space-y-2">
@@ -174,6 +239,7 @@ export function OnboardingPanel() {
             <div><div className="text-[16px] font-extrabold text-[var(--ink)]">{sel}</div><div className="text-[12px] text-[var(--ink-3)]">{staff?.role} · {staff?.op}</div></div>
             <div className="ml-auto flex items-center gap-2">
               {cleared ? <span className="rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a43]">✓ Cleared to start</span> : <span className="rounded-full bg-[#fdf3e0] px-2.5 py-1 text-[11.5px] font-extrabold text-[#8a5a09]">⏳ Start on hold</span>}
+              <Button onClick={exportPack}>🖨️ Export pack</Button>
             </div>
           </div>
           {!cleared && <div className="mb-3 rounded-xl border border-[#f3cfa6] bg-[#fdf3e0] px-3.5 py-2 text-[12px] font-semibold text-[#8a4b09]">Cannot start in regulated activity until Right to work, DBS and References are verified.</div>}
@@ -218,6 +284,7 @@ export function OnboardingPanel() {
           <p className="mt-3 text-[11px] text-[var(--ink-3)]">Certificates (DBS, First Aid) are also tracked in <b>Team → Staff certificates</b>. Sensitive fields (🔒) need secure storage &amp; retention — on the backend list.</p>
         </div>
       </div>
+      )}
 
       {cfg && <RequirementsModal fields={ob.fields} onSave={ob.saveFields} onClose={() => setCfg(false)} accessRoles={(settings.roles ?? []).map((r) => r.name).filter(Boolean)} jobTitles={(settings.staffRoles ?? []).filter(Boolean)} />}
     </div>
