@@ -133,37 +133,46 @@ export function CredentialsApp() {
       {packCfg && (() => {
         const nCerts = xCourses ? staff.filter((s) => xStaff.has(s.name)).reduce((n, s) => n + completionsFor(s.name).filter((d) => xCourseIds.has(d.courseId)).length, 0) : 0;
         const allStaff = xStaff.size === staff.length; const allTypes = xTypes.size === cred.types.length; const allCourses = xCourseIds.size === courseOpts.length;
-        const row = (checked: boolean, onClick: () => void, label: React.ReactNode, sub?: string) => (
-          <label className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2 py-1.5 hover:bg-[var(--panel)]"><input type="checkbox" checked={checked} onChange={onClick} className="h-4 w-4 flex-none accent-[#1d3a8f]" /><span className="text-[13px] font-semibold text-[var(--ink)]">{label}</span>{sub && <span className="text-[11.5px] text-[var(--ink-3)]">{sub}</span>}</label>
+        const row = (key: string, checked: boolean, onClick: () => void, label: React.ReactNode, sub?: string) => (
+          <label key={key} className={"flex min-w-0 cursor-pointer items-center gap-2 rounded-lg border px-2 py-1.5 transition-colors " + (checked ? "border-[#1d3a8f] bg-[#eef4ff]" : "border-[var(--line)] hover:bg-[var(--panel)]")}><input type="checkbox" checked={checked} onChange={onClick} className="h-3.5 w-3.5 flex-none accent-[#1d3a8f]" /><span className="min-w-0 flex-1"><span className="block truncate text-[12px] font-semibold text-[var(--ink)]">{label}</span>{sub && <span className="block truncate text-[10px] text-[var(--ink-3)]">{sub}</span>}</span></label>
+        );
+        const secHead = (title: string, all: boolean, onToggle: () => void) => (
+          <div className="mb-1.5 flex items-center gap-2"><span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{title}</span><button type="button" onClick={onToggle} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{all ? "Clear all" : "Select all"}</button></div>
         );
         return (
-          <div className="fixed inset-0 z-[141] flex justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setPackCfg(false)}>
-            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
-              <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Build export pack</h3><button type="button" onClick={() => setPackCfg(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
-              <p className="mb-3 text-[12px] text-[var(--ink-3)]">Choose exactly who and what goes into the PDF. {op !== "all" ? `Scoped to ${op}.` : "All locations."}</p>
-
-              <div className="mb-3">
-                <div className="mb-1 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff</span><button type="button" onClick={() => setXStaff(allStaff ? new Set() : new Set(staff.map((s) => s.name)))} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{allStaff ? "Clear all" : "Select all"}</button></div>
-                <div className="max-h-[168px] overflow-y-auto rounded-lg border border-[var(--line)] p-1">{staff.map((s) => row(xStaff.has(s.name), () => toggleSet(xStaff, setXStaff, s.name), s.name, s.op))}</div>
+          <div className="fixed inset-0 z-[141] flex items-center justify-center bg-black/45 p-4" onClick={() => setPackCfg(false)}>
+            <div className="flex max-h-[86vh] w-full max-w-lg select-none flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
+              <div className="flex-none border-b border-[var(--line)] px-5 py-3.5">
+                <div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Build export pack</h3><button type="button" onClick={() => setPackCfg(false)} className="ml-auto text-[18px] text-[var(--ink-3)] hover:text-[var(--ink)]">×</button></div>
+                <p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">Pick exactly who and what goes into the PDF · {op !== "all" ? op : "All locations"}</p>
               </div>
 
-              <div className="mb-3">
-                <div className="mb-1 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Credentials</span><button type="button" onClick={() => setXTypes(allTypes ? new Set() : new Set(cred.types.map((t) => t.id)))} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{allTypes ? "Clear all" : "Select all"}</button></div>
-                <div className="max-h-[150px] overflow-y-auto rounded-lg border border-[var(--line)] p-1">{cred.types.map((t) => row(xTypes.has(t.id), () => toggleSet(xTypes, setXTypes, t.id), t.name, t.required ? "required" : undefined))}</div>
-              </div>
-
-              <label className="mb-2 flex cursor-pointer items-center gap-2.5 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={xDocs} onChange={() => setXDocs((v) => !v)} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[13px] font-bold text-[var(--ink)]">Attach uploaded certificate files</span></label>
-
-              <label className="mb-2 flex cursor-pointer items-center gap-2.5 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={xCourses} onChange={() => setXCourses((v) => !v)} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[13px] font-bold text-[var(--ink)]">Include internal course certificates</span></label>
-              {xCourses && (courseOpts.length ? (
-                <div className="mb-3 ml-1">
-                  <div className="mb-1 flex items-center gap-2"><span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Which courses</span><button type="button" onClick={() => setXCourseIds(allCourses ? new Set() : new Set(courseOpts.map(([id]) => id)))} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">{allCourses ? "Clear all" : "Select all"}</button></div>
-                  <div className="max-h-[150px] overflow-y-auto rounded-lg border border-[var(--line)] p-1">{courseOpts.map(([id, title]) => row(xCourseIds.has(id), () => toggleSet(xCourseIds, setXCourseIds, id), title))}</div>
+              <div className="flex-1 overflow-y-auto px-5 py-4">
+                <div className="mb-4">
+                  {secHead("Staff", allStaff, () => setXStaff(allStaff ? new Set() : new Set(staff.map((s) => s.name))))}
+                  <div className="grid grid-cols-2 gap-1.5">{staff.map((s) => row(s.name, xStaff.has(s.name), () => toggleSet(xStaff, setXStaff, s.name), s.name, s.op))}</div>
                 </div>
-              ) : <p className="mb-3 ml-1 text-[12px] text-[var(--ink-3)]">No completed courses among the selected staff.</p>)}
 
-              <div className="mt-3 flex items-center gap-2 border-t border-[var(--line)] pt-3">
-                <span className="text-[11.5px] text-[var(--ink-3)]">{xStaff.size} staff · {xTypes.size} credential{xTypes.size === 1 ? "" : "s"}{xCourses ? ` · ${nCerts} course cert${nCerts === 1 ? "" : "s"}` : ""}</span>
+                <div className="mb-4">
+                  {secHead("Credentials", allTypes, () => setXTypes(allTypes ? new Set() : new Set(cred.types.map((t) => t.id))))}
+                  <div className="grid grid-cols-2 gap-1.5">{cred.types.map((t) => row(t.id, xTypes.has(t.id), () => toggleSet(xTypes, setXTypes, t.id), t.name, t.required ? "required" : "optional"))}</div>
+                </div>
+
+                <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={xDocs} onChange={() => setXDocs((v) => !v)} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[12.5px] font-bold text-[var(--ink)]">Attach uploaded files</span></label>
+                  <label className="flex cursor-pointer items-center gap-2 rounded-lg bg-[var(--panel)] px-3 py-2"><input type="checkbox" checked={xCourses} onChange={() => setXCourses((v) => !v)} className="h-4 w-4 accent-[#1d3a8f]" /><span className="text-[12.5px] font-bold text-[var(--ink)]">Include course certificates</span></label>
+                </div>
+
+                {xCourses && (courseOpts.length ? (
+                  <div className="mt-3">
+                    {secHead("Which courses", allCourses, () => setXCourseIds(allCourses ? new Set() : new Set(courseOpts.map(([id]) => id))))}
+                    <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">{courseOpts.map(([id, title]) => row(id, xCourseIds.has(id), () => toggleSet(xCourseIds, setXCourseIds, id), title))}</div>
+                  </div>
+                ) : <p className="mt-2 text-[12px] text-[var(--ink-3)]">No completed courses among these staff.</p>)}
+              </div>
+
+              <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3">
+                <span className="text-[11.5px] text-[var(--ink-3)]">{xStaff.size} staff · {xTypes.size} cred{xTypes.size === 1 ? "" : "s"}{xCourses ? ` · ${nCerts} cert${nCerts === 1 ? "" : "s"}` : ""}</span>
                 <Button onClick={() => setPackCfg(false)} className="ml-auto">Cancel</Button>
                 <Button variant="primary" disabled={!xStaff.size || !xTypes.size} onClick={runPack}>⬇ Generate PDF</Button>
               </div>
