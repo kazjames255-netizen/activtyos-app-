@@ -20,6 +20,7 @@ import {
 import { DEMO_STAFF } from "@/features/learning/credentials";
 
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+const APPRAISERS = ["You", ...DEMO_STAFF.filter((s) => s.role === "Lead").map((s) => s.name)];
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "id" + Math.floor(performance.now() * 1000));
 type Sub = "reviews" | "feedback" | "talent" | "templates" | "pip" | "settings";
 
@@ -32,6 +33,7 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
   const [talent, setTalent] = useState<Talent[]>([]);
   const [boxes, setBoxes] = useState<Record<string, BoxDef>>(NINEBOX);
   const [op, setOp] = useState("all");
+  const [apr, setApr] = useState("all");
   const [edit, setEdit] = useState<Review | null>(null);
   const [newRev, setNewRev] = useState(false);
   const [fbAdd, setFbAdd] = useState(false);
@@ -53,7 +55,8 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
 
   const locations = useMemo(() => [...new Set(DEMO_STAFF.map((s) => s.op))].sort(), []);
   const inOp = (opv?: string) => op === "all" || opv === op;
-  const visReviews = reviews.filter((r) => inOp(r.op));
+  const appraiserOptions = useMemo(() => [...new Set(["You", ...reviews.map((r) => r.appraiser || "You")])], [reviews]);
+  const visReviews = reviews.filter((r) => inOp(r.op) && (apr === "all" || (r.appraiser || "You") === apr));
   const overdue = visReviews.filter(isOverdue);
   const dueSoon = visReviews.filter((r) => !isOverdue(r) && r.status !== "complete" && daysUntil(r.due) <= 14);
   const scored = visReviews.map(overallScore).filter((n): n is number => n != null);
@@ -75,7 +78,8 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
             <button key={k} type="button" onClick={() => setSub(k)} className={`rounded-full px-3 py-1.5 text-[12px] font-bold ${sub === k ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{l}</button>
           ))}
         </div>
-        <Select value={op} onChange={(e) => setOp(e.target.value)} className="ml-auto"><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select>
+        {sub === "reviews" && <Select value={apr} onChange={(e) => setApr(e.target.value)} className="ml-auto" title="Filter by appraiser"><option value="all">All appraisers</option>{appraiserOptions.map((a) => <option key={a} value={a}>{a === "You" ? "Assigned to me (You)" : a}</option>)}</Select>}
+        <Select value={op} onChange={(e) => setOp(e.target.value)} className={sub === "reviews" ? "" : "ml-auto"}><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select>
         {sub === "reviews" && <Button variant="primary" onClick={() => setNewRev(true)}>+ New review</Button>}
         {sub === "feedback" && <Button variant="primary" onClick={() => setFbAdd(true)}>+ Add note</Button>}
       </div>
@@ -88,7 +92,7 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
               <tbody>{[...visReviews].sort((a, b) => (a.due < b.due ? -1 : 1)).map((r) => { const sc = overallScore(r); const od = isOverdue(r); return (
                 <tr key={r.id} className="border-t border-[var(--line-2,#eef2f8)]">
                   <td className="px-3 py-2.5"><div className="flex items-center gap-2"><span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{initials(r.name)}</span><div><div className="font-bold text-[var(--ink)]">{r.name}{flagged.has(r.staffId) && <span className="ml-1.5 rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-bold text-[#c0392b]">PIP</span>}</div><div className="text-[10.5px] text-[var(--ink-3)]">{r.role}{r.op ? ` · ${r.op}` : ""}</div></div></div></td>
-                  <td className="px-3 py-2.5 text-[var(--ink-2)]">{KIND_LABEL[r.kind]}</td>
+                  <td className="px-3 py-2.5"><div className="text-[var(--ink-2)]">{KIND_LABEL[r.kind]}</div><div className="text-[10.5px] text-[var(--ink-3)]">Appraiser: {r.appraiser || "You"}</div></td>
                   <td className="px-3 py-2.5"><span className={od ? "font-bold text-[#c0392b]" : "text-[var(--ink-2)]"}>{fmtDate(r.due)}{od ? " · overdue" : ""}</span></td>
                   <td className="px-3 py-2.5"><span className={`rounded-full px-2 py-0.5 text-[10.5px] font-bold ${r.status === "complete" ? "bg-[#e6f4ea] text-[#0f7a43]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{STATUS_LABEL[r.status]}</span></td>
                   <td className="px-3 py-2.5 text-center font-extrabold tabular-nums text-[var(--ink)]">{sc != null ? `${sc}` : "—"}</td>
@@ -404,6 +408,7 @@ function ReviewEditor({ rev, onSave, onClose }: { rev: Review; onSave: (r: Revie
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center gap-2"><h3 className="text-[16px] font-extrabold text-[var(--ink)]">{r.name}</h3><span className="text-[12.5px] text-[var(--ink-3)]">· {KIND_LABEL[r.kind]} · due {fmtDate(r.due)}</span><span className="ml-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">{STATUS_LABEL[r.status]}</span><button type="button" onClick={onClose} className="ml-1 text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Appraiser</span><Select value={r.appraiser || "You"} onChange={(e) => set({ appraiser: e.target.value })} className="w-56 text-[12px]">{[...new Set([r.appraiser || "You", ...APPRAISERS])].filter((a) => slug(a) !== r.staffId).map((a) => <option key={a} value={a}>{a}</option>)}</Select><span className="text-[10.5px] text-[var(--ink-3)]">conducts &amp; edits this form</span></div>
 
         {/* data-informed signals */}
         <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-[var(--panel)] p-2.5 sm:grid-cols-4">
@@ -417,7 +422,7 @@ function ReviewEditor({ rev, onSave, onClose }: { rev: Review; onSave: (r: Revie
         {r.self.done && <div className="mb-3 rounded-xl border border-[var(--line)] p-3"><div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🧑 Self-assessment</div>{r.self.text && <p className="mb-1.5 text-[12.5px] italic text-[var(--ink-2)]">“{r.self.text}”</p>}<div className="flex flex-wrap gap-1.5">{tpl.competencies.map((c) => { const s = r.self.ratings.find((x) => x.id === c.id)?.rating; return <span key={c.id} className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-semibold text-[var(--ink-2)]">{c.label.split(" ")[0]}: {s ? `${s}` : "—"}</span>; })}</div></div>}
 
         {/* manager ratings */}
-        <div className="mb-1 flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">👤 Manager review</div>{overall != null && <span className="ml-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">Overall {overall}/5</span>}</div>
+        <div className="mb-1 flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">👤 {r.appraiser && r.appraiser !== "You" ? `${r.appraiser}'s review` : "Appraiser review"}</div>{overall != null && <span className="ml-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">Overall {overall}/5</span>}</div>
         <div className="space-y-1.5">{tpl.competencies.map((c) => { const cur = r.manager.ratings.find((x) => x.id === c.id)?.rating; return (
           <div key={c.id} className="flex items-center gap-2"><div className="min-w-0 flex-1"><div className="truncate text-[12.5px] font-semibold text-[var(--ink)]">{c.label}</div>{c.desc && <div className="truncate text-[10.5px] text-[var(--ink-3)]">{c.desc}</div>}</div><div className="flex gap-1">{([1, 2, 3, 4, 5] as Rating[]).map((n) => (<button key={n} type="button" onClick={() => setMgrRating(c.id, n)} title={RATING_LABEL[n]} className={`h-7 w-7 rounded-lg text-[12px] font-bold ${cur === n ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-2)] hover:bg-[#e2e8f4]"}`}>{n}</button>))}</div></div>
         ); })}</div>
@@ -456,14 +461,15 @@ function ReviewEditor({ rev, onSave, onClose }: { rev: Review; onSave: (r: Revie
 }
 
 function NewReview({ onCreate, onClose }: { onCreate: (r: Review) => void; onClose: () => void }) {
-  const [name, setName] = useState(""); const [kind, setKind] = useState<ReviewKind>("annual"); const [due, setDue] = useState(isoDate(new Date(Date.now() + 14 * 86400000)));
-  const create = () => { const s = DEMO_STAFF.find((x) => slug(x.name) === name); if (!s) return; const tpl = templateFor(s.role); onCreate({ id: uid(), staffId: slug(s.name), name: s.name, role: s.role, op: s.op, kind, templateId: tpl.id, due, status: "scheduled", self: { done: false, ratings: tpl.competencies.map((c) => ({ id: c.id })) }, manager: { ratings: tpl.competencies.map((c) => ({ id: c.id })) }, goals: [], signoff: {}, createdAt: new Date().toISOString() }); };
+  const [name, setName] = useState(""); const [kind, setKind] = useState<ReviewKind>("annual"); const [due, setDue] = useState(isoDate(new Date(Date.now() + 14 * 86400000))); const [appraiser, setAppraiser] = useState("You");
+  const create = () => { const s = DEMO_STAFF.find((x) => slug(x.name) === name); if (!s) return; const tpl = templateFor(s.role); onCreate({ id: uid(), staffId: slug(s.name), name: s.name, role: s.role, op: s.op, appraiser, kind, templateId: tpl.id, due, status: "scheduled", self: { done: false, ratings: tpl.competencies.map((c) => ({ id: c.id })) }, manager: { ratings: tpl.competencies.map((c) => ({ id: c.id })) }, goals: [], signoff: {}, createdAt: new Date().toISOString() }); };
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[10vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">New review</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={name} onChange={(e) => setName(e.target.value)} className="w-full"><option value="">Choose…</option>{DEMO_STAFF.map((s) => <option key={s.name} value={slug(s.name)}>{s.name} · {s.role}</option>)}</Select></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Appraiser <span className="font-normal normal-case text-[var(--ink-3)]">— who conducts &amp; signs it off</span></span><Select value={appraiser} onChange={(e) => setAppraiser(e.target.value)} className="w-full">{APPRAISERS.filter((a) => slug(a) !== name).map((a) => <option key={a} value={a}>{a}</option>)}</Select></label>
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={kind} onChange={(e) => setKind(e.target.value as ReviewKind)} className="w-full">{(Object.keys(KIND_LABEL) as ReviewKind[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}</Select></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Due</span><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-full" /></label>

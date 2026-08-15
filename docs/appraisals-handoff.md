@@ -40,6 +40,13 @@ staff **My appraisals** view). Everything below is what Amir needs to make it re
 3. **The signals** — expose real endpoints for a person's lateness, sickness +
    Bradford, and credential (DBS/first-aid) status, scoped to the requesting
    manager. Front-end already shapes the panel around `Signals`.
+3b. **Appraiser assignment + access** — each review now carries an `appraiser`
+   (set on creation, editable). The assigned appraiser is who conducts and edits
+   the manager/appraiser side of the form. In the demo the operator portal is a
+   single login so anyone can open it and there's an "appraiser" filter to view a
+   given appraiser's reviews ("Assigned to me"). Real version: gate edit access to
+   the **assigned appraiser + admins**, surface each appraiser's own queue, and
+   record who actually made each edit (audit). Ties to Roles & permissions.
 4. **Two-sided flow + e-signature** — staff submit self-assessment → status moves
    to `manager`; manager completes → `signoff`. Capture **both signatures** with
    timestamps (`signoff.managerAt` / `staffAt`) as a legal record; lock the review

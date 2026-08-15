@@ -40,16 +40,16 @@ function blankRatings(role?: string) { return templateFor(role).competencies.map
 export function seedReviews(): Review[] {
   const now = new Date(); const d = (off: number) => { const x = new Date(now); x.setDate(x.getDate() + off); return isoDate(x); };
   const S = DEMO_STAFF; const by = (n: string) => S.find((x) => x.name === n)!;
-  const mk = (name: string, kind: ReviewKind, due: string, status: Review["status"], extra: Partial<Review> = {}): Review => {
+  const mk = (name: string, kind: ReviewKind, due: string, status: Review["status"], appraiser: string, extra: Partial<Review> = {}): Review => {
     const s = by(name); const tpl = templateFor(s.role);
-    return { id: uid(), staffId: slug(name), name, role: s.role, op: s.op, kind, templateId: tpl.id, due, status, self: { done: false, ratings: blankRatings(s.role) }, manager: { ratings: blankRatings(s.role) }, goals: [], signoff: {}, createdAt: now.toISOString(), ...extra };
+    return { id: uid(), staffId: slug(name), name, role: s.role, op: s.op, appraiser, kind, templateId: tpl.id, due, status, self: { done: false, ratings: blankRatings(s.role) }, manager: { ratings: blankRatings(s.role) }, goals: [], signoff: {}, createdAt: now.toISOString(), ...extra };
   };
   return [
-    mk("Marcus Bell", "annual", d(9), "manager", { self: { done: true, text: "Strong year — happy to take on more lead responsibility.", ratings: COACH_COMPS.map((c, i) => ({ id: c.id, rating: (i % 2 ? 4 : 5) as 4 | 5 })) }, manager: { text: "Excellent lead. Grow the mentoring side.", ratings: LEAD_COMPS.map((c) => ({ id: c.id, rating: 4 })) }, goals: [{ id: uid(), title: "Mentor two new coaches this season", status: "progress", progress: 40, due: d(90) }, { id: uid(), title: "Complete Designated Safeguarding Lead training", status: "open", due: d(60) }] }),
-    mk("Jess Patel", "probation", d(-2), "self", { self: { done: false, ratings: blankRatings("Coach") } }),
-    mk("Aisha Rahman", "6-month", d(21), "scheduled"),
-    mk("Tom Lewis", "annual", d(-20), "complete", { manager: { text: "Solid, reliable coach.", ratings: COACH_COMPS.map((c) => ({ id: c.id, rating: 4 })) }, self: { done: true, ratings: COACH_COMPS.map((c) => ({ id: c.id, rating: 4 })) }, signoff: { managerAt: d(-20), staffAt: d(-19) } }),
-    mk("Priya Khan", "probation", d(5), "scheduled"),
+    mk("Marcus Bell", "annual", d(9), "manager", "You", { self: { done: true, text: "Strong year — happy to take on more lead responsibility.", ratings: COACH_COMPS.map((c, i) => ({ id: c.id, rating: (i % 2 ? 4 : 5) as 4 | 5 })) }, manager: { text: "Excellent lead. Grow the mentoring side.", ratings: LEAD_COMPS.map((c) => ({ id: c.id, rating: 4 })) }, goals: [{ id: uid(), title: "Mentor two new coaches this season", status: "progress", progress: 40, due: d(90) }, { id: uid(), title: "Complete Designated Safeguarding Lead training", status: "open", due: d(60) }] }),
+    mk("Jess Patel", "probation", d(-2), "self", "Marcus Bell", { self: { done: false, ratings: blankRatings("Coach") } }),
+    mk("Aisha Rahman", "6-month", d(21), "scheduled", "You"),
+    mk("Tom Lewis", "annual", d(-20), "complete", "Aisha Rahman", { manager: { text: "Solid, reliable coach.", ratings: COACH_COMPS.map((c) => ({ id: c.id, rating: 4 })) }, self: { done: true, ratings: COACH_COMPS.map((c) => ({ id: c.id, rating: 4 })) }, signoff: { managerAt: d(-20), staffAt: d(-19) } }),
+    mk("Priya Khan", "probation", d(5), "scheduled", "You"),
   ];
 }
 export const loadReviews = (): Review[] => { const s = read<Review[]>(RK); return Array.isArray(s) ? s : seedReviews(); };

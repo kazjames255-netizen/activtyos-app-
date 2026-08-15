@@ -49,7 +49,7 @@ export function MyAppraisalsApp() {
         <Card className="p-4">
           <div className="mb-2 text-[12px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">📅 Upcoming</div>
           {upcoming.length === 0 ? <div className="text-[12.5px] text-[var(--ink-3)]">Nothing scheduled.</div> : <div className="space-y-1.5">{upcoming.map((r) => (
-            <div key={r.id} className="flex items-center gap-2 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{KIND_LABEL[r.kind]}</span><span className="ml-auto text-[var(--ink-3)]">{fmtDate(r.due)}</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{STATUS_LABEL[r.status]}</span></div>
+            <div key={r.id} className="flex flex-wrap items-center gap-2 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{KIND_LABEL[r.kind]}</span><span className="text-[10.5px] text-[var(--ink-3)]">· with {r.appraiser || "your manager"}</span><span className="ml-auto text-[var(--ink-3)]">{fmtDate(r.due)}</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f]">{STATUS_LABEL[r.status]}</span></div>
           ))}</div>}
         </Card>
       </div>

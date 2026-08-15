@@ -23,6 +23,7 @@ export const GOAL_STATUS_LABEL: Record<Goal["status"], string> = { open: "Not st
 export type BoxDef = { label: string; tone: string; action: string };
 export interface Review {
   id: string; staffId: string; name: string; role?: string; op?: string;
+  appraiser?: string; // who conducts the review — sees & edits the manager form
   kind: ReviewKind; templateId?: string; due: string; status: ReviewStatus;
   self: { done: boolean; text?: string; ratings: CompScore[] };
   manager: { text?: string; ratings: CompScore[] };
