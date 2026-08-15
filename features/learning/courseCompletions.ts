@@ -27,6 +27,23 @@ export function completionsFor(staffName: string): CourseDone[] {
 
 const fmtLong = (isoDate: string) => { const d = new Date(isoDate + "T00:00:00"); return isNaN(+d) ? isoDate : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }); };
 
+// A completed course's certificate expiry = completion date + the course's
+// renewal interval (or the provider default). Null = never expires.
+export function courseExpiry(done: CourseDone, settings: TenantSettings): Date | null {
+  const course = SEED_LIBRARY.find((c) => c.id === done.courseId);
+  const rm = course?.renewMonths ?? settings.learning?.renewMonths ?? 0;
+  if (!rm) return null;
+  const issued = new Date(done.date + "T00:00:00");
+  return new Date(issued.getFullYear(), issued.getMonth() + rm, issued.getDate());
+}
+// Still valid today? (never-expiring courses are always in date)
+export function courseInDate(done: CourseDone, settings: TenantSettings): boolean {
+  const exp = courseExpiry(done, settings);
+  if (!exp) return true;
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  return exp.getTime() >= today.getTime();
+}
+
 // Build the CertData for one staff+course, styled with the provider's chosen
 // certificate template/branding from Setup → Learning. Shared by the single
 // download and the bulk export pack.
