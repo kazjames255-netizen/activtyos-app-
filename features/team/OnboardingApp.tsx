@@ -19,7 +19,29 @@ export interface OnboardField {
   id: string; section: string; label: string; type: FieldType; required: boolean;
   applyKind: "all" | "roles" | "staff"; applyRoles?: string[]; applyStaff?: string[];
   options?: string[]; hint?: string; gate?: boolean; sensitive?: boolean; custom?: boolean;
+  other?: boolean;       // select allows a free-text "Other"
+  fromInvite?: boolean;  // pre-filled when the sign-up link was sent; staff can't edit, the company can
+  declaration?: boolean; // a document the person signs — offers a "see example" the company can view/print
 }
+
+const NATIONALITIES = ["British", "Irish", "Polish", "Romanian", "Indian", "Pakistani", "Bangladeshi", "Nigerian", "Ghanaian", "Kenyan", "South African", "Portuguese", "Spanish", "Italian", "French", "German", "Lithuanian", "Latvian", "Bulgarian", "Filipino", "American", "Canadian", "Australian", "Other"];
+
+// Standard childcare disqualification self-declaration wording (authored for
+// ActivityOS; aligns with the Childcare (Disqualification) Regulations / EYFS).
+export const DISQUAL_DECLARATION = `DISQUALIFICATION SELF-DECLARATION
+
+I confirm that, to the best of my knowledge, I am not disqualified from working with children under the Childcare (Disqualification) and Childcare (Early Years Provision Free of Charge) (Extended Entitlement) Regulations 2018 or any related legislation.
+
+I declare that:
+1. I have not been cautioned for, or convicted of, any offence against a child, or any violent or sexual offence against an adult.
+2. I am not, and have never been, included on the DBS children's barred list.
+3. I have not had an order or determination made against me that would disqualify me (including having care of a child removed, or an Ofsted registration cancelled/refused).
+4. I am not subject to any prohibition, direction, sanction or restriction that prevents me from working with children.
+5. I understand my duty to inform my employer immediately if any of the above changes at any time during my employment.
+
+I understand that providing false information may lead to withdrawal of any offer of employment or to dismissal, and may be a criminal offence.
+
+Signed: ______________________________   Print name: ______________________________   Date: ____________`;
 export interface OnboardValue { v?: string; fileData?: string; fileName?: string; status?: "todo" | "requested" | "received" | "verified" }
 export interface OnboardRecord { staff: string; values: Record<string, OnboardValue>; extra: string[] }
 
@@ -37,34 +59,46 @@ export const SECTIONS: [string, string, string][] = [
 const F = (id: string, section: string, label: string, type: FieldType, required = false, x: Partial<OnboardField> = {}): OnboardField => ({ id, section, label, type, required, applyKind: "all", ...x });
 
 export const DEFAULT_FIELDS: OnboardField[] = [
-  F("fullName", "personal", "Full legal name", "text", true),
+  F("fullName", "personal", "Full legal name", "text", true, { fromInvite: true }),
   F("prevNames", "personal", "Previous / known-as names", "text"),
   F("dob", "personal", "Date of birth", "date", true),
   F("ni", "personal", "National Insurance number", "text", true),
-  F("address", "personal", "Home address", "textarea", true),
+  F("address1", "personal", "Address line 1", "text", true),
+  F("address2", "personal", "Address line 2", "text"),
+  F("town", "personal", "Town / city", "text", true),
+  F("postcode", "personal", "Postcode", "text", true),
   F("addrHistory", "personal", "Address history (last 5 years)", "textarea", false, { hint: "Needed for DBS" }),
   F("phone", "personal", "Mobile number", "tel", true),
-  F("email", "personal", "Personal email", "email", true),
-  F("photo", "personal", "Photo (ID badge)", "file"),
+  F("email", "personal", "Personal email", "email", true, { fromInvite: true }),
 
-  F("nationality", "rtw", "Nationality", "text", true),
+  F("nationality", "rtw", "Nationality", "select", true, { options: NATIONALITIES, other: true }),
   F("rtwMethod", "rtw", "Right-to-work method", "select", true, { options: ["Share code (eVisa)", "Passport (British/Irish)", "Birth certificate + NI", "Other"] }),
   F("shareCode", "rtw", "Share code (9-char)", "text", false, { hint: "From gov.uk — valid 90 days" }),
-  F("rtwEvidence", "rtw", "Right-to-work evidence", "file"),
+  F("rtwEvidence", "rtw", "Right-to-work evidence (upload)", "file"),
   F("rtwCheck", "rtw", "Right to work verified", "check", true, { gate: true }),
 
   F("idDocs", "dbs", "ID documents seen", "text", true, { hint: "e.g. passport + proof of address" }),
   F("idCheck", "dbs", "Identity verified", "check", true),
   F("dbsCert", "dbs", "Enhanced DBS certificate no.", "text"),
   F("dbsIssue", "dbs", "DBS issue date", "date"),
+  F("dbsFile", "dbs", "DBS certificate (upload)", "file", false, { hint: "Company can upload a copy" }),
   F("dbsUpdate", "dbs", "On DBS Update Service", "checkbox"),
   F("dbsUpdateNo", "dbs", "Update Service number", "text"),
   F("overseas", "dbs", "Overseas check (if 3+ months abroad)", "select", false, { options: ["Not needed", "Requested", "Received"] }),
-  F("disqual", "dbs", "Disqualification self-declaration signed", "checkbox"),
+  F("disqual", "dbs", "Disqualification self-declaration signed", "checkbox", false, { declaration: true, hint: "See the example to print & have them sign" }),
+  F("disqualFile", "dbs", "Signed declaration (upload)", "file"),
   F("dbsCheck", "dbs", "DBS cleared (barred-list checked)", "check", true, { gate: true }),
 
-  F("ref1", "refs", "Reference 1 — name, org, contact", "textarea", true),
-  F("ref2", "refs", "Reference 2 — name, org, contact", "textarea", true),
+  F("ref1Name", "refs", "Reference 1 — name", "text", true),
+  F("ref1Org", "refs", "Reference 1 — organisation", "text"),
+  F("ref1Rel", "refs", "Reference 1 — relationship", "text"),
+  F("ref1Phone", "refs", "Reference 1 — phone", "tel"),
+  F("ref1Email", "refs", "Reference 1 — email", "email"),
+  F("ref2Name", "refs", "Reference 2 — name", "text", true),
+  F("ref2Org", "refs", "Reference 2 — organisation", "text"),
+  F("ref2Rel", "refs", "Reference 2 — relationship", "text"),
+  F("ref2Phone", "refs", "Reference 2 — phone", "tel"),
+  F("ref2Email", "refs", "Reference 2 — email", "email"),
   F("employHistory", "refs", "Employment history + gaps explained", "textarea"),
   F("refsCheck", "refs", "References received & satisfactory", "check", true, { gate: true }),
 
@@ -77,7 +111,7 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("studentLoan", "payroll", "Student / postgraduate loan", "checkbox"),
   F("bank", "payroll", "Bank sort code / account", "text", false, { sensitive: true, hint: "Staff enter this themselves" }),
   F("pension", "payroll", "Pension auto-enrolment", "checkbox"),
-  F("jobTitle", "payroll", "Job title", "text"),
+  F("jobTitle", "payroll", "Job title", "text", false, { fromInvite: true }),
   F("startDate", "payroll", "Start date", "date", true),
   F("hours", "payroll", "Contracted hours", "text"),
   F("payRate", "payroll", "Pay rate", "text", false, { sensitive: true }),
@@ -150,9 +184,20 @@ export function OnboardingPanel() {
   const [cfg, setCfg] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [mode, setMode] = useState<"records" | "scr">("records");
+  const [showDecl, setShowDecl] = useState(false);
   const provider = settings.providerName || settings.billing?.businessName || "Your company";
 
   const staffOf = (name: string) => DEMO_STAFF.find((s) => s.name === name);
+  // Job title / name / email are captured when the sign-up link is sent — pre-fill
+  // them here (staff can't edit; the company can). Seed the record once if empty.
+  useEffect(() => {
+    const s = DEMO_STAFF.find((x) => x.name === sel); if (!s) return;
+    const r = ob.recordFor(sel); const seed: Record<string, OnboardValue> = {};
+    if (r.values.fullName?.v == null) seed.fullName = { v: s.name };
+    if (r.values.jobTitle?.v == null) seed.jobTitle = { v: s.role };
+    if (Object.keys(seed).length) ob.upsertRecord({ ...r, values: { ...r.values, ...seed } });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sel]);
   const applicable = (name: string, role?: string, extra: string[] = []) => ob.fields.filter((f) => fieldApplies(f, name, role, extra));
   const progressOf = (name: string) => { const s = staffOf(name); const rec = ob.recordFor(name); const fs = applicable(name, s?.role, rec.extra); const done = fs.filter((f) => satisfied(f, rec.values[f.id])).length; return { done, total: fs.length, pct: fs.length ? Math.round((done / fs.length) * 100) : 0 }; };
   const clearedOf = (name: string) => { const s = staffOf(name); const rec = ob.recordFor(name); return applicable(name, s?.role, rec.extra).filter((f) => f.gate).every((f) => satisfied(f, rec.values[f.id])); };
@@ -251,16 +296,23 @@ export function OnboardingPanel() {
               <div className="grid gap-2.5 sm:grid-cols-2">
                 {fs.map((f) => { const val = rec.values[f.id]; const ok = satisfied(f, val); return (
                   <div key={f.id} className={"rounded-lg border p-2.5 " + (f.type === "textarea" ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)]")}>
-                    <label className="mb-1 flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{f.label}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title="Sensitive — stored securely" className="text-[10px]">🔒</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">added</span>}</label>
+                    <label className="mb-1 flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{f.label}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title="Sensitive — stored securely" className="text-[10px]">🔒</span>}{f.fromInvite && <span title="Set when the sign-up link was sent — staff can't edit; the company can" className="rounded bg-[#eaf1ff] px-1 text-[8.5px] font-bold uppercase text-[#1d54c4]">🔗 from invite</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">added</span>}</label>
                     {f.type === "check" ? (
                       <div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st })} className={"rounded-full px-2 py-0.5 text-[10.5px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{st}</button>)}</div>
                     ) : f.type === "checkbox" ? (
-                      <label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[var(--ink)]"><input type="checkbox" checked={val?.v === "yes"} onChange={(e) => setVal(f.id, { v: e.target.checked ? "yes" : "" })} className="h-4 w-4 accent-[#1d3a8f]" /> Yes</label>
+                      <div className="flex flex-wrap items-center gap-3"><label className="flex cursor-pointer items-center gap-2 text-[12.5px] font-semibold text-[var(--ink)]"><input type="checkbox" checked={val?.v === "yes"} onChange={(e) => setVal(f.id, { v: e.target.checked ? "yes" : "" })} className="h-4 w-4 accent-[#1d3a8f]" /> Yes, signed</label>{f.declaration && <button type="button" onClick={() => setShowDecl(true)} className="text-[11px] font-bold text-[#1d3a8f] hover:underline">📄 See / print example</button>}</div>
                     ) : f.type === "file" ? (
                       <div className="flex flex-wrap items-center gap-2"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ Upload<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileName: file.name }); r.readAsDataURL(file); }} /></label>{val?.fileName && <button type="button" onClick={() => openFile(val.fileData)} className="max-w-[150px] truncate text-[11.5px] font-bold text-[#1d3a8f] hover:underline">📎 {val.fileName}</button>}</div>
-                    ) : f.type === "select" ? (
-                      <Select value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">Choose…</option>{(f.options ?? []).map((o) => <option key={o} value={o}>{o}</option>)}</Select>
-                    ) : f.type === "textarea" ? (
+                    ) : f.type === "select" ? (() => {
+                      const opts = f.options ?? []; const v = val?.v ?? ""; const inList = opts.includes(v);
+                      const selectVal = inList ? v : (v && f.other ? "Other" : ""); const showOther = !!f.other && selectVal === "Other";
+                      return (
+                        <div className="space-y-1.5">
+                          <Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">Choose…</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Select>
+                          {showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder="Type it here…" className="w-full" />}
+                        </div>
+                      );
+                    })() : f.type === "textarea" ? (
                       <textarea value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} rows={2} className="w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
                     ) : (
                       <Input type={f.type === "date" ? "date" : f.type === "tel" ? "tel" : f.type === "email" ? "email" : "text"} value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full" />
@@ -284,6 +336,16 @@ export function OnboardingPanel() {
           <p className="mt-3 text-[11px] text-[var(--ink-3)]">Certificates (DBS, First Aid) are also tracked in <b>Team → Staff certificates</b>. Sensitive fields (🔒) need secure storage &amp; retention — on the backend list.</p>
         </div>
       </div>
+      )}
+
+      {showDecl && (
+        <div className="fixed inset-0 z-[142] flex items-center justify-center bg-black/45 p-4" onClick={() => setShowDecl(false)}>
+          <div className="flex max-h-[86vh] w-full max-w-xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Disqualification self-declaration — example</h3><button type="button" onClick={() => setShowDecl(false)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div><p className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">Print this, have the staff member sign it, then upload the signed copy and tick the box.</p></div>
+            <div className="flex-1 overflow-y-auto px-5 py-4"><pre className="whitespace-pre-wrap font-sans text-[12.5px] leading-relaxed text-[var(--ink)]">{DISQUAL_DECLARATION}</pre></div>
+            <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><span className="text-[11px] text-[var(--ink-3)]">{provider}</span><Button className="ml-auto" onClick={() => setShowDecl(false)}>Close</Button><Button variant="primary" onClick={() => printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Disqualification declaration</title><style>body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:34px;max-width:720px;margin:0 auto}h1{font-size:16px}pre{white-space:pre-wrap;font-family:inherit;font-size:13px;line-height:1.7}</style></head><body><h1>${esc(provider)}</h1><pre>${esc(DISQUAL_DECLARATION)}</pre><script>window.onload=function(){setTimeout(function(){window.print()},300)}</script></body></html>`)}>🖨️ Print</Button></div>
+          </div>
+        </div>
       )}
 
       {cfg && <RequirementsModal fields={ob.fields} onSave={ob.saveFields} onClose={() => setCfg(false)} accessRoles={(settings.roles ?? []).map((r) => r.name).filter(Boolean)} jobTitles={(settings.staffRoles ?? []).filter(Boolean)} />}
