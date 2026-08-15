@@ -30,6 +30,7 @@ import { StaffDocsApp } from "@/features/documents/StaffDocsApp";
 import { StaffPayslipsApp } from "@/features/payroll/StaffPayslipsApp";
 import { HolidayApp } from "@/features/holiday/HolidayApp";
 import { MyHolidayApp } from "@/features/holiday/MyHolidayApp";
+import { MyAppraisalsApp } from "@/features/appraisals/MyAppraisalsApp";
 import { TimeClockApp } from "@/features/timeclock/TimeClockApp";
 import { TimesheetsApp } from "@/features/timeclock/TimesheetsApp";
 import { PayrollApp } from "@/features/payroll/PayrollApp";
@@ -271,6 +272,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     ai: () => <AiAssistant kind="staff" />,
     availability: AvailabilityApp,
     holiday: MyHolidayApp,
+    appraisals: MyAppraisalsApp,
     clockinout: TimeClockApp,
     expenses: planned({
       title: "My expenses",

@@ -843,6 +843,49 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       }
     ]
   },
+  "staff-appraisals": {
+    "title": "Appraisals & performance",
+    "introLine": "This tab runs your whole performance cycle — probation and annual reviews, ongoing feedback, a talent grid and PIPs — with real lateness and absence data pulled in so nothing's guessed on the day.",
+    "doneLine": "That's Appraisals — schedule a review, let the signals do the prep, agree goals and sign off. Everything a person owes shows in their own 'My appraisals' tab.",
+    "steps": [
+      {
+        "label": "Read the tiles",
+        "stage": "Overview",
+        "line": "Start at the four tiles — reviews due in the next fortnight, anything overdue, your team's average score and how many people are on a PIP. Use the 'All listings' dropdown at the top-right to narrow everything on the tab to one site.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Due ≤ 14 days · 2</span><span class=\"chip2\">Overdue · 1</span><span class=\"chip2\">Avg score · 4.1/5</span><span class=\"chip2\">On a PIP · 1</span></div><div class=\"field ph\">All listings ▾</div><div class=\"hint\">The listing filter drives the whole tab — Reviews, Feedback, Talent and PIPs all narrow together.</div></div>"
+      },
+      {
+        "label": "Start a review",
+        "stage": "Reviews",
+        "line": "On the Reviews sub-tab, click '+ New review', pick the employee, the type — probation, 3-month, 6-month, annual or a supervision 1:1 — and a due date. It opens straight into the editor. The list shows each person's status and score; click 'Open →' to work on one.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">📋 Reviews</span><span class=\"chip2\">🌟 Feedback</span><span class=\"chip2\">🎯 Talent</span><span class=\"btn\">+ New review</span></div><div class=\"row2\"><div class=\"field\">Employee: Jess Patel · Coach</div><div class=\"field\">Type: Probation review</div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Marcus Bell</b> <span class=\"g\">Annual · due 24 Aug</span> <span class=\"tkp\">Manager review</span></div></div></div>"
+      },
+      {
+        "label": "The signals panel",
+        "stage": "Evidence",
+        "line": "Every review opens with a live signals strip — recent late clock-ins, sickness days and Bradford factor from Leave & absence, and DBS / first-aid status. It's pulled automatically so the conversation is evidence-based, not from memory.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">DATA-INFORMED SIGNALS</div><div class=\"chips\"><span class=\"ochip\">Late clock-ins: none</span><span class=\"chip2\">Sickness: 3d · 2 spells</span><span class=\"chip2\">Bradford: 12</span><span class=\"chip2\">DBS · First aid: Valid · Expiring</span></div><div class=\"hint\">Straight from Clock-in, Leave & absence and staff credentials.</div></div>"
+      },
+      {
+        "label": "Rate, set goals, sign off",
+        "stage": "Complete",
+        "line": "The staff member self-rates first; you then score each competency 1–5, write a summary, and add SMART goals with a target date. For a probation review pick the outcome — pass, extend or don't confirm. Hit 'Sign off & complete' to lock it and stamp the date.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">👤 MANAGER REVIEW <span class=\"tkp\">Overall 4.2/5</span></div><div class=\"tkt\"><div class=\"tkhd\">Coaching & delivery <span class=\"chips\"><span class=\"chip2\">4</span><span class=\"ochip\">5</span></span></div></div><div class=\"fl\">🎯 GOALS</div><div class=\"field\">Mentor two new coaches this season · target Nov</div><div class=\"btn\">Sign off & complete</div></div>"
+      },
+      {
+        "label": "Feedback, talent & PIPs",
+        "stage": "Between reviews",
+        "line": "Don't wait for review day. Log kudos, concerns and supervision notes any time on 'Feedback & 1:1s'. Place people on the 9-box 'Talent grid' (performance × potential — click a name to move them). And when needed, open a structured PIP with concern, actions, support and dates on the PIP sub-tab.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">🌟 Kudos</span><span class=\"chip2\">⚠️ Concern</span><span class=\"chip2\">🗒️ Supervision</span></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>9-box</b> <span class=\"g\">Star · High potential · Core…</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>PIP</b> <span class=\"g\">concern · actions · support · dates</span></div></div></div><div class=\"hint\">Notes logged here surface in the person's next review.</div></div>"
+      },
+      {
+        "label": "Templates & settings",
+        "stage": "Set up",
+        "line": "The competencies people are rated on live on the 'Templates' sub-tab — one per role (Coach, Lead), fully editable: rename, add or remove lines. 'Settings' explains how the cycle works. That's the whole loop — schedule, evidence, rate, agree goals, sign off.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">🧩 TEMPLATES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Coach appraisal</b> <span class=\"tkp\">Coach</span></div></div><div class=\"field\">Coaching & activity delivery</div><div class=\"field\">Safeguarding & child protection</div><div class=\"field ph\">+ Add competency</div></div>"
+      }
+    ]
+  },
   "tasks": {
     "title": "Task manager",
     "introLine": "This is your operational to-do list — proper tasks tied to real camps, bookings and compliance, all pulled into one tidy inbox no matter how many companies you coach for.",
