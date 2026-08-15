@@ -298,6 +298,7 @@ function AbsenceEditor({ abs, region, sickRule, isNew, profiles, policy, absence
   const first = (a.name || "They").split(" ")[0];
   // effective pay treatment: a manual override wins, else the default for the type
   const pay: PayTreatment = a.pay ?? defaultPayTreatment(a.kind, { rolled });
+  const effAwe = a.awe != null ? a.awe : prof?.awe; // fall back to the profile's known AWE
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -323,14 +324,15 @@ function AbsenceEditor({ abs, region, sickRule, isNew, profiles, policy, absence
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason / note</span><Input value={a.reason || ""} onChange={(e) => set({ reason: e.target.value })} className="w-full" /></label>
           {a.kind === "sickness" && <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Statutory Sick Pay</span><Select value={a.ssp || "eligible"} onChange={(e) => set({ ssp: e.target.value as Absence["ssp"] })} className="w-full"><option value="eligible">Eligible — reported in time</option><option value="withheld">Withheld — reported late</option></Select></label>
-            <label className="mt-2 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Average weekly earnings <span className="normal-case text-[var(--ink-3)]">(their last 8 weeks ÷ 8)</span></span><Input inputMode="decimal" value={a.awe != null ? String(a.awe) : ""} placeholder="£ per week" onChange={(e) => set({ awe: e.target.value.trim() === "" ? undefined : parseFloat(e.target.value) })} className="w-full" /></label>
-            {a.awe != null && a.awe >= 0 && <div className="mt-1.5 rounded-lg bg-[#eef4fd] px-2.5 py-1.5 text-[11px] font-semibold text-[#1d3a8f]">Weekly SSP ≈ <b>£{sspWeekly(a.awe).toFixed(2)}</b> — the lower of £{SSP_WEEKLY.toFixed(2)} and 80% of £{a.awe.toFixed(2)}. Split across the shifts they were due that week.</div>}
+            <label className="mt-2 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Average weekly earnings <span className="normal-case text-[var(--ink-3)]">(their last 8 weeks ÷ 8)</span></span><Input inputMode="decimal" value={a.awe != null ? String(a.awe) : ""} placeholder={prof?.awe != null ? `£${prof.awe} on file` : "£ per week"} onChange={(e) => set({ awe: e.target.value.trim() === "" ? undefined : parseFloat(e.target.value) })} className="w-full" /></label>
+            {effAwe != null && effAwe >= 0 && <div className="mt-1.5 rounded-lg bg-[#eef4fd] px-2.5 py-1.5 text-[11px] font-semibold text-[#1d3a8f]">Weekly SSP ≈ <b>£{sspWeekly(effAwe).toFixed(2)}</b> — the lower of £{SSP_WEEKLY.toFixed(2)} and 80% of £{effAwe.toFixed(2)}. Split across the shifts they were due that week.{a.awe == null && prof?.awe != null ? " (from their profile)" : ""}</div>}
+            {prof?.sspUsedWeeks != null && prof.sspUsedWeeks > 0 && <div className="mt-1.5 rounded-lg bg-[#fdf3e0] px-2.5 py-1.5 text-[11px] font-semibold text-[#8a5a09]">⏳ {prof.sspUsedWeeks} of 28 SSP weeks already used — {Math.max(0, 28 - prof.sspUsedWeeks)} left before SSP stops (issue SSP1).</div>}
             <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">SSP is <b>not</b> based on the shift they missed — it&rsquo;s 80% of their <b>8-week average</b> (weeks they earned £0 dilute it), capped at £{SSP_WEEKLY.toFixed(2)}. Only owed for <b>rota&rsquo;d</b> shifts; report rule: <b>{sickRule}</b>.</div>
           </div>}
           {isNew && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Status</span><Select value={a.status} onChange={(e) => set({ status: e.target.value as Absence["status"] })} className="w-full"><option value="approved">Approved (add directly)</option><option value="pending">Pending (needs approval)</option></Select></label>}
           <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[12px] font-semibold text-[#1d3a8f]">{days} working day{days === 1 ? "" : "s"} (weekends &amp; bank holidays excluded)</div>
         </div>
-        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={isNew && !a.staffId} onClick={() => onSave({ ...a, days, pay, paid: pay !== "unpaid", ...(a.kind === "sickness" && !a.ssp ? { ssp: "eligible" as const } : {}) })}>Save</Button></div>
+        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={isNew && !a.staffId} onClick={() => onSave({ ...a, days, pay, paid: pay !== "unpaid", ...(a.kind === "sickness" && !a.ssp ? { ssp: "eligible" as const } : {}), ...(a.kind === "sickness" && a.awe == null && prof?.awe != null ? { awe: prof.awe } : {}) })}>Save</Button></div>
       </div>
     </div>
   );
@@ -348,12 +350,19 @@ function ProfileEditor({ prof, policy, onSave, onClose }: { prof: LeaveProfile; 
           {p.holidayPay === "rolled-up" ? <div className="rounded-lg bg-[#fdf3e0] px-3 py-2 text-[12px] font-semibold text-[#8a5a09]">Holiday is paid as they earn it — no bookable allowance to set.</div> : <>
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Days worked / week</span><Input inputMode="decimal" value={String(p.daysPerWeek ?? policy.daysPerWeek)} onChange={(e) => setP({ ...p, daysPerWeek: parseFloat(e.target.value) || undefined })} className="w-full" /><span className="mt-1 block text-[10.5px] text-[var(--ink-3)]">Statutory at this pattern: <b>{stat} days</b></span></label>
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Allowance override (days/year) <span className="normal-case text-[var(--ink-3)]">— blank = statutory {stat}</span></span><Input inputMode="decimal" value={p.allowanceDays != null ? String(p.allowanceDays) : ""} placeholder={String(stat)} onChange={(e) => setP({ ...p, allowanceDays: e.target.value.trim() === "" ? undefined : parseFloat(e.target.value) })} className="w-full" /></label>
-          <div className="grid grid-cols-2 gap-2">
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Carried over</span><Input inputMode="decimal" value={String(p.carriedOver || 0)} onChange={(e) => setP({ ...p, carriedOver: parseFloat(e.target.value) || 0 })} className="w-full" /></label>
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Start date <span className="normal-case text-[var(--ink-3)]">(accrual)</span></span><Input type="date" value={p.startDate || ""} onChange={(e) => setP({ ...p, startDate: e.target.value || undefined })} className="w-full" /></label>
-          </div>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Carried over (days)</span><Input inputMode="decimal" value={String(p.carriedOver || 0)} onChange={(e) => setP({ ...p, carriedOver: parseFloat(e.target.value) || 0 })} className="w-full" /></label>
           <div className="rounded-lg bg-[#eef4fd] px-3 py-2 text-[12px] font-semibold text-[#1d3a8f]">Full allowance: {annualAllowance(p, policy)} days{p.carriedOver ? ` + ${p.carriedOver} carried` : ""}</div>
           </>}
+          {/* prior service / opening balances — for staff who already worked for you before being added here */}
+          <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5">
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Prior service &amp; opening balances</div>
+            <label className="block"><span className="mb-1 block text-[10.5px] font-bold uppercase text-[var(--ink-3)]">Continuous service start <span className="normal-case text-[var(--ink-3)]">(first day they ever worked for you)</span></span><Input type="date" value={p.startDate || ""} onChange={(e) => setP({ ...p, startDate: e.target.value || undefined })} className="w-full" /></label>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              <label className="block"><span className="mb-1 block text-[10.5px] font-bold uppercase text-[var(--ink-3)]">Avg weekly earnings £</span><Input inputMode="decimal" value={p.awe != null ? String(p.awe) : ""} placeholder="for SSP" onChange={(e) => setP({ ...p, awe: e.target.value.trim() === "" ? undefined : parseFloat(e.target.value) })} className="w-full" /></label>
+              <label className="block"><span className="mb-1 block text-[10.5px] font-bold uppercase text-[var(--ink-3)]">SSP weeks used <span className="normal-case text-[var(--ink-3)]">(of 28)</span></span><Input inputMode="decimal" value={p.sspUsedWeeks != null ? String(p.sspUsedWeeks) : ""} placeholder="0" onChange={(e) => setP({ ...p, sspUsedWeeks: e.target.value.trim() === "" ? undefined : parseFloat(e.target.value) })} className="w-full" /></label>
+            </div>
+            <div className="mt-1.5 text-[10px] leading-relaxed text-[var(--ink-3)]">Added someone who already worked for you? Set their <b>real start date</b> (drives accrual + maternity eligibility), <b>average weekly earnings</b> (so sick pay isn&rsquo;t worked out from £0 of in-system history), and any <b>SSP weeks already used</b> of the 28-week max — otherwise the system treats them as a brand-new hire.</div>
+          </div>
         </div>
         <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" onClick={() => onSave(p)}>Save</Button></div>
       </div>

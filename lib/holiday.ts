@@ -86,7 +86,9 @@ export interface LeaveProfile {
   daysPerWeek?: number;         // overrides policy for part-timers
   allowanceDays?: number;       // overrides the computed allowance
   carriedOver?: number;         // days carried in from last year
-  startDate?: string;           // employment start (for first-year accrual)
+  startDate?: string;           // CONTINUOUS-SERVICE start (first day they worked for you) — drives accrual + service-based eligibility, even if added to the system later
+  awe?: number;                 // known average weekly earnings (seed for SSP/family pay when there's no pay history in-system yet)
+  sspUsedWeeks?: number;        // SSP weeks already consumed of the 28-week max (opening balance for migrated staff)
   // "accrued" (default) = books paid time off; "rolled-up" = holiday is INCLUDED
   // IN PAY at 12.07% (legal for irregular/part-year staff from Apr 2024). Rolled-up
   // staff don't book paid leave — payroll adds a separate 12.07% line instead.
