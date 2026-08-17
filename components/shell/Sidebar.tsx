@@ -298,7 +298,12 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   return (
     <nav
       className={`flex h-screen flex-none flex-col overflow-x-hidden overflow-y-auto py-4 text-[13px] transition-[width] duration-200 ${collapsed ? "w-[62px]" : "w-[248px]"}`}
-      style={{ background: "var(--side-bg)", color: "var(--side-ink)" }}
+      style={{
+        color: "var(--side-ink)",
+        backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.6px), var(--side-bg)",
+        backgroundSize: "18px 18px, cover",
+        backgroundRepeat: "repeat, no-repeat",
+      }}
     >
       <div className={`flex items-center pb-4 ${collapsed ? "justify-center px-2" : "gap-2 px-4"}`}>
         {collapsed ? (

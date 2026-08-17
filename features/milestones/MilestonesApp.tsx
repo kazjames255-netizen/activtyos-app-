@@ -374,10 +374,6 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
   return (<>
     <div className="mt-3 overflow-hidden rounded-2xl border" style={{ borderColor: tone + "40", boxShadow: "0 1px 2px rgba(20,30,60,.05),0 14px 34px rgba(20,30,60,.08)" }}>
       <div className="relative flex flex-wrap items-center gap-3 overflow-hidden px-4 py-4 text-white" style={{ background: gGrad }}>
-        {/* dotted texture + soft blob, like the course hero */}
-        <div className="pointer-events-none absolute inset-0 opacity-50" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,.4) 1px, transparent 1.6px)", backgroundSize: "14px 14px" }} />
-        <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" />
-        <div className="pointer-events-none absolute -bottom-16 left-20 h-40 w-40 rounded-full bg-white/[.07]" />
         {celebrate && <Confetti tone={p.when} />}
         <span className="relative grid h-12 w-12 place-items-center rounded-xl bg-white/20 ring-1 ring-white/30"><span className="text-[24px] font-bold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{cur + 1}</span></span>
         <div className="relative min-w-0">
