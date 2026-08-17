@@ -194,12 +194,9 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   const [openOverrides, setOpenOverrides] = useState<Record<string, boolean>>({});
   const isOpen = (label: string) => openOverrides[label] ?? label === activeGroupLabel;
 
-  // The schedule area needs every pixel for the calendar, so the rail
-  // auto-narrows to an icon strip on entry. A manual toggle still wins while
-  // you're on the page; leaving the schedule restores the full rail.
-  const WIDE_VIEWS = new Set<string>(["schedule"]);
+  // The full rail always shows; users can still narrow it manually with the
+  // « toggle if they want more room.
   const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => { setCollapsed(WIDE_VIEWS.has(activeView)); }, [activeView]);
 
   // The workspace is branded with the provider's own name, not "ActivityOS" —
   // that moves to the footer. For an operator that's their tenant (business)
@@ -298,12 +295,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   return (
     <nav
       className={`flex h-screen flex-none flex-col overflow-x-hidden overflow-y-auto py-4 text-[13px] transition-[width] duration-200 ${collapsed ? "w-[62px]" : "w-[248px]"}`}
-      style={{
-        color: "var(--side-ink)",
-        backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.6px), var(--side-bg)",
-        backgroundSize: "18px 18px, cover",
-        backgroundRepeat: "repeat, no-repeat",
-      }}
+      style={{ background: "var(--side-bg)", color: "var(--side-ink)" }}
     >
       <div className={`flex items-center pb-4 ${collapsed ? "justify-center px-2" : "gap-2 px-4"}`}>
         {collapsed ? (
