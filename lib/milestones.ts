@@ -26,10 +26,13 @@ export interface MPhase { id: string; title: string; subtitle?: string; when: MP
 // so the roadmap plots them as dated bars. Recurring phases reset each season.
 // Per-action state a franchise fills in — Task-Manager style: status, note,
 // who, when, and whether it's been pushed into the Task Manager.
+// Tasks (inside a main action) mirror the Task Manager: To do / In progress / Done.
 export type ActStatus = "todo" | "prog" | "done";
-export const ACT_STATUS: Record<ActStatus, { label: string; tone: string }> = { todo: { label: "Not met", tone: "#c0392b" }, prog: { label: "In progress", tone: "#b45309" }, done: { label: "Met", tone: "#0f7a43" } };
+export const ACT_STATUS: Record<ActStatus, { label: string; tone: string }> = { todo: { label: "To do", tone: "#3b82f6" }, prog: { label: "In progress", tone: "#f59e0b" }, done: { label: "Done", tone: "#16b364" } };
 const ACT_WEIGHT: Record<ActStatus, number> = { todo: 0, prog: 0.5, done: 1 };
-export interface ActState { done?: boolean; status?: ActStatus; note?: string; assignee?: string; due?: string; taskId?: string }
+export type ActPrio = "low" | "med" | "high" | "urgent";
+export const ACT_PRIO: Record<ActPrio, { label: string; tone: string }> = { urgent: { label: "Urgent", tone: "#ef4444" }, high: { label: "High", tone: "#f59e0b" }, med: { label: "Medium", tone: "#3b82f6" }, low: { label: "Low", tone: "#8a93a6" } };
+export interface ActState { done?: boolean; status?: ActStatus; priority?: ActPrio; note?: string; assignee?: string; due?: string; taskId?: string }
 export interface StepState { start?: string; end?: string; pct: number; actions?: Record<string, ActState> }
 export interface MProgress { season: string; steps: Record<string, StepState> }
 

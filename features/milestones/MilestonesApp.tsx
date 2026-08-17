@@ -10,8 +10,8 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
-  type MPhase, type MStep, type MStepLink, type MAction, type MProgress, type StepState, type ActState, type ActStatus, type MPhaseWhen,
-  WHEN_LABEL, WHEN_TONE, ACT_STATUS, phaseDone, phasePct, phaseComplete, overallPct, currentPhaseIndex, phaseWindow, stepPct, stepPctEff, actState, actStatus, actionsDone, dparse, fmtShort, isoDate,
+  type MPhase, type MStep, type MStepLink, type MAction, type MProgress, type StepState, type ActState, type ActStatus, type ActPrio, type MPhaseWhen,
+  WHEN_LABEL, WHEN_TONE, ACT_STATUS, ACT_PRIO, phaseDone, phasePct, phaseComplete, overallPct, currentPhaseIndex, phaseWindow, stepPct, stepPctEff, actState, actStatus, actionsDone, dparse, fmtShort, isoDate,
 } from "@/lib/milestones";
 import { loadTemplate, saveTemplate, resetTemplate, loadProgress, saveProgress, seedProgress, newId, loadHistory, pushHistory } from "./data";
 import { DEMO_STAFF } from "@/features/learning/credentials";
@@ -65,7 +65,7 @@ function useCountUp(target: number, ms = 600) {
 }
 
 // a task's Task-Manager-style status (for tasks scored by % rather than actions)
-const TASK_STEPS: { pct: number; label: string; tone: string }[] = [{ pct: 0, label: "Not met", tone: "#c0392b" }, { pct: 50, label: "In progress", tone: "#b45309" }, { pct: 100, label: "Met", tone: "#16a34a" }];
+const TASK_STEPS: { pct: number; label: string; tone: string }[] = [{ pct: 0, label: "To do", tone: "#3b82f6" }, { pct: 50, label: "In progress", tone: "#f59e0b" }, { pct: 100, label: "Done", tone: "#16b364" }];
 const taskStatus = (pct: number) => (pct >= 100 ? TASK_STEPS[2] : pct > 0 ? TASK_STEPS[1] : TASK_STEPS[0]);
 
 // ── item 9: urgency colour on dates ──────────────────────────────────────────
@@ -156,10 +156,11 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
   const [editAction, setEditAction] = useState<{ p: MPhase; s: MStep; mode: "meta" | "schedule" } | null>(null);
   const setStep = (id: string, patch: Partial<StepState>) => onProg({ ...prog, steps: { ...prog.steps, [id]: { ...(prog.steps[id] || { pct: 0 }), ...patch } } });
   const setAct = (stepId: string, actId: string, patch: Partial<ActState>) => { const cur = prog.steps[stepId] || { pct: 0 }; onProg({ ...prog, steps: { ...prog.steps, [stepId]: { ...cur, actions: { ...(cur.actions || {}), [actId]: { ...(cur.actions?.[actId] || {}), ...patch } } } } }); };
+  const addTask = (step: MStep, title: string) => onTemplate?.(phases.map((p) => ({ ...p, steps: p.steps.map((x) => x.id === step.id ? { ...x, actions: [...(x.actions || []), { id: newId(), title }] } : x) })));
   const pushAction = async (step: MStep, action: MAction) => {
     const stA = prog.steps[step.id]?.actions?.[action.id] || {};
     try {
-      const created = await apiPost<{ id: string }>("/api/tasks", { t: action.title, who: stA.assignee || undefined, due: stA.due || null, prio: "med", status: "todo", cat: "Milestones" });
+      const created = await apiPost<{ id: string }>("/api/tasks", { t: action.title, who: stA.assignee || undefined, due: stA.due || null, prio: stA.priority || "med", status: stA.status || "todo", cat: "Milestones" });
       setAct(step.id, action.id, { taskId: created?.id || "queued" });
       flash?.("Added to the Task Manager.");
     } catch { flash?.("Couldn't reach the Task Manager."); }
@@ -216,7 +217,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
 
       {view === "slides" && <Slides phases={phases} prog={prog} idx={idx} setIdx={setIdx} editable={editable} canEdit={canEdit} me={me} provider={provider}
         onEditAction={(p, s) => setEditAction({ p, s, mode: "meta" })} onEditPhase={(p) => setEditPhase(p)} onDeletePhase={(ph) => { if (phases.length > 1) { delPhase(ph.id); flash?.("Milestone deleted."); } else flash?.("Keep at least one milestone."); }} onAddAction={addAction} onAddPhase={addPhase}
-        onSchedule={setStep} onActState={setAct} onPush={pushAction} />}
+        onAddTask={addTask} onSchedule={setStep} onActState={setAct} onPush={pushAction} />}
 
       {view === "roadmap" && (<>
         {/* month axis */}
@@ -292,7 +293,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
 
 // ── Slides — one milestone at a time ─────────────────────────────────────────
 type Filter = "all" | "mine" | "overdue" | "unassigned";
-interface SlideCbs { onEditAction: (p: MPhase, s: MStep) => void; onEditPhase: (p: MPhase) => void; onDeletePhase: (p: MPhase) => void; onAddAction: (p: MPhase) => void; onSchedule: (stepId: string, patch: Partial<StepState>) => void; onActState: (stepId: string, actId: string, patch: Partial<ActState>) => void; onPush: (step: MStep, a: MAction) => void }
+interface SlideCbs { onEditAction: (p: MPhase, s: MStep) => void; onEditPhase: (p: MPhase) => void; onDeletePhase: (p: MPhase) => void; onAddAction: (p: MPhase) => void; onAddTask: (step: MStep, title: string) => void; onSchedule: (stepId: string, patch: Partial<StepState>) => void; onActState: (stepId: string, actId: string, patch: Partial<ActState>) => void; onPush: (step: MStep, a: MAction) => void }
 
 function Slides({ phases, prog, idx, setIdx, editable, canEdit, me, onAddPhase, ...cbs }: { phases: MPhase[]; prog: MProgress; idx: number; setIdx: (i: number) => void; editable: boolean; canEdit: boolean; me: string; provider: string; onAddPhase: () => void } & SlideCbs) {
   const n = phases.length; const cur = Math.min(idx, Math.max(n - 1, 0)); const p = phases[cur];
@@ -345,9 +346,9 @@ function Slides({ phases, prog, idx, setIdx, editable, canEdit, me, onAddPhase, 
   );
 }
 
-function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAction, onEditPhase, onDeletePhase, onAddAction, onSchedule, onActState, onPush, onPrev, onNext, onJump }: { phase: MPhase; prog: MProgress; cur: number; n: number; editable: boolean; canEdit: boolean; me: string; filter: Filter; onPrev: () => void; onNext: () => void; onJump: (i: number) => void } & SlideCbs) {
+function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAction, onEditPhase, onDeletePhase, onAddAction, onAddTask, onSchedule, onActState, onPush, onPrev, onNext, onJump }: { phase: MPhase; prog: MProgress; cur: number; n: number; editable: boolean; canEdit: boolean; me: string; filter: Filter; onPrev: () => void; onNext: () => void; onJump: (i: number) => void } & SlideCbs) {
   const [confirmDel, setConfirmDel] = useState(false);
-  const [actFilter, setActFilter] = useState(""); const [actSort, setActSort] = useState<"order" | "date">("order");
+  const [actFilter, setActFilter] = useState(""); const [actSort, setActSort] = useState<"order" | "date">("order"); const [newTask, setNewTask] = useState("");
   const tone = rampColor(cur, n); const gGrad = rampGrad(cur, n); const gBar = `linear-gradient(90deg, ${tone}, ${tone}cc)`; // slide takes its milestone's traffic-light colour
   const win = phaseWindow(p, prog); const pc = phasePct(p, prog); const done = phaseComplete(p, prog);
   const [openStep, setOpenStep] = useState<string | null>(null);
@@ -372,16 +373,19 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
 
   return (<>
     <div className="mt-3 overflow-hidden rounded-2xl border" style={{ borderColor: tone + "40", boxShadow: "0 1px 2px rgba(20,30,60,.05),0 14px 34px rgba(20,30,60,.08)" }}>
-      <div className="relative flex flex-wrap items-center gap-3 px-4 py-3.5" style={{ background: `linear-gradient(115deg, ${tone}22, ${tone}08 55%, transparent)` }}>
+      <div className="relative flex flex-wrap items-center gap-3 overflow-hidden px-4 py-4 text-white" style={{ background: gGrad }}>
+        {/* dotted texture + soft blob, like the course hero */}
+        <div className="pointer-events-none absolute inset-0 opacity-50" style={{ backgroundImage: "radial-gradient(circle, rgba(255,255,255,.4) 1px, transparent 1.6px)", backgroundSize: "14px 14px" }} />
+        <div className="pointer-events-none absolute -right-10 -top-12 h-44 w-44 rounded-full bg-white/10" />
+        <div className="pointer-events-none absolute -bottom-16 left-20 h-40 w-40 rounded-full bg-white/[.07]" />
         {celebrate && <Confetti tone={p.when} />}
-        <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: gGrad }} />
-        <span className="grid h-12 w-12 place-items-center rounded-xl text-white shadow" style={{ background: gGrad }}><span className="text-[24px] font-bold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{cur + 1}</span></span>
-        <div className="min-w-0">
-          <div className="flex flex-wrap items-center gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</span><span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums text-white" style={{ background: gGrad }}>{done ? "Complete ✓" : `${pc}%`}</span>{canEdit && <button type="button" onClick={() => onEditPhase(p)} className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[var(--ink)]" title="Edit milestone">✎ Edit</button>}{canEdit && <button type="button" onClick={() => setConfirmDel(true)} className="rounded-md px-1.5 py-0.5 text-[13px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[#c0392b]" title="Delete milestone">×</button>}</div>
-          <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{p.subtitle || WHEN_LABEL[p.when]}</div>
-          {win && <div className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] ring-1 ring-black/5"><span className="text-[var(--ink-3)]">From</span><span style={{ color: tone }}>{fmtShort(isoDate(win.start))}</span><span style={{ color: tone }}>→</span><span className="text-[var(--ink-3)]">to</span><span style={{ color: tone }}>{fmtShort(isoDate(win.end))}</span></div>}
+        <span className="relative grid h-12 w-12 place-items-center rounded-xl bg-white/20 ring-1 ring-white/30"><span className="text-[24px] font-bold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{cur + 1}</span></span>
+        <div className="relative min-w-0">
+          <div className="flex flex-wrap items-center gap-2"><span className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</span><span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-extrabold tabular-nums ring-1 ring-white/30">{done ? "Complete ✓" : `${pc}%`}</span>{canEdit && <button type="button" onClick={() => onEditPhase(p)} className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-white/85 hover:bg-white/15" title="Edit milestone">✎ Edit</button>}{canEdit && <button type="button" onClick={() => setConfirmDel(true)} className="rounded-md px-1.5 py-0.5 text-[13px] font-bold text-white/85 hover:bg-white/15" title="Delete milestone">×</button>}</div>
+          <div className="mt-0.5 text-[11.5px] text-white/85">{p.subtitle || WHEN_LABEL[p.when]}</div>
+          {win && <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white/18 px-2.5 py-0.5 text-[10.5px] font-bold ring-1 ring-white/25"><span className="text-white/70">From</span><span>{fmtShort(isoDate(win.start))}</span><span className="text-white/60">→</span><span className="text-white/70">to</span><span>{fmtShort(isoDate(win.end))}</span></div>}
         </div>
-        <span className="ml-auto text-[11px] font-bold text-[var(--ink-3)]">Milestone {cur + 1} of {n}</span>
+        <span className="relative ml-auto text-[11px] font-bold text-white/80">Milestone {cur + 1} of {n}</span>
       </div>
       <div className="h-1.5 bg-[var(--panel)]"><div className="h-full transition-[width] duration-700" style={{ width: `${pc}%`, background: gBar }} /></div>
       {confirmDel && <div className="flex flex-wrap items-center gap-2 border-b border-[#f3c9c9] bg-[#fdf2f2] px-4 py-2 text-[12px] font-bold text-[#c0392b]">Delete “{p.title}” and its tasks?<div className="ml-auto flex gap-2"><button type="button" onClick={() => setConfirmDel(false)} className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] ring-1 ring-black/5">Cancel</button><button type="button" onClick={() => { setConfirmDel(false); onDeletePhase(p); }} className="rounded-lg bg-[#c0392b] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#a5301f]">Delete milestone</button></div></div>}
@@ -398,7 +402,7 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
       {celebrate && <div className="mx-4 mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-extrabold text-white" style={{ background: gGrad }}>🎉 Milestone complete!{cur < n - 1 && <button type="button" onClick={onNext} className="ml-auto rounded-full bg-white/20 px-2.5 py-1 text-[11px] hover:bg-white/30">Next milestone →</button>}</div>}
 
       <div className="space-y-2 p-4">
-        <div className="flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Tasks ({phaseDone(p, prog)}/{p.steps.length} done)</div>{canEdit && <button type="button" onClick={() => onAddAction(p)} className="ml-auto rounded-lg bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#e6ecfa]">＋ Add task</button>}</div>
+        <div className="flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Main actions ({phaseDone(p, prog)}/{p.steps.length} done)</div>{canEdit && <button type="button" onClick={() => onAddAction(p)} className="ml-auto rounded-lg bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#e6ecfa]">＋ Add main action</button>}</div>
         {shown.map((s) => { const st = prog.steps[s.id]; const sp = stepPctEff(s, prog); const sdone = sp >= 100; const acts = s.actions || [];
           const cMet = acts.filter((a) => actStatus(st?.actions?.[a.id]) === "done").length;
           const cProg = acts.filter((a) => actStatus(st?.actions?.[a.id]) === "prog").length;
@@ -424,12 +428,12 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
                 {/* met / in-progress / not-met segmented bar */}
                 <div className="mt-1.5 flex items-center gap-2 pl-[30px]">
                   <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]">
-                    {acts.length > 0 ? (<>{cMet > 0 && <div style={{ width: `${(cMet / acts.length) * 100}%`, background: "#16a34a" }} />}{cProg > 0 && <div style={{ width: `${(cProg / acts.length) * 100}%`, background: "#e8a300" }} />}</>) : <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${sp}%`, background: gBar }} />}
+                    {acts.length > 0 ? (<>{cMet > 0 && <div style={{ width: `${(cMet / acts.length) * 100}%`, background: "#16b364" }} />}{cProg > 0 && <div style={{ width: `${(cProg / acts.length) * 100}%`, background: "#f59e0b" }} />}</>) : <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${sp}%`, background: gBar }} />}
                   </div>
                   <span className="text-[10px] font-bold tabular-nums text-[var(--ink-3)]">{sp}%</span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-[30px] text-[10px] font-bold">
-                  {acts.length > 0 ? <span className="text-[var(--ink-2)]"><span style={{ color: "#16a34a" }}>{cMet} met</span> · <span style={{ color: "#b45309" }}>{cProg} in progress</span> · <span style={{ color: "#c0392b" }}>{cTodo} not met</span></span>
+                  {acts.length > 0 ? <span className="text-[var(--ink-2)]"><span style={{ color: "#16b364" }}>{cMet} done</span> · <span style={{ color: "#f59e0b" }}>{cProg} in progress</span> · <span style={{ color: "#3b82f6" }}>{cTodo} to do</span></span>
                     : <span className="rounded-full px-2 py-0.5" style={{ color: taskStatus(sp).tone, background: taskStatus(sp).tone + "18" }}>{taskStatus(sp).label}</span>}
                   {pushed > 0 && <span className="text-[#0f7a43]">↗ {pushed} in Tasks</span>}
                   {!!s.links?.length && s.links.map((l) => <Link key={l.href + l.label} href={l.href} onClick={(e) => e.stopPropagation()} className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold text-white hover:opacity-90" style={{ background: gGrad }}>{l.label} →</Link>)}
@@ -444,27 +448,29 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
                   </div>
                   {acts.length > 0 ? (<>
                     <div className="mb-1.5 mt-2.5 flex flex-wrap items-center gap-2">
-                      <span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Actions</span>
+                      <span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Tasks · like the Task Manager</span>
                       <Select value={actFilter} onChange={(e) => setActFilter(e.target.value)} className="text-[11px]" aria-label="Filter by staff"><option value="">All staff</option>{staffHere.map((nm) => <option key={nm} value={nm}>{nm}</option>)}</Select>
                       <Select value={actSort} onChange={(e) => setActSort(e.target.value as "order" | "date")} className="text-[11px]" aria-label="Sort"><option value="order">Default order</option><option value="date">By due date</option></Select>
                     </div>
-                    <div className="space-y-1.5">{rows.map((a) => { const x = st?.actions?.[a.id] || {}; const stt = actStatus(x); const met = ACT_STATUS[stt]; return (
+                    <div className="space-y-1.5">{rows.map((a) => { const x = st?.actions?.[a.id] || {}; const stt = actStatus(x); const met = ACT_STATUS[stt]; const pr = ACT_PRIO[x.priority || "med"]; return (
                       <div key={a.id} className="rounded-lg border border-[var(--line)] p-2" style={{ borderLeft: `3px solid ${met.tone}` }}>
-                        <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: met.tone }} /><span className={`flex-1 text-[12px] font-semibold ${stt === "done" ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{a.title}</span>{x.taskId ? <Link href="/franchise/tasks" className="text-[10.5px] font-bold text-[#0f7a43]">✓ In Task Manager ↗</Link> : <button type="button" onClick={() => onPush(s, a)} className="rounded-md bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f] hover:bg-[#e0eaff]">↗ Task Manager</button>}</div>
+                        <div className="flex items-center gap-2"><span className="h-2 w-2 shrink-0 rounded-full" style={{ background: met.tone }} /><span className={`flex-1 text-[12px] font-semibold ${stt === "done" ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{a.title}</span>{x.taskId ? <Link href="/franchise/tasks" className="text-[10.5px] font-bold text-[#0f7a43]">✓ In Task Manager ↗</Link> : <button type="button" onClick={() => onPush(s, a)} className="rounded-md bg-[#eef4fd] px-2 py-0.5 text-[10px] font-bold text-[#1d3a8f] hover:bg-[#e0eaff]">↗ Add to Task Manager</button>}</div>
                         <div className="mt-1.5 flex flex-wrap items-center gap-1.5 pl-4">
                           <Select value={stt} onChange={(e) => onActState(s.id, a.id, { status: e.target.value as ActStatus })} className="text-[11px] font-bold" style={{ color: met.tone }}>{(Object.keys(ACT_STATUS) as ActStatus[]).map((k) => <option key={k} value={k}>{ACT_STATUS[k].label}</option>)}</Select>
+                          <span className="inline-flex items-center gap-1 rounded-lg border border-[var(--line)] pl-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ background: pr.tone }} /><Select value={x.priority || "med"} onChange={(e) => onActState(s.id, a.id, { priority: e.target.value as ActPrio })} className="border-0 bg-transparent px-1 text-[11px] font-bold" aria-label="Priority">{(Object.keys(ACT_PRIO) as ActPrio[]).map((k) => <option key={k} value={k}>{ACT_PRIO[k].label}</option>)}</Select></span>
                           <Select value={x.assignee || ""} onChange={(e) => onActState(s.id, a.id, { assignee: e.target.value || undefined })} className="text-[11px]"><option value="">Unassigned</option>{STAFF.map((nm) => <option key={nm} value={nm}>{nm}</option>)}</Select>
                           <Input type="date" value={x.due || ""} onChange={(e) => onActState(s.id, a.id, { due: e.target.value })} className="w-[128px] text-[11px]" />
                         </div>
-                        <Input value={x.note || ""} onChange={(e) => onActState(s.id, a.id, { note: e.target.value })} placeholder="Progress notes…" className="mt-1.5 w-full text-[11px]" />
+                        <Input value={x.note || ""} onChange={(e) => onActState(s.id, a.id, { note: e.target.value })} placeholder="Notes / progress…" className="mt-1.5 w-full text-[11px]" />
                       </div>
                     ); })}</div>
                   </>) : (
-                    <div className="mt-2.5"><div className="mb-1.5 text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Status</div>
+                    <div className="mt-2.5"><div className="mb-1.5 text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Status — or add tasks below</div>
                       <div className="inline-flex gap-1">{TASK_STEPS.map((o) => { const on = (st?.pct ?? 0) === o.pct; return <button key={o.pct} type="button" onClick={() => onSchedule(s.id, { pct: o.pct })} className="rounded-lg px-3 py-1.5 text-[11.5px] font-bold transition-colors" style={{ background: on ? o.tone : "var(--panel)", color: on ? "#fff" : o.tone }}>{o.label}</button>; })}</div>
-                      <div className="mt-1.5 text-[10px] text-[var(--ink-3)]">Feeds this milestone’s completion — each task is an equal share of {pc}% overall.</div>
+                      <div className="mt-1.5 text-[10px] text-[var(--ink-3)]">Feeds this milestone’s completion — each main action is an equal share of {pc}% overall.</div>
                     </div>
                   )}
+                  {canEdit && <div className="mt-2 flex gap-2"><Input value={newTask} onChange={(e) => setNewTask(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && newTask.trim()) { onAddTask(s, newTask.trim()); setNewTask(""); } }} placeholder="Add a task inside this action…" className="flex-1 text-[11.5px]" /><Button onClick={() => { if (newTask.trim()) { onAddTask(s, newTask.trim()); setNewTask(""); } }}>＋ Add task</Button></div>}
                 </div>
               )}
             </div>
@@ -532,7 +538,7 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPu
         <div className="mb-2 flex items-center gap-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-white" style={{ background: grad(phase.when) }}>{phase.title}</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
 
         {onMeta ? (<>
-          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Task</span><Input value={step.title} onChange={(e) => onMeta({ title: e.target.value })} className="w-full text-[14px] font-bold" /></label>
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Main action</span><Input value={step.title} onChange={(e) => onMeta({ title: e.target.value })} className="w-full text-[14px] font-bold" /></label>
           <label className="mt-2 block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Detail</span><textarea value={step.detail || ""} onChange={(e) => onMeta({ detail: e.target.value })} rows={2} placeholder="What good looks like…" className="w-full rounded-lg border border-[var(--line)] p-2 text-[12.5px]" /></label>
           <div className="mt-2"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Links to pages</span>
             <div className="flex flex-wrap items-center gap-1.5">
@@ -545,12 +551,12 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPu
               </Select>
             </div>
           </div>
-          {/* HO defines the checklist of actions inside the task */}
-          <div className="mt-3"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Actions (checklist inside this task)</span>
+          {/* the tasks inside this main action */}
+          <div className="mt-3"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Tasks inside this main action</span>
             <div className="space-y-1">{actions.map((a, ai) => (
               <div key={a.id} className="flex items-center gap-1.5"><span className="text-[var(--ink-3)]">•</span><Input value={a.title} onChange={(e) => onMeta({ actions: actions.map((x, k) => k === ai ? { ...x, title: e.target.value } : x) })} className="flex-1 text-[12px]" /><button type="button" onClick={() => onMeta({ actions: actions.filter((_, k) => k !== ai) })} className="px-1 text-[14px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button></div>
             ))}</div>
-            <button type="button" onClick={() => onMeta({ actions: [...actions, { id: newId(), title: "New action" }] })} className="mt-1 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add action</button>
+            <button type="button" onClick={() => onMeta({ actions: [...actions, { id: newId(), title: "New task" }] })} className="mt-1 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add task</button>
           </div>
         </>) : <h3 className="text-[15px] font-extrabold text-[var(--ink)]">{step.title}</h3>}
 
