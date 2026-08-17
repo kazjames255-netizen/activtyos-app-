@@ -101,7 +101,7 @@ function exportSeasonPlan(phases: MPhase[], prog: MProgress, provider: string) {
   const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); }
 }
 
-export function MilestonesApp({ mode = "franchise" }: { mode?: "ho" | "franchise" }) {
+export function MilestonesApp({ mode = "franchise", embedded = false }: { mode?: "ho" | "franchise"; embedded?: boolean }) {
   const [phases, setPhases] = useState<MPhase[]>([]);
   const [prog, setProg] = useState<MProgress | null>(null);
   const [toast, setToast] = useState<string | null>(null);
@@ -119,16 +119,20 @@ export function MilestonesApp({ mode = "franchise" }: { mode?: "ho" | "franchise
     const steps = Object.fromEntries(Object.entries(prog.steps).map(([id, st]) => [id, rec.has(id) ? { ...st, pct: 0 } : st]));
     persistProg({ ...prog, season: name, steps }); setNewSeason(false); flash(`New season: ${name} — recurring phases reset.`);
   };
+  const board = mode === "ho"
+    ? <Roadmap phases={phases} prog={preview} onProg={() => {}} editable onTemplate={persistPhases} onReset={() => { resetTemplate(); const t = loadTemplate(); setPhases(t); flash("Reset to the default plan."); }} flash={flash} />
+    : <Roadmap phases={phases} prog={prog} onProg={persistProg} onNewSeason={() => setNewSeason(true)} onTemplate={persistPhases} flash={flash} />;
+  const modals = (<>
+    {newSeason && <NewSeason current={prog.season} onSave={startSeason} onClose={() => setNewSeason(false)} />}
+    {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
+  </>);
+  if (embedded) return <div style={LIGHT_PALETTE}><div className="-mt-3">{board}</div>{modals}</div>;
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Milestones" icon="📍" lede={mode === "ho"
         ? "Build the roadmap every franchise follows — add milestones and their tasks right on the map. Franchises see it live and track their own dates & progress."
         : "Your season roadmap — walk it milestone by milestone, or see the whole timeline. Set dates and completion as you go."} />
-      {mode === "ho"
-        ? <Roadmap phases={phases} prog={preview} onProg={() => {}} editable onTemplate={persistPhases} onReset={() => { resetTemplate(); const t = loadTemplate(); setPhases(t); flash("Reset to the default plan."); }} flash={flash} />
-        : <Roadmap phases={phases} prog={prog} onProg={persistProg} onNewSeason={() => setNewSeason(true)} onTemplate={persistPhases} flash={flash} />}
-      {newSeason && <NewSeason current={prog.season} onSave={startSeason} onClose={() => setNewSeason(false)} />}
-      {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
+      {board}{modals}
     </div>
   );
 }
@@ -373,15 +377,16 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
 
   return (<>
     <div className="mt-3 overflow-hidden rounded-2xl border" style={{ borderColor: tone + "40", boxShadow: "0 1px 2px rgba(20,30,60,.05),0 14px 34px rgba(20,30,60,.08)" }}>
-      <div className="relative flex flex-wrap items-center gap-3 overflow-hidden px-4 py-4 text-white" style={{ background: gGrad }}>
+      <div className="relative flex flex-wrap items-center gap-3 px-4 py-3.5" style={{ background: `linear-gradient(115deg, ${tone}1f, ${tone}08 60%, transparent)` }}>
         {celebrate && <Confetti tone={p.when} />}
-        <span className="relative grid h-12 w-12 place-items-center rounded-xl bg-white/20 ring-1 ring-white/30"><span className="text-[24px] font-bold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{cur + 1}</span></span>
-        <div className="relative min-w-0">
-          <div className="flex flex-wrap items-center gap-2"><span className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</span><span className="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-extrabold tabular-nums ring-1 ring-white/30">{done ? "Complete ✓" : `${pc}%`}</span>{canEdit && <button type="button" onClick={() => onEditPhase(p)} className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-white/85 hover:bg-white/15" title="Edit milestone">✎ Edit</button>}{canEdit && <button type="button" onClick={() => setConfirmDel(true)} className="rounded-md px-1.5 py-0.5 text-[13px] font-bold text-white/85 hover:bg-white/15" title="Delete milestone">×</button>}</div>
-          <div className="mt-0.5 text-[11.5px] text-white/85">{p.subtitle || WHEN_LABEL[p.when]}</div>
-          {win && <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-white/18 px-2.5 py-0.5 text-[10.5px] font-bold ring-1 ring-white/25"><span className="text-white/70">From</span><span>{fmtShort(isoDate(win.start))}</span><span className="text-white/60">→</span><span className="text-white/70">to</span><span>{fmtShort(isoDate(win.end))}</span></div>}
+        <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: gGrad }} />
+        <span className="grid h-12 w-12 place-items-center rounded-xl text-white shadow" style={{ background: gGrad }}><span className="text-[24px] font-bold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{cur + 1}</span></span>
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</span><span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums text-white" style={{ background: gGrad }}>{done ? "Complete ✓" : `${pc}%`}</span>{canEdit && <button type="button" onClick={() => onEditPhase(p)} className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[var(--ink)]" title="Edit milestone">✎ Edit</button>}{canEdit && <button type="button" onClick={() => setConfirmDel(true)} className="rounded-md px-1.5 py-0.5 text-[13px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[#c0392b]" title="Delete milestone">×</button>}</div>
+          <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{p.subtitle || WHEN_LABEL[p.when]}</div>
+          {win && <div className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] ring-1 ring-black/5"><span className="text-[var(--ink-3)]">From</span><span style={{ color: tone }}>{fmtShort(isoDate(win.start))}</span><span style={{ color: tone }}>→</span><span className="text-[var(--ink-3)]">to</span><span style={{ color: tone }}>{fmtShort(isoDate(win.end))}</span></div>}
         </div>
-        <span className="relative ml-auto text-[11px] font-bold text-white/80">Milestone {cur + 1} of {n}</span>
+        <span className="ml-auto text-[11px] font-bold text-[var(--ink-3)]">Milestone {cur + 1} of {n}</span>
       </div>
       <div className="h-1.5 bg-[var(--panel)]"><div className="h-full transition-[width] duration-700" style={{ width: `${pc}%`, background: gBar }} /></div>
       {confirmDel && <div className="flex flex-wrap items-center gap-2 border-b border-[#f3c9c9] bg-[#fdf2f2] px-4 py-2 text-[12px] font-bold text-[#c0392b]">Delete “{p.title}” and its tasks?<div className="ml-auto flex gap-2"><button type="button" onClick={() => setConfirmDel(false)} className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] ring-1 ring-black/5">Cancel</button><button type="button" onClick={() => { setConfirmDel(false); onDeletePhase(p); }} className="rounded-lg bg-[#c0392b] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#a5301f]">Delete milestone</button></div></div>}

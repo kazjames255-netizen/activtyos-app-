@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Rea
 import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { MilestonesApp } from "@/features/milestones/MilestonesApp";
 import { Button } from "@/components/ui";
 import { TourLauncher } from "@/features/common/TourLauncher";
 
@@ -121,7 +122,7 @@ export function TasksApp() {
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState("");
   const [me, setMe] = useState("");
-  const [tab, setTab] = useState<"mine" | "team" | "board" | "cal" | "archive">("mine");
+  const [tab, setTab] = useState<"mine" | "team" | "board" | "cal" | "archive" | "milestones">("mine");
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [flash, setFlash] = useState(false);
@@ -142,6 +143,8 @@ export function TasksApp() {
   const today = todayIso();
   const manager = role === "company" || role === "franchise";
   const isFreelancer = role === "freelancer";
+  const showMilestones = role === "company" || role === "franchise";
+  const onMilestones = tab === "milestones";
   // A solo freelancer has no team — assignment is meaningless, so every task is
   // theirs and the assignee UI is hidden.
   const noAssignee = isFreelancer;
@@ -302,7 +305,7 @@ export function TasksApp() {
       <TourLauncher view="tasks" />
 
       {/* Quick add */}
-      <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
+      {!onMilestones && <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
           <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-[240px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
           <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>Deadline</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
@@ -320,17 +323,19 @@ export function TasksApp() {
           </div>
         )}
         <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{noAssignee ? "" : <><b>@</b> assignee · </>}<b>!</b> priority · <b>#</b> link a camp · <b>today tomorrow Mon</b> set the due date · or <b>+ New task</b> for the full form</div>
-      </div>
+      </div>}
 
       {/* Tabs + toolbar */}
       <div className="mb-2.5 flex flex-wrap items-center gap-2">
-        <div className="inline-flex flex-wrap gap-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold shadow-sm">
+        <div className="inline-flex flex-wrap items-center gap-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold shadow-sm">
           {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 transition-colors" style={tab === k ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>)}
+          {showMilestones && <button type="button" onClick={() => setTab("milestones")} className="ml-0.5 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 transition-transform hover:-translate-y-px" style={onMilestones ? { background: "linear-gradient(135deg,#6d28d9,#0e7490)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(109,40,217,.5)" } : { color: "#6d28d9", boxShadow: "inset 0 0 0 1.5px rgba(109,40,217,.28)" }}>📍 Milestones</button>}
         </div>
-        <div className="relative ml-auto">
+        {!onMilestones && <div className="relative ml-auto">
           <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 px-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
-        </div>
+        </div>}
       </div>
+      {!onMilestones && <>
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">When</span>
         {([["All", ""], ["Today", "today"], ["Tomorrow", "tomorrow"]] as const).map(([label, val]) => <button key={label} type="button" onClick={() => setDueScope(val)} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={dueScope === val ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{label}</button>)}
@@ -341,11 +346,14 @@ export function TasksApp() {
         {(["urgent", "high", "med", "low"] as Prio[]).map((p) => <button key={p} type="button" onClick={() => setPrioFilter(prioFilter === p ? "" : p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={prioFilter === p ? { borderColor: PRIO[p].dot, background: `${PRIO[p].dot}1a`, color: PRIO[p].dot } : { borderColor: "var(--line)", color: "var(--ink-2)" }}><span className="h-2 w-2 rounded-full" style={{ background: PRIO[p].dot }} />{PRIO[p].label}</button>)}
         {filtersActive && <><button type="button" onClick={clearFilters} className="ml-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-3)]">Clear ✕</button><span className="text-[11.5px] text-[var(--ink-3)]">{base.length} match{base.length === 1 ? "" : "es"}</span></>}
       </div>
+      </>}
 
       {isFreelancer && tab === "mine" && <div className="mb-2 rounded-xl border border-[#dbe6fb] bg-[#f2f7ff] px-3 py-2 text-[12px] text-[var(--ink-2)]"><b>One inbox across every company you work for</b> — tasks from all the providers you coach for land here together, each badged with the company it belongs to.</div>}
 
       {/* Views */}
-      {all.length === 0 ? (
+      {onMilestones ? (
+        <MilestonesApp mode={role === "company" ? "ho" : "franchise"} embedded />
+      ) : all.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-14 text-center">
           <div className="text-[15px] font-extrabold">No tasks yet</div>
           <p className="mx-auto mt-1 max-w-[440px] text-[12.5px] text-[var(--ink-3)]">Add your first with the quick-add above — try <b>Set up Week 3 registers tomorrow @Sam !high #Bedford</b>. Some will also appear on their own once the auto-spawn engine ships.</p>

@@ -134,7 +134,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "ho-framework", legacyView: "ho-framework", label: "Milestones", highlight: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"3.5\" width=\"14\" height=\"17\" rx=\"2\"></rect><path d=\"M9 3.5V6h6V3.5M8.5 11l1.6 1.6L13 9.5M8.5 16l1.6 1.6L13 14.5\"></path></svg>" }, badge: null },
+        { view: "ho-framework", legacyView: "ho-framework", label: "Milestones", hidden: true, highlight: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"3.5\" width=\"14\" height=\"17\" rx=\"2\"></rect><path d=\"M9 3.5V6h6V3.5M8.5 11l1.6 1.6L13 9.5M8.5 16l1.6 1.6L13 14.5\"></path></svg>" }, badge: null },
       ],
     },
     {
@@ -183,7 +183,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "dash", legacyView: "franchise-dash", label: "Dashboard", icon: { type: "glyph", value: "▦" }, badge: null },
-        { view: "milestones", legacyView: "franchise-milestones", label: "Milestones", highlight: true, icon: { type: "glyph", value: "📍" }, badge: null },
       ],
     },
     {
