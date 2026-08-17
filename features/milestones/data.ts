@@ -89,4 +89,11 @@ export const loadProgress = (phases?: MPhase[]): MProgress => {
   return phases ? seedProgress(phases) : { season: "This season", steps: {} };
 };
 export const saveProgress = (p: MProgress) => write(PK, p);
+
+// ── item 20: season history (snapshot on each new season) ────────────────────
+const HK = "aos.milestones.history.v1";
+export interface MSnapshot { season: string; overall: number; at: string }
+export const loadHistory = (): MSnapshot[] => { const s = read<MSnapshot[]>(HK); return Array.isArray(s) ? s : []; };
+export const pushHistory = (snap: MSnapshot) => { write(HK, [snap, ...loadHistory()].slice(0, 12)); };
+
 export { uid as newId };
