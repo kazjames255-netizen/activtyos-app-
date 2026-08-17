@@ -70,7 +70,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
           active
             ? { background: "rgba(255,255,255,0.16)", color: "#ffffff", boxShadow: "inset 3px 0 0 var(--side-ct-bg)" }
             : item.highlight
-              ? { color: "#ffe08a", background: "rgba(250,204,21,0.14)", boxShadow: "inset 3px 0 0 #facc15" }
+              ? { color: "#ffffff", background: "rgba(255,255,255,0.06)", boxShadow: "inset 3px 0 0 rgba(255,255,255,0.6)" }
               : { color: "var(--side-nav)", opacity: faded ? 0.55 : 1 }
         }
       >
@@ -105,7 +105,7 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
         active
           ? { background: "rgba(255,255,255,0.16)", color: "#ffffff", fontWeight: 700, boxShadow: "inset 3px 0 0 var(--side-ct-bg)" }
           : item.highlight
-            ? { color: "#ffe08a", background: "rgba(250,204,21,0.14)", boxShadow: "inset 3px 0 0 #facc15" }
+            ? { color: "#ffffff", background: "rgba(255,255,255,0.06)", boxShadow: "inset 3px 0 0 rgba(255,255,255,0.6)" }
             : { color: "var(--side-nav)" }
       }
     >

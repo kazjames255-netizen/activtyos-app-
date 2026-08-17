@@ -113,10 +113,12 @@ html,
 body {
   margin: 0;
   padding: 0;
+  /* The app renders on a light surface everywhere — keep the page white while
+     routes load so there's never a dark flash between navigations. */
+  background: #f5f8fd;
 }
 
 body {
-  background: var(--bg);
   color: var(--ink);
   font-family: var(--ff);
 }

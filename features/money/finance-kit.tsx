@@ -22,18 +22,20 @@ export const colorFor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a 
 // A dark-gradient KPI tile with an icon badge, optional right-hand visual and children.
 export function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: ReactNode; grad: string; icon?: string; aside?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl p-4 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)]" style={{ background: grad }}>
-      <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
-      <div className="relative flex items-start justify-between gap-2">
+    <div className="relative overflow-hidden rounded-2xl p-4 text-white" style={{ background: grad, boxShadow: "0 14px 30px -16px rgba(20,30,80,.55), inset 0 1px 0 rgba(255,255,255,.4)" }}>
+      {/* shine: a diagonal gloss sweep + a bright top corner sheen */}
+      <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(125deg, rgba(255,255,255,.32) 0%, rgba(255,255,255,.08) 26%, rgba(255,255,255,0) 52%)" }} />
+      <div className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full" style={{ background: "radial-gradient(circle at 32% 32%, rgba(255,255,255,.4), rgba(255,255,255,0) 70%)" }} />
+      <div className="pointer-events-none absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-white/[.06]" />
+      <div className="relative">
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">
-            {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/15 text-[11px]">{icon}</span>}
+          <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/75">
+            {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/20 text-[11px]">{icon}</span>}
             <span className="truncate">{label}</span>
           </div>
           <div className="mt-1.5 text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{value}</div>
-          {sub && <div className="mt-1 text-[11px] font-semibold text-white/80">{sub}</div>}
+          {sub && <div className="mt-1 text-[11px] font-semibold text-white/85">{sub}</div>}
         </div>
-        {aside && <div className="flex-none">{aside}</div>}
       </div>
       {children}
     </div>
