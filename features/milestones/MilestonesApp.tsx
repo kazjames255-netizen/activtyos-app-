@@ -29,6 +29,11 @@ const GRAD: Record<MPhaseWhen, [string, string]> = { setup: ["#3a58cc", "#182a72
 const grad = (w: MPhaseWhen) => `linear-gradient(135deg, ${GRAD[w][0]}, ${GRAD[w][1]})`;
 const gradBar = (w: MPhaseWhen) => `linear-gradient(90deg, ${GRAD[w][0]}, ${GRAD[w][1]})`;
 
+// traffic-light ramp across the milestones (first red → last always dark green)
+const RAMP = ["#e5484d", "#f2820c", "#e8a300", "#7cb342", "#16a34a"];
+const rampColor = (i: number, n: number) => (n <= 1 ? "#0f7a43" : i === n - 1 ? "#0f7a43" : RAMP[Math.min(RAMP.length - 1, Math.round((i / (n - 1)) * (RAMP.length - 1)))]);
+const rampGrad = (i: number, n: number) => { const c = rampColor(i, n); return `linear-gradient(135deg, ${c}, ${c}cc)`; };
+
 // ── item 1: bespoke duotone icon set per phase (retire the emoji) ────────────
 const ICON_PATHS: Record<MPhaseWhen, string> = {
   setup: "M12 3c3 1.5 5 4.5 5 8l-2.2 2.2-3.6-3.6L13 7.5C12 5.8 11 4.2 12 3ZM9.4 11.6 12.4 14.6l-2 2-1-.6-.7 1.7-1.4-1.4 1.7-.7-.6-1ZM7 15c-1.4.6-2 3-2 3s2.4-.6 3-2Z",
@@ -111,7 +116,7 @@ export function MilestonesApp({ mode = "franchise" }: { mode?: "ho" | "franchise
         : "Your season roadmap — walk it milestone by milestone, or see the whole timeline. Set dates and completion as you go."} />
       {mode === "ho"
         ? <Roadmap phases={phases} prog={preview} onProg={() => {}} editable onTemplate={persistPhases} onReset={() => { resetTemplate(); const t = loadTemplate(); setPhases(t); flash("Reset to the default plan."); }} flash={flash} />
-        : <Roadmap phases={phases} prog={prog} onProg={persistProg} onNewSeason={() => setNewSeason(true)} />}
+        : <Roadmap phases={phases} prog={prog} onProg={persistProg} onNewSeason={() => setNewSeason(true)} onTemplate={persistPhases} flash={flash} />}
       {newSeason && <NewSeason current={prog.season} onSave={startSeason} onClose={() => setNewSeason(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
@@ -138,7 +143,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
   const [idx, setIdx] = useState(currentPhaseIndex(phases, prog));
   const [open, setOpen] = useState<string | null>(phases[currentPhaseIndex(phases, prog)]?.id ?? null);
   const [editPhase, setEditPhase] = useState<MPhase | null>(null);
-  const [editAction, setEditAction] = useState<{ p: MPhase; s: MStep } | null>(null);
+  const [editAction, setEditAction] = useState<{ p: MPhase; s: MStep; mode: "meta" | "schedule" } | null>(null);
   const setStep = (id: string, patch: Partial<StepState>) => onProg({ ...prog, steps: { ...prog.steps, [id]: { ...(prog.steps[id] || { pct: 0 }), ...patch } } });
   const setAct = (stepId: string, actId: string, patch: Partial<ActState>) => { const cur = prog.steps[stepId] || { pct: 0 }; onProg({ ...prog, steps: { ...prog.steps, [stepId]: { ...cur, actions: { ...(cur.actions || {}), [actId]: { ...(cur.actions?.[actId] || {}), ...patch } } } } }); };
   const pushAction = async (step: MStep, action: MAction) => {
@@ -157,7 +162,8 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
   // template mutators
   const setStepMeta = (pid: string, sid: string, patch: Partial<MStep>) => onTemplate?.(phases.map((p) => p.id === pid ? { ...p, steps: p.steps.map((s) => s.id === sid ? { ...s, ...patch } : s) } : p));
   const addPhase = () => { const np: MPhase = { id: newId(), title: "New milestone", subtitle: "", when: "before", recurring: true, icon: "📌", steps: [] }; onTemplate?.([...phases, np]); setIdx(phases.length); setEditPhase(np); };
-  const addAction = (p: MPhase) => { const ns: MStep = { id: newId(), title: "New task", detail: "", links: [] }; onTemplate?.(phases.map((x) => x.id === p.id ? { ...x, steps: [...x.steps, ns] } : x)); setEditAction({ p, s: ns }); };
+  const canEdit = !!onTemplate;
+  const addAction = (p: MPhase) => { const ns: MStep = { id: newId(), title: "New task", detail: "", links: [] }; onTemplate?.(phases.map((x) => x.id === p.id ? { ...x, steps: [...x.steps, ns] } : x)); setEditAction({ p, s: ns, mode: "meta" }); };
   const delPhase = (id: string) => onTemplate?.(phases.filter((p) => p.id !== id));
   const delStep = (pid: string, sid: string) => onTemplate?.(phases.map((p) => p.id === pid ? { ...p, steps: p.steps.filter((s) => s.id !== sid) } : p));
 
@@ -189,17 +195,17 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
         </div>
       </div>
 
-      {/* item 10: always-visible season mini-ribbon */}
+      {/* item 10: always-visible season mini-ribbon (traffic-light ramp) */}
       <div className="flex gap-1 px-4 pt-3">
-        {phases.map((p, i) => { const pc = phasePct(p, prog); const done = phaseComplete(p, prog); return (
-          <button key={p.id} type="button" onClick={() => { setView("slides"); setIdx(i); }} title={`${p.title} · ${pc}%`} className="relative h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: WHEN_TONE[p.when] + "22", outline: i === idx ? `2px solid ${WHEN_TONE[p.when]}` : "none", outlineOffset: 1 }}>
-            <span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${done ? 100 : pc}%`, background: gradBar(p.when) }} />
+        {phases.map((p, i) => { const pc = phasePct(p, prog); const done = phaseComplete(p, prog); const rc = rampColor(i, phases.length); return (
+          <button key={p.id} type="button" onClick={() => { setView("slides"); setIdx(i); }} title={`${p.title} · ${pc}%`} className="relative h-2.5 flex-1 overflow-hidden rounded-full" style={{ background: rc + "26", outline: i === idx ? `2px solid ${rc}` : "none", outlineOffset: 1 }}>
+            <span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${done ? 100 : pc}%`, background: `linear-gradient(90deg, ${rc}, ${rc}cc)` }} />
           </button>
         ); })}
       </div>
 
-      {view === "slides" && <Slides phases={phases} prog={prog} idx={idx} setIdx={setIdx} editable={editable} me={me} provider={provider}
-        onEditAction={(p, s) => setEditAction({ p, s })} onEditPhase={(p) => setEditPhase(p)} onAddAction={addAction} onAddPhase={addPhase}
+      {view === "slides" && <Slides phases={phases} prog={prog} idx={idx} setIdx={setIdx} editable={editable} canEdit={canEdit} me={me} provider={provider}
+        onEditAction={(p, s) => setEditAction({ p, s, mode: "meta" })} onEditPhase={(p) => setEditPhase(p)} onAddAction={addAction} onAddPhase={addPhase}
         onSchedule={setStep} onActState={setAct} onPush={pushAction} />}
 
       {view === "roadmap" && (<>
@@ -235,7 +241,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
                 {isOpen && p.steps.map((s) => { const st = prog.steps[s.id]; const sp = stepPctEff(s, prog); const a = dparse(st?.start), b = dparse(st?.end); const sdone = sp >= 100;
                   return (
                     <div key={s.id} className="flex items-stretch border-t border-dashed border-[var(--line)]">
-                      <button type="button" onClick={() => setEditAction({ p, s })} className={`${LEFT} flex shrink-0 items-center gap-1.5 py-2 pl-6 pr-2 text-left hover:bg-[var(--panel)]`}>
+                      <button type="button" onClick={() => setEditAction({ p, s, mode: editable ? "meta" : "schedule" })} className={`${LEFT} flex shrink-0 items-center gap-1.5 py-2 pl-6 pr-2 text-left hover:bg-[var(--panel)]`}>
                         <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: sdone ? "#0f7a43" : tone }} />
                         <span className="min-w-0 flex-1 truncate text-[11.5px] text-[var(--ink-2)]">{s.title}</span>
                         <span className="shrink-0 text-[9.5px] font-bold tabular-nums text-[var(--ink-3)]">{sp}%</span>
@@ -243,30 +249,31 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
                       <div className="relative flex-1 py-2">
                         {grid()}
                         {a && b ? (
-                          <button type="button" onClick={() => setEditAction({ p, s })} title={`${s.title} · ${fmtShort(st?.start)}–${fmtShort(st?.end)} · ${sp}%`} className="absolute top-1/2 flex h-5 -translate-y-1/2 items-center overflow-hidden rounded-md" style={{ left: `${xp(a)}%`, width: `${Math.max(xp(b) - xp(a), 1)}%`, background: tone + "24", boxShadow: `inset 0 0 0 1px ${tone}55` }}>
+                          <button type="button" onClick={() => setEditAction({ p, s, mode: editable ? "meta" : "schedule" })} title={`${s.title} · ${fmtShort(st?.start)}–${fmtShort(st?.end)} · ${sp}%`} className="absolute top-1/2 flex h-5 -translate-y-1/2 items-center overflow-hidden rounded-md" style={{ left: `${xp(a)}%`, width: `${Math.max(xp(b) - xp(a), 1)}%`, background: tone + "24", boxShadow: `inset 0 0 0 1px ${tone}55` }}>
                             <div className="h-full transition-[width]" style={{ width: `${sp}%`, background: gradBar(p.when) }} />
                           </button>
-                        ) : <button type="button" onClick={() => setEditAction({ p, s })} className="absolute left-0 top-1/2 -translate-y-1/2 rounded-md bg-[var(--panel)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ set dates</button>}
+                        ) : <button type="button" onClick={() => setEditAction({ p, s, mode: editable ? "meta" : "schedule" })} className="absolute left-0 top-1/2 -translate-y-1/2 rounded-md bg-[var(--panel)] px-2 py-0.5 text-[9.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ set dates</button>}
                       </div>
                     </div>
                   );
                 })}
-                {isOpen && editable && <button type="button" onClick={() => addAction(p)} className="ml-6 py-1.5 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">＋ Add task</button>}
+                {isOpen && canEdit && <button type="button" onClick={() => addAction(p)} className="ml-6 py-1.5 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">＋ Add task</button>}
               </div>
             );
           })}
-          {editable && <button type="button" onClick={addPhase} className="mt-3 w-full rounded-xl border border-dashed border-[var(--line)] py-2 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">＋ Add milestone</button>}
+          {canEdit && <button type="button" onClick={addPhase} className="mt-3 w-full rounded-xl border border-dashed border-[var(--line)] py-2 text-[12px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f]">＋ Add milestone</button>}
         </div>
       </>)}
 
       {editPhase && <PhaseEditor phase={editPhase} phases={phases} onChange={(patch) => onTemplate?.(phases.map((p) => p.id === editPhase.id ? { ...p, ...patch } : p))} onMove={(dir) => { const i = phases.findIndex((p) => p.id === editPhase.id); onTemplate?.(move(phases, i, dir)); }} onDelete={() => { delPhase(editPhase.id); setEditPhase(null); flash?.("Milestone removed."); }} onClose={() => setEditPhase(null)} />}
       {editAction && (() => { const p = phases.find((x) => x.id === editAction.p.id) || editAction.p; const s = p.steps.find((x) => x.id === editAction.s.id) || editAction.s;
+        const meta = editAction.mode === "meta";
         return <ActionEditor phase={p} step={s} state={prog.steps[s.id]}
-          onMeta={editable ? (patch) => setStepMeta(p.id, s.id, patch) : undefined}
-          onSchedule={editable ? undefined : (patch) => setStep(s.id, patch)}
-          onActState={editable ? undefined : (aid, patch) => setAct(s.id, aid, patch)}
-          onPush={editable ? undefined : (a) => pushAction(s, a)}
-          onDelete={editable ? () => { delStep(p.id, s.id); setEditAction(null); } : undefined}
+          onMeta={meta ? (patch) => setStepMeta(p.id, s.id, patch) : undefined}
+          onSchedule={meta ? undefined : (patch) => setStep(s.id, patch)}
+          onActState={meta ? undefined : (aid, patch) => setAct(s.id, aid, patch)}
+          onPush={meta ? undefined : (a) => pushAction(s, a)}
+          onDelete={canEdit ? () => { delStep(p.id, s.id); setEditAction(null); } : undefined}
           onClose={() => setEditAction(null)} />;
       })()}
     </Card>
@@ -277,7 +284,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
 type Filter = "all" | "mine" | "overdue" | "unassigned";
 interface SlideCbs { onEditAction: (p: MPhase, s: MStep) => void; onEditPhase: (p: MPhase) => void; onAddAction: (p: MPhase) => void; onSchedule: (stepId: string, patch: Partial<StepState>) => void; onActState: (stepId: string, actId: string, patch: Partial<ActState>) => void; onPush: (step: MStep, a: MAction) => void }
 
-function Slides({ phases, prog, idx, setIdx, editable, me, onAddPhase, ...cbs }: { phases: MPhase[]; prog: MProgress; idx: number; setIdx: (i: number) => void; editable: boolean; me: string; provider: string; onAddPhase: () => void } & SlideCbs) {
+function Slides({ phases, prog, idx, setIdx, editable, canEdit, me, onAddPhase, ...cbs }: { phases: MPhase[]; prog: MProgress; idx: number; setIdx: (i: number) => void; editable: boolean; canEdit: boolean; me: string; provider: string; onAddPhase: () => void } & SlideCbs) {
   const n = phases.length; const cur = Math.min(idx, Math.max(n - 1, 0)); const p = phases[cur];
   const [filter, setFilter] = useState<Filter>("all");
   const activeRef = useRef<HTMLButtonElement>(null); const touch = useRef(0);
@@ -293,19 +300,20 @@ function Slides({ phases, prog, idx, setIdx, editable, me, onAddPhase, ...cbs }:
         <div className="relative flex min-w-full items-start gap-1" style={{ width: n > 6 ? n * 100 : undefined }}>
           <div className="absolute left-[6%] right-[6%] top-6 h-1 rounded-full bg-[var(--panel)]" />
           <div className="absolute left-[6%] top-6 h-1 rounded-full transition-[width] duration-300" style={{ width: `${n > 1 ? (cur / (n - 1)) * 88 : 0}%`, background: "linear-gradient(90deg,#1d3a8f,#6d28d9)" }} />
-          {phases.map((ph, i) => { const t = WHEN_TONE[ph.when]; const d = phaseComplete(ph, prog); const active = i === cur; const ppc = phasePct(ph, prog);
+          {phases.map((ph, i) => { const rc = rampColor(i, n); const d = phaseComplete(ph, prog); const active = i === cur; const ppc = phasePct(ph, prog); const win = phaseWindow(ph, prog);
             return (
-              <button key={ph.id} ref={active ? activeRef : undefined} type="button" onClick={() => setIdx(i)} className="relative z-10 flex flex-1 flex-col items-center gap-1" style={{ minWidth: 88 }}>
+              <button key={ph.id} ref={active ? activeRef : undefined} type="button" onClick={() => setIdx(i)} className="relative z-10 flex flex-1 flex-col items-center gap-0.5" style={{ minWidth: 96 }}>
                 {active && <span data-fx className="absolute -top-3 z-20 text-[13px]" style={{ animation: "mfx-in .3s ease" }}>📍</span>}
-                <span className="relative grid h-12 w-12 place-items-center rounded-full transition-transform" style={{ background: d ? grad(ph.when) : "#fff", color: d ? "#fff" : t, boxShadow: `inset 0 1px 1px rgba(255,255,255,.55), 0 4px 10px ${t}44, 0 0 0 3px #fff${active ? `, 0 0 0 6px ${t}33` : ""}`, transform: active ? "scale(1.06)" : undefined }}>
-                  {d ? <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg> : <PhaseIcon when={ph.when} className="h-5 w-5" />}
+                <span className="relative grid h-12 w-12 place-items-center rounded-full transition-transform" style={{ background: d ? rampGrad(i, n) : "#fff", color: d ? "#fff" : rc, boxShadow: `inset 0 1px 1px rgba(255,255,255,.55), 0 4px 10px ${rc}55, 0 0 0 3px #fff, 0 0 0 ${active ? 6 : 3.5}px ${rc}${active ? "55" : "aa"}`, transform: active ? "scale(1.06)" : undefined }}>
+                  {d ? <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={2.4} strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg> : <span className="text-[19px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{i + 1}</span>}
                 </span>
-                <span className="max-w-[92px] text-center text-[10px] font-bold leading-tight" style={{ color: active ? t : "var(--ink-2)" }}>{ph.title}</span>
-                <span className="text-[9px] font-bold tabular-nums text-[var(--ink-3)]">{ppc}%</span>
+                <span className="mt-1 max-w-[96px] text-center text-[10px] font-bold leading-tight" style={{ color: active ? rc : "var(--ink-2)" }}>{ph.title}</span>
+                <span className="text-[9px] font-semibold tabular-nums text-[var(--ink-3)]">{win ? `${fmtShort(isoDate(win.start))} – ${fmtShort(isoDate(win.end))}` : "no dates"}</span>
+                <span className="text-[9.5px] font-extrabold tabular-nums" style={{ color: rc }}>{ppc}%</span>
               </button>
             );
           })}
-          {editable && <button type="button" onClick={onAddPhase} className="relative z-10 flex flex-col items-center gap-1" style={{ minWidth: 64 }}><span className="grid h-12 w-12 place-items-center rounded-full border-2 border-dashed border-[var(--line)] text-[20px] text-[var(--ink-3)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">＋</span><span className="text-[9.5px] font-bold text-[var(--ink-3)]">Add</span></button>}
+          {canEdit && <button type="button" onClick={onAddPhase} className="relative z-10 flex flex-col items-center gap-1 pt-0" style={{ minWidth: 64 }}><span className="grid h-12 w-12 place-items-center rounded-full border-2 border-dashed border-[var(--line)] text-[20px] text-[var(--ink-3)] hover:border-[#1d3a8f] hover:text-[#1d3a8f]">＋</span><span className="text-[9.5px] font-bold text-[var(--ink-3)]">Add</span></button>}
         </div>
       </div>
 
@@ -321,13 +329,13 @@ function Slides({ phases, prog, idx, setIdx, editable, me, onAddPhase, ...cbs }:
 
       {/* item 13: animated slide + swipe */}
       <div key={cur} className="mfx-slide" onTouchStart={(e) => { touch.current = e.touches[0].clientX; }} onTouchEnd={(e) => { const dx = e.changedTouches[0].clientX - touch.current; if (dx < -50) setIdx(Math.min(n - 1, cur + 1)); if (dx > 50) setIdx(Math.max(0, cur - 1)); }}>
-        {p && <Slide phase={p} prog={prog} cur={cur} n={n} editable={editable} me={me} filter={filter} {...cbs} onPrev={() => setIdx(Math.max(0, cur - 1))} onNext={() => setIdx(Math.min(n - 1, cur + 1))} onJump={setIdx} />}
+        {p && <Slide phase={p} prog={prog} cur={cur} n={n} editable={editable} canEdit={canEdit} me={me} filter={filter} {...cbs} onPrev={() => setIdx(Math.max(0, cur - 1))} onNext={() => setIdx(Math.min(n - 1, cur + 1))} onJump={setIdx} />}
       </div>
     </div>
   );
 }
 
-function Slide({ phase: p, prog, cur, n, editable, me, filter, onEditAction, onEditPhase, onAddAction, onSchedule, onActState, onPush, onPrev, onNext, onJump }: { phase: MPhase; prog: MProgress; cur: number; n: number; editable: boolean; me: string; filter: Filter; onPrev: () => void; onNext: () => void; onJump: (i: number) => void } & SlideCbs) {
+function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAction, onEditPhase, onAddAction, onSchedule, onActState, onPush, onPrev, onNext, onJump }: { phase: MPhase; prog: MProgress; cur: number; n: number; editable: boolean; canEdit: boolean; me: string; filter: Filter; onPrev: () => void; onNext: () => void; onJump: (i: number) => void } & SlideCbs) {
   const tone = WHEN_TONE[p.when]; const win = phaseWindow(p, prog); const pc = phasePct(p, prog); const done = phaseComplete(p, prog);
   const [openStep, setOpenStep] = useState<string | null>(null);
   const now = Date.now(); const ts = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).getTime() : Infinity);
@@ -356,7 +364,7 @@ function Slide({ phase: p, prog, cur, n, editable, me, filter, onEditAction, onE
         <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: grad(p.when) }} />
         <span className="grid h-12 w-12 place-items-center rounded-xl text-white shadow" style={{ background: grad(p.when) }}><PhaseIcon when={p.when} className="h-6 w-6" strokeWidth={1.9} /></span>
         <div className="min-w-0">
-          <div className="flex items-center gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</span><span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums text-white" style={{ background: grad(p.when) }}>{done ? "Complete ✓" : `${pc}%`}</span>{editable && <button type="button" onClick={() => onEditPhase(p)} className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[var(--ink)]" title="Edit milestone">✎</button>}</div>
+          <div className="flex items-center gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</span><span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums text-white" style={{ background: grad(p.when) }}>{done ? "Complete ✓" : `${pc}%`}</span>{canEdit && <button type="button" onClick={() => onEditPhase(p)} className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[var(--ink)]" title="Edit milestone">✎ Edit</button>}</div>
           <div className="text-[11.5px] text-[var(--ink-3)]">{p.subtitle || WHEN_LABEL[p.when]}{win ? ` · ${fmtShort(isoDate(win.start))} – ${fmtShort(isoDate(win.end))}` : ""}</div>
         </div>
         <span className="ml-auto text-[11px] font-bold text-[var(--ink-3)]">Milestone {cur + 1} of {n}</span>
@@ -375,7 +383,7 @@ function Slide({ phase: p, prog, cur, n, editable, me, filter, onEditAction, onE
       {celebrate && <div className="mx-4 mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-extrabold text-white" style={{ background: grad(p.when) }}>🎉 Milestone complete!{cur < n - 1 && <button type="button" onClick={onNext} className="ml-auto rounded-full bg-white/20 px-2.5 py-1 text-[11px] hover:bg-white/30">Next milestone →</button>}</div>}
 
       <div className="space-y-2 p-4">
-        <div className="flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{editable ? "Tasks" : "Actions"} ({phaseDone(p, prog)}/{p.steps.length} done)</div>{editable && <button type="button" onClick={() => onAddAction(p)} className="ml-auto rounded-lg bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#e6ecfa]">＋ Add task</button>}</div>
+        <div className="flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Tasks ({phaseDone(p, prog)}/{p.steps.length} done)</div>{canEdit && <button type="button" onClick={() => onAddAction(p)} className="ml-auto rounded-lg bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#e6ecfa]">＋ Add task</button>}</div>
         {shown.map((s) => { const st = prog.steps[s.id]; const sp = stepPctEff(s, prog); const sdone = sp >= 100; const acts = s.actions || [];
           const assignees = [...new Set(acts.map((a) => st?.actions?.[a.id]?.assignee).filter(Boolean) as string[])];
           const pushed = acts.filter((a) => st?.actions?.[a.id]?.taskId).length;
@@ -389,7 +397,8 @@ function Slide({ phase: p, prog, cur, n, editable, me, filter, onEditAction, onE
                   <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full text-[11px] font-bold" style={{ background: sdone ? tone : "var(--panel)", color: sdone ? "#fff" : "transparent" }}>✓</span>
                   <span className={`text-[13px] font-bold ${sdone ? "text-[var(--ink-3)] line-through" : "text-[var(--ink)]"}`}>{s.title}</span>
                   {due ? <span className={`ml-auto ${chip}`} style={{ color: due.tone, background: due.tone + "18" }}>{due.text}</span> : <span className="ml-auto text-[10px] font-bold text-[var(--ink-3)]">no dates</span>}
-                  {!editable && <span className="ml-1 text-[10px] text-[var(--ink-3)]">{expanded ? "▲" : "▾"}</span>}
+                  {canEdit && <button type="button" onClick={(e) => { e.stopPropagation(); onEditAction(p, s); }} className="ml-1 rounded px-1 text-[11px] text-[var(--ink-3)] hover:text-[var(--ink)]" title="Edit task">✎</button>}
+                  {!editable && <span className="ml-0.5 text-[10px] text-[var(--ink-3)]">{expanded ? "▲" : "▾"}</span>}
                 </div>
                 {s.detail && <div className="mt-0.5 pl-[30px] text-[11px] text-[var(--ink-3)]">{s.detail}</div>}
                 <div className="mt-1.5 flex items-center gap-2 pl-[30px]"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${sp}%`, background: gradBar(p.when) }} /></div><span className="text-[10px] font-bold tabular-nums text-[var(--ink-3)]">{sp}%</span></div>
@@ -426,7 +435,7 @@ function Slide({ phase: p, prog, cur, n, editable, me, filter, onEditAction, onE
             </div>
           );
         })}
-        {shown.length === 0 && <div className="py-2 text-center text-[12px] text-[var(--ink-3)]">{p.steps.length === 0 ? `No ${editable ? "tasks" : "actions"} in this milestone yet.${editable ? " Use “＋ Add task”." : ""}` : "Nothing matches this filter."}</div>}
+        {shown.length === 0 && <div className="py-2 text-center text-[12px] text-[var(--ink-3)]">{p.steps.length === 0 ? `No tasks in this milestone yet.${canEdit ? " Use “＋ Add task”." : ""}` : "Nothing matches this filter."}</div>}
       </div>
     </div>
 
