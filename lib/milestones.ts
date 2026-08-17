@@ -24,20 +24,28 @@ export interface MPhase { id: string; title: string; subtitle?: string; when: MP
 
 // Progress: each step (sub-target) carries a start/end date and a completion %,
 // so the roadmap plots them as dated bars. Recurring phases reset each season.
-// Per-action state a franchise fills in (who / when / done / pushed-to-tasks).
-export interface ActState { done?: boolean; assignee?: string; due?: string; taskId?: string }
+// Per-action state a franchise fills in — Task-Manager style: status, note,
+// who, when, and whether it's been pushed into the Task Manager.
+export type ActStatus = "todo" | "prog" | "done";
+export const ACT_STATUS: Record<ActStatus, { label: string; tone: string }> = { todo: { label: "Not met", tone: "#c0392b" }, prog: { label: "In progress", tone: "#b45309" }, done: { label: "Met", tone: "#0f7a43" } };
+const ACT_WEIGHT: Record<ActStatus, number> = { todo: 0, prog: 0.5, done: 1 };
+export interface ActState { done?: boolean; status?: ActStatus; note?: string; assignee?: string; due?: string; taskId?: string }
 export interface StepState { start?: string; end?: string; pct: number; actions?: Record<string, ActState> }
 export interface MProgress { season: string; steps: Record<string, StepState> }
 
 export const emptyProgress = (season: string): MProgress => ({ season, steps: {} });
 export const stepState = (prog: MProgress, id: string): StepState => prog.steps[id] || { pct: 0 };
 export const actState = (prog: MProgress, stepId: string, actId: string): ActState => prog.steps[stepId]?.actions?.[actId] || {};
+export const actStatus = (x?: ActState): ActStatus => x?.status || (x?.done ? "done" : "todo");
 export const stepPct = (prog: MProgress, id: string) => prog.steps[id]?.pct ?? 0;
-export const actionsDone = (step: MStep, prog: MProgress) => (step.actions || []).filter((a) => prog.steps[step.id]?.actions?.[a.id]?.done).length;
-// A task's effective completion: derived from its actions if it has any, else its own %.
+export const actionsDone = (step: MStep, prog: MProgress) => (step.actions || []).filter((a) => actStatus(prog.steps[step.id]?.actions?.[a.id]) === "done").length;
+// A task's effective completion: weighted (met = 1, in-progress = ½) across its
+// actions if it has any, else its own %.
 export const stepPctEff = (step: MStep, prog: MProgress) => {
   const acts = step.actions || [];
-  return acts.length ? Math.round((actionsDone(step, prog) / acts.length) * 100) : (prog.steps[step.id]?.pct ?? 0);
+  if (!acts.length) return prog.steps[step.id]?.pct ?? 0;
+  const sum = acts.reduce((t, a) => t + ACT_WEIGHT[actStatus(prog.steps[step.id]?.actions?.[a.id])], 0);
+  return Math.round((sum / acts.length) * 100);
 };
 export const isStepDone = (_p: MPhase, stepId: string, prog: MProgress) => stepPct(prog, stepId) >= 100;
 export const phaseDone = (p: MPhase, prog: MProgress) => p.steps.filter((s) => stepPctEff(s, prog) >= 100).length;

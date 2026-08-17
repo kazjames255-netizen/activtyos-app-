@@ -76,7 +76,7 @@ export function seedProgress(phases: MPhase[]): MProgress {
       // demo action states: assign each action + tick a share of them done
       if (s.actions?.length) {
         const done = Math.round((pct / 100) * s.actions.length);
-        cell.actions = Object.fromEntries(s.actions.map((act, k) => [act.id, { done: k < done, assignee: who[k % who.length], due: addD(Math.round(st + k)) }]));
+        cell.actions = Object.fromEntries(s.actions.map((act, k) => [act.id, { status: (k < done ? "done" : k === done ? "prog" : "todo") as "todo" | "prog" | "done", assignee: who[k % who.length], due: addD(Math.round(st + k)) }]));
       }
       steps[s.id] = cell;
     });
