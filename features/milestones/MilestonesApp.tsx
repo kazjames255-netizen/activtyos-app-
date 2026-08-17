@@ -64,6 +64,10 @@ function useCountUp(target: number, ms = 600) {
   return v;
 }
 
+// a task's Task-Manager-style status (for tasks scored by % rather than actions)
+const TASK_STEPS: { pct: number; label: string; tone: string }[] = [{ pct: 0, label: "Not met", tone: "#c0392b" }, { pct: 50, label: "In progress", tone: "#b45309" }, { pct: 100, label: "Met", tone: "#16a34a" }];
+const taskStatus = (pct: number) => (pct >= 100 ? TASK_STEPS[2] : pct > 0 ? TASK_STEPS[1] : TASK_STEPS[0]);
+
 // ── item 9: urgency colour on dates ──────────────────────────────────────────
 function dueMeta(iso?: string, done?: boolean): { text: string; tone: string } | null {
   if (!iso) return null;
@@ -344,7 +348,8 @@ function Slides({ phases, prog, idx, setIdx, editable, canEdit, me, onAddPhase, 
 function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAction, onEditPhase, onDeletePhase, onAddAction, onSchedule, onActState, onPush, onPrev, onNext, onJump }: { phase: MPhase; prog: MProgress; cur: number; n: number; editable: boolean; canEdit: boolean; me: string; filter: Filter; onPrev: () => void; onNext: () => void; onJump: (i: number) => void } & SlideCbs) {
   const [confirmDel, setConfirmDel] = useState(false);
   const [actFilter, setActFilter] = useState(""); const [actSort, setActSort] = useState<"order" | "date">("order");
-  const tone = WHEN_TONE[p.when]; const win = phaseWindow(p, prog); const pc = phasePct(p, prog); const done = phaseComplete(p, prog);
+  const tone = rampColor(cur, n); const gGrad = rampGrad(cur, n); const gBar = `linear-gradient(90deg, ${tone}, ${tone}cc)`; // slide takes its milestone's traffic-light colour
+  const win = phaseWindow(p, prog); const pc = phasePct(p, prog); const done = phaseComplete(p, prog);
   const [openStep, setOpenStep] = useState<string | null>(null);
   const now = Date.now(); const ts = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).getTime() : Infinity);
   // item 17: celebration
@@ -369,15 +374,16 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
     <div className="mt-3 overflow-hidden rounded-2xl border" style={{ borderColor: tone + "40", boxShadow: "0 1px 2px rgba(20,30,60,.05),0 14px 34px rgba(20,30,60,.08)" }}>
       <div className="relative flex flex-wrap items-center gap-3 px-4 py-3.5" style={{ background: `linear-gradient(115deg, ${tone}22, ${tone}08 55%, transparent)` }}>
         {celebrate && <Confetti tone={p.when} />}
-        <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: grad(p.when) }} />
-        <span className="grid h-12 w-12 place-items-center rounded-xl text-white shadow" style={{ background: grad(p.when) }}><PhaseIcon when={p.when} className="h-6 w-6" strokeWidth={1.9} /></span>
+        <span className="absolute inset-y-0 left-0 w-1.5" style={{ background: gGrad }} />
+        <span className="grid h-12 w-12 place-items-center rounded-xl text-white shadow" style={{ background: gGrad }}><span className="text-[24px] font-bold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{cur + 1}</span></span>
         <div className="min-w-0">
-          <div className="flex items-center gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</span><span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums text-white" style={{ background: grad(p.when) }}>{done ? "Complete ✓" : `${pc}%`}</span>{canEdit && <button type="button" onClick={() => onEditPhase(p)} className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[var(--ink)]" title="Edit milestone">✎ Edit</button>}{canEdit && <button type="button" onClick={() => setConfirmDel(true)} className="rounded-md px-1.5 py-0.5 text-[13px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[#c0392b]" title="Delete milestone">×</button>}</div>
-          <div className="text-[11.5px] text-[var(--ink-3)]">{p.subtitle || WHEN_LABEL[p.when]}{win ? ` · ${fmtShort(isoDate(win.start))} – ${fmtShort(isoDate(win.end))}` : ""}</div>
+          <div className="flex flex-wrap items-center gap-2"><span className="text-[16px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</span><span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold tabular-nums text-white" style={{ background: gGrad }}>{done ? "Complete ✓" : `${pc}%`}</span>{canEdit && <button type="button" onClick={() => onEditPhase(p)} className="rounded-md px-1.5 py-0.5 text-[11px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[var(--ink)]" title="Edit milestone">✎ Edit</button>}{canEdit && <button type="button" onClick={() => setConfirmDel(true)} className="rounded-md px-1.5 py-0.5 text-[13px] font-bold text-[var(--ink-3)] hover:bg-white/70 hover:text-[#c0392b]" title="Delete milestone">×</button>}</div>
+          <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{p.subtitle || WHEN_LABEL[p.when]}</div>
+          {win && <div className="mt-1 inline-flex items-center gap-1.5 rounded-full bg-white/70 px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] ring-1 ring-black/5"><span className="text-[var(--ink-3)]">From</span><span style={{ color: tone }}>{fmtShort(isoDate(win.start))}</span><span style={{ color: tone }}>→</span><span className="text-[var(--ink-3)]">to</span><span style={{ color: tone }}>{fmtShort(isoDate(win.end))}</span></div>}
         </div>
         <span className="ml-auto text-[11px] font-bold text-[var(--ink-3)]">Milestone {cur + 1} of {n}</span>
       </div>
-      <div className="h-1.5 bg-[var(--panel)]"><div className="h-full transition-[width] duration-700" style={{ width: `${pc}%`, background: gradBar(p.when) }} /></div>
+      <div className="h-1.5 bg-[var(--panel)]"><div className="h-full transition-[width] duration-700" style={{ width: `${pc}%`, background: gBar }} /></div>
       {confirmDel && <div className="flex flex-wrap items-center gap-2 border-b border-[#f3c9c9] bg-[#fdf2f2] px-4 py-2 text-[12px] font-bold text-[#c0392b]">Delete “{p.title}” and its tasks?<div className="ml-auto flex gap-2"><button type="button" onClick={() => setConfirmDel(false)} className="rounded-lg bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)] ring-1 ring-black/5">Cancel</button><button type="button" onClick={() => { setConfirmDel(false); onDeletePhase(p); }} className="rounded-lg bg-[#c0392b] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#a5301f]">Delete milestone</button></div></div>}
 
       {!editable && (overdue + dueSoon + unassigned > 0 || nextUp) && (
@@ -389,7 +395,7 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
         </div>
       )}
 
-      {celebrate && <div className="mx-4 mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-extrabold text-white" style={{ background: grad(p.when) }}>🎉 Milestone complete!{cur < n - 1 && <button type="button" onClick={onNext} className="ml-auto rounded-full bg-white/20 px-2.5 py-1 text-[11px] hover:bg-white/30">Next milestone →</button>}</div>}
+      {celebrate && <div className="mx-4 mt-3 flex items-center gap-2 rounded-xl px-3 py-2 text-[13px] font-extrabold text-white" style={{ background: gGrad }}>🎉 Milestone complete!{cur < n - 1 && <button type="button" onClick={onNext} className="ml-auto rounded-full bg-white/20 px-2.5 py-1 text-[11px] hover:bg-white/30">Next milestone →</button>}</div>}
 
       <div className="space-y-2 p-4">
         <div className="flex items-center gap-2"><div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Tasks ({phaseDone(p, prog)}/{p.steps.length} done)</div>{canEdit && <button type="button" onClick={() => onAddAction(p)} className="ml-auto rounded-lg bg-[var(--panel)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#e6ecfa]">＋ Add task</button>}</div>
@@ -418,14 +424,15 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
                 {/* met / in-progress / not-met segmented bar */}
                 <div className="mt-1.5 flex items-center gap-2 pl-[30px]">
                   <div className="flex h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]">
-                    {acts.length > 0 ? (<>{cMet > 0 && <div style={{ width: `${(cMet / acts.length) * 100}%`, background: "#16a34a" }} />}{cProg > 0 && <div style={{ width: `${(cProg / acts.length) * 100}%`, background: "#e8a300" }} />}</>) : <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${sp}%`, background: gradBar(p.when) }} />}
+                    {acts.length > 0 ? (<>{cMet > 0 && <div style={{ width: `${(cMet / acts.length) * 100}%`, background: "#16a34a" }} />}{cProg > 0 && <div style={{ width: `${(cProg / acts.length) * 100}%`, background: "#e8a300" }} />}</>) : <div className="h-full rounded-full transition-[width] duration-700" style={{ width: `${sp}%`, background: gBar }} />}
                   </div>
                   <span className="text-[10px] font-bold tabular-nums text-[var(--ink-3)]">{sp}%</span>
                 </div>
                 <div className="mt-1.5 flex flex-wrap items-center gap-2 pl-[30px] text-[10px] font-bold">
-                  {acts.length > 0 && <span className="text-[var(--ink-2)]"><span style={{ color: "#16a34a" }}>{cMet} met</span> · <span style={{ color: "#b45309" }}>{cProg} in progress</span> · <span style={{ color: "#c0392b" }}>{cTodo} not met</span></span>}
+                  {acts.length > 0 ? <span className="text-[var(--ink-2)]"><span style={{ color: "#16a34a" }}>{cMet} met</span> · <span style={{ color: "#b45309" }}>{cProg} in progress</span> · <span style={{ color: "#c0392b" }}>{cTodo} not met</span></span>
+                    : <span className="rounded-full px-2 py-0.5" style={{ color: taskStatus(sp).tone, background: taskStatus(sp).tone + "18" }}>{taskStatus(sp).label}</span>}
                   {pushed > 0 && <span className="text-[#0f7a43]">↗ {pushed} in Tasks</span>}
-                  {!!s.links?.length && s.links.map((l) => <Link key={l.href + l.label} href={l.href} onClick={(e) => e.stopPropagation()} className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold text-white hover:opacity-90" style={{ background: grad(p.when) }}>{l.label} →</Link>)}
+                  {!!s.links?.length && s.links.map((l) => <Link key={l.href + l.label} href={l.href} onClick={(e) => e.stopPropagation()} className="rounded-lg px-2 py-0.5 text-[10.5px] font-bold text-white hover:opacity-90" style={{ background: gGrad }}>{l.label} →</Link>)}
                 </div>
               </div>
               {/* inline expand — schedule + Task-Manager-style action list */}
@@ -453,7 +460,10 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
                       </div>
                     ); })}</div>
                   </>) : (
-                    <div className="mt-2"><div className="mb-1 flex items-center justify-between text-[10px] font-extrabold uppercase text-[var(--ink-3)]"><span>Completion</span><span className="tabular-nums" style={{ color: tone }}>{st?.pct ?? 0}%</span></div><input type="range" min={0} max={100} step={5} value={st?.pct ?? 0} onChange={(e) => onSchedule(s.id, { pct: Number(e.target.value) })} className="w-full" style={{ accentColor: tone }} /></div>
+                    <div className="mt-2.5"><div className="mb-1.5 text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Status</div>
+                      <div className="inline-flex gap-1">{TASK_STEPS.map((o) => { const on = (st?.pct ?? 0) === o.pct; return <button key={o.pct} type="button" onClick={() => onSchedule(s.id, { pct: o.pct })} className="rounded-lg px-3 py-1.5 text-[11.5px] font-bold transition-colors" style={{ background: on ? o.tone : "var(--panel)", color: on ? "#fff" : o.tone }}>{o.label}</button>; })}</div>
+                      <div className="mt-1.5 text-[10px] text-[var(--ink-3)]">Feeds this milestone’s completion — each task is an equal share of {pc}% overall.</div>
+                    </div>
                   )}
                 </div>
               )}
