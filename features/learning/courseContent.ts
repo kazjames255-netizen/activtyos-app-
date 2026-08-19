@@ -20,7 +20,26 @@ export type Block =
   | { k: "sort"; prompt: string; buckets: string[]; items: { text: string; bucket: number }[] }   // drag each item into the right bucket
   | { k: "order"; prompt: string; items: string[] }                                                 // drag into the correct order (array = correct order)
   | { k: "match"; prompt: string; pairs: { l: string; r: string }[] }                               // match left to right
-  | { k: "reveal"; prompt?: string; cards: { front: string; back: string }[] };                     // tap to flip
+  | { k: "reveal"; prompt?: string; cards: { front: string; back: string }[] }                       // tap to flip
+  | { k: "figure"; fig: string; caption?: string }                                                    // a detailed inline SVG diagram (see CourseFigures)
+  // ——— animated, video-like lesson ———
+  | { k: "motion"; title?: string; voice?: boolean; accent?: string; scenes: MotionScene[] };         // scene-based motion-graphics film with synced narration/captions
+
+// One scene of a motion lesson. `visual` selects a scene renderer (like the ART
+// registry). `seconds` is the authored budget (the literal duration in text
+// mode; the minimum dwell in voice mode — the voice can hold the scene longer).
+export interface MotionScene {
+  id: string;
+  visual: string;
+  seconds: number;
+  narration: string;                 // spoken aloud AND used to time the key words
+  keys?: string[];                    // key words that pop up in sync with the narration (substrings of it, in order)
+  onScreenText?: OnScreenText[];      // (legacy) kinetic phrases; superseded by `keys`
+  props?: Record<string, unknown>;    // per-template knobs (icon, items, value, good/bad, …)
+  interactive?: boolean;             // pause the film here until the learner answers (your-turn beat)
+  choices?: { label: string; ok: boolean; fb: string }[];
+}
+export interface OnScreenText { t: string; at?: number; until?: number; emphasis?: "normal" | "strong" | "muted" }
 
 export interface QuizQ { q: string; opts: string[]; a: number; fb?: string }
 export interface Lesson { id: string; title: string; mins: number; blocks: Block[]; hidden?: boolean }
@@ -36,6 +55,7 @@ export interface CourseDoc {
   activeQuiz?: number;         // which end-of-course quiz version is live (0-based)
 }
 import { GENERATED_COURSES } from "./courseContent.generated";
+import { NEW_COURSES } from "./courseContent.newcourses";
 
 // ————————————————————————————————————————————————————————————————
 // END-OF-COURSE QUIZ VERSIONS
@@ -77,6 +97,35 @@ const safeguarding: CourseDoc = {
  "blurb": "The core course for everyone who works directly and regularly with children. Builds on Level 1 awareness: recognise abuse and wider risks, respond to disclosures, understand thresholds and early help, work safely, and report the same day. Grounded primarily in Working Together to Safeguard Children 2023 and our own safeguarding policy (with good practice drawn from Keeping Children Safe in Education). Progression: Level 1 = awareness, Level 2 = this course, Level 3 = advanced DSL training.",
  "pass": 80,
  "lessons": [
+  {
+   id: "l0",
+   title: "Watch first — Safeguarding in two minutes",
+   mins: 2,
+   blocks: [
+    { k: "text", t: "Before the detail, here's the whole of safeguarding in one short film. Press play — turn your sound on, or switch to text at the bottom." },
+    {
+     k: "motion",
+     title: "Safeguarding in two minutes",
+     scenes: [
+      { id: "s0", visual: "intro", seconds: 5, narration: "Safeguarding. The whole of it — in two minutes.", keys: ["Safeguarding", "two minutes"] },
+      { id: "s1", visual: "cold-open", seconds: 8, narration: "Every day, Kai raced in first. Today he's last. Hood up. Silent. You notice.", keys: ["raced in first", "Hood up", "Silent", "You notice"] },
+      { id: "s2", visual: "everyone", seconds: 7, narration: "You don't need a title to keep a child safe. Safeguarding is everyone's job.", keys: ["a title", "keep a child safe", "everyone's job"] },
+      { id: "s3", visual: "notice", seconds: 12, narration: "A mark no one can explain. A flinch near the changing rooms. A child who's gone quiet. Notice the change.", keys: ["A mark", "A flinch", "gone quiet", "Notice the change"] },
+      { id: "s4", visual: "respond", seconds: 8, narration: "If he opens up, stay calm. Listen — don't dig. Let him use his own words.", keys: ["stay calm", "Listen", "his own words"] },
+      { id: "s5", visual: "not-secret", seconds: 10, narration: "Never promise to keep it secret. Say: to keep you safe, I'll share this with the person who can help.", keys: ["Never promise", "secret", "to keep you safe", "the person who can help"] },
+      { id: "s6", visual: "record", seconds: 8, narration: "Then write it down. The facts, the time, his own words. Not what you assume.", keys: ["write it down", "The facts", "his own words", "Not what you assume"] },
+      { id: "s7", visual: "report", seconds: 8, narration: "Now hand it on. Tell your Designated Safeguarding Lead the same day. Every time.", keys: ["hand it on", "Designated Safeguarding Lead", "the same day"] },
+      { id: "s8", visual: "your-turn", seconds: 11, narration: "But if a child is in immediate danger, don't wait. Your turn — what's your first move?", onScreenText: [{ t: "Your turn.", at: 0.2 }], interactive: true, choices: [
+        { label: "Investigate it yourself first", ok: false, fb: "No — you never investigate. Notice, record, report." },
+        { label: "Wait and tell someone tomorrow", ok: false, fb: "Safeguarding never waits — immediate danger means act now." },
+        { label: "Call 999 or children's social care", ok: true, fb: "Right. Immediate danger: call 999 or children's social care straight away." },
+      ] },
+      { id: "s9", visual: "close", seconds: 9, narration: "Notice. Respond. Record. Report — the same day. That's how you keep every child safe.", keys: ["Notice", "Respond", "Record", "Report", "keep every child safe"] },
+     ],
+    },
+    { k: "callout", tone: "tip", title: "That's the whole job", t: "Everything else in this course is detail on those four steps. If you only remember one thing: Notice, Respond, Record, Report — and tell the DSL the same day." },
+   ],
+  },
   {
    "id": "l1",
    "title": "Safeguarding at Level 2 — from awareness to action",
@@ -1151,12 +1200,129 @@ const safeguarding: CourseDoc = {
  ]
 };
 
+// ————————————————————————————————————————————————————————————————
+// KCSIE 2026 — Key Changes. Built from the NSPCC CASPAR briefing "Keeping
+// children safe in education 2026" (DfE, July 2026). KCSIE is the statutory
+// framework for schools/colleges in England; camps and clubs are not schools,
+// so this course frames the 2026 updates as good practice to adopt.
+const kcsie2026: CourseDoc = {
+  id: "c40",
+  title: "KCSIE 2026 — What's Changed",
+  cat: "Recommended",
+  cover: "shield",
+  category: "saf",
+  renewMonths: 12,
+  blurb: "A concise update on the key changes in Keeping Children Safe in Education (KCSIE) 2026 — the statutory safeguarding guidance for schools and colleges in England, in force from 1 September 2026. KCSIE is not our governing framework (camps and clubs work primarily to Working Together to Safeguard Children 2023 and our own policy), but its updates are respected good practice. This course summarises what changed and what's worth adopting: an expanded view of child-on-child abuse, new online-safety duties (generative AI, mobile phones, filtering reviews), a major safer-recruitment change removing the supervision exemption from regulated activity, DSL cover arrangements, and new sections on young carers, medical conditions and single-sex facilities. Source: NSPCC CASPAR briefing, July 2026.",
+  pass: 80,
+  lessons: [
+    {
+      id: "l1",
+      title: "What KCSIE 2026 is and when it applies",
+      mins: 5,
+      blocks: [
+        { k: "art", art: "shield", caption: "KCSIE 2026 — the statutory safeguarding guidance for schools, refreshed." },
+        { k: "text", t: "Keeping Children Safe in Education (KCSIE) is statutory guidance that sets out what schools and colleges in England must do to safeguard and promote the welfare of children. It is directed at governing bodies, proprietors, management committees of pupil referral units and senior leadership teams. Each year the Department for Education refreshes it, and this short course covers the additions in the 2026 edition." },
+        { k: "callout", tone: "law", title: "In force from 1 September 2026", t: "KCSIE 2026 was published for information on 7 July 2026 and comes into force, replacing the previous edition, on 1 September 2026 (DfE, 2026)." },
+        { k: "callout", tone: "info", title: "Are we in scope?", t: "KCSIE is the statutory framework for schools and colleges — we are a camp/club, not a school, so we work primarily to Working Together to Safeguard Children 2023 and our own safeguarding policy. KCSIE is borrowed good practice: this course highlights the 2026 changes worth adopting." },
+        { k: "points", title: "The big themes in KCSIE 2026", items: [
+          "Child-on-child abuse — expanded, including misogyny and the highest-risk times of day.",
+          "Online safety — new guidance on generative AI, mobile-phone-free settings, and yearly filtering reviews.",
+          "Safer recruitment — the supervision exemption is removed from regulated activity.",
+          "New sections — young carers, children with medical conditions, sport and single-sex facilities.",
+          "DSL cover — robust arrangements for when the designated lead is unavailable.",
+        ] },
+        { k: "check", q: "When does KCSIE 2026 come into force?", opts: ["7 July 2026", "1 September 2026", "Immediately on publication"], a: 1, fb: "Correct — published for information on 7 July 2026, in force from 1 September 2026." },
+      ],
+    },
+    {
+      id: "l2",
+      title: "Part one — changes for all staff",
+      mins: 6,
+      blocks: [
+        { k: "points", title: "New and clarified for everyone", items: [
+          "Child-to-caregiver abuse is named as a form of abuse staff should be aware of.",
+          "Verbal abuse is clarified as a possible form of emotional abuse.",
+          "A child who is pregnant or a parent, or showing early abusive or harmful behaviours, may benefit from support before statutory intervention.",
+          "New detail on community-based Family Help assessments and when to refer to Family Help or children's social care.",
+        ] },
+        { k: "callout", tone: "warn", title: "Child-on-child abuse — expanded", t: "The guidance now highlights the times children are at highest risk (such as immediately after school), references misogyny, stresses it is a safeguarding issue for all children involved, and emphasises that it is preventable through recognising indicators early." },
+        { k: "points", title: "Exploitation (CCE & CSE)", items: [
+          "This harm can be committed or facilitated by an organised network or gang, and children may identify with one.",
+          "Most sexual abuse is committed by someone known to the victim.",
+          "Children are not always recognised as victims and can be criminalised for actions they take while under coercion.",
+        ] },
+        { k: "callout", tone: "info", title: "Mental health & serious violence", t: "All staff should know that mental health problems can develop into safeguarding concerns — staff recognise the warning signs but only trained professionals diagnose. Concerns that a child is carrying, using or intending to use a weapon must be reported to the DSL, who carries out a risk assessment." },
+        { k: "check", q: "Which is now clarified as a possible form of emotional abuse?", opts: ["Verbal abuse", "A single argument", "Strict rules"], a: 0, fb: "Right — KCSIE 2026 clarifies that verbal abuse can be a form of emotional abuse." },
+      ],
+    },
+    {
+      id: "l3",
+      title: "Part two — managing safeguarding",
+      mins: 6,
+      blocks: [
+        { k: "steps", title: "What changed in the management of safeguarding", items: [
+          { h: "DSL cover", t: "Settings should have robust arrangements for when the DSL is unavailable (illness, leave) — for example a confidential shared mailbox, so concerns are still received, monitored and acted on without delay." },
+          { h: "Information sharing", t: "Share what is relevant, proportionate and well-contextualised; when a child changes setting and there is a risk, the receiving setting assesses risk and puts a plan in place, and both DSLs should talk." },
+          { h: "Online safety", t: "New guidance on the safe, legal use of generative AI; all schools should be mobile-phone-free with a clear policy; and filtering and monitoring should be reviewed at least once a year, with a record kept." },
+        ] },
+        { k: "points", title: "New sections in Part two", items: [
+          "Young carers — caring responsibilities can affect attendance, attainment, behaviour and wellbeing; identify early.",
+          "Children with medical conditions — a safeguarding referral is only needed where an incident shows increased risk (e.g. essential medication repeatedly missing).",
+          "Attendance is recognised as a key safeguarding factor.",
+        ] },
+        { k: "callout", tone: "info", title: "Sport, facilities & social transition", t: "KCSIE 2026 adds detailed new guidance on single-sex sport, toilets, changing rooms, showers and boarding, and on requests for support with a child's social transition — including recording biological sex accurately, involving parents, keeping clear records and taking a careful approach (reflecting the Cass Review). Follow your own setting's policy and the full guidance for the detail." },
+        { k: "check", q: "How often should filtering and monitoring systems be reviewed?", opts: ["At least once a year", "Once every three years", "Only if something goes wrong"], a: 0, fb: "Correct — at least once a year, checking all devices, with a record kept." },
+      ],
+    },
+    {
+      id: "l4",
+      title: "Parts three to five — recruitment, allegations & child-on-child sexual harm",
+      mins: 6,
+      blocks: [
+        { k: "callout", tone: "law", title: "Safer recruitment — the big change", t: "In line with the Crime and Policing Act 2026, the supervision exemption is removed from regulated activity. Work carried out in specified places by supervised staff or volunteers can now fall under regulated activity." },
+        { k: "points", title: "What that means for volunteers", items: [
+          "Volunteering that involves teaching, training, instructing or supervising children for more than 3 days in a 30-day period, or overnight, is now regulated activity.",
+          "That requires an enhanced DBS check with barred-list check — including for existing volunteers who now fall into scope.",
+          "Where a volunteer is not in regulated activity, carry out a written risk assessment to decide which checks are needed.",
+        ] },
+        { k: "callout", tone: "warn", title: "Nude and semi-nude images", t: "Every incident of sharing nude or semi-nude images requires a safeguarding response — whether it was consensual or not — with a proportionate approach that considers the children's age, development and any coercion, exploitation or vulnerability." },
+        { k: "points", title: "Allegations & child-on-child sexual harm", items: [
+          "For an allegation about someone from a third-party agency, the setting shares responsibility — gathering the facts and managing the safeguarding process while the agency usually leads any disciplinary action.",
+          "The child-on-child sexual harassment and violence chapter is rewritten around the continuum from harmful sexual behaviour to sexual violence.",
+        ] },
+        { k: "check", q: "Under the Crime and Policing Act 2026, what changed for regulated activity?", opts: ["The supervision exemption was removed", "DBS checks were abolished", "All volunteers became exempt"], a: 0, fb: "Correct — supervised staff and volunteers in specified places can now be in regulated activity." },
+      ],
+    },
+    {
+      id: "l5",
+      title: "What this means for our camps and clubs",
+      mins: 5,
+      blocks: [
+        { k: "points", title: "Practical actions to take", items: [
+          "Re-check who now counts as regulated activity (supervision no longer exempts them) and make sure DBS and barred-list checks are right.",
+          "Set clear expectations on mobile phones and staff use of AI, and review any filtering/monitoring at least once a year.",
+          "Make sure there is cover so safeguarding concerns are still received when your DSL is away.",
+          "Treat every nude-image incident as a safeguarding matter, and stay alert to young carers and medical-condition risks.",
+          "Know your highest-risk moments (for example pick-up and changeovers).",
+        ] },
+        { k: "reveal", prompt: "Tap each card to check the big ideas.", cards: [
+          { front: "Do we have to follow KCSIE?", back: "Not as our governing framework — we work to Working Together 2023 and our own policy. But KCSIE is respected good practice and worth adopting." },
+          { front: "The single biggest change for us", back: "The supervision exemption is gone: supervised staff and volunteers in specified places can now be in regulated activity, needing enhanced DBS with barred-list checks." },
+          { front: "Who diagnoses mental health?", back: "Not us. Staff recognise warning signs and refer; only appropriately trained professionals diagnose." },
+        ] },
+        { k: "callout", tone: "tip", title: "The golden thread is unchanged", t: "Whatever the update, the job is the same: notice it, record it, and report it to your DSL the same day — and call 999 or children's social care if a child is in immediate danger." },
+        { k: "check", q: "A consensual sharing of a nude image between two children — what is the response?", opts: ["No action, because it was consensual", "Always a safeguarding response, proportionate to age and any coercion", "Only act if a parent complains"], a: 1, fb: "Right — every nude/semi-nude image incident needs a safeguarding response, consensual or not." },
+      ],
+    },
+  ],
+};
+
 // Order the three Safeguarding levels first, in progression order (L1 → L2 → L3),
 // then the rest of the library. (L2 is the hand-authored flagship above; L1=c11, L3=c12.)
 const _L1 = GENERATED_COURSES.find((c) => c.id === "c11");
 const _L3 = GENERATED_COURSES.find((c) => c.id === "c12");
 const _rest = GENERATED_COURSES.filter((c) => c.id !== "c11" && c.id !== "c12");
-export const SEED_LIBRARY: CourseDoc[] = [_L1, safeguarding, _L3, ..._rest].filter(Boolean) as CourseDoc[];
+export const SEED_LIBRARY: CourseDoc[] = [_L1, safeguarding, _L3, kcsie2026, ..._rest, ...NEW_COURSES].filter(Boolean) as CourseDoc[];
 
 export const blankCourse = (id: string): CourseDoc => ({
   id, title: "Untitled course", cat: "Recommended", cover: "shield", blurb: "",

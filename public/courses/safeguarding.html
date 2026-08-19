@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Safeguarding — Level 2 opener</title>
+<!--
+  Self-contained animated e-learning lesson. No external requests: all CSS, JS
+  and graphics are inline. Opens from file:// offline.
+  To change wording, edit the CONTENT object near the top of the <script>.
+  Animation lives in the VIS map, keyed by scene id, kept separate from copy.
+-->
+<style>
+  /* ---- palette & tokens (every colour lives here — none hardcoded below) ---- */
+  :root{
+    --c-primary:#1d3a8f; --c-secondary:#2f6bd8; --c-accent:#f6b352; --c-accent-d:#e0973a;
+    --c-good:#34d399; --c-stage-a:#14265c; --c-stage-b:#2f6bd8; --c-bg:#eef3fb;
+    --c-ink:#0e1f4a; --c-ink-2:#5b678a; --c-white:#ffffff; --c-line:#dbe4f5;
+    --c-shadow:#020c26; --c-panel:#f5f8ff; --c-panel-line:#cdd9f5; --c-red:#e21d27;
+    --c-card:rgba(255,255,255,.10); --c-card-line:rgba(255,255,255,.30);
+    /* flat-illustration wardrobe (skin/clothing = illustration colours) */
+    --w0t:#4f8bf0; --w0d:#3a6bc4; --w0p:#26324f; --w0s:#eab88f; --w0h:#2f2016;
+    --w1t:#2bb27a; --w1d:#1f8f61; --w1p:#2c3a58; --w1s:#c68a5c; --w1h:#141414;
+    --w2t:#ef6b86; --w2d:#cf556e; --w2p:#3a2f4c; --w2s:#f1c69c; --w2h:#5a3a1f;
+    --wct:#f6b352; --wcd:#e0973a; --wcp:#6f4310; --wcs:#eaa96f; --wch:#3a2415; /* child */
+    --wgt:#8ea6d8; --wgd:#7789bf; --wgp:#5b6b8a; --wgs:#b9c4de; --wgh:#7f8db0; /* greyed */
+    --ease:cubic-bezier(0.4,0,0.2,1);
+    --font: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  *{box-sizing:border-box}
+  [hidden]{display:none!important} /* keep the hidden attribute winning over .poster/.panel display */
+  html,body{margin:0;padding:0;background:var(--c-bg);color:var(--c-ink);font-family:var(--font);}
+  .wrap{max-width:1000px;margin:0 auto;padding:20px 16px 48px;}
+  .head{display:flex;align-items:baseline;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+  .head h1{font-size:clamp(17px,2.4vw,22px);margin:0;font-weight:800;letter-spacing:-.01em}
+  .head .sub{color:var(--c-ink-2);font-size:13px;font-weight:600}
+  .head .pct{margin-left:auto;font-size:13px;font-weight:800;color:var(--c-primary)}
+
+  /* ---- stage ---- */
+  .stage-wrap{position:relative;width:100%;aspect-ratio:16/9;border-radius:18px;overflow:hidden;
+    background:linear-gradient(160deg,var(--c-stage-a),var(--c-stage-b));
+    box-shadow:0 20px 48px -18px rgba(2,12,38,.62);}
+  .stage{position:absolute;inset:0;width:100%;height:100%}
+  .dots{position:absolute;inset:0;pointer-events:none;opacity:.5;
+    background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1.6px);background-size:22px 22px}
+  .vig{position:absolute;inset:0;pointer-events:none;
+    background:radial-gradient(120% 80% at 50% 0%,transparent 55%,rgba(2,12,38,.5) 100%)}
+  .scene{opacity:0;transition:opacity .3s var(--ease)}
+  .scene.active{opacity:1}
+
+  .kinetic{position:absolute;left:0;right:0;bottom:20%;text-align:center;padding:0 6%;
+    pointer-events:none;color:var(--c-white);}
+  .kinetic b{display:inline-block;font-weight:800;letter-spacing:-.01em;line-height:1.05;
+    font-size:clamp(20px,4.4vw,52px);text-shadow:0 2px 18px rgba(2,12,38,.6);
+    opacity:0;transform:translateY(115%);transition:transform .5s var(--ease),opacity .35s ease}
+  .kinetic.show b{opacity:1;transform:translateY(0)}
+  .kinetic.strong b{color:var(--c-accent)}
+  .kinetic .small{font-size:clamp(13px,2.2vw,26px);font-weight:700;opacity:.9}
+
+  .caption{position:absolute;left:0;right:0;bottom:5%;text-align:center;padding:0 6%;
+    color:var(--c-white);font-size:clamp(13px,1.8vw,22px);font-weight:600;line-height:1.35;
+    text-shadow:0 2px 12px rgba(2,12,38,.55)}
+  .caption .w{color:rgba(255,255,255,.42);transition:color .18s}
+  .caption .w.lit{color:var(--c-white)}
+
+  /* poster / gesture gate (also unlocks mobile speech) */
+  .poster{position:absolute;inset:0;display:grid;place-items:center;border:0;cursor:pointer;
+    background:rgba(9,18,45,.30)}
+  .poster .btn{display:grid;place-items:center;width:9%;min-width:56px;aspect-ratio:1;border-radius:50%;
+    background:rgba(255,255,255,.95);color:var(--c-primary);font-size:clamp(20px,3vw,30px);
+    box-shadow:0 10px 24px rgba(2,12,38,.4);animation:poster 2.2s ease-in-out infinite}
+  .poster .lbl{position:absolute;bottom:6%;color:var(--c-white);font-weight:700;font-size:13px;opacity:.9}
+  @keyframes poster{0%,100%{transform:scale(1)}50%{transform:scale(1.06)}}
+  /* a key word popping in, in time with the voice */
+  @keyframes aos-pop{from{opacity:0;transform:scale(.72) translateY(14px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+  /* ---- transport controls ---- */
+  .controls{display:flex;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
+  .controls .grp{display:flex;align-items:center;gap:6px}
+  button.ctrl{display:grid;place-items:center;height:40px;min-width:40px;padding:0 10px;border-radius:11px;
+    border:1px solid var(--c-line);background:var(--c-white);color:var(--c-primary);font-weight:800;
+    font-size:15px;cursor:pointer}
+  button.ctrl.primary{background:var(--c-primary);color:var(--c-white);border-color:var(--c-primary)}
+  button.ctrl[aria-pressed="true"]{background:var(--c-primary);color:var(--c-white);border-color:var(--c-primary)}
+  button.ctrl:hover{filter:brightness(1.04)}
+  .track{flex:1;min-width:180px;height:16px;position:relative;cursor:pointer;display:flex;align-items:center}
+  .track .rail{position:absolute;left:0;right:0;height:6px;border-radius:99px;background:var(--c-line)}
+  .track .fill{position:absolute;left:0;height:6px;border-radius:99px;background:var(--c-primary);width:0}
+  .track .tick{position:absolute;top:1px;width:2px;height:14px;background:var(--c-white);opacity:.9;transform:translateX(-1px)}
+  .time{font-variant-numeric:tabular-nums;font-size:12px;font-weight:700;color:var(--c-ink-2);min-width:74px;text-align:right}
+
+  /* ---- overlay panels (quiz / certificate) ---- */
+  .panel{position:absolute;inset:0;overflow:auto;padding:min(6%,40px);background:rgba(11,22,52,.97);
+    color:var(--c-white);display:flex;flex-direction:column;gap:14px}
+  .panel h2{margin:0;font-size:clamp(18px,3vw,26px)}
+  .panel .lead{color:rgba(255,255,255,.85);font-size:14px;margin:0}
+  .q{background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:14px}
+  .q .prompt{font-weight:800;font-size:clamp(15px,2vw,18px);margin-bottom:10px}
+  .opt{display:block;width:100%;text-align:left;margin:6px 0;padding:11px 13px;border-radius:11px;
+    border:1px solid rgba(255,255,255,.28);background:rgba(255,255,255,.08);color:var(--c-white);
+    font-weight:700;font-size:14px;cursor:pointer}
+  .opt:hover{background:rgba(255,255,255,.16)}
+  .opt.correct{border-color:var(--c-good);background:rgba(52,211,153,.22)}
+  .opt.wrong{border-color:var(--c-accent);background:rgba(246,179,82,.18)}
+  .opt[disabled]{cursor:default;opacity:.9}
+  .fb{margin-top:8px;font-size:13.5px;font-weight:600;min-height:1.2em}
+  .fb.ok{color:var(--c-good)} .fb.no{color:var(--c-accent)}
+  .score{font-size:clamp(20px,4vw,34px);font-weight:800}
+  .cert{background:var(--c-white);color:var(--c-ink);border-radius:14px;padding:26px;text-align:center;
+    border:3px solid var(--c-primary)}
+  .cert .badge{font-size:34px}
+  .cert h3{margin:.3em 0;font-size:clamp(18px,3vw,24px);color:var(--c-primary)}
+  .cert .name{font-size:clamp(20px,4vw,30px);font-weight:800;border-bottom:2px solid var(--c-line);
+    display:inline-block;min-width:60%;padding:4px 8px}
+  .cert input{font:inherit;font-size:18px;text-align:center;border:1px solid var(--c-line);border-radius:8px;padding:8px;width:70%}
+  .row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+  /* focus visibility for keyboard users */
+  :focus-visible{outline:3px solid var(--c-accent);outline-offset:2px;border-radius:6px}
+
+  .note{color:var(--c-ink-2);font-size:12px;margin-top:14px;line-height:1.5}
+
+  /* narrow screens: the stage is short, so lift the on-screen title to the top
+     band so it never collides with a multi-line caption at the bottom */
+  @media (max-width:640px){
+    .kinetic{bottom:auto;top:9%}
+    .caption{bottom:4%;font-size:clamp(12px,3.4vw,16px)}
+  }
+  /* reduced motion: no movement, timing preserved by the JS clock */
+  @media (prefers-reduced-motion: reduce){
+    .scene,.kinetic b,.caption .w,.poster .btn{transition:none!important;animation:none!important}
+  }
+  /* print: show only the certificate */
+  @media print{
+    body *{visibility:hidden}
+    #cert, #cert *{visibility:visible}
+    #cert{position:absolute;inset:0;border:none}
+    .cert input{border:none}
+  }
+</style>
+</head>
+<body>
+<main class="wrap" id="course">
+  <div class="head">
+    <h1 id="lessonTitle">Safeguarding</h1>
+    <span class="sub" id="lessonSub"></span>
+    <span class="pct" id="pct" aria-live="polite">0%</span>
+  </div>
+
+  <div class="stage-wrap" id="stageWrap" tabindex="0" role="group" aria-label="Animated safeguarding lesson">
+    <svg class="stage" id="stage" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid meet" aria-hidden="true">
+      <defs>
+        <linearGradient id="g-shield" x1="0" y1="0" x2=".3" y2="1">
+          <stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#cfe0ff"/>
+        </linearGradient>
+        <radialGradient id="g-spot" cx=".5" cy=".4" r=".6">
+          <stop offset="0" stop-color="#f6b352" stop-opacity=".55"/>
+          <stop offset="1" stop-color="#f6b352" stop-opacity="0"/>
+        </radialGradient>
+      </defs>
+      <!-- scene groups injected here by JS -->
+    </svg>
+    <div class="dots"></div>
+    <div class="vig"></div>
+    <div class="kinetic" id="kinetic" aria-live="polite"><b id="kineticText"></b></div>
+    <div class="caption" id="caption" hidden></div>
+
+    <button class="poster" id="poster" aria-label="Play the lesson">
+      <span class="btn" aria-hidden="true">▶</span>
+      <span class="lbl" id="posterLbl"></span>
+    </button>
+
+    <!-- knowledge check -->
+    <div class="panel" id="quiz" hidden></div>
+    <!-- certificate -->
+    <div class="panel" id="certWrap" hidden></div>
+  </div>
+
+  <div class="controls" role="group" aria-label="Player controls">
+    <div class="grp">
+      <button class="ctrl" id="prev" aria-label="Previous scene">‹</button>
+      <button class="ctrl primary" id="play" aria-label="Play">▶</button>
+      <button class="ctrl" id="next" aria-label="Next scene">›</button>
+      <button class="ctrl" id="restart" aria-label="Restart lesson">↺</button>
+    </div>
+    <div class="track" id="track" role="slider" aria-label="Timeline" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" tabindex="0">
+      <div class="rail"></div><div class="fill" id="fill"></div>
+    </div>
+    <span class="time" id="time">0:00 / 0:00</span>
+    <div class="grp">
+      <button class="ctrl" id="mode" aria-pressed="true" aria-label="Autoplay on">▶ Auto</button>
+      <button class="ctrl" id="speak" aria-pressed="false" aria-label="Read aloud off">🔊 Aloud</button>
+    </div>
+  </div>
+
+  <p class="note" id="hint">Key words appear on screen as the lesson plays. Turn on “Aloud” for the browser voice (offline). Keyboard: Space = play/pause · ← → = scenes · click the bar to jump.</p>
+</main>
+
+<script>
+"use strict";
+/* =====================================================================
+   1) LESSON CONTENT  — edit copy here without touching animation code
+   ===================================================================== */
+const CONTENT = {
+  id: "safeguarding-l1",
+  title: "Safeguarding",
+  subtitle: "Level 2 · the two-minute opener",
+  pass: 80,
+  // `screen`  = full-text kinetic phrase (shown when audio is OFF)
+  // `keys`    = key words that pop up IN SYNC WITH THE VOICE (shown when audio is ON).
+  //             each must be an exact substring of `caption`, in spoken order.
+  scenes: [
+    { id:"intro",   dur:5,  screen:["Safeguarding","in two minutes"], strong:false,
+      caption:"Safeguarding. Everyone's job — and simpler than you think.",
+      keys:["Safeguarding","Everyone's job","simpler than you think"] },
+    { id:"cold",    dur:9,  screen:["You noticed."], strong:true,
+      caption:"Every day, Kai raced in first. Today he's last, hood up, silent. You notice.",
+      keys:["raced in first","hood up","silent","You notice"] },
+    { id:"everyone",dur:7,  screen:["Everyone's job."],
+      caption:"You don't need a badge or a title to keep a child safe. It's everyone's job.",
+      keys:["a title","keep a child safe","everyone's job"] },
+    { id:"steps",   dur:6,  screen:["Notice · Respond · Record · Report"],
+      caption:"Whatever you see, four steps never change.",
+      keys:["Whatever you see","four steps","never change"] },
+    { id:"notice",  dur:12, screen:["Notice the change."], strong:true,
+      caption:"A mark no one can explain. A flinch near the changing rooms. A child who's gone quiet. Notice the change — you don't need proof.",
+      keys:["A mark","A flinch","gone quiet","Notice the change","don't need proof"] },
+    { id:"respond", dur:9,  screen:["Listen. Don't dig."],
+      caption:"If they open up, stay calm. Listen — don't ask leading questions. Let them use their own words.",
+      keys:["stay calm","Listen","don't ask leading questions","their own words"] },
+    { id:"secret",  dur:9,  screen:["Never promise secrecy."], strong:true,
+      caption:"Never promise to keep it secret. Say: to keep you safe, I'll tell the person who can help.",
+      keys:["Never promise","secret","to keep you safe","the person who can help"] },
+    { id:"record",  dur:10, screen:["Facts, not guesses."],
+      caption:"Write it down straight away. The facts, the time, their own words — and keep your opinion separate.",
+      keys:["Write it down","The facts","the time","their own words","opinion separate"] },
+    { id:"report",  dur:9,  screen:["Tell the DSL — today."], strong:true,
+      caption:"Hand it to your Designated Safeguarding Lead the same day. Every time. You report; they decide.",
+      keys:["Designated Safeguarding Lead","the same day","Every time","You report"] },
+    { id:"danger",  dur:8,  screen:["Immediate danger? Call 999."], strong:true,
+      caption:"If a child is in immediate danger, don't wait — call 999 or children's social care.",
+      keys:["immediate danger","don't wait","call 999","children's social care"] },
+    { id:"recap",   dur:8,  screen:["Notice · Respond · Record · Report"],
+      caption:"Notice. Respond. Record. Report — the same day. That's the whole job.",
+      keys:["Notice","Respond","Record","Report","the same day"] },
+    { id:"close",   dur:6,  screen:["If you notice, you act."],
+      caption:"If you notice, you act. That's how you keep every child safe.",
+      keys:["you notice","you act","every child safe"] },
+  ],
+  quiz: [
+    { q:"A child tells you something upsetting. What must you never do?",
+      opts:["Promise to keep it a secret","Listen calmly","Tell your DSL"], a:0,
+      fb:["", "Listening calmly is exactly right — that's not something to avoid.",
+          "Telling your DSL is what you must do — not something to avoid."],
+      ok:"Right — never promise secrecy. You can only promise to keep them safe." },
+    { q:"You've written down a concern. When do you tell the Designated Safeguarding Lead?",
+      opts:["Within a week","The same day","Only if you're certain"], a:1,
+      fb:["Too slow — concerns go to the DSL the same day.", "",
+          "You never need to be certain — report the same day regardless."],
+      ok:"Correct — the same day, every time." },
+    { q:"A child is in immediate danger and the DSL isn't answering. What do you do first?",
+      opts:["Investigate what happened","Wait for the DSL","Call 999 or children's social care"], a:2,
+      fb:["Never investigate yourself — that's not your role, and it can make things worse.",
+          "Don't wait when a child is in immediate danger — act now.", ""],
+      ok:"Right — immediate danger means 999 or children's social care straight away." },
+  ],
+  certTitle: "Safeguarding — Level 2 (opener)",
+};
+
+/* =====================================================================
+   2) ILLUSTRATION HELPERS  (flat vector; one construction rule per figure)
+   ===================================================================== */
+const NS = "http://www.w3.org/2000/svg";
+const CASTS = {
+  c0:{t:"--w0t",d:"--w0d",p:"--w0p",s:"--w0s",h:"--w0h"},
+  c1:{t:"--w1t",d:"--w1d",p:"--w1p",s:"--w1s",h:"--w1h"},
+  c2:{t:"--w2t",d:"--w2d",p:"--w2p",s:"--w2s",h:"--w2h"},
+  child:{t:"--wct",d:"--wcd",p:"--wcp",s:"--wcs",h:"--wch"},
+  grey:{t:"--wgt",d:"--wgd",p:"--wgp",s:"--wgs",h:"--wgh"},
+};
+const V = c => `var(${c})`;
+/* A person, feet at (x,y). Drawn in ~85u-tall local space, scaled by s. */
+function person(x, y, s, castKey, hood){
+  const c = CASTS[castKey];
+  const hair = hood
+    ? `<path d="M-12.5 -59 Q-14 -79 0 -79 Q14 -79 12.5 -59 Q6 -70 0 -70 Q-6 -70 -12.5 -59 Z" style="fill:${V(c.t)}"/>`
+    : `<path d="M-9.6 -61 Q-10 -75 0 -75 Q10 -75 9.6 -61 Q4.6 -69 0 -69 Q-4.6 -69 -9.6 -61 Z" style="fill:${V(c.h)}"/>`;
+  return `<g transform="translate(${x} ${y}) scale(${s})">
+    <ellipse cx="0" cy="3" rx="17" ry="4.5" style="fill:var(--c-shadow)" opacity=".22"/>
+    <rect x="-9" y="-24" width="7.6" height="27" rx="3.6" style="fill:${V(c.p)}"/>
+    <rect x="1.4" y="-24" width="7.6" height="27" rx="3.6" style="fill:${V(c.p)}"/>
+    <rect x="-15.6" y="-47" width="6.6" height="28" rx="3.2" style="fill:${V(c.d)}"/>
+    <rect x="9" y="-47" width="6.6" height="28" rx="3.2" style="fill:${V(c.d)}"/>
+    <path d="M-13 -49 Q0 -55 13 -49 L11.5 -21 Q0 -16 -11.5 -21 Z" style="fill:${V(c.t)}"/>
+    <path d="M-13 -49 Q0 -55 13 -49 L12 -43 Q0 -48 -12 -43 Z" style="fill:var(--c-white)" opacity=".16"/>
+    <rect x="-3" y="-55" width="6" height="7" rx="2" style="fill:${V(c.s)}"/>
+    <circle cx="0" cy="-62" r="9.2" style="fill:${V(c.s)}"/>
+    ${hair}
+  </g>`;
+}
+const SHIELD_D = "M50 8 L84 21 V50 C84 71 68 84 50 90 C32 84 16 71 16 50 V21 Z";
+/* Shield in 0..100 space at (x,y) scaled to `size`. Draws itself via dashoffset. */
+function shield(x, y, size){
+  return `<g transform="translate(${x} ${y}) scale(${size/100})">
+    <path class="sh-fill" d="${SHIELD_D}" fill="url(#g-shield)" opacity="0"/>
+    <path class="sh-gloss" d="M50 8 L84 21 V50 C84 60 78 68 68 74 L34 20 Z" style="fill:var(--c-white)" opacity="0"/>
+    <path class="sh-line" d="${SHIELD_D}" fill="none" style="stroke:var(--c-white)" stroke-width="3.6"
+      stroke-linejoin="round" stroke-linecap="round" stroke-dasharray="320" stroke-dashoffset="320"/>
+    <path class="sh-tick" d="M36 51 L47 62 L67 38" fill="none" style="stroke:var(--c-good)" stroke-width="6"
+      stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="50" stroke-dashoffset="50"/>
+  </g>`;
+}
+const rays = (cx,cy,r0,r1,cls) => [0,45,90,135,180,225,270,315].map(a=>{
+  const r=a*Math.PI/180;
+  return `<line class="${cls}" x1="${cx+r0*Math.cos(r)}" y1="${cy+r0*Math.sin(r)}" x2="${cx+r1*Math.cos(r)}" y2="${cy+r1*Math.sin(r)}" style="stroke:var(--c-accent)" stroke-width="3" stroke-linecap="round" opacity="0"/>`;
+}).join("");
+
+/* =====================================================================
+   3) SCENE VISUALS  — build(svgString) + anim(group, p)  per scene id
+      p is 0..1 progress through the scene; only transform/opacity/dashoffset
+      are touched so it stays smooth and fully scrubbable.
+   ===================================================================== */
+const clamp01 = n => n<0?0:n>1?1:n;
+const seg = (p,a,b) => clamp01((p-a)/(b-a));
+const eo = t => 1-Math.pow(1-clamp01(t),3);
+const A = (g,sel,attr,val)=>{const e=g.querySelector(sel); if(e) e.setAttribute(attr,val);};
+const AA = (g,sel,fn)=>g.querySelectorAll(sel).forEach(fn);
+const FLOOR = `<ellipse cx="960" cy="900" rx="820" ry="70" style="fill:var(--c-white)" opacity=".06"/>`;
+
+const VIS = {
+  intro:{
+    build:()=>`${rays(960,430,300,300,"ray")}
+      <g transform="translate(730 120)">${shield(0,0,420)}</g>`,
+    anim:(g,p)=>{ const d=eo(seg(p,.05,.7)), r=eo(seg(p,.5,1));
+      A(g,".sh-fill","opacity",eo(seg(p,.05,1)));
+      A(g,".sh-gloss","opacity",.18*eo(seg(p,.4,1)));
+      A(g,".sh-line","stroke-dashoffset",320*(1-d));
+      AA(g,".ray",(e,i)=>{ const a=[0,45,90,135,180,225,270,315][i]*Math.PI/180;
+        e.setAttribute("opacity",r*.5);
+        e.setAttribute("x2",960+(300+r*120)*Math.cos(a)); e.setAttribute("y2",430+(300+r*120)*Math.sin(a)); }); }
+  },
+  cold:{
+    build:()=>`${[300,620,940,1260,1600].map(x=>`<rect x="${x-70}" y="150" width="140" height="110" rx="10" style="fill:var(--c-white)" opacity=".07"/>`).join("")}
+      <line x1="120" y1="900" x2="1800" y2="900" style="stroke:var(--c-white)" stroke-opacity=".14" stroke-width="3"/>
+      ${FLOOR}
+      <g class="staff">
+        ${person(320,900,3.4,"grey")}${person(560,900,3.4,"grey")}
+        ${person(1360,900,3.4,"grey")}${person(1600,900,3.4,"grey")}
+      </g>
+      <ellipse class="spot" cx="960" cy="560" rx="240" ry="330" fill="url(#g-spot)" opacity="0"/>
+      <g class="child breathe">${person(960,900,4.6,"child",true)}</g>`,
+    anim:(g,p)=>{ const drain=eo(seg(p,.15,.75));
+      A(g,".staff","opacity",(0.9-drain*0.62).toFixed(3));
+      A(g,".spot","opacity",(0.55*drain).toFixed(3)); }
+  },
+  everyone:{
+    build:()=>`${FLOOR}
+      <g class="s0">${person(380,900,3.6,"c0")}</g><g class="s1">${person(620,900,3.6,"c1")}</g>
+      <g class="s2">${person(1300,900,3.6,"c2")}</g><g class="s3">${person(1540,900,3.6,"c0")}</g>
+      ${person(960,900,4.4,"child",true)}
+      <circle class="ring" cx="960" cy="560" r="250" fill="none" style="stroke:var(--c-accent)" stroke-width="7"
+        stroke-dasharray="1571" stroke-dashoffset="1571" transform="rotate(-90 960 560)"/>`,
+    anim:(g,p)=>{ [0,1,2,3].forEach(i=>A(g,".s"+i,"opacity",(0.35+0.65*seg(p,.1+i*.09,.34+i*.09)).toFixed(3)));
+      A(g,".ring","stroke-dashoffset",(1571*(1-eo(seg(p,.55,1)))).toFixed(1)); }
+  },
+  steps:{
+    build:()=>{ const xs=[360,760,1160,1560];
+      return `<line class="ln" x1="360" y1="540" x2="1560" y2="540" style="stroke:var(--c-white)" stroke-width="6"
+        stroke-linecap="round" stroke-dasharray="1200" stroke-dashoffset="1200"/>
+      ${xs.map((x,i)=>`<g class="nd${i}" opacity="0"><circle cx="${x}" cy="540" r="26" style="fill:var(--c-accent)"/>
+        <circle cx="${x}" cy="540" r="12" style="fill:var(--c-stage-a)"/></g>`).join("")}`; },
+    anim:(g,p)=>{ A(g,".ln","stroke-dashoffset",(1200*(1-eo(seg(p,.05,.7)))).toFixed(0));
+      [0,1,2,3].forEach(i=>A(g,".nd"+i,"opacity",seg(p,.2+i*.15,.35+i*.15).toFixed(3))); }
+  },
+  notice:{
+    // three signal cards fade + rise in, one after another, and stay visible
+    build:()=>{ const xs=[490,960,1430];
+      const icon=[ // amber pictograms: a mark, a flinch, a flat line (gone quiet)
+        `<path d="M-40 14 q40 -30 80 0" fill="none" style="stroke:var(--c-accent)" stroke-width="9" stroke-linecap="round"/>`,
+        `<path d="M-30 -18 l24 30 M-6 -18 l-24 30" fill="none" style="stroke:var(--c-accent)" stroke-width="9" stroke-linecap="round"/>`,
+        `<line x1="-38" y1="4" x2="38" y2="4" style="stroke:var(--c-accent)" stroke-width="9" stroke-linecap="round"/>`];
+      const label=["A mark","A flinch","Gone quiet"];
+      return xs.map((x,i)=>`<g class="cd${i}" opacity="0" transform="translate(${x} 470)">
+        <rect x="-190" y="-180" width="380" height="380" rx="30" style="fill:var(--c-card);stroke:var(--c-card-line)" stroke-width="3"/>
+        <circle cx="0" cy="-40" r="72" style="fill:var(--c-accent)" opacity=".12"/>
+        <g transform="translate(0 -40) scale(2.2)">${icon[i]}</g>
+        <text x="0" y="120" font-size="48" font-weight="800" text-anchor="middle" style="fill:var(--c-white)">${label[i]}</text>
+      </g>`).join(""); },
+    anim:(g,p)=>{ const xs=[490,960,1430];
+      [0,1,2].forEach(i=>{ const o=eo(seg(p,.1+i*.22,.4+i*.22)); const cd=g.querySelector(".cd"+i);
+        cd.setAttribute("opacity",o.toFixed(3));
+        cd.setAttribute("transform",`translate(${xs[i]} ${(470+(1-o)*40).toFixed(0)})`); }); }
+  },
+  respond:{
+    build:()=>`${FLOOR}
+      <g class="adult">${person(720,900,4.2,"c0")}</g>
+      ${person(1200,900,3.7,"child",true)}
+      <g class="bubble" transform="translate(1230 430)" opacity="0">
+        <rect x="-20" y="-70" width="230" height="120" rx="30" style="fill:var(--c-white)"/>
+        <path d="M0 42 l-10 46 l52 -38 Z" style="fill:var(--c-white)"/>
+        <line x1="28" y1="-24" x2="176" y2="-24" style="stroke:var(--c-secondary)" stroke-width="11" stroke-linecap="round"/>
+        <line x1="28" y1="6" x2="130" y2="6" style="stroke:var(--c-secondary)" stroke-width="11" stroke-linecap="round" opacity=".6"/>
+      </g>`,
+    anim:(g,p)=>{ const kneel=eo(seg(p,.05,.5)), bub=eo(seg(p,.4,.95));
+      A(g,".adult","transform",`translate(720 ${900+kneel*60}) scale(${(1-kneel*0.14).toFixed(3)}) rotate(${(kneel*7).toFixed(1)})`);
+      const b=g.querySelector(".bubble"); b.setAttribute("opacity",bub.toFixed(3));
+      b.setAttribute("transform",`translate(1230 430) scale(${(0.5+bub*0.5).toFixed(3)})`); }
+  },
+  secret:{
+    build:()=>`<g class="lock" transform="translate(960 470)">
+        <rect x="-90" y="-20" width="180" height="150" rx="28" style="fill:var(--c-white)" opacity=".1"/>
+        <rect x="-90" y="-20" width="180" height="150" rx="28" fill="none" style="stroke:var(--c-white)" stroke-width="16"/>
+        <path d="M-48 -20 V-64 a48 48 0 0 1 96 0 V-20" fill="none" style="stroke:var(--c-white)" stroke-width="16"/>
+        <circle cx="0" cy="46" r="16" style="fill:var(--c-white)"/>
+        <line x1="-120" y1="-96" x2="120" y2="150" style="stroke:var(--c-accent)" stroke-width="18" stroke-linecap="round"/>
+      </g>
+      <g class="sh" transform="translate(780 250)">${shield(0,0,360)}</g>`,
+    anim:(g,p)=>{ const m=eo(seg(p,.45,1));
+      A(g,".lock","opacity",(1-m).toFixed(3));
+      const sh=g.querySelector(".sh"); sh.setAttribute("opacity",m.toFixed(3));
+      A(g,".sh .sh-fill","opacity",m.toFixed(3));
+      A(g,".sh .sh-line","stroke-dashoffset",(320*(1-m)).toFixed(0)); }
+  },
+  record:{
+    build:()=>`<g transform="translate(960 470)">
+      <rect x="-320" y="-240" width="640" height="480" rx="26" style="fill:var(--c-panel)"/>
+      <rect x="-320" y="-240" width="640" height="480" rx="26" fill="none" style="stroke:var(--c-panel-line)" stroke-width="3"/>
+      <line x1="-230" y1="-240" x2="-230" y2="240" style="stroke:var(--c-red)" stroke-opacity=".35" stroke-width="4"/>
+      ${[-180,-130,-80,-30].map(cy=>`<circle cx="-275" cy="${cy}" r="12" fill="none" style="stroke:var(--c-panel-line)" stroke-width="4"/>`).join("")}
+      <text x="-190" y="-140" font-family="var(--font)" font-size="44" font-weight="800" style="fill:var(--c-primary)">3:10pm — he said</text>
+      <rect class="l1" x="0" y="-116" width="440" height="28" rx="14" style="fill:var(--c-secondary)" transform="translate(-190 0) scale(0 1)"/>
+      <rect class="l2" x="0" y="-58" width="360" height="28" rx="14" style="fill:var(--c-secondary)" opacity=".8" transform="translate(-190 0) scale(0 1)"/>
+      <line x1="-275" y1="40" x2="275" y2="40" style="stroke:var(--c-line)" stroke-width="3"/>
+      <g class="op" opacity="0">
+        <text x="-190" y="110" font-family="var(--font)" font-size="30" font-weight="700" style="fill:var(--c-ink-2)">my opinion — kept separate</text>
+        <rect x="-190" y="130" width="300" height="20" rx="10" style="fill:var(--c-line)"/>
+      </g></g>`,
+    anim:(g,p)=>{ const l1=eo(seg(p,.12,.42)), l2=eo(seg(p,.36,.66)), o=eo(seg(p,.7,1));
+      A(g,".l1","transform",`translate(-190 0) scale(${l1.toFixed(3)} 1)`);
+      A(g,".l2","transform",`translate(-190 0) scale(${l2.toFixed(3)} 1)`);
+      A(g,".op","opacity",o.toFixed(3)); }
+  },
+  report:{
+    build:()=>`${FLOOR}
+      <path d="M420 560 Q960 220 1500 560" fill="none" style="stroke:var(--c-accent)" stroke-opacity=".4" stroke-width="4" stroke-dasharray="6 10"/>
+      ${person(420,860,3.6,"c2")}
+      <g transform="translate(420 470)"><rect x="-34" y="-46" width="68" height="104" rx="12" style="fill:var(--c-stage-a)" stroke="#ffffff" stroke-opacity=".2"/><text x="0" y="18" font-size="34" font-weight="800" text-anchor="middle" style="fill:var(--c-accent)">999</text></g>
+      <g class="note" opacity="1"><rect x="-24" y="-30" width="48" height="60" rx="7" style="fill:var(--c-panel)" stroke="#cdd9f5"/><line x1="-13" y1="-13" x2="13" y2="-13" style="stroke:var(--c-secondary)" stroke-width="4"/><line x1="-13" y1="-1" x2="8" y2="-1" style="stroke:var(--c-secondary)" stroke-width="4"/></g>
+      ${person(1500,860,3.8,"c1")}
+      <g class="badge" transform="translate(1452 430)">${shield(0,0,100)}</g>
+      <text x="1500" y="560" font-size="30" font-weight="800" text-anchor="middle" style="fill:var(--c-white)" opacity=".9">your DSL</text>`,
+    anim:(g,p)=>{ const tr=eo(seg(p,.12,.64)), tk=eo(seg(p,.64,1));
+      const nx=420+tr*1080, ny=520-Math.sin(tr*Math.PI)*300;
+      const nt=g.querySelector(".note"); nt.setAttribute("transform",`translate(${nx.toFixed(0)} ${ny.toFixed(0)})`);
+      nt.setAttribute("opacity",(1-seg(tr,.92,1)).toFixed(3));
+      A(g,".badge .sh-fill","opacity",tr.toFixed(3));
+      A(g,".badge .sh-line","stroke-dashoffset",(320*(1-tr)).toFixed(0));
+      A(g,".badge .sh-tick","stroke-dashoffset",(50*(1-tk)).toFixed(0)); }
+  },
+  danger:{
+    build:()=>`<g class="alert pulse" transform="translate(960 430)">
+        <path d="M0 -150 L150 120 H-150 Z" style="fill:var(--c-accent);stroke:var(--c-accent)" fill-opacity=".14" stroke-linejoin="round" stroke-width="16"/>
+        <path d="M0 -150 L150 120 H-150 Z" fill="none" style="stroke:var(--c-accent)" stroke-width="16" stroke-linejoin="round"/>
+        <line x1="0" y1="-56" x2="0" y2="46" style="stroke:var(--c-accent)" stroke-width="20" stroke-linecap="round"/>
+        <circle cx="0" cy="90" r="14" style="fill:var(--c-accent)"/>
+      </g>
+      <g class="phone" transform="translate(960 720)" opacity="0"><rect x="-70" y="-46" width="140" height="92" rx="14" style="fill:var(--c-stage-a)" stroke="#ffffff" stroke-opacity=".2"/><text x="0" y="18" font-size="50" font-weight="800" text-anchor="middle" style="fill:var(--c-accent)">999</text></g>`,
+    anim:(g,p)=>{ A(g,".phone","opacity",eo(seg(p,.2,.6)).toFixed(3)); }
+  },
+  recap:{
+    build:()=>{ const xs=[380,720,1060,1400];
+      return `<line x1="380" y1="420" x2="1400" y2="420" style="stroke:var(--c-white)" stroke-opacity=".3" stroke-width="5"/>
+      ${xs.map((x,i)=>`<circle class="rn${i}" cx="${x}" cy="420" r="22" style="fill:var(--c-good)" opacity="0"/>`).join("")}
+      <g transform="translate(870 560)">${shield(0,0,220)}</g>`; },
+    anim:(g,p)=>{ [0,1,2,3].forEach(i=>A(g,".rn"+i,"opacity",seg(p,.1+i*.12,.3+i*.12).toFixed(3)));
+      const d=eo(seg(p,.6,1)); A(g,".sh-fill","opacity",d.toFixed(3)); A(g,".sh-line","stroke-dashoffset",(320*(1-d)).toFixed(0)); A(g,".sh-tick","stroke-dashoffset",(50*(1-d)).toFixed(0)); }
+  },
+  close:{
+    build:()=>`${rays(960,470,240,320,"ray")}<g transform="translate(770 240)">${shield(0,0,380)}</g>`,
+    anim:(g,p)=>{ const d=eo(seg(p,.08,.7)), gl=Math.sin(clamp01(seg(p,.55,1))*Math.PI);
+      A(g,".sh-fill","opacity",d.toFixed(3)); A(g,".sh-line","stroke-dashoffset",(320*(1-d)).toFixed(0)); A(g,".sh-tick","stroke-dashoffset",(50*(1-d)).toFixed(0));
+      AA(g,".ray",(e)=>e.setAttribute("opacity",(gl*.55).toFixed(3))); }
+  },
+};
+
+/* =====================================================================
+   4) TIMELINE CONTROLLER  (single rAF clock — play / pause / seek)
+   ===================================================================== */
+const $ = s => document.querySelector(s);
+const stage = $("#stage"), scenes = CONTENT.scenes, N = scenes.length;
+let REDUCE = matchMedia("(prefers-reduced-motion: reduce)").matches;
+matchMedia("(prefers-reduced-motion: reduce)").addEventListener?.("change", e=>{REDUCE=e.matches; paint();});
+
+// cumulative end time (ms) per scene
+const cum = []; { let t=0; scenes.forEach(s=>{ t+=s.dur*1000; cum.push(t); }); }
+const TOTAL = cum[cum.length-1];
+
+let elapsed=0, startAt=0, playing=false, rafId=0, cur=-1;
+let autoAdvance=true, speakOn=false, holding=false, finished=false;
+
+// Build every scene group once, hidden until active.
+const groups = scenes.map((s,i)=>{
+  const g = document.createElementNS(NS,"g");
+  g.setAttribute("class","scene"); g.dataset.i=i;
+  const frag = new DOMParser().parseFromString(`<svg xmlns="${NS}">${VIS[s.id].build()}</svg>`,"image/svg+xml").documentElement;
+  while(frag.firstChild) g.appendChild(frag.firstChild);
+  stage.appendChild(g); return g;
+});
+
+function locate(ms){ let i=cum.findIndex(e=>ms<e); if(i<0)i=N-1; const start=i? cum[i-1]:0;
+  return { i, start, p: clamp01((ms-start)/(scenes[i].dur*1000)) }; }
+
+/* Read-aloud (optional, offline, degrades silently).
+   When it's ON, the on-screen text follows the VOICE, not the clock: word-boundary
+   events tell us exactly how far the narration has spoken (`speechChar`), so the
+   key words pop in sync. Browsers that don't fire boundaries fall back to a
+   speaking-rate estimate. `ended` lets the film wait for a line to finish. */
+const SPEAK_RATE = 1.06, CHARS_PER_SEC = 14.5; // ~ speaking rate for the fallback estimate
+const MIN_DWELL = 450;                          // ms a scene must show before the voice may advance it
+let voice=null, speechChar=0, speechLen=1, speakStart=0, boundaryFired=false, lastKey=null;
+const ended = new Set();
+if(window.speechSynthesis){ const pick=()=>{ const v=speechSynthesis.getVoices();
+  voice = v.find(x=>x.name==="Google UK English Female") || v.find(x=>/en-GB/i.test(x.lang)) || v[0] || null; };
+  pick(); speechSynthesis.onvoiceschanged=pick; }
+function say(i){
+  if(!speakOn || !window.speechSynthesis){ ended.add(i); return; }
+  try{
+    speechSynthesis.cancel();
+    const text = scenes[i].caption;
+    ended.delete(i); speechChar=0; speechLen=Math.max(1,text.length); boundaryFired=false; speakStart=performance.now(); lastKey=null;
+    const u=new SpeechSynthesisUtterance(text); if(voice)u.voice=voice; u.lang="en-GB"; u.rate=SPEAK_RATE;
+    u.onboundary=e=>{ if(e.charIndex!=null){ boundaryFired=true; speechChar=e.charIndex + (e.charLength||0); } };
+    u.onend=()=>{ ended.add(i); speechChar=speechLen; };
+    u.onerror=()=>{ ended.add(i); };
+    speechSynthesis.speak(u);
+  }catch(e){ ended.add(i); }
+}
+// the latest key word reached by `charPos` (a char index into the narration).
+// Defaults to the first key so a word shows from the very start (no blank gap).
+function keyAt(sc, charPos){ const keys=sc.keys||[]; if(!keys.length) return "";
+  let shown=keys[0]; for(const k of keys){ const at=sc.caption.indexOf(k); if(at>=0 && at<=charPos) shown=k; } return shown; }
+
+/* paint the current frame from `elapsed` (no scheduling) */
+function paint(){
+  const {i,p} = locate(elapsed);
+  // activate the right scene group
+  if(i!==cur){
+    groups.forEach((g,k)=>g.classList.toggle("active",k===i));
+    cur=i; lastKey=null; onSceneEnter(i);
+  }
+  // drive the active scene's animation
+  VIS[scenes[i].id].anim(groups[i], REDUCE?1:p);
+  // NO running caption in any mode — only the key words pop up.
+  // Audio ON: timed to the voice (word boundaries, or a rate estimate).
+  // Audio OFF: timed to the scene clock. Either way we track how far through the
+  // narration we are (`charPos`) and show the latest key word reached.
+  const kin=$("#kinetic"), kt=$("#kineticText"), cap=$("#caption"), sc=scenes[i];
+  cap.style.display="none";
+  let charPos;
+  if(speakOn){
+    if(!boundaryFired){ const est=(speechLen/CHARS_PER_SEC/SPEAK_RATE)*1000;
+      speechChar = Math.min(speechLen, (performance.now()-speakStart)/Math.max(1,est)*speechLen); }
+    charPos = speechChar;
+  } else {
+    charPos = (REDUCE?1:p) * sc.caption.length;
+  }
+  const key = keyAt(sc, charPos);
+  kin.className = "kinetic"+(sc.strong?" strong":"")+(key?" show":"");
+  if(key!==lastKey){ lastKey=key; kt.textContent=key;                 // pop each new key word
+    kt.style.animation="none"; void kt.offsetWidth; kt.style.animation = key && !REDUCE ? "aos-pop .42s var(--ease) both" : ""; }
+  // transport UI
+  const frac = elapsed/TOTAL;
+  $("#fill").style.width = (frac*100)+"%";
+  $("#time").textContent = fmt(elapsed)+" / "+fmt(TOTAL);
+  const track=$("#track"); track.setAttribute("aria-valuenow", Math.round(frac*100));
+  $("#pct").textContent = Math.round(frac*100)+"%";
+  save();
+}
+function onSceneEnter(i){ if(speakOn && playing) say(i); }
+
+function frame(now){
+  if(!playing) return;
+  elapsed = now - startAt;
+  let {i,p,start} = locate(elapsed);
+  // When audio is on the VOICE paces the film: hold at the scene edge until the
+  // line has finished (so it's never cut off), and advance early if it finishes
+  // ahead of the clock — this keeps the pop-up words locked to the narration.
+  if(speakOn){
+    const endMs=cum[i];
+    if(ended.has(i)){ if(elapsed-start>MIN_DWELL && elapsed<endMs){ elapsed=endMs; startAt=now-elapsed; ({i,p,start}=locate(elapsed)); } }
+    else if(elapsed>=endMs){ elapsed=endMs-1; startAt=now-elapsed; ({i,p,start}=locate(elapsed)); }
+  }
+  // click-to-advance: stop at each scene end until the learner continues
+  if(!autoAdvance && !speakOn && p>=1 && i<N-1){ elapsed=cum[i]-1; startAt=now-elapsed; playing=false; holding=true; paint(); setPlayBtn(); return; }
+  if(elapsed>=TOTAL){ elapsed=TOTAL; playing=false; paint(); setPlayBtn(); onFinish(); return; }
+  paint();
+  rafId=requestAnimationFrame(frame);
+}
+function play(){ if(finished){ restart(); return; } $("#poster").hidden=true; holding=false;
+  playing=true; startAt=performance.now()-elapsed; setPlayBtn();
+  if(speakOn && cur>=0){ ended.delete(cur); say(cur); }   // (re)start narration for the current scene
+  cancelAnimationFrame(rafId); rafId=requestAnimationFrame(frame); }
+function pause(){ playing=false; cancelAnimationFrame(rafId); try{speechSynthesis&&speechSynthesis.cancel();}catch(e){} setPlayBtn(); }
+function toggle(){ playing?pause():play(); }
+function seekMs(ms){ elapsed=Math.max(0,Math.min(TOTAL,ms)); startAt=performance.now()-elapsed;
+  try{speechSynthesis&&speechSynthesis.cancel();}catch(e){} finished=false; $("#quiz").hidden=true;
+  lastKey=null; speechChar=0; ended.clear();   // reset voice state so pacing re-speaks from here
+  paint();
+  // reaching the very end (by scrub or play) opens the knowledge check
+  if(elapsed>=TOTAL){ playing=false; cancelAnimationFrame(rafId); setPlayBtn(); onFinish(); } }
+function gotoScene(i){ i=Math.max(0,Math.min(N-1,i)); seekMs(i? cum[i-1]:0); if(!playing&&!holding){} }
+function nextScene(){ const {i}=locate(elapsed); if(holding){ holding=false; play(); } else gotoScene(i+1); if(playing){play();} }
+function prevScene(){ const {i}=locate(elapsed); gotoScene(i-1); if(playing){play();} }
+function restart(){ finished=false; $("#quiz").hidden=true; $("#certWrap").hidden=true; seekMs(0); play(); }
+function setPlayBtn(){ const b=$("#play"); b.textContent=playing?"❚❚":"▶"; b.setAttribute("aria-label",playing?"Pause":"Play"); }
+function fmt(ms){ const s=Math.round(ms/1000); return Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+
+/* =====================================================================
+   5) KNOWLEDGE CHECK + CERTIFICATE
+   ===================================================================== */
+function onFinish(){ finished=true; renderQuiz(); }
+function renderQuiz(){
+  const wrap=$("#quiz"); wrap.hidden=false;
+  let answered=0, correct=0; const attempts=CONTENT.quiz.map(()=>0); const done=CONTENT.quiz.map(()=>false);
+  wrap.innerHTML = `<h2>Quick check</h2><p class="lead">Three questions. You need ${CONTENT.pass}% to pass.</p>`
+    + CONTENT.quiz.map((q,qi)=>`<div class="q" data-q="${qi}"><div class="prompt">${qi+1}. ${q.q}</div>
+        ${q.opts.map((o,oi)=>`<button class="opt" data-q="${qi}" data-o="${oi}">${o}</button>`).join("")}
+        <div class="fb" data-fb="${qi}" role="status"></div></div>`).join("")
+    + `<div class="row" id="quizFoot"></div>`;
+  wrap.querySelectorAll(".opt").forEach(btn=>btn.addEventListener("click",()=>{
+    const qi=+btn.dataset.q, oi=+btn.dataset.o, q=CONTENT.quiz[qi];
+    if(done[qi]) return;
+    const fb=wrap.querySelector(`[data-fb="${qi}"]`);
+    if(oi===q.a){ btn.classList.add("correct"); fb.textContent=q.ok; fb.className="fb ok";
+      done[qi]=true; answered++; correct++; lockQ(qi);
+    } else {
+      attempts[qi]++; btn.classList.add("wrong"); btn.disabled=true;
+      fb.textContent=q.fb[oi]||"Not quite — try again."; fb.className="fb no";
+      if(attempts[qi]>=2){ // reveal after 2 attempts
+        wrap.querySelector(`.opt[data-q="${qi}"][data-o="${q.a}"]`).classList.add("correct");
+        fb.textContent="The right answer is highlighted. "+q.ok; done[qi]=true; answered++; lockQ(qi);
+      }
+    }
+    if(answered===CONTENT.quiz.length) showScore(correct);
+  }));
+  function lockQ(qi){ wrap.querySelectorAll(`.opt[data-q="${qi}"]`).forEach(b=>b.disabled=true); }
+  function showScore(correct){
+    const pctScore=Math.round(correct/CONTENT.quiz.length*100), passed=pctScore>=CONTENT.pass;
+    const foot=wrap.querySelector("#quizFoot");
+    foot.innerHTML=`<div class="score">${pctScore}% — ${passed?"Passed ✓":"Not yet"}</div>`;
+    const retry=document.createElement("button"); retry.className="ctrl"; retry.textContent="↺ Retry lesson";
+    retry.addEventListener("click",restart); foot.appendChild(retry);
+    if(passed){ savePass(); const c=document.createElement("button"); c.className="ctrl primary"; c.textContent="Get certificate";
+      c.addEventListener("click",renderCert); foot.appendChild(c); }
+  }
+}
+function renderCert(){
+  $("#quiz").hidden=true; const w=$("#certWrap"); w.hidden=false;
+  const today=new Date().toLocaleDateString("en-GB",{day:"numeric",month:"long",year:"numeric"});
+  w.innerHTML=`<div class="cert" id="cert"><div class="badge">🛡️</div>
+    <h3>Certificate of completion</h3>
+    <p>This certifies that</p>
+    <input id="cn" type="text" placeholder="Type your name" aria-label="Your name" value="">
+    <p>has completed</p><div class="name">${CONTENT.certTitle}</div>
+    <p>on ${today}</p></div>
+    <div class="row"><button class="ctrl primary" id="printCert">🖨️ Print / save PDF</button>
+    <button class="ctrl" id="backLesson">‹ Back to lesson</button></div>`;
+  w.querySelector("#printCert").addEventListener("click",()=>window.print());
+  w.querySelector("#backLesson").addEventListener("click",()=>{ w.hidden=true; seekMs(0); });
+  const cn=w.querySelector("#cn"); cn.addEventListener("input",()=>{ cn.setAttribute("value",cn.value); });
+}
+
+/* =====================================================================
+   6) PERSISTENCE (localStorage, optional — lesson works without it)
+   ===================================================================== */
+const KEY="aos.course."+CONTENT.id;
+function save(){ try{ const {i}=locate(elapsed);
+  const prev=JSON.parse(localStorage.getItem(KEY)||"{}");
+  localStorage.setItem(KEY, JSON.stringify({furthest:Math.max(i,prev.furthest||0), passed:prev.passed||false})); }catch(e){} }
+function savePass(){ try{ const prev=JSON.parse(localStorage.getItem(KEY)||"{}"); prev.passed=true;
+  localStorage.setItem(KEY,JSON.stringify(prev)); }catch(e){} }
+function loadProgress(){ try{ return JSON.parse(localStorage.getItem(KEY)||"{}"); }catch(e){ return {}; } }
+
+/* =====================================================================
+   7) WIRING  (buttons, keyboard, progress bar)
+   ===================================================================== */
+$("#lessonTitle").textContent=CONTENT.title;
+$("#lessonSub").textContent=CONTENT.subtitle;
+$("#posterLbl").textContent=CONTENT.title+" · "+fmt(TOTAL);
+// scene ticks on the track
+{ const track=$("#track"); cum.slice(0,-1).forEach(t=>{ const d=document.createElement("div"); d.className="tick";
+  d.style.left=(t/TOTAL*100)+"%"; track.appendChild(d); }); }
+
+$("#poster").addEventListener("click",play);
+$("#play").addEventListener("click",toggle);
+$("#next").addEventListener("click",nextScene);
+$("#prev").addEventListener("click",prevScene);
+$("#restart").addEventListener("click",restart);
+$("#mode").addEventListener("click",()=>{ autoAdvance=!autoAdvance; const b=$("#mode");
+  b.setAttribute("aria-pressed",String(autoAdvance)); b.textContent=autoAdvance?"▶ Auto":"👆 Click";
+  b.setAttribute("aria-label",autoAdvance?"Autoplay on":"Click to advance"); });
+$("#speak").addEventListener("click",()=>{ speakOn=!speakOn; const b=$("#speak");
+  b.setAttribute("aria-pressed",String(speakOn)); b.setAttribute("aria-label",speakOn?"Read aloud on — key words pop up":"Read aloud off — full captions");
+  lastKey=null; ended.clear();
+  if(!speakOn){ try{speechSynthesis&&speechSynthesis.cancel();}catch(e){} }
+  else if(cur>=0 && playing){ say(cur); }   // begin narrating the current scene
+  paint(); });
+
+// clickable / keyboard timeline
+function trackToMs(clientX){ const r=$("#track").getBoundingClientRect(); return clamp01((clientX-r.left)/r.width)*TOTAL; }
+$("#track").addEventListener("click",e=>seekMs(trackToMs(e.clientX)));
+$("#track").addEventListener("keydown",e=>{
+  if(e.key==="ArrowRight"){e.preventDefault();seekMs(elapsed+3000);} else if(e.key==="ArrowLeft"){e.preventDefault();seekMs(elapsed-3000);} });
+
+// global keyboard (when focus is inside the player)
+$("#stageWrap").addEventListener("keydown",e=>{
+  if(e.key===" "||e.key==="k"){ e.preventDefault(); toggle(); }
+  else if(e.key==="ArrowRight"){ e.preventDefault(); nextScene(); }
+  else if(e.key==="ArrowLeft"){ e.preventDefault(); prevScene(); }
+});
+
+// pause when tab hidden or player scrolled off-screen (perf + a11y)
+document.addEventListener("visibilitychange",()=>{ if(document.hidden&&playing) pause(); });
+if("IntersectionObserver" in window){ new IntersectionObserver(es=>{ if(es[0]&&es[0].intersectionRatio<0.25&&playing) pause(); },{threshold:[0,.25,1]}).observe($("#stageWrap")); }
+
+// first paint (poster covers it); restore progress position (paused)
+{ const pr=loadProgress(); if(pr.furthest){ elapsed = pr.furthest? (cum[pr.furthest-1]||0) : 0; } paint(); setPlayBtn(); }
+</script>
+</body>
+</html>

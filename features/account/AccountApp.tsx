@@ -51,6 +51,9 @@ export function AccountApp() {
   const [ok, setOk] = useState<string | null>(null);
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const [pwMsg, setPwMsg] = useState<{ err?: string; ok?: string }>({});
+  // The registration card is editable right here (not only in Setup).
+  const [editReg, setEditReg] = useState(false);
+  const [rf, setRf] = useState({ businessName: "", providerName: "", activityKinds: "", address: "", postcode: "", email: "", phone: "", vatNumber: "" });
 
   const load = useCallback(() => {
     apiGet<Profile>("/api/account").then((prof) => {
@@ -82,6 +85,33 @@ export function AccountApp() {
     setError(null); setOk(null);
     try { await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } }); setOk("Logo removed."); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t remove the logo"); }
+  }
+
+  function startEditReg() {
+    const bb = settings.billing ?? {};
+    setRf({
+      businessName: bb.businessName ?? "",
+      providerName: settings.providerName ?? "",
+      activityKinds: (settings.activityKinds ?? []).join(", "),
+      address: bb.address ?? "",
+      postcode: settings.postcode ?? "",
+      email: bb.email ?? "",
+      phone: bb.phone ?? "",
+      vatNumber: bb.vatNumber ?? "",
+    });
+    setEditReg(true);
+  }
+  async function saveReg() {
+    setError(null); setOk(null);
+    try {
+      await save({ settings: { ...settings,
+        providerName: rf.providerName.trim() || rf.businessName.trim(),
+        postcode: rf.postcode.trim(),
+        activityKinds: rf.activityKinds.split(",").map((s) => s.trim()).filter(Boolean),
+        billing: { ...(settings.billing ?? {}), businessName: rf.businessName.trim(), address: rf.address.trim(), email: rf.email.trim(), phone: rf.phone.trim(), vatNumber: rf.vatNumber.trim() },
+      } });
+      setEditReg(false); setOk("Registration details saved.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); }
   }
 
   async function saveProfile() {
@@ -141,9 +171,11 @@ export function AccountApp() {
           <Card className="mb-3 p-4">
             <div className="mb-1 flex items-center justify-between gap-2">
               <div className="text-[13.5px] font-extrabold">From your registration</div>
-              <a href={`/${p.role}/setup`} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Edit in Setup →</a>
+              {editReg
+                ? <div className="flex items-center gap-3"><button type="button" onClick={() => setEditReg(false)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:underline">Cancel</button><button type="button" onClick={saveReg} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Save</button></div>
+                : <button type="button" onClick={startEditReg} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Edit details →</button>}
             </div>
-            <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">The details you gave when you signed up. Manage them in Setup.</p>
+            <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">The details you gave when you signed up. Edit them here, or set them up in full in <a href={`/${p.role}/setup`} className="font-bold text-[#1d3a8f] hover:underline">Setup</a>.</p>
 
             {/* Logo — editable right here (not only in Setup), since it's the one
                 thing every customer email + page shows. */}
@@ -162,14 +194,27 @@ export function AccountApp() {
               <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Shown on your customer emails, booking pages and PDFs. PNG, JPG, SVG, WebP, GIF — up to 1MB, resized automatically.</div>
             </div>
 
-            <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
-              {reg.map(([k, v]) => (
-                <div key={k} className="flex flex-col">
-                  <dt className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{k}</dt>
-                  <dd className="text-[13px] font-semibold text-[var(--ink)] break-words">{v}</dd>
-                </div>
-              ))}
-            </dl>
+            {editReg ? (
+              <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
+                <div><FieldLabel>Business name</FieldLabel><Input value={rf.businessName} onChange={(e) => setRf((s) => ({ ...s, businessName: e.target.value }))} className="w-full" /></div>
+                <div><FieldLabel>Shown to parents as</FieldLabel><Input value={rf.providerName} onChange={(e) => setRf((s) => ({ ...s, providerName: e.target.value }))} className="w-full" placeholder="Defaults to your business name" /></div>
+                <div><FieldLabel>What you run</FieldLabel><Input value={rf.activityKinds} onChange={(e) => setRf((s) => ({ ...s, activityKinds: e.target.value }))} className="w-full" placeholder="e.g. Holiday camps, After-school clubs" /></div>
+                <div><FieldLabel>Postcode</FieldLabel><Input value={rf.postcode} onChange={(e) => setRf((s) => ({ ...s, postcode: e.target.value }))} className="w-full" placeholder="e.g. MK1 1AA" /></div>
+                <div className="sm:col-span-2"><FieldLabel>Based (address)</FieldLabel><Input value={rf.address} onChange={(e) => setRf((s) => ({ ...s, address: e.target.value }))} className="w-full" placeholder="Street, town" /></div>
+                <div><FieldLabel>Contact email</FieldLabel><Input value={rf.email} onChange={(e) => setRf((s) => ({ ...s, email: e.target.value }))} className="w-full" /></div>
+                <div><FieldLabel>Contact phone</FieldLabel><Input value={rf.phone} onChange={(e) => setRf((s) => ({ ...s, phone: e.target.value }))} className="w-full" /></div>
+                <div><FieldLabel>VAT number</FieldLabel><Input value={rf.vatNumber} onChange={(e) => setRf((s) => ({ ...s, vatNumber: e.target.value }))} className="w-full" placeholder="If registered" /></div>
+              </div>
+            ) : (
+              <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
+                {reg.map(([k, v]) => (
+                  <div key={k} className="flex flex-col">
+                    <dt className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{k}</dt>
+                    <dd className="text-[13px] font-semibold text-[var(--ink)] break-words">{v}</dd>
+                  </div>
+                ))}
+              </dl>
+            )}
           </Card>
         )}
 

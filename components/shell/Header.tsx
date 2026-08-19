@@ -83,14 +83,17 @@ export function Header({ portal }: { portal: PortalKey }) {
           // Bookings promoted to the top bar (like the customer's My bookings),
           // out of the sidebar. Only where the portal has a bookings view.
           ...(findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: "Bookings", icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Bookings — nothing needs attention" }] : []),
+          // Staff get Announcements + Messages promoted to the top bar (out of the sidebar).
+          ...(portal === "staff" && findNavItem(portal, "announcements") ? [{ view: "announcements", href: `/${portal}/announcements`, label: "Announcements", icon: MEGAPHONE, wide: false, badge: 0, accent: "#c2410c", accentLight: "#f59e0b", tip: "Announcements from your provider" }] : []),
+          ...(portal === "staff" && findNavItem(portal, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : "Messages" }] : []),
           // Families promoted to the top bar — quick access to the family list.
-          ...(findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: "Families", icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: "Families — leads and customers" }] : []),
+          ...(findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: "Families", icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: "Families" }] : []),
         ];
 
   // The green "Communication" top-bar tab: a dropdown gathering the comms
   // views (Newsfeed, Messages, Email) so they're out of the sidebar.
   const commItems: { view: string; label: string; icon: ReactNode; href: string; badge: number }[] =
-    portal === "custdash" ? [] : ([
+    portal === "custdash" || portal === "staff" ? [] : ([
       findNavItem(portal, "newsfeed") && !featureOff(features, "newsfeed") ? { view: "newsfeed", label: "Newsfeed", icon: MEGAPHONE, href: `/${portal}/newsfeed`, badge: 0 } : null,
       findNavItem(portal, "messages") && !featureOff(features, "messages") ? { view: "messages", label: "Messages", icon: MAIL, href: `/${portal}/messages`, badge: unread } : null,
       findNavItem(portal, "email") && !featureOff(features, "email") ? { view: "email", label: "Email", icon: MAIL, href: `/${portal}/email`, badge: 0 } : null,

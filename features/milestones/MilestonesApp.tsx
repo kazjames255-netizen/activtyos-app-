@@ -17,6 +17,13 @@ import { loadTemplate, saveTemplate, resetTemplate, loadProgress, saveProgress, 
 import { DEMO_STAFF } from "@/features/learning/credentials";
 import { useSettings } from "@/lib/settings";
 import { NAV_GROUPS } from "@/lib/nav/config";
+import { CreateModal, type LinkOpts } from "@/features/tasks/TasksApp";
+
+// the New-task modal (from the Task Manager) needs a link-options object; in the
+// milestones context we just offer the franchise pages, no bookings/children.
+const TASK_LINKOPTS: LinkOpts = { portal: "franchise", bookOpts: [], childOpts: [], parentOpts: [], listings: [], locations: [], cats: [] };
+// map a Task-Manager status to a milestone action status
+const toActStatus = (s?: string): ActStatus => (s === "done" ? "done" : s === "prog" ? "prog" : "todo");
 
 // every franchise page + sub-area (incl. settings) for the deep-link picker
 const LINK_PAGES: { label: string; href: string }[] = [
@@ -160,7 +167,12 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
   const [editAction, setEditAction] = useState<{ p: MPhase; s: MStep; mode: "meta" | "schedule" } | null>(null);
   const setStep = (id: string, patch: Partial<StepState>) => onProg({ ...prog, steps: { ...prog.steps, [id]: { ...(prog.steps[id] || { pct: 0 }), ...patch } } });
   const setAct = (stepId: string, actId: string, patch: Partial<ActState>) => { const cur = prog.steps[stepId] || { pct: 0 }; onProg({ ...prog, steps: { ...prog.steps, [stepId]: { ...cur, actions: { ...(cur.actions || {}), [actId]: { ...(cur.actions?.[actId] || {}), ...patch } } } } }); };
-  const addTask = (step: MStep, title: string) => onTemplate?.(phases.map((p) => ({ ...p, steps: p.steps.map((x) => x.id === step.id ? { ...x, actions: [...(x.actions || []), { id: newId(), title }] } : x) })));
+  const addTask = (step: MStep, f: NewTaskFields) => {
+    const id = newId();
+    onTemplate?.(phases.map((p) => ({ ...p, steps: p.steps.map((x) => x.id === step.id ? { ...x, actions: [...(x.actions || []), { id, title: f.title }] } : x) })));
+    setAct(step.id, id, { status: f.status || "todo", assignee: f.assignee || undefined, due: f.due || undefined, priority: f.priority || "med" });
+    apiPost("/api/tasks", { t: f.title, who: f.assignee || undefined, due: f.due || null, prio: f.priority || "med", status: "todo", cat: "Milestones" }).catch(() => {});
+  };
   const pushAction = async (step: MStep, action: MAction) => {
     const stA = prog.steps[step.id]?.actions?.[action.id] || {};
     try {
@@ -286,7 +298,7 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
         return <ActionEditor phase={p} step={s} state={prog.steps[s.id]}
           onMeta={meta ? (patch) => setStepMeta(p.id, s.id, patch) : undefined}
           onSchedule={meta ? undefined : (patch) => setStep(s.id, patch)}
-          onActState={meta ? undefined : (aid, patch) => setAct(s.id, aid, patch)}
+          onActState={(aid, patch) => setAct(s.id, aid, patch)}
           onPush={meta ? undefined : (a) => pushAction(s, a)}
           onDelete={canEdit ? () => { delStep(p.id, s.id); setEditAction(null); } : undefined}
           onClose={() => setEditAction(null)} />;
@@ -297,7 +309,8 @@ function Roadmap({ phases, prog, onProg, onNewSeason, editable = false, onTempla
 
 // ── Slides — one milestone at a time ─────────────────────────────────────────
 type Filter = "all" | "mine" | "overdue" | "unassigned";
-interface SlideCbs { onEditAction: (p: MPhase, s: MStep) => void; onEditPhase: (p: MPhase) => void; onDeletePhase: (p: MPhase) => void; onAddAction: (p: MPhase) => void; onAddTask: (step: MStep, title: string) => void; onSchedule: (stepId: string, patch: Partial<StepState>) => void; onActState: (stepId: string, actId: string, patch: Partial<ActState>) => void; onPush: (step: MStep, a: MAction) => void }
+interface NewTaskFields { title: string; assignee?: string; due?: string; status?: ActStatus; priority?: ActPrio }
+interface SlideCbs { onEditAction: (p: MPhase, s: MStep) => void; onEditPhase: (p: MPhase) => void; onDeletePhase: (p: MPhase) => void; onAddAction: (p: MPhase) => void; onAddTask: (step: MStep, fields: NewTaskFields) => void; onSchedule: (stepId: string, patch: Partial<StepState>) => void; onActState: (stepId: string, actId: string, patch: Partial<ActState>) => void; onPush: (step: MStep, a: MAction) => void }
 
 function Slides({ phases, prog, idx, setIdx, editable, canEdit, me, onAddPhase, ...cbs }: { phases: MPhase[]; prog: MProgress; idx: number; setIdx: (i: number) => void; editable: boolean; canEdit: boolean; me: string; provider: string; onAddPhase: () => void } & SlideCbs) {
   const n = phases.length; const cur = Math.min(idx, Math.max(n - 1, 0)); const p = phases[cur];
@@ -352,7 +365,7 @@ function Slides({ phases, prog, idx, setIdx, editable, canEdit, me, onAddPhase, 
 
 function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAction, onEditPhase, onDeletePhase, onAddAction, onAddTask, onSchedule, onActState, onPush, onPrev, onNext, onJump }: { phase: MPhase; prog: MProgress; cur: number; n: number; editable: boolean; canEdit: boolean; me: string; filter: Filter; onPrev: () => void; onNext: () => void; onJump: (i: number) => void } & SlideCbs) {
   const [confirmDel, setConfirmDel] = useState(false);
-  const [actFilter, setActFilter] = useState(""); const [actSort, setActSort] = useState<"order" | "date">("order"); const [newTask, setNewTask] = useState("");
+  const [actFilter, setActFilter] = useState(""); const [actSort, setActSort] = useState<"order" | "date">("order"); const [addFor, setAddFor] = useState<MStep | null>(null);
   const tone = rampColor(cur, n); const gGrad = rampGrad(cur, n); const gBar = `linear-gradient(90deg, ${tone}, ${tone}cc)`; // slide takes its milestone's traffic-light colour
   const win = phaseWindow(p, prog); const pc = phasePct(p, prog); const done = phaseComplete(p, prog);
   const [openStep, setOpenStep] = useState<string | null>(null);
@@ -471,7 +484,7 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
                       <div className="mt-1.5 text-[10px] text-[var(--ink-3)]">Feeds this milestone’s completion — each main action is an equal share of {pc}% overall.</div>
                     </div>
                   )}
-                  {canEdit && <div className="mt-2 flex gap-2"><Input value={newTask} onChange={(e) => setNewTask(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && newTask.trim()) { onAddTask(s, newTask.trim()); setNewTask(""); } }} placeholder="Add a task inside this action…" className="flex-1 text-[11.5px]" /><Button onClick={() => { if (newTask.trim()) { onAddTask(s, newTask.trim()); setNewTask(""); } }}>＋ Add task</Button></div>}
+                  {canEdit && <button type="button" onClick={() => setAddFor(s)} className="mt-2 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">＋ Add task</button>}
                 </div>
               )}
             </div>
@@ -486,6 +499,7 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
       <div className="flex gap-1">{Array.from({ length: n }).map((_, i) => <button key={i} type="button" onClick={() => onJump(i)} className="h-2 rounded-full transition-all" style={{ width: i === cur ? 18 : 8, background: i === cur ? tone : "var(--line)" }} />)}</div>
       <Button variant="primary" onClick={onNext} disabled={cur === n - 1}>Next →</Button>
     </div>
+    {addFor && <CreateModal noAssignee={false} team={STAFF} opts={TASK_LINKOPTS} onClose={() => setAddFor(null)} onCreate={(f) => { onAddTask(addFor, { title: (f.t || "New task").trim(), assignee: f.who, due: f.due || undefined, status: toActStatus(f.status), priority: (f.prio as ActPrio) || "med" }); setAddFor(null); }} />}
   </>);
 }
 
@@ -531,9 +545,19 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPu
   const tone = WHEN_TONE[phase.when];
   const start = state?.start || ""; const end = state?.end || ""; const pct = state?.pct ?? 0;
   const links = step.links || []; const actions = step.actions || [];
-  const doneCt = actions.filter((a) => state?.actions?.[a.id]?.done).length;
+  const doneCt = actions.filter((a) => actStatus(state?.actions?.[a.id]) === "done").length;
   const derived = actions.length ? Math.round((doneCt / actions.length) * 100) : pct;
-  return (
+  const [addOpen, setAddOpen] = useState(false);
+  // adds a task to this main action AND creates the matching real task in the Task Manager
+  const createTask = (f: { t?: string; who?: string; prio?: string; due?: string | null; status?: string }) => {
+    const id = newId();
+    onMeta?.({ actions: [...actions, { id, title: (f.t || "New task").trim() }] });
+    onActState?.(id, { status: toActStatus(f.status), assignee: f.who || undefined, due: f.due || undefined, priority: (f.prio as ActPrio) || "med" });
+    apiPost("/api/tasks", { status: "todo", prio: "med", cat: "Milestones", ...f }).catch(() => {});
+    setAddOpen(false);
+  };
+  return (<>
+    {addOpen && <CreateModal noAssignee={false} team={STAFF} opts={TASK_LINKOPTS} onClose={() => setAddOpen(false)} onCreate={(f) => createTask(f)} />}
     <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex items-center gap-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-white" style={{ background: grad(phase.when) }}>{phase.title}</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
@@ -557,7 +581,7 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPu
             <div className="space-y-1">{actions.map((a, ai) => (
               <div key={a.id} className="flex items-center gap-1.5"><span className="text-[var(--ink-3)]">•</span><Input value={a.title} onChange={(e) => onMeta({ actions: actions.map((x, k) => k === ai ? { ...x, title: e.target.value } : x) })} className="flex-1 text-[12px]" /><button type="button" onClick={() => onMeta({ actions: actions.filter((_, k) => k !== ai) })} className="px-1 text-[14px] text-[var(--ink-3)] hover:text-[#c0392b]">×</button></div>
             ))}</div>
-            <button type="button" onClick={() => onMeta({ actions: [...actions, { id: newId(), title: "New task" }] })} className="mt-1 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add task</button>
+            <button type="button" onClick={() => setAddOpen(true)} className="mt-1 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">+ Add task</button>
           </div>
         </>) : <h3 className="text-[15px] font-extrabold text-[var(--ink)]">{step.title}</h3>}
 
@@ -603,7 +627,7 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPu
         </div>
       </div>
     </div>
-  );
+  </>);
 }
 
 function NewSeason({ current, onSave, onClose }: { current: string; onSave: (name: string) => void; onClose: () => void }) {

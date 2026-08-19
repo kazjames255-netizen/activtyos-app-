@@ -20,6 +20,8 @@ interface DayAvail { on: boolean; from: string; to: string }
 interface Availability { days: Record<DayKey, DayAvail>; note: string; submittedAt: string | null }
 
 const KEY = "aos.myavailability.v1";
+// Light fill + crisp inset outline so inputs clearly read as fields on white.
+const FIELD_STYLE = { backgroundColor: "#f5f3fb", boxShadow: "inset 0 0 0 1.5px #c5bfd6" } as const;
 const blankDay = (): DayAvail => ({ on: false, from: "09:00", to: "17:00" });
 const blank = (): Availability => ({ days: Object.fromEntries(DAYS.map(([k]) => [k, blankDay()])) as Record<DayKey, DayAvail>, note: "", submittedAt: null });
 const load = (): Availability => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.days ? v : blank(); } catch { return blank(); } };
@@ -69,9 +71,9 @@ export function AvailabilityApp() {
                 <span className="w-[92px] flex-none text-[13.5px] font-extrabold text-[var(--ink)]">{label}</span>
                 {day.on ? (
                   <div className="flex items-center gap-2 text-[12.5px] text-[var(--ink-2)]">
-                    <Input type="time" value={day.from} onChange={(e) => setDay(k, { from: e.target.value })} className="w-[112px]" />
+                    <Input type="time" value={day.from} onChange={(e) => setDay(k, { from: e.target.value })} className="w-[112px]" style={FIELD_STYLE} />
                     <span className="text-[var(--ink-3)]">to</span>
-                    <Input type="time" value={day.to} onChange={(e) => setDay(k, { to: e.target.value })} className="w-[112px]" />
+                    <Input type="time" value={day.to} onChange={(e) => setDay(k, { to: e.target.value })} className="w-[112px]" style={FIELD_STYLE} />
                   </div>
                 ) : (
                   <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">Not available</span>

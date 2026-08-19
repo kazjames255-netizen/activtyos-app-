@@ -20,9 +20,29 @@ const SEED: Record<string, [number, number, string][]> = {
   "Dan Reed": [[0, 100, "2026-02-14"], [1, 100, "2026-02-14"], [2, 97, "2026-04-01"], [3, 90, "2026-05-16"], [9, 85, "2026-07-22"]],
 };
 
+// Live completions a staff member has actually done in the app (demo store; real
+// per-user completion + scores are Amir's). Merged with the seed so the manager
+// oversight (CredentialsApp) sees what staff complete in real time.
+const LIVE_KEY = "aos.learn.completions.v1";
+type LiveStore = Record<string, CourseDone[]>;
+function loadLive(): LiveStore { if (typeof window === "undefined") return {}; try { const v = JSON.parse(localStorage.getItem(LIVE_KEY) || "{}"); return v && typeof v === "object" ? v : {}; } catch { return {}; } }
+
+export function recordCompletion(staffName: string, done: CourseDone) {
+  if (typeof window === "undefined" || !staffName) return;
+  try {
+    const all = loadLive(); const list = all[staffName] ? [...all[staffName]] : [];
+    const i = list.findIndex((d) => d.courseId === done.courseId);
+    if (i >= 0) { if (done.score >= list[i].score) list[i] = done; } else list.push(done);
+    all[staffName] = list; localStorage.setItem(LIVE_KEY, JSON.stringify(all));
+  } catch { /* ignore */ }
+}
+
 export function completionsFor(staffName: string): CourseDone[] {
-  const rows = SEED[staffName] ?? [];
-  return rows.map(([i, score, date]) => { const c = SEED_LIBRARY[i]; return c ? { courseId: c.id, title: c.title, score, date } : null; }).filter(Boolean) as CourseDone[];
+  const seed = (SEED[staffName] ?? []).map(([i, score, date]) => { const c = SEED_LIBRARY[i]; return c ? { courseId: c.id, title: c.title, score, date } : null; }).filter(Boolean) as CourseDone[];
+  const map = new Map<string, CourseDone>();
+  for (const d of seed) map.set(d.courseId, d);
+  for (const d of loadLive()[staffName] ?? []) map.set(d.courseId, d); // live wins on the same course
+  return [...map.values()];
 }
 
 const fmtLong = (isoDate: string) => { const d = new Date(isoDate + "T00:00:00"); return isNaN(+d) ? isoDate : d.toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }); };

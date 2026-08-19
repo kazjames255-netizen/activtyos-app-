@@ -12,6 +12,7 @@ import { CouponTicker } from "@/features/parent/CouponTicker";
 import { NewsflashBanner } from "@/features/parent/NewsflashBanner";
 import { ParentWelcome } from "@/features/parent/ParentWelcome";
 import { StaffWelcome } from "@/features/staff/StaffWelcome";
+import { StaffReminderBanner } from "@/features/staff/StaffReminderBanner";
 
 // The customer dashboard runs the same light palette the operator screens sit
 // on (see components/OperatorPage LIGHT_PALETTE), so the parent portal matches
@@ -58,13 +59,19 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             {portalKey === "custdash" && <ParentWelcome />}
             {/* First-login onboarding launcher for staff. */}
             {portalKey === "staff" && <StaffWelcome />}
+            {/* Persistent, non-blocking reminder bar for staff — outstanding
+                courses & documents, so first login isn't a wall of reading. */}
+            {portalKey === "staff" && <StaffReminderBanner />}
             {/* Customer-only flashy newsflash for unseen provider posts. */}
             {portalKey === "custdash" && <NewsflashBanner />}
             {/* Customer-only running bar of the family's usable discount codes. */}
             {portalKey === "custdash" && <CouponTicker />}
             {/* Operator trial / cancellation nudge bar. */}
             {!light && <TrialBanner portal={portalKey} />}
-            <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]">{props.children}</main>
+            {/* The operator views each wrap themselves in the light palette, but
+                the main surface itself must be light too — otherwise the dark
+                --bg shows through as a black flash while a route loads. */}
+            <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]" style={light ? undefined : LIGHT_PALETTE}>{props.children}</main>
           </div>
         </div>
         </SubscriptionGate>

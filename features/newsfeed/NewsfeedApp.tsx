@@ -7,6 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Button } from "@/components/ui";
 import { TourLauncher } from "@/features/common/TourLauncher";
+import { StaffNotifyComposer } from "./StaffNotifyComposer";
 import { NewsletterBuilder, NewsletterView, PostImage, NL_PALETTES, downscaleImage, newMeta, newsletterToText, newsletterToHtml, type Newsletter, type NlMeta } from "./newsletter";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -144,6 +145,7 @@ export function NewsfeedApp() {
   const [folderKind, setFolderKind] = useState<"all" | "post" | "newsletter">("all"); // sub-filter inside an open folder
   const [query, setQuery] = useState("");
   const [pending, setPending] = useState<{ label: string; run: () => void } | null>(null); // live-post countdown
+  const [audience, setAudience] = useState<"parents" | "staff">("parents"); // Newsfeed = parents; Staff = internal notices
   const router = useRouter();
   const portal = usePathname()?.split("/")[1] || "freelancer";
 
@@ -306,6 +308,28 @@ export function NewsfeedApp() {
 
   const kpis: [string, number][] = [["Published", live.length], ["Pinned", pinnedCount], ["Scheduled", scheduledCount]];
 
+  // Parents (this newsfeed) vs Staff (internal notices → their Announcements board).
+  const audienceSwitch = (
+    <div className="mb-3.5 inline-flex rounded-full border border-[#dbe6fb] bg-white p-1 shadow-sm">
+      {([["parents", "👪 To parents"], ["staff", "🧑‍🏫 To staff"]] as const).map(([a, label]) => (
+        <button key={a} type="button" onClick={() => setAudience(a)} className={"rounded-full px-4 py-1.5 text-[12.5px] font-extrabold transition-colors " + (audience === a ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-3)] hover:text-[var(--ink)]")}>{label}</button>
+      ))}
+    </div>
+  );
+
+  if (audience === "staff") {
+    return (
+      <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+        <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: HERO }}>
+          <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Notifications</div>
+          <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">Send updates to families or to your own team. Staff notices land on every team member’s Announcements board — never seen by parents.</p>
+        </div>
+        {audienceSwitch}
+        <StaffNotifyComposer listings={listings} authorName={settings.providerName || settings.billing?.businessName} />
+      </div>
+    );
+  }
+
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
@@ -320,6 +344,8 @@ export function NewsfeedApp() {
           ))}
         </div>
       </div>
+
+      {audienceSwitch}
 
       <TourLauncher view="newsfeed" />
 

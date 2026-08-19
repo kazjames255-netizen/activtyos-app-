@@ -46,22 +46,28 @@ Signed: ______________________________   Print name: ___________________________
 export interface OnboardValue { v?: string; fileData?: string; fileName?: string; status?: "todo" | "requested" | "received" | "verified"; at?: string }
 const nowIso = () => { try { return new Date().toISOString(); } catch { return ""; } };
 const fmtStamp = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
+// DBS certs don't legally "expire", but employers re-check on their own cycle
+// (commonly ~3 years). Show how old a certificate is from its issue date.
+const monthsSince = (iso?: string) => { if (!iso) return null; const d = new Date(iso + "T00:00:00"); if (isNaN(+d)) return null; const n = new Date(); return (n.getFullYear() - d.getFullYear()) * 12 + (n.getMonth() - d.getMonth()) - (n.getDate() < d.getDate() ? 1 : 0); };
+const dbsAgeLabel = (iso?: string) => { const m = monthsSince(iso); if (m == null || m < 0) return ""; const y = Math.floor(m / 12), mo = m % 12; const age = y ? `${y} year${y > 1 ? "s" : ""}${mo ? ` ${mo} month${mo > 1 ? "s" : ""}` : ""}` : `${mo} month${mo !== 1 ? "s" : ""}`; return `Issued ${age} ago${m >= 36 ? " — over 3 years old, consider re-checking" : ""}`; };
+const dbsAgeColor = (iso?: string) => { const m = monthsSince(iso); return m != null && m >= 36 ? "#b45309" : "#0f7a43"; };
 // pay value = { basis, amount, hpw, auto }
 interface PayVal { basis: "hour" | "day" | "year"; amount: string; hpw: string; auto: boolean }
 const parsePay = (v?: string): PayVal => { try { const p = JSON.parse(v || "{}"); return { basis: p.basis || "hour", amount: p.amount || "", hpw: p.hpw || "", auto: p.auto !== false }; } catch { return { basis: "hour", amount: "", hpw: "", auto: true }; } };
 const payDerived = (p: PayVal) => { const a = parseFloat(p.amount) || 0; const h = parseFloat(p.hpw) || 0; const annual = p.basis === "year" ? a : p.basis === "hour" ? a * h * 52 : a * 260 /* ~working days/yr */; const hourly = p.basis === "hour" ? a : h ? annual / (h * 52) : 0; return { hourly, annual, monthly: annual / 12 }; };
 const gbp = (n: number) => n ? "£" + n.toLocaleString("en-GB", { maximumFractionDigits: n < 100 ? 2 : 0 }) : "£0";
-export interface OnboardRecord { staff: string; values: Record<string, OnboardValue>; extra: string[] }
+export interface OnboardRecord { staff: string; values: Record<string, OnboardValue>; extra: string[]; submittedAt?: string; outstanding?: string[]; lastEditedAt?: string }
 
 export const SECTIONS: [string, string, string][] = [
   ["personal", "Personal & contact", "👤"],
   ["rtw", "Right to work", "🛂"],
-  ["dbs", "Identity & DBS", "🪪"],
+  ["dbs", "Identity", "🪪"],
+  ["dbscheck", "DBS check", "🔎"],
   ["refs", "References & history", "📋"],
   ["quals", "Qualifications & training", "🎓"],
   ["payroll", "Payroll & HMRC", "💷"],
-  ["availability", "Availability", "📅"],
   ["emergency", "Emergency & health", "🚑"],
+  ["availability", "Availability", "📅"],
   ["agreements", "Agreements & policies", "✍️"],
 ];
 // rich per-section colour for the slideshow header
@@ -69,6 +75,7 @@ const SECTION_STYLE: Record<string, { grad: string; ink: string; soft: string }>
   personal: { grad: "linear-gradient(135deg,#1d3a8f,#3f7ae0)", ink: "#1d3a8f", soft: "#eef4fd" },
   rtw: { grad: "linear-gradient(135deg,#0e7d74,#22b4a6)", ink: "#0f766e", soft: "#e1f5ee" },
   dbs: { grad: "linear-gradient(135deg,#5b21b6,#a855f7)", ink: "#6d28d9", soft: "#f3effe" },
+  dbscheck: { grad: "linear-gradient(135deg,#4338ca,#6366f1)", ink: "#4338ca", soft: "#eef0fe" },
   refs: { grad: "linear-gradient(135deg,#b45309,#f59e0b)", ink: "#b45309", soft: "#fdf3e0" },
   quals: { grad: "linear-gradient(135deg,#166534,#37b26a)", ink: "#0f7a43", soft: "#eaf8f0" },
   payroll: { grad: "linear-gradient(135deg,#9d174d,#f43f5e)", ink: "#be123c", soft: "#fdecec" },
@@ -80,6 +87,7 @@ const SECTION_STYLE: Record<string, { grad: string; ink: string; soft: string }>
 const F = (id: string, section: string, label: string, type: FieldType, required = false, x: Partial<OnboardField> = {}): OnboardField => ({ id, section, label, type, required, applyKind: "all", ...x });
 
 export const DEFAULT_FIELDS: OnboardField[] = [
+  F("photo", "personal", "Profile photo", "file", true, { hint: "A clear, professional head-and-shoulders photo — parents will see this, so keep it smart (no casual or joke pictures)." }),
   F("fullName", "personal", "Full legal name", "text", true, { fromInvite: true }),
   F("prevNames", "personal", "Previous / known-as names", "text"),
   F("dob", "personal", "Date of birth", "date", true),
@@ -88,28 +96,35 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("address2", "personal", "Address line 2", "text"),
   F("town", "personal", "Town / city", "text", true),
   F("postcode", "personal", "Postcode", "text", true),
-  F("addrHistory", "personal", "Previous addresses (last 5 years)", "addresses", false, { hint: "Optional if your current address covers the last 5 years — otherwise add each previous address." }),
+  F("movedIn", "personal", "I moved into this address on", "date", true, { hint: "If that's less than 5 years ago, add your previous addresses below." }),
+  F("addrHistory", "personal", "Previous addresses (to cover 5 years)", "addresses", false, { hint: "Add each previous address with the date you moved in, until your history goes back 5 years." }),
   F("phone", "personal", "Mobile number", "tel", true),
   F("email", "personal", "Personal email", "email", true, { fromInvite: true }),
 
   F("nationality", "rtw", "Nationality", "select", true, { options: NATIONALITIES, other: true }),
   F("rtwMethod", "rtw", "Right-to-work method", "select", true, { options: ["Share code (eVisa)", "Passport (British/Irish)", "Birth certificate + NI", "Other"] }),
   F("shareCode", "rtw", "Share code (9-char)", "text", false, { hint: "From gov.uk — valid 90 days" }),
-  F("rtwEvidence", "rtw", "Right-to-work evidence (upload)", "file"),
+  F("rtwEvidence", "rtw", "Right-to-work evidence (upload)", "file", false, { hint: "Upload your document — or enter your share code on the left. One is required." }),
   F("rtwCheck", "rtw", "Right to work verified", "check", true, { gate: true }),
 
   F("idMethod", "dbs", "ID method", "select", true, { options: ["Passport", "Driving licence (photocard)", "Birth certificate + proof of address", "BRP / eVisa", "National ID card"], other: true }),
   F("idFile", "dbs", "ID document (upload)", "file", true),
+  F("addrProofType", "dbs", "Proof of current address — document type", "select", false, { options: ["Utility bill (last 3 months)", "Bank or building society statement (last 3 months)", "Council tax bill (current year)", "Driving licence (if not used as ID above)", "Tenancy agreement (current)", "Mortgage statement (last 12 months)", "HMRC / DWP / benefits letter (last 3 months)", "Other"], hint: "Must show your name + current address. A passport can't be used here — it doesn't show your address." }),
+  F("addrProof", "dbs", "Proof of address (upload)", "file", false, { hint: "A different document to your photo ID, dated within the last 3 months where relevant." }),
   F("idCheck", "dbs", "Identity verified", "check", true),
-  F("dbsCert", "dbs", "Enhanced DBS certificate no.", "text"),
-  F("dbsIssue", "dbs", "DBS issue date", "date"),
-  F("dbsFile", "dbs", "DBS certificate (upload)", "file", false, { hint: "Company can upload a copy" }),
-  F("dbsUpdate", "dbs", "On DBS Update Service", "checkbox"),
-  F("dbsUpdateNo", "dbs", "Update Service number", "text"),
-  F("overseas", "dbs", "Overseas check (if 3+ months abroad)", "select", false, { options: ["Not needed", "Requested", "Received"] }),
-  F("disqual", "dbs", "Disqualification self-declaration signed", "checkbox", false, { declaration: true, hint: "See the example to print & have them sign" }),
-  F("disqualFile", "dbs", "Signed declaration (upload)", "file"),
-  F("dbsCheck", "dbs", "DBS cleared (barred-list checked)", "check", true, { gate: true }),
+  // ── DBS check — its own section. This just records an EXISTING certificate;
+  // applying for a NEW DBS is done through the umbrella-body / DBS system, not here.
+  F("hasDbs", "dbscheck", "Do you have an enhanced DBS certificate?", "select", true, { options: ["Yes — I have one", "No — the company will arrange it"] }),
+  F("dbsCert", "dbscheck", "DBS certificate number", "text"),
+  F("dbsIssue", "dbscheck", "DBS issue date", "date", false, { hint: "The company sets how long a certificate stays valid, counted from this date." }),
+  F("dbsFile", "dbscheck", "DBS certificate (upload)", "file", false, { hint: "Upload a photo or scan of your certificate." }),
+  F("dbsUpdate", "dbscheck", "Registered with the DBS Update Service", "checkbox"),
+  F("dbsUpdateNo", "dbscheck", "Update Service number", "text"),
+  F("dbsCheck", "dbscheck", "DBS seen & cleared", "check", true, { gate: true }),
+  // operator-only compliance items (hidden from the staff form)
+  F("overseas", "dbscheck", "Overseas check (if 3+ months abroad)", "select", false, { options: ["Not needed", "Requested", "Received"] }),
+  F("disqual", "dbscheck", "Disqualification self-declaration signed", "checkbox", false, { declaration: true, hint: "See the example to print & have them sign" }),
+  F("disqualFile", "dbscheck", "Signed declaration (upload)", "file"),
 
   F("ref1Name", "refs", "Reference 1 — name", "text", true),
   F("ref1Org", "refs", "Reference 1 — organisation", "text"),
@@ -129,12 +144,29 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("qualDocs", "quals", "Certificate uploads", "file"),
   F("interviewNotes", "quals", "Safer-recruitment interview notes", "textarea"),
 
-  F("p45", "payroll", "P45 / Starter checklist", "select", true, { options: ["P45 provided", "Starter checklist", "N/A"] }),
-  F("p45File", "payroll", "P45 / starter checklist (upload)", "file"),
-  F("taxStatement", "payroll", "Starter statement (A/B/C)", "select", false, { options: ["A — first job", "B — other job/pension", "C — has another job"] }),
-  F("studentLoan", "payroll", "Student / postgraduate loan", "checkbox"),
-  F("bank", "payroll", "Bank sort code / account", "text", false, { sensitive: true, hint: "Staff enter this themselves" }),
-  F("pension", "payroll", "Pension auto-enrolment", "checkbox"),
+  F("p45", "payroll", "Do you have a P45 from a job this tax year?", "select", true, { options: ["Yes — I have a P45", "No — I'll complete the starter checklist below"] }),
+  F("p45File", "payroll", "P45 (upload)", "file", false, { hint: "Upload the P45 from your previous employer — parts 2 and 3." }),
+  // HMRC starter checklist — asked as the actual questions and answered here,
+  // rather than uploaded as a separate form. Sets the tax code until HMRC updates it.
+  F("taxStatement", "payroll", "Employee statement — which one applies to you?", "select", false, { options: [
+    "A — This is my first job since 6 April and I've not been getting taxable Jobseeker's Allowance, Employment & Support Allowance, taxable Incapacity Benefit, or a State / Occupational Pension",
+    "B — This is now my only job, but since 6 April I've had another job or received taxable benefits (JSA / ESA / Incapacity Benefit). I don't get a State / Occupational Pension",
+    "C — I have another job or receive a State or Occupational Pension",
+  ], hint: "Pick the statement that's true for you — it sets your tax code for now." }),
+  F("studentLoan", "payroll", "I'm repaying a student loan", "checkbox"),
+  F("studentLoanPlan", "payroll", "Student loan plan type", "select", false, { options: ["Plan 1", "Plan 2", "Plan 4 (Scotland)", "Not sure"], hint: "It's on your loan statements, or check gov.uk if you're unsure." }),
+  F("postgradLoan", "payroll", "I'm also repaying a postgraduate loan", "checkbox"),
+  F("bankName", "payroll", "Name of bank / building society", "text", false, { sensitive: true, hint: "So we can pay your wages." }),
+  F("bankHolder", "payroll", "Name on the account", "text", false, { sensitive: true, hint: "Exactly as it appears on your card / statement." }),
+  F("bankSort", "payroll", "Sort code", "text", false, { sensitive: true, hint: "6 digits, e.g. 12-34-56." }),
+  F("bankAccount", "payroll", "Account number", "text", false, { sensitive: true, hint: "8 digits." }),
+  F("pension", "payroll", "Workplace pension", "select", true, { options: ["Stay in — auto-enrol me (recommended)", "Opt out of the pension"], hint: "By law you're automatically enrolled. To formally opt out you normally do so through the pension provider within the opt-out window — this records your wish and the required acknowledgements." }),
+  // shown only if they choose to opt out — the mandatory auto-enrolment opt-out statements
+  F("pensionOptOut1", "payroll", "I wish to opt out of the pension scheme.", "checkbox", false, { declaration: true }),
+  F("pensionOptOut2", "payroll", "I understand that if I opt out I will lose the right to pension contributions from my employer.", "checkbox", false, { declaration: true }),
+  F("pensionOptOut3", "payroll", "I understand that if I opt out I may have a lower income when I retire.", "checkbox", false, { declaration: true }),
+  F("pensionSign", "payroll", "Signature (type your full name)", "text", false, { hint: "Typing your name here counts as your electronic signature." }),
+  F("pensionSignDate", "payroll", "Date signed", "date"),
   F("jobTitle", "payroll", "Job title", "jobtitle", false, { fromInvite: true }),
   F("startDate", "payroll", "Start date", "date", true),
   F("hours", "payroll", "Contracted hours", "text"),
@@ -145,7 +177,7 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("emergName", "emergency", "Emergency contact name", "text", true),
   F("emergPhone", "emergency", "Emergency contact phone", "tel", true),
   F("emergRel", "emergency", "Relationship", "text"),
-  F("medical", "emergency", "Medical / allergies / adjustments", "textarea", false, { sensitive: true }),
+  F("medical", "emergency", "I confirm I've told my employer about any medical conditions, allergies or reasonable adjustments they should be aware of — including anything relevant in an emergency.", "checkbox", true, { declaration: true }),
 
   F("contract", "agreements", "Employment contract", "readdoc", true),
   F("handbook", "agreements", "Staff handbook", "readdoc"),
@@ -319,8 +351,8 @@ export function OnboardingPanel() {
   const style = SECTION_STYLE[curSid] ?? SECTION_STYLE.personal;
   const sectionDone = (sid: string) => { const fs = appl.filter((f) => f.section === sid); return { d: fs.filter((f) => satisfied(f, rec.values[f.id])).length, t: fs.length }; };
 
-  const fieldCard = (f: OnboardField) => { const val = rec.values[f.id]; const ok = satisfied(f, val); return (
-    <div key={f.id} className={"rounded-xl border p-3 " + (f.type === "textarea" || f.type === "addresses" || f.type === "certs" || f.type === "availability" ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)] bg-[var(--surface)]")}>
+  const fieldCard = (f: OnboardField) => { const val = rec.values[f.id]; const ok = satisfied(f, val); const longSelect = f.type === "select" && (f.options ?? []).some((o) => o.length > 60); return (
+    <div key={f.id} className={"rounded-xl border p-3 " + (f.type === "textarea" || f.type === "addresses" || f.type === "certs" || f.type === "availability" || longSelect ? "sm:col-span-2 " : "") + (ok ? "border-[#cfe8d7] bg-[#f4fbf6]" : "border-[var(--line)] bg-[var(--surface)]")}>
       <label className="mb-1.5 flex flex-wrap items-center gap-1.5 text-[12px] font-bold text-[var(--ink-2)]">{ok && <span className="text-[#0f7a43]">✓</span>}{f.label}{f.required && <span className="text-[#c0392b]">*</span>}{f.sensitive && <span title="Sensitive — stored securely" className="text-[10px]">🔒</span>}{f.fromInvite && <span title="Set when the sign-up link was sent — staff can't edit; the company can" className="rounded bg-[#eaf1ff] px-1 text-[8.5px] font-bold uppercase text-[#1d54c4]">🔗 from invite</span>}{rec.extra.includes(f.id) && <span className="rounded bg-[#eef1f6] px-1 text-[8.5px] font-bold uppercase text-[#64748b]">added</span>}</label>
       {f.type === "check" ? (
         <div><div className="flex flex-wrap gap-1">{STATUS_SEQ.map((st) => <button key={st} type="button" onClick={() => setVal(f.id, { status: st, at: st === "verified" ? nowIso() : val?.at })} className={"rounded-full px-2.5 py-1 text-[11px] font-bold capitalize " + ((val?.status ?? "todo") === st ? STATUS_TONE[st] : "bg-[var(--panel)] text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{st}</button>)}</div>{val?.status === "verified" && val?.at && <div className="mt-1 text-[10px] text-[var(--ink-3)]">Verified {fmtStamp(val.at)}</div>}</div>
@@ -354,7 +386,11 @@ export function OnboardingPanel() {
       ) : f.type === "select" ? (() => {
         const opts = f.options ?? []; const v = val?.v ?? ""; const inList = opts.includes(v);
         const selectVal = inList ? v : (v && f.other ? "Other" : ""); const showOther = !!f.other && selectVal === "Other";
-        return (<div className="space-y-1.5"><Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">Choose…</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Select>{showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder="Type it here…" className="w-full" />}</div>);
+        // Long options (e.g. the HMRC employee statement) truncate when the native
+        // select is collapsed — show the full chosen text wrapped underneath, with
+        // any leading "A — " / "Plan 1 — " marker emphasised so it reads at a glance.
+        const readback = inList && v.length > 48 ? (() => { const m = v.match(/^(\S+)\s+—\s+([\s\S]+)/); return <div className="rounded-lg bg-[var(--panel)] px-2.5 py-2 text-[11.5px] leading-snug text-[var(--ink-2)]">{m ? <><span className="mr-1 inline-block rounded bg-[#1d3a8f] px-1.5 py-0.5 text-[10px] font-extrabold text-white">{m[1]}</span>{m[2]}</> : v}</div>; })() : null;
+        return (<div className="space-y-1.5"><Select value={selectVal} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full"><option value="">Choose…</option>{opts.map((o) => <option key={o} value={o}>{o}</option>)}</Select>{readback}{showOther && <Input value={v === "Other" ? "" : v} onChange={(e) => setVal(f.id, { v: e.target.value })} placeholder="Type it here…" className="w-full" />}</div>);
       })() : f.type === "availability" ? (() => {
         const av = parseAvail(val?.v);
         const write = (next: Record<string, string[]>) => { setVal(f.id, { v: JSON.stringify(next) }); try { const all = JSON.parse(localStorage.getItem(AVAIL_KEY) || "{}"); all[sel] = next; localStorage.setItem(AVAIL_KEY, JSON.stringify(all)); } catch { /* ignore */ } };
@@ -393,6 +429,11 @@ export function OnboardingPanel() {
         );
       })() : f.type === "textarea" ? (
         <textarea value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} rows={2} className="w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[13px] outline-none focus:border-[#1d3a8f]" />
+      ) : f.id === "dbsIssue" ? (
+        <div className="space-y-1">
+          <Input type="date" value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full" />
+          {val?.v && <div className="text-[11px] font-bold" style={{ color: dbsAgeColor(val.v) }}>🔎 {dbsAgeLabel(val.v)}</div>}
+        </div>
       ) : (
         <Input type={f.type === "date" ? "date" : f.type === "tel" ? "tel" : f.type === "email" ? "email" : "text"} value={val?.v ?? ""} onChange={(e) => setVal(f.id, { v: e.target.value })} className="w-full" />
       )}
@@ -457,6 +498,17 @@ export function OnboardingPanel() {
               <Button onClick={exportPack}>🖨️ Export pack</Button>
             </div>
           </div>
+
+          {/* staff submitted the form — flag what they left outstanding (compulsory but not provided) */}
+          {rec.submittedAt && (() => { const editedAfter = !!rec.lastEditedAt && rec.lastEditedAt > rec.submittedAt!; const attention = (rec.outstanding?.length ?? 0) > 0 || editedAfter; return (
+            <div className={"mx-4 mt-3 rounded-xl border px-3.5 py-2.5 text-[12px] " + (attention ? "border-[#f3cfa6] bg-[#fdf3e0] text-[#8a4b09]" : "border-[#cfe8d7] bg-[#f4fbf6] text-[#0f7a43]")}>
+              <span className="font-extrabold">✅ {sel.split(" ")[0]} submitted their onboarding{rec.submittedAt ? ` on ${fmtStamp(rec.submittedAt)}` : ""}.</span>
+              {(rec.outstanding?.length ?? 0) > 0
+                ? <> ⚠ They flagged <b>{rec.outstanding!.length}</b> compulsory item{rec.outstanding!.length > 1 ? "s" : ""} still outstanding: <b>{rec.outstanding!.join(", ")}</b>. Chase these before clearing to start.</>
+                : !editedAfter && <> All compulsory staff items were provided.</>}
+              {editedAfter && <div className="mt-1 font-extrabold">🔄 {sel.split(" ")[0]} updated their details on {fmtStamp(rec.lastEditedAt)} after submitting — please review the changes.</div>}
+            </div>
+          ); })()}
 
           {/* step rail */}
           <div className="flex flex-wrap gap-1.5 px-4 pt-3">

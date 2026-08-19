@@ -49,6 +49,10 @@ import { TasksApp } from "@/features/tasks/TasksApp";
 import { TripsApp } from "@/features/trips/TripsApp";
 import { ParentTripsApp } from "@/features/trips/ParentTripsApp";
 import { ScheduleApp as RotaApp } from "@/features/schedule/ScheduleApp";
+import { MyScheduleApp } from "@/features/schedule/MyScheduleApp";
+import { StaffExpensesApp } from "@/features/staff/StaffExpensesApp";
+import { StaffAnnouncementsApp } from "@/features/staff/StaffAnnouncementsApp";
+import { StaffOnboardingApp } from "@/features/staff/StaffOnboardingApp";
 import { AvailabilityApp } from "@/features/schedule/AvailabilityApp";
 import { CalendarApp } from "@/features/calendar/CalendarApp";
 import { InventoryApp } from "@/features/inventory/InventoryApp";
@@ -262,31 +266,18 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     customers: CustomersApp,
     tasks: TasksApp,
     trips: TripsApp,
-    schedule: RotaApp,
+    schedule: MyScheduleApp,
+    announcements: StaffAnnouncementsApp,
+    onboarding: StaffOnboardingApp,
     messages: () => <MessagesApp mode="operator" />,
     compliance: ComplianceApp,
     account: AccountApp,
-    privacy: PrivacyApp,
     ai: () => <AiAssistant kind="staff" />,
     availability: AvailabilityApp,
     holiday: MyHolidayApp,
     appraisals: MyAppraisalsApp,
     clockinout: TimeClockApp,
-    expenses: planned({
-      title: "My expenses",
-      blurb: "Snap a receipt, claim it back, and track what's been reimbursed.",
-      links: [{ href: "/staff/messages", label: "Messages", hint: "send receipts to your organiser today" }],
-    }),
-    pay: planned({
-      title: "My pay",
-      blurb: "Payslips, hours worked and what's landing this month — once payroll is built.",
-      links: [{ href: "/staff/schedule", label: "Schedule", hint: "your hours live here" }],
-    }),
-    training: planned({
-      title: "Learning Centre",
-      blurb: "Required training, refreshers and certificates, tracked per staff member.",
-      links: [{ href: "/staff/documents", label: "Documents", hint: "policies and handbooks today" }],
-    }),
+    expenses: StaffExpensesApp,
     children: CustomersApp, // routable alias of Families
     moments2: MomentsApp, // routable alias of Moments
   },

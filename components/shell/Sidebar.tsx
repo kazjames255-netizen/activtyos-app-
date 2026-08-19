@@ -317,7 +317,10 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
           />
         ) : (
           <span
-            className="block min-w-0 flex-1 truncate text-[17px] font-extrabold"
+            className={`block min-w-0 flex-1 break-words font-extrabold leading-[1.08] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden ${
+              brandName.length > 30 ? "text-[12px]" : brandName.length > 24 ? "text-[13px]" : brandName.length > 18 ? "text-[14.5px]" : "text-[17px]"
+            }`}
+            title={brandName}
             style={{ fontFamily: "var(--ff-display)", color: "var(--side-ink)" }}
           >
             {brandName}

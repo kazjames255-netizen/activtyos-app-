@@ -7,6 +7,8 @@ import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { SEED_LIBRARY, blankCourse, activeQuizVersion, quizVersions, QUIZ_VERSION_LABELS, type CourseDoc } from "./courseContent";
 import { CoursePlayer } from "./CoursePlayer";
+import { withVideos } from "./courseVideos";
+import { withEnhancements } from "./courseEnhancements";
 import { CourseHero } from "./courseArt";
 import { openCertificate, makeRef } from "./certificates";
 import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel as credTargetLabel, exportCredsPdf, fmtDate as fmtCredDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
@@ -57,6 +59,27 @@ type Level = "Intro" | "Core" | "Advanced";
 const COURSE_META: Record<string, { cat: CatKey; level: Level; tags: string[] }> = {
   c11: { cat: "saf", level: "Intro", tags: ["Awareness", "KCSIE 2025"] },
   c1: { cat: "saf", level: "Core", tags: ["KCSIE 2025", "Core"] },
+  c40: { cat: "saf", level: "Core", tags: ["KCSIE 2026", "Update"] },
+  c41: { cat: "health", level: "Core", tags: ["COSHH", "Chemicals"] },
+  c42: { cat: "health", level: "Core", tags: ["DSE", "Workstation"] },
+  c43: { cat: "health", level: "Core", tags: ["Slips, trips & falls"] },
+  c44: { cat: "health", level: "Core", tags: ["PPE"] },
+  c45: { cat: "health", level: "Core", tags: ["Electrical", "PAT"] },
+  c46: { cat: "health", level: "Core", tags: ["Legionella", "Water"] },
+  c47: { cat: "health", level: "Core", tags: ["Fire warden"] },
+  c48: { cat: "medical", level: "Core", tags: ["First aid", "EFAW"] },
+  c49: { cat: "medical", level: "Core", tags: ["Appointed person"] },
+  c50: { cat: "health", level: "Core", tags: ["RIDDOR", "Reporting"] },
+  c51: { cat: "health", level: "Core", tags: ["Work at height", "Ladders"] },
+  c52: { cat: "health", level: "Core", tags: ["Asbestos"] },
+  c53: { cat: "together", level: "Core", tags: ["Duty of care"] },
+  c54: { cat: "together", level: "Core", tags: ["De-escalation"] },
+  c55: { cat: "digital", level: "Core", tags: ["Cyber security"] },
+  c56: { cat: "health", level: "Core", tags: ["Environment", "Sustainability"] },
+  c57: { cat: "health", level: "Core", tags: ["Play equipment"] },
+  c58: { cat: "health", level: "Core", tags: ["Transport", "Minibus"] },
+  c59: { cat: "together", level: "Core", tags: ["Whistleblowing"] },
+  c60: { cat: "health", level: "Core", tags: ["Evacuation", "Lockdown"] },
   c12: { cat: "saf", level: "Advanced", tags: ["DSL", "Statutory"] },
   c4: { cat: "saf", level: "Core", tags: ["Exploitation", "County lines"] },
   c16: { cat: "saf", level: "Core", tags: ["Exploitation"] },
@@ -65,7 +88,13 @@ const COURSE_META: Record<string, { cat: CatKey; level: Level; tags: string[] }>
   c18: { cat: "saf", level: "Core", tags: ["Domestic abuse"] },
   c5: { cat: "saf", level: "Core", tags: ["Safe staffing", "DBS"] },
   c13: { cat: "send", level: "Core", tags: ["Autism", "SEND"] },
-  c14: { cat: "send", level: "Core", tags: ["ADHD", "SEND"] },
+  c14: { cat: "send", level: "Intro", tags: ["ADHD", "Level 1", "Awareness"] },
+  c61: { cat: "send", level: "Core", tags: ["ADHD", "Level 2", "Inclusive delivery"] },
+  c62: { cat: "together", level: "Intro", tags: ["Coaching", "Level 1"] },
+  c63: { cat: "together", level: "Core", tags: ["Coaching", "Level 2", "STEP"] },
+  c64: { cat: "together", level: "Advanced", tags: ["Coaching", "Level 3", "Inclusive"] },
+  c65: { cat: "health", level: "Intro", tags: ["Food safety", "Level 1"] },
+  c66: { cat: "health", level: "Core", tags: ["Food safety", "Level 2", "SFBB"] },
   c15: { cat: "send", level: "Core", tags: ["Wellbeing"] },
   c3: { cat: "send", level: "Core", tags: ["Behaviour", "Trauma-informed"] },
   c8: { cat: "digital", level: "Core", tags: ["Online safety", "4 Cs"] },
@@ -250,7 +279,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const [certExportOpen, setCertExportOpen] = useState(false);
   const router = useRouter();
 
-  useEffect(() => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s?.assignments) setAssignments(s.assignments); } catch { /* ignore */ } try { const c = JSON.parse(localStorage.getItem(CKEY) || "null"); if (Array.isArray(c) && c.length) setCourses(c); } catch { /* ignore */ } try { const p = JSON.parse(localStorage.getItem(PKEY) || "null"); if (p?.policies) setPolicies(p.policies); if (p?.acks) setAcks(p.acks); } catch { /* ignore */ } try { const r = JSON.parse(localStorage.getItem(RKEY) || "null"); if (r) setReminders({ ...DEFAULT_REMINDERS, ...r }); } catch { /* ignore */ } }, []);
+  useEffect(() => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s?.assignments) setAssignments(s.assignments); } catch { /* ignore */ } try { const c = JSON.parse(localStorage.getItem(CKEY) || "null"); if (Array.isArray(c) && c.length) { const seen = new Set(c.map((x: CourseDoc) => x.id)); const merged = [...c, ...SEED_LIBRARY.filter((s) => !seen.has(s.id))]; setCourses(merged); } } catch { /* ignore */ } try { const p = JSON.parse(localStorage.getItem(PKEY) || "null"); if (p?.policies) setPolicies(p.policies); if (p?.acks) setAcks(p.acks); } catch { /* ignore */ } try { const r = JSON.parse(localStorage.getItem(RKEY) || "null"); if (r) setReminders({ ...DEFAULT_REMINDERS, ...r }); } catch { /* ignore */ } }, []);
   const persistA = (a: Assignment[]) => { setAssignments(a); try { localStorage.setItem(KEY, JSON.stringify({ assignments: a })); } catch { /* ignore */ } };
   const persistP = (pol: PolicyDoc[], ak: PolicyAck[]) => { setPolicies(pol); setAcks(ak); try { localStorage.setItem(PKEY, JSON.stringify({ policies: pol, acks: ak })); } catch { /* ignore */ } };
   const savePolicy = (p: PolicyDoc) => { persistP(policies.some((x) => x.id === p.id) ? policies.map((x) => (x.id === p.id ? p : x)) : [...policies, p], acks); setPolicyForm(null); flash("✅ Policy saved"); };
@@ -897,7 +926,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
 
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] -translate-x-1/2 rounded-full bg-[#111634] px-4 py-2 text-[13px] font-bold text-white shadow-lg">{toast}</div>}
 
-      {player && typeof document !== "undefined" && createPortal(<CoursePlayer course={player} onClose={() => setPlayer(null)} />, document.body)}
+      {player && typeof document !== "undefined" && createPortal(<CoursePlayer course={withVideos(withEnhancements(player))} onClose={() => setPlayer(null)} />, document.body)}
       {editing && typeof document !== "undefined" && createPortal(<CourseEditor course={editing} onSave={saveCourse} onCancel={() => setEditing(null)} />, document.body)}
       {insight && typeof document !== "undefined" && createPortal(
         <div className="fixed inset-0 z-[135] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={() => setInsight(null)}>

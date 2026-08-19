@@ -7,6 +7,8 @@ import { activeQuizVersion, QUIZ_VERSION_LABELS } from "./courseContent";
 import { coursePaletteOf } from "./courseTheme";
 import { CourseBanner } from "./CourseBanner";
 import { openCertificate, makeRef } from "./certificates";
+import { MotionBlock } from "./MotionPlayer";
+import { Figure } from "./CourseFigures";
 import { useSettings } from "@/lib/settings";
 
 // Interactive block kinds that must be attempted before a lesson can be marked complete.
@@ -97,6 +99,7 @@ function speakText(blocks: Block[]): string {
     else if (b.k === "table") parts.push(b.head.join(", ") + ". " + b.rows.map((r) => r.join(", ")).join(". "));
     else if (b.k === "art" && b.caption) parts.push(b.caption);
     else if ((b.k === "image" || b.k === "video") && b.caption) parts.push(b.caption);
+    else if (b.k === "motion") parts.push(b.scenes.map((s) => s.narration).join(" "));
   }
   return parts.join(". ");
 }
@@ -353,6 +356,8 @@ export function BlockView({ b, onDone }: { b: Block; onDone?: () => void }) {
   if (b.k === "order") return <OrderBlock b={b} onDone={onDone} />;
   if (b.k === "match") return <MatchBlock b={b} onDone={onDone} />;
   if (b.k === "reveal") return <RevealBlock b={b} onDone={onDone} />;
+  if (b.k === "motion") return <MotionBlock b={b} onDone={onDone} />;
+  if (b.k === "figure") return <Figure fig={b.fig} caption={b.caption} />;
   return null;
 }
 
@@ -438,6 +443,9 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
   const lesson = lessons[li];
   const pct = Math.round((done.size / total) * 100);
   const readText = useMemo(() => (lesson ? speakText(lesson.blocks) : ""), [lesson]);
+  // A motion lesson owns the single speech-synthesis queue while it plays, so the
+  // top-bar "Read aloud" control is suppressed to avoid the two fighting over it.
+  const lessonHasMotion = !!lesson && lesson.blocks.some((b) => b.k === "motion");
 
   // ——— gate lesson completion behind the interactive activities ———
   const interactiveIdx = useMemo(
@@ -479,7 +487,7 @@ export function CoursePlayer({ course, onClose }: { course: CourseDoc; onClose: 
         <button type="button" onClick={onClose} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">‹ Exit</button>
         {course.logo && /* eslint-disable-next-line @next/next/no-img-element */ <img src={course.logo} alt="" className="h-8 w-auto flex-none rounded object-contain" />}
         <div className="min-w-0"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{course.title}</div><div className="text-[11px] text-[var(--ink-3)]">{isQuiz ? "Final quiz" : `Lesson ${li + 1} of ${lessons.length} · ${lesson.mins} min read`}</div></div>
-        {!isQuiz && <button type="button" onClick={toggleVoice} title="Read this lesson aloud" aria-label={voice.speaking ? "Stop reading this lesson aloud" : "Read this lesson aloud"} aria-pressed={voice.speaking} className={"ml-auto inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-extrabold transition-colors " + (voice.speaking ? "bg-[var(--accent)] text-white" : "border border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]")}>{voice.speaking ? "⏹ Stop voice" : "🔊 Read aloud"}{voice.speaking && <span className="flex items-end gap-0.5">{[0, 1, 2].map((i) => <span key={i} className="w-[3px] animate-pulse rounded-full bg-white" style={{ height: 6 + i * 4, animationDelay: `${i * 120}ms` }} />)}</span>}</button>}
+        {!isQuiz && !lessonHasMotion && <button type="button" onClick={toggleVoice} title="Read this lesson aloud" aria-label={voice.speaking ? "Stop reading this lesson aloud" : "Read this lesson aloud"} aria-pressed={voice.speaking} className={"ml-auto inline-flex items-center gap-2 rounded-full px-3.5 py-1.5 text-[13px] font-extrabold transition-colors " + (voice.speaking ? "bg-[var(--accent)] text-white" : "border border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]")}>{voice.speaking ? "⏹ Stop voice" : "🔊 Read aloud"}{voice.speaking && <span className="flex items-end gap-0.5">{[0, 1, 2].map((i) => <span key={i} className="w-[3px] animate-pulse rounded-full bg-white" style={{ height: 6 + i * 4, animationDelay: `${i * 120}ms` }} />)}</span>}</button>}
       </div>
       {/* progress */}
       <div className="h-1 flex-none bg-[var(--line)]"><div className="h-full bg-[#0f9d58] transition-all" style={{ width: `${pct}%` }} /></div>

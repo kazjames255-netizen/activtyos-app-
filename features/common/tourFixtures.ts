@@ -105,6 +105,47 @@ const DASH: Fixtures = {
   "/api/library": null,
 };
 
+// ── Staff dashboard ──────────────────────────────────────────────────────────
+// The staff member's own landing page (StaffDashApp) — a different component to
+// the operator dashboard, so it reads different endpoints: today's ratios/
+// registers (children in vs due in, safeguarding watch list) + the team's tasks.
+const STAFF_DASH: Fixtures = {
+  "/api/me": { tenantName: "Riverside Sports Club" },
+  "/api/ratios": {
+    date: "today",
+    bands: [],
+    sessions: [
+      { blockId: "b1", start: "09:00", end: "15:30", blockName: "Summer Multi-Sports Camp", listingName: "Riverside Holiday Camp", totalChildren: 22, sendCount: 2, requiredStaff: 3, staffAssigned: 3, met: true },
+      { blockId: "b2", start: "15:30", end: "16:30", blockName: "After-school Football", listingName: "Riverside Football Club", totalChildren: 12, sendCount: 1, requiredStaff: 2, staffAssigned: 1, met: false },
+    ],
+  },
+  "/api/registers": [
+    {
+      blockId: "b1", start: "09:00", end: "15:30", blockName: "Summer Multi-Sports Camp", listingName: "Riverside Holiday Camp",
+      counts: { expected: 22, present: 14, notArrived: 7, absent: 1, collected: 0 },
+      attendees: [
+        { ref: "r1", children: [{ name: "Ava Thompson", age: 7 }], child: { allergies: "Peanuts — EpiPen in her bag" }, attendance: { status: "in" } },
+        { ref: "r2", children: [{ name: "Noah Green", age: 9 }], child: { send: "1", sendPlanName: "ASD support plan" }, attendance: { status: "in" } },
+        { ref: "r3", children: [{ name: "Leo Brooks", age: 8 }], child: { dietary: "Halal", allergies: "Dairy" }, attendance: { status: "in" } },
+        { ref: "r4", children: [{ name: "Mia Patel", age: 6 }], child: { medical: "Asthma — blue inhaler with staff" }, attendance: null },
+      ],
+    },
+    {
+      blockId: "b2", start: "15:30", end: "16:30", blockName: "After-school Football", listingName: "Riverside Football Club",
+      counts: { expected: 12, present: 0, notArrived: 12, absent: 0, collected: 0 },
+      attendees: [
+        { ref: "r5", children: [{ name: "Sofia Rossi", age: 10 }], child: { medical: "Type 1 diabetes", careNotes: "Individual healthcare plan on file" }, attendance: null },
+      ],
+    },
+  ],
+  "/api/tasks": [
+    { id: "t1", title: "Set out the football cones before the 3:30 club", done: false, priority: "normal", dueDate: "Today" },
+    { id: "t2", title: "Sign off the morning register", done: false, priority: "high" },
+    { id: "t3", title: "Restock the first-aid kit — plasters running low", done: false },
+  ],
+  "/api/timetables/published": [],
+};
+
 // The Settings page shown at the end of every tour — the tab strip renders from
 // defaults, so it only needs enough to not error.
 const SETUP: Fixtures = {
@@ -163,6 +204,9 @@ export const TOUR_FIXTURES: Record<string, Fixtures> = {
   // Fewer periods/passes so the built block + calculator fit on screen.
   blocks: { ...LB_FIXTURES.blocks, ...BLOCKS_TRIM },
   dash: DASH,
+  // Staff portal's own dashboard (StaffDashApp) — portal-keyed so it doesn't
+  // clash with the operator "dash" fixture above. Served for /tour/staff/dash.
+  "staff/dash": STAFF_DASH,
   setup: SETUP,
   // The Team & Deployment page reads venues, listings, seasons and the plan's
   // staff seats — the generated fixtures predate all that, so top them up here

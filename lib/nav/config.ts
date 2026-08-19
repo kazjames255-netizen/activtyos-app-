@@ -405,88 +405,74 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "dash", legacyView: "staff-dash", label: "Dashboard", icon: { type: "glyph", value: "▦" }, badge: null },
+        { view: "ai", legacyView: "staff-ai", label: "Ask AI", icon: { type: "glyph", value: "✦" }, badge: null },
       ],
     },
     {
-      label: "My week",
+      // Promoted to the top header bar (see Header.tsx) — kept here hidden so the
+      // routes exist and findNavItem resolves them, but they never show in the rail.
+      label: null,
       pinned: false,
       footer: false,
       items: [
-        { view: "schedule", legacyView: "staff-schedule", label: "My schedule", icon: { type: "glyph", value: "▦" }, badge: null },
-        { view: "clockinout", legacyView: "staff-clockinout", label: "Clock in / out", icon: { type: "glyph", value: "⏱" }, badge: null },
-        { view: "availability", legacyView: "staff-availability", label: "My availability", icon: { type: "glyph", value: "⏱" }, badge: null },
-        { view: "holiday", legacyView: "staff-holiday", label: "My time off", icon: { type: "glyph", value: "🏖" }, badge: null },
-        { view: "appraisals", legacyView: "staff-appraisals", label: "My appraisals", icon: { type: "glyph", value: "📋" }, badge: null },
-        { view: "tasks", legacyView: "staff-tasks", label: "Task manager", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l3 3 9-9\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10\"></path></svg>" }, badge: null },
+        { view: "announcements", legacyView: "staff-announcements", label: "Announcements", hidden: true, icon: { type: "glyph", value: "📣" }, badge: null },
+        { view: "messages", legacyView: "staff-messages", label: "Messages", hidden: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M4 7.5l8 5.5 8-5.5\"></path></svg>" }, badge: null },
+        { view: "customers", legacyView: "staff-customers", label: "Families", hidden: true, icon: { type: "glyph", value: "👪" }, badge: null },
       ],
     },
     {
-      label: "On shift",
+      label: "My schedule",
       pinned: false,
       footer: false,
       items: [
+        { view: "schedule", legacyView: "staff-schedule", label: "My shifts & clock", icon: { type: "glyph", value: "🗓" }, badge: null },
+        { view: "availability", legacyView: "staff-availability", label: "My availability", icon: { type: "glyph", value: "📅" }, badge: null },
+        { view: "holiday", legacyView: "staff-holiday", label: "Time off", icon: { type: "glyph", value: "🏖" }, badge: null },
+        { view: "tasks", legacyView: "staff-tasks", label: "My tasks", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M9 11l3 3 9-9\"></path><path d=\"M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h10\"></path></svg>" }, badge: null },
+      ],
+    },
+    {
+      label: "On session",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "registers", legacyView: "staff-registers", label: "Register", icon: { type: "glyph", value: "✓" }, badge: null },
         { view: "ratios", legacyView: "staff-ratios", label: "Ratios & groups", icon: { type: "glyph", value: "⚖" }, badge: null },
-        { view: "trips", legacyView: "staff-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
-        { view: "timetable", legacyView: "staff-timetable", label: "Timetable", icon: { type: "glyph", value: "▦" }, badge: null },
-      ],
-    },
-    {
-      label: "People",
-      pinned: false,
-      footer: false,
-      items: [
-        { view: "customers", legacyView: "staff-customers", label: "My families", icon: { type: "glyph", value: "◑" }, badge: null },
-      ],
-    },
-    {
-      label: "Resources",
-      pinned: false,
-      footer: false,
-      items: [
-        { view: "training", legacyView: "staff-training", label: "Learning Centre", icon: { type: "glyph", value: "◎" }, badge: null },
-        { view: "certificates", legacyView: "staff-certificates", label: "My learning", icon: { type: "glyph", value: "🎖" }, badge: null },
-        { view: "documents", legacyView: "staff-documents", label: "Documents", icon: { type: "glyph", value: "▤" }, badge: null },
-        { view: "ai", legacyView: "staff-ai", label: "AI assistant", icon: { type: "glyph", value: "✦" }, badge: null },
-      ],
-    },
-    {
-      label: "Account",
-      pinned: false,
-      footer: false,
-      items: [
-        { view: "payslips", legacyView: "staff-payslips", label: "My payslips", icon: { type: "glyph", value: "🧾" }, badge: null },
-        { view: "expenses", legacyView: "staff-expenses", label: "My expenses", icon: { type: "glyph", value: "💷" }, badge: null },
-        { view: "account", legacyView: "staff-account", label: "Onboarding info", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3\"></path></svg>" }, badge: null },
-        { view: "privacy", legacyView: "staff-privacy", label: "Data & privacy", icon: { type: "glyph", value: "🛡" }, badge: null },
-      ],
-    },
-    {
-      label: "Coming soon",
-      pinned: false,
-      footer: false,
-      items: [
-        { view: "pay", legacyView: "staff-pay", label: "My pay", icon: { type: "glyph", value: "£" }, badge: null },
-      ],
-    },
-    {
-      label: "Pupils",
-      pinned: false,
-      footer: false,
-      items: [
-        { view: "registers", legacyView: "staff-registers", label: "Registers", icon: { type: "glyph", value: "✓" }, badge: null },
-        { view: "incident", legacyView: "staff-incident", label: "Log concern", icon: { type: "glyph", value: "⚑" }, badge: null },
-        { view: "medication", legacyView: "staff-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
-        { view: "accidents", legacyView: "staff-accidents", label: "First aid", icon: { type: "glyph", value: "⛑" }, badge: null },
+        { view: "timetable", legacyView: "staff-timetable", label: "Activity timetable", icon: { type: "glyph", value: "▦" }, badge: null },
         { view: "meals", legacyView: "staff-meals", label: "Meals", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"13\" r=\"5\"></circle><path d=\"M4.5 4v6M4.5 10v10M19.5 4c1 2 1 5 0 7v9\"></path></svg>" }, badge: null },
+        { view: "trips", legacyView: "staff-trips", label: "Trips & visits", icon: { type: "glyph", value: "🚌" }, badge: null },
         { view: "moments", legacyView: "staff-moments", label: "Moments", icon: { type: "glyph", value: "📷" }, badge: null },
       ],
     },
     {
-      label: "Communication",
+      label: "Safeguarding & health",
       pinned: false,
       footer: false,
       items: [
-        { view: "messages", legacyView: "staff-messages", label: "Messages", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M4 7.5l8 5.5 8-5.5\"></path></svg>" }, badge: null },
+        { view: "incident", legacyView: "staff-incident", label: "Report a concern", icon: { type: "glyph", value: "⚑" }, badge: null },
+        { view: "accidents", legacyView: "staff-accidents", label: "Accidents & first aid", icon: { type: "glyph", value: "⛑" }, badge: null },
+        { view: "medication", legacyView: "staff-medication", label: "Medication", icon: { type: "glyph", value: "💊" }, badge: null },
+      ],
+    },
+    {
+      label: "Learning & documents",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "certificates", legacyView: "staff-certificates", label: "Certificates & courses", icon: { type: "glyph", value: "🎖" }, badge: null },
+        { view: "documents", legacyView: "staff-documents", label: "Documents", icon: { type: "glyph", value: "▤" }, badge: null },
+      ],
+    },
+    {
+      label: "Pay & personal",
+      pinned: false,
+      footer: false,
+      items: [
+        { view: "payslips", legacyView: "staff-payslips", label: "Payslips", icon: { type: "glyph", value: "🧾" }, badge: null },
+        { view: "expenses", legacyView: "staff-expenses", label: "Expenses", icon: { type: "glyph", value: "💷" }, badge: null },
+        { view: "appraisals", legacyView: "staff-appraisals", label: "Appraisals", icon: { type: "glyph", value: "📋" }, badge: null },
+        { view: "onboarding", legacyView: "staff-onboarding", label: "Onboarding", icon: { type: "glyph", value: "🪪" }, badge: null },
+        { view: "account", legacyView: "staff-account", label: "Account settings", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3\"></path></svg>" }, badge: null },
       ],
     },
     {

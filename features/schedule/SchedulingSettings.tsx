@@ -33,7 +33,7 @@ export function SchedulingSettingsForm() {
 
       <Card className="p-5">
         <SecHead>Swaps and offers</SecHead>
-        <SelRow label="Co-worker schedule visibility" desc="If staff can view each other's schedule, you can enable shift swaps between them." value={value.coworkerVisibility} onChange={(v) => set("coworkerVisibility", v as SchedulingSettings["coworkerVisibility"])} opts={[["all", "Allow all"], ["team", "Same team only"], ["none", "Hidden"]]} />
+        <SelRow label="Co-worker schedule visibility" desc="Who can see the team's “Who’s on this week” rota on their My schedule page. Same listing = staff see everyone rostered on a listing they work on; Leads & managers = only leads see it." value={value.coworkerVisibility} onChange={(v) => set("coworkerVisibility", v as SchedulingSettings["coworkerVisibility"])} opts={[["all", "All staff"], ["team", "Same listing only"], ["leads", "Leads & managers only"], ["none", "Hidden"]]} />
         <TogRow label="Swap shifts" desc="Staff can swap shifts with each other if both hold the appropriate training/qualifications." value={value.swapShifts} onChange={(v) => set("swapShifts", v)} />
         <TogRow label="Manager approval for shift swaps" desc="Require a manager to approve shift swaps." value={value.swapApproval} onChange={(v) => set("swapApproval", v)} />
         <TogRow label="Offer shifts" desc="Staff can offer their shift to qualified, available co-workers. Manager approval not required but a manager is notified when the shift is accepted." value={value.offerShifts} onChange={(v) => set("offerShifts", v)} />

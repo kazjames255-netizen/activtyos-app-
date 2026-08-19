@@ -467,7 +467,7 @@ export interface SchedulingSettings {
   unconfirmedToOpen: "off" | "12h" | "24h" | "48h";
   suggestionOrder: "bestfit" | "cost" | "hours";
   showLocationNames: boolean;
-  coworkerVisibility: "all" | "team" | "none";
+  coworkerVisibility: "all" | "team" | "leads" | "none"; // who may see the team's "who's on this week" rota
   swapShifts: boolean;
   swapApproval: boolean;
   offerShifts: boolean;

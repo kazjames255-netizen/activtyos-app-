@@ -146,7 +146,7 @@ export function MyHolidayApp() {
             </div>
           )}
           {ovTab === "status" && (
-            <div className="mt-4"><div className="flex items-center gap-2 rounded-xl bg-[var(--panel)] p-3"><span className="h-2.5 w-2.5 rounded-full" style={{ background: myClock?.status === "in" ? "#12b76a" : myClock?.status === "break" ? "#f59e0b" : "#94a3b8" }} /><span className="text-[13px] font-bold text-[var(--ink)]">You&rsquo;re {myStatus}</span>{myClock?.clockInAt && myClock.status !== "out" && <span className="text-[12px] text-[var(--ink-3)]">since {clockHhmm(myClock.clockInAt)}</span>}<a href="clockinout" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Clock in/out →</a></div></div>
+            <div className="mt-4"><div className="flex items-center gap-2 rounded-xl bg-[var(--panel)] p-3"><span className="h-2.5 w-2.5 rounded-full" style={{ background: myClock?.status === "in" ? "#12b76a" : myClock?.status === "break" ? "#f59e0b" : "#94a3b8" }} /><span className="text-[13px] font-bold text-[var(--ink)]">You&rsquo;re {myStatus}</span>{myClock?.clockInAt && myClock.status !== "out" && <span className="text-[12px] text-[var(--ink-3)]">since {clockHhmm(myClock.clockInAt)}</span>}<a href="schedule?tab=clock" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Clock in/out →</a></div></div>
           )}
           {ovTab === "clocked" && (
             <div className="mt-3 divide-y divide-[var(--line)]">{clockedIn.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nobody clocked in right now.</div> : clockedIn.map((r) => (

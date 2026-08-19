@@ -17,7 +17,9 @@ import { TourBridge } from "@/features/common/TourBridge";
 export default function TourPage({ params }: { params: Promise<{ portal: string; view: string }> }) {
   const { portal, view } = use(params);
   useState(() => {
-    enableDemoMode(TOUR_FIXTURES[view] ?? {});
+    // Prefer a portal-specific fixture (e.g. "staff/dash") so portals that share
+    // a view name but render different components each get the right demo data.
+    enableDemoMode(TOUR_FIXTURES[`${portal}/${view}`] ?? TOUR_FIXTURES[view] ?? {});
     return null;
   });
   const View = getRegisteredView(portal as PortalKey, view);

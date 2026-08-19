@@ -55,7 +55,7 @@ const LINK: Record<LinkKind, { label: string; bg: string; fg: string; icon: stri
 };
 // The types the picker offers (old camp/comp still render on legacy tasks).
 const LINK_TYPES: LinkKind[] = ["child", "parent", "book", "list", "venue", "gen"];
-interface LinkOpts { portal: string; bookOpts: { ref: string; v: string; sub?: string }[]; childOpts: { name: string; ref: string; sub?: string }[]; parentOpts: { name: string; ref: string; sub?: string }[]; listings: { id: string; title: string; location?: string }[]; locations: string[]; cats: string[] }
+export interface LinkOpts { portal: string; bookOpts: { ref: string; v: string; sub?: string }[]; childOpts: { name: string; ref: string; sub?: string }[]; parentOpts: { name: string; ref: string; sub?: string }[]; listings: { id: string; title: string; location?: string }[]; locations: string[]; cats: string[] }
 
 // A link chip — deep-links straight to the record when it has an href, and shows
 // a ↗ so it's obviously a link ("go to booking", not just a label).
@@ -643,7 +643,7 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
 }
 
 // ── Create-task modal ───────────────────────────────────────────────────────
-function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onCreate }: { noAssignee: boolean; team: string[]; opts: LinkOpts; initialTitle?: string; onClose: () => void; onCreate: (f: Partial<Task>, toCal: boolean) => void }) {
+export function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onCreate }: { noAssignee: boolean; team: string[]; opts: LinkOpts; initialTitle?: string; onClose: () => void; onCreate: (f: Partial<Task>, toCal: boolean) => void }) {
   const [t, setT] = useState(initialTitle ?? "");
   const [who, setWho] = useState("");
   const [prio, setPrio] = useState<Prio>("med");
@@ -658,7 +658,7 @@ function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onCreate }
   const fieldRow = (name: string, node: ReactNode) => <div><div className="mb-0.5 text-[11px] font-bold text-[var(--ink-3)]">{name}</div>{node}</div>;
   const submit = () => { if (!t.trim()) return; onCreate({ t: t.trim(), who: noAssignee ? "" : who, prio, due: due || null, time: time || null, status, link, labels }, toCal); };
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 p-4 pt-[6vh]" onClick={onClose}>
+    <div className="fixed inset-0 z-[200] flex items-start justify-center bg-black/40 p-4 pt-[6vh]" onClick={onClose}>
       <div className="w-full max-w-[520px] overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between px-5 py-3.5 text-white" style={{ background: HERO }}>
           <div className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>New task</div>
