@@ -22,11 +22,9 @@ export const colorFor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a 
 // A dark-gradient KPI tile with an icon badge, optional right-hand visual and children.
 export function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: ReactNode; grad: string; icon?: string; aside?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl p-4 text-white" style={{ background: grad, boxShadow: "0 14px 30px -16px rgba(20,30,80,.55), inset 0 1px 0 rgba(255,255,255,.4)" }}>
-      {/* shine: a diagonal gloss sweep + a bright top corner sheen */}
-      <div className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(125deg, rgba(255,255,255,.32) 0%, rgba(255,255,255,.08) 26%, rgba(255,255,255,0) 52%)" }} />
-      <div className="pointer-events-none absolute -right-10 -top-12 h-32 w-32 rounded-full" style={{ background: "radial-gradient(circle at 32% 32%, rgba(255,255,255,.4), rgba(255,255,255,0) 70%)" }} />
-      <div className="pointer-events-none absolute -bottom-12 -left-8 h-28 w-28 rounded-full bg-white/[.06]" />
+    <div className="relative overflow-hidden rounded-2xl p-4 text-white" style={{ background: grad, boxShadow: "0 10px 24px -16px rgba(20,30,80,.45)" }}>
+      {/* one restrained top sheen — less "showroom", more dashboard */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0))" }} />
       <div className="relative">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/75">
@@ -82,7 +80,7 @@ export function Donut({ segments, center, sub, valueFmt = (n) => String(n), size
         {segments.map((s) => (
           <div key={s.label} className="flex items-center gap-2 text-[11.5px]">
             <span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: s.color }} />
-            <span className="min-w-0 flex-1 font-semibold capitalize leading-tight">{s.label}</span>
+            <span className="min-w-0 flex-1 font-semibold leading-tight">{s.label}</span>
             <span className="flex-none tabular-nums font-bold text-[var(--ink-3)]">{valueFmt(s.value)}</span>
           </div>
         ))}
@@ -92,17 +90,20 @@ export function Donut({ segments, center, sub, valueFmt = (n) => String(n), size
 }
 
 // Ranked gradient horizontal bars.
-export function Breakdown({ entries }: { entries: { label: string; value: number; sub: string; color: string }[] }) {
+export function Breakdown({ entries }: { entries: { label: string; value: number; sub: string; color: string; meta?: string }[] }) {
   const max = Math.max(1, ...entries.map((e) => e.value));
   if (!entries.length) return <Empty>Nothing yet.</Empty>;
   return (
     <div className="flex flex-col gap-3">
       {entries.map((e, i) => (
         <div key={e.label}>
-          <div className="mb-1.5 flex items-center justify-between gap-2 text-[12.5px]">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="grid h-5 w-5 flex-none place-items-center rounded-md text-[10px] font-extrabold text-white" style={{ background: e.color }}>{i + 1}</span>
-              <span className="truncate font-semibold capitalize">{e.label}</span>
+          <div className="mb-1.5 flex items-start justify-between gap-2 text-[12.5px]">
+            <span className="flex min-w-0 items-start gap-2">
+              <span className="mt-[1px] grid h-5 w-5 flex-none place-items-center rounded-md text-[10px] font-extrabold text-white" style={{ background: e.color }}>{i + 1}</span>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">{e.label}</span>
+                {e.meta && <span className="block truncate text-[11px] font-medium text-[var(--ink-3)]">📍 {e.meta}</span>}
+              </span>
             </span>
             <span className="whitespace-nowrap font-extrabold tabular-nums text-[var(--ink-2)]">{e.sub}</span>
           </div>
@@ -136,9 +137,9 @@ export function MiniBars({ data, labels, caption }: { data: number[]; labels: st
 
 export function Panel({ title, right, children, className = "" }: { title: ReactNode; right?: ReactNode; children: ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 ${className}`}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{title}</div>
+    <div className={`rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(16,32,90,.04)] ${className}`}>
+      <div className="mb-3.5 flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2.5">
+        <div className="text-[15.5px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{title}</div>
         {right}
       </div>
       {children}
@@ -167,13 +168,18 @@ export function TrendChart({ series, series2, fmt, color, color2 }: { series: { 
   const y = (v: number) => H - PAD - (v / max) * (H - 2 * PAD);
   const line = (arr: { value: number }[]) => arr.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
   const areaP = series.length ? `${line(series)} L${x(series.length - 1)},${H - PAD} L${x(0)},${H - PAD} Z` : "";
-  const lastVal = series[series.length - 1]?.value ?? 0;
-  const s2End = series2 && series2.length ? series2[series2.length - 1] : null;
-  const valLabel = (cx: number, cy: number, text: string, fill: string, anchor: "middle" | "end") => {
-    const ly = cy < 26 ? cy + 15 : cy - 9;
-    const xc = anchor === "end" ? Math.min(cx, W - 2) : Math.max(text.length * 3.4, Math.min(W - text.length * 3.4, cx));
-    return <text x={xc} y={ly} fontSize="11" fontWeight="800" fill={fill} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor={anchor}>{text}</text>;
+  // A value label just above (-1) / below (+1) a point, white halo, clamped
+  // inside the box. Labels every point so figures read without hovering.
+  const ptLabel = (cx: number, cy: number, text: string, fill: string, dir: -1 | 1) => {
+    const ly = dir < 0 ? (cy < 18 ? cy + 15 : cy - 8) : (cy > H - 18 ? cy - 8 : cy + 15);
+    const half = text.length * 3.2;
+    const xc = Math.max(PAD + half, Math.min(W - PAD - half, cx));
+    return <text x={xc} y={ly} fontSize="10.5" fontWeight="800" fill={fill} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor="middle">{text}</text>;
   };
+  const dots = (arr: { value: number }[], col: string, dir: -1 | 1) =>
+    arr.map((p, i) => (p.value > 0 || i === arr.length - 1) ? (
+      <g key={`${dir}-${i}`}><circle cx={x(i)} cy={y(p.value)} r="3" fill={col} />{ptLabel(x(i), y(p.value), fmt(p.value), col, dir)}</g>
+    ) : null);
   return (
     <div className="relative">
       <svg viewBox={`0 0 ${W} ${H + 6}`} className="w-full" style={{ overflow: "visible" }}
@@ -187,9 +193,8 @@ export function TrendChart({ series, series2, fmt, color, color2 }: { series: { 
         <path d={line(series)} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
         {series2 && <path d={line(series2)} fill="none" stroke={color2} strokeWidth="2.5" strokeLinejoin="round" />}
         {hover != null && <line x1={x(hover)} x2={x(hover)} y1={PAD} y2={H - PAD} stroke="var(--ink-3)" strokeWidth="1" strokeDasharray="3 3" />}
-        <circle cx={x(series.length - 1)} cy={y(lastVal)} r="3.5" fill={color} />
-        {valLabel(x(series.length - 1), y(lastVal), fmt(lastVal), color, s2End ? "end" : "middle")}
-        {s2End && <><circle cx={x(series2!.length - 1)} cy={y(s2End.value)} r="3.5" fill={color2} />{valLabel(x(series2!.length - 1), y(s2End.value), fmt(s2End.value), color2!, "end")}</>}
+        {dots(series, color, -1)}
+        {series2 && dots(series2, color2!, 1)}
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{series.filter((_, i) => i % Math.ceil(n / 6) === 0 || i === n - 1).map((p, i) => <span key={i}>{monthLabel(p.label)}</span>)}</div>
       {hover != null && series[hover] && (
