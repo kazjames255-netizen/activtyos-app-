@@ -9,6 +9,7 @@ import { PageHero } from "@/components/OperatorPage";
 import { Tile } from "@/features/money/finance-kit";
 import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDur, workedMs, type ClockRecord } from "@/features/timeclock/data";
 import { greeting } from "@/lib/greeting";
+import { useSettings } from "@/lib/settings";
 
 // ─────────────────────────────────────────────────────────────────────────
 // staff/dash — the staff member's colourful landing page. Live tenant data:
@@ -54,6 +55,30 @@ function myShiftToday(): MyShift | null {
   } catch { return null; }
 }
 
+interface Coworker { name: string; start: string; end: string; role?: string; where?: string }
+// Who else is rostered today — gated by the same "co-worker visibility" setting
+// that controls MySchedule's "Who's on" tab (all / same-listing / leads / none).
+function coworkersToday(vis: "all" | "team" | "leads" | "none"): Coworker[] {
+  if (vis === "none") return [];
+  try {
+    const s = JSON.parse(localStorage.getItem(ROTA_KEY) || "null") as { staff?: { id: string; name: string }[]; shifts?: (MyShift & { staffId?: string; date?: string })[] } | null;
+    const staff = s?.staff || [];
+    const shifts = (s?.shifts as (MyShift & { staffId?: string; date?: string })[]) || [];
+    const day = todayIso();
+    const meIds = new Set(staff.filter((x) => x.name === ME).map((x) => x.id));
+    const mine = shifts.filter((x) => x.date === day && x.staffId && meIds.has(x.staffId));
+    const iAmLead = mine.some((x) => /lead|manager|owner/i.test(x.role || ""));
+    if (vis === "leads" && !iAmLead) return [];
+    const myScopes = new Set(mine.map((x) => x.listing || x.site).filter(Boolean));
+    const nameById = new Map(staff.map((x) => [x.id, x.name]));
+    return shifts
+      .filter((x) => x.date === day && x.staffId && !meIds.has(x.staffId))
+      .filter((x) => (vis === "team" ? myScopes.has(x.listing || x.site) : true))
+      .map((x) => ({ name: nameById.get(x.staffId!) || "Colleague", start: x.start, end: x.end, role: x.role, where: x.listing || x.site }))
+      .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
+  } catch { return []; }
+}
+
 export function StaffDashApp() {
   const [me, setMe] = useState<Me | null>(null);
   const [sessions, setSessions] = useState<RatioSession[] | null>(null);
@@ -63,8 +88,11 @@ export function StaffDashApp() {
   const [error, setError] = useState<string | null>(null);
   const [clock, setClock] = useState<Record<string, ClockRecord> | null>(null);
   const [shift, setShift] = useState<MyShift | null>(null);
+  const [coworkers, setCoworkers] = useState<Coworker[]>([]);
   const [profile, setProfile] = useState<WatchKid | null>(null); // watch-list child card
   const [, tick] = useState(0); // live worked-time tick
+  const { settings } = useSettings();
+  const coworkerVis = settings.scheduling?.coworkerVisibility ?? "all";
   const today = todayIso();
 
   const refresh = useCallback(() => {
@@ -74,6 +102,7 @@ export function StaffDashApp() {
     apiGet<PublishedLite[]>("/api/timetables/published").then((w) => setTimetableToday((w ?? []).some((x) => x.dayList.some((d) => d.iso === today)))).catch(() => {});
   }, [today]);
   useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); refresh(); setClock(loadClock()); setShift(myShiftToday()); }, [refresh]);
+  useEffect(() => { setCoworkers(coworkersToday(coworkerVis)); }, [coworkerVis]);
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(id); }, []);
   useRealtime(["bookings", "blocks", "tasks", "timetables", "registers"], refresh);
 
@@ -133,6 +162,21 @@ export function StaffDashApp() {
             <div className="mt-2 text-[17px] font-extrabold leading-tight text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>You’re not rostered today</div>
             <div className="mt-1 text-[13px] text-[var(--ink-3)]">Enjoy your day off 🌿</div>
           </>)}
+          {coworkers.length > 0 && (
+            <div className="mt-3 border-t border-[var(--line)] pt-3">
+              <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Working with you today</div>
+              <div className="mt-1.5 flex flex-col gap-1">
+                {coworkers.slice(0, 6).map((c, i) => (
+                  <div key={i} className="flex items-center gap-2 text-[12.5px]">
+                    <span className="font-bold text-[var(--ink)]">{c.name}</span>
+                    {c.role && <span className="truncate text-[11px] text-[var(--ink-3)]">{c.role}</span>}
+                    <span className="ml-auto flex-none tabular-nums text-[12px] font-semibold text-[var(--ink-2)]">{to12(c.start)}–{to12(c.end)}</span>
+                  </div>
+                ))}
+                {coworkers.length > 6 && <div className="text-[11px] text-[var(--ink-3)]">+{coworkers.length - 6} more</div>}
+              </div>
+            </div>
+          )}
         </div>
 
         <div className={"rounded-2xl border p-4 " + (status === "in" ? "border-[#bfe6cf] bg-[#f2fbf5]" : status === "break" ? "border-[#f3d9a7] bg-[#fdf6e8]" : "border-[var(--line)] bg-white")}>
