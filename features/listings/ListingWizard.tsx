@@ -1902,20 +1902,36 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
         <div className="flex flex-col gap-2">
           {blocks.library.map((b) => {
             const on = b.id === d.blockId;
+            const openBlocks = () => window.open(window.location.pathname.replace(/\/[^/]*$/, "/blocks"), "_blank");
+            if (on) return (
+              // Selected: a strong, clearly-picked state with its own actions —
+              // no longer a toggle, so clicking to explore can't deselect it.
+              <div key={b.id} className="rounded-xl border-2 p-3" style={{ borderColor: "var(--brand-2)", background: "var(--brand-soft)" }}>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="whitespace-nowrap rounded-full bg-[var(--brand-2,#2f6bd8)] px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-white">✓ Selected</span>
+                    <div>
+                      <div className="text-[13.5px] font-extrabold text-[var(--brand-ink)]">{b.name}</div>
+                      <div className="text-[11.5px] text-[var(--ink-3)]">{b.periodIds.length} period{b.periodIds.length === 1 ? "" : "s"} · {b.passIds.length} pass{b.passIds.length === 1 ? "" : "es"}</div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button type="button" onClick={openBlocks} className="whitespace-nowrap rounded-full border border-[var(--brand-2)] bg-white px-2.5 py-1 text-[11px] font-bold text-[var(--brand-ink)] hover:bg-[var(--brand-soft)]">✎ Edit block ↗</button>
+                    <button type="button" onClick={() => upd({ blockId: null })} className="whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">✕ Unselect</button>
+                  </div>
+                </div>
+                <div className="mt-2.5 rounded-lg bg-white/60 px-2.5 py-1.5 text-[11px] font-semibold text-[var(--brand-ink)]">↓ Its passes are now the editable tickets below — set each one&rsquo;s age, capacity, or close/hide it. Change the periods &amp; passes themselves in <b>Edit block</b>.</div>
+              </div>
+            );
             return (
-              // Clicking the selected block clears it — picking the wrong one
-              // otherwise left no way back to "no block".
-              <button key={b.id} type="button" onClick={() => upd({ blockId: on ? null : b.id })}
-                title={on ? "Click to unselect" : undefined}
-                className="group flex items-center justify-between gap-2 rounded-xl border p-3 text-left"
-                style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)" }}>
+              <button key={b.id} type="button" onClick={() => upd({ blockId: b.id })}
+                className="flex items-center justify-between gap-2 rounded-xl border p-3 text-left transition-colors hover:border-[var(--brand-2)] hover:bg-[var(--panel)]"
+                style={{ borderColor: "var(--line)" }}>
                 <div>
                   <div className="text-[13.5px] font-extrabold">▥ {b.name}</div>
-                  <div className="text-[11.5px] text-[var(--ink-3)]">{b.periodIds.length} periods · {b.passIds.length} passes</div>
+                  <div className="text-[11.5px] text-[var(--ink-3)]">{b.periodIds.length} period{b.periodIds.length === 1 ? "" : "s"} · {b.passIds.length} pass{b.passIds.length === 1 ? "" : "es"}</div>
                 </div>
-                <span className="whitespace-nowrap text-[11.5px] font-bold" style={{ color: on ? "var(--brand-ink)" : "var(--ink-3)" }}>
-                  {on ? <><span className="group-hover:hidden">✓ Selected</span><span className="hidden group-hover:inline">✕ Unselect</span></> : "Use this block"}
-                </span>
+                <span className="whitespace-nowrap rounded-full border border-[var(--brand-2)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-ink)]">Use this block</span>
               </button>
             );
           })}
@@ -1925,8 +1941,8 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
         <div className="mt-3">
           <SectionHead icon="🎟️">Tickets on this listing — each can amend its own age &amp; capacity</SectionHead>
           <p className="mb-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">
-            <b>Capacity is per day</b> — how many of <em>that</em> pass can be booked on any one day, separate from the
-            whole-listing total. A room refills each day, so this resets daily. It&rsquo;s how you cap a <b>SEND / 1:1</b> pass to
+            <b>Capacity is per day</b> — how many of <em>that</em>{" "}pass can be booked on any one day, separate from the
+            whole-listing total. A room refills each day, so this resets daily. It&rsquo;s how you cap a <b>SEND / 1:1</b>{" "}pass to
             the number of dedicated staff you have: set it to, say, 2 and only two 1:1 places a day can be booked, so
             you&rsquo;re never committed to support you can&rsquo;t provide.
           </p>
