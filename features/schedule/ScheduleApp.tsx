@@ -64,7 +64,10 @@ const loadTpl = (): Template[] => { try { return JSON.parse(localStorage.getItem
 // Real-data only: the rota starts empty. Locations come from the library, listings
 // & seasons from the operator's real data; shifts + staff are built here / wired.
 const empty = (): Store => ({ staff: [], shifts: [], sites: [] });
-const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.shifts ? v : empty(); } catch { return empty(); } };
+// Ignore a `demo`-flagged rota — the clock feature seeds a minimal one (staff
+// without rate/role) under this key so its "scheduled shift" display has data;
+// that shape isn't a real schedule and would crash here. Fall back to empty().
+const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.shifts && !v.demo ? v : empty(); } catch { return empty(); } };
 
 // Approved holiday/absence pulled from the Holiday planner (aos.holiday.absences.v1)
 // → a Set of `${nameLower}|${date}` so a person on leave can't be rostered.

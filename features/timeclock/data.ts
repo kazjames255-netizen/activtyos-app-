@@ -109,7 +109,9 @@ const demoLateFor = (r: ClockRecord) => (r.lateMin && r.lateMin > 0 ? r.lateMin 
 // `demo:true` so we can refresh it, but NEVER touch a real/seeded rota.
 function ensureDemoRota(recs: Record<string, ClockRecord>): void {
   const raw = read<{ staff?: RotaStaff[]; shifts?: RotaShift[]; demo?: boolean }>(ROTA_KEY);
-  if (raw?.shifts?.length && !raw.demo) return; // a real rota exists — leave it
+  // Only ever write when the rota is absent or our own demo — never touch a real
+  // schedule (any store the Schedule saved, even with staff but no shifts yet).
+  if (raw && !raw.demo && ((raw.shifts?.length ?? 0) > 0 || (raw.staff?.length ?? 0) > 0)) return;
   const day = todayISO();
   const pad = (n: number) => String(n).padStart(2, "0");
   const hm = (t: number) => `${pad(Math.floor((((t % 1440) + 1440) % 1440) / 60))}:${pad(((t % 60) + 60) % 60)}`;
