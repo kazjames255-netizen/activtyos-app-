@@ -186,8 +186,8 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
       <aside className="relative flex flex-col gap-4 p-5 text-white md:min-h-full"
         style={{
           backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.6px), var(--side-bg)",
-          backgroundSize: "18px 18px, cover",
-          backgroundRepeat: "repeat, no-repeat",
+          backgroundSize: "18px 18px, cover, cover, cover, cover",
+          backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat",
         }}>
         {onClose && <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full text-[17px] font-bold leading-none text-white/70 transition hover:bg-white/15 hover:text-white md:hidden">×</button>}
 

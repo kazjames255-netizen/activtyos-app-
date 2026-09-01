@@ -39,8 +39,8 @@ const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
 // is needed on the card (which is what clipped the listing dropdown before).
 const SIDE_SURFACE = {
   backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.6px), var(--side-bg)",
-  backgroundSize: "18px 18px, cover",
-  backgroundRepeat: "repeat, no-repeat",
+  backgroundSize: "18px 18px, cover, cover, cover, cover",
+  backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat",
 } as const;
 const AURORA_BG = "#23479f"; // mid-stop of --side-bg, for the on-white pill text
 const GHOST = "inline-flex items-center gap-1.5 rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-[12.5px] font-bold text-white/95 transition hover:bg-white/20";
@@ -1002,7 +1002,7 @@ export function RegistersApp() {
                   </label>
                 </div>
                 <button type="button" onClick={() => setDlOpen(true)} className={GHOST + " ml-auto"}>⬇ Download</button>
-                <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? "Collapse header" : "Expand header"} className="inline-flex items-center gap-1.5 rounded-full border border-white/25 px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-[0_6px_16px_-6px_rgba(10,20,50,.7)] transition hover:brightness-110" style={{ background: "#0f2a63" }}><span className="text-[13px] leading-none">📊</span>{heroOpen ? "Hide overview" : "Show overview"}</button>
+                <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? "Collapse header" : "Expand header"} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
               </div>
 
               {/* Collapsed: a slim one-line summary so the numbers stay visible. */}

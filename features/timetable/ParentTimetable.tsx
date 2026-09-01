@@ -42,7 +42,7 @@ export function ParentTimetableApp() {
       {/* Hero */}
       <div
         className="relative mb-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]"
-        style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${"linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)"}`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}
+        style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${"linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)"}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}
       >
         <h2 className="m-0 flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px]">▦</span>

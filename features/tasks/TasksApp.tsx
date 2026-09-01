@@ -286,10 +286,10 @@ export function TasksApp() {
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
 
       {/* Hero */}
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Task manager</div>
-          <button type="button" onClick={toggleHero} aria-expanded={heroOpen} title={heroOpen ? "Collapse cards" : "Show cards"} className="inline-flex flex-none items-center gap-1.5 rounded-full border border-white/25 px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-[0_6px_16px_-6px_rgba(10,20,50,.7)] transition hover:brightness-110" style={{ background: "#16306e" }}><span className="text-[13px] leading-none">📊</span>{heroOpen ? "Hide overview" : "Show overview"}</button>
+          <button type="button" onClick={toggleHero} aria-expanded={heroOpen} title={heroOpen ? "Collapse cards" : "Show cards"} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
         </div>
         {heroOpen && <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{sub}</p>}
         {heroOpen && <div className="mt-3.5 flex flex-wrap gap-2.5">

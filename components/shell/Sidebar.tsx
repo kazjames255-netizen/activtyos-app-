@@ -295,8 +295,8 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       style={{
         color: "var(--side-ink)",
         backgroundImage: "radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1.6px), var(--side-bg)",
-        backgroundSize: "18px 18px, cover",
-        backgroundRepeat: "repeat, no-repeat",
+        backgroundSize: "18px 18px, cover, cover, cover, cover",
+        backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat",
       }}
     >
       <div className={`flex items-center pb-4 ${collapsed ? "justify-center px-2" : "gap-2 px-4"}`}>

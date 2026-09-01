@@ -74,8 +74,8 @@ export function PageHero({
           // A white 18px dot grid layered over the gradient — matches the sidebar
           // and register header so every title card reads as the same surface.
           backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${background ?? "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)"}`,
-          backgroundSize: "18px 18px, cover",
-          backgroundRepeat: "repeat, no-repeat",
+          backgroundSize: "18px 18px, cover, cover, cover, cover",
+          backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat",
         }}
       >
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -96,10 +96,10 @@ export function PageHero({
                 onClick={toggle}
                 aria-expanded={open}
                 title={open ? "Collapse cards" : "Show cards"}
-                className="inline-flex items-center gap-1.5 rounded-full border border-white/25 px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-[0_6px_16px_-6px_rgba(10,20,50,.7)] transition hover:brightness-110"
-                style={{ background: "#16306e" }}
+                className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white"
+                style={{ background: "rgba(12,26,68,.42)" }}
               >
-                <span className="text-[13px] leading-none">📊</span>{open ? "Hide overview" : "Show overview"}
+                <span className="text-[10px] leading-none">{open ? "▾" : "▸"}</span>{open ? "Hide" : "Show"}
               </button>
             )}
           </div>
