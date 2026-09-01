@@ -1274,6 +1274,11 @@ function PricingCalculator({
   // The longest-finish timing — the one the pass price is set against (the rest
   // work out shorter). Named so the price box can say WHY it's the reference.
   const longestTiming = timingRows.length ? timingRows.reduce((a, b) => (pHrs(b) > pHrs(a) ? b : a)) : null;
+  // Label for the longest timing: its range, prefixed with the title only when
+  // that's a real name (not itself a time — periods can auto-title to their range).
+  const longestLabel = longestTiming
+    ? (/\d\s*(am|pm)|\d:\s*\d/i.test(longestTiming.title) ? periodRange(longestTiming) : `${longestTiming.title} · ${periodRange(longestTiming)}`)
+    : "";
 
   const setFlat = (passId: string, v: string) => {
     setPassFlat((m) => ({ ...m, [passId]: v }));
@@ -1400,7 +1405,7 @@ function PricingCalculator({
                       <label className="block text-[11.5px] font-extrabold leading-[1.45] text-[#8a5a09]">
                         💷 Full price for this pass
                         {longestTiming && timingRows.length > 1 ? (
-                          <span className="font-semibold text-[#a97b2e]"> — set it for the <b>longest finish ({longestTiming.title}, {periodRange(longestTiming)})</b>; earlier finishes work out cheaper from this</span>
+                          <span className="font-semibold text-[#a97b2e]"> — set it for the <b>longest finish ({longestLabel})</b>; earlier finishes work out cheaper from this</span>
                         ) : (
                           <span className="font-semibold text-[#a97b2e]"> — what this pass costs</span>
                         )}
