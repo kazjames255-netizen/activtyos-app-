@@ -172,7 +172,10 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   // "any children with allergies in?", "who's not arrived?", "who has SEND?".
   type CDoc = { name?: string; send?: string; sendPlanId?: string; sendPlanName?: string; allergies?: string; medical?: string; dietary?: string };
   const childByName = new Map(childrenSnap.docs.map((d) => [((d.data() as CDoc).name ?? "").trim().toLowerCase(), d.data() as CDoc]));
-  const registersSnap = await db.collection("registers").where("tenantId", "==", tenantId).where("date", "==", today).get();
+  const [registersSnap, menuDoc] = await Promise.all([
+    db.collection("registers").where("tenantId", "==", tenantId).where("date", "==", today).get(),
+    db.collection("menus").doc(`${tenantId}_${today}`).get(),
+  ]);
   const attByRef = new Map<string, string>();
   registersSnap.docs.forEach((d) => {
     const entries = (d.data() as { entries?: Record<string, { status?: string; collectedAt?: string | null }> }).entries ?? {};
@@ -205,11 +208,16 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
       .reduce((s, p) => s + (p.amount ?? 0), 0),
   );
 
-  const openTasks = tasksSnap.docs
-    .map((d) => d.data() as { title?: string; done?: boolean; dueDate?: string })
-    .filter((t) => !t.done)
-    .slice(0, 15)
-    .map((t) => ({ title: t.title, due: t.dueDate ?? null }));
+  const taskRows = tasksSnap.docs.map((d) => d.data() as { title?: string; done?: boolean; dueDate?: string; status?: string; who?: string });
+  const openR = taskRows.filter((t) => !t.done && t.status !== "done");
+  const openTasks = openR.slice(0, 15).map((t) => ({ title: t.title, due: t.dueDate ?? null, who: t.who ?? null }));
+  const taskSummary = { open: openR.length, overdue: openR.filter((t) => !!t.dueDate && t.dueDate < today).length, dueToday: openR.filter((t) => t.dueDate === today).length };
+
+  // Today's meals (menu for the day) + how many children in have dietary/allergy needs.
+  const menuMeals = (menuDoc.data()?.meals as { type?: string; description?: string; allergens?: string[] }[] | undefined) ?? [];
+  const mealsToday = menuMeals.length
+    ? { menu: menuMeals.map((m) => ({ type: m.type, description: m.description, allergens: m.allergens ?? [] })), childrenWithDietaryNeeds: childrenTodayDetailed.filter((k) => k.care.some((c) => c.startsWith("dietary") || c.startsWith("allergy"))).length }
+    : null;
 
   const compact = (b: Booking) => ({
     ref: b.ref, child: b.child, family: b.booker, listing: b.listing,
@@ -263,6 +271,7 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
     date: today,
     sessions: sessions.filter((s) => s.date === today).map((s) => ({ listing: s.listing, start: s.start, end: s.end, booked: s.booked, capacity: s.capacity })),
     attendance,
+    meals: mealsToday, // today's menu + how many children in have dietary/allergy needs (null if no menu set)
     childrenWithSEND: sendChildrenToday,
     children: childrenTodayDetailed, // each: child, listing, family, status (signed in / not signed in yet / absent / collected), care[] (SEND, allergy, medical, dietary)
   };
@@ -273,7 +282,7 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   // never money, booking approvals or owing families. Those are the manager's,
   // and handing them to a coach would be wrong (and a data-minimisation issue).
   if (forStaff) {
-    return { today: todayBlock, upcomingSessions, openTasks, incidents, childrenSummary, team };
+    return { today: todayBlock, upcomingSessions, openTasks, taskSummary, incidents, childrenSummary, team };
   }
 
   // ── Operator-only: money, marketing & wider ops (staff never reach here) ──
@@ -346,6 +355,7 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
     childrenSummary,
     team,
     incidents,
+    taskSummary,
     finances,
     coupons,
     memberships,
