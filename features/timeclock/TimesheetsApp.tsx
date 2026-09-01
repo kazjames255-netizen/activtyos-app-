@@ -23,7 +23,7 @@ export function TimesheetsApp() {
   const [q, setQ] = useState("");
   const [locFilter, setLocFilter] = useState("all");
   const [edit, setEdit] = useState<ClockRecord | null>(null);
-  const [statusFilter, setStatusFilter] = useState<"all" | "in" | "break" | "late" | "out">("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "in" | "break" | "needs" | "out">("all");
   const [nudges, setNudges] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => { setAll(loadClock()); setSettings(loadClockSettings()); }, []);
@@ -159,13 +159,17 @@ export function TimesheetsApp() {
 
       {tab === "in" && (() => {
         const outVisible = out.filter((r) => !offNames.has(r.name.trim().toLowerCase()));
-        const late = [...inNow, ...onBreak].filter((r) => (r.lateMin || 0) > 0);
+        // "Needs attention" = anyone to chase: scheduled but not clocked in (needs
+        // to clock IN), or clocked in late. They're the ones a nudge is for.
+        const needsIn = outVisible.filter((r) => !r.clockInAt);
+        const lateIn = [...inNow, ...onBreak].filter((r) => (r.lateMin || 0) > 0);
+        const needsAction = [...needsIn, ...lateIn];
         const F = statusFilter;
         const pills: [typeof statusFilter, string, number, string][] = [
           ["all", "All", inNow.length + onBreak.length + outVisible.length, "#1d3a8f"],
           ["in", "🟢 Clocked in", inNow.length, "#0f7a43"],
           ["break", "⏸ On break", onBreak.length, "#f59e0b"],
-          ["late", "⏰ Late", late.length, "#c0392b"],
+          ["needs", "⚠ Needs attention", needsAction.length, "#c0392b"],
           ["out", "⚪ Clocked out", outVisible.length, "#64748b"],
         ];
         const section = (label: string, color: string, list: ClockRecord[], empty: string) => (
@@ -187,7 +191,7 @@ export function TimesheetsApp() {
             </div>
             {(F === "all" || F === "in") && section("🟢 Clocked in", "#0f7a43", inNow, "No one clocked in.")}
             {(F === "all" || F === "break") && section("⏸ On break", "#f59e0b", onBreak, "Nobody on a break.")}
-            {F === "late" && section("⏰ Clocked in late", "#c0392b", late, "Nobody clocked in late — nice.")}
+            {F === "needs" && section("⚠ Needs to clock in or out", "#c0392b", needsAction, "Everyone's where they should be — nothing to chase. 👍")}
             {F === "all" && (
               <div className="mt-4">
                 <div className="mb-2 flex items-center gap-2"><span className="text-[12px] font-extrabold uppercase tracking-wide text-[#8b5cf6]">🏖 Off today</span><span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#8b5cf6] px-1.5 text-[10.5px] font-extrabold text-white">{off.length}</span></div>
