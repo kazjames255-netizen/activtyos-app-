@@ -689,6 +689,7 @@ export function RegistersApp() {
   const [dlOpen, setDlOpen] = useState(false);
   const [nudgeFor, setNudgeFor] = useState<{ a: Attendee; late: Late } | null>(null);
   const [openKid, setOpenKid] = useState<Attendee | null>(null);
+  const [heroOpen, setHeroOpen] = useState(true); // collapse the headline + toolbar to give the list room
   const [view, setView] = useState<"list" | "gallery">("list"); // List table vs Photos overview
   const [galFilter, setGalFilter] = useState<"all" | "present" | "notArrived" | "absent" | "collected">("all");
   const [showConsent, setShowConsent] = useState(false); // reveal photo-permission chips
@@ -1001,8 +1002,21 @@ export function RegistersApp() {
                   </label>
                 </div>
                 <button type="button" onClick={() => setDlOpen(true)} className={GHOST + " ml-auto"}>⬇ Download</button>
+                <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? "Collapse header" : "Expand header"} className={GHOST}>{heroOpen ? "▴ Collapse" : "▾ Expand"}</button>
               </div>
 
+              {/* Collapsed: a slim one-line summary so the numbers stay visible. */}
+              {!heroOpen && (
+                <button type="button" onClick={() => setHeroOpen(true)} className="mt-3 flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-left hover:bg-white/10">
+                  <span className="text-[15px] font-extrabold tracking-[-0.02em]" style={{ fontVariantNumeric: "tabular-nums" }}>{agg.present} of {agg.expected} <span className="font-semibold text-white/55">signed in</span></span>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#ffb020" }} />{agg.notArrived} not arrived</span>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#ff6b81" }} />{agg.absent} absent</span>
+                  {agg.collectedCount > 0 && <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#3ddc84" }} />{agg.collectedCount} collected</span>}
+                  <span className="ml-auto text-[11.5px] font-bold text-white/60">▾ Expand</span>
+                </button>
+              )}
+
+              {heroOpen && (<>
               {/* The headline figure — the one number you read from across a hall. */}
               <div className="mt-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
                 <div className="min-w-0">
@@ -1081,6 +1095,7 @@ export function RegistersApp() {
                   </div>
                 </div>
               )}
+              </>)}
             </div>
           </div>
 
