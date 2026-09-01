@@ -2443,6 +2443,10 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
   return (
     <div className="mx-auto max-w-[1120px]">
       <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
+      <div className="mb-3 flex flex-wrap items-start gap-2 rounded-lg border border-[#cfe0fb] bg-[#f4f9ff] px-3 py-2 text-[11.5px] leading-[1.5] text-[#16306e]">
+        <span>ℹ️</span>
+        <span>Your team is <b>shared across every listing</b> and stored by reference — so a new hire you add here shows up in the picker on <b>all</b> your listings (you just <b>Assign</b> them to the ones they work), and editing a name or bio updates it everywhere. Assigning changes nothing about existing listings until you tick the person on.</span>
+      </div>
       <RichCard icon="🧑‍🏫" title="Your team" subtitle="Names + short bios — saved and reusable on every listing">
         <div>
       <div className="mb-3 grid items-start gap-2 md:grid-cols-2">
