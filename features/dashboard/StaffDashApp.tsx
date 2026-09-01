@@ -149,8 +149,8 @@ export function StaffDashApp() {
     <div className="text-[var(--ink)]">
       <PageHero
         icon="👋"
-        title={`${greeting(me?.name)} — here’s ${me?.tenantName ?? "your club"} today`}
-        lede={`${dayLabel} — live from bookings, registers and the team’s tasks.`}
+        title={greeting(me?.name)}
+        lede={`${dayLabel}${me?.tenantName ? ` · ${me.tenantName}` : ""} — your shifts, registers and tasks for today.`}
       />
 
       {error && <div className="mb-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
