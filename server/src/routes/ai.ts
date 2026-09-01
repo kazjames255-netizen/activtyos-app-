@@ -21,7 +21,7 @@ import type { Booking } from "../../../features/bookings/types";
 export const ai = Router();
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-const MODEL = process.env.GROQ_MODEL || "llama-3.3-70b-versatile";
+const MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
 const chatSchema = z.object({
   messages: z
@@ -241,7 +241,10 @@ ai.post("/chat", async (req, res) => {
       model: MODEL,
       messages: [{ role: "system", content: system }, ...parsed.data.messages],
       temperature: 0.3,
-      max_tokens: 700,
+      // gpt-oss are reasoning models: give headroom so the answer survives the
+      // reasoning budget, and keep that reasoning light so replies stay snappy.
+      max_tokens: MODEL.includes("gpt-oss") ? 1600 : 700,
+      ...(MODEL.includes("gpt-oss") ? { reasoning_effort: "low" as const } : {}),
     }),
   });
   if (!groqRes.ok) {
