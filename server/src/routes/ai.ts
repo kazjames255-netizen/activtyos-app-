@@ -37,7 +37,14 @@ const HOWTO: Record<"operator" | "staff" | "parent" | "platform", string> = {
     "Log an accident/incident: Registers or the Incidents area → Log accident → child, what happened, first aid given, and whether to notify the parent (they get a copy in their portal).",
     "See finances: Finance & analytics (revenue, payouts, debts, customers). Money in / Money out for income and expenses. Payroll for staff pay.",
     "Add a team member: Team & invites → invite by email and choose their role; they join via the invite link. Rotas/shifts are set in Schedule.",
-    "Set up the business: Setup & features (seasons, child questions, consents, safeguarding options, portal toggles).",
+    "Record an expense / bills: Money out (expenses) — add a bill or expense and mark it Paid or Pending; Purchasing for purchase orders. Set the accounting basis (cash vs accrual) in Setup → Money.",
+    "Reconcile takings: Reconciliation — match payments received against bookings and invoices.",
+    "Set up refer-a-friend: Setup → Refer a friend — turn it on, set the friend discount and the referrer reward; families then get a Refer a friend page.",
+    "Memberships: Setup → Memberships — turn it on and define up to 3 tiers (a % discount or £ wallet credit per month).",
+    "Run payroll / see timesheets: Payroll for pay runs (it uses clocked hours); Clock in/out & timesheets for the hours themselves.",
+    "Split fees with a partner or coach: the Split fees page.",
+    "Change your ActivityOS plan: Subscription.",
+    "Set up the business: Setup & features (seasons, child questions, consents, safeguarding options, roles & permissions, and which modules families see).",
   ].join("\n• "),
   staff: [
     "Take a register: Registers → today's session → tap each child to mark them In, Absent or Collected. Use “Roll call” for a head-count. Tap a child's name to see their care card (allergies, medical, SEND, collection password).",
@@ -45,14 +52,21 @@ const HOWTO: Record<"operator" | "staff" | "parent" | "platform", string> = {
     "Log an accident: Registers/Incidents → Log accident → child, what happened and any first aid; a manager and (if set) the parent are notified.",
     "Your tasks: Tasks → tick one off or change its status. Team tasks are shared.",
     "Who's in / who has SEND or allergies: Registers → the child cards show attendance and every care flag.",
-    "Time off & your shifts: My time off to request leave; My schedule / Timetable for your shifts.",
+    "Time off & your shifts: My time off to request leave; My shifts & clock in/out for your rota.",
+    "Set your availability: My availability — mark when you can and can't work.",
+    "Your pay & claims: Payslips for your payslips; My expenses to submit an expense claim (attach a receipt).",
+    "Your training & certificates: Certificates & courses — your required and optional courses and cert expiry.",
+    "Finish onboarding: the Onboarding page — complete your joining details to get cleared to start.",
   ].join("\n• "),
   parent: [
     "Pay what you owe: Payments → pay outstanding invoices/bookings (card, or store credit in your Wallet).",
     "Book an activity: Browse → pick the activity and dates → checkout. Discount codes and wallet credit apply at checkout.",
     "Change or cancel: My bookings → open the booking (cancellation follows the provider's cut-off).",
     "Update your child's details: Children → edit allergies, medical, dietary, SEND/EHCP plan, consents and collection password.",
-    "Messages & updates: Messages for chats; Newsfeed/Moments for photos and updates the provider shares.",
+    "Messages & updates: Messages for chats; Newsfeed for the provider's news; Moments for your child's photos.",
+    "Discount codes & memberships: the Coupons & discount codes page shows codes you can use; the Memberships page shows tiers you can join.",
+    "Refer a friend: the Refer a friend page has your link and what you earn.",
+    "Trips & consent: the Trips & consent page — give consent for a trip; Medication to record your child's medication for the provider.",
   ].join("\n• "),
   platform: [
     "Providers: the Providers area lists every tenant, their plan and activity.",
@@ -361,15 +375,24 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
 
 // ── Parent snapshot — the family's own world: bookings, children, credit. ──
 async function familySnapshot(email: string, uid: string) {
-  const [bookingsSnap, childrenSnap, wallets] = await Promise.all([
+  const [bookingsSnap, childrenSnap, wallets, threadsSnap, memSnap] = await Promise.all([
     db.collection("bookings").where("email", "==", email).get(),
     db.collection("children").where("parentUid", "==", uid).get(),
     walletsForFamily(email),
+    db.collection("threads").where("parentEmail", "==", email).get(),
+    db.collection("memberships").where("email", "==", email).get(),
   ]);
   const bookings = bookingsSnap.docs.map((d) => fromDoc(d.data() as BookingDoc));
   const tenantIds = [...new Set(bookings.map((b) => b.tenantId).filter(Boolean) as string[])].slice(0, 30);
   const tenants = tenantIds.length ? await db.getAll(...tenantIds.map((id) => db.collection("tenants").doc(id))) : [];
   const providerName = new Map(tenants.filter((t) => t.exists).map((t) => [t.id, (t.data()!.name as string) ?? "Your provider"]));
+  // Recent provider news (Firestore `in` caps at 10 tenants).
+  const provTids = tenantIds.slice(0, 10);
+  const postsSnap = provTids.length ? await db.collection("posts").where("tenantId", "in", provTids).get() : null;
+  const posts = (postsSnap?.docs ?? []).map((d) => d.data() as { tenantId?: string; title?: string; status?: string; createdAt?: string })
+    .filter((p) => p.status === "published").sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")).slice(0, 5);
+  const threads = threadsSnap.docs.map((d) => d.data() as { tenantName?: string; subject?: string; lastFrom?: string; parentUnread?: number });
+  const memRows = memSnap.docs.map((d) => d.data() as { tenantId?: string; tierName?: string; status?: string; benefitType?: string; benefitValue?: number });
 
   return {
     children: childrenSnap.docs.map((d) => {
@@ -385,6 +408,9 @@ async function familySnapshot(email: string, uid: string) {
       cancelled: b.status === "Cancelled" ? { refund: b.cancel?.refund ?? null, amount: b.cancel?.amount ?? null } : null,
     })),
     storeCredit: wallets.map((w) => ({ provider: w.provider, balanceGBP: w.balance })),
+    memberships: memRows.filter((m) => m.status === "active").map((m) => ({ provider: providerName.get(m.tenantId ?? "") ?? null, tier: m.tierName, benefit: m.benefitType, value: m.benefitValue })),
+    messages: { unread: threads.reduce((s, t) => s + (t.parentUnread ?? 0), 0), recent: threads.filter((t) => (t.parentUnread ?? 0) > 0).slice(0, 5).map((t) => ({ provider: t.tenantName, subject: t.subject, from: t.lastFrom })) },
+    recentNews: posts.map((p) => ({ provider: providerName.get(p.tenantId ?? "") ?? null, title: p.title, date: p.createdAt })),
   };
 }
 

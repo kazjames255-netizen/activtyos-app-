@@ -26,18 +26,22 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 // ── Empty-state suggestion chips, grouped by job ──────────────────────────
 const STARTERS: Record<Kind, { label: string; icon: string; qs: string[] }[]> = {
   operator: [
-    { label: "Today", icon: "📋", qs: ["Who's booked in today?", "Which sessions are running now?", "Is anyone not signed in yet?"] },
-    { label: "Money", icon: "💷", qs: ["Which families still owe money?", "How much have I taken this week?", "What's outstanding right now?"] },
-    { label: "Bookings", icon: "🎫", qs: ["How full are my upcoming sessions?", "Any bookings awaiting approval?", "How did bookings go this week?"] },
-    { label: "Team", icon: "👷", qs: ["Who's working today?", "Any staff certificates expiring soon?"] },
-    { label: "Grow", icon: "📣", qs: ["Which listings are filling fastest?", "Who are my repeat families?"] },
+    { label: "Today", icon: "📋", qs: ["Who's booked in today?", "Which sessions are running now?", "Is anyone not signed in yet?", "Are any allergies or SEND in today?"] },
+    { label: "Money", icon: "💷", qs: ["How much have I taken this week?", "Which families still owe money?", "What are my biggest expenses this month?", "Any invoices overdue?"] },
+    { label: "Bookings", icon: "🎫", qs: ["How full are my upcoming sessions?", "Any bookings awaiting approval?", "Which sessions still have spaces?", "How did bookings go this week?"] },
+    { label: "Children & safety", icon: "🛡️", qs: ["Who has SEND in today?", "Show me recent accidents or incidents", "How many children have a medical need on file?"] },
+    { label: "Marketing", icon: "📣", qs: ["Which listings are filling fastest?", "Which discount codes are live?", "Who are my top-spending families?", "How's my referral scheme doing?"] },
+    { label: "Running it", icon: "⚙️", qs: ["Anything low on stock?", "Any unread messages?", "How do I add a new listing?", "How do I turn on childcare vouchers?"] },
   ],
   staff: [
-    { label: "Today", icon: "📋", qs: ["Who's expected in today?", "What's running this week?", "Who hasn't been signed in?"] },
-    { label: "Tasks", icon: "✅", qs: ["What tasks are still open?", "Anything due today?"] },
+    { label: "Today", icon: "📋", qs: ["Who's expected in today?", "Who hasn't been signed in?", "Which activity am I on and when?", "How many children are in right now?"] },
+    { label: "Children & safety", icon: "🛡️", qs: ["Any allergies in my group today?", "Who has SEND in today?", "How do I report a safeguarding concern?"] },
+    { label: "My day", icon: "✅", qs: ["What tasks are still open?", "Anything due today?", "How do I take the register?", "How do I clock in and out?"] },
   ],
   parent: [
-    { label: "My family", icon: "👨‍👩‍👧", qs: ["What have my children got coming up?", "Do I owe anything at the moment?", "Do I have any store credit?"] },
+    { label: "My family", icon: "👨‍👩‍👧", qs: ["What have my children got coming up?", "When's my child's next session?", "Which providers am I signed up with?"] },
+    { label: "Money", icon: "💷", qs: ["Do I owe anything at the moment?", "Do I have any store credit?", "How do I pay what I owe?"] },
+    { label: "Managing", icon: "⚙️", qs: ["How do I book a new activity?", "How do I change or cancel a booking?", "How do I update my child's allergies?", "How do I give trip consent?"] },
   ],
   platform: [
     { label: "Overview", icon: "📊", qs: ["How many providers are on the platform?", "How are bookings split by status?", "Who joined recently?"] },
