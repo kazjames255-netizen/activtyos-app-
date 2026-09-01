@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { Tile, GRAD } from "@/features/money/finance-kit";
 import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
   KIND_META, summarise, conflicts, annualAllowance, statutoryDays, leaveYear,
@@ -78,34 +79,40 @@ export function HolidayApp() {
         const today = isoDate(new Date());
         const teamOff = (iso: string) => absences.filter((a) => a.status === "approved" && a.start <= iso && a.end >= iso).length;
         const offThisWeek = new Set(absences.filter((a) => a.status === "approved" && a.start <= week[6] && a.end >= week[0]).map((a) => a.staffId)).size;
-        const cards: { icon: string; value: number; label: string; tone: string; tab: Tab }[] = [
-          { icon: "📋", value: pending.length, label: "Pending requests", tone: "#e11d63", tab: "requests" },
-          { icon: "🌴", value: offToday.length, label: "Off today", tone: "#1d3a8f", tab: "off" },
-          { icon: "🗓️", value: offThisWeek, label: "Off this week", tone: "#0f7a43", tab: "off" },
-          { icon: "👥", value: profiles.length, label: "Team", tone: "#64748b", tab: "allowances" },
+        const cards: { icon: string; value: number; label: string; sub: string; grad: string; tab: Tab }[] = [
+          { icon: "📋", value: pending.length, label: "Pending requests", sub: pending.length ? "awaiting you" : "all decided", grad: pending.length ? GRAD.pink : GRAD.green, tab: "requests" },
+          { icon: "🌴", value: offToday.length, label: "Off today", sub: offToday.length ? offToday.map((a) => a.name.split(" ")[0]).join(", ") : "everyone in", grad: GRAD.teal, tab: "off" },
+          { icon: "🗓️", value: offThisWeek, label: "Off this week", sub: "booked leave", grad: GRAD.violet, tab: "off" },
+          { icon: "👥", value: profiles.length, label: "Team", sub: "people tracked", grad: GRAD.blue, tab: "allowances" },
         ];
         return (
-          <Card className="p-4">
-            <div className="mb-2 flex flex-wrap items-baseline gap-2">
-              <div className="text-[15px] font-extrabold text-[var(--ink)]">This week</div>
-              <span className="text-[11.5px] text-[var(--ink-3)]">{ly.label} leave year</span>
+          <Card className="overflow-hidden p-0">
+            <div className="flex flex-wrap items-baseline gap-2 px-4 py-3" style={{ background: "linear-gradient(120deg,#16306e,#274ba3)" }}>
+              <div className="text-[15px] font-extrabold text-white">☀️ This week</div>
+              <span className="text-[11.5px] font-semibold text-white/70">{ly.label} leave year</span>
             </div>
-            <div className="grid grid-cols-7 gap-1.5">
-              {week.map((iso) => { const n = teamOff(iso); const isToday = iso === today; const d = new Date(`${iso}T00:00:00`); return (
-                <div key={iso} className="text-center">
-                  <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{d.toLocaleDateString("en-GB", { weekday: "short" })} {d.getDate()}</div>
-                  <div className={`mx-auto mt-1 grid h-11 w-11 place-items-center rounded-full text-[15px] font-extrabold tabular-nums ${isToday ? "bg-[#1d3a8f] text-white" : n > 0 ? "bg-[#eef4fd] text-[#1d3a8f] ring-1 ring-[#cfe0fb]" : "bg-[var(--panel)] text-[var(--ink-3)]"}`}>{n}</div>
-                </div>
-              ); })}
-            </div>
-            <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Team members off each day this week</div>
-            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {cards.map((c) => (
-                <button key={c.label} type="button" onClick={() => setTab(c.tab)} title={`Go to ${c.label}`} className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2.5 text-left transition hover:border-[var(--ink-3)] hover:bg-[var(--panel)]">
-                  <span className="grid h-7 w-7 flex-none place-items-center rounded-lg text-[14px]" style={{ background: c.tone + "1a" }}>{c.icon}</span>
-                  <div className="min-w-0"><div className="text-[16px] font-extrabold tabular-nums text-[var(--ink)]">{c.value}</div><div className="truncate text-[10.5px] font-semibold text-[var(--ink-3)]">{c.label}</div></div>
-                </button>
-              ))}
+            <div className="p-4">
+              <div className="grid grid-cols-7 gap-1.5">
+                {week.map((iso) => { const n = teamOff(iso); const isToday = iso === today; const d = new Date(`${iso}T00:00:00`); return (
+                  <div key={iso} className="text-center">
+                    <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{d.toLocaleDateString("en-GB", { weekday: "short" })} {d.getDate()}</div>
+                    <div className="mx-auto mt-1 grid h-11 w-11 place-items-center rounded-full text-[15px] font-extrabold tabular-nums text-white"
+                      style={isToday ? { background: "linear-gradient(135deg,#16306e,#3f78d8)", boxShadow: "0 6px 14px -6px rgba(29,58,143,.6)" }
+                        : n > 0 ? { background: "linear-gradient(135deg,#7c3aed,#a855f7)", boxShadow: "0 6px 14px -8px rgba(124,58,237,.6)" }
+                        : { background: "var(--panel)", color: "var(--ink-3)" }}>
+                      <span style={n > 0 || isToday ? undefined : { color: "var(--ink-3)" }}>{n}</span>
+                    </div>
+                  </div>
+                ); })}
+              </div>
+              <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Team members off each day this week</div>
+              <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                {cards.map((c) => (
+                  <button key={c.label} type="button" onClick={() => setTab(c.tab)} title={`Go to ${c.label}`} className="text-left transition-transform hover:-translate-y-0.5">
+                    <Tile label={c.label} icon={c.icon} grad={c.grad} value={String(c.value)} sub={c.sub} />
+                  </button>
+                ))}
+              </div>
             </div>
           </Card>
         );
