@@ -3028,9 +3028,9 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   // Numbered so the order to work through is obvious. Timing is skipped when
   // the block has none, so dates become step 2.
   const step = (n: number, text: string) => (
-    <div className="mb-2 mt-4 flex items-center gap-2">
-      <span className="flex h-[18px] w-[18px] items-center justify-center text-[10px] font-black" style={{ background: LIME, color: INK }}>{n}</span>
-      <span className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: MUTs }}>{text}</span>
+    <div className="mb-1.5 mt-3 flex items-center gap-2">
+      <span className="flex h-[16px] w-[16px] items-center justify-center text-[9px] font-black" style={{ background: LIME, color: INK }}>{n}</span>
+      <span className="text-[9.5px] font-black uppercase tracking-[0.14em]" style={{ color: MUTs }}>{text}</span>
     </div>
   );
   const on = { background: "rgba(198,255,0,.1)", color: LIME, borderColor: LIME };
@@ -3054,33 +3054,33 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   );
   return (
     <div className={wrap} style={wrapStyle}>
-      <div className="px-5 py-3.5" style={{ background: BAR }}>
+      <div className="px-4 py-2.5" style={{ background: BAR }}>
         <div className="flex items-baseline justify-between">
-          <span className="text-[18px] font-black italic uppercase text-white">Choose dates &amp; times</span>
-          {b.pass && <span className="text-[12px] text-[#cfe8ff]">from <b className="italic text-white">{money(b.unitPrice)}</b></span>}
+          <span className="text-[15px] font-black italic uppercase text-white">Choose dates &amp; times</span>
+          {b.pass && <span className="text-[11px] text-[#cfe8ff]">from <b className="italic text-white">{money(b.unitPrice)}</b></span>}
         </div>
         {b.hint && (
-          <div className="mt-2 flex items-start gap-1.5 rounded bg-white/15 px-2.5 py-1.5 text-[11.5px] font-semibold text-white backdrop-blur-sm">
+          <div className="mt-1.5 flex items-start gap-1.5 rounded bg-white/15 px-2.5 py-1 text-[11px] font-semibold text-white backdrop-blur-sm">
             <span aria-hidden>👉</span><span>{b.hint}</span>
           </div>
         )}
         {/* How close they are to the next discount. */}
         {b.nudge && (
-          <div className="mt-1.5 flex items-start gap-1.5 rounded px-2.5 py-1.5 text-[11.5px] font-black" style={{ background: LIME, color: INK }}>
+          <div className="mt-1 flex items-start gap-1.5 rounded px-2.5 py-1 text-[11px] font-black" style={{ background: LIME, color: INK }}>
             <span aria-hidden>⚡</span><span>{b.nudge}</span>
           </div>
         )}
       </div>
-      <div className="p-5">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="p-4">
+        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="min-w-0">
         {b.passes.length === 0 ? <div className="text-[13px] text-[#8f9bb0]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
           <>
             {step(1, "Choose your pass")}
-            <div className="flex flex-wrap gap-2">{b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? "This pass is closed for this camp" : !fits ? `Not enough days left for a ${t.days}-day pass` : undefined} className="border px-4 py-2 text-[12.5px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ml-1.5 no-underline">· Closed</span> : !fits ? <span className="ml-1.5 no-underline">· Not enough days left</span> : null}</button>; })}</div>
+            <div className="flex flex-wrap gap-2">{b.passes.map((t) => { const closed = b.passClosed(t.id); const fits = b.passFits(t); const off = closed || !fits; return <button key={t.id} type="button" disabled={off} onClick={() => { if (!off) b.pickPass(t.id); }} title={closed ? "This pass is closed for this camp" : !fits ? `Not enough days left for a ${t.days}-day pass` : undefined} className="border px-3 py-1.5 text-[12px] font-bold disabled:cursor-not-allowed" style={off ? { ...idle, opacity: 0.5, textDecoration: "line-through" } : t.id === b.passId ? on : idle}>{t.name} · {money(booking ? booking.priceFor(t.id, b.periodId) : t.basePrice)}{closed ? <span className="ml-1.5 no-underline">· Closed</span> : !fits ? <span className="ml-1.5 no-underline">· Not enough days left</span> : null}</button>; })}</div>
             {b.periods.length > 0 && <>
               {step(2, "Choose a timing")}
-              <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3.5 py-2 text-left text-[12px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
+              <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3 py-1.5 text-left text-[11.5px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
             </>}
             {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? "Choose any dates" : "Choose your dates")}
             {weeks.length ? <div className="flex flex-col gap-3">{weeks.slice(0, 8).map((w) => <div key={w.mon}>
@@ -3094,13 +3094,13 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                 return <button key={iso} type="button" disabled={dPast || dOff || (full && !queueable)}
                   onClick={() => (queueable ? b.toggleWait(iso) : b.pickDay(iso, w.mon))}
                   title={dPast ? "This day has already passed" : full ? (queueable ? (waiting ? "On your waiting list — tap to remove" : "Full — tap to join the waiting list") : "Full") : left === null ? undefined : d.showSpaces ? (low ? `Only ${left} left` : `${left} places left`) : (low ? "Almost full" : "Space available")}
-                  className="relative flex w-[44px] flex-col items-center border py-1.5 disabled:cursor-not-allowed"
+                  className="relative flex w-[40px] flex-col items-center border py-1 disabled:cursor-not-allowed"
                   style={waiting ? { borderColor: "#ffb020", color: "#ffb020", background: "#2a2110" }
                     : dPast ? { borderColor: LINEs, color: "#454d5e", background: CELLOFF, opacity: 0.5 }
                     : dOff || full ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF }
                     : sel ? { borderColor: LIME, color: INK, background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
-                  <span className="text-[14px] font-black leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
+                  <span className="text-[13px] font-black leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}
                 </button>; })}</div>
             </div>)}</div> : <div className="border border-dashed p-3.5 text-center text-[12px] text-[#6a7488]" style={{ borderColor: LINEs }}>Set the dates in “When it runs”.</div>}
@@ -3128,8 +3128,8 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                 </p>
               </div>
             ) : (
-            <div className="relative mt-11">
-            <button className={`w-full py-3.5 text-[13px] font-black italic uppercase disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ ...skew, background: LIME, color: INK, ["--aos-ready-ring" as string]: surf.ring } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
+            <div className="relative mt-6">
+            <button className={`w-full py-3 text-[12.5px] font-black italic uppercase disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ ...skew, background: LIME, color: INK, ["--aos-ready-ring" as string]: surf.ring } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
                 {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
                   <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
                     <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
@@ -3191,7 +3191,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               <b className="italic text-white">{money(b.total)}</b>
             </span>
           </div>
-          <button className="mt-3 w-full py-3.5 text-[13px] font-black italic uppercase disabled:opacity-40" style={{ ...skew, background: LIME, color: INK }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? "Next — add children" : `Checkout (${b.basket.length})`}</span></button>
+          <button className="mt-3 w-full py-3 text-[12.5px] font-black italic uppercase disabled:opacity-40" style={{ ...skew, background: LIME, color: INK }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? "Next — add children" : `Checkout (${b.basket.length})`}</span></button>
         </div>
         </div>
       </div>
