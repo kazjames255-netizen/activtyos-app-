@@ -91,6 +91,10 @@ export function InventoryApp() {
   async function doCheck(i: Item, qty: number) { try { await apiPost(`/api/inventory/${encodeURIComponent(i.id)}/check`, { quantity: qty }); setCheckVals((v) => { const n = { ...v }; delete n[i.id]; return n; }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
   async function markReceived(i: Item) { if (!confirm(`Mark ${i.orderQty ?? 0} ${i.name} as received? They'll be added to stock.`)) return; try { await apiPost(`/api/inventory/${encodeURIComponent(i.id)}/received`, {}); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
 
+  const [heroOpen, setHeroOpen] = useState(true);
+  useEffect(() => { try { if (localStorage.getItem("aos.hero.inventory") === "0") setHeroOpen(false); } catch { /* ignore */ } }, []);
+  const toggleHero = () => setHeroOpen((v) => { const n = !v; try { localStorage.setItem("aos.hero.inventory", n ? "1" : "0"); } catch { /* ignore */ } return n; });
+
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* hero */}
@@ -100,9 +104,12 @@ export function InventoryApp() {
             <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📦</span>Inventory</div>
             <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">Your kit & stock — what you hold, where it&rsquo;s stored, how many, and when it was last counted. Run a stock check, and carry a season&rsquo;s stock over to the next.</p>
           </div>
-          <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Add item</button>
+          <div className="flex flex-none items-center gap-2">
+            <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Add item</button>
+          </div>
         </div>
-        {items && (
+        {items && heroOpen && (
           <div className="mt-4 flex flex-wrap gap-2.5">{tiles.map(([label, v]) => (
             <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{v}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{label}</div></div>
           ))}</div>
