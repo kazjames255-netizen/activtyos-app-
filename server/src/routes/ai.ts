@@ -43,12 +43,13 @@ const RECEIVED = new Set(["recorded", "succeeded"]);
 // ── Operator snapshot — the dashboard's numbers plus a compact booking list
 // so "who's in today" and "who still owes" have names, not just totals. ──
 async function tenantSnapshot(tenantId: string, forStaff = false) {
-  const [bookingsSnap, blocksSnap, listingsSnap, paymentsSnap, tasksSnap] = await Promise.all([
+  const [bookingsSnap, blocksSnap, listingsSnap, paymentsSnap, tasksSnap, childrenSnap] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("blocks").where("tenantId", "==", tenantId).get(),
     db.collection("listings").where("tenantId", "==", tenantId).get(),
     db.collection("payments").where("tenantId", "==", tenantId).get(),
     db.collection("tasks").where("tenantId", "==", tenantId).get(),
+    db.collection("children").where("tenantId", "==", tenantId).get(),
   ]);
 
   const now = new Date();
@@ -80,6 +81,36 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
     .filter((b) => b.status === "Confirmed" && (!b.days || b.days.includes(today)))
     .filter((b) => sessions.some((s) => s.date === today && s.listing === b.listing));
 
+  // Care flags (SEND/allergy/medical/dietary) from the child records, and who's
+  // actually signed in from today's registers — so the assistant can answer
+  // "any children with allergies in?", "who's not arrived?", "who has SEND?".
+  type CDoc = { name?: string; send?: string; sendPlanId?: string; sendPlanName?: string; allergies?: string; medical?: string; dietary?: string };
+  const childByName = new Map(childrenSnap.docs.map((d) => [((d.data() as CDoc).name ?? "").trim().toLowerCase(), d.data() as CDoc]));
+  const registersSnap = await db.collection("registers").where("tenantId", "==", tenantId).where("date", "==", today).get();
+  const attByRef = new Map<string, string>();
+  registersSnap.docs.forEach((d) => {
+    const entries = (d.data() as { entries?: Record<string, { status?: string; collectedAt?: string | null }> }).entries ?? {};
+    for (const [ref, v] of Object.entries(entries)) attByRef.set(ref, v.collectedAt ? "collected" : (v.status ?? ""));
+  });
+  const statusWord = (s?: string) => (s === "in" ? "signed in" : s === "collected" ? "collected" : s === "absent" ? "absent" : "not signed in yet");
+  const childrenTodayDetailed = inToday.slice(0, 80).map((b) => {
+    const c = childByName.get((b.child ?? "").trim().toLowerCase()) ?? {};
+    const care: string[] = [];
+    if (c.send || c.sendPlanId || c.sendPlanName) care.push("SEND");
+    if (c.allergies) care.push(`allergy: ${c.allergies}`);
+    if (c.medical) care.push(`medical: ${c.medical}`);
+    if (c.dietary) care.push(`dietary: ${c.dietary}`);
+    return { child: b.child, listing: b.listing, family: b.booker, status: statusWord(attByRef.get(b.ref)), care };
+  });
+  const attendance = {
+    expected: childrenTodayDetailed.length,
+    signedIn: childrenTodayDetailed.filter((k) => k.status === "signed in").length,
+    collected: childrenTodayDetailed.filter((k) => k.status === "collected").length,
+    absent: childrenTodayDetailed.filter((k) => k.status === "absent").length,
+    notSignedInYet: childrenTodayDetailed.filter((k) => k.status === "not signed in yet").length,
+  };
+  const sendChildrenToday = childrenTodayDetailed.filter((k) => k.care.includes("SEND")).map((k) => k.child);
+
   const owing = live.filter((b) => OWES.has(b.pay) && outstandingOf(b) > 0);
   const takenThisWeek = round2(
     paymentsSnap.docs
@@ -103,7 +134,9 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   const todayBlock = {
     date: today,
     sessions: sessions.filter((s) => s.date === today).map((s) => ({ listing: s.listing, start: s.start, end: s.end, booked: s.booked, capacity: s.capacity })),
-    expectedChildren: inToday.slice(0, 80).map((b) => ({ child: b.child, listing: b.listing, family: b.booker })),
+    attendance,
+    childrenWithSEND: sendChildrenToday,
+    children: childrenTodayDetailed, // each: child, listing, family, status (signed in / not signed in yet / absent / collected), care[] (SEND, allergy, medical, dietary)
   };
   const upcomingSessions = sessions.filter((s) => s.date >= today && s.open).slice(0, 10)
     .map((s) => ({ date: s.date, start: s.start, end: s.end, listing: s.listing, spotsLeft: s.spotsLeft }));
