@@ -43,7 +43,9 @@ export function FinanceAnalyticsApp() {
   const [status, setStatus] = useState<PayStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [months, setMonths] = useState(6);
-  const [tab, setTab] = useState<"overview" | "revenue" | "addons" | "payouts" | "debts" | "people" | "insights">("overview");
+  const [tab, setTab] = useState<"overview" | "revenue" | "payouts" | "debts" | "insights">("overview");
+  // Sub-sections inside the Insights hub (was three separate top tabs).
+  const [insTab, setInsTab] = useState<"customers" | "addons" | "value">("customers");
   const [nowMs] = useState(() => Date.now());
   // Season + Location filters (a season/venue is a set of listings; we keep only
   // bookings whose listing is in it). "" = all.
@@ -338,7 +340,7 @@ export function FinanceAnalyticsApp() {
         actions={periodToggle}
       />
       <TabStrip
-        tabs={[["overview", "Overview"], ["revenue", "Revenue"], ["addons", "Add-ons"], ["payouts", "Payouts"], ["debts", "Debts"], ["people", "Customers & learners"], ["insights", "Insights"]]}
+        tabs={[["overview", "Overview"], ["revenue", "Revenue"], ["payouts", "Payouts"], ["debts", "Debts"], ["insights", "Insights"]]}
         value={tab}
         onChange={(t) => { setTabTouched(true); setTab(t); }}
       />
@@ -356,6 +358,15 @@ export function FinanceAnalyticsApp() {
             </select>
           )}
           {(season || venue) && <button type="button" onClick={() => { setSeason(""); setVenue(""); }} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">Reset</button>}
+        </div>
+      )}
+
+      {/* Insights sub-sections — one hub instead of three top tabs. */}
+      {tab === "insights" && !loading && (
+        <div className="mb-3 inline-flex flex-wrap gap-1 rounded-full bg-white p-1 shadow-sm">
+          {([["customers", "👤 Customers & learners"], ["addons", "🧩 Add-ons"], ["value", "📊 Value & mix"]] as [typeof insTab, string][]).map(([k, l]) => (
+            <button key={k} type="button" onClick={() => setInsTab(k)} className={`rounded-full px-3.5 py-1.5 text-[12.5px] font-bold ${insTab === k ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-2)] hover:bg-[#f2f5fb]"}`}>{l}</button>
+          ))}
         </div>
       )}
 
@@ -496,7 +507,7 @@ export function FinanceAnalyticsApp() {
             ) : <Empty>No unpaid invoices — nicely on top of it.</Empty>}
           </Panel>
         </div>
-      ) : tab === "people" ? (
+      ) : tab === "insights" && insTab === "customers" ? (
         <div className="flex flex-col gap-4">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Total bookers" icon="👤" grad={GRAD.blue} value={String(a.totalBookers)} sub={`in the last ${months} months`} />
@@ -525,7 +536,7 @@ export function FinanceAnalyticsApp() {
             <TrendChart series={a.collectedByMonth} fmt={compactMoney} color={GREEN} />
           </Panel>
         </div>
-      ) : tab === "addons" ? (
+      ) : tab === "insights" && insTab === "addons" ? (
         <div className="flex flex-col gap-4">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Add-on revenue (est.)" icon="🧩" grad={GRAD.violet} value={money(mix.addonRevenue)} sub="from paid add-ons" />
