@@ -1083,7 +1083,7 @@ export function ListingWizard({
             {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} />}
             {stepKey === "capacity" && <CapacityStep d={d} upd={upd} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
-            {stepKey === "provided" && <ChipStep headings={<HeadingFields d={d} upd={upd} sectionKey="included" />} n={3} kicker="STEP 3 · PROVIDED" title="What is provided" cardTitle="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }}
+            {stepKey === "provided" && <ChipStep n={3} kicker="STEP 3 · PROVIDED" title="What is provided" cardTitle="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }}
               extra={
                 <div className="mt-4">
                   <RichCard icon="🧳" title="What to bring" subtitle="What families should pack — shown on the listing and in the confirmation email">
@@ -1411,7 +1411,6 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
         </RichCard>
         <RichCard icon="📸" title="Gallery" subtitle="Extra photos for the page" tint="teal">
           <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" />
-          <HeadingFields d={d} upd={upd} sectionKey="gallery" />
           <div className="mt-1 text-[11px] text-[var(--ink-3)]">Shown as a gallery at the bottom of the customer page.</div>
         </RichCard>
       </div>
@@ -1734,7 +1733,6 @@ function ContentStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
           </RichCard>
           <RichCard icon="🌟" title="Learning outcomes" subtitle="What children gain" tint="teal">
             <EditableChips options={local.outcomes} sel={d.outcomes} emojis={local.emojis} showEmoji onToggle={(v) => upd({ outcomes: toggle(d.outcomes, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, outcomes: [...s.outcomes, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ outcomes: [...d.outcomes, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, outcomes: s.outcomes.filter((x) => x !== v) })); upd({ outcomes: d.outcomes.filter((x) => x !== v) }); }} check />
-            <HeadingFields d={d} upd={upd} sectionKey="learn" />
           </RichCard>
         </div>
       </div>
@@ -1770,11 +1768,9 @@ function SafetyStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       <div className="grid gap-4 md:grid-cols-2">
         <RichCard icon="🛡️" title="Safety features">
           <EditableChips options={local.safety} sel={d.safety} emojis={local.emojis} showEmoji onToggle={(v) => upd({ safety: toggle(d.safety, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, safety: [...s.safety, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ safety: [...d.safety, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, safety: s.safety.filter((x) => x !== v) })); upd({ safety: d.safety.filter((x) => x !== v) }); }} check />
-          <HeadingFields d={d} upd={upd} sectionKey="safety" />
         </RichCard>
         <RichCard icon="🤝" title="SEND & accessibility" tint="teal">
           <EditableChips options={local.send} sel={d.send} emojis={local.emojis} showEmoji onToggle={(v) => upd({ send: toggle(d.send, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, send: [...s.send, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ send: [...d.send, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, send: s.send.filter((x) => x !== v) })); upd({ send: d.send.filter((x) => x !== v) }); }} check />
-          <HeadingFields d={d} upd={upd} sectionKey="send" />
         </RichCard>
       </div>
       <div className="mt-2 text-[11px] text-[var(--ink-3)]">New options you add here are saved and offered on every listing.</div>
@@ -2217,30 +2213,9 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
 
 // Inline on each step: reword the heading this step's content appears under on
 // the customer page. Blank keeps the wording shown as the placeholder.
-function HeadingFields({ d, upd, sectionKey }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; sectionKey: string }) {
-  const def = SECTION_KEYS.find((s) => s.key === sectionKey);
-  if (!def) return null;
-  const set = (k: string, v: string) => upd({ headings: { ...(d.headings ?? {}), [k]: v } });
-  const customised = !!(d.headings?.[`${sectionKey}.eyebrow`] || d.headings?.[`${sectionKey}.title`]);
-  return (
-    <details className="mt-2.5" open={customised}>
-      <summary className="cursor-pointer list-none text-[11px] font-bold text-[#2f6bd8] [&::-webkit-details-marker]:hidden">✏️ Customise the wording <span className="font-normal text-[var(--ink-3)]">— optional{customised ? " · edited" : ""}</span></summary>
-      <div className="mt-2 flex flex-wrap gap-2 rounded-xl border border-[#dbe7fb] bg-[#f4f9ff] p-2.5">
-        <div className="min-w-[140px] flex-1">
-          <FieldLabel>Small label above</FieldLabel>
-          <Input value={d.headings?.[`${sectionKey}.eyebrow`] ?? ""} onChange={(e) => set(`${sectionKey}.eyebrow`, e.target.value)} placeholder={def.eyebrow} className="w-full text-[12px]" />
-        </div>
-        <div className="min-w-[140px] flex-1">
-          <FieldLabel>Heading</FieldLabel>
-          <Input value={d.headings?.[`${sectionKey}.title`] ?? ""} onChange={(e) => set(`${sectionKey}.title`, e.target.value)} placeholder={sectionKey === "about" ? d.descriptionSection || def.title : def.title} className="w-full text-[12px]" />
-        </div>
-      </div>
-    </details>
-  );
-}
-
 // Reword every heading a parent sees. Blank = use the wording shown as the
-// placeholder.
+// placeholder. Lives once on the Preview step (was also inline on each step —
+// removed as redundant clutter).
 function HeadingsEditor({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
   const [open, setOpen] = useState(false);
   const set = (k: string, v: string) => upd({ headings: { ...(d.headings ?? {}), [k]: v } });
@@ -2390,7 +2365,6 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
           })}
         </div>
       ) : <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">No add-ons yet — create one on the right. They save and appear on every listing.</div>}
-      <HeadingFields d={d} upd={upd} sectionKey="addons" />
       </RichCard>
       <RichCard icon={editing ? "✏️" : "➕"} title={editing ? `Editing “${local.addons.find((x) => x.id === editing)?.name ?? ""}”` : "Create a new add-on"} subtitle="Saved and reusable on any listing">
       <div className="flex flex-wrap items-end gap-2">
@@ -2466,7 +2440,6 @@ function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Par
       <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
       <RichCard icon="🧑‍🏫" title="Your team" subtitle="Names + short bios — saved and reusable on every listing">
         <div>
-      <HeadingFields d={d} upd={upd} sectionKey="team" />
       <div className="mb-3 grid items-start gap-2 md:grid-cols-2">
         {local.staff.map((m) => {
           const on = d.staffIds.includes(m.id);
