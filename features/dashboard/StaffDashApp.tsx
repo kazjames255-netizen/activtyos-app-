@@ -155,7 +155,20 @@ export function StaffDashApp() {
 
       {error && <div className="mb-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
 
-      {/* Hero row — pink "my shift" + clock in/out */}
+      {/* Today at a glance — one unified bar, hairline dividers */}
+      <div className="mb-3 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--line)] shadow-[0_1px_3px_rgba(20,30,60,.06)] sm:grid-cols-4">
+        {STAT.map((t) => (
+          <div key={t.small} className="flex items-center gap-3 bg-white p-4">
+            <span className="grid h-11 w-11 flex-none place-items-center rounded-xl text-[18px]" style={{ background: t.tint, color: t.ink }}>{t.icon}</span>
+            <div className="min-w-0">
+              <div className="text-[27px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
+              <div className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">{t.small}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* My day + clock in/out */}
       <div className="mb-3 grid gap-3 md:grid-cols-2">
         <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
           <div className="flex items-center justify-between">
@@ -220,29 +233,18 @@ export function StaffDashApp() {
         </div>
       </div>
 
-      {/* Stat tiles — counts are for your site, today */}
-      <div className="mb-3 grid grid-cols-2 gap-2.5 md:grid-cols-4">
-        {STAT.map((t) => (
-          <div key={t.small} className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
-            <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 flex-none place-items-center rounded-xl text-[15px]" style={{ background: t.tint, color: t.ink }}>{t.icon}</span>
-              <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t.small}</span>
-            </div>
-            <div className="mt-2.5 text-[28px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
-            <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t.sub}</div>
-          </div>
-        ))}
-      </div>
-
       {/* Watch list — flagged children in today (SEND / allergy / medical / dietary) */}
-      <Card className="mb-3 p-0">
-        <div className="h-1.5 w-full rounded-t-2xl" style={{ background: "linear-gradient(90deg,#c0362c,#f59e0b)" }} />
-        <div className="p-4">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-[13px] font-extrabold">⚠️ Watch list — today</span>
-            {regs !== null && watch.length > 0 && <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[10.5px] font-extrabold text-[#c0362c]">{watch.length} to keep an eye on</span>}
+      <Card className="mb-3 p-4">
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#fdecec", color: "#c0362c" }}>⚠️</span>
+            <div>
+              <div className="text-[14px] font-extrabold leading-tight">Watch list — today</div>
+              <div className="text-[11px] text-[var(--ink-3)]">Tap a child for their care card</div>
+            </div>
           </div>
-          <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">Children in at your site today with SEND, allergy, medical or dietary needs. Tap a name in the register for the full care plan.</p>
+          {regs !== null && watch.length > 0 && <span className="flex-none rounded-full bg-[#fdecec] px-2.5 py-1 text-[10.5px] font-extrabold text-[#c0362c]">{watch.length} to watch</span>}
+        </div>
           {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
             : watch.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No flagged children in today. 👍</div>
               : watch.map((k) => (
@@ -262,20 +264,20 @@ export function StaffDashApp() {
                   <span className="ml-auto flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">{k.where}<span className="text-[var(--brand,#1d3a8f)]">›</span></span>
                 </button>
               ))}
-        </div>
       </Card>
 
       {/* Today's sessions */}
-      <Card className="mb-3 overflow-hidden p-0">
-        <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#1d3a8f,#3f7ae0)" }} />
-        <div className="p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-[13px] font-extrabold">Today&rsquo;s sessions</span>
-            <span className="flex gap-2">
-              {timetableToday && <Link href="/staff/timetable"><Button sm>Day plan</Button></Link>}
-              <Link href="/staff/registers"><Button sm variant="primary">Open registers</Button></Link>
-            </span>
+      <Card className="mb-3 p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#eaf1ff", color: "#1d4ed8" }}>🗓️</span>
+            <div className="text-[14px] font-extrabold leading-tight">Today&rsquo;s sessions</div>
           </div>
+          <span className="flex gap-2">
+            {timetableToday && <Link href="/staff/timetable"><Button sm>Day plan</Button></Link>}
+            <Link href="/staff/registers"><Button sm variant="primary">Open registers</Button></Link>
+          </span>
+        </div>
           {sessions === null ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
             : sessions.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing runs today.</div>
               : sessions.map((s) => (
@@ -290,17 +292,17 @@ export function StaffDashApp() {
                   </span>
                 </div>
               ))}
-        </div>
       </Card>
 
       {/* Team tasks */}
-      <Card className="overflow-hidden p-0">
-        <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#b45309,#f59e0b)" }} />
-        <div className="p-4">
-          <div className="mb-2 flex items-center justify-between">
-            <span className="text-[13px] font-extrabold">Team tasks</span>
-            <Link href="/staff/tasks"><Button sm>All tasks</Button></Link>
+      <Card className="p-4">
+        <div className="mb-3 flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2.5">
+            <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#fef3e2", color: "#b45309" }}>✅</span>
+            <div className="text-[14px] font-extrabold leading-tight">Team tasks</div>
           </div>
+          <Link href="/staff/tasks"><Button sm>All tasks</Button></Link>
+        </div>
           {tasks === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
             : open.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">All done — nothing open. 🎉</div>
               : open.slice(0, 6).map((t) => (
@@ -311,7 +313,6 @@ export function StaffDashApp() {
                   {t.dueDate && <span className="text-[11px] text-[var(--ink-3)]">{t.dueDate}</span>}
                 </div>
               ))}
-        </div>
       </Card>
 
       {/* Care card — the flagged child's needs at a glance */}
