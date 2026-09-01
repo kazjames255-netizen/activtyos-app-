@@ -586,6 +586,9 @@ function ListingsTab({
   const [linkWarnId, setLinkWarnId] = useState<string | null>(null);
   const [archiveTick, setArchiveTick] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
+  // Confirmation + undo so archiving doesn't feel like the listing vanished.
+  const [justArchived, setJustArchived] = useState<{ id: string; name: string } | null>(null);
+  const archTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [menuId, setMenuId] = useState<string | null>(null);
   const [venueFilter, setVenueFilter] = useState("");
@@ -600,7 +603,7 @@ function ListingsTab({
     if (visNoteTimer.current) clearTimeout(visNoteTimer.current);
     visNoteTimer.current = setTimeout(() => setVisNote(null), 8000);
   };
-  useEffect(() => () => { if (visNoteTimer.current) clearTimeout(visNoteTimer.current); }, []);
+  useEffect(() => () => { if (visNoteTimer.current) clearTimeout(visNoteTimer.current); if (archTimer.current) clearTimeout(archTimer.current); }, []);
 
   // "Book for a customer" — jump to the Bookings page's Take-a-booking flow
   // (the real booking widget in operator mode) with this listing preselected.
@@ -651,6 +654,15 @@ function ListingsTab({
       .then(() => refresh())
       .catch((e) => onError(e instanceof Error ? e.message : "Archive failed"));
     setArchiveTick((t) => t + 1);
+    if (v) {
+      // Show where it went: open the Archived section + a dismissible undo note.
+      setShowArchived(true);
+      setJustArchived({ id: l.id, name: l.name });
+      if (archTimer.current) clearTimeout(archTimer.current);
+      archTimer.current = setTimeout(() => setJustArchived(null), 9000);
+    } else {
+      setJustArchived(null);
+    }
   };
   const copyLink = (l: Listing, isDraft?: boolean) => {
     const link = `${typeof window !== "undefined" ? window.location.origin : ""}/book/${l.id}`;
@@ -976,10 +988,22 @@ function ListingsTab({
         })
       )}
 
+      {/* Undo toast — makes clear where an archived listing went. */}
+      {justArchived && (
+        <div className="fixed bottom-5 left-1/2 z-[150] flex max-w-[92vw] -translate-x-1/2 items-center gap-3 rounded-2xl bg-[#111634] px-4 py-2.5 text-[12.5px] font-semibold text-white shadow-xl">
+          <span>📦 <b>{justArchived.name}</b> archived — it&rsquo;s in <b>Archived</b> at the bottom.</span>
+          <button type="button" onClick={() => { const l = archivedList.find((x) => x.id === justArchived.id) ?? { id: justArchived.id, name: justArchived.name } as Listing; archive(l, false); }} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-extrabold hover:bg-white/25">↩ Undo</button>
+          <button type="button" onClick={() => setJustArchived(null)} className="text-[16px] leading-none text-white/60 hover:text-white">×</button>
+        </div>
+      )}
+
       {archivedList.length > 0 && (
-        <div className="mt-2">
-          <button type="button" onClick={() => setShowArchived((v) => !v)} className="flex items-center gap-1.5 text-[12px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-            <span>{showArchived ? "▾" : "▸"}</span> Archived ({archivedList.length})
+        <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
+          <button type="button" onClick={() => setShowArchived((v) => !v)} className="flex w-full items-center gap-2 text-[12px] font-extrabold text-[var(--ink-2)]">
+            <span className="grid h-6 w-6 place-items-center rounded-lg bg-white text-[13px] ring-1 ring-[var(--line)]">📦</span>
+            <span>Archived</span>
+            <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#5b6478] px-1.5 text-[10.5px] font-extrabold text-white">{archivedList.length}</span>
+            <span className="ml-auto text-[11px] font-semibold text-[var(--ink-3)]">{showArchived ? "▾ hide" : "▸ show"}</span>
           </button>
           {showArchived && (
             <div className="mt-2 flex flex-col gap-1.5">
