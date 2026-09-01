@@ -1228,10 +1228,20 @@ function PricingCalculator({
     block.masterPrice != null ? String(block.masterPrice) : "",
   );
   const [calcOn, setCalcOn] = useState(block.calcOn !== false);
-  const [passFlat, setPassFlat] = useState<Record<string, string>>(() =>
-    Object.fromEntries(Object.entries(block.passFlat).map(([k, v]) => [k, String(v)])),
-  );
-  const [passMode, setPassMode] = useState<Record<string, "flat">>(() => ({ ...block.passMode }));
+  // Each pass is priced on its OWN — a day pass isn't a fraction of the week, so
+  // editing the longest pass must not move the shorter ones. Non-longest passes
+  // seed from their current price as independent (flat) values; only the timings
+  // WITHIN a pass are pro-rata'd (by hours) from that pass's price.
+  const [passFlat, setPassFlat] = useState<Record<string, string>>(() => {
+    const seed: Record<string, string> = {};
+    block.resolved.passes.forEach((p, i) => { if (i > 0) seed[p.id] = String(p.price); });
+    return { ...seed, ...Object.fromEntries(Object.entries(block.passFlat).map(([k, v]) => [k, String(v)])) };
+  });
+  const [passMode, setPassMode] = useState<Record<string, "flat">>(() => {
+    const seed: Record<string, "flat"> = {};
+    block.resolved.passes.forEach((p, i) => { if (i > 0) seed[p.id] = "flat"; });
+    return { ...seed, ...block.passMode };
+  });
   const [periodPrice, setPeriodPriceState] = useState<Record<string, string>>(() =>
     Object.fromEntries(Object.entries(block.periodPrice).map(([k, v]) => [k, String(v)])),
   );
@@ -1298,8 +1308,8 @@ function PricingCalculator({
   // passes update as you type, not only after Save.
   const passDisplayPrice = (passId: string, idx: number, resolvedPrice: number): number => {
     if (idx === 0) return num(masterPrice);
+    // Each pass keeps its own price — never derived from the longest pass.
     if (passMode[passId] === "flat") return num(passFlat[passId] ?? "0");
-    if (calcOn) { const md = passes[0]?.days || 1; return Math.round((passes[idx]?.days ?? 0) * (num(masterPrice) / md) * 100) / 100; }
     return resolvedPrice;
   };
 
@@ -1337,7 +1347,7 @@ function PricingCalculator({
       </div>
       <p className="mb-2 text-[11px] text-[var(--ink-3)]">
         {calcOn
-          ? "Set the full price for the longest pass — shorter passes and each timing are calculated. Edit any to override, then Save pricing."
+          ? "Set each pass's full price — its timings are worked out automatically (a later finish costs more). Passes are priced on their own; a day pass isn't a fraction of the week. Edit any timing to override, then Save pricing."
           : "Auto-calc is off — set each price by hand, then Save pricing."}
       </p>
 
@@ -1368,8 +1378,27 @@ function PricingCalculator({
 
                 {open && (
                   <div className="border-t border-[var(--line)] p-2.5">
+                    {/* The driver: this pass's own full price, up top and clearly
+                        highlighted. Each pass is priced on its own — a day pass
+                        isn't a fraction of the week. Its timings calculate from it. */}
+                    <div className="mb-2.5 rounded-lg border-2 p-2.5" style={{ borderColor: "#e0a020", background: "#fdf6ea" }}>
+                      <label className="block text-[11.5px] font-extrabold text-[#8a5a09]">
+                        💷 Full price for this pass <span className="font-semibold text-[#a97b2e]">— its timings work out from this</span>
+                      </label>
+                      <div className="mt-1.5 flex items-center gap-1.5">
+                        <span className="text-[16px] font-extrabold text-[#8a5a09]">£</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={isM ? masterPrice : passFlat[q.id] ?? ""}
+                          onChange={(e) => (isM ? setMasterPrice(e.target.value) : setFlat(q.id, e.target.value))}
+                          placeholder="0.00"
+                          className="w-[130px] text-[15px] font-bold"
+                        />
+                      </div>
+                    </div>
                     <div className="mb-1.5 text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
-                      Timings &amp; prices
+                      Timings &amp; prices <span className="font-semibold normal-case tracking-normal">— a later finish costs proportionally more</span>
                     </div>
                     {timingRows.length === 0 ? (
                       <div className="text-[11px] text-[var(--ink-3)]">No timings on this block yet.</div>
@@ -1411,52 +1440,6 @@ function PricingCalculator({
                         );
                       })
                     )}
-
-                    <div className="mt-2 rounded-lg bg-[var(--panel)] p-2">
-                      {isM ? (
-                        <>
-                          <label className="text-[11px] font-bold text-[var(--ink-3)]">
-                            Price for this (longest) pass — the rest calculate from it
-                          </label>
-                          <div className="mt-1 flex items-center gap-1.5">
-                            <span className="font-extrabold">£</span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={masterPrice}
-                              onChange={(e) => setMasterPrice(e.target.value)}
-                              placeholder="0.00"
-                              className="w-[120px]"
-                            />
-                          </div>
-                        </>
-                      ) : (
-                        <>
-                          <label className="text-[11px] font-bold text-[var(--ink-3)]">
-                            Full price{isFlat ? " (edited)" : " (calculated — edit if you like)"}
-                          </label>
-                          <div className="mt-1 flex items-center gap-2">
-                            <span className="font-extrabold">£</span>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={isFlat ? passFlat[q.id] ?? "" : price.toFixed(2)}
-                              onChange={(e) => setFlat(q.id, e.target.value)}
-                              className="w-[110px]"
-                            />
-                            {isFlat && (
-                              <button
-                                type="button"
-                                onClick={() => resetPass(q.id)}
-                                className="text-[11px] font-bold text-[var(--brand)]"
-                              >
-                                ↺ reset to calculated
-                              </button>
-                            )}
-                          </div>
-                        </>
-                      )}
-                    </div>
                   </div>
                 )}
               </div>
