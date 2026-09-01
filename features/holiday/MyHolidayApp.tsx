@@ -37,6 +37,8 @@ export function MyHolidayApp() {
   const [absences, setAbsences] = useState<Absence[]>([]);
   const [policy, setPolicy] = useState<HolidayPolicy>(loadPolicy);
   const [reqOpen, setReqOpen] = useState(false);
+  const [reqKind, setReqKind] = useState<AbsenceKind>("annual");
+  const openReq = (k: AbsenceKind = "annual") => { setReqKind(k); setReqOpen(true); };
   const [showHistory, setShowHistory] = useState(false);
   const [ovTab, setOvTab] = useState<"summary" | "status" | "clocked">("summary");
   const [clock, setClock] = useState<Record<string, ClockRecord>>({});
@@ -95,7 +97,7 @@ export function MyHolidayApp() {
         </div>
       </Card>
       {historyRows}
-      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} rolled onSubmit={submit} onClose={() => setReqOpen(false)} />}
+      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} rolled initialKind={reqKind} onSubmit={submit} onClose={() => setReqOpen(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
@@ -106,7 +108,7 @@ export function MyHolidayApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="My time off" icon="🏖" lede="Request time off, track what's left, and see your absence history. Approvals go to your manager." actions={<Button variant="primary" onClick={() => setReqOpen(true)}>+ Request time off</Button>} />
+      <PageHero title="My time off" icon="🏖" lede="Request time off, track what's left, and see your absence history. Approvals go to your manager." />
 
       {(() => {
         // BrightHR-style overview: a week strip (team absences per day) + tabs.
@@ -131,7 +133,6 @@ export function MyHolidayApp() {
         <Card className="p-4">
           <div className="mb-3 flex flex-wrap items-center gap-2"><div className="text-[15px] font-extrabold text-[var(--ink)]">Overview</div>
             {pendingCount > 0 && <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#f3c0bb] px-2.5 py-1 text-[11.5px] font-bold text-[#c0392b]">⚠ {pendingCount} pending {pendingCount === 1 ? "absence" : "absences"}</span>}
-            <button type="button" onClick={() => setReqOpen(true)} className="ml-auto rounded-lg bg-[#e6007e] px-3 py-1.5 text-[12px] font-extrabold text-white hover:brightness-105">+ Add time off</button>
           </div>
           {/* week strip — team time-off, only if the provider lets staff see it */}
           {seeTeamAbsence && (<>
@@ -170,7 +171,8 @@ export function MyHolidayApp() {
         {/* ── My summary (right) ── */}
         <Card className="p-4">
           <div className="mb-3 text-[14px] font-extrabold text-[var(--ink)]">My summary</div>
-          <button type="button" onClick={() => setReqOpen(true)} className="w-full rounded-lg bg-[#e6007e] px-4 py-2.5 text-[13.5px] font-extrabold text-white hover:brightness-105">Request time off</button>
+          <button type="button" onClick={() => openReq("annual")} className="w-full rounded-lg bg-[#e6007e] px-4 py-2.5 text-[13.5px] font-extrabold text-white hover:brightness-105">Request time off</button>
+          <button type="button" onClick={() => openReq("sickness")} className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-[#f59e0b] px-4 py-2.5 text-[13.5px] font-extrabold text-white hover:brightness-105">🤒 I&rsquo;m off sick</button>
           <button type="button" onClick={() => setShowHistory((v) => !v)} className="mt-2 w-full rounded-lg border border-[#e6007e] px-4 py-2.5 text-[13.5px] font-extrabold text-[#e6007e] hover:bg-[#fdeef6]">Absence history</button>
           <div className="mt-4 flex items-center gap-4 border-t border-[var(--line)] pt-4">
             <Ring value={s.remaining} total={s.total} label="left" />
@@ -211,15 +213,15 @@ export function MyHolidayApp() {
         </Card>
       )}
 
-      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} onSubmit={submit} onClose={() => setReqOpen(false)} />}
+      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} initialKind={reqKind} onSubmit={submit} onClose={() => setReqOpen(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
 }
 
-function RequestModal({ region, remaining, rolled, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; rolled?: boolean; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; reason?: string; days: number }) => void; onClose: () => void }) {
+function RequestModal({ region, remaining, rolled, initialKind, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; rolled?: boolean; initialKind?: AbsenceKind; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; reason?: string; days: number }) => void; onClose: () => void }) {
   const today = isoDate(new Date());
-  const [kind, setKind] = useState<AbsenceKind>("annual");
+  const [kind, setKind] = useState<AbsenceKind>(initialKind ?? "annual");
   const [start, setStart] = useState(today);
   const [end, setEnd] = useState(today);
   const [half, setHalf] = useState<"am" | "pm" | "">("");
