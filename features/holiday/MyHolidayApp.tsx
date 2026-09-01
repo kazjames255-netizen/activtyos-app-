@@ -247,8 +247,10 @@ function RequestModal({ region, remaining, rolled, initialKind, sickOnly, onSubm
     : null;
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
-      <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className={`w-full max-w-md overflow-hidden rounded-2xl p-5 shadow-2xl ${sickOnly ? "bg-[#fffaf3] ring-2 ring-[#f59e0b]/45" : "bg-white"}`} onClick={(e) => e.stopPropagation()}>
+        <div className={`-mx-5 -mt-5 mb-4 h-1.5 ${sickOnly ? "bg-[#f59e0b]" : "bg-[#e6007e]"}`} />
         <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{sickOnly ? "🤒 Report I'm off sick" : rolled ? "Book time off" : "Request time off"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        {sickOnly && <p className="-mt-1.5 mb-3 text-[11.5px] leading-relaxed text-[#8a5a09]">Let your manager know you&rsquo;re unwell. Add the dates you expect to be off — you can update them if things change.</p>}
         <div className="grid gap-2.5">
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={kind} onChange={(e) => setKind(e.target.value as AbsenceKind)} disabled={sickOnly} className="w-full disabled:opacity-70">{kindOptions.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {KIND_META[k].label}</option>)}</Select></label>
           <div className="grid grid-cols-2 gap-2">
@@ -260,9 +262,9 @@ function RequestModal({ region, remaining, rolled, initialKind, sickOnly, onSubm
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">From time</span><Input type="time" value={fromTime} onChange={(e) => { setFromTime(e.target.value); if (e.target.value >= toTime) setToTime(e.target.value); }} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Until</span><Input type="time" value={toTime} min={fromTime} onChange={(e) => setToTime(e.target.value)} className="w-full" /></label>
           </div>}
-          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason (optional)</span><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. family trip" className="w-full" /></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{sickOnly ? "What's wrong? (optional)" : "Reason (optional)"}</span><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={sickOnly ? "e.g. flu, migraine, stomach bug" : "e.g. family trip"} className="w-full" /></label>
           {context && <div className={`rounded-lg px-3 py-2 text-[11.5px] font-semibold ${context.tone}`}>{context.text}</div>}
-          <div className={`rounded-lg px-3 py-2 text-[12px] font-semibold ${overBudget ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{timed ? `${fromTime}–${toTime} · ` : ""}{days} working day{days === 1 ? "" : "s"}{rolledUnpaid ? " · unpaid (already in your pay)" : kind === "annual" ? ` · ${remaining} left before this` : ""}{overBudget ? " — more than your remaining allowance" : ""}</div>
+          <div className={`rounded-lg px-3 py-2 text-[12px] font-semibold ${overBudget ? "bg-[#fdecec] text-[#c0392b]" : sickOnly ? "bg-[#fff4e0] text-[#8a5a09]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{timed ? `${fromTime}–${toTime} · ` : ""}{days} working day{days === 1 ? "" : "s"}{sickOnly ? " off sick" : rolledUnpaid ? " · unpaid (already in your pay)" : kind === "annual" ? ` · ${remaining} left before this` : ""}{overBudget ? " — more than your remaining allowance" : ""}</div>
         </div>
         <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={days <= 0 || (timed && timedHours <= 0)} onClick={() => onSubmit({ kind, start, end, half: null, fromTime: timed ? fromTime : undefined, toTime: timed ? toTime : undefined, reason: reason || undefined, days })}>Send request</Button></div>
       </div>
