@@ -1999,7 +1999,7 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
             // Days a single week offers, and the total days the whole run offers.
             const weekLen = d.blockMode === "weekly" ? (d.days?.length || 5) : 7;
             const totalRun = genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length;
-            const validFor = (days: number, k: BookRule) => k === "week" ? days <= weekLen : k === "blocks" ? (days === weekLen || days === totalRun) : true;
+            const validFor = (days: number, k: BookRule) => k === "week" ? days <= weekLen : k === "blocks" ? (days === weekLen || days === totalRun) : days <= totalRun;
             const anyReset = multiDay.some((t) => { const s = (d.bookRules ?? {})[t.name]; return s && !validFor(t.days, s); });
             return (<>
             {anyReset && (
@@ -2010,7 +2010,20 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
             {multiDay.map((t) => {
               const weekOk = t.days <= weekLen;                        // fits inside one week
               const blockOk = t.days === weekLen || t.days === totalRun; // a whole week, or the whole run
-              const okFor = (k: BookRule) => (k === "week" ? weekOk : k === "blocks" ? blockOk : true);
+              const listingOk = t.days <= totalRun;                    // enough days exist across the whole run
+              const okFor = (k: BookRule) => (k === "week" ? weekOk : k === "blocks" ? blockOk : listingOk);
+              // A pass needing more days than the run offers can't be booked at
+              // all — show it as not applicable rather than an impossible option.
+              if (!weekOk && !blockOk && !listingOk) return (
+                <div key={t.name} className="border-b border-dashed border-[var(--line)] py-2 last:border-0">
+                  <div className="mb-1 flex flex-wrap items-center gap-2">
+                    <b className="text-[13px]">{t.name}</b>
+                    <span className="rounded-full bg-[var(--panel)] px-2 py-[2px] text-[10.5px] font-bold text-[var(--ink-3)]">{t.days} days</span>
+                    <span className="rounded-full bg-[#fdecec] px-2 py-[2px] text-[10.5px] font-bold text-[#c0392b]">Doesn&rsquo;t fit</span>
+                  </div>
+                  <div className="text-[11.5px] text-[#c0392b]">A {t.days}-day pass needs {t.days} days, but this run only offers {totalRun} ({weekLen} a week) — nobody can book it. Lengthen the run/days, or drop this pass from the block.</div>
+                </div>
+              );
               const stored = (d.bookRules ?? {})[t.name];
               // Never show/keep an option that can't actually work for this pass.
               const rule: BookRule = stored && okFor(stored) ? stored : (weekOk ? "week" : "listing");
