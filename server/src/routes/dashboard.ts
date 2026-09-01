@@ -40,6 +40,15 @@ dashboard.get("/", async (req, res) => {
 
   const title = new Map(listingsSnap.docs.map((d) => [d.id, (d.data() as { title?: string }).title ?? "Untitled"]));
 
+  // Optional location lens: ?venueId= narrows every figure to the listings at
+  // one venue. Blocks/bookings carry listingId; payments only carry booking
+  // refs, so we intersect them with the venue's booking refs further down.
+  const venueId = typeof req.query.venueId === "string" && req.query.venueId ? req.query.venueId : null;
+  const venueListingIds = venueId
+    ? new Set(listingsSnap.docs.filter((d) => (d.data() as { venueId?: string | null }).venueId === venueId).map((d) => d.id))
+    : null;
+  const inVenue = (listingId?: string | null) => !venueListingIds || (listingId != null && venueListingIds.has(listingId));
+
   // ── Sessions across the tenant's open blocks (real dates + per-date counts) ──
   type Sess = { date: string; start: string; end: string; capacity: number; booked: number; spotsLeft: number; listing: string; open: boolean };
   const sessions: Sess[] = [];
@@ -48,6 +57,7 @@ dashboard.get("/", async (req, res) => {
   const perListing = new Map<string, { capacity: number; booked: number; spotsLeft: number; nextDate: string }>();
   for (const d of blocksSnap.docs) {
     const doc = d.data() as BlockDoc;
+    if (!inVenue(doc.listingId)) continue;
     const sum = blockSummary(d.id, doc);
     const listing = title.get(doc.listingId) ?? "Untitled";
     const future = sum.sessions.filter((s) => s.date >= today);
@@ -77,7 +87,10 @@ dashboard.get("/", async (req, res) => {
   const bookings = bookingsSnap.docs.map((d) => {
     const b = fromDoc(d.data() as BookingDoc);
     return { ...b, createdAt: b.createdAt ?? d.createTime?.toDate().toISOString() ?? "" };
-  });
+  }).filter((b) => inVenue(b.listingId));
+  // Payments only reference bookings by ref — a payment counts for the venue if
+  // one of its refs belongs to a booking at that venue.
+  const venueRefs = venueId ? new Set(bookings.map((b) => b.ref)) : null;
   const live = bookings.filter((b) => b.status !== "Cancelled" && b.status !== "Declined");
   const waitlist = bookings.filter((b) => b.status === "Waitlisted").length;
   const newThisWeek = bookings.filter((b) => (b.createdAt ?? "") >= weekAgo).length;
@@ -89,8 +102,9 @@ dashboard.get("/", async (req, res) => {
   // ── Money in this week (payment records, refunds excluded) ──
   const takenThisWeek = round2(
     paymentsSnap.docs
-      .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string })
+      .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string; refs?: string[] })
       .filter((p) => p.type !== "refund" && RECEIVED.has(p.status ?? "") && (p.createdAt ?? "") >= weekAgo)
+      .filter((p) => !venueRefs || (p.refs ?? []).some((r) => venueRefs.has(r)))
       .reduce((s, p) => s + (p.amount ?? 0), 0),
   );
 
@@ -106,6 +120,9 @@ dashboard.get("/", async (req, res) => {
     bookings: { live: live.length, newThisWeek, waitlist },
     occupancy: { booked: openBooked, capacity: openCapacity, pct: openCapacity ? Math.round((openBooked / openCapacity) * 100) : 0 },
     money: { takenThisWeek, outstanding, overdueVouchers, awaitingVoucher },
-    counts: { listings: listingsSnap.size, activeBlocks: blocksSnap.docs.filter((d) => (d.data() as BlockDoc).open).length },
+    counts: {
+      listings: venueListingIds ? venueListingIds.size : listingsSnap.size,
+      activeBlocks: blocksSnap.docs.filter((d) => { const b = d.data() as BlockDoc; return b.open && inVenue(b.listingId); }).length,
+    },
   });
 });

@@ -203,9 +203,9 @@ function Funnel({ stages }: { stages: { label: string; value: number; color: str
 }
 function Panel({ title, right, children, className = "" }: { title: string; right?: React.ReactNode; children: React.ReactNode; className?: string }) {
   return (
-    <div className={`rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 ${className}`}>
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <div className="text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{title}</div>
+    <div className={`rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_1px_2px_rgba(16,32,90,.04)] ${className}`}>
+      <div className="mb-3.5 flex items-center justify-between gap-2 border-b border-[var(--line)] pb-2.5">
+        <div className="text-[15.5px] font-extrabold leading-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{title}</div>
         {right}
       </div>
       {children}
@@ -312,10 +312,14 @@ export function DashboardApp() {
   const [nowMs] = useState(() => Date.now());
   // listingId → seasonId, so bookings can be grouped by season (names in settings).
   const [listingSeason, setListingSeason] = useState<Record<string, string>>({});
-  // listingId → venue (location) name, for the "Revenue by activity" location line + filter.
+  // listingId → venue name (for the 📍 line) and → venueId (for filtering).
   const [listingVenue, setListingVenue] = useState<Record<string, string>>({});
-  // Selected location filter for the Revenue-by-activity card ("" = all).
-  const [activityLoc, setActivityLoc] = useState("");
+  const [listingVenueId, setListingVenueId] = useState<Record<string, string>>({});
+  // The venues that actually have listings — options for the location lens.
+  const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
+  // The whole-dashboard location lens ("" = all locations). Drives both the
+  // server figures (?venueId=) and the client-side booking analytics.
+  const [dashVenue, setDashVenue] = useState("");
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
   // Just for the greeting — the person's name, not the business name.
@@ -325,13 +329,14 @@ export function DashboardApp() {
   const portal = (usePathname() ?? "/").split("/")[1] || "app";
 
   const load = useCallback(() => {
-    apiGet<Dash>("/api/dashboard").then((x) => { setD(x); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    // The location lens narrows the server figures too (blocks/bookings/payments).
+    apiGet<Dash>(`/api/dashboard${dashVenue ? `?venueId=${encodeURIComponent(dashVenue)}` : ""}`).then((x) => { setD(x); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     // On failure keep bookings null but record the error, so the analytics
     // section shows a retry instead of "Loading your figures…" forever.
     apiGet<Booking[]>("/api/bookings").then((b) => { setBookings(b); setBookingsErr(null); }).catch((e) => setBookingsErr(e instanceof Error ? e.message : "Couldn’t load your figures"));
     apiGet<DashTask[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => setTasks([]));
     // Listings carry the season + venue for each activity; the library names the
-    // venues. Together they give the season grouping and the location line/filter.
+    // venues. Together they give the season grouping and the location line/lens.
     Promise.all([
       apiGet<{ id: string; seasonId?: string | null; venueId?: string | null }[]>("/api/listings?mine=1"),
       apiGet<{ venues?: { id: string; name: string }[] } | null>("/api/library").catch(() => null),
@@ -339,12 +344,12 @@ export function DashboardApp() {
       const list = ls ?? [];
       setListingSeason(Object.fromEntries(list.filter((l) => l.id && l.seasonId).map((l) => [l.id, l.seasonId as string])));
       const venueName = new Map((lib?.venues ?? []).map((v) => [v.id, v.name]));
-      setListingVenue(Object.fromEntries(list.flatMap((l) => {
-        const n = l.venueId ? venueName.get(l.venueId) : undefined;
-        return l.id && n ? [[l.id, n] as [string, string]] : [];
-      })));
+      setListingVenue(Object.fromEntries(list.flatMap((l) => { const n = l.venueId ? venueName.get(l.venueId) : undefined; return l.id && n ? [[l.id, n] as [string, string]] : []; })));
+      setListingVenueId(Object.fromEntries(list.filter((l) => l.id && l.venueId).map((l) => [l.id, l.venueId as string])));
+      const used = new Set(list.map((l) => l.venueId).filter(Boolean));
+      setVenues((lib?.venues ?? []).filter((v) => used.has(v.id)));
     }).catch(() => {});
-  }, []);
+  }, [dashVenue]);
   useEffect(load, [load]);
   useRealtime(["bookings", "blocks", "listings", "payments", "tasks"], load);
 
@@ -359,7 +364,7 @@ export function DashboardApp() {
 
   // Everything analytical, computed from the tenant's own bookings.
   const a = useMemo(() => {
-    const list = (bookings ?? []).filter((b) => b.status !== "Declined");
+    const list = (bookings ?? []).filter((b) => b.status !== "Declined" && (!dashVenue || listingVenueId[b.listingId ?? ""] === dashVenue));
     const now = new Date(nowMs);
     const keys: string[] = [];
     for (let i = months - 1; i >= 0; i--) keys.push(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
@@ -439,7 +444,7 @@ export function DashboardApp() {
       funnel, repeat,
       recent,
     };
-  }, [bookings, months, nowMs, listingSeason, listingVenue, seasons]);
+  }, [bookings, months, nowMs, listingSeason, listingVenue, listingVenueId, dashVenue, seasons]);
 
   // Doughnut centres: total booked, and paid share of all bookings.
   const statusTotal = a.byStatus.reduce((s, x) => s + x.value, 0);
@@ -459,6 +464,16 @@ export function DashboardApp() {
             <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>{greeting(me?.name)}</div>
             <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>📊 Dashboard</h2>
             <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Today at a glance, plus income, bookings and where they&rsquo;re coming from.</p>
+            {/* Location lens — narrows every figure below to one venue. */}
+            {venues.length > 0 && (
+              <label className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white/12 px-3 py-1.5 ring-1 ring-white/20">
+                <span className="text-[11px] font-bold uppercase tracking-wide text-white/75">📍 Location</span>
+                <select value={dashVenue} onChange={(e) => setDashVenue(e.target.value)} className="cursor-pointer bg-transparent text-[12.5px] font-extrabold text-white outline-none">
+                  <option value="" className="text-black">All locations</option>
+                  {venues.map((v) => <option key={v.id} value={v.id} className="text-black">{v.name}</option>)}
+                </select>
+              </label>
+            )}
           </div>
           {/* On-site-today summary, on the right of the title banner. */}
           <div className="rounded-2xl bg-white/12 px-4 py-3 text-right ring-1 ring-white/15">
@@ -645,28 +660,9 @@ export function DashboardApp() {
                 ? <Empty>Set up your seasons in Setup to see this.</Empty>
                 : <Breakdown entries={a.bySeason} />}
             </Panel>
-            {(() => {
-              const locs = [...new Set(a.byActivity.map((e) => e.venue).filter((v): v is string => !!v))].sort();
-              const filtered = a.byActivity.filter((e) => !activityLoc || e.venue === activityLoc);
-              const entries = filtered.slice(0, 6).map((e, i) => ({ label: e.label, value: e.value, sub: money(e.value), color: ACT_C[i % ACT_C.length], meta: e.venue }));
-              return (
-                <Panel
-                  title="Revenue by activity"
-                  right={locs.length > 0 ? (
-                    <select
-                      value={activityLoc}
-                      onChange={(e) => setActivityLoc(e.target.value)}
-                      className="max-w-[160px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink-2)] outline-none"
-                    >
-                      <option value="">All locations</option>
-                      {locs.map((l) => <option key={l} value={l}>{l}</option>)}
-                    </select>
-                  ) : undefined}
-                >
-                  {entries.length ? <Breakdown entries={entries} /> : <Empty>No revenue at {activityLoc} yet.</Empty>}
-                </Panel>
-              );
-            })()}
+            <Panel title="Revenue by activity">
+              <Breakdown entries={a.byActivity.slice(0, 6).map((e, i) => ({ label: e.label, value: e.value, sub: money(e.value), color: ACT_C[i % ACT_C.length], meta: e.venue }))} />
+            </Panel>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
