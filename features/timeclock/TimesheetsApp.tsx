@@ -59,7 +59,10 @@ export function TimesheetsApp() {
   const clockOutPerson = (r: ClockRecord) => { setAll(clockOut(all, r.id, r.name)); flash(`${r.name.split(" ")[0]} clocked out.`); };
   // BrightHR-style person card
   const personCard = (r: ClockRecord) => {
-    const footTone = r.status === "in" ? { bg: "#fdeef6", fg: "#c11574" } : r.status === "break" ? { bg: "#fdf3e0", fg: "#8a5a09" } : { bg: "var(--panel)", fg: "var(--ink-3)" };
+    // Status colour, not action colour: clocked in = green, on break = amber,
+    // out = grey. (Pink used to read as "clocked in", which is the clock-IN
+    // colour on the staff page — the opposite of what it meant here.)
+    const footTone = r.status === "in" ? { bg: "#e6f4ea", fg: "#0f7a43" } : r.status === "break" ? { bg: "#fdf3e0", fg: "#8a5a09" } : { bg: "var(--panel)", fg: "var(--ink-3)" };
     const foot = r.status === "in" ? `${hhmm(r.clockInAt)} — Clocked in${r.lateMin ? ` · ${r.lateMin}m late` : ""}${r.loc ? ` · ${r.loc.startsWith("📍") ? "Location" : r.loc}` : ""}`
       : r.status === "break" ? `On break since ${hhmm(r.breakStart)}`
       : r.clockInAt ? `Worked ${fmtDur(workedMs(r))} today` : "Not clocked in today";
@@ -70,7 +73,7 @@ export function TimesheetsApp() {
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13.5px] font-extrabold text-[#1d3a8f]">{r.name}</div>
             <div className="truncate text-[11.5px] text-[var(--ink-3)]">{r.role}{r.op ? ` · ${r.op}` : ""}</div>
-            {(r.status === "in" || r.status === "break") && <button type="button" onClick={() => clockOutPerson(r)} className="mt-1 text-[12px] font-bold text-[#e6007e] hover:underline">Clock out</button>}
+            {(r.status === "in" || r.status === "break") && <button type="button" onClick={() => clockOutPerson(r)} className="mt-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f] hover:bg-[#eef4ff]">Clock out</button>}
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold" style={{ background: footTone.bg, color: footTone.fg }}><span>⏱</span>{foot}</div>
