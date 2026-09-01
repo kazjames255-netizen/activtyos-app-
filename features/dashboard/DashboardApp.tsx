@@ -252,13 +252,25 @@ function TrendChart({ series, series2, fmt, color, color2 }: { series: { label: 
   const y = (v: number) => H - PAD - (v / max) * (H - 2 * PAD);
   const line = (arr: { value: number }[]) => arr.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.value).toFixed(1)}`).join(" ");
   const areaP = series.length ? `${line(series)} L${x(series.length - 1)},${H - PAD} L${x(0)},${H - PAD} Z` : "";
-  const lastVal = series[series.length - 1]?.value ?? 0;
-  const s2End = series2 && series2.length ? series2[series2.length - 1] : null;
-  const valLabel = (cx: number, cy: number, text: string, fill: string, anchor: "middle" | "end") => {
-    const ly = cy < 26 ? cy + 15 : cy - 9;
-    const xc = anchor === "end" ? Math.min(cx, W - 2) : Math.max(text.length * 3.4, Math.min(W - text.length * 3.4, cx));
-    return <text x={xc} y={ly} fontSize="11" fontWeight="800" fill={fill} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor={anchor}>{text}</text>;
+  // A value label sitting just above (dir -1) or below (dir +1) a point, with a
+  // white halo so it stays legible over the line/area. Clamped inside the box so
+  // nothing clips at the edges or the top.
+  const ptLabel = (cx: number, cy: number, text: string, fill: string, dir: -1 | 1) => {
+    const ly = dir < 0 ? (cy < 18 ? cy + 15 : cy - 8) : (cy > H - 18 ? cy - 8 : cy + 15);
+    const half = text.length * 3.2;
+    const xc = Math.max(PAD + half, Math.min(W - PAD - half, cx));
+    return <text x={xc} y={ly} fontSize="10.5" fontWeight="800" fill={fill} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor="middle">{text}</text>;
   };
+  // Dots + direct value labels for every point (zeros skipped, except the last),
+  // so the figures read at a glance without hovering. In the two-series chart the
+  // upper line labels above and the lower line below, so they never collide.
+  const dots = (arr: { value: number }[], col: string, dir: -1 | 1) =>
+    arr.map((p, i) => (p.value > 0 || i === arr.length - 1) ? (
+      <g key={`${dir}-${i}`}>
+        <circle cx={x(i)} cy={y(p.value)} r="3" fill={col} />
+        {ptLabel(x(i), y(p.value), fmt(p.value), col, dir)}
+      </g>
+    ) : null);
   return (
     <div className="relative">
       <svg viewBox={`0 0 ${W} ${H + 6}`} className="w-full" style={{ overflow: "visible" }}
@@ -272,9 +284,10 @@ function TrendChart({ series, series2, fmt, color, color2 }: { series: { label: 
         <path d={line(series)} fill="none" stroke={color} strokeWidth="2.5" strokeLinejoin="round" />
         {series2 && <path d={line(series2)} fill="none" stroke={color2} strokeWidth="2.5" strokeLinejoin="round" />}
         {hover != null && <line x1={x(hover)} x2={x(hover)} y1={PAD} y2={H - PAD} stroke="var(--ink-3)" strokeWidth="1" strokeDasharray="3 3" />}
-        <circle cx={x(series.length - 1)} cy={y(lastVal)} r="3.5" fill={color} />
-        {valLabel(x(series.length - 1), y(lastVal), fmt(lastVal), color, s2End ? "end" : "middle")}
-        {s2End && <><circle cx={x(series2!.length - 1)} cy={y(s2End.value)} r="3.5" fill={color2} />{valLabel(x(series2!.length - 1), y(s2End.value), fmt(s2End.value), color2!, "end")}</>}
+        {/* Lower line labels below, upper line above — in the single-series chart
+            there's only the one, labelled above. */}
+        {dots(series, color, series2 ? -1 : -1)}
+        {series2 && dots(series2, color2!, 1)}
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{series.filter((_, i) => i % Math.ceil(n / 6) === 0 || i === n - 1).map((p, i) => <span key={i}>{monthLabel(p.label)}</span>)}</div>
       {hover != null && series[hover] && (
