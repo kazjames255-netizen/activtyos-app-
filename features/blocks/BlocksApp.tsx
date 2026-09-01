@@ -318,16 +318,23 @@ function PeriodsColumn({
 }) {
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [title, setTitle] = useState("");
+  const [title, setTitle] = useState("09am–3:30pm");
   const [start, setStart] = useState("09:00");
   const [finish, setFinish] = useState("15:30");
   const [busy, setBusy] = useState(false);
   const [triedSave, setTriedSave] = useState(false); // show validation only after a save attempt
+  // The title defaults to the timings (e.g. "9am–3:30pm") and keeps following
+  // them — until the user types their own, at which point we leave it alone.
+  const [titleEdited, setTitleEdited] = useState(false);
+
+  const fmtT = (t: string) => { const [h, m] = t.split(":").map(Number); if (Number.isNaN(h)) return t; const ap = h < 12 ? "am" : "pm"; return `${h % 12 || 12}${m ? ":" + String(m).padStart(2, "0") : ""}${ap}`; };
+  const presetTitle = (s: string, f: string) => `${fmtT(s)}–${fmtT(f)}`;
 
   function reset() {
-    setTitle("");
     setStart("09:00");
     setFinish("15:30");
+    setTitle(presetTitle("09:00", "15:30"));
+    setTitleEdited(false);
     setEditingId(null);
     setTriedSave(false);
   }
@@ -335,6 +342,7 @@ function PeriodsColumn({
     setTitle(p.title);
     setStart(p.start);
     setFinish(p.finish);
+    setTitleEdited(true); // keep their saved title; don't overwrite from timings
     setEditingId(p.id);
     setOpen(true);
   }
@@ -384,18 +392,18 @@ function PeriodsColumn({
           <div className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">
             {editingId ? "Edit period" : "New period"}
           </div>
-          <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Period title" className="w-full" />
+          <Input value={title} onChange={(e) => { const v = e.target.value; if (v.trim() === "") { setTitle(presetTitle(start, finish)); setTitleEdited(false); } else { setTitle(v); setTitleEdited(true); } }} placeholder="Period title" className="w-full" />
           {triedSave && title.trim().length < 2 && (
             <div className="text-[11px] text-[var(--red)]">Give the period a title before saving.</div>
           )}
           <div className="flex items-center gap-2">
             <div className="flex-1">
               <FieldLabel>Start</FieldLabel>
-              <Input type="time" value={start} onChange={(e) => setStart(e.target.value)} className="w-full" />
+              <Input type="time" value={start} onChange={(e) => { const v = e.target.value; setStart(v); if (!titleEdited) setTitle(presetTitle(v, finish)); }} className="w-full" />
             </div>
             <div className="flex-1">
               <FieldLabel>Finish</FieldLabel>
-              <Input type="time" value={finish} onChange={(e) => setFinish(e.target.value)} className="w-full" />
+              <Input type="time" value={finish} onChange={(e) => { const v = e.target.value; setFinish(v); if (!titleEdited) setTitle(presetTitle(start, v)); }} className="w-full" />
             </div>
           </div>
           {start >= finish && (
