@@ -6,6 +6,7 @@ import { get as apiGet, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card } from "@/components/ui";
 import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDur, workedMs, type ClockRecord } from "@/features/timeclock/data";
+import { greeting } from "@/lib/greeting";
 
 // ─────────────────────────────────────────────────────────────────────────
 // staff/dash — the staff member's colourful landing page. Live tenant data:
@@ -20,7 +21,7 @@ const ROTA_KEY = "aos.rota.v5";
 interface RatioSession { blockId: string; start: string; end: string; blockName: string; listingName: string; totalChildren: number; sendCount: number; requiredStaff: number; staffAssigned: number; met: boolean }
 interface Task { id: string; title: string; done: boolean; priority?: "low" | "normal" | "high"; dueDate?: string; assignee?: string }
 interface PublishedLite { id: string; dayList: { iso: string }[] }
-interface Me { tenantName: string | null }
+interface Me { tenantName: string | null; name?: string }
 interface MyShift { start: string; end: string; role?: string; site?: string; listing?: string }
 // Register feed — the day's real attendance + safeguarding flags per child.
 interface ChildFlags { allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanId?: string; sendPlanName?: string; careNotes?: string }
@@ -106,7 +107,7 @@ export function StaffDashApp() {
   return (
     <div className="text-[var(--ink)]">
       <div className="mb-4">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Today at {me?.tenantName ?? "your club"}</h2>
+        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{greeting(me?.name)} — here’s {me?.tenantName ?? "your club"} today</h2>
         <p className="text-[12.5px] text-[var(--ink-3)]">{dayLabel} — live from bookings, registers and the team’s tasks.</p>
       </div>
 

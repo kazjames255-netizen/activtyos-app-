@@ -104,6 +104,23 @@ export interface ChildQuestion {
    * columns.
    */
   replaces?: string;
+  /**
+   * For "yesno" only. When the parent answers NO, the booking is held for
+   * manual acceptance instead of confirming itself. "Is your child toilet
+   * trained? — No" isn't a refusal, it's a staffing question: can we cover
+   * nappy changes that day, at the ratios we have? So the provider decides,
+   * rather than the form deciding for them.
+   *
+   * No "hold on yes" variant: a provider who wants that words the question the
+   * other way round, and offering both made the control read as a puzzle.
+   */
+  reviewIfNo?: boolean;
+  /**
+   * Marks a question the app does something with beyond storing the answer.
+   * "toilet" drives the register's nappy badge and change log — without it the
+   * register has no way to know which of a provider's questions means this.
+   */
+  kind?: "toilet";
 }
 
 /**
@@ -1353,6 +1370,35 @@ export function limitFor(
 
 /** Questions re-asked on every booking, rather than once when set up. */
 export const asksEveryBooking = (q: ChildQuestion) => q.ask === "every";
+
+// ── Toilet training ─────────────────────────────────────────────────────────
+// Offered as a preset rather than seeded for everyone: it matters to early-
+// years and holiday-club providers and is irrelevant (and a bit odd to be
+// asked) for a provider whose youngest is eight.
+export const TOILET_QUESTION: ChildQuestion = {
+  id: "q-toilet",
+  label: "Is your child toilet trained?",
+  type: "yesno",
+  kind: "toilet",
+  scope: "all",
+  required: true,
+  showOnRegister: true,
+  reviewIfNo: true,
+  help: "So we can plan changing and staffing. Answering “no” doesn’t stop you booking — we’ll confirm the place ourselves.",
+};
+/** The provider's toilet-training question, if they've added one and it's live. */
+export const toiletQuestion = (qs: ChildQuestion[]): ChildQuestion | undefined => qs.find((q) => q.kind === "toilet" && !q.hidden);
+/** True when the child's answer says they're NOT toilet trained. */
+export function needsNappies(qs: ChildQuestion[], answers?: Record<string, string> | null): boolean {
+  const q = toiletQuestion(qs);
+  if (!q || !answers) return false;
+  return (answers[q.id] ?? "").trim().toLowerCase() === "no";
+}
+/** Questions answered "no" that should hold the booking for manual acceptance. */
+export function heldForReview(qs: ChildQuestion[], answers?: Record<string, string> | null): ChildQuestion[] {
+  if (!answers) return [];
+  return qs.filter((q) => !q.hidden && q.reviewIfNo && (answers[q.id] ?? "").trim().toLowerCase() === "no");
+}
 
 export const answerKey = (q: ChildQuestion): string => q.id;
 

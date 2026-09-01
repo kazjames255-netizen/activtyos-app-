@@ -38,10 +38,13 @@ me.get("/", async (req, res) => {
   // The parent's postcode, captured at signup, so the browse can locate them.
   const userSnap = await db.collection("users").doc(req.user!.uid).get();
   const postcode = (userSnap.data()?.postcode as string | undefined) ?? null;
+  // The PERSON's name (not the business) — dashboards greet by first name.
+  const name = ((userSnap.data()?.name as string | undefined) || req.user!.name || "").trim();
   // Whether the parent has seen the first-login welcome popup (add-your-kids).
   const welcomed = !!(userSnap.data()?.welcomedAt);
   res.json({
     email: req.user!.email ?? null,
+    name,
     role: auth.role,
     tenantId: auth.tenantId,
     tenantName,

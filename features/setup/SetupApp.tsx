@@ -29,6 +29,7 @@ import {
   type CancelReason,
   type VoucherProvider,
   type RatioGroup,
+  TOILET_QUESTION,
 } from "@/lib/settings";
 import { policyWording, sortBands, HOURS, type CancellationPolicy, type NamedPolicy, type RefundBand } from "@/lib/cancellation";
 import { defaultSeasonNames, type Season } from "@/lib/seasons";
@@ -987,6 +988,15 @@ function QuestionsEditor({
     setOpenId(q.id);
   };
 
+  // One-tap preset — it carries the `kind` the register needs for the nappy
+  // badge and change log, which a hand-typed question can't.
+  const hasToilet = questions.some((q) => q.kind === "toilet");
+  const addToilet = () => {
+    if (hasToilet) { setOpenId(TOILET_QUESTION.id); return; }
+    onChange([...questions, { ...TOILET_QUESTION }]);
+    setOpenId(TOILET_QUESTION.id);
+  };
+
   const move = (i: number, dir: -1 | 1) => {
     const j = i + dir;
     if (j < 0 || j >= questions.length) return;
@@ -1132,6 +1142,20 @@ function QuestionsEditor({
                   <Toggle on={!!q.required} onChange={(v) => patch(q.id, (x) => ({ ...x, required: v }))} labels={["Yes", "No"]} />
                 </div>
 
+                {q.type === "yesno" && (
+                  <div className="mt-3">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[12px] font-bold">If they answer <b>No</b>, hold for your approval</span>
+                      <Toggle on={!!q.reviewIfNo} onChange={(v) => patch(q.id, (x) => ({ ...x, reviewIfNo: v || undefined }))} labels={["Yes", "No"]} />
+                    </div>
+                    <div className="mt-1 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
+                      {q.reviewIfNo
+                        ? "The family can still book. It arrives as “Approval needed” for you to accept or decline, rather than confirming itself."
+                        : "The booking confirms itself whatever they answer."}
+                    </div>
+                  </div>
+                )}
+
                 <div className="mt-3 flex flex-wrap items-center gap-2">
                   <span className="text-[12px] font-bold">Show on child info for staff</span>
                   <Toggle on={q.showOnRegister !== false} onChange={(v) => patch(q.id, (x) => ({ ...x, showOnRegister: v }))} labels={["Yes", "No"]} />
@@ -1238,7 +1262,11 @@ function QuestionsEditor({
         );
       })}
 
-      <Button variant="primary" onClick={add}>＋ Add a question</Button>
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="primary" onClick={add}>＋ Add a question</Button>
+        <Button onClick={addToilet}>{hasToilet ? "🚼 Toilet training (added)" : "🚼 Add toilet-training question"}</Button>
+      </div>
+      {!hasToilet && <p className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Adds &ldquo;Is your child toilet trained?&rdquo;. Answering <b>no</b> holds the booking for you to accept, and the register shows a nappy tag plus a change log for that child.</p>}
     </div>
   );
 }

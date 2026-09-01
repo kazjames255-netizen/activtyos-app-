@@ -6,6 +6,7 @@
 
 import { GENERATED_FIXTURES } from "./tourFixtures.generated";
 import { LB_FIXTURES } from "./tourExtra.generated";
+import { TOILET_QUESTION } from "@/lib/settings";
 
 type Fixtures = Record<string, unknown>;
 
@@ -65,6 +66,34 @@ const DASH_BOOKINGS = Array.from({ length: 42 }, (_, i) => {
   };
 });
 
+// Today's register for the dashboard's "On site now" card. Dates are stamped at
+// module load so the card is always populated whenever the tour is taken —
+// a fixed date would leave it empty from the day after it was written.
+const DASH_TODAY = new Date().toISOString().slice(0, 10);
+const DASH_KIDS = ["Freya Walsh", "Amelia Bennett", "Oliver Bennett", "Jack Thompson", "Noah Clarke", "Harry Patel", "Sophia Reid"];
+const dashAttendee = (i: number, status: "in" | "absent" | null) => ({
+  ref: `DASH-${i}`,
+  children: [{ name: DASH_KIDS[i] }],
+  child: null,
+  attendance: status ? { status } : null,
+});
+const DASH_REGISTERS = [
+  {
+    blockId: "dash-am", date: DASH_TODAY, start: "08:30", end: "12:30",
+    blockName: "Multi-Sports (AM)", listingId: "lst-summer-camp", listingName: "Summer Multi-Sports Camp",
+    attendees: [dashAttendee(0, "in"), dashAttendee(1, "in"), dashAttendee(2, "in"), dashAttendee(3, null), dashAttendee(4, "absent")],
+    counts: { expected: 5, present: 3, notArrived: 1, absent: 1, collected: 0 },
+    heads: [], takenBy: null,
+  },
+  {
+    blockId: "dash-pm", date: DASH_TODAY, start: "15:30", end: "16:30",
+    blockName: "After-school", listingId: "lst-football", listingName: "After-school Football Club",
+    attendees: [dashAttendee(5, "in"), dashAttendee(6, null)],
+    counts: { expected: 2, present: 1, notArrived: 1, absent: 0, collected: 0 },
+    heads: [], takenBy: null,
+  },
+];
+
 const DASH: Fixtures = {
   "/api/dashboard": {
     today: {
@@ -98,11 +127,22 @@ const DASH: Fixtures = {
     { id: "t2", t: "Chase unpaid balance — Williams family", status: "prog", time: "14:00", due: "2026-08-11", link: { k: "Family", v: "Dan Williams", href: "/freelancer/customers" } },
     { id: "t3", t: "Print registers for tomorrow", status: "todo", due: "2026-08-11", link: null },
   ],
+  // The dashboard's "On site now" card joins children (register) to staff
+  // (clock store) via the listing's VENUE, so these three have to agree:
+  // venue names must match the demo clock records' `op` values.
   "/api/listings": [
     { id: "L0", seasonId: "summer26" },
     { id: "L1", seasonId: null },
+    { id: "lst-summer-camp", seasonId: "s-summer-hols", venueId: "v-mk" },
+    { id: "lst-football", seasonId: "s-autumn-1", venueId: "v-bed" },
   ],
-  "/api/library": null,
+  "/api/library": {
+    venues: [
+      { id: "v-mk", name: "Milton Keynes" },
+      { id: "v-bed", name: "Bedford" },
+    ],
+  },
+  "/api/registers": DASH_REGISTERS,
 };
 
 // ── Staff dashboard ──────────────────────────────────────────────────────────
@@ -204,6 +244,21 @@ export const TOUR_FIXTURES: Record<string, Fixtures> = {
   // Fewer periods/passes so the built block + calculator fit on screen.
   blocks: { ...LB_FIXTURES.blocks, ...BLOCKS_TRIM },
   dash: DASH,
+  // Give the register tour a toilet-training question plus one child who isn't
+  // trained, so the nappy tag and change log actually appear in the walkthrough.
+  registers: (() => {
+    const base = (GENERATED_FIXTURES.registers ?? {}) as Fixtures;
+    const sessions = (base["/api/registers"] as { attendees?: { child?: Record<string, unknown> | null }[] }[] | undefined) ?? [];
+    return {
+      ...base,
+      "/api/library": { childQuestions: [TOILET_QUESTION] },
+      "/api/registers": sessions.map((s, si) => ({
+        ...s,
+        attendees: (s.attendees ?? []).map((a, ai) =>
+          si === 0 && ai < 2 && a.child ? { ...a, child: { ...a.child, answers: { "q-toilet": "No" } } } : a),
+      })),
+    };
+  })(),
   // Staff portal's own dashboard (StaffDashApp) — portal-keyed so it doesn't
   // clash with the operator "dash" fixture above. Served for /tour/staff/dash.
   "staff/dash": STAFF_DASH,

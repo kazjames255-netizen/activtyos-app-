@@ -8,8 +8,9 @@ import { money, collectedNet } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { useSettings } from "@/lib/settings";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
-import { LiveClockCard } from "@/features/timeclock/LiveClockCard";
+import { OnSiteNowCard } from "@/features/timeclock/OnSiteNowCard";
 import { Badge } from "@/components/ui";
+import { greeting } from "@/lib/greeting";
 
 interface Dash {
   today: { date: string; booked: number; sessions: { listing: string; start: string; end: string; booked: number; capacity: number }[] };
@@ -296,6 +297,9 @@ export function DashboardApp() {
   const [listingSeason, setListingSeason] = useState<Record<string, string>>({});
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
+  // Just for the greeting — the person's name, not the business name.
+  const [me, setMe] = useState<{ name?: string } | null>(null);
+  useEffect(() => { apiGet<{ name?: string }>("/api/me").then(setMe).catch(() => {}); }, []);
   const router = useRouter();
   const portal = (usePathname() ?? "/").split("/")[1] || "app";
 
@@ -409,7 +413,7 @@ export function DashboardApp() {
       <div className="overflow-hidden rounded-2xl text-white" style={{ background: HERO }}>
         <div className="flex flex-wrap items-end justify-between gap-3 px-6 py-5">
           <div>
-            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Your business</div>
+            <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>{greeting(me?.name)}</div>
             <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>📊 Dashboard</h2>
             <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Today at a glance, plus income, bookings and where they&rsquo;re coming from.</p>
           </div>
@@ -453,7 +457,7 @@ export function DashboardApp() {
       </div>
 
       {/* live clock-in board */}
-      <div className="mt-3"><LiveClockCard /></div>
+      <div className="mt-3"><OnSiteNowCard /></div>
 
       {/* Today · Live listings · Tasks today — three across */}
       <div className="mt-3 grid gap-3 lg:grid-cols-3">

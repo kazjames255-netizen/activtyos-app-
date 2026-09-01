@@ -151,6 +151,24 @@ h4 {
 }
 .aos-step { animation: aos-step-in 0.22s ease-out; }
 
+/* Child-card tabs — the panel slides in from the direction you moved, so
+   switching tabs reads as travelling along a row rather than the content
+   blinking. Direction is set per-render from which tab you came from. */
+@keyframes aos-tab-in-r {
+  from { opacity: 0; transform: translateX(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes aos-tab-in-l {
+  from { opacity: 0; transform: translateX(-14px); }
+  to   { opacity: 1; transform: none; }
+}
+.aos-tab-r { animation: aos-tab-in-r 0.26s cubic-bezier(.22,.8,.3,1); }
+.aos-tab-l { animation: aos-tab-in-l 0.26s cubic-bezier(.22,.8,.3,1); }
+/* Anyone who's asked the OS to calm motion down gets a plain fade. */
+@media (prefers-reduced-motion: reduce) {
+  .aos-tab-r, .aos-tab-l { animation: none; }
+}
+
 /* The pointing hand on "add to basket". A parent who has just tapped their
    last date needs telling the basket is the next move; a static emoji reads as
    decoration, a moving one reads as an instruction.

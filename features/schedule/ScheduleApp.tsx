@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { get as apiGet, isDemoMode } from "@/lib/api";
 import { useTenantSettings } from "@/lib/settings";
 import { SchedulingSettingsForm } from "./SchedulingSettings";
+import { StaffAttendanceBoard } from "./StaffAttendanceBoard";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 
@@ -145,7 +146,7 @@ export function ScheduleApp() {
   const [toast, setToast] = useState<string | null>(null);
   const [venuesR, setVenuesR] = useState<{ id: string; name: string }[]>([]);
   const [listingsR, setListingsR] = useState<{ title: string; seasonId?: string | null; venueId?: string | null }[]>([]);
-  const [schedView, setSchedView] = useState<"rota" | "settings">("rota");
+  const [schedView, setSchedView] = useState<"rota" | "attendance" | "settings">("rota");
   const [copyMenu, setCopyMenu] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [tplSaveOpen, setTplSaveOpen] = useState(false);
@@ -490,12 +491,12 @@ export function ScheduleApp() {
       </div>
 
       <div className="mb-3 inline-flex rounded-xl bg-[var(--panel)] p-1">
-        {([["rota", "Rota"], ["settings", "Settings"]] as const).map(([v, lbl]) => (
+        {([["rota", "Rota"], ["attendance", "Attendance"], ["settings", "Settings"]] as const).map(([v, lbl]) => (
           <button key={v} type="button" onClick={() => setSchedView(v)} className={"rounded-lg px-4 py-1.5 text-[13px] font-bold transition-colors " + (schedView === v ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>
         ))}
       </div>
 
-      {schedView === "settings" ? <SchedulingSettingsForm /> : (
+      {schedView === "attendance" ? <StaffAttendanceBoard /> : schedView === "settings" ? <SchedulingSettingsForm /> : (
       <>
 
       <Card className="mb-3 overflow-hidden">
