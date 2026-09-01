@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
 import { Tile, Ring, GRAD } from "@/features/money/finance-kit";
 import { useSettings } from "@/lib/settings";
 import { SEED_LIBRARY, blankCourse, activeQuizVersion, quizVersions, QUIZ_VERSION_LABELS, type CourseDoc } from "./courseContent";
@@ -473,12 +473,14 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               </div>
             )}
             {/* At-a-glance stats — rich gradient KPI tiles */}
-            <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+            <CollapsibleStats id="learning-overview">
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               <Tile label="Total courses" icon="📚" grad={GRAD.blue} value={String(courses.length)} sub="in your library" />
               <Tile label="Staff on a course" icon="👥" grad={GRAD.green} value={String(assignedStaffN)} sub="have training assigned" />
               <Tile label="Missed a deadline" icon="⏰" grad={overdueN > 0 ? GRAD.pink : GRAD.green} value={String(overdueN)} sub={overdueN > 0 ? `${overduePct}% of assigned staff` : "all on track"} aside={<Ring pct={overduePct} label={`${overduePct}%`} />} />
               <Tile label="Avg quiz score" icon="🎯" grad={GRAD.violet} value={`${avgScore}%`} sub="across passed quizzes" aside={<Ring pct={avgScore} label={`${avgScore}%`} />} />
             </div>
+            </CollapsibleStats>
 
             {/* Assigned to you — personal learning only appears for courses assigned to you */}
             {myCourses.length > 0 && (
@@ -630,11 +632,13 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 </div>
               </div>
             )}
-            <div className="mb-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+            <CollapsibleStats id="learning-safeguarding">
+            <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-3">
               <Tile label="Staff in scope" icon="👥" grad={GRAD.blue} value={String(staff.length)} sub="assigned safeguarding" />
               <Tile label="Safeguarding complete" icon="🛡️" grad={GRAD.green} value={String(compN)} sub={`${staff.length ? Math.round((compN / staff.length) * 100) : 0}% of staff`} aside={<Ring pct={staff.length ? (compN / staff.length) * 100 : 0} label={`${staff.length ? Math.round((compN / staff.length) * 100) : 0}%`} />} />
               <Tile label="Overdue" icon="⏰" grad={overN > 0 ? GRAD.pink : GRAD.green} value={String(overN)} sub={overN > 0 ? "past their deadline" : "nobody overdue"} aside={<Ring pct={staff.length ? (overN / staff.length) * 100 : 0} label={`${staff.length ? Math.round((overN / staff.length) * 100) : 0}%`} />} />
             </div>
+            </CollapsibleStats>
             {/* Top & bottom courses by average score */}
             <div className="mb-3 grid gap-2.5 md:grid-cols-2">
               {([["🏆 Top 5 courses — highest average score", ranked.slice(0, 5), "#0f7a43"], ["⚠ Bottom 5 — need revisiting & retraining", ranked.slice(-5).reverse(), "#c0392b"]] as const).map(([title, list, col], i) => (
@@ -713,11 +717,13 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
               const csv = () => downloadCSV(`credentials-${todayISO()}.csv`, ["Staff", "Location", ...cred.types.map((t) => t.name)], staff.map((s) => [s.name, s.op, ...cred.types.map((t) => credStatus(cred.recordFor(s.name, t.id)))]));
               return (<>
                 <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">Staff upload &amp; renew certificates in <b className="text-[var(--ink-2)]">their own area</b>; this is the single verified record. Click a cell to view, verify or add on their behalf.</p>
-                <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                <CollapsibleStats id="learning-certs">
+                <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                   {([["Expiring", "expiring soon", "#b45309", "#fdf3e0", "⏳"], ["Expired", "expired", "#c0392b", "#fdeceb", "⛔"], ["Pending", "to verify", "#1d54c4", "#eaf1ff", "🔎"], ["Missing", "required missing", "#5b6577", "#eef1f6", "➖"]] as const).map(([st, lbl, col, bg, icon]) => { const on = credStatusFilter === st; return (
                     <button key={st} type="button" onClick={() => setCredStatusFilter(on ? "all" : st)} className={"flex items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-left transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{cnt(st)}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
                   ); })}
                 </div>
+                </CollapsibleStats>
                 <div className="mb-3 flex flex-wrap items-center gap-2">
                   <div className="relative">
                     <Button onClick={() => setCertExportOpen((v) => !v)}>⬇ Export ▾</Button>

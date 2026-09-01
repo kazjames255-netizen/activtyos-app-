@@ -6,7 +6,7 @@
 // store; real file storage + per-user identity are Amir's.
 import { useEffect, useState } from "react";
 import { Button, Card } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
 import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, fmtDate, daysUntil, type CredRecord, type CredType } from "./credentials";
 import { recordCompletion, completionsFor, downloadCourseCertificate, courseInDate, courseExpiry } from "./courseCompletions";
 import { useSettings } from "@/lib/settings";
@@ -186,7 +186,8 @@ export function StaffCertsApp() {
         const availCats = Array.from(new Set(otherCourses.map((c) => catOf(c))));
         const otherFiltered = catFilter === "all" ? otherCourses : otherCourses.filter((c) => catOf(c) === catFilter);
         return (<>
-          <div className="mb-4 grid grid-cols-3 gap-3">
+          <CollapsibleStats id="staff-certs">
+          <div className="grid grid-cols-3 gap-3">
             {([["Courses completed", String(myDone.length), "all time"], ["My average score", myAvg == null ? "—" : `${myAvg}%`, "across your courses"], ["Team average", teamAvg == null ? "—" : `${teamAvg}%`, "everyone at your provider"]] as const).map(([label, value, sub]) => (
               <div key={label} className="rounded-2xl border border-[var(--line)] bg-white p-3.5 text-center sm:text-left">
                 <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div>
@@ -195,6 +196,7 @@ export function StaffCertsApp() {
               </div>
             ))}
           </div>
+          </CollapsibleStats>
 
           <div className="mb-1.5 flex items-center gap-2">
             <h3 className="text-[13px] font-extrabold uppercase tracking-wide text-[var(--ink-2)]">Courses you need to complete</h3>

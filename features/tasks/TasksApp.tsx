@@ -137,6 +137,9 @@ export function TasksApp() {
   const [prioFilter, setPrioFilter] = useState<Prio | "">("");
   const [dueScope, setDueScope] = useState(""); // "" (any) | "today" | "tomorrow" | an ISO date
   const [kpiFilter, setKpiFilter] = useState<"" | "open" | "overdue" | "week" | "unassigned">("");
+  const [heroOpen, setHeroOpen] = useState(true);
+  useEffect(() => { try { if (localStorage.getItem("aos.hero.tasks") === "0") setHeroOpen(false); } catch { /* ignore */ } }, []);
+  const toggleHero = () => setHeroOpen((v) => { const n = !v; try { localStorage.setItem("aos.hero.tasks", n ? "1" : "0"); } catch { /* ignore */ } return n; });
   const [listings, setListings] = useState<{ id: string; title: string; location?: string }[]>([]);
   const [bookings, setBookings] = useState<{ ref: string; booker?: string; email?: string; phone?: string; postcode?: string; child?: string; kids?: { name: string; age?: number }[]; listing?: string; pass?: string; dates?: string }[]>([]);
   const portal = usePathname()?.split("/")[1] || "freelancer";
@@ -284,9 +287,12 @@ export function TasksApp() {
 
       {/* Hero */}
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: HERO }}>
-        <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Task manager</div>
-        <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{sub}</p>
-        <div className="mt-3.5 flex flex-wrap gap-2.5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Task manager</div>
+          <button type="button" onClick={toggleHero} aria-expanded={heroOpen} title={heroOpen ? "Collapse cards" : "Show cards"} className="inline-flex flex-none items-center gap-1.5 rounded-full border border-white/25 px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-[0_6px_16px_-6px_rgba(10,20,50,.7)] transition hover:brightness-110" style={{ background: "#16306e" }}><span className="text-[13px] leading-none">📊</span>{heroOpen ? "Hide overview" : "Show overview"}</button>
+        </div>
+        {heroOpen && <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{sub}</p>}
+        {heroOpen && <div className="mt-3.5 flex flex-wrap gap-2.5">
           {kpis.map(([label, n, color, key]) => {
             const on = kpiFilter === key;
             return (
@@ -299,7 +305,7 @@ export function TasksApp() {
               </button>
             );
           })}
-        </div>
+        </div>}
       </div>
 
       <TourLauncher view="tasks" />

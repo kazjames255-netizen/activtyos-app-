@@ -7,7 +7,7 @@
 // (docs/appraisals-handoff.md).
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
 import {
   type Review, type ReviewTemplate, type FeedbackNote, type PIP, type Talent, type ReviewKind, type Rating, type FeedbackKind, type BoxDef, type Goal, type PIPTarget, type PIPCheckIn,
   KIND_LABEL, STATUS_LABEL, RATING_LABEL, GOAL_STATUS_LABEL, PIP_STATUS_LABEL, PIP_STATUS_TONE, FB_META, NINEBOX, overallScore, isOverdue, daysUntil, fmtDate, isoDate, bradfordTone, pipProgress,
@@ -66,11 +66,13 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
   const Body = (
     <>
       {/* tiles */}
+      <CollapsibleStats id="appraisals-overview">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[["Due ≤ 14 days", dueSoon.length, "#1d3a8f"], ["Overdue", overdue.length, "#c0392b"], ["Avg score", avg != null ? `${avg}/5` : "—", "#0f7a43"], ["On a PIP", pips.filter((p) => p.status === "open").length, "#f59e0b"]].map(([l, v, c]) => (
           <div key={l as string} className="rounded-2xl border border-[var(--line)] bg-white p-4"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{l}</div><div className="mt-1 text-[22px] font-extrabold tabular-nums" style={{ color: c as string, fontFamily: "var(--ff-display)" }}>{v as string | number}</div></div>
         ))}
       </div>
+      </CollapsibleStats>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <div className="inline-flex flex-wrap gap-1 rounded-full bg-white p-1 shadow-sm">

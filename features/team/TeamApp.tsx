@@ -7,7 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_ROLES } from "@/lib/settings";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { LocationsApp } from "@/features/locations/LocationsApp";
 import { AppraisalsApp } from "@/features/appraisals/AppraisalsApp";
 import { OnboardingPanel } from "@/features/team/OnboardingApp";
@@ -203,7 +203,8 @@ export function TeamApp() {
       {tab === "applications" ? <ApplicationsPanel /> : tab === "onboarding" ? <OnboardingPanel /> : tab === "locations" ? <LocationsApp embedded /> : tab === "appraisals" ? <AppraisalsApp embedded /> : (
       <>
       {/* KPI tiles — dashboard style */}
-      <div className="mb-4 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+      <CollapsibleStats id="team">
+      <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
         <Tile label={`On your plan${sub?.details?.name ? ` · ${sub.details.name}` : ""}`} icon="👥" grad={atCap ? GRAD.amber : GRAD.violet}
           value={`${staffCount}${staffLimit != null ? ` / ${staffLimit}` : ""}`}
           sub={staffLimit != null ? (atCap ? "at your plan limit" : `${staffLimit - staffCount} more included`) : "extra bill monthly"}
@@ -212,6 +213,7 @@ export function TeamApp() {
         <Tile label="Pending" icon="✉️" grad={GRAD.amber} value={`${pending.length}`} sub="awaiting first login" />
         <Tile label="Locations" icon="📍" grad={GRAD.teal} value={`${venues.length}`} sub="sites they can work" aside={<button type="button" onClick={() => setTab("locations")} className="inline-block rounded-full bg-white/20 px-3 py-1 text-[11px] font-extrabold text-white hover:bg-white/30">Deployment →</button>} />
       </div>
+      </CollapsibleStats>
 
       {atCap && <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e3] px-3 py-2 text-[12.5px] text-[#7a5b06]"><span className="font-bold">You&rsquo;ve reached the staff included on your plan.</span><span>Invite more and you move up a tier.</span><Link href="/company/subscription" className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white hover:bg-[#16306e]">Upgrade plan →</Link></div>}
 

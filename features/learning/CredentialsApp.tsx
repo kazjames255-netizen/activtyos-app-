@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Card, Select } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel, exportCredsPdf, exportCredsPack, credFiles, DEMO_STAFF, fmtDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
 import { completionsFor, downloadCourseCertificate, courseCertData, courseCertTemplate, courseInDate, courseExpiry } from "./courseCompletions";
@@ -64,11 +64,13 @@ export function CredentialsApp() {
           <button type="button" onClick={() => setShowCourses((v) => !v)} className={"ml-auto inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition-colors " + (showCourses ? "border-[#1d3a8f] bg-[#eaf1ff] text-[#1d3a8f]" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:border-[#1d3a8f]")}><span className={"grid h-4 w-7 items-center rounded-full px-0.5 transition-colors " + (showCourses ? "bg-[#1d3a8f]" : "bg-[var(--line)]")}><span className={"h-3 w-3 rounded-full bg-white transition-transform " + (showCourses ? "translate-x-3" : "")} /></span>📚 Internal courses</button>
         </div>
 
-        <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+        <CollapsibleStats id="credentials">
+        <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
           {([["Expiring", "expiring soon", "#b45309", "#fdf3e0", "⏳"], ["Expired", "expired", "#c0392b", "#fdeceb", "⛔"], ["Pending", "to verify", "#1d54c4", "#eaf1ff", "🔎"], ["Missing", "required missing", "#5b6577", "#eef1f6", "➖"]] as const).map(([st, lbl, col, bg, icon]) => { const on = statusFilter === st; return (
             <button key={st} type="button" onClick={() => setStatusFilter(on ? "all" : st)} className={"flex items-center gap-3 rounded-2xl border border-transparent px-3.5 py-3 text-left transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{cnt(st)}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
           ); })}
         </div>
+        </CollapsibleStats>
 
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <div className="relative">

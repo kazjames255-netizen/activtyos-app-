@@ -6,7 +6,7 @@
 // server-side. Demo "me" = Marcus Bell, matching the other staff areas.
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 
 const ME = "Marcus Bell";
 const KEY = "aos.staff.expenses.v1";
@@ -54,6 +54,7 @@ export function StaffExpensesApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="My expenses" icon="💷" lede="Claim back what you've spent for work — attach a receipt and track it through to reimbursement. Approvals go to your manager." actions={<Button variant="primary" onClick={() => setOpen(true)}>+ New claim</Button>} />
 
+      <CollapsibleStats id="staff-expenses">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           ["Claims", String(mine.length), "all time"],
@@ -68,6 +69,7 @@ export function StaffExpensesApp() {
           </div>
         ))}
       </div>
+      </CollapsibleStats>
 
       <Card className="mt-4 p-0">
         {mine.length === 0 ? (

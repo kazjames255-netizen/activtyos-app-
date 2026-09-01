@@ -7,7 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money, collectedNet } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { useSettings } from "@/lib/settings";
-import { LIGHT_PALETTE } from "@/components/OperatorPage";
+import { LIGHT_PALETTE, CollapsibleStats } from "@/components/OperatorPage";
 import { OnSiteNowCard } from "@/features/timeclock/OnSiteNowCard";
 import { Badge } from "@/components/ui";
 import { greeting } from "@/lib/greeting";
@@ -487,7 +487,8 @@ export function DashboardApp() {
       </div>
 
       {/* Live operational KPIs (from /api/dashboard) */}
-      <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+      <CollapsibleStats id="dashboard-kpis" className="mt-4" label="Live KPIs">
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         <Tile label="New bookings" icon="📈" value={`${a.weekly.reduce((s, v) => s + v, 0)}`} sub="in the last 5 weeks" grad={GRAD.blue}>
           {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} caption="per week" />}
         </Tile>
@@ -515,6 +516,7 @@ export function DashboardApp() {
           grad={d.money.outstanding > 0 ? GRAD.pink : GRAD.green}
         />
       </div>
+      </CollapsibleStats>
 
       {/* live clock-in board */}
       <div className="mt-3"><OnSiteNowCard /></div>
@@ -640,12 +642,14 @@ export function DashboardApp() {
         )
       ) : (
         <>
-          <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+          <CollapsibleStats id="dashboard-money-kpis" className="mt-3" label="Figures">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Income collected" icon="💰" value={money(a.kpis.collected)} sub={`last ${months}m · net of refunds`} grad={GRAD.green} />
             <Tile label="Bookings" icon="🎫" value={`${a.kpis.bookings}`} sub={`booked in last ${months}m (excl. cancelled)`} grad={GRAD.blue} />
             <Tile label="Families" icon="👨‍👩‍👧" value={`${a.kpis.families}`} sub={`unique customers · last ${months}m`} grad={GRAD.violet} />
             <Tile label="Avg booking" icon="🧮" value={money(a.kpis.avg)} sub="per paid booking" grad={GRAD.amber} />
           </div>
+          </CollapsibleStats>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
             <Panel title="Income by month" right={<Legend items={[["Collected", GREEN]]} />}>

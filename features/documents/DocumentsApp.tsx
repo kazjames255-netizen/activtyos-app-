@@ -10,7 +10,7 @@
 // read-and-confirm docs.
 import { useEffect, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { DEMO_STAFF } from "@/features/learning/credentials";
 
@@ -147,11 +147,13 @@ export function DocumentsApp() {
           })()}
         </Card>
       ) : (<>
-      <div className="mb-3 grid grid-cols-3 gap-2.5">
+      <CollapsibleStats id="documents" className="mb-3">
+      <div className="grid grid-cols-3 gap-2.5">
         {([["all", "documents", "#1d54c4", "#eaf1ff", "📁", docs.length], ["expiring", "review soon", "#b45309", "#fdf3e0", "⏳", expiring], ["expired", "out of date", "#c0392b", "#fdeceb", "⛔", expired]] as const).map(([k, lbl, col, bg, icon, n]) => { const on = statusFilter === k; return (
           <button key={k} type="button" onClick={() => setStatusFilter(k === "all" ? "all" : on ? "all" : k)} className={"flex items-center gap-3 rounded-2xl px-3.5 py-3 text-left transition-all " + (on ? "ring-2 ring-offset-1" : "hover:-translate-y-0.5 hover:shadow-md")} style={{ background: bg, ...(on ? ({ "--tw-ring-color": col } as React.CSSProperties) : {}) }}><span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white/70 text-[17px]">{icon}</span><div><div className="text-[22px] font-extrabold leading-none tabular-nums" style={{ color: col }}>{n}</div><div className="mt-0.5 text-[11px] font-semibold" style={{ color: col }}>{lbl}</div></div></button>
         ); })}
       </div>
+      </CollapsibleStats>
 
       <Card className="p-4">
         <div className="mb-3 flex flex-wrap items-center gap-2">

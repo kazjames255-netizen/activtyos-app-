@@ -7,7 +7,7 @@
 // figures, retained 3 years past tax-year end (see docs/payroll-integrations-handoff.md).
 import { useEffect, useMemo, useState } from "react";
 import { Card } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { openPayslip, PAYROLL_RUNS_KEY, type PayRun, type Line } from "./PayrollApp";
 
@@ -37,6 +37,7 @@ export function StaffPayslipsApp() {
       <PageHero title="My payslips" icon="🧾" lede="Your pay history — open or print any payslip. These are estimated previews until your employer's payroll provider issues the statutory version." />
 
       {/* year-to-date summary */}
+      <CollapsibleStats id="payslips">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           ["Payslips", String(mine.length), "this tax year"],
@@ -51,6 +52,7 @@ export function StaffPayslipsApp() {
           </div>
         ))}
       </div>
+      </CollapsibleStats>
 
       <Card className="mt-4 p-0">
         {mine.length === 0 ? (

@@ -8,7 +8,7 @@
 // it. Front-end demo stores; real submissions + email are Amir's.
 import { useEffect, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { Tile, GRAD } from "@/features/money/finance-kit";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_FIELDS } from "./OnboardingApp";
@@ -236,12 +236,14 @@ export function ApplicationsPanel() {
 
       {tab === "received" ? (<>
         {/* Summary tiles — triage at a glance before reading the list. */}
-        <div className="mb-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <CollapsibleStats id="team-applications">
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
           <Tile label="Applications" icon="📥" grad={GRAD.blue} value={String(apps.length)} sub={`${newCount} new`} />
           <Tile label="New / to review" icon="🆕" grad={newCount > 0 ? GRAD.amber : GRAD.green} value={String(newCount)} sub={newCount > 0 ? "awaiting a decision" : "all reviewed"} />
           <Tile label="Accepted" icon="✅" grad={GRAD.green} value={String(apps.filter((a) => a.status === "accepted").length)} sub={`${apps.filter((a) => a.onboardingSent).length} onboarding sent`} />
           <Tile label="Rejected" icon="🚫" grad={GRAD.violet} value={String(apps.filter((a) => a.status === "rejected").length)} sub="not taken forward" />
         </div>
+        </CollapsibleStats>
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <label className="text-[12px] font-bold text-[var(--ink-3)]">📍 Location</label>
           <Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="max-w-[240px]"><option value="all">All locations</option>{APP_LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}</Select>

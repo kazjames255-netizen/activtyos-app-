@@ -8,7 +8,7 @@
 // accounting sync are the backend/integration piece (Amir). Demo stores.
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { DEMO_STAFF } from "@/features/learning/credentials";
 import { loadProfiles as loadHolidayProfiles } from "@/features/holiday/data";
@@ -311,12 +311,14 @@ export function PayrollApp() {
       </div>
 
       {tab === "overview" && (<>
-        <div className="mb-3 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
+        <CollapsibleStats id="payroll">
+        <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
           {tile(`This ${freq === "monthly" ? "month" : "period"} · gross`, gbp0(totalGross), `${emps.length} employees · ${FREQ_LABEL[freq]}`, "linear-gradient(135deg,#1d3a8f,#3f7ae0)")}
           {tile("Net to pay", gbp0(totalNet), "after tax, NI & pension", "linear-gradient(135deg,#166534,#37b26a)")}
           {tile("PAYE + NI to HMRC", gbp0(totalPaye + lines.reduce((a, l) => a + l.eeNiM + l.erNiM, 0)), "estimated liability", "linear-gradient(135deg,#9d174d,#f43f5e)")}
           {tile("Total employer cost", gbp0(totalErCost), "incl. employer NI & pension", "linear-gradient(135deg,#334155,#64748b)")}
         </div>
+        </CollapsibleStats>
         <Card className="p-4">
           <div className="flex flex-wrap items-center gap-2"><div><div className="text-[13.5px] font-extrabold text-[var(--ink)]">Next pay day</div><div className="text-[12px] text-[var(--ink-3)]">{nextPay.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })} · {FREQ_LABEL[freq]} · {period}</div></div><Button variant="primary" className="ml-auto" onClick={() => setTab("run")}>▶ Run payroll</Button></div>
           {runs.length > 0 && <div className="mt-3 border-t border-[var(--line)] pt-3"><div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Recent runs</div>{runs.slice(0, 3).map((r) => <div key={r.id} className="flex items-center gap-2 py-1 text-[12.5px]"><span className="font-bold text-[var(--ink)]">{r.period}</span><span className="text-[var(--ink-3)]">{r.lines.length} payslips · {gbp0(r.lines.reduce((a, l) => a + l.netM, 0))} net</span><span className="ml-auto rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">{r.status}</span></div>)}</div>}

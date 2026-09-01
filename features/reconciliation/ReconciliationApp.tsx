@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { Tile, GRAD, money } from "@/features/money/finance-kit";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -132,12 +132,14 @@ export function ReconciliationApp() {
 
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
 
-      <div className="mb-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+      <CollapsibleStats id="reconciliation">
+      <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
         <Tile label="Awaiting" icon="⏳" grad={(data?.summary.count ?? 0) > 0 ? GRAD.pink : GRAD.green} value={data ? String(data.summary.count) : "…"} sub="payments to match" />
         <Tile label="Outstanding" icon="💷" grad={GRAD.blue} value={data ? money(data.summary.outstanding) : "…"} sub="still to come in" />
         <Tile label="Reconciled" icon="✅" grad={GRAD.green} value={data ? String(data.summary.reconciledCount) : "…"} sub="fully matched" />
         <Tile label="Overdue" icon="⚠️" grad={(data?.summary.overdue ?? 0) > 0 ? GRAD.amber : GRAD.teal} value={data ? String(data.summary.overdue) : "…"} sub="vouchers past due" />
       </div>
+      </CollapsibleStats>
 
       {/* Method tabs */}
       <div className="mb-3 flex flex-wrap gap-1.5">

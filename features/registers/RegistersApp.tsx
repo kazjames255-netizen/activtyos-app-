@@ -1002,7 +1002,7 @@ export function RegistersApp() {
                   </label>
                 </div>
                 <button type="button" onClick={() => setDlOpen(true)} className={GHOST + " ml-auto"}>⬇ Download</button>
-                <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? "Collapse header" : "Expand header"} className={GHOST}>{heroOpen ? "▴ Collapse" : "▾ Expand"}</button>
+                <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? "Collapse header" : "Expand header"} className="inline-flex items-center gap-1.5 rounded-full border border-white/25 px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-[0_6px_16px_-6px_rgba(10,20,50,.7)] transition hover:brightness-110" style={{ background: "#0f2a63" }}><span className="text-[13px] leading-none">📊</span>{heroOpen ? "Hide overview" : "Show overview"}</button>
               </div>
 
               {/* Collapsed: a slim one-line summary so the numbers stay visible. */}

@@ -6,7 +6,7 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { collectedNet, refundedGross, owedOf } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
-import { LIGHT_PALETTE, PageHero, TabStrip } from "@/components/OperatorPage";
+import { CollapsibleStats, LIGHT_PALETTE, PageHero, TabStrip } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { SeasonPicker } from "@/components/SeasonPicker";
 import {
@@ -374,12 +374,14 @@ export function FinanceAnalyticsApp() {
         <div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">Loading your figures…</div>
       ) : tab === "overview" ? (
         <div className="flex flex-col gap-4">
+          <CollapsibleStats id="finance-overview">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Revenue collected" icon="💰" grad={GRAD.green} value={money(a.collected)} sub={<>of {money(a.booked)} booked<Delta pct={a.collectedDelta} /></>} aside={<Ring pct={a.booked ? (a.collected / a.booked) * 100 : 0} label={`${a.booked ? Math.round((a.collected / a.booked) * 100) : 0}%`} />} />
             <Tile label="Owed to you" icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={a.owed > 0 ? "unpaid / invoiced" : "all settled"} />
             <Tile label="Refunds" icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={`last ${months} months`} />
             <Tile label="Est. net to bank" icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={`after ~${money(a.fees)} fees`} />
           </div>
+          </CollapsibleStats>
           <div className="grid gap-4 lg:grid-cols-3">
             <Panel title="Revenue over time" right={<Legend items={[["Booked", LIGHTB], ["Collected", GREEN]]} />} className="lg:col-span-2">
               <TrendChart series={a.bookedByMonth} series2={a.collectedByMonth} fmt={compactMoney} color={LIGHTB} color2={GREEN} />
@@ -402,12 +404,14 @@ export function FinanceAnalyticsApp() {
         </div>
       ) : tab === "revenue" ? (
         <div className="flex flex-col gap-4">
+          <CollapsibleStats id="finance-revenue">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Total booked" icon="🎫" grad={GRAD.blue} value={money(a.booked)} sub={<><span>{months}-month value</span><Delta pct={a.bookedDelta} /></>} />
             <Tile label="Collected" icon="✅" grad={GRAD.green} value={money(a.collected)} sub={<><span>paid &amp; funded</span><Delta pct={a.collectedDelta} /></>} />
             <Tile label="Outstanding" icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.teal} value={money(a.owed)} sub="not yet paid" />
             <Tile label="Refunds" icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub="issued in period" />
           </div>
+          </CollapsibleStats>
           <Panel title="Booked vs collected by month" right={<Legend items={[["Booked", LIGHTB], ["Collected", GREEN]]} />}>
             <TrendChart series={a.bookedByMonth} series2={a.collectedByMonth} fmt={compactMoney} color={LIGHTB} color2={GREEN} />
           </Panel>
@@ -440,12 +444,14 @@ export function FinanceAnalyticsApp() {
               <button type="button" onClick={manage} disabled={connecting} className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink)] disabled:opacity-60">{connecting ? "Opening…" : "Manage payouts →"}</button>
             </div>
           )}
+          <CollapsibleStats id="finance-payouts">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="On the way (est.)" icon="🚚" grad={GRAD.amber} value={money(a.inTransit)} sub="collected in last 7 days" />
             <Tile label="In your bank (est.)" icon="🏦" grad={GRAD.green} value={money(a.inBank)} sub="settled earlier" />
             <Tile label="Est. fees" icon="✂️" grad={GRAD.violet} value={money(a.fees)} sub="~1.4% + 20p / payment" />
             <Tile label="Est. net (period)" icon="💷" grad={GRAD.blue} value={money(a.net)} sub="collected − fees" />
           </div>
+          </CollapsibleStats>
           <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">These payout figures are ActivityOS estimates from your paid bookings. Exact balances appear once your payment provider is fully connected.</div>
           <Panel title="Payout transactions">
             {payments.filter((p) => p.type !== "refund").length ? (
@@ -471,12 +477,14 @@ export function FinanceAnalyticsApp() {
         </div>
       ) : tab === "debts" ? (
         <div className="flex flex-col gap-4">
+          <CollapsibleStats id="finance-debts">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Owed by families" icon="🧾" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub="unpaid bookings" />
             <Tile label="Unpaid invoices" icon="📄" grad={GRAD.amber} value={money(invoices?.summary.outstanding ?? 0)} sub={`${invoices?.items.filter((i) => i.status !== "paid").length ?? 0} open`} />
             <Tile label="Overdue invoices" icon="⏰" grad={GRAD.pink} value={money(invoices?.summary.overdue ?? 0)} sub={`${invoices?.items.filter((i) => i.overdue).length ?? 0} past due`} />
             <Tile label="Refunds issued" icon="↩️" grad={GRAD.violet} value={money(a.refunds)} sub={`last ${months} months`} />
           </div>
+          </CollapsibleStats>
           <Panel title="Who owes you" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{a.owing.length} booking{a.owing.length === 1 ? "" : "s"} · {money(a.owed)}</span>}>
             {a.owing.length ? (
               <div className="flex flex-col divide-y divide-[var(--line)]">
@@ -509,12 +517,14 @@ export function FinanceAnalyticsApp() {
         </div>
       ) : tab === "insights" && insTab === "customers" ? (
         <div className="flex flex-col gap-4">
+          <CollapsibleStats id="finance-insights-customers">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Total bookers" icon="👤" grad={GRAD.blue} value={String(a.totalBookers)} sub={`in the last ${months} months`} />
             <Tile label="Total learners" icon="🧒" grad={GRAD.teal} value={String(a.totalLearners)} sub="children booked in" />
             <Tile label="Returning bookers" icon="🔁" grad={GRAD.pink} value={String(a.returningBookers)} sub={`${a.newBookers} new`} aside={<Ring pct={a.totalBookers ? (a.returningBookers / a.totalBookers) * 100 : 0} label={`${a.totalBookers ? Math.round((a.returningBookers / a.totalBookers) * 100) : 0}%`} />} />
             <Tile label="Spend per customer" icon="💷" grad={GRAD.green} value={money(a.spendPerCustomer)} sub="collected ÷ bookers" />
           </div>
+          </CollapsibleStats>
           <div className="grid gap-4 lg:grid-cols-3">
             <Panel title="New vs returning bookers">
               {a.totalBookers ? <Donut segments={[{ label: "Returning", value: a.returningBookers, color: PINK }, { label: "New", value: a.newBookers, color: LIGHTB }]} center={`${a.totalBookers ? Math.round((a.returningBookers / a.totalBookers) * 100) : 0}%`} sub="returning" /> : <Empty>No bookers yet.</Empty>}
@@ -538,12 +548,14 @@ export function FinanceAnalyticsApp() {
         </div>
       ) : tab === "insights" && insTab === "addons" ? (
         <div className="flex flex-col gap-4">
+          <CollapsibleStats id="finance-insights-addons">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Add-on revenue (est.)" icon="🧩" grad={GRAD.violet} value={money(mix.addonRevenue)} sub="from paid add-ons" />
             <Tile label="Attach rate" icon="📈" grad={GRAD.blue} value={`${mix.attachRate}%`} sub="of bookings add an extra" aside={<Ring pct={mix.attachRate} label={`${mix.attachRate}%`} />} />
             <Tile label="Add-ons sold" icon="🛒" grad={GRAD.teal} value={String(mix.addonUnits)} sub="units in period" />
             <Tile label="Bookings w/ add-ons" icon="✅" grad={GRAD.green} value={String(mix.bookingsWithAddon)} sub={`of ${mix.winBookings} bookings`} />
           </div>
+          </CollapsibleStats>
           <Panel title="Top add-ons by revenue" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">est. price × units sold</span>}>
             {mix.topAddons.length ? <Breakdown entries={mix.topAddons} /> : <Empty>No add-ons sold yet — create them in the listing builder&rsquo;s Add-ons step, and they&rsquo;ll show here once booked.</Empty>}
           </Panel>
@@ -551,12 +563,14 @@ export function FinanceAnalyticsApp() {
         </div>
       ) : (
         <div className="flex flex-col gap-4">
+          <CollapsibleStats id="finance-insights-bookings">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Avg booking value" icon="🧮" grad={GRAD.blue} value={money(mix.avgBookingValue)} sub={`across ${mix.winBookings} bookings`} />
             <Tile label="Median booking" icon="📊" grad={GRAD.teal} value={money(mix.medianValue)} sub="typical basket" />
             <Tile label="Boys : girls" icon="🚻" grad={GRAD.violet} value={mix.genderKnown ? `${Math.round((mix.gender.boy / mix.genderKnown) * 100)}:${Math.round((mix.gender.girl / mix.genderKnown) * 100)}` : "—"} sub={mix.genderKnown ? `${mix.genderKnown} with gender set` : "no gender recorded"} />
             <Tile label="Busiest day" icon="📅" grad={GRAD.amber} value={mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).value ? mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).label : "—"} sub="most sessions" />
           </div>
+          </CollapsibleStats>
           <div className="grid gap-4 lg:grid-cols-2">
             <Panel title="Booking value distribution"><Breakdown entries={mix.valueBands} /></Panel>
             <Panel title="Pass / ticket mix" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">revenue · bookings</span>}>

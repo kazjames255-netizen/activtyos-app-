@@ -7,7 +7,7 @@
 // Demo store; backend + real notifications are Amir's (docs/holiday-planner-handoff.md).
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { Tile, GRAD } from "@/features/money/finance-kit";
 import {
   type Absence, type AbsenceKind, type LeaveProfile, type HolidayPolicy,
@@ -106,6 +106,7 @@ export function HolidayApp() {
                 ); })}
               </div>
               <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Team members off each day this week</div>
+              <CollapsibleStats id="holiday-overview">
               <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
                 {cards.map((c) => (
                   <button key={c.label} type="button" onClick={() => setTab(c.tab)} title={`Go to ${c.label}`} className="text-left transition-transform hover:-translate-y-0.5">
@@ -113,6 +114,7 @@ export function HolidayApp() {
                   </button>
                 ))}
               </div>
+              </CollapsibleStats>
             </div>
           </Card>
         );
