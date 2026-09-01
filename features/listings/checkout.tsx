@@ -1133,15 +1133,11 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         </div>
       ) : (
         <>
-          <div className="mt-4 font-bold uppercase" style={{ ...label, color: tk.ink }}>Whose booking is this?</div>
+          <div className="mt-3 font-bold uppercase" style={{ ...label, color: tk.ink }}>Whose booking is this?</div>
 
-          <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
-            <div className="text-[12.5px] font-extrabold" style={{ color: tk.ink }}>1 · They&rsquo;re on your books</div>
-            <div className="mb-2 mt-0.5 text-[11.5px] leading-[1.5]" style={{ color: tk.ink }}>
-              Anyone who has booked with you before. The booking goes on the account they already
-              have, with their children ready to pick. Someone who only registered — and never
-              booked with you — won&rsquo;t be here; use option 2 and we&rsquo;ll link their account.
-            </div>
+          <div className={`mt-1.5 border p-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
+            <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>1 · Already booked with you</div>
+            <div className="mb-1.5 mt-0.5 text-[11px] leading-[1.4]" style={{ color: tk.muted }}>Their account &amp; children are ready to pick. <span title="Someone who only registered but never booked isn't here — use option 2 and we'll link their account.">Registered-only? Use option 2.</span></div>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by name or email…"
               className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`} style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
             <div className="mt-1 text-[11px]" style={{ color: parentsState === "error" ? "#fca5a5" : tk.ink }}>
@@ -1168,27 +1164,23 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             )}
           </div>
 
-          <div className={`mt-2 border p-3 ${tk.round}`} style={{ borderColor: tk.line }}>
-            <div className="text-[12.5px] font-extrabold" style={{ color: tk.ink }}>2 · Anyone else</div>
-            <div className="mt-0.5 text-[11.5px] leading-[1.5]" style={{ color: tk.ink }}>
-              New to you, or registered but never booked. If that email already has an ActivityOS
-              account we&rsquo;ll use it rather than making a second; if not, they get one. Either way
-              they&rsquo;re emailed the booking, a way to set a password, and a link to pay. Ask them for:
+          <div className={`mt-2 border p-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
+            <div className="flex flex-wrap items-baseline gap-x-2">
+              <div className="text-[12px] font-extrabold" style={{ color: tk.ink }}>2 · Anyone else</div>
+              <div className="text-[11px] leading-[1.4]" style={{ color: tk.muted }} title="If that email already has an ActivityOS account we'll use it, not make a second. They're emailed the booking, a password link and a way to pay. Next step: each child's name, DOB and boy/girl.">New / never booked — they&rsquo;re emailed the booking &amp; a link to pay.</div>
             </div>
-            <div className="mt-1.5 mb-2 text-[11px] leading-[1.6]" style={{ color: tk.ink }}>
-              <b>Now:</b> their name, email, phone and address.<br />
-              <b>Next step:</b> each child&rsquo;s name, date of birth and boy/girl.
-            </div>
-            {(["name", "email", "phone", "address"] as const).map((k) => (
-              <div key={k} className="mb-1.5">
-                <div className="mb-1 text-[10.5px] font-bold" style={{ color: tk.ink }}>
-                  {{ name: "Parent's full name", email: "Email", phone: "Phone", address: "Address" }[k]}
+            <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+              {(["name", "email", "phone", "address"] as const).map((k) => (
+                <div key={k} className={k === "address" || k === "name" ? "col-span-2" : ""}>
+                  <div className="mb-0.5 text-[10px] font-bold" style={{ color: tk.muted }}>
+                    {{ name: "Parent's full name", email: "Email", phone: "Phone", address: "Address" }[k]}
+                  </div>
+                  <input value={np[k]} onChange={(e) => setNp({ ...np, [k]: e.target.value })}
+                    className={`aos-in w-full border px-2.5 py-1.5 text-[12.5px] outline-none ${tk.round}`}
+                    style={{ background: tk.inputBg, borderColor: `${tk.ink}4d`, color: tk.ink }} />
                 </div>
-                <input value={np[k]} onChange={(e) => setNp({ ...np, [k]: e.target.value })}
-                  className={`aos-in w-full border px-2.5 py-2 text-[12.5px] outline-none ${tk.round}`}
-                  style={{ background: tk.inputBg, borderColor: `${tk.ink}4d`, color: tk.ink }} />
-              </div>
-            ))}
+              ))}
+            </div>
             {/* A mistyped address creates an account for a stranger holding a
                 child's name and date of birth, so it gets read back. */}
             {npReady && (

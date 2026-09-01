@@ -198,7 +198,7 @@ export function TakeBookingModal() {
     // slab dropped into the page.
     <div
       onClick={(e) => e.target === e.currentTarget && dismiss()}
-      className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8"
+      className="fixed inset-0 z-[9999] flex items-center justify-center overflow-y-auto bg-black/55 p-3 sm:p-4"
       style={
         {
           "--bg": "#0f1115",
@@ -211,15 +211,14 @@ export function TakeBookingModal() {
         } as React.CSSProperties
       }
     >
-      <div className="w-full max-w-[1100px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-[22px] py-5 text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
-        <div className="mb-2 flex items-center gap-2.5">
+      <div className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-[960px] flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
+        {/* Fixed header — the body below scrolls, so the page never does. */}
+        <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-[22px] py-3">
           <h3 className="m-0 font-[var(--ff-display)] text-[18px] font-extrabold">Take a booking</h3>
-          <span onClick={dismiss} className="ml-auto cursor-pointer text-[22px] text-[var(--ink-3)]">×</span>
+          <span className="text-[11.5px] text-[var(--ink-3)]">· phone / walk-in · we email a payment link (Invoice sent)</span>
+          <span onClick={dismiss} className="ml-auto cursor-pointer text-[22px] leading-none text-[var(--ink-3)]">×</span>
         </div>
-        <div className="mb-3 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
-          A phone booking, on the same screen a parent sees. We&rsquo;ll <b>email them a payment
-          link</b>; it sits as <b>Invoice sent</b> until they pay.
-        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto px-[22px] py-4">
 
         {error && <div className="mb-3 text-[12.5px] text-[var(--red)]">{error}</div>}
 
@@ -299,6 +298,7 @@ export function TakeBookingModal() {
             </div>
           )
         )}
+        </div>
       </div>
     </div>
   );
