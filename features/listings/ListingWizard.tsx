@@ -1791,30 +1791,24 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
   const dates = useMemo(() => genDates(d.runFrom, d.runTo, d.days), [d.runFrom, d.runTo, d.days]);
   const weeks = useMemo(() => groupWeeks(dates), [dates]);
   const live = dates.filter((x) => !d.datesOff.includes(x)).length;
-  const hadRules = Object.keys(d.bookRules ?? {}).length > 0;
-  // Changing the run length / weekly days can make a pass's booking option
-  // impossible — so a structural change clears them, and the note tells the
-  // operator to set them again on the Tickets & pricing step.
-  const updRun = (patch: Partial<WizardDraft>) => upd({ ...patch, ...(hadRules ? { bookRules: {} } : {}) });
+  // Changing the dates/days doesn't wipe the per-pass booking rules: the Tickets
+  // & pricing step re-validates each rule against the new dates (falling back and
+  // flagging any that no longer fit), and the booking engine guards them too — so
+  // still-valid rules survive and only the impossible ones self-correct there.
   const dayLabel = <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">Days it runs{weekly ? " · locked to Mon–Fri" : ""}</span>;
   return (
     <div className="max-w-[1120px]">
       <StepHead n={5} kicker="STEP 5 · WHEN IT RUNS" title="When it runs" lede="Pick the block size and which days run — the calendar builds itself." />
-      {hadRules && (
-        <div className="mb-3 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] font-semibold text-[#7a5b06]">
-          ⚠️ Heads up — changing the dates or days clears the <b>booking rules for each pass</b> (how each one can be booked — any day, whole week, etc.), which you set on the <b>Tickets &amp; pricing</b> step. Just set them again there once you&rsquo;re done here.
-        </div>
-      )}
       <div className="grid items-start gap-4 md:grid-cols-2">
         <RichCard icon="🗓️" title="Dates & pattern" subtitle="When it runs and on which days">
           <div className="mb-3 flex gap-3">
-            <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">Runs from</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => updRun({ runFrom: e.target.value })} className="w-full" /></div>
-            <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">Runs to</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => updRun({ runTo: e.target.value })} className="w-full" /></div>
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-from">Runs from</FieldLabel><Input id="wiz-run-from" type="date" value={d.runFrom} onChange={(e) => upd({ runFrom: e.target.value })} className="w-full" /></div>
+            <div className="flex-1"><FieldLabel htmlFor="wiz-run-to">Runs to</FieldLabel><Input id="wiz-run-to" type="date" value={d.runTo} onChange={(e) => upd({ runTo: e.target.value })} className="w-full" /></div>
           </div>
           <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">Block size</span>
           <div className="mb-3 flex flex-wrap gap-1.5">
             {[["weekly", "Weekly (Mon–Fri)"], ["custom", "Custom days (incl. weekends)"]].map(([k, label]) => (
-              <button key={k} type="button" onClick={() => updRun({ blockMode: k as "weekly" | "custom", days: k === "weekly" ? [1, 2, 3, 4, 5] : d.days })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold"
+              <button key={k} type="button" onClick={() => upd({ blockMode: k as "weekly" | "custom", days: k === "weekly" ? [1, 2, 3, 4, 5] : d.days })} className="rounded-lg border px-3 py-1.5 text-[12px] font-bold"
                 style={d.blockMode === k ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>{label}</button>
             ))}
           </div>
@@ -1823,7 +1817,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
             {WEEKDAYS.map(([n, label]) => {
               const on = d.days.includes(n);
               return (
-                <button key={n} type="button" disabled={weekly} onClick={() => updRun({ days: toggle(d.days.map(String), String(n)).map(Number) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold disabled:opacity-50"
+                <button key={n} type="button" disabled={weekly} onClick={() => upd({ days: toggle(d.days.map(String), String(n)).map(Number) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold disabled:opacity-50"
                   style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-3)" }}>{label}</button>
               );
             })}
