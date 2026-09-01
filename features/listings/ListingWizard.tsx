@@ -50,11 +50,12 @@ const STEPS = [
   { key: "policy", label: "Policy & publish", stage: "Publish" },
 ] as const;
 
+// Only the shapes that genuinely render differently. Multiple photos rotate as
+// a carousel (see the note under the picker) — the old "Collage"/"Big +
+// thumbnails" options did nothing and were removed.
 const LAYOUTS = [
   { key: "big", label: "One big image · 1600×900px" },
   { key: "wide", label: "Wide banner · 1920×640px" },
-  { key: "collage", label: "Collage (2×2) · 800×800px each" },
-  { key: "thumbs", label: "Big + thumbnails · 1600×900px" },
 ];
 const SECTION_TYPES = ["Summary", "What we'll do", "When you arrive", "Our curriculum"];
 const WEEKDAYS: [number, string][] = [[1, "Mon"], [2, "Tue"], [3, "Wed"], [4, "Thu"], [5, "Fri"], [6, "Sat"], [0, "Sun"]];
@@ -1406,8 +1407,8 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
               </button>
             ))}
           </div>
-          <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel="＋ Add main photo" previewAspect={d.layout === "banner" ? "3 / 1" : "16 / 9"} />
-          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Crop to fit — the preview matches the customer page. Add more than one and it rotates as a carousel.</div>
+          <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel="＋ Add main photo" previewAspect={d.layout === "wide" ? "3 / 1" : "16 / 9"} />
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Pick the shape (tall <b>16:9</b> or short-wide <b>banner</b>) — the crop preview matches the customer hero exactly. <b>Add more than one photo and they rotate as a carousel.</b></div>
         </RichCard>
         <RichCard icon="📸" title="Gallery" subtitle="Extra photos for the page" tint="teal">
           <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" previewAspect="1 / 1" />
@@ -3289,7 +3290,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
   // Fixed ASPECT (not height) so the hero crops identically on every screen and
   // matches the wizard's crop preview exactly — WYSIWYG.
-  const heroAspect = d.layout === "banner" ? "3 / 1" : "16 / 9";
+  const heroAspect = d.layout === "wide" ? "3 / 1" : "16 / 9";
   // Show the first few passes, then a "+N more" toggle so a long block list
   // doesn't run down the whole hero.
   const [morePasses, setMorePasses] = useState(false);
@@ -3513,7 +3514,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   const grid2 = full ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
   // Fixed ASPECT (not height) so the hero crops the same on every screen and
   // matches the wizard's crop preview exactly — WYSIWYG.
-  const heroAspect = d.layout === "banner" ? "3 / 1" : "16 / 9";
+  const heroAspect = d.layout === "wide" ? "3 / 1" : "16 / 9";
   const [teamOpen, setTeamOpen] = useState(true);
   const [whereOpen, setWhereOpen] = useState(false);
   const [morePasses, setMorePasses] = useState(false);
