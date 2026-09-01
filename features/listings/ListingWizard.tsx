@@ -2423,62 +2423,52 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
 }
 
 function StaffStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
-  const [first, setFirst] = useState("");
-  const [last, setLast] = useState("");
+  const [q, setQ] = useState("");
   const [bioN, setBioN] = useState<Record<string, number>>({});
   const updMember = (id: string, patch: Partial<StaffMember>) => patchLocal((s) => ({ ...s, staff: s.staff.map((m) => (m.id === id ? { ...m, ...patch } : m)) }));
   const writeBio = (m: StaffMember) => { updMember(m.id, { bio: genBio(m.bio, m, bioN[m.id] || 0) }); setBioN((s) => ({ ...s, [m.id]: (s[m.id] || 0) + 1 })); };
-  const addMember = () => {
-    if (first.trim().length < 1) return;
-    const m = { id: uid(), first: first.trim(), last: last.trim(), bio: "" };
-    patchLocal((s) => ({ ...s, staff: [...s.staff, m] }));
-    upd({ staffIds: [...d.staffIds, m.id] });
-    setFirst(""); setLast("");
-  };
-  const removeMember = (id: string) => {
-    if (!confirm("Remove this staff member?")) return;
-    patchLocal((s) => ({ ...s, staff: s.staff.filter((m) => m.id !== id) }));
-    upd({ staffIds: d.staffIds.filter((x) => x !== id) });
-  };
+  const query = q.trim().toLowerCase();
+  const list = query ? local.staff.filter((m) => `${m.first} ${m.last}`.toLowerCase().includes(query)) : local.staff;
+  const assignedCount = local.staff.filter((m) => d.staffIds.includes(m.id)).length;
   return (
     <div className="mx-auto max-w-[1120px]">
-      <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Add your team — first & last name and a short bio each — then assign who's onsite for this listing." />
-      <div className="mb-3 flex flex-wrap items-start gap-2 rounded-lg border border-[#cfe0fb] bg-[#f4f9ff] px-3 py-2 text-[11.5px] leading-[1.5] text-[#16306e]">
-        <span>ℹ️</span>
-        <span>Your team is <b>shared across every listing</b> and stored by reference — so a new hire you add here shows up in the picker on <b>all</b> your listings (you just <b>Assign</b> them to the ones they work), and editing a name or bio updates it everywhere. Assigning changes nothing about existing listings until you tick the person on.</span>
-      </div>
-      <RichCard icon="🧑‍🏫" title="Your team" subtitle="Names + short bios — saved and reusable on every listing">
+      <StepHead n={9} kicker="STEP 9 · STAFF" title="Staff onsite" lede="Search your onboarded team, assign who's onsite for this listing, and set the bio parents see." />
+      <RichCard icon="🧑‍🏫" title="Your team" subtitle="Search your onboarded staff · assign who's onsite · edit their bio">
         <div>
-      <div className="mb-3 grid items-start gap-2 md:grid-cols-2">
-        {local.staff.map((m) => {
-          const on = d.staffIds.includes(m.id);
-          return (
-            <div key={m.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-              <div className="mb-2 flex flex-wrap items-center gap-2">
-                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[var(--brand-soft)] font-extrabold text-[var(--brand-ink)]">{(m.first[0] || "?").toUpperCase()}</span>
-                <Input value={m.first} onChange={(e) => updMember(m.id, { first: e.target.value })} placeholder="First name" className="w-[130px]" />
-                <Input value={m.last} onChange={(e) => updMember(m.id, { last: e.target.value })} placeholder="Surname" className="w-[130px]" />
-                <div className="ml-auto flex gap-1.5">
-                  <Button sm variant={on ? "primary" : "default"} onClick={() => upd({ staffIds: toggle(d.staffIds, m.id) })}>{on ? "Onsite" : "Assign"}</Button>
-                  <button type="button" onClick={() => removeMember(m.id)} aria-label="Remove" className="px-1 text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍  Search staff by name…" className="w-full max-w-[300px]" />
+        <span className="text-[11.5px] font-semibold text-[var(--ink-3)]">{assignedCount} assigned to this listing</span>
+      </div>
+      {local.staff.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">No staff onboarded yet — add your team in <b>Team &amp; invites</b>, then they&rsquo;ll show here to assign.</div>
+      ) : list.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-[var(--line)] p-5 text-center text-[12px] text-[var(--ink-3)]">No staff match &ldquo;{q}&rdquo;.</div>
+      ) : (
+        <div className="grid items-start gap-2 md:grid-cols-2">
+          {list.map((m) => {
+            const on = d.staffIds.includes(m.id);
+            return (
+              <div key={m.id} className="rounded-xl border p-3" style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white font-extrabold text-[var(--brand-ink)] ring-1 ring-[var(--brand-2)]/30">{(m.first[0] || "?").toUpperCase()}</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{m.first} {m.last}</div>
+                    <div className="truncate text-[10.5px] text-[var(--ink-3)]">{m.bio ? m.bio : "No bio yet"}</div>
+                  </div>
+                  <Button sm variant={on ? "primary" : "default"} onClick={() => upd({ staffIds: toggle(d.staffIds, m.id) })}>{on ? "✓ Onsite" : "Assign"}</Button>
                 </div>
+                <div className="mb-1 flex items-center justify-between">
+                  <FieldLabel>Bio <span className="font-normal text-[var(--ink-3)]">— parents see this</span></FieldLabel>
+                  <Button sm onClick={() => writeBio(m)}>✨ Write with AI</Button>
+                </div>
+                <textarea value={m.bio} maxLength={300} onChange={(e) => updMember(m.id, { bio: e.target.value })} placeholder="Type a few words (e.g. football, patient, 6 years) then ✨ Write with AI…"
+                  className="h-[58px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[12.5px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
               </div>
-              <div className="mb-1 flex items-center justify-between">
-                <FieldLabel>Short bio</FieldLabel>
-                <Button sm onClick={() => writeBio(m)}>✨ Write bio with AI</Button>
-              </div>
-              <textarea value={m.bio} maxLength={300} onChange={(e) => updMember(m.id, { bio: e.target.value })} placeholder="Type a few words (e.g. football, patient, 6 years experience) then ✨ Write bio with AI…"
-                className="h-[58px] w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2 text-[12.5px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex flex-wrap items-end gap-1.5">
-        <div><FieldLabel>First name</FieldLabel><Input value={first} onChange={(e) => setFirst(e.target.value)} placeholder="First" className="w-[130px]" /></div>
-        <div><FieldLabel>Surname</FieldLabel><Input value={last} onChange={(e) => setLast(e.target.value)} onKeyDown={(e) => e.key === "Enter" && addMember()} placeholder="Surname" className="w-[130px]" /></div>
-        <Button onClick={addMember}>＋ Add staff</Button>
-      </div>
-      <div className="mt-2 text-[11px] text-[var(--ink-3)]">Staff &amp; bios are saved and reusable on every listing.</div>
+            );
+          })}
+        </div>
+      )}
+      <div className="mt-2 text-[11px] text-[var(--ink-3)]">Staff come from your <b>onboarded team</b> (add people in Team &amp; invites). Bios are saved and reused on every listing; assign only the ones onsite for this one.</div>
         </div>
       </RichCard>
     </div>
