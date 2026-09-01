@@ -320,6 +320,8 @@ export function DashboardApp() {
   // The whole-dashboard location lens ("" = all locations). Drives both the
   // server figures (?venueId=) and the client-side booking analytics.
   const [dashVenue, setDashVenue] = useState("");
+  // A second, card-local location filter just for Revenue by activity.
+  const [activityLoc, setActivityLoc] = useState("");
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
   // Just for the greeting — the person's name, not the business name.
@@ -660,9 +662,24 @@ export function DashboardApp() {
                 ? <Empty>Set up your seasons in Setup to see this.</Empty>
                 : <Breakdown entries={a.bySeason} />}
             </Panel>
-            <Panel title="Revenue by activity">
-              <Breakdown entries={a.byActivity.slice(0, 6).map((e, i) => ({ label: e.label, value: e.value, sub: money(e.value), color: ACT_C[i % ACT_C.length], meta: e.venue }))} />
-            </Panel>
+            {(() => {
+              const locs = [...new Set(a.byActivity.map((e) => e.venue).filter((v): v is string => !!v))].sort();
+              const filtered = a.byActivity.filter((e) => !activityLoc || e.venue === activityLoc);
+              const entries = filtered.slice(0, 6).map((e, i) => ({ label: e.label, value: e.value, sub: money(e.value), color: ACT_C[i % ACT_C.length], meta: e.venue }));
+              return (
+                <Panel
+                  title="Revenue by activity"
+                  right={locs.length > 0 ? (
+                    <select value={activityLoc} onChange={(e) => setActivityLoc(e.target.value)} className="max-w-[170px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink-2)] outline-none">
+                      <option value="">📍 All locations</option>
+                      {locs.map((l) => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  ) : undefined}
+                >
+                  {entries.length ? <Breakdown entries={entries} /> : <Empty>No revenue at {activityLoc} yet.</Empty>}
+                </Panel>
+              );
+            })()}
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">

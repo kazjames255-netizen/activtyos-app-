@@ -31,11 +31,16 @@ const FIRSTS = ["Ava", "Noah", "Leo", "Mia", "Sofia", "Jack", "Ella", "Harry", "
 const LASTS = ["Thompson", "Green", "Brooks", "Patel", "Rossi", "Wood", "Chen", "Singh", "Adeyemi", "Bell", "Murphy", "Hughes", "Khan", "Walsh", "Owusu", "Nowak", "Ali", "Reyes", "Fraser", "Begum", "Doyle", "Clarke", "Ahmed", "Ford"];
 const PARENTS = ["Sarah", "Dan", "Marco", "Raj", "Emma", "Wei", "Amrit", "Tola", "Kate", "Ciara", "Megan", "James", "Aisha", "Paul", "Kwame", "Anna", "Yusuf", "Elena", "Tom", "Nadia", "Sean", "Priya", "Omar", "Beth"];
 
+// Two sites, so the dashboard's location line + filter have something to show.
+const VENUES = [
+  { key: "loughton", name: "Loughton Leisure Centre", address: "Traps Hill, Loughton IG10 1SZ", city: "Loughton" },
+  { key: "buckhurst", name: "Buckhurst Hill Sports Hall", address: "Queens Rd, Buckhurst Hill IG9 5BX", city: "Buckhurst Hill" },
+];
 const LISTINGS = [
-  { key: "camp", name: "Summer Holiday Camp", passes: [{ name: "5-day week pass", price: 150 }, { name: "Daily pass", price: 35 }], w: 5 },
-  { key: "football", name: "After-School Football Club", passes: [{ name: "Termly", price: 120 }, { name: "Drop-in", price: 8 }], w: 4 },
-  { key: "swim", name: "Learn to Swim", passes: [{ name: "Block of 6", price: 72 }, { name: "Single lesson", price: 14 }], w: 4 },
-  { key: "parties", name: "Birthday Party Package", passes: [{ name: "Standard party", price: 180 }, { name: "Deluxe party", price: 260 }], w: 1 },
+  { key: "camp", name: "Summer Holiday Camp", venue: "loughton", passes: [{ name: "5-day week pass", price: 150 }, { name: "Daily pass", price: 35 }], w: 5 },
+  { key: "football", name: "After-School Football Club", venue: "buckhurst", passes: [{ name: "Termly", price: 120 }, { name: "Drop-in", price: 8 }], w: 4 },
+  { key: "swim", name: "Learn to Swim", venue: "buckhurst", passes: [{ name: "Block of 6", price: 72 }, { name: "Single lesson", price: 14 }], w: 4 },
+  { key: "parties", name: "Birthday Party Package", venue: "loughton", passes: [{ name: "Standard party", price: 180 }, { name: "Deluxe party", price: 260 }], w: 1 },
 ];
 const STATUSES: [string, number][] = [["Confirmed", 78], ["Cancelled", 9], ["Waitlisted", 5], ["Approval needed", 5], ["Declined", 3]];
 const PAYS: [string, number][] = [["Paid", 72], ["Unpaid", 14], ["Partially paid", 5], ["Refunded", 5], ["Invoice sent", 4]];
@@ -69,11 +74,18 @@ async function seed() {
     createdAt: stampFrom(-100 + Math.floor(r() * 40), r), notes: "",
   });
 
+  // ── Library venues (locations), so listings can point at a venue ──────
+  await put(db.collection("libraries").doc(TID), {
+    tenantId: TID,
+    venues: VENUES.map((v) => ({ id: ns(`venue-${v.key}`), name: v.name, address: v.address, city: v.city })),
+  });
+
   // ── Listings + one block each ─────────────────────────────────────────
   for (const l of LISTINGS) {
     const listingId = ns(l.key);
     await put(db.collection("listings").doc(listingId), {
       tenantId: TID, tenantName: tName, name: l.name, passes: l.passes, status: "live", visibility: "public",
+      venueId: ns(`venue-${l.venue}`),
       maxAttendees: "40", capacityScope: "listing", days: [1, 2, 3, 4, 5], images: [], gallery: [], categoryIds: [], addonIds: [], staffIds: [], sections: [], send: [],
     });
     await put(db.collection("blocks").doc(ns(`${l.key}-blk`)), {
