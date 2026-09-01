@@ -239,24 +239,24 @@ export function StaffDashApp() {
           )}
         </div>
 
-        <div className={"rounded-2xl border p-4 " + (status === "in" ? "border-[#bfe6cf] bg-[#f2fbf5]" : status === "break" ? "border-[#f3d9a7] bg-[#fdf6e8]" : "border-[var(--line)] bg-white")}>
-          <div className="flex items-center justify-between">
-            <div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">⏱ Clock in / out</div>
-            <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={status === "in" ? { background: "#d7f5e3", color: "#0f7a43" } : status === "break" ? { background: "#fbe6c4", color: "#9a5a00" } : { background: "#eef1f6", color: "#64748b" }}>{status === "in" ? "Clocked in" : status === "break" ? "On break" : "Clocked out"}</span>
+        <div className="relative flex flex-col overflow-hidden rounded-2xl p-5 text-white shadow-[0_14px_34px_-16px_rgba(20,50,35,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${status === "in" ? "linear-gradient(125deg,#0b6b3a 0%,#12924e 55%,#2fb56f 100%)" : status === "break" ? "linear-gradient(125deg,#8a4b0a 0%,#c47912 55%,#f5a623 100%)" : "linear-gradient(125deg,#334155 0%,#475569 55%,#64748b 100%)"}`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
+          <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
+          <div className="relative flex items-center justify-between">
+            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">⏱ Clock in / out</div>
+            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold backdrop-blur-sm">{status === "in" ? "Clocked in" : status === "break" ? "On break" : "Clocked out"}</span>
           </div>
           {status === "out" ? (
-            <div className="mt-2">
-              <div className="text-[12.5px] text-[var(--ink-3)]">{rec?.clockOutAt ? `You clocked out — worked ${fmtDur(workedMs(rec))} today.` : "Tap when you arrive to start your shift."}</div>
-              <button type="button" onClick={doIn} className="mt-2.5 w-full rounded-xl py-2.5 text-[14px] font-extrabold text-white shadow-sm hover:brightness-110" style={{ background: "linear-gradient(135deg,#0f9d58,#3ddc84)" }}>Clock in</button>
+            <div className="relative mt-auto pt-4">
+              <div className="text-[13px] text-white/85">{rec?.clockOutAt ? `You clocked out — worked ${fmtDur(workedMs(rec))} today.` : "Tap when you arrive to start your shift."}</div>
+              <button type="button" onClick={doIn} className="mt-3 w-full rounded-xl bg-white py-3 text-[14px] font-extrabold text-[#0b6b3a] shadow-sm transition hover:brightness-95">Clock in</button>
             </div>
           ) : (
-            <div className="mt-2">
-              <div className="flex items-end justify-between">
-                <div><div className="text-[10.5px] font-bold uppercase text-[var(--ink-3)]">Worked today</div><div className="text-[22px] font-extrabold tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{fmtDur(workedMs(rec!))}</div></div>
-              </div>
-              <div className="mt-2.5 flex gap-2">
-                <button type="button" onClick={doBreak} className="flex-1 rounded-xl border border-[var(--line)] bg-white py-2 text-[12.5px] font-extrabold text-[#9a5a00] hover:border-[#f3d9a7]">{status === "break" ? "End break" : "Take a break"}</button>
-                <button type="button" onClick={doOut} className="flex-1 rounded-xl py-2 text-[12.5px] font-extrabold text-white hover:brightness-110" style={{ background: "linear-gradient(135deg,#e11d48,#fb7185)" }}>Clock out</button>
+            <div className="relative mt-auto pt-4">
+              <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-white/70">Worked today</div>
+              <div className="text-[32px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{fmtDur(workedMs(rec!))}</div>
+              <div className="mt-3 flex gap-2">
+                <button type="button" onClick={doBreak} className="flex-1 rounded-xl bg-white/15 py-2.5 text-[12.5px] font-extrabold text-white backdrop-blur-sm transition hover:bg-white/25">{status === "break" ? "End break" : "Take a break"}</button>
+                <button type="button" onClick={doOut} className="flex-1 rounded-xl bg-white py-2.5 text-[12.5px] font-extrabold text-[#c0362c] shadow-sm transition hover:brightness-95">Clock out</button>
               </div>
             </div>
           )}
