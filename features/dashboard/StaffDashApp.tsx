@@ -6,7 +6,6 @@ import { get as apiGet, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
-import { Tile } from "@/features/money/finance-kit";
 import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDur, workedMs, type ClockRecord } from "@/features/timeclock/data";
 import { greeting } from "@/lib/greeting";
 import { useSettings } from "@/lib/settings";
@@ -46,6 +45,7 @@ function flagsOf(c: ChildFlags): WatchFlag[] {
 
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const to12 = (t: string) => { const [h, m] = (t || "0:0").split(":").map(Number); const ap = h >= 12 ? "pm" : "am"; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr}${m ? ":" + String(m).padStart(2, "0") : ""}${ap}`; };
+const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
 function myShiftToday(): MyShift | null {
   try {
     const s = JSON.parse(localStorage.getItem(ROTA_KEY) || "null") as { staff?: { id: string; name: string }[]; shifts?: MyShift[] & { staffId?: string; date?: string }[] } | null;
@@ -71,16 +71,19 @@ function coworkersToday(vis: "all" | "team" | "leads" | "none"): Coworker[] {
     if (vis === "leads" && !iAmLead) return [];
     const myScopes = new Set(mine.map((x) => x.listing || x.site).filter(Boolean));
     const nameById = new Map(staff.map((x) => [x.id, x.name]));
+    const seen = new Set<string>();
     return shifts
       .filter((x) => x.date === day && x.staffId && !meIds.has(x.staffId))
       .filter((x) => (vis === "team" ? myScopes.has(x.listing || x.site) : true))
       .map((x) => ({ name: nameById.get(x.staffId!) || "Colleague", start: x.start, end: x.end, role: x.role, where: x.listing || x.site }))
+      .filter((c) => { const k = `${c.name}|${c.start}|${c.end}`; if (seen.has(k)) return false; seen.add(k); return true; })
       .sort((a, b) => (a.start || "").localeCompare(b.start || ""));
   } catch { return []; }
 }
 
 export function StaffDashApp() {
   const [me, setMe] = useState<Me | null>(null);
+  const [venues, setVenues] = useState<{ name: string; address?: string; city?: string }[]>([]);
   const [sessions, setSessions] = useState<RatioSession[] | null>(null);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [regs, setRegs] = useState<RegSession[] | null>(null);
@@ -100,6 +103,7 @@ export function StaffDashApp() {
     apiGet<RegSession[]>(`/api/registers?date=${today}`).then((r) => setRegs(r ?? [])).catch(() => setRegs([]));
     apiGet<Task[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => {});
     apiGet<PublishedLite[]>("/api/timetables/published").then((w) => setTimetableToday((w ?? []).some((x) => x.dayList.some((d) => d.iso === today)))).catch(() => {});
+    apiGet<{ venues?: { name: string; address?: string; city?: string }[] }>("/api/library").then((l) => setVenues(l.venues ?? [])).catch(() => {});
   }, [today]);
   useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); refresh(); setClock(loadClock()); setShift(myShiftToday()); }, [refresh]);
   useEffect(() => { setCoworkers(coworkersToday(coworkerVis)); }, [coworkerVis]);
@@ -121,6 +125,10 @@ export function StaffDashApp() {
     } as WatchKid)));
   const tickTask = (t: Task) => { setTasks((list) => (list ?? []).map((x) => (x.id === t.id ? { ...x, done: true } : x))); void apiPut(`/api/tasks/${t.id}`, { done: true }).catch(() => refresh()); };
   const dayLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  // Where I'm working today — match the shift's venue name to the library venue for its address.
+  const myVenueName = shift?.site || shift?.listing || "";
+  const myVenue = venues.find((v) => v.name === myVenueName);
+  const myAddress = myVenue ? [myVenue.address, myVenue.city].filter(Boolean).join(", ") : "";
 
   // ── quick clock in/out ──
   const meId = slug(ME);
@@ -129,13 +137,12 @@ export function StaffDashApp() {
   const doIn = () => setClock((c) => clockIn(c || {}, meId, ME, shift?.site));
   const doOut = () => setClock((c) => clockOut(c || {}, meId, ME));
   const doBreak = () => setClock((c) => (status === "break" ? endBreak(c || {}, meId) : startBreak(c || {}, meId)));
-  // A cohesive cool palette (blue → cyan → indigo → violet) rather than a
-  // blue/green/orange/purple mix.
+  // Clean white cards with a restrained, cohesive accent chip — no loud gradients.
   const STAT = [
-    { big: sessions === null ? "…" : String(sessions.length), small: "Sessions today", grad: "linear-gradient(135deg,#1e3a8a,#3b82f6)", icon: "🎪", sub: "running at your site" },
-    { big: regs === null ? "…" : String(childrenIn), small: "Children in", grad: "linear-gradient(135deg,#0e6f8a,#22b8cf)", icon: "🧒", sub: "signed in right now" },
-    { big: regs === null ? "…" : String(dueIn), small: "Due in today", grad: "linear-gradient(135deg,#3730a3,#6366f1)", icon: "📋", sub: "expected across sessions" },
-    { big: tasks === null ? "…" : String(open.length), small: "My open tasks", grad: "linear-gradient(135deg,#6d28d9,#9d7bf0)", icon: "✅", sub: "assigned to you" },
+    { big: sessions === null ? "…" : String(sessions.length), small: "Sessions today", tint: "#eaf1ff", ink: "#1d4ed8", icon: "🎪", sub: "running at your site" },
+    { big: regs === null ? "…" : String(childrenIn), small: "Children in", tint: "#e4f5f6", ink: "#0e7490", icon: "🧒", sub: "signed in right now" },
+    { big: regs === null ? "…" : String(dueIn), small: "Due in today", tint: "#eceafe", ink: "#4f46e5", icon: "📋", sub: "expected across sessions" },
+    { big: tasks === null ? "…" : String(open.length), small: "My open tasks", tint: "#f3ecfe", ink: "#7c3aed", icon: "✅", sub: "assigned to you" },
   ];
 
   return (
@@ -156,24 +163,34 @@ export function StaffDashApp() {
             <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={shift ? { background: "#eaf0fc", color: "#1d3a8f" } : { background: "#eef1f6", color: "#64748b" }}>{shift ? "Rostered" : "Day off"}</span>
           </div>
           {shift ? (<>
-            <div className="mt-2 text-[22px] font-extrabold leading-none text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>{to12(shift.start)} – {to12(shift.end)}</div>
-            <div className="mt-1.5 text-[13px] font-semibold text-[var(--ink-2)]">{[shift.role, shift.site, shift.listing].filter(Boolean).join(" · ") || "On shift"}</div>
+            <div className="mt-2 text-[24px] font-extrabold leading-none text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>{to12(shift.start)} – {to12(shift.end)}</div>
+            {shift.role && <div className="mt-1.5 text-[12.5px] font-semibold text-[var(--ink-2)]">{shift.role}</div>}
+            {myVenueName && (
+              <div className="mt-2.5 flex items-start gap-2 rounded-xl bg-[var(--panel)] px-3 py-2">
+                <span className="text-[14px] leading-none">📍</span>
+                <div className="min-w-0">
+                  <div className="text-[12.5px] font-bold text-[var(--ink)]">{myVenueName}</div>
+                  <div className="text-[11.5px] text-[var(--ink-3)]">{myAddress || "Address on the register"}</div>
+                </div>
+              </div>
+            )}
           </>) : (<>
             <div className="mt-2 text-[17px] font-extrabold leading-tight text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>You’re not rostered today</div>
             <div className="mt-1 text-[13px] text-[var(--ink-3)]">Enjoy your day off 🌿</div>
           </>)}
           {coworkers.length > 0 && (
             <div className="mt-3 border-t border-[var(--line)] pt-3">
-              <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Working with you today</div>
-              <div className="mt-1.5 flex flex-col gap-1">
+              <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Working with you today</div>
+              <div className="flex flex-col gap-2">
                 {coworkers.slice(0, 6).map((c, i) => (
-                  <div key={i} className="flex items-center gap-2 text-[12.5px]">
-                    <span className="font-bold text-[var(--ink)]">{c.name}</span>
+                  <div key={i} className="flex items-center gap-2">
+                    <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-[#eaf0fc] text-[9.5px] font-extrabold text-[#1d3a8f]">{initials(c.name)}</span>
+                    <span className="text-[12.5px] font-bold text-[var(--ink)]">{c.name}</span>
                     {c.role && <span className="truncate text-[11px] text-[var(--ink-3)]">{c.role}</span>}
                     <span className="ml-auto flex-none tabular-nums text-[12px] font-semibold text-[var(--ink-2)]">{to12(c.start)}–{to12(c.end)}</span>
                   </div>
                 ))}
-                {coworkers.length > 6 && <div className="text-[11px] text-[var(--ink-3)]">+{coworkers.length - 6} more</div>}
+                {coworkers.length > 6 && <div className="pl-8 text-[11px] text-[var(--ink-3)]">+{coworkers.length - 6} more rostered</div>}
               </div>
             </div>
           )}
@@ -206,7 +223,14 @@ export function StaffDashApp() {
       {/* Stat tiles — counts are for your site, today */}
       <div className="mb-3 grid grid-cols-2 gap-2.5 md:grid-cols-4">
         {STAT.map((t) => (
-          <Tile key={t.small} label={t.small} value={t.big} sub={t.sub} grad={t.grad} icon={t.icon} />
+          <div key={t.small} className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+            <div className="flex items-center gap-2">
+              <span className="grid h-8 w-8 flex-none place-items-center rounded-xl text-[15px]" style={{ background: t.tint, color: t.ink }}>{t.icon}</span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t.small}</span>
+            </div>
+            <div className="mt-2.5 text-[28px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
+            <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t.sub}</div>
+          </div>
         ))}
       </div>
 
