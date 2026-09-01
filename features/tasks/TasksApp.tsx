@@ -306,6 +306,11 @@ export function TasksApp() {
             );
           })}
         </div>}
+        {/* Section tabs live in the title card */}
+        <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-1 rounded-2xl border border-white/25 bg-white/95 p-1 text-[12.5px] font-bold shadow-sm">
+          {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 transition-colors" style={tab === k ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>)}
+          {showMilestones && <button type="button" onClick={() => setTab("milestones")} className="ml-0.5 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 transition-transform hover:-translate-y-px" style={onMilestones ? { background: "linear-gradient(135deg,#6d28d9,#0e7490)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(109,40,217,.5)" } : { color: "#6d28d9", boxShadow: "inset 0 0 0 1.5px rgba(109,40,217,.28)" }}>📍 Milestones</button>}
+        </div>
       </div>
 
       <TourLauncher view="tasks" />
@@ -331,16 +336,14 @@ export function TasksApp() {
         <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{noAssignee ? "" : <><b>@</b> assignee · </>}<b>!</b> priority · <b>#</b> link a camp · <b>today tomorrow Mon</b> set the due date · or <b>+ New task</b> for the full form</div>
       </div>}
 
-      {/* Tabs + toolbar */}
-      <div className="mb-2.5 flex flex-wrap items-center gap-2">
-        <div className="inline-flex flex-wrap items-center gap-1 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1 text-[12.5px] font-bold shadow-sm">
-          {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 transition-colors" style={tab === k ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>)}
-          {showMilestones && <button type="button" onClick={() => setTab("milestones")} className="ml-0.5 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 transition-transform hover:-translate-y-px" style={onMilestones ? { background: "linear-gradient(135deg,#6d28d9,#0e7490)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(109,40,217,.5)" } : { color: "#6d28d9", boxShadow: "inset 0 0 0 1.5px rgba(109,40,217,.28)" }}>📍 Milestones</button>}
+      {/* Toolbar (tabs now live in the title card above) */}
+      {!onMilestones && (
+        <div className="mb-2.5 flex flex-wrap items-center gap-2">
+          <div className="relative ml-auto">
+            <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 px-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
+          </div>
         </div>
-        {!onMilestones && <div className="relative ml-auto">
-          <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search tasks…" className="w-[190px] rounded-full border border-[var(--line)] bg-[var(--surface)] py-1.5 px-3 text-[12px] outline-none focus:border-[#1d3a8f]" />
-        </div>}
-      </div>
+      )}
       {!onMilestones && <>
       <div className="mb-2 flex flex-wrap items-center gap-1.5">
         <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">When</span>
