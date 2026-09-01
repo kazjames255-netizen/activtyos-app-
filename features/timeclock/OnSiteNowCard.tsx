@@ -49,6 +49,39 @@ interface RegSession {
   counts: { expected: number; present: number; notArrived: number; absent: number; collected: number };
 }
 
+// ── little visual building blocks (borrowed from the leave planner's language:
+//    rings, segmented bars, gradient tiles — a picture beats a sentence) ──────
+function Ring({ pct, size = 60, stroke = 7, color = GREEN }: { pct: number; size?: number; stroke?: number; color?: string }) {
+  const r = (size - stroke) / 2, c = 2 * Math.PI * r;
+  return (
+    <div className="relative flex-none" style={{ width: size, height: size }}>
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e6ebf3" strokeWidth={stroke} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={stroke} strokeLinecap="round" strokeDasharray={`${(pct / 100) * c} ${c}`} />
+      </svg>
+      <div className="absolute inset-0 grid place-items-center text-[13px] font-extrabold tabular-nums" style={{ color }}>{pct}%</div>
+    </div>
+  );
+}
+// A stacked bar — green (in) / amber (not arrived) / red (absent) — the diagram
+// that replaces the old "8 of 12 · 2 not arrived · 2 absent" text line.
+function SegBar({ segs, h = 10 }: { segs: { value: number; color: string }[]; h?: number }) {
+  const total = Math.max(1, segs.reduce((s, x) => s + x.value, 0));
+  return (
+    <div className="flex overflow-hidden rounded-full bg-[#eef1f6]" style={{ height: h }}>
+      {segs.map((s, i) => s.value > 0 ? <div key={i} style={{ width: `${(s.value / total) * 100}%`, background: s.color }} title={`${s.value}`} /> : null)}
+    </div>
+  );
+}
+function LegendDot({ color, children }: { color: string; children: React.ReactNode }) {
+  return <span className="inline-flex items-center gap-1.5"><span className="h-2.5 w-2.5 flex-none rounded-full" style={{ background: color }} /><span className="font-bold" style={{ color }}>{children}</span></span>;
+}
+function Avatar({ name, tone, sm }: { name: string; tone: string; sm?: boolean }) {
+  const initials = name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  return <span className={`grid flex-none place-items-center rounded-full font-extrabold text-white ring-2 ring-white ${sm ? "h-7 w-7 text-[10px]" : "h-8 w-8 text-[11px]"}`} style={{ background: tone }} title={name}>{initials}</span>;
+}
+const staffTone = (s: ClockRecord) => (s.status === "break" ? "#f59e0b" : s.status === "in" ? "#12b76a" : "#cbd5e1");
+
 export function OnSiteNowCard() {
   const [regs, setRegs] = useState<RegSession[] | null>(null);
   const [clock, setClock] = useState<Record<string, ClockRecord>>({});
@@ -107,12 +140,10 @@ export function OnSiteNowCard() {
     if (rows.out.length && !rows.out.some((r) => r.id === tab)) setTab(rows.out[0].id);
   }, [rows.out, tab]);
   const shown = rows.out.filter((r) => r.id === tab);
-  const tot = shown.reduce((o, r) => ({ expected: o.expected + r.expected, present: o.present + r.present, absent: o.absent + r.absent, notIn: o.notIn + r.notIn.length }), { expected: 0, present: 0, absent: 0, notIn: 0 });
   // Staff counts follow the tab too: on a listing, only that listing's staff.
   const staffScope = shown.flatMap((r) => r.staff);
   const staffIn = staffScope.filter((r) => r.status === "in").length;
   const staffBreak = staffScope.filter((r) => r.status === "break").length;
-  const scopeLabel = shown[0]?.name ?? "";
 
   // Staff read as pills with initials — deliberately unlike the children's
   // plain name chips above, so the two can't be confused at a glance.
@@ -142,82 +173,112 @@ export function OnSiteNowCard() {
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
-      <div className="mb-2 flex flex-wrap items-center gap-2">
+    <div className="rounded-2xl border border-[var(--line)] bg-white p-4 sm:p-5">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#12b76a] opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#12b76a]" /></span>
-        <div className="text-[13px] font-extrabold text-[var(--ink)]">On site now</div>
+        <div className="text-[14px] font-extrabold text-[var(--ink)]">On site now</div>
+        <span className="text-[11px] font-semibold text-[var(--ink-3)]">· updates live</span>
         <a href="timesheets" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Timesheets →</a>
       </div>
 
-      {/* Scope tabs — overall, or one listing at a time */}
+      {/* Listing tabs — each carries its own in/expected badge, so you can see
+          at a glance which site needs a look before you even open it. */}
       {rows.out.length > 1 && (
-        <div className="mb-2 flex flex-wrap gap-1.5">
-          {rows.out.map((r) => (
-            <button key={r.id} type="button" onClick={() => setTab(r.id)} className="max-w-[220px] truncate rounded-lg border px-2.5 py-1 text-[11.5px] font-bold" style={tab === r.id ? ON : OFF}>{r.name}</button>
-          ))}
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          {rows.out.map((r) => {
+            const on = tab === r.id;
+            return (
+              <button key={r.id} type="button" onClick={() => setTab(r.id)} className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold" style={on ? ON : OFF}>
+                <span className="max-w-[160px] truncate">{r.name}</span>
+                <span className="rounded-full px-1.5 py-0.5 text-[10px] font-extrabold tabular-nums" style={on ? { background: "#1d3a8f", color: "#fff" } : { background: "#eef1f6", color: "#64748b" }}>{r.present}/{r.expected}</span>
+              </button>
+            );
+          })}
         </div>
       )}
 
-      {/* The summary, labelled so it's never ambiguous what it counts */}
-      <div className="mb-3 rounded-xl px-3.5 py-3" style={{ background: "#eef4fd", border: "1px solid #cfe0f7" }}>
-        <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.12em] text-[#1d3a8f]/70">{scopeLabel}</div>
-        <div className="flex flex-wrap gap-x-5 gap-y-1.5 text-[13.5px]">
-          <span className="font-extrabold" style={{ color: GREEN }}>🧒 {tot.present} of {tot.expected} children in</span>
-          <span className="font-extrabold" style={{ color: AMBER }}>⏳ {tot.notIn} not arrived</span>
-          <span className="font-extrabold" style={{ color: RED }}>🚫 {tot.absent} absent</span>
-          <span className="font-extrabold text-[#1d3a8f]">👤 {staffIn} staff in{staffBreak ? ` · ${staffBreak} on break` : ""}</span>
-        </div>
-      </div>
-
-      {regs === null ? <div className="text-[12px] text-[var(--ink-3)]">Loading today…</div>
-        : rows.out.length === 0 ? <div className="text-[12px] text-[var(--ink-3)]">Nothing running today.</div> : (
+      {regs === null ? <div className="py-8 text-center text-[12px] text-[var(--ink-3)]">Loading today…</div>
+        : rows.out.length === 0 ? <div className="py-8 text-center text-[12px] text-[var(--ink-3)]">Nothing running today.</div> : (
         <div className="space-y-3">
-          {shown.map((r) => (
-            <div key={r.id} className="overflow-hidden rounded-xl border border-[#dbe6fb] bg-white shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)]">
-              {/* Listing header */}
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-[#dbe6fb] bg-[#f2f7ff] px-3.5 py-2.5">
-                <span className="text-[14.5px] font-extrabold text-[var(--ink)]">{r.name}</span>
-                {r.venue && <span className="rounded-md bg-white px-1.5 py-0.5 text-[11.5px] font-semibold text-[var(--ink-3)] ring-1 ring-[var(--line)]">📍 {r.venue}</span>}
-                <span className="ml-auto text-[13px] font-extrabold" style={{ color: GREEN }}>{r.present}/{r.expected} in</span>
-                {r.absent > 0 && <span className="text-[13px] font-extrabold" style={{ color: RED }}>· {r.absent} absent</span>}
-              </div>
+          {shown.map((r) => {
+            const notArr = Math.max(0, r.notIn.length);
+            const inPct = r.expected ? Math.round((r.present / r.expected) * 100) : 0;
+            return (
+              <div key={r.id} className="overflow-hidden rounded-2xl border border-[#dbe6fb] shadow-[0_2px_12px_-6px_rgba(29,58,143,.3)]">
+                {/* header band — gradient, like the leave planner's tiles */}
+                <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ background: "linear-gradient(120deg,#16306e,#274ba3)" }}>
+                  <span className="text-[15px] font-extrabold text-white">{r.name}</span>
+                  {r.venue
+                    ? <span className="rounded-md bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white ring-1 ring-white/20">📍 {r.venue}</span>
+                    : <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/70">No venue set</span>}
+                  <span className="ml-auto text-[13px] font-extrabold tabular-nums text-white">{r.present}/{r.expected} in{r.absent ? ` · ${r.absent} absent` : ""}</span>
+                </div>
 
-              {/* CHILDREN — green-tinted, with per-session counts */}
-              <div className="px-3.5 py-2.5">
-                <div className="mb-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.09em]" style={{ background: "#e2f5ea", color: GREEN }}>🧒 Children</span>
-                  <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{r.present} of {r.expected} in{r.absent ? ` · ${r.absent} absent` : ""}</span>
-                </div>
-                <div className="flex flex-wrap gap-1.5">
-                  {r.sessions.map((s) => (
-                    <span key={s.blockId} className="rounded-lg bg-[var(--panel)] px-2 py-1 text-[12px] font-semibold text-[var(--ink-2)] ring-1 ring-[var(--line)]">
-                      {s.start}–{s.end} · <b style={{ color: GREEN }}>{s.counts.present}</b>/{s.counts.expected} in{s.counts.absent ? ` · ${s.counts.absent} abs` : ""}
-                    </span>
-                  ))}
-                </div>
-                {r.notIn.length > 0 && (
-                  <div className="mt-2 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[12px] font-extrabold" style={{ color: AMBER }}>Not signed in:</span>
-                    {r.notIn.map((n, i) => (
-                      <span key={`${n}-${i}`} className="rounded-md px-2 py-0.5 text-[12.5px] font-bold" style={{ background: "#fff4e5", color: AMBER, boxShadow: "inset 0 0 0 1px #f5d9a8" }}>{n}</span>
-                    ))}
+                {/* ── visual summary: completion ring + segmented bar + staff avatars ── */}
+                <div className="grid gap-4 border-b border-[#eef1f6] bg-white px-4 py-4 sm:grid-cols-[1fr_auto]">
+                  <div className="flex items-center gap-4">
+                    <Ring pct={inPct} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-[22px] font-extrabold tabular-nums text-[var(--ink)]">{r.present}<span className="text-[var(--ink-3)]">/{r.expected}</span></span>
+                        <span className="text-[12px] font-bold text-[var(--ink-3)]">children in</span>
+                      </div>
+                      <div className="mt-2"><SegBar segs={[{ value: r.present, color: GREEN }, { value: notArr, color: AMBER }, { value: r.absent, color: RED }]} /></div>
+                      <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[11.5px]">
+                        <LegendDot color={GREEN}>{r.present} in</LegendDot>
+                        <LegendDot color={AMBER}>{notArr} not arrived</LegendDot>
+                        <LegendDot color={RED}>{r.absent} absent</LegendDot>
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
+                  <div className="sm:min-w-[150px] sm:border-l sm:border-[#eef1f6] sm:pl-4">
+                    <div className="text-[10.5px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-3)]">Staff on site</div>
+                    <div className="text-[22px] font-extrabold tabular-nums text-[#1d3a8f]">{staffIn}{staffBreak ? <span className="text-[13px] font-bold text-[#b45309]"> +{staffBreak} on break</span> : ""}</div>
+                    {r.staff.length > 0
+                      ? <div className="mt-1.5 flex flex-wrap items-center pl-1.5">{r.staff.map((s) => <span key={s.id} className="-ml-1.5"><Avatar name={s.name} tone={staffTone(s)} sm /></span>)}</div>
+                      : <div className="mt-1 text-[11px] text-[var(--ink-3)]">{r.venue ? "None clocked in here" : "No venue → can’t match staff"}</div>}
+                  </div>
+                </div>
 
-              {/* STAFF — its own band so a child's name can't be mistaken for a colleague's */}
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 border-t border-[var(--line)] bg-[var(--panel)]/60 px-3.5 py-2.5">
-                <span className="rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-[0.09em]" style={{ background: "#e7f0ff", color: "#1d3a8f" }}>👤 Staff</span>
-                {r.staff.length === 0
-                  ? <span className="text-[12px] text-[var(--ink-3)]">{r.venue ? "None clocked in here" : "No venue set — staff can’t be matched to this listing"}</span>
-                  : r.staff.map((s) => <StaffDot key={s.id} r={s} />)}
+                {/* per-session mini bars */}
+                <div className="bg-white px-4 py-3">
+                  <div className="mb-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.09em]" style={{ background: "#e2f5ea", color: GREEN }}>🧒 By session</span></div>
+                  <div className="flex flex-col gap-2">
+                    {r.sessions.map((s) => {
+                      const na = Math.max(0, s.counts.notArrived ?? (s.counts.expected - s.counts.present - s.counts.absent));
+                      return (
+                        <div key={s.blockId} className="flex items-center gap-3">
+                          <span className="w-[104px] flex-none rounded-md bg-[var(--panel)] px-2 py-1 text-center text-[11.5px] font-bold tabular-nums text-[var(--ink-2)] ring-1 ring-[var(--line)]">{s.start}–{s.end}</span>
+                          <div className="min-w-0 flex-1"><SegBar h={8} segs={[{ value: s.counts.present, color: GREEN }, { value: na, color: AMBER }, { value: s.counts.absent, color: RED }]} /></div>
+                          <span className="w-[118px] flex-none whitespace-nowrap text-right text-[11.5px] font-semibold tabular-nums text-[var(--ink-2)]"><b style={{ color: GREEN }}>{s.counts.present}</b>/{s.counts.expected} in{s.counts.absent ? ` · ${s.counts.absent} abs` : ""}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  {r.notIn.length > 0 && (
+                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
+                      <span className="text-[11.5px] font-extrabold" style={{ color: AMBER }}>⏳ Not signed in:</span>
+                      {r.notIn.map((n, i) => (
+                        <span key={`${n}-${i}`} className="rounded-md px-2 py-0.5 text-[12px] font-bold" style={{ background: "#fff4e5", color: AMBER, boxShadow: "inset 0 0 0 1px #f5d9a8" }}>{n}</span>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* staff band — full detail (role · shift · status · late) */}
+                <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5 border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+                  <span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.09em]" style={{ background: "#e7f0ff", color: "#1d3a8f" }}>👤 Staff</span>
+                  {r.staff.length === 0
+                    ? <span className="text-[12px] text-[var(--ink-3)]">{r.venue ? "None clocked in here" : "No venue set — staff can’t be matched to this listing"}</span>
+                    : r.staff.map((s) => <StaffDot key={s.id} r={s} />)}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {rows.rest.length > 0 && (
-            <div className="rounded-xl border border-dashed border-[var(--line)] px-3 py-2">
-              <div className="mb-0.5 text-[11.5px] font-extrabold text-[var(--ink-3)]">Elsewhere / unassigned</div>
-              <div className="flex flex-wrap gap-x-3 gap-y-0.5">{rows.rest.map((s) => <StaffDot key={s.id} r={s} />)}</div>
+            <div className="rounded-2xl border border-dashed border-[var(--line)] px-4 py-3">
+              <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">Elsewhere / unassigned</div>
+              <div className="flex flex-wrap gap-1.5">{rows.rest.map((s) => <StaffDot key={s.id} r={s} />)}</div>
             </div>
           )}
         </div>
