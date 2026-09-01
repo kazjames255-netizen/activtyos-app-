@@ -187,12 +187,29 @@ export function StaffDashApp() {
     { big: tasks === null ? "…" : String(open.length), small: "My open tasks", tint: "#f3ecfe", ink: "#7c3aed", icon: "✅", sub: "assigned to you" },
   ];
 
+  // Compact clock in/out control that lives in the hero's top-right.
+  const clockWidget = (
+    <div className="flex flex-wrap items-center gap-2">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-extrabold text-white backdrop-blur-sm">
+        <span className="h-2 w-2 rounded-full" style={{ background: status === "in" ? "#3ddc84" : status === "break" ? "#f5b81f" : "#cbd5e1" }} />
+        {status === "in" ? `Clocked in · ${fmtDur(workedMs(rec!))}` : status === "break" ? `On break · ${fmtDur(workedMs(rec!))}` : "Clocked out"}
+      </span>
+      {status === "out" ? (
+        <button type="button" onClick={doIn} className="rounded-full bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[#0b6b3a] shadow-sm transition hover:brightness-95">⏱ Clock in</button>
+      ) : (<>
+        <button type="button" onClick={doBreak} className="rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-extrabold text-white backdrop-blur-sm transition hover:bg-white/25">{status === "break" ? "End break" : "Break"}</button>
+        <button type="button" onClick={doOut} className="rounded-full bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[#c0362c] shadow-sm transition hover:brightness-95">Clock out</button>
+      </>)}
+    </div>
+  );
+
   return (
     <div className="text-[var(--ink)]">
       <PageHero
         icon="👋"
         title={greeting(me?.name)}
         lede={`${dayLabel}${me?.tenantName ? ` · ${me.tenantName}` : ""} — your shifts, registers and tasks for today.`}
+        actions={clockWidget}
       />
 
       {error && <div className="mb-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
@@ -239,41 +256,20 @@ export function StaffDashApp() {
           )}
         </div>
 
-        <div className="relative flex flex-col overflow-hidden rounded-2xl p-5 text-white shadow-[0_14px_34px_-16px_rgba(20,50,35,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${status === "in" ? "linear-gradient(125deg,#0b6b3a 0%,#12924e 55%,#2fb56f 100%)" : status === "break" ? "linear-gradient(125deg,#8a4b0a 0%,#c47912 55%,#f5a623 100%)" : "linear-gradient(125deg,#334155 0%,#475569 55%,#64748b 100%)"}`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
-          <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
-          <div className="relative flex items-center justify-between">
-            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">⏱ Clock in / out</div>
-            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold backdrop-blur-sm">{status === "in" ? "Clocked in" : status === "break" ? "On break" : "Clocked out"}</span>
-          </div>
-          {status === "out" ? (
-            <div className="relative mt-auto pt-4">
-              <div className="text-[13px] text-white/85">{rec?.clockOutAt ? `You clocked out — worked ${fmtDur(workedMs(rec))} today.` : "Tap when you arrive to start your shift."}</div>
-              <button type="button" onClick={doIn} className="mt-3 w-full rounded-xl bg-white py-3 text-[14px] font-extrabold text-[#0b6b3a] shadow-sm transition hover:brightness-95">Clock in</button>
-            </div>
-          ) : (
-            <div className="relative mt-auto pt-4">
-              <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-white/70">Worked today</div>
-              <div className="text-[32px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{fmtDur(workedMs(rec!))}</div>
-              <div className="mt-3 flex gap-2">
-                <button type="button" onClick={doBreak} className="flex-1 rounded-xl bg-white/15 py-2.5 text-[12.5px] font-extrabold text-white backdrop-blur-sm transition hover:bg-white/25">{status === "break" ? "End break" : "Take a break"}</button>
-                <button type="button" onClick={doOut} className="flex-1 rounded-xl bg-white py-2.5 text-[12.5px] font-extrabold text-[#c0362c] shadow-sm transition hover:brightness-95">Clock out</button>
+        <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+          <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-3)]">Today at a glance</div>
+          <div className="grid grid-cols-2 gap-2.5">
+            {STAT.map((t) => (
+              <div key={t.small} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                <span className="grid h-9 w-9 flex-none place-items-center rounded-lg text-[15px]" style={{ background: t.tint, color: t.ink }}>{t.icon}</span>
+                <div className="min-w-0">
+                  <div className="text-[21px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
+                  <div className="truncate text-[9.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t.small}</div>
+                </div>
               </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Today at a glance — one unified bar, hairline dividers */}
-      <div className="mb-3 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--line)] shadow-[0_1px_3px_rgba(20,30,60,.06)] sm:grid-cols-4">
-        {STAT.map((t) => (
-          <div key={t.small} className="flex items-center gap-3 bg-white p-4">
-            <span className="grid h-11 w-11 flex-none place-items-center rounded-xl text-[18px]" style={{ background: t.tint, color: t.ink }}>{t.icon}</span>
-            <div className="min-w-0">
-              <div className="text-[27px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
-              <div className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">{t.small}</div>
-            </div>
+            ))}
           </div>
-        ))}
+        </div>
       </div>
 
       {/* ── Children today ───────────────────────────────────────────── */}
