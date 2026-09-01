@@ -1413,9 +1413,13 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
           <div className="mt-1 text-[11px] text-[var(--ink-3)]">Pick the shape (tall <b>16:9</b> or short-wide <b>banner</b>) — the crop preview matches the customer hero exactly. <b>Add more than one photo and they rotate as a carousel.</b></div>
         </RichCard>
         <RichCard icon="📸" title="Gallery" subtitle="Extra photos for the page" tint="teal">
-          <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" contain />
-          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Shown in full at the bottom of the customer page — no cropping, so certificates &amp; docs stay whole.</div>
+          <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" previewAspect="1 / 1" />
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Shown as square tiles at the bottom of the customer page — click a photo to crop it to fit.</div>
         </RichCard>
+      </div>
+      <div className="mt-4 rounded-2xl border border-[var(--line)] bg-white p-3.5">
+        <FieldLabel>🎨 Page colour theme <span className="font-normal text-[var(--ink-3)]">— the look parents see for this listing (each listing can have its own)</span></FieldLabel>
+        <div className="mt-1"><ThemePicker value={resolveTheme(d.pageStyle)} onChange={(t) => upd({ pageStyle: t })} /></div>
       </div>
     </div>
   );
@@ -3192,28 +3196,10 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const opens = useOpensAt(d.opensAt);
   const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand(), topRight };
 
-  const flick = onTheme ? (
-    <div className="mb-3 flex flex-wrap items-center gap-2">
-      <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Page style</span>
-      <div className="flex flex-wrap items-center gap-1.5">
-        {(Object.values(THEMES)).map((t) => {
-          const on = theme === t.key;
-          return (
-            <button key={t.key} type="button" onClick={() => onTheme(t.key)} title={t.label}
-              className="flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-bold transition-all"
-              style={on ? { borderColor: t.swatch, background: `${t.swatch}1f`, color: "var(--ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
-              <span className="h-3.5 w-3.5 flex-none rounded-full ring-1 ring-black/10" style={{ background: t.swatch }} />
-              {t.label}{on ? " ✓" : ""}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  ) : null;
-
+  // No theme picker here — the colour theme is chosen in the listing editor
+  // (Basics step), so the preview shows exactly what the parent sees, nothing more.
   return (
     <div>
-      {flick}
       {theme === "playful" ? <PlayfulPage {...p} /> : <SportPage {...p} surf={THEMES[theme]} />}
     </div>
   );
@@ -3265,6 +3251,25 @@ const THEMES: Record<PageTheme, Surf> = {
 function resolveTheme(t?: string): PageTheme {
   if (t === "navy") return "royal";
   return t && t in THEMES ? (t as PageTheme) : "sport";
+}
+// The colour-theme picker — lives in the listing editor (not on the preview), so
+// the parent only ever sees the chosen theme for that listing.
+function ThemePicker({ value, onChange }: { value: PageTheme; onChange: (t: PageTheme) => void }) {
+  return (
+    <div className="flex flex-wrap items-center gap-1.5">
+      {Object.values(THEMES).map((t) => {
+        const on = value === t.key;
+        return (
+          <button key={t.key} type="button" onClick={() => onChange(t.key)} title={t.label}
+            className="flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-bold transition-all"
+            style={on ? { borderColor: t.swatch, background: `${t.swatch}1f`, color: "var(--ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+            <span className="h-3.5 w-3.5 flex-none rounded-full ring-1 ring-black/10" style={{ background: t.swatch }} />
+            {t.label}{on ? " ✓" : ""}
+          </button>
+        );
+      })}
+    </div>
+  );
 }
 // Rolling hero carousel — auto-advances + arrows/dots when there's >1 photo.
 function HeroImages({ imgs, fallback }: { imgs: ListingImage[]; fallback: string }) {
@@ -3514,7 +3519,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
             ) : (
               <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: a.emoji ? "#e4f8ee" : "#06d6a0", color: a.emoji ? undefined : "#fff" }}>{a.emoji || "＋"}</span>
             )}{a.name}</span><b style={{ color: DEEP }}>{money(a.price)}</b></div>)}</div></PlayCard>}
-            {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title={headingOf(d, "gallery", "title")}><div className={`grid gap-2.5 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} contain />)}</div></PlayCard>}
+            {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title={headingOf(d, "gallery", "title")}><div className={`grid gap-2.5 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} />)}</div></PlayCard>}
           </div>
           {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
@@ -3878,7 +3883,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
               // eslint-disable-next-line @next/next/no-img-element
               <img src={a.image} alt="" className="h-8 w-8 flex-none object-cover" />
             ) : a.emoji ? <span className="text-[16px]">{a.emoji}</span> : null}{a.name}</span><span className={`font-black ${cond}`} style={{ color: LIME }}>{money(a.price)}</span></div>)}</SportSec>}
-            {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} contain />)}</div></SportSec>}
+            {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} />)}</div></SportSec>}
           </div>
           {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
