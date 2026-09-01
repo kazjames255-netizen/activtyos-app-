@@ -6,7 +6,7 @@ import { get as apiGet, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
-import { Tile, GRAD } from "@/features/money/finance-kit";
+import { Tile } from "@/features/money/finance-kit";
 import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDur, workedMs, type ClockRecord } from "@/features/timeclock/data";
 import { greeting } from "@/lib/greeting";
 
@@ -99,11 +99,13 @@ export function StaffDashApp() {
   const doIn = () => setClock((c) => clockIn(c || {}, meId, ME, shift?.site));
   const doOut = () => setClock((c) => clockOut(c || {}, meId, ME));
   const doBreak = () => setClock((c) => (status === "break" ? endBreak(c || {}, meId) : startBreak(c || {}, meId)));
+  // A cohesive cool palette (blue → cyan → indigo → violet) rather than a
+  // blue/green/orange/purple mix.
   const STAT = [
-    { big: sessions === null ? "…" : String(sessions.length), small: "Sessions today", grad: GRAD.blue, icon: "🎪", sub: "running at your site" },
-    { big: regs === null ? "…" : String(childrenIn), small: "Children in", grad: GRAD.green, icon: "🧒", sub: "signed in right now" },
-    { big: regs === null ? "…" : String(dueIn), small: "Due in today", grad: GRAD.amber, icon: "📋", sub: "expected across sessions" },
-    { big: tasks === null ? "…" : String(open.length), small: "My open tasks", grad: GRAD.violet, icon: "✅", sub: "assigned to you" },
+    { big: sessions === null ? "…" : String(sessions.length), small: "Sessions today", grad: "linear-gradient(135deg,#1e3a8a,#3b82f6)", icon: "🎪", sub: "running at your site" },
+    { big: regs === null ? "…" : String(childrenIn), small: "Children in", grad: "linear-gradient(135deg,#0e6f8a,#22b8cf)", icon: "🧒", sub: "signed in right now" },
+    { big: regs === null ? "…" : String(dueIn), small: "Due in today", grad: "linear-gradient(135deg,#3730a3,#6366f1)", icon: "📋", sub: "expected across sessions" },
+    { big: tasks === null ? "…" : String(open.length), small: "My open tasks", grad: "linear-gradient(135deg,#6d28d9,#9d7bf0)", icon: "✅", sub: "assigned to you" },
   ];
 
   return (
@@ -164,8 +166,8 @@ export function StaffDashApp() {
       </div>
 
       {/* Watch list — flagged children in today (SEND / allergy / medical / dietary) */}
-      <Card className="mb-3 overflow-hidden p-0">
-        <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#c0362c,#f59e0b)" }} />
+      <Card className="mb-3 p-0">
+        <div className="h-1.5 w-full rounded-t-2xl" style={{ background: "linear-gradient(90deg,#c0362c,#f59e0b)" }} />
         <div className="p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="text-[13px] font-extrabold">⚠️ Watch list — today</span>
@@ -180,7 +182,12 @@ export function StaffDashApp() {
                   <span className={"rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase " + (k.status === "in" ? "bg-[#d7f5e3] text-[#0f7a43]" : k.status === "absent" ? "bg-[#eef1f6] text-[#64748b]" : "bg-[#fef3d8] text-[#9a5a00]")}>{k.status === "in" ? "In" : k.status === "absent" ? "Absent" : "Due"}</span>
                   <span className="flex flex-wrap gap-1">
                     {k.flags.map((f, i) => (
-                      <span key={i} title={f.detail || f.k} className="rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: f.bg, color: f.fg }}>{f.k}</span>
+                      <span key={i} className="group/flag relative inline-block" aria-label={f.detail ? `${f.k}: ${f.detail}` : f.k}>
+                        <span className="cursor-help rounded-full px-1.5 py-0.5 text-[10px] font-bold" style={{ background: f.bg, color: f.fg }}>{f.k}</span>
+                        <span className="pointer-events-none absolute left-0 top-full z-30 mt-1 hidden w-max max-w-[260px] rounded-lg bg-[#111634] px-2.5 py-1.5 text-[11px] font-semibold leading-snug text-white shadow-[0_8px_24px_-6px_rgba(0,0,0,.5)] group-hover/flag:block">
+                          <b className="text-white">{f.k}</b>{f.detail ? <span className="font-normal text-white/85"> — {f.detail}</span> : <span className="font-normal text-white/70"> — no detail recorded</span>}
+                        </span>
+                      </span>
                     ))}
                   </span>
                   <span className="ml-auto text-[11px] text-[var(--ink-3)]">{k.where}</span>
