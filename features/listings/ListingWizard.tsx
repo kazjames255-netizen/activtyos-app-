@@ -3191,6 +3191,13 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
           <button className="mt-3 w-full py-3.5 text-[13px] font-black italic uppercase disabled:opacity-40" style={{ ...skew, background: LIME, color: INK }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? "Next — add children" : `Checkout (${b.basket.length})`}</span></button>
         </div>
       </div>
+      {/* Always-visible way on — a sticky Next bar, so you never scroll to find it. */}
+      <div className="sticky bottom-0 z-20 flex items-center gap-3 px-4 py-2.5" style={{ background: BAR, borderTop: `1px solid ${LINEs}`, boxShadow: "0 -8px 20px -12px rgba(0,0,0,.6)" }}>
+        <span className="min-w-0 truncate text-[12px] font-bold" style={{ color: b.basket.length ? "#fff" : MUTs }}>{b.basket.length ? `${b.basket.length} in basket · ${money(b.total)}` : "Pick a pass & dates to continue"}</span>
+        <button type="button" disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")} className="ml-auto flex flex-none items-center gap-1.5 rounded-full px-5 py-2.5 text-[13px] font-black italic uppercase transition-transform hover:scale-[1.02] disabled:opacity-40" style={{ background: LIME, color: INK }}>
+          {mode === "parent" ? "Next — children" : "Next"} <span className="text-[17px] leading-none">→</span>
+        </button>
+      </div>
     </div>
   );
 }
