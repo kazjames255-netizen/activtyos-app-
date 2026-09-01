@@ -813,6 +813,17 @@ function BlockLibrary({
         then send a block to one or more of your listings.
       </p>
 
+      {(() => {
+        const unpriced = active.filter((b) => !b.priced);
+        if (unpriced.length === 0) return null;
+        return (
+          <div className="mb-2.5 flex items-start gap-2 rounded-lg border border-[#f0c98a] bg-[#fdf6ea] px-3 py-2.5 text-[12px] leading-[1.5] text-[#8a5a09]">
+            <span className="text-[14px]">⚠️</span>
+            <span><b>{unpriced.length} block{unpriced.length === 1 ? "" : "s"} still {unpriced.length === 1 ? "needs" : "need"} pricing.</b> A block can&rsquo;t be booked until you set its prices — open it and press <b>Set prices</b>. {unpriced.slice(0, 3).map((b) => b.name).join(", ")}{unpriced.length > 3 ? "…" : ""}</span>
+          </div>
+        );
+      })()}
+
       {active.length === 0 ? (
         <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">
           {bundles.length === 0
@@ -1032,10 +1043,10 @@ function LibraryCard({
             className={`rounded-full px-2 py-[2px] text-[10px] font-bold ${
               block.priced
                 ? "bg-white text-[#1d3a8f]"
-                : "bg-white/20 text-white"
+                : "bg-[#f59e0b] text-white"
             }`}
           >
-            {block.priced ? "Priced" : "Unpriced"}
+            {block.priced ? "Priced" : "⚠ Needs pricing"}
           </span>
           <button
             type="button"
@@ -1185,8 +1196,9 @@ function LibraryCard({
           </div>
 
           <div className="mt-3 flex flex-wrap gap-1.5">
-            <Button sm variant={showCalc ? "primary" : "default"} onClick={() => setShowCalc((v) => !v)}>
-              {showCalc ? "Close pricing" : "Sort pricing"}
+            <Button sm variant={showCalc ? "primary" : "default"} onClick={() => setShowCalc((v) => !v)}
+              style={!showCalc && !block.priced ? { background: "#f59e0b", color: "#fff", borderColor: "#f59e0b" } : undefined}>
+              {showCalc ? "Close pricing" : block.priced ? "Sort pricing" : "⚠ Set prices"}
             </Button>
             <Button sm variant={editing ? "primary" : "default"} onClick={() => setEditing((v) => !v)}>
               {editing ? "Done" : "Edit"}
@@ -1259,6 +1271,9 @@ function PricingCalculator({
   // per-timing pricing (a shorter finish costs proportionally less).
   const pHrs = (p: Period) => { const mins = (s: string) => { const [h, m] = s.split(":").map(Number); return h * 60 + m; }; const d = (mins(p.finish) - mins(p.start)) / 60; return d > 0 ? d : 1; };
   const baseTimingH = timingRows.length ? Math.max(...timingRows.map(pHrs)) : 0;
+  // The longest-finish timing — the one the pass price is set against (the rest
+  // work out shorter). Named so the price box can say WHY it's the reference.
+  const longestTiming = timingRows.length ? timingRows.reduce((a, b) => (pHrs(b) > pHrs(a) ? b : a)) : null;
 
   const setFlat = (passId: string, v: string) => {
     setPassFlat((m) => ({ ...m, [passId]: v }));
@@ -1382,8 +1397,13 @@ function PricingCalculator({
                         highlighted. Each pass is priced on its own — a day pass
                         isn't a fraction of the week. Its timings calculate from it. */}
                     <div className="mb-2.5 rounded-lg border-2 p-2.5" style={{ borderColor: "#e0a020", background: "#fdf6ea" }}>
-                      <label className="block text-[11.5px] font-extrabold text-[#8a5a09]">
-                        💷 Full price for this pass <span className="font-semibold text-[#a97b2e]">— its timings work out from this</span>
+                      <label className="block text-[11.5px] font-extrabold leading-[1.45] text-[#8a5a09]">
+                        💷 Full price for this pass
+                        {longestTiming && timingRows.length > 1 ? (
+                          <span className="font-semibold text-[#a97b2e]"> — set it for the <b>longest finish ({longestTiming.title}, {periodRange(longestTiming)})</b>; earlier finishes work out cheaper from this</span>
+                        ) : (
+                          <span className="font-semibold text-[#a97b2e]"> — what this pass costs</span>
+                        )}
                       </label>
                       <div className="mt-1.5 flex items-center gap-1.5">
                         <span className="text-[16px] font-extrabold text-[#8a5a09]">£</span>
