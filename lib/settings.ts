@@ -485,6 +485,7 @@ export interface SchedulingSettings {
   suggestionOrder: "bestfit" | "cost" | "hours";
   showLocationNames: boolean;
   coworkerVisibility: "all" | "team" | "leads" | "none"; // who may see the team's "who's on this week" rota
+  staffSeeTeamAbsence: boolean; // staff can see the team's time-off (who's off this week) on their Time-off page
   swapShifts: boolean;
   swapApproval: boolean;
   offerShifts: boolean;
@@ -503,7 +504,7 @@ export const DEFAULT_SCHEDULING: SchedulingSettings = {
   firstDay: "mon", defaultShiftHours: 6, defaultBreakMins: 30, breakPaid: "unpaid",
   notifyRecipient: "bestfit", notifyOnRemoved: "email_push", allowClaimOpen: false,
   unconfirmedToOpen: "off", suggestionOrder: "bestfit", showLocationNames: false,
-  coworkerVisibility: "all", swapShifts: true, swapApproval: true, offerShifts: true,
+  coworkerVisibility: "all", staffSeeTeamAbsence: true, swapShifts: true, swapApproval: true, offerShifts: true,
   onCostPct: 12.07, openShiftCost: 0, availabilityReminders: false,
   notifyOnPublish: "email_push", autoRemindUnconfirmed: "off", shiftReminder: "off",
   checkinGraceMin: 15, checkinAutoAlert: true, autoRequestAvailability: false,

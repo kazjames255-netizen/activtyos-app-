@@ -13,8 +13,10 @@ import {
 } from "@/lib/holiday";
 import { loadPolicy, loadProfiles, loadAbsences, saveAbsences, slug } from "./data";
 import { loadClock, type ClockRecord, hhmm as clockHhmm, sinceLabel } from "@/features/timeclock/data";
+import { useTenantSettings } from "@/lib/settings";
 
 const ME = "Marcus Bell";
+const ME_ROLE = "Camp Lead"; // demo role (per-user identity is Amir's)
 const ME_ID = slug(ME);
 const KINDS: AbsenceKind[] = ["annual", "sickness", "toil", "unpaid", "maternity", "adoption", "parental", "bereavement", "other"];
 
@@ -39,6 +41,7 @@ export function MyHolidayApp() {
   const [ovTab, setOvTab] = useState<"summary" | "status" | "clocked">("summary");
   const [clock, setClock] = useState<Record<string, ClockRecord>>({});
   const [toast, setToast] = useState<string | null>(null);
+  const { settings: tenantSettings } = useTenantSettings();
   useEffect(() => { setProfiles(loadProfiles()); setAbsences(loadAbsences()); setPolicy(loadPolicy()); setClock(loadClock()); }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2600); };
   const persistAbs = (a: Absence[]) => { setAbsences(a); saveAbsences(a); };
@@ -112,9 +115,16 @@ export function MyHolidayApp() {
         const today = isoDate(new Date());
         const teamOff = (iso: string) => absences.filter((a) => a.status === "approved" && a.start <= iso && a.end >= iso).length;
         const pendingCount = mine.filter((a) => a.status === "pending").length;
-        const clockedIn = Object.values(clock).filter((r) => r.status === "in" || r.status === "break");
         const myClock = clock[ME_ID];
         const myStatus = myClock?.status === "in" ? "Clocked in" : myClock?.status === "break" ? "On break" : "Clocked out";
+        // Who's-clocked-in visibility follows the provider's co-worker setting
+        // (same as the schedule "Who's on" tab): all / same-listing / leads / off.
+        const seeTeamAbsence = tenantSettings.scheduling?.staffSeeTeamAbsence ?? true;
+        const vis = tenantSettings.scheduling?.coworkerVisibility ?? "all";
+        const iAmLead = /lead|manager|owner/i.test(ME_ROLE);
+        const teamVisible = vis !== "none" && (vis !== "leads" || iAmLead);
+        const clockedAll = Object.values(clock).filter((r) => r.status === "in" || r.status === "break");
+        const clockedIn = vis === "team" ? clockedAll.filter((r) => r.op && r.op === myClock?.op) : clockedAll;
         return (
       <div className="grid gap-4 lg:grid-cols-[1.6fr_1fr]">
         {/* ── Overview (left) ── */}
@@ -123,7 +133,8 @@ export function MyHolidayApp() {
             {pendingCount > 0 && <span className="inline-flex items-center gap-1.5 rounded-lg border border-[#f3c0bb] px-2.5 py-1 text-[11.5px] font-bold text-[#c0392b]">⚠ {pendingCount} pending {pendingCount === 1 ? "absence" : "absences"}</span>}
             <button type="button" onClick={() => setReqOpen(true)} className="ml-auto rounded-lg bg-[#e6007e] px-3 py-1.5 text-[12px] font-extrabold text-white hover:brightness-105">+ Add time off</button>
           </div>
-          {/* week strip */}
+          {/* week strip — team time-off, only if the provider lets staff see it */}
+          {seeTeamAbsence && (<>
           <div className="grid grid-cols-7 gap-1.5">{week.map((iso) => { const n = teamOff(iso); const isToday = iso === today; const d = new Date(`${iso}T00:00:00`); return (
             <div key={iso} className="text-center">
               <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{d.toLocaleDateString("en-GB", { weekday: "short" })} {d.getDate()}</div>
@@ -131,10 +142,11 @@ export function MyHolidayApp() {
             </div>
           ); })}</div>
           <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Colleagues off each day this week</div>
+          </>)}
 
           {/* tabs */}
           <div className="mt-3 flex gap-4 border-b border-[var(--line)] text-[12.5px] font-bold">
-            {([["summary", "My summary"], ["status", "Working status"], ["clocked", `Who's clocked in? ${clockedIn.length}`]] as [typeof ovTab, string][]).map(([k, l]) => (
+            {([["summary", "My summary"], ["status", "Working status"], ...(teamVisible ? [["clocked", `Who's clocked in? ${clockedIn.length}`] as [typeof ovTab, string]] : [])] as [typeof ovTab, string][]).map(([k, l]) => (
               <button key={k} type="button" onClick={() => setOvTab(k)} className={`-mb-px border-b-2 pb-2 ${ovTab === k ? "border-[#1d3a8f] text-[#1d3a8f]" : "border-transparent text-[var(--ink-3)] hover:text-[var(--ink-2)]"}`}>{l}</button>
             ))}
           </div>
@@ -148,8 +160,8 @@ export function MyHolidayApp() {
           {ovTab === "status" && (
             <div className="mt-4"><div className="flex items-center gap-2 rounded-xl bg-[var(--panel)] p-3"><span className="h-2.5 w-2.5 rounded-full" style={{ background: myClock?.status === "in" ? "#12b76a" : myClock?.status === "break" ? "#f59e0b" : "#94a3b8" }} /><span className="text-[13px] font-bold text-[var(--ink)]">You&rsquo;re {myStatus}</span>{myClock?.clockInAt && myClock.status !== "out" && <span className="text-[12px] text-[var(--ink-3)]">since {clockHhmm(myClock.clockInAt)}</span>}<a href="schedule?tab=clock" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Clock in/out →</a></div></div>
           )}
-          {ovTab === "clocked" && (
-            <div className="mt-3 divide-y divide-[var(--line)]">{clockedIn.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nobody clocked in right now.</div> : clockedIn.map((r) => (
+          {ovTab === "clocked" && teamVisible && (
+            <div className="mt-3 divide-y divide-[var(--line)]">{clockedIn.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nobody clocked in{vis === "team" ? " on your listings" : ""} right now.</div> : clockedIn.map((r) => (
               <div key={r.id} className="flex items-center gap-2 py-2 text-[12.5px]"><span className="h-2 w-2 rounded-full" style={{ background: r.status === "break" ? "#f59e0b" : "#12b76a" }} /><span className="font-bold text-[var(--ink)]">{r.name}</span>{r.op && <span className="text-[var(--ink-3)]">· {r.op}</span>}<span className="ml-auto text-[var(--ink-3)]">{r.status === "break" ? "on break" : sinceLabel(r.clockInAt)}</span></div>
             ))}</div>
           )}
