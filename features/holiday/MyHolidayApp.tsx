@@ -19,6 +19,8 @@ const ME = "Marcus Bell";
 const ME_ROLE = "Camp Lead"; // demo role (per-user identity is Amir's)
 const ME_ID = slug(ME);
 const KINDS: AbsenceKind[] = ["annual", "sickness", "toil", "unpaid", "maternity", "adoption", "parental", "bereavement", "other"];
+// The "Other" summary card groups everything that isn't annual / sickness / TOIL.
+const OTHER_KINDS: AbsenceKind[] = ["other", "unpaid", "maternity", "adoption", "parental", "bereavement"];
 
 function Ring({ value, total, label }: { value: number; total: number; label: string }) {
   const pct = total > 0 ? Math.max(0, Math.min(1, value / total)) : 0; const R = 34, C = 2 * Math.PI * R;
@@ -40,6 +42,10 @@ export function MyHolidayApp() {
   const [reqKind, setReqKind] = useState<AbsenceKind>("annual");
   const openReq = (k: AbsenceKind = "annual") => { setReqKind(k); setReqOpen(true); };
   const [showHistory, setShowHistory] = useState(false);
+  const [histKind, setHistKind] = useState<AbsenceKind | "all">("all");
+  const [histFrom, setHistFrom] = useState("");
+  const [histTo, setHistTo] = useState("");
+  const [histQ, setHistQ] = useState("");
   const [ovTab, setOvTab] = useState<"summary" | "status" | "clocked">("summary");
   const [clock, setClock] = useState<Record<string, ClockRecord>>({});
   const [toast, setToast] = useState<string | null>(null);
@@ -57,6 +63,19 @@ export function MyHolidayApp() {
   const ly = leaveYear(policy);
   const nph = nextPublicHoliday(isoDate(new Date()), policy.region);
   const otherDays = s.byKind.other + s.byKind.unpaid + s.byKind.maternity + s.byKind.parental;
+
+  // Absence-history filtering: by kind (driven by the summary cards), date range and free text.
+  const histFiltered = mine.filter((a) => {
+    if (histKind === "other" ? !OTHER_KINDS.includes(a.kind) : histKind !== "all" && a.kind !== histKind) return false;
+    if (histFrom && a.end < histFrom) return false;
+    if (histTo && a.start > histTo) return false;
+    const q = histQ.trim().toLowerCase();
+    if (q && !`${KIND_META[a.kind].label} ${a.reason ?? ""} ${a.note ?? ""} ${a.status} ${a.start} ${a.end}`.toLowerCase().includes(q)) return false;
+    return true;
+  });
+  const histActive = histKind !== "all" || !!histFrom || !!histTo || !!histQ.trim();
+  const clearHist = () => { setHistKind("all"); setHistFrom(""); setHistTo(""); setHistQ(""); };
+  const pickCard = (kind: AbsenceKind) => { setHistKind((k) => (k === kind ? "all" : kind)); setShowHistory(true); };
 
   const submit = (a: Omit<Absence, "id" | "staffId" | "name" | "status" | "requestedAt" | "days"> & { days: number }) => {
     // only ANNUAL leave is unpaid-because-rolled-up; sickness is SSP-paid, etc.
@@ -102,8 +121,8 @@ export function MyHolidayApp() {
     </div>
   );
 
-  const counter = (kind: AbsenceKind, value: number) => { const km = KIND_META[kind]; return (
-    <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2.5"><span className="grid h-7 w-7 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span><div><div className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{value}</div><div className="text-[10.5px] font-semibold text-[var(--ink-3)]">{km.label}</div></div></div>
+  const counter = (kind: AbsenceKind, value: number) => { const km = KIND_META[kind]; const active = showHistory && histKind === kind; return (
+    <button type="button" onClick={() => pickCard(kind)} title={`Filter history by ${km.label}`} className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left transition ${active ? "border-[#1d3a8f] bg-[#f4f8ff] ring-2 ring-[#1d3a8f]/25" : "border-[var(--line)] hover:border-[var(--ink-3)] hover:bg-[var(--panel)]"}`}><span className="grid h-7 w-7 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span><div><div className="text-[15px] font-extrabold tabular-nums text-[var(--ink)]">{value}</div><div className="text-[10.5px] font-semibold text-[var(--ink-3)]">{km.label}</div></div>{active && <span className="ml-auto text-[13px] font-black text-[#1d3a8f]">✓</span>}</button>
   ); };
 
   return (
@@ -198,13 +217,24 @@ export function MyHolidayApp() {
       {/* history */}
       {showHistory && (
         <Card className="mt-4 p-0">
-          <div className="border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Absence history</div>
-          {mine.length === 0 ? <div className="p-8 text-center text-[13px] text-[var(--ink-3)]">No absences yet.</div> : (
-            <div className="divide-y divide-[var(--line)]">{mine.map((a) => { const km = KIND_META[a.kind]; const tone = a.status === "approved" ? "bg-[#e6f4ea] text-[#0f7a43]" : a.status === "pending" ? "bg-[#fdf3e0] text-[#8a5a09]" : "bg-[#eef1f6] text-[#64748b]"; return (
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3">
+            <div className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Absence history</div>
+            <span className="text-[11px] font-semibold text-[var(--ink-3)]">{histFiltered.length}{histFiltered.length !== mine.length ? ` of ${mine.length}` : ""}</span>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              {histKind !== "all" && <button type="button" onClick={() => setHistKind("all")} className="inline-flex items-center gap-1 rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f]">{histKind === "other" ? "🗓️ Other" : `${KIND_META[histKind].icon} ${KIND_META[histKind].label}`} <span className="text-[12px]">×</span></button>}
+              <label className="flex items-center gap-1 text-[10.5px] font-bold text-[var(--ink-3)]">From <Input type="date" value={histFrom} onChange={(e) => setHistFrom(e.target.value)} className="h-8 w-[140px] text-[12px]" /></label>
+              <label className="flex items-center gap-1 text-[10.5px] font-bold text-[var(--ink-3)]">To <Input type="date" value={histTo} min={histFrom || undefined} onChange={(e) => setHistTo(e.target.value)} className="h-8 w-[140px] text-[12px]" /></label>
+              <Input value={histQ} onChange={(e) => setHistQ(e.target.value)} placeholder="🔍 Search…" className="h-8 w-[150px] text-[12px]" />
+              {histActive && <button type="button" onClick={clearHist} className="rounded-lg px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Clear</button>}
+            </div>
+          </div>
+          {mine.length === 0 ? <div className="p-8 text-center text-[13px] text-[var(--ink-3)]">No absences yet.</div>
+          : histFiltered.length === 0 ? <div className="p-8 text-center text-[13px] text-[var(--ink-3)]">No absences match your filters. <button type="button" onClick={clearHist} className="font-bold text-[#1d3a8f] hover:underline">Clear filters</button></div> : (
+            <div className="divide-y divide-[var(--line)]">{histFiltered.map((a) => { const km = KIND_META[a.kind]; const tone = a.status === "approved" ? "bg-[#e6f4ea] text-[#0f7a43]" : a.status === "pending" ? "bg-[#fdf3e0] text-[#8a5a09]" : "bg-[#eef1f6] text-[#64748b]"; return (
               <div key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <span className="grid h-8 w-8 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span>
                 <div className="min-w-[150px]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{km.label}</div><div className="text-[11.5px] text-[var(--ink-3)]">{fmtRange(a.start, a.end)}{a.fromTime ? ` · ${a.fromTime}–${a.toTime}` : a.half ? ` · ${a.half}` : ""} · {a.days}d</div></div>
-                {a.note && <div className="text-[11.5px] italic text-[var(--ink-3)]">“{a.note}”</div>}
+                {(a.reason || a.note) && <div className="text-[11.5px] italic text-[var(--ink-3)]">“{a.reason || a.note}”</div>}
                 <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${tone}`}>{a.status}</span>
                 {a.status === "pending" && <button type="button" onClick={() => cancel(a.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Cancel</button>}
               </div>
