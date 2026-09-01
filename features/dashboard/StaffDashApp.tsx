@@ -5,6 +5,8 @@ import Link from "next/link";
 import { get as apiGet, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card } from "@/components/ui";
+import { PageHero } from "@/components/OperatorPage";
+import { Tile, GRAD } from "@/features/money/finance-kit";
 import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDur, workedMs, type ClockRecord } from "@/features/timeclock/data";
 import { greeting } from "@/lib/greeting";
 
@@ -98,30 +100,34 @@ export function StaffDashApp() {
   const doOut = () => setClock((c) => clockOut(c || {}, meId, ME));
   const doBreak = () => setClock((c) => (status === "break" ? endBreak(c || {}, meId) : startBreak(c || {}, meId)));
   const STAT = [
-    { big: sessions === null ? "…" : String(sessions.length), small: "Sessions today", grad: "linear-gradient(135deg,#1d3a8f,#3f7ae0)" },
-    { big: regs === null ? "…" : String(childrenIn), small: "Children in", grad: "linear-gradient(135deg,#0f7a43,#3ddc84)" },
-    { big: regs === null ? "…" : String(dueIn), small: "Due in today", grad: "linear-gradient(135deg,#b45309,#f59e0b)" },
-    { big: tasks === null ? "…" : String(open.length), small: "My open tasks", grad: "linear-gradient(135deg,#6d28d9,#a855f7)" },
+    { big: sessions === null ? "…" : String(sessions.length), small: "Sessions today", grad: GRAD.blue, icon: "🎪", sub: "running at your site" },
+    { big: regs === null ? "…" : String(childrenIn), small: "Children in", grad: GRAD.green, icon: "🧒", sub: "signed in right now" },
+    { big: regs === null ? "…" : String(dueIn), small: "Due in today", grad: GRAD.amber, icon: "📋", sub: "expected across sessions" },
+    { big: tasks === null ? "…" : String(open.length), small: "My open tasks", grad: GRAD.violet, icon: "✅", sub: "assigned to you" },
   ];
 
   return (
     <div className="text-[var(--ink)]">
-      <div className="mb-4">
-        <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{greeting(me?.name)} — here’s {me?.tenantName ?? "your club"} today</h2>
-        <p className="text-[12.5px] text-[var(--ink-3)]">{dayLabel} — live from bookings, registers and the team’s tasks.</p>
-      </div>
+      <PageHero
+        icon="👋"
+        title={`${greeting(me?.name)} — here’s ${me?.tenantName ?? "your club"} today`}
+        lede={`${dayLabel} — live from bookings, registers and the team’s tasks.`}
+      />
 
       {error && <div className="mb-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
 
       {/* Hero row — pink "my shift" + clock in/out */}
       <div className="mb-3 grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-[#c9dcfa] bg-gradient-to-br from-[#eef4ff] to-[#f8fbff] p-4">
-          <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[#1d3a8f]/75">🗓 My shift today</div>
+        <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+          <div className="flex items-center justify-between">
+            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-3)]">🗓 My shift today</div>
+            <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={shift ? { background: "#eaf0fc", color: "#1d3a8f" } : { background: "#eef1f6", color: "#64748b" }}>{shift ? "Rostered" : "Day off"}</span>
+          </div>
           {shift ? (<>
-            <div className="mt-1 text-[22px] font-extrabold leading-none text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>{to12(shift.start)} – {to12(shift.end)}</div>
-            <div className="mt-1 text-[13px] font-semibold text-[var(--ink-2)]">{[shift.role, shift.site, shift.listing].filter(Boolean).join(" · ") || "On shift"}</div>
+            <div className="mt-2 text-[22px] font-extrabold leading-none text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>{to12(shift.start)} – {to12(shift.end)}</div>
+            <div className="mt-1.5 text-[13px] font-semibold text-[var(--ink-2)]">{[shift.role, shift.site, shift.listing].filter(Boolean).join(" · ") || "On shift"}</div>
           </>) : (<>
-            <div className="mt-1 text-[17px] font-extrabold leading-tight text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>You’re not rostered today</div>
+            <div className="mt-2 text-[17px] font-extrabold leading-tight text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>You’re not rostered today</div>
             <div className="mt-1 text-[13px] text-[var(--ink-3)]">Enjoy your day off 🌿</div>
           </>)}
         </div>
@@ -150,14 +156,10 @@ export function StaffDashApp() {
         </div>
       </div>
 
-      {/* Colourful stat tiles — counts are for your site, today */}
+      {/* Stat tiles — counts are for your site, today */}
       <div className="mb-3 grid grid-cols-2 gap-2.5 md:grid-cols-4">
         {STAT.map((t) => (
-          <div key={t.small} className="relative overflow-hidden rounded-2xl p-3.5 text-white shadow-sm" style={{ background: t.grad }}>
-            <svg className="pointer-events-none absolute inset-0 h-full w-full opacity-15" viewBox="0 0 100 60" preserveAspectRatio="xMidYMid slice" aria-hidden><circle cx="90" cy="8" r="20" fill="#fff" /></svg>
-            <div className="relative text-[26px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
-            <div className="relative mt-1 text-[10.5px] font-bold uppercase tracking-[0.04em] text-white/85">{t.small}</div>
-          </div>
+          <Tile key={t.small} label={t.small} value={t.big} sub={t.sub} grad={t.grad} icon={t.icon} />
         ))}
       </div>
 
