@@ -82,14 +82,30 @@ export function TimesheetsApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Clock in/out & timesheets" icon="⏱" lede="See who's in, on a break, or off right now, review today's clocked hours against the rota, and send approved hours to payroll." />
 
-      {/* live tiles */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[["Clocked in", inNow.length, "#12b76a"], ["On break", onBreak.length, "#f59e0b"], ["Clocked out", out.length, "#94a3b8"], ["Off today", off.length, "#8b5cf6"]].map(([label, n, c]) => (
-          <div key={label as string} className="rounded-2xl border border-[var(--line)] bg-white p-4">
-            <div className="flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: c as string }} /><span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</span></div>
-            <div className="mt-1 text-[24px] font-extrabold tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{n as number}</div>
-          </div>
-        ))}
+      {/* Live now — same visual language as the staff Clock in/out page: a big
+          status panel with pill labels, rather than flat tiles. */}
+      <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#12b76a] opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#12b76a]" /></span>
+          <div className="text-[14px] font-extrabold text-[var(--ink)]">Live now</div>
+          <span className="text-[11px] font-semibold text-[var(--ink-3)]">· updates as people clock in &amp; out</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {([
+            ["Clocked in", inNow.length, "#12b76a", "#e6f4ea", "#0f7a43"],
+            ["On break", onBreak.length, "#f59e0b", "#fdf3e0", "#8a5a09"],
+            ["Clocked out", out.length, "#94a3b8", "#eef1f6", "#64748b"],
+            ["Off today", off.length, "#8b5cf6", "#f3ecfb", "#6d28d9"],
+          ] as [string, number, string, string, string][]).map(([label, n, dot, bg, fg]) => (
+            <div key={label} className="flex items-center gap-3 rounded-2xl bg-[var(--panel)] p-3.5">
+              <span className="grid h-10 w-10 flex-none place-items-center rounded-full" style={{ background: bg }}><span className="h-3 w-3 rounded-full" style={{ background: dot }} /></span>
+              <div className="min-w-0">
+                <div className="text-[24px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{n}</div>
+                <span className="mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: bg, color: fg }}>{label}</span>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="mt-4 inline-flex flex-wrap gap-1 rounded-full bg-white p-1 shadow-sm">
