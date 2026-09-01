@@ -1245,6 +1245,10 @@ function PricingCalculator({
     () => [...periods].sort((a, b) => (a.start < b.start ? -1 : 1)),
     [periods],
   );
+  // Hours in a timing, and the longest timing's hours — the pro-rata base for
+  // per-timing pricing (a shorter finish costs proportionally less).
+  const pHrs = (p: Period) => { const mins = (s: string) => { const [h, m] = s.split(":").map(Number); return h * 60 + m; }; const d = (mins(p.finish) - mins(p.start)) / 60; return d > 0 ? d : 1; };
+  const baseTimingH = timingRows.length ? Math.max(...timingRows.map(pHrs)) : 0;
 
   const setFlat = (passId: string, v: string) => {
     setPassFlat((m) => ({ ...m, [passId]: v }));
@@ -1297,6 +1301,19 @@ function PricingCalculator({
     if (passMode[passId] === "flat") return num(passFlat[passId] ?? "0");
     if (calcOn) { const md = passes[0]?.days || 1; return Math.round((passes[idx]?.days ?? 0) * (num(masterPrice) / md) * 100) / 100; }
     return resolvedPrice;
+  };
+
+  // Per-timing price, computed LIVE from the typed master price so the boxes
+  // fill in as you type (not only after Save). A timing costs its share of the
+  // pass price by hours: pass price × (this timing's hours ÷ longest timing's
+  // hours) — the longest timing = the full pass price. Manual mode / no master
+  // falls back to the saved server value.
+  const liveTiming = (passId: string, idx: number, per: Period): number => {
+    if (calcOn && baseTimingH > 0) {
+      const base = passDisplayPrice(passId, idx, passes[idx]?.price ?? 0);
+      return Math.round(((base * pHrs(per)) / baseTimingH) * 100) / 100;
+    }
+    return resolvedTiming(passId, per.id);
   };
 
   return (
@@ -1360,7 +1377,7 @@ function PricingCalculator({
                       timingRows.map((p) => {
                         const key = `${q.id}_${p.id}`;
                         const ovStr = periodPrice[key];
-                        const calc = resolvedTiming(q.id, p.id);
+                        const calc = liveTiming(q.id, idx, p);
                         const inputVal =
                           ovStr !== undefined ? ovStr : calcOn && calc ? calc.toFixed(2) : "";
                         return (
