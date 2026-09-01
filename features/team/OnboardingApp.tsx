@@ -13,6 +13,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
 import { DEMO_STAFF, useCredentials, credStatus, CredBadge, appliesTo as credAppliesTo, openCredFile } from "@/features/learning/credentials";
+import { Tile, GRAD } from "@/features/money/finance-kit";
 
 // ——— model ———
 type FieldType = "text" | "tel" | "email" | "date" | "textarea" | "select" | "file" | "checkbox" | "check" | "addresses" | "certs" | "jobtitle" | "pay" | "readdoc" | "availability";
@@ -477,6 +478,19 @@ export function OnboardingPanel() {
           <p className="mt-2 text-[11px] text-[var(--ink-3)]"><b>N/A</b> = not required for that person&rsquo;s role (set in Requirements). Click a name to open their full record.</p>
         </div>
       ) : (
+      <>
+      {/* Team-wide onboarding progress — a top-line before drilling into one person. */}
+      {(() => {
+        const cleared = DEMO_STAFF.filter((s) => clearedOf(s.name)).length;
+        const started = DEMO_STAFF.filter((s) => { const p = progressOf(s.name); return p.pct > 0 && p.pct < 100; }).length;
+        return (
+          <div className="mb-3 grid grid-cols-3 gap-2.5">
+            <Tile label="Cleared to start" icon="✅" grad={GRAD.green} value={String(cleared)} sub={`of ${DEMO_STAFF.length} staff`} />
+            <Tile label="Start on hold" icon="⛔" grad={cleared < DEMO_STAFF.length ? GRAD.pink : GRAD.green} value={String(DEMO_STAFF.length - cleared)} sub="checks outstanding" />
+            <Tile label="In progress" icon="⏳" grad={GRAD.amber} value={String(started)} sub="part-way through" />
+          </div>
+        );
+      })()}
       <div className="grid gap-3 md:grid-cols-[260px_1fr]">
         {/* roster */}
         <div className="space-y-2">
@@ -552,6 +566,7 @@ export function OnboardingPanel() {
           <p className="px-4 pb-4 text-[11px] text-[var(--ink-3)]">Certificates (DBS, First Aid) are also tracked in <b>Team → Staff certificates</b>. Sensitive fields (🔒) need secure storage &amp; retention — on the backend list.</p>
         </div>
       </div>
+      </>
       )}
 
       {showDecl && (

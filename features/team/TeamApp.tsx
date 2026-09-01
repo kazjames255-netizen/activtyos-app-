@@ -7,7 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_ROLES } from "@/lib/settings";
 import { Button, Card, Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE } from "@/components/OperatorPage";
+import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { LocationsApp } from "@/features/locations/LocationsApp";
 import { AppraisalsApp } from "@/features/appraisals/AppraisalsApp";
 import { OnboardingPanel } from "@/features/team/OnboardingApp";
@@ -188,9 +188,9 @@ export function TeamApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <div className="mb-3"><h2 className="text-[22px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Team &amp; invites</h2><p className="text-[12.5px] text-[var(--ink-3)]">Invite people, give them a role and where they work.</p></div>
+      <PageHero icon="👥" title="Team &amp; invites" lede="Invite people, set their role and where they work — then onboard, deploy and review them." />
 
-      <div className="mb-3 flex flex-wrap items-center gap-3">
+      <div className="mb-3 mt-4 flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-xl bg-[var(--panel)] p-1">
           {([["team", "Team members"], ["applications", "Applications"], ["onboarding", "Onboarding"], ["locations", "Deployment"], ["appraisals", "Appraisals"]] as const).map(([t, lbl]) => (
             <button key={t} type="button" onClick={() => setTab(t)} className={"rounded-lg px-4 py-1.5 text-[13px] font-bold transition-colors " + (tab === t ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>

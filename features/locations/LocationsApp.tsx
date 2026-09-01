@@ -7,6 +7,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
+import { Tile, GRAD } from "@/features/money/finance-kit";
 import { LocationDetail, type Venue } from "./LocationDetail";
 
 interface Listing { id: string; title?: string; name?: string; venueId?: string | null; seasonId?: string | null; status?: string; visibility?: string; archived?: boolean }
@@ -90,10 +91,14 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
     <div className={embedded ? "text-[var(--ink)]" : "-m-3 min-h-[calc(100vh-3.5rem)] p-3 text-[var(--ink)] sm:-m-5 sm:p-5"} style={embedded ? undefined : LIGHT_PALETTE}>
       {detailVenue ? <LocationDetail venue={detailVenue} venues={list!} onBack={() => router.push(pathname)} /> : (
       <>
-      <div className="mb-3">
-        <h2 className="text-[20px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Deployment</h2>
-        <p className="text-[12.5px] text-[var(--ink-3)]">Move staff across locations &amp; listings — turn one on and the schedule offers them for its shifts. Locations &amp; listings are edited in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p>
+      {!embedded && <div className="mb-3"><h2 className="text-[20px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Deployment</h2></div>}
+      {/* Summary tiles — the flat page needed a top-line at a glance. */}
+      <div className="mb-3 grid grid-cols-3 gap-2.5">
+        <Tile label="Locations" icon="📍" grad={GRAD.teal} value={String(list?.length ?? 0)} sub="venues you run" />
+        <Tile label="Staff deployed" icon="👥" grad={GRAD.violet} value={String(staff.filter((s) => s.sites.length > 0).length)} sub={`of ${staff.length} on the team`} />
+        <Tile label="Listings" icon="🎫" grad={GRAD.blue} value={String(deployListings.length)} sub="active programmes" />
       </div>
+      <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">Move staff across locations &amp; listings — turn one on and the schedule offers them for its shifts. Locations &amp; listings are edited in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-xl bg-[var(--panel)] p-1">
