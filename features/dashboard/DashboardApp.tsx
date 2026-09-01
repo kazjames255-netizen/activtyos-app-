@@ -218,17 +218,20 @@ function Legend({ items }: { items: [string, string][] }) {
 function Empty({ children }: { children: React.ReactNode }) {
   return <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{children}</div>;
 }
-function Breakdown({ entries }: { entries: { label: string; value: number; sub: string; color: string }[] }) {
+function Breakdown({ entries }: { entries: { label: string; value: number; sub: string; color: string; meta?: string }[] }) {
   const max = Math.max(1, ...entries.map((e) => e.value));
   if (!entries.length) return <Empty>Nothing yet.</Empty>;
   return (
     <div className="flex flex-col gap-3">
       {entries.map((e, i) => (
         <div key={e.label}>
-          <div className="mb-1.5 flex items-center justify-between gap-2 text-[12.5px]">
-            <span className="flex min-w-0 items-center gap-2">
-              <span className="grid h-5 w-5 flex-none place-items-center rounded-md text-[10px] font-extrabold text-white" style={{ background: e.color }}>{i + 1}</span>
-              <span className="truncate font-semibold">{e.label}</span>
+          <div className="mb-1.5 flex items-start justify-between gap-2 text-[12.5px]">
+            <span className="flex min-w-0 items-start gap-2">
+              <span className="mt-[1px] grid h-5 w-5 flex-none place-items-center rounded-md text-[10px] font-extrabold text-white" style={{ background: e.color }}>{i + 1}</span>
+              <span className="min-w-0">
+                <span className="block truncate font-semibold">{e.label}</span>
+                {e.meta && <span className="block truncate text-[11px] font-medium text-[var(--ink-3)]">📍 {e.meta}</span>}
+              </span>
             </span>
             <span className="whitespace-nowrap font-extrabold tabular-nums">{e.sub}</span>
           </div>
@@ -309,6 +312,10 @@ export function DashboardApp() {
   const [nowMs] = useState(() => Date.now());
   // listingId → seasonId, so bookings can be grouped by season (names in settings).
   const [listingSeason, setListingSeason] = useState<Record<string, string>>({});
+  // listingId → venue (location) name, for the "Revenue by activity" location line + filter.
+  const [listingVenue, setListingVenue] = useState<Record<string, string>>({});
+  // Selected location filter for the Revenue-by-activity card ("" = all).
+  const [activityLoc, setActivityLoc] = useState("");
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
   // Just for the greeting — the person's name, not the business name.
@@ -323,9 +330,20 @@ export function DashboardApp() {
     // section shows a retry instead of "Loading your figures…" forever.
     apiGet<Booking[]>("/api/bookings").then((b) => { setBookings(b); setBookingsErr(null); }).catch((e) => setBookingsErr(e instanceof Error ? e.message : "Couldn’t load your figures"));
     apiGet<DashTask[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => setTasks([]));
-    apiGet<{ id: string; seasonId?: string | null }[]>("/api/listings?mine=1")
-      .then((ls) => setListingSeason(Object.fromEntries((ls ?? []).filter((l) => l.id && l.seasonId).map((l) => [l.id, l.seasonId as string]))))
-      .catch(() => {});
+    // Listings carry the season + venue for each activity; the library names the
+    // venues. Together they give the season grouping and the location line/filter.
+    Promise.all([
+      apiGet<{ id: string; seasonId?: string | null; venueId?: string | null }[]>("/api/listings?mine=1"),
+      apiGet<{ venues?: { id: string; name: string }[] } | null>("/api/library").catch(() => null),
+    ]).then(([ls, lib]) => {
+      const list = ls ?? [];
+      setListingSeason(Object.fromEntries(list.filter((l) => l.id && l.seasonId).map((l) => [l.id, l.seasonId as string])));
+      const venueName = new Map((lib?.venues ?? []).map((v) => [v.id, v.name]));
+      setListingVenue(Object.fromEntries(list.flatMap((l) => {
+        const n = l.venueId ? venueName.get(l.venueId) : undefined;
+        return l.id && n ? [[l.id, n] as [string, string]] : [];
+      })));
+    }).catch(() => {});
   }, []);
   useEffect(load, [load]);
   useRealtime(["bookings", "blocks", "listings", "payments", "tasks"], load);
@@ -355,7 +373,9 @@ export function DashboardApp() {
 
     const income = keys.map((k) => ({ label: k, value: 0 }));
     const booked = keys.map((k) => ({ label: k, value: 0 }));
-    const byAct = new Map<string, number>();
+    // Keyed by listingId (so two listings sharing a name don't merge), carrying
+    // the display name + its venue for the location line/filter.
+    const byAct = new Map<string, { name: string; venue?: string; value: number }>();
     const bySeason = new Map<string, number>();
     const seasonName = (b: Booking) => seasons.find((s) => s.id === (b.listingId ? listingSeason[b.listingId] : undefined))?.name ?? "No season";
     const byStatus = new Map<string, number>();
@@ -384,10 +404,15 @@ export function DashboardApp() {
       if (fam && countsToward(b)) famCount.set(fam, (famCount.get(fam) ?? 0) + 1);
       byStatus.set(b.status, (byStatus.get(b.status) ?? 0) + 1);
       payMix.set(b.pay || "—", (payMix.get(b.pay || "—") ?? 0) + 1);
-      if (countsToward(b) && b.listing) byAct.set(b.listing, (byAct.get(b.listing) ?? 0) + collectedNet(b));
+      if (countsToward(b) && (b.listingId || b.listing)) {
+        const key = b.listingId || b.listing;
+        const cur = byAct.get(key) ?? { name: b.listing || "—", venue: b.listingId ? listingVenue[b.listingId] : undefined, value: 0 };
+        cur.value += collectedNet(b);
+        byAct.set(key, cur);
+      }
       if (countsToward(b)) bySeason.set(seasonName(b), (bySeason.get(seasonName(b)) ?? 0) + collectedNet(b));
     }
-    const acts = [...byAct.entries()].sort((x, y) => y[1] - x[1]);
+    const acts = [...byAct.values()].sort((x, y) => y.value - x.value);
     const seasonRows = [...bySeason.entries()].filter(([, v]) => v > 0 || bySeason.size <= 6).sort((x, y) => y[1] - x[1]);
     const recent = [...list].sort((x, y) => (y.createdAt ?? "").localeCompare(x.createdAt ?? "")).slice(0, 6);
     // Booking lifecycle funnel + repeat-customer share, from the same windowed bookings.
@@ -405,14 +430,16 @@ export function DashboardApp() {
       income, booked, weekly, weeklyIncome,
       weeklyLabels: wkStarts.map((ms) => new Date(ms).toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" })),
       kpis: { collected: totalCollected, bookings: bookingsCount, families: [...families].filter(Boolean).length, avg: paidCount ? totalCollected / paidCount : 0 },
-      byActivity: acts.slice(0, 6).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
+      // Full list (venue included) — the location filter + top-6 slice happen at
+      // render, so filtering by location doesn't lose activities beyond the top 6.
+      byActivity: acts.map((v) => ({ label: v.name, venue: v.venue, value: v.value })),
       bySeason: seasonRows.slice(0, 8).map(([label, value], i) => ({ label, value, sub: money(value), color: ACT_C[i % ACT_C.length] })),
       byStatus: [...byStatus.entries()].map(([label, value]) => ({ label, value, sub: String(value), color: STATUS_C[label] ?? "#8a86a3" })),
       payMix: [...payMix.entries()].map(([label, value]) => ({ label, value, sub: String(value), color: PAY_C[label] ?? "#8a86a3" })),
       funnel, repeat,
       recent,
     };
-  }, [bookings, months, nowMs, listingSeason, seasons]);
+  }, [bookings, months, nowMs, listingSeason, listingVenue, seasons]);
 
   // Doughnut centres: total booked, and paid share of all bookings.
   const statusTotal = a.byStatus.reduce((s, x) => s + x.value, 0);
@@ -618,9 +645,28 @@ export function DashboardApp() {
                 ? <Empty>Set up your seasons in Setup to see this.</Empty>
                 : <Breakdown entries={a.bySeason} />}
             </Panel>
-            <Panel title="Revenue by activity">
-              <Breakdown entries={a.byActivity} />
-            </Panel>
+            {(() => {
+              const locs = [...new Set(a.byActivity.map((e) => e.venue).filter((v): v is string => !!v))].sort();
+              const filtered = a.byActivity.filter((e) => !activityLoc || e.venue === activityLoc);
+              const entries = filtered.slice(0, 6).map((e, i) => ({ label: e.label, value: e.value, sub: money(e.value), color: ACT_C[i % ACT_C.length], meta: e.venue }));
+              return (
+                <Panel
+                  title="Revenue by activity"
+                  right={locs.length > 0 ? (
+                    <select
+                      value={activityLoc}
+                      onChange={(e) => setActivityLoc(e.target.value)}
+                      className="max-w-[160px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink-2)] outline-none"
+                    >
+                      <option value="">All locations</option>
+                      {locs.map((l) => <option key={l} value={l}>{l}</option>)}
+                    </select>
+                  ) : undefined}
+                >
+                  {entries.length ? <Breakdown entries={entries} /> : <Empty>No revenue at {activityLoc} yet.</Empty>}
+                </Panel>
+              );
+            })()}
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
