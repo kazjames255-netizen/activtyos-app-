@@ -62,7 +62,7 @@ export function ReferralsApp() {
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Hero — kept compact: title + inline stats on the left, small leaderboard on the right */}
-      <div className="relative mb-4 overflow-hidden rounded-2xl p-4 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+      <div className="relative mb-4 overflow-hidden rounded-2xl p-4 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
         <Link href={`/${portal}/setup?tab=refer`} className="absolute right-4 top-4 z-10 rounded-full bg-[#1d3a8f] px-3 py-1 text-[11.5px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">⚙️ Change settings</Link>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-[240px] flex-1">

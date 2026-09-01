@@ -25,7 +25,7 @@ type SettingsShape = ReturnType<typeof useSettings>["settings"];
 type SaveFn = ReturnType<typeof useSettings>["save"];
 
 const LIGHT_PALETTE = { "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc", "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1" } as CSSProperties;
-const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
+const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)";
 const BLUE = "#1d3a8f", PINK = "#be1259", GREEN = "#0f7a43", RED = "#c02636";
 const ACT_PALETTE = ["#be1259", "#047857", "#0369a1", "#b45309", "#0e7490", "#6d28d9", "#c2410c", "#4338ca", "#b91c1c", "#7c3aed"];
 const ACTS: Act[] = [

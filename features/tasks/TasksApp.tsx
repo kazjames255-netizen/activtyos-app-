@@ -19,7 +19,7 @@ const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
-const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
+const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)";
 const BLUE = "#1d3a8f";
 
 type Prio = "urgent" | "high" | "med" | "low";

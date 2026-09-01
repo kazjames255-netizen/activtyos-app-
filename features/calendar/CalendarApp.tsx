@@ -24,7 +24,7 @@ interface Item { kind: "session" | "event"; date: string; start: string; end: st
 type Mode = "month" | "week" | "day";
 
 const LIGHT_PALETTE = { "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc", "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1" } as CSSProperties;
-const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)";
+const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)";
 const BLUE = "#1d3a8f", RED = "#c02636";
 const PALETTE = ["#6d28d9", "#0369a1", "#be1259", "#047857", "#b45309", "#c2410c", "#4338ca", "#7c3aed", "#b91c1c", "#0e7490"];
 const soft = (hex: string) => `color-mix(in srgb,${hex} 14%,var(--surface))`;

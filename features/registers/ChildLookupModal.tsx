@@ -151,7 +151,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <div className="overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 62%,#ffffff 100%)" }}>
+            <div className="flex items-center justify-between px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
               <div className="text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>🔎 Find a child</div>
               <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
             </div>

@@ -54,10 +54,14 @@ export function MoneyInApp() {
     <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{big}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{sub}</div></div>
   );
 
+  const [heroOpen, setHeroOpen] = useState(true);
+  useEffect(() => { try { if (localStorage.getItem("aos.hero.money-in") === "0") setHeroOpen(false); } catch { /* ignore */ } }, []);
+  const toggleHero = () => setHeroOpen((v) => { const n = !v; try { localStorage.setItem("aos.hero.money-in", n ? "1" : "0"); } catch { /* ignore */ } return n; });
+
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Money-in hero — Invoices + Income folded into one headline */}
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💰</span>
@@ -70,7 +74,11 @@ export function MoneyInApp() {
             ))}
           </div>
         </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything your business takes in — <b>bookings</b>, customer <b>invoices</b> and other <b>income</b>. Paid bookings &amp; invoices fold into your income totals below.</p>
+        <div className="mt-1.5 flex items-start justify-between gap-3">
+          <p className="max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything your business takes in — <b>bookings</b>, customer <b>invoices</b> and other <b>income</b>. Paid bookings &amp; invoices fold into your income totals below.</p>
+          <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+        </div>
+        {heroOpen && (<>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">
           <Kpi big={money(inMonth)} sub="In this month" />
           <Kpi big={money(inYear)} sub={`In ${thisYear}`} />
@@ -78,6 +86,7 @@ export function MoneyInApp() {
         </div>
         <div className="mt-2 text-[11px] text-white/75">This month received: <b className="text-white">{money(bkMonth)}</b> bookings + <b className="text-white">{money(invMonth)}</b> invoices + <b className="text-white">{money(incMonth)}</b> other income</div>
         <div className="mt-0.5 text-[10.5px] text-white/60">Awaiting payment = <b className="text-white/80">sent customer invoices not yet paid</b> (excludes unpaid bookings) — not counted in the totals above until paid.</div>
+        </>)}
       </div>
 
       {tab === "invoices" ? <InvoicesApp embedded /> : <IncomeApp embedded />}

@@ -73,7 +73,7 @@ export function PageHero({
         style={{
           // A white 18px dot grid layered over the gradient — matches the sidebar
           // and register header so every title card reads as the same surface.
-          backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${background ?? "linear-gradient(120deg,#16306e 0%,#3f78d8 60%,#ffffff 100%)"}`,
+          backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${background ?? "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)"}`,
           backgroundSize: "18px 18px, cover, cover, cover, cover",
           backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat",
         }}

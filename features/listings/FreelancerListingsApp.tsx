@@ -405,34 +405,40 @@ export function FreelancerListingsApp() {
         } as React.CSSProperties
       }
     >
-      <PageHero title="Blocks & listings" lede="Locations, scheduling blocks and your programmes" icon="🎫" />
-      <div className="mb-3 flex flex-wrap items-center justify-end gap-2.5">
-        <div className="flex items-center gap-2.5">
-          {tab === "listings" && (
-            <>
-              <Button
-                onClick={() => {
-                  // The whole-storefront widget for the operator's own website.
-                  const tid = (listings?.[0] as { tenantId?: string } | undefined)?.tenantId;
-                  if (!tid) {
-                    alert("Create a listing first — the storefront embed shows your live listings.");
-                    return;
-                  }
-                  const snippet = `<script src="${window.location.origin}/embed.js" data-store="${tid}" async></script>`;
-                  navigator.clipboard?.writeText(snippet).then(() =>
-                    alert(`Copied! Paste this into your website's HTML for a button that opens your WHOLE storefront (every live listing):\n\n${snippet}\n\nTips:\n· data-mode="inline" embeds the storefront directly in the page\n· on React/Next sites, put <div data-activityos-store="${tid}"></div> where it should go and load the script anywhere`),
-                  ).catch(() => {});
-                }}
-              >
-                {"</>"} Embed
-              </Button>
-              <Button variant="primary" onClick={() => startNew()} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">
-                ＋ New listing
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+      <PageHero
+        title="Blocks & listings"
+        lede="Locations, scheduling blocks and your programmes"
+        icon="🎫"
+        actions={tab === "listings" ? (
+          <>
+            <button
+              type="button"
+              onClick={() => {
+                // The whole-storefront widget for the operator's own website.
+                const tid = (listings?.[0] as { tenantId?: string } | undefined)?.tenantId;
+                if (!tid) {
+                  alert("Create a listing first — the storefront embed shows your live listings.");
+                  return;
+                }
+                const snippet = `<script src="${window.location.origin}/embed.js" data-store="${tid}" async></script>`;
+                navigator.clipboard?.writeText(snippet).then(() =>
+                  alert(`Copied! Paste this into your website's HTML for a button that opens your WHOLE storefront (every live listing):\n\n${snippet}\n\nTips:\n· data-mode="inline" embeds the storefront directly in the page\n· on React/Next sites, put <div data-activityos-store="${tid}"></div> where it should go and load the script anywhere`),
+                ).catch(() => {});
+              }}
+              className="rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] shadow-sm transition hover:bg-white/90"
+            >
+              {"</>"} Embed
+            </button>
+            <button
+              type="button"
+              onClick={() => startNew()}
+              className="rounded-full border border-white/25 bg-[#16306e] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110"
+            >
+              ＋ New listing
+            </button>
+          </>
+        ) : undefined}
+      />
 
       <TourLauncher view={tab === "blocks" ? "blocks" : "listings"} />
 
