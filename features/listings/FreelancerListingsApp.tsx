@@ -594,6 +594,10 @@ function ListingsTab({
   const [menuId, setMenuId] = useState<string | null>(null);
   const [venueFilter, setVenueFilter] = useState("");
   const [catFilter, setCatFilter] = useState("");
+  const [seasonFilter, setSeasonFilter] = useState("");
+  const { settings: tSettings } = useTenantSettings();
+  const seasons = tSettings.seasons ?? [];
+  const seasonName = (id?: string | null) => seasons.find((s) => s.id === id)?.name;
   // Clicking Public/Hidden explains what it actually does — the words alone
   // don't tell an operator whether parents can still reach the listing.
   const [visNote, setVisNote] = useState<string | null>(null);
@@ -701,6 +705,7 @@ function ListingsTab({
       l, dr, info,
       vn: dr ? local.venues.find((v) => v.id === dr.venueId)?.name ?? "" : "",
       venueId: dr?.venueId ?? null,
+      seasonId: dr?.seasonId ?? null,
       categoryIds: dr?.categoryIds ?? [],
       cap, spaces, left, booked,
       pct: cap && cap > 0 ? booked / cap : 0,
@@ -718,6 +723,7 @@ function ListingsTab({
     if (dateFilter && !(r.dr && listingRunsOn(r.dr, dateFilter))) return false;
     if (venueFilter && r.venueId !== venueFilter) return false;
     if (catFilter && !r.categoryIds.includes(catFilter)) return false;
+    if (seasonFilter && r.seasonId !== seasonFilter) return false;
     return true;
   });
 
@@ -806,6 +812,16 @@ function ListingsTab({
           </Pill>
         )}
 
+        {seasons.length > 0 && (() => {
+          const seasonOpts = seasons.map((s) => ({ ...s, n: rows.filter((r) => !r.archived && r.seasonId === s.id).length })).filter((s) => s.n > 0);
+          return seasonOpts.length > 0 ? (
+            <Pill active={!!seasonFilter} onClear={() => setSeasonFilter("")}>
+              <PillSelect active={!!seasonFilter} value={seasonFilter} onChange={setSeasonFilter} title="Filter by season"
+                options={[["", "All seasons"], ...seasonOpts.map((s) => [s.id, `${s.name} (${s.n})`] as [string, string])]} />
+            </Pill>
+          ) : null;
+        })()}
+
         <Pill active={sortBy !== "soonest"} onClear={() => setSortBy("soonest")}>
           <PillSelect active={sortBy !== "soonest"} value={sortBy} onChange={(v) => setSortBy(v as SortKey)} title="Sort the list"
             options={SORTS.map(([k, label]) => [k, label] as [string, string])} />
@@ -818,9 +834,9 @@ function ListingsTab({
             style={{ color: dateFilter ? "#fff" : "var(--ink)", colorScheme: dateFilter ? "dark" : "light" }} />
         </Pill>
 
-        {(q || dateFilter || venueFilter || catFilter || sortBy !== "soonest") && (
+        {(q || dateFilter || venueFilter || catFilter || seasonFilter || sortBy !== "soonest") && (
           <button type="button" title="Clear every filter"
-            onClick={() => { setQ(""); setDateFilter(""); setVenueFilter(""); setCatFilter(""); setSortBy("soonest"); }}
+            onClick={() => { setQ(""); setDateFilter(""); setVenueFilter(""); setCatFilter(""); setSeasonFilter(""); setSortBy("soonest"); }}
             className="h-8 px-1 text-[11.5px] font-semibold text-[var(--ink-3)] hover:text-[var(--ink)] hover:underline">Reset</button>
         )}
 
@@ -834,7 +850,8 @@ function ListingsTab({
       {activeShown.length === 0 ? (
         <Card className="p-5 text-center text-[12.5px] text-[var(--ink-3)]">{q || dateFilter || venueFilter || catFilter ? `No listings match your filters${dateFilter ? " on that date" : ""}.` : "No active listings — check Archived below."}</Card>
       ) : (
-        activeShown.map(({ l, info, vn, cap, spaces, isLive, isDraft }) => {
+        activeShown.map(({ l, info, vn, cap, spaces, isLive, isDraft, seasonId }) => {
+          const season = seasonName(seasonId);
           return (
             <Card key={l.id} className="overflow-visible p-0 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-20px_rgba(20,35,90,.35)]">
               <div className="flex flex-col sm:flex-row">
@@ -869,7 +886,10 @@ function ListingsTab({
                       <span title="Parents can see this listing but can't book until then" className="rounded-full bg-[#fff7ed] px-2 py-[2px] text-[10px] font-semibold text-[#9a3412]">⏰ Opens {openLabel(info.opensAt)}</span>
                     )}
                   </div>
-                  <div className="mt-1 text-[12.5px] text-[var(--ink-3)]">{vn || "No venue set"}</div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[12.5px] text-[var(--ink-3)]">
+                    <span>{vn || "No venue set"}</span>
+                    {season && <span title="Season" className="rounded-full bg-[var(--panel)] px-1.5 py-[1px] text-[10.5px] font-semibold text-[var(--ink-2)] ring-1 ring-[var(--line)]">🗓 {season}</span>}
+                  </div>
 
                   {/* passes */}
                   <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
