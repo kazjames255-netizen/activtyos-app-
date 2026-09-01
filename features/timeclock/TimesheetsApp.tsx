@@ -9,7 +9,7 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type ClockRecord, type ClockSettings, loadClock, loadClockSettings, saveClockSettings,
-  offToday, workedMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, shiftToday, rateFor, setApproved, editRecord, payHours, clockOut,
+  offToday, workedMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, shiftToday, lateMinutesToday, rateFor, setApproved, editRecord, payHours, clockOut,
 } from "./data";
 
 const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -75,7 +75,7 @@ export function TimesheetsApp() {
     // out = grey. (Pink used to read as "clocked in", which is the clock-IN
     // colour on the staff page — the opposite of what it meant here.)
     const sh = shiftToday(r.name);        // their rostered shift today (start/end)
-    const late = r.lateMin || 0;
+    const late = lateMinutesToday(r);     // late vs shift start, recomputed live
     const footTone = r.status === "in" ? { bg: "#e6f4ea", fg: "#0f7a43" } : r.status === "break" ? { bg: "#fdf3e0", fg: "#8a5a09" } : { bg: "var(--panel)", fg: "var(--ink-3)" };
     const foot = r.status === "in" ? `${sh ? `Shift ${sh.start}–${sh.end} · ` : ""}in ${hhmm(r.clockInAt)} · on shift ${fmtDur(workedMs(r))}${late ? ` · ${fmtLate(late)} late` : sh ? " · on time" : ""}${r.loc ? ` · ${r.loc.startsWith("📍") ? "Location" : r.loc}` : ""}`
       : r.status === "break" ? `On break since ${hhmm(r.breakStart)}${sh ? ` · shift ${sh.start}–${sh.end}` : ""}`
@@ -170,7 +170,7 @@ export function TimesheetsApp() {
         // "Needs attention" = anyone to chase: scheduled but not clocked in (needs
         // to clock IN), or clocked in late. They're the ones a nudge is for.
         const needsIn = outVisible.filter((r) => !r.clockInAt);
-        const lateIn = [...inNow, ...onBreak].filter((r) => (r.lateMin || 0) > 0);
+        const lateIn = [...inNow, ...onBreak].filter((r) => lateMinutesToday(r) > 0);
         const needsAction = [...needsIn, ...lateIn];
         const F = statusFilter;
         const pills: [typeof statusFilter, string, number, string][] = [

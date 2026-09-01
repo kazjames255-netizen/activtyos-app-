@@ -100,22 +100,34 @@ function seed(): Record<string, ClockRecord> {
 // clocked-in person's shift starts when they clocked in, minus any lateness, so
 // "in 12:50 · 12m late · shift 12:38" all agrees. Only writes when the rota is
 // empty, so a real/seeded schedule is never clobbered.
+// A deterministic demo lateness per person (minutes) — mostly on time, a few
+// clearly late — so the "clocked in late by X" display is actually visible.
+const DEMO_LATES = [0, 0, 0, 11, 24, 43];
+const demoLateFor = (r: ClockRecord) => (r.lateMin && r.lateMin > 0 ? r.lateMin : DEMO_LATES[[...r.name].reduce((n, c) => n + c.charCodeAt(0), 0) % DEMO_LATES.length]);
+// Seed a demo rota so every clocked-in person has a scheduled shift (their start
+// = clock-in minus a demo lateness, so a mix read as on-time / late). Marked
+// `demo:true` so we can refresh it, but NEVER touch a real/seeded rota.
 function ensureDemoRota(recs: Record<string, ClockRecord>): void {
-  if (rota().shifts.length) return;
+  const raw = read<{ staff?: RotaStaff[]; shifts?: RotaShift[]; demo?: boolean }>(ROTA_KEY);
+  if (raw?.shifts?.length && !raw.demo) return; // a real rota exists — leave it
   const day = todayISO();
   const pad = (n: number) => String(n).padStart(2, "0");
   const hm = (t: number) => `${pad(Math.floor((((t % 1440) + 1440) % 1440) / 60))}:${pad(((t % 60) + 60) % 60)}`;
   const staff: RotaStaff[] = []; const shifts: RotaShift[] = [];
   for (const r of Object.values(recs)) {
     staff.push({ id: r.id, name: r.name });
-    if (r.clockInAt) {
-      const startMin = mins(hhmm(r.clockInAt)) - (r.lateMin || 0);
-      shifts.push({ staffId: r.id, date: day, start: hm(startMin), end: hm(startMin + 360) });
-    } else {
-      shifts.push({ staffId: r.id, date: day, start: "09:00", end: "15:00" });
-    }
+    const startMin = r.clockInAt ? mins(hhmm(r.clockInAt)) - demoLateFor(r) : mins("09:00");
+    shifts.push({ staffId: r.id, date: day, start: hm(startMin), end: hm(startMin + 360) });
   }
-  write(ROTA_KEY, { staff, shifts });
+  write(ROTA_KEY, { staff, shifts, demo: true });
+}
+// UI-truth lateness: how late vs their scheduled shift start (falls back to the
+// stored value). Recomputed live so it's always right for the current rota.
+export function lateMinutesToday(r: ClockRecord): number {
+  if (!r.clockInAt) return 0;
+  const sh = shiftToday(r.name);
+  if (sh) return Math.max(0, mins(hhmm(r.clockInAt)) - mins(sh.start));
+  return r.lateMin || 0;
 }
 export const loadClock = (): Record<string, ClockRecord> => {
   const s = read<Record<string, ClockRecord>>(CLOCK_KEY);
