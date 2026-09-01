@@ -11,7 +11,7 @@ import { TourLauncher } from "@/features/common/TourLauncher";
 import { useTenantSettings } from "@/lib/settings";
 import { VenueMap } from "./VenueMap";
 import { DEMO_STAFF } from "@/features/learning/credentials";
-import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
+import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Freelancer Listings — the build-manual's "Listings, services & tickets"
@@ -241,7 +241,6 @@ export function FreelancerListingsApp() {
   const [error, setError] = useState<string | null>(null);
   const [local, setLocal] = useState<LocalState | null>(null);
   const [wizard, setWizard] = useState<{ draft: WizardDraft; key: string } | null>(null);
-  const [viewing, setViewing] = useState<{ draft: WizardDraft; runs?: Listing["blocks"] } | null>(null);
   const [tick, setTick] = useState(0);
   // In-progress drafts (never published) — resumable from the Listings tab.
   // How many listings sit behind each category / venue. Both library tabs show
@@ -479,7 +478,6 @@ export function FreelancerListingsApp() {
           }}
           onResume={(key, dr) => setWizard({ draft: dr, key })}
           onDeleteDraft={(key) => { if (confirm("Delete this draft?")) { deleteDraft(key); setTick((t) => t + 1); } }}
-          onView={(l) => setViewing({ draft: serverDraft(l) ?? loadDrafts()[l.id] ?? { ...emptyDraft(), id: l.id, title: l.name }, runs: l.blocks })}
           onSetVisibility={(l, vis) => {
             api(`/api/listings/${encodeURIComponent(l.id)}`, { method: "PUT", body: JSON.stringify({ visibility: vis }) })
               .then(() => refresh())
@@ -505,17 +503,6 @@ export function FreelancerListingsApp() {
         />
       )}
 
-      {viewing && (
-        <div onClick={(e) => e.target === e.currentTarget && setViewing(null)} className="fixed inset-0 z-[10000] flex items-start justify-center overflow-auto bg-black/60 p-4 sm:p-6">
-          <div className="w-full max-w-[1040px]">
-            <div className="mb-2 flex items-center justify-between text-white">
-              <span className="text-[13px] font-bold">Customer view — {viewing.draft.title || "listing"}</span>
-              <button type="button" onClick={() => setViewing(null)} className="text-[22px] leading-none">×</button>
-            </div>
-            <ListingPreview draft={viewing.draft} local={local} runs={viewing.runs} />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
@@ -573,7 +560,6 @@ function ListingsTab({
   onEdit,
   onResume,
   onDeleteDraft,
-  onView,
   onSetVisibility,
   visTick,
   onError,
@@ -585,7 +571,6 @@ function ListingsTab({
   onEdit: (l: Listing) => void;
   onResume: (key: string, dr: WizardDraft) => void;
   onDeleteDraft: (key: string) => void;
-  onView: (l: Listing) => void;
   onSetVisibility: (l: Listing, vis: "public" | "hidden") => void;
   visTick: number;
   onError: (m: string) => void;
@@ -595,6 +580,7 @@ function ListingsTab({
   const [dateFilter, setDateFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "live" | "ended" | "draft">("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [linkWarnId, setLinkWarnId] = useState<string | null>(null);
   const [archiveTick, setArchiveTick] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -653,9 +639,16 @@ function ListingsTab({
       .catch((e) => onError(e instanceof Error ? e.message : "Archive failed"));
     setArchiveTick((t) => t + 1);
   };
-  const copyLink = (l: Listing) => {
+  const copyLink = (l: Listing, isDraft?: boolean) => {
     const link = `${typeof window !== "undefined" ? window.location.origin : ""}/book/${l.id}`;
-    navigator.clipboard?.writeText(link).then(() => { setCopiedId(l.id); setTimeout(() => setCopiedId(null), 1500); }).catch(() => {});
+    navigator.clipboard?.writeText(link).then(() => {
+      setCopiedId(l.id);
+      setTimeout(() => setCopiedId(null), 1500);
+      // The /book link only opens for the public once the listing is Live.
+      // While it's a draft it 404s for everyone but the signed-in owner, so
+      // warn rather than let the operator send a link that silently fails.
+      if (isDraft) { setLinkWarnId(l.id); setTimeout(() => setLinkWarnId((v) => (v === l.id ? null : v)), 8000); }
+    }).catch(() => {});
   };
   // The one-line "Book now" widget for the operator's OWN website — pastes
   // anywhere HTML goes (Wix/WordPress/Squarespace embed blocks included).
@@ -896,6 +889,12 @@ function ListingsTab({
                         return <button key={v} type="button" onClick={() => setVisibility(l, v)} title={v === "public" ? "Listed on your booking page — parents can find and book it" : "Unlisted — off your booking page, but the direct link still books"} className="px-2.5 py-1 transition-colors" style={on ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { color: "var(--ink-3)" }}>{v === "public" ? "Public" : "Hidden"}</button>;
                       })}
                     </span>
+                    {linkWarnId === l.id && (
+                      <div className="order-last w-full rounded-lg border px-3 py-2 text-[11.5px] leading-[1.5]"
+                        style={{ background: "#fff7ed", borderColor: "#fed7aa", color: "#9a3412" }}>
+                        Link copied — but this listing is <b>Unpublished</b>, so parents will see &ldquo;not available&rdquo; until you open it in <b>Edit</b> and publish it. It works for you because you&rsquo;re signed in as the owner.
+                      </div>
+                    )}
                     {visNote === l.id && (
                       <div className="order-last w-full rounded-lg border px-3 py-2 text-[11.5px] leading-[1.5]"
                         style={visibilityOf(l) === "public"
@@ -909,8 +908,10 @@ function ListingsTab({
                       </div>
                     )}
                     <div className="ml-auto flex items-center gap-2">
-                      <Button sm onClick={() => copyLink(l)}>{copiedId === l.id ? "✓ Copied" : "🔗 Link"}</Button>
-                      <Button sm onClick={() => onView(l)}>View</Button>
+                      <Button sm onClick={() => copyLink(l, isDraft)}>{copiedId === l.id ? "✓ Copied" : "🔗 Link"}</Button>
+                      {/* Opens the real parent page (/book/{id}) in a new tab —
+                          the exact storefront a parent sees, not a preview. */}
+                      <Button sm onClick={() => window.open(`/book/${l.id}`, "_blank", "noopener")}>View as parent ↗</Button>
                       <Button sm variant="primary" onClick={() => onEdit(l)}>Edit</Button>
                       <div className="relative">
                         <Button sm onClick={() => setMenuId((m) => (m === l.id ? null : l.id))}>⋯</Button>
