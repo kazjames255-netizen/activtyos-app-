@@ -84,6 +84,18 @@ async function seedTenant(tid: string) {
   }, { merge: true });
   batch.set(db.collection("childFiles").doc(planFileId).collection("chunks").doc("0"), { b64: planPdf.toString("base64") }, { merge: true });
 
+  // Demo marketing + safeguarding + stock so the AI co-pilot has coupons,
+  // accidents and low-stock items to talk about across the platform.
+  batch.set(db.collection("discountCodes").doc(ns("code1")), { tenantId: tid, code: "SUMMER20", type: "percent", value: 20, active: true, usedCount: 14, expiry: "", createdAt: new Date().toISOString() }, { merge: true });
+  batch.set(db.collection("discountCodes").doc(ns("code2")), { tenantId: tid, code: "EARLYBIRD", type: "amount", value: 5, active: true, usedCount: 6, expiry: "", createdAt: new Date().toISOString() }, { merge: true });
+  const acc = (i: number, childName: string, injury: string, severity: string) => batch.set(db.collection("incidents").doc(ns(`inc${i}`)), { tenantId: tid, kind: "accident", date: today, time: "10:15", childName, injury, description: `${injury} — cleaned and comforted, parent notified.`, severity, firstAider: "Tom Reilly", parentNotified: true, createdAt: new Date().toISOString() }, { merge: true });
+  acc(1, "Ava Thompson", "Grazed knee", "minor");
+  acc(2, "Leo Brooks", "Bumped head", "moderate");
+  const stock = (i: number, name: string, quantity: number, minQty: number, location: string) => batch.set(db.collection("inventory").doc(ns(`inv${i}`)), { tenantId: tid, name, quantity, minQty, unit: "units", location, season: "Full year", lastCheckedAt: today, createdAt: new Date().toISOString() }, { merge: true });
+  stock(1, "First-aid plasters", 3, 10, "Store cupboard");
+  stock(2, "Sun cream bottles", 1, 5, "First-aid box");
+  stock(3, "Footballs", 22, 6, "Sports shed");
+
   batch.set(db.collection("listings").doc(listingId), {
     tenantId: tid, tenantName: tenant.name ?? "", name: "Holiday Multi-Sports Camp", passes: [{ name: "Morning", price: 22 }, { name: "Afternoon", price: 22 }],
     status: "live", visibility: "public", maxAttendees: "60", capacityScope: "listing", days: [1, 2, 3, 4, 5], images: [], gallery: [], categoryIds: [], addonIds: [], staffIds: [], sections: [], send: [],
@@ -135,7 +147,7 @@ async function seedTenant(tid: string) {
 
 // Remove every regdemo-* doc across all collections (namespaced + legacy shared ids).
 async function clean() {
-  for (const coll of ["listings", "blocks", "bookings", "children", "registers", "childFiles"]) {
+  for (const coll of ["listings", "blocks", "bookings", "children", "registers", "childFiles", "discountCodes", "incidents", "inventory"]) {
     const snap = await db.collection(coll).get();
     const del = snap.docs.filter((d) => d.id.startsWith("regdemo-") || d.id.startsWith("regdemo_"));
     for (let i = 0; i < del.length; i += 400) { const b = db.batch(); del.slice(i, i + 400).forEach((d) => b.delete(d.ref)); await b.commit(); }
