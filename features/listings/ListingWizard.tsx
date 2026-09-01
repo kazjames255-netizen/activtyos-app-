@@ -1793,8 +1793,8 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
   const live = dates.filter((x) => !d.datesOff.includes(x)).length;
   const hadRules = Object.keys(d.bookRules ?? {}).length > 0;
   // Changing the run length / weekly days can make a pass's booking option
-  // (Step 6) impossible — so a structural change clears them, and the note
-  // tells the operator to set them again.
+  // impossible — so a structural change clears them, and the note tells the
+  // operator to set them again on the Tickets & pricing step.
   const updRun = (patch: Partial<WizardDraft>) => upd({ ...patch, ...(hadRules ? { bookRules: {} } : {}) });
   const dayLabel = <span className="mb-1.5 block text-[11.5px] font-extrabold text-[#16306e]">Days it runs{weekly ? " · locked to Mon–Fri" : ""}</span>;
   return (
@@ -1802,7 +1802,7 @@ function RunStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
       <StepHead n={5} kicker="STEP 5 · WHEN IT RUNS" title="When it runs" lede="Pick the block size and which days run — the calendar builds itself." />
       {hadRules && (
         <div className="mb-3 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] font-semibold text-[#7a5b06]">
-          ⚠️ Changing the dates or weekly days here resets <b>“How parents can book each pass”</b> (Step 6) — pop back there and set it again after.
+          ⚠️ Heads up — changing the dates or days clears the <b>booking rules for each pass</b> (how each one can be booked — any day, whole week, etc.), which you set on the <b>Tickets &amp; pricing</b> step. Just set them again there once you&rsquo;re done here.
         </div>
       )}
       <div className="grid items-start gap-4 md:grid-cols-2">
