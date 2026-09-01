@@ -1230,12 +1230,48 @@ function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDel
 
 // ── Shared image bits ──────────────────────────────────────────────────────
 // One renderer used in the editor AND the customer view, so cropping is WYSIWYG.
+// Focal-point crop via background sizing: the image is sized to *cover* the frame
+// and then scaled by zoom, so it always overflows both axes once zoomed — which
+// lets Left/Right (x) AND Up/Down (y) both pan via background-position. (The old
+// object-position approach could only ever pan the single axis that happened to
+// overflow, so Left/Right was dead on portrait-ish images.)
 export function CroppedImage({ im, className, style }: { im: ListingImage; className?: string; style?: React.CSSProperties }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [ai, setAi] = useState(0); // image aspect (w/h)
+  const [ac, setAc] = useState(0); // container aspect (w/h)
+  useEffect(() => {
+    const el = ref.current; if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => { const r = el.getBoundingClientRect(); if (r.width && r.height) setAc(r.width / r.height); });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let alive = true; const img = new window.Image();
+    img.onload = () => { if (alive && img.naturalWidth && img.naturalHeight) setAi(img.naturalWidth / img.naturalHeight); };
+    img.src = im.src;
+    return () => { alive = false; };
+  }, [im.src]);
+  const z = (im.zoom || 100) / 100;
+  const ready = ai > 0 && ac > 0;
+  // Cover size on each axis (≥100% of the container) × zoom. Ratio preserved: the
+  // wider-relative axis stays at 100%×zoom, the other grows to cover — both scale
+  // by the same z, so the image never distorts and pans smoothly in both directions.
+  const bgW = ready ? Math.max(1, ai / ac) * z * 100 : 100;
+  const bgH = ready ? Math.max(1, ac / ai) * z * 100 : 100;
   return (
-    <div className={`overflow-hidden ${className || ""}`} style={style}>
-      {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={im.src} alt="" className="h-full w-full object-cover" style={{ objectPosition: `${im.x}% ${im.y}%`, transform: `scale(${im.zoom / 100})` }} />
-    </div>
+    <div
+      ref={ref}
+      className={`overflow-hidden bg-[var(--panel)] ${className || ""}`}
+      style={{
+        ...style,
+        backgroundImage: `url("${im.src}")`,
+        backgroundRepeat: "no-repeat",
+        backgroundPosition: `${im.x}% ${im.y}%`,
+        backgroundSize: ready ? `${bgW}% ${bgH}%` : "cover",
+      }}
+      role="img"
+    />
   );
 }
 
