@@ -42,7 +42,7 @@ const RECEIVED = new Set(["recorded", "succeeded"]);
 
 // ── Operator snapshot — the dashboard's numbers plus a compact booking list
 // so "who's in today" and "who still owes" have names, not just totals. ──
-async function tenantSnapshot(tenantId: string) {
+async function tenantSnapshot(tenantId: string, forStaff = false) {
   const [bookingsSnap, blocksSnap, listingsSnap, paymentsSnap, tasksSnap] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("blocks").where("tenantId", "==", tenantId).get(),
@@ -100,14 +100,24 @@ async function tenantSnapshot(tenantId: string) {
     outstanding: round2(outstandingOf(b)),
   });
 
+  const todayBlock = {
+    date: today,
+    sessions: sessions.filter((s) => s.date === today).map((s) => ({ listing: s.listing, start: s.start, end: s.end, booked: s.booked, capacity: s.capacity })),
+    expectedChildren: inToday.slice(0, 80).map((b) => ({ child: b.child, listing: b.listing, family: b.booker })),
+  };
+  const upcomingSessions = sessions.filter((s) => s.date >= today && s.open).slice(0, 10)
+    .map((s) => ({ date: s.date, start: s.start, end: s.end, listing: s.listing, spotsLeft: s.spotsLeft }));
+
+  // Front-line staff get an OPERATIONAL view only — who's in, sessions, tasks —
+  // never money, booking approvals or owing families. Those are the manager's,
+  // and handing them to a coach would be wrong (and a data-minimisation issue).
+  if (forStaff) {
+    return { today: todayBlock, upcomingSessions, openTasks };
+  }
+
   return {
-    today: {
-      date: today,
-      sessions: sessions.filter((s) => s.date === today).map((s) => ({ listing: s.listing, start: s.start, end: s.end, booked: s.booked, capacity: s.capacity })),
-      expectedChildren: inToday.slice(0, 80).map((b) => ({ child: b.child, listing: b.listing, family: b.booker })),
-    },
-    upcomingSessions: sessions.filter((s) => s.date >= today && s.open).slice(0, 10)
-      .map((s) => ({ date: s.date, start: s.start, end: s.end, listing: s.listing, spotsLeft: s.spotsLeft })),
+    today: todayBlock,
+    upcomingSessions,
     occupancy: { booked: openBooked, capacity: openCapacity, pct: openCapacity ? Math.round((openBooked / openCapacity) * 100) : 0 },
     bookings: {
       live: live.length,
@@ -216,9 +226,10 @@ ai.post("/chat", async (req, res) => {
   } else {
     const scope = operatorScope(req, res);
     if (!scope || !scope.tenantId) return; // operatorScope has already responded
-    snapshot = await tenantSnapshot(scope.tenantId);
-    who = auth.role === "staff"
-      ? "a staff member at an activity provider. The data is their employer's live operational picture. Their portal's areas are: Dashboard, Timetable, Registers, Tasks, Messages."
+    const isStaff = auth.role === "staff";
+    snapshot = await tenantSnapshot(scope.tenantId, isStaff);
+    who = isStaff
+      ? "a front-line staff member (e.g. a coach or activity leader) at an activity provider. The data is TODAY's operational picture only — the sessions running, the children expected in, and the team's tasks. You do NOT have their finances, revenue, who owes money, or booking approvals: those are the manager's, not a staff member's. If they ask about money, payments, owing families or approving bookings, say that's handled by their manager and you can't see it. Their portal's areas are: Dashboard, Timetable, Registers, Tasks, Messages."
       : "the owner/manager of a children's activity provider. The data is their business's live operational picture. Their portal's areas include: Dashboard, Bookings, Listings, Blocks & pricing, Registers, Families, Finances, Tasks, Messages.";
   }
 
