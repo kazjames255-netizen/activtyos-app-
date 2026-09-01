@@ -9,10 +9,12 @@ import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type ClockRecord, type ClockSettings, loadClock, loadClockSettings, saveClockSettings,
-  offToday, workedMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, rateFor, setApproved, editRecord, payHours, clockOut,
+  offToday, workedMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, shiftToday, rateFor, setApproved, editRecord, payHours, clockOut,
 } from "./data";
 
 const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+// e.g. 12 → "12m late", 230 → "3h 50m late"
+const fmtLate = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m}m`);
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 type Tab = "in" | "sheets" | "settings";
 
@@ -72,10 +74,12 @@ export function TimesheetsApp() {
     // Status colour, not action colour: clocked in = green, on break = amber,
     // out = grey. (Pink used to read as "clocked in", which is the clock-IN
     // colour on the staff page — the opposite of what it meant here.)
+    const sh = shiftToday(r.name);        // their rostered shift today (start/end)
+    const late = r.lateMin || 0;
     const footTone = r.status === "in" ? { bg: "#e6f4ea", fg: "#0f7a43" } : r.status === "break" ? { bg: "#fdf3e0", fg: "#8a5a09" } : { bg: "var(--panel)", fg: "var(--ink-3)" };
-    const foot = r.status === "in" ? `${hhmm(r.clockInAt)} — Clocked in${r.lateMin ? ` · ${r.lateMin}m late` : ""}${r.loc ? ` · ${r.loc.startsWith("📍") ? "Location" : r.loc}` : ""}`
-      : r.status === "break" ? `On break since ${hhmm(r.breakStart)}`
-      : r.clockInAt ? `Worked ${fmtDur(workedMs(r))} today` : "Not clocked in today";
+    const foot = r.status === "in" ? `${sh ? `Shift ${sh.start}–${sh.end} · ` : ""}in ${hhmm(r.clockInAt)}${late ? ` · ${fmtLate(late)} late` : sh ? " · on time" : ""}${r.loc ? ` · ${r.loc.startsWith("📍") ? "Location" : r.loc}` : ""}`
+      : r.status === "break" ? `On break since ${hhmm(r.breakStart)}${sh ? ` · shift ${sh.start}–${sh.end}` : ""}`
+      : r.clockInAt ? `Worked ${fmtDur(workedMs(r))} today${sh ? ` · shift ${sh.start}–${sh.end}` : ""}` : `Not clocked in${sh ? ` · shift from ${sh.start}` : ""}`;
     return (
       <div key={r.id} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
         <div className="flex items-start gap-2.5 p-3">
@@ -83,6 +87,10 @@ export function TimesheetsApp() {
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13.5px] font-extrabold text-[#1d3a8f]">{r.name}</div>
             <div className="truncate text-[11.5px] text-[var(--ink-3)]">{r.role}{r.op ? ` · ${r.op}` : ""}</div>
+            {/* Lateness front-and-centre: how late + when their shift was due to start. */}
+            {late > 0 && (
+              <div className="mt-1 inline-flex items-center gap-1 rounded-full bg-[#fdecec] px-2 py-0.5 text-[10.5px] font-extrabold text-[#c0392b]">⏰ {fmtLate(late)} late{sh ? ` · shift ${sh.start}` : ""}</div>
+            )}
             {(() => {
               const onClock = r.status === "in" || r.status === "break";
               const notIn = r.status === "out" && !r.clockInAt; // scheduled but never clocked in
