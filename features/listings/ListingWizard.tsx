@@ -1616,12 +1616,9 @@ function AgeCaps({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) =>
     <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel,#fbf8fc)] p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <div className="text-[12.5px] font-bold">Limit places by age group, per day <span className="font-normal text-[var(--ink-3)]">— optional</span></div>
+          <div className="text-[12.5px] font-bold">Limit places by age group <span className="font-normal text-[var(--ink-3)]">— optional, most listings skip this</span></div>
           <div className="text-[11px] leading-[1.5] text-[var(--ink-3)]">
-            Cap only the ages you want to limit — you can set a max on one group and leave the rest blank,
-            and the day&rsquo;s {Number.isFinite(ceiling) ? `${ceiling} places` : "total"} still can&rsquo;t be exceeded
-            (the uncapped ages share whatever&rsquo;s left). <b>Blank = no limit; 0 = closed</b>, so no child that age
-            can book. <b>Per day</b>, since a room refills each day. Group names, ages and room sizes are set in <b>Setup → Age groups &amp; rooms</b> — here you only set this listing&rsquo;s caps.
+            Set a daily cap for any age group — <b>blank = no limit, 0 = closed</b>. {Number.isFinite(ceiling) ? `The day’s ${ceiling} places still apply.` : "Your daily total still applies."} Groups &amp; room sizes come from <b>Setup → Age groups &amp; rooms</b>.
           </div>
         </div>
         {!on && (

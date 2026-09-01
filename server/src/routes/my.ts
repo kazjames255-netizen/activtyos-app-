@@ -705,6 +705,20 @@ my.post("/bookings", async (req, res) => {
     };
   };
 
+  // Server-side age gate. The checkout blocks this in the UI; this is the
+  // control that also stops a direct API call. When the listing doesn't accept
+  // out-of-range children, reject any that are (the "Yes" case is allowed
+  // through and later flipped to Approval needed).
+  if (!listing.allowOutOfRange && (Number.isFinite(ageFrom) || Number.isFinite(ageTo))) {
+    for (const it of input.items) {
+      const { name, age } = resolveChild(it);
+      if (outOfRange(age)) {
+        res.status(400).json({ error: `${name || "A child"} is outside this listing’s age range (${listing.ageFrom ?? ""}–${listing.ageTo ?? ""}).` });
+        return;
+      }
+    }
+  }
+
   const needsAddons = input.items.some((i) => i.addons?.length);
   const wantsVoucher = "voucherScheme" in input ? input.voucherScheme : undefined;
   const libAddons = new Map<string, LibAddon>();
