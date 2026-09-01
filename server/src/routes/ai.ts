@@ -262,14 +262,85 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
     return { today: todayBlock, upcomingSessions, openTasks, incidents, childrenSummary, team };
   }
 
+  // ── Operator-only: money, marketing & wider ops (staff never reach here) ──
+  const year = today.slice(0, 4);
+  const monthKey = today.slice(0, 7);
+  const [incomeSnap, expensesSnap, invoicesSnap, couponsSnap, membersSnap, referralsSnap, poSnap, inventorySnap, threadsSnap, postsSnap, momentsSnap, customersSnap] = await Promise.all([
+    db.collection("income").where("tenantId", "==", tenantId).get(),
+    db.collection("expenses").where("tenantId", "==", tenantId).get(),
+    db.collection("invoices").where("tenantId", "==", tenantId).get(),
+    db.collection("discountCodes").where("tenantId", "==", tenantId).get(),
+    db.collection("memberships").where("tenantId", "==", tenantId).get(),
+    db.collection("referrals").where("tenantId", "==", tenantId).get(),
+    db.collection("purchaseOrders").where("tenantId", "==", tenantId).get(),
+    db.collection("inventory").where("tenantId", "==", tenantId).get(),
+    db.collection("threads").where("tenantId", "==", tenantId).get(),
+    db.collection("posts").where("tenantId", "==", tenantId).get(),
+    db.collection("moments").where("tenantId", "==", tenantId).get(),
+    db.collection("customers").where("tenantId", "==", tenantId).get(),
+  ]);
+  const sumBy = <T,>(rows: T[], amt: (r: T) => number, keep: (r: T) => boolean) => round2(rows.filter(keep).reduce((s, r) => s + amt(r), 0));
+
+  // Payments received (from the base paymentsSnap), income ledger, expenses, invoices.
+  const payRows = paymentsSnap.docs.map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string });
+  const gotIn = (from: string) => sumBy(payRows, (p) => p.amount ?? 0, (p) => p.type !== "refund" && RECEIVED.has(p.status ?? "") && (p.createdAt ?? "") >= from);
+  const incomeRows = incomeSnap.docs.map((d) => d.data() as { date?: string; category?: string; amount?: number });
+  const expRows = expensesSnap.docs.map((d) => d.data() as { date?: string; category?: string; amount?: number; supplier?: string; status?: string });
+  const invRows = invoicesSnap.docs.map((d) => d.data() as { customerName?: string; amount?: number; status?: string; dueDate?: string });
+  const groupSum = (rows: { category?: string; amount?: number }[]) => {
+    const m = new Map<string, number>();
+    for (const r of rows) m.set(r.category || "Uncategorised", (m.get(r.category || "Uncategorised") ?? 0) + (r.amount ?? 0));
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([category, gbp]) => ({ category, gbp: round2(gbp) }));
+  };
+  const finances = {
+    receivedThisWeekGBP: takenThisWeek,
+    receivedThisMonthGBP: gotIn(`${monthKey}-01T00:00:00`),
+    receivedThisYearGBP: gotIn(`${year}-01-01T00:00:00`),
+    otherIncome: { thisMonthGBP: sumBy(incomeRows, (r) => r.amount ?? 0, (r) => (r.date ?? "").slice(0, 7) === monthKey), thisYearGBP: sumBy(incomeRows, (r) => r.amount ?? 0, (r) => (r.date ?? "").slice(0, 4) === year), byCategory: groupSum(incomeRows) },
+    expenses: { thisMonthGBP: sumBy(expRows, (r) => r.amount ?? 0, (r) => (r.date ?? "").slice(0, 7) === monthKey), thisYearGBP: sumBy(expRows, (r) => r.amount ?? 0, (r) => (r.date ?? "").slice(0, 4) === year), pendingGBP: sumBy(expRows, (r) => r.amount ?? 0, (r) => r.status === "pending"), byCategory: groupSum(expRows) },
+    invoices: { outstandingGBP: sumBy(invRows, (i) => i.amount ?? 0, (i) => i.status === "sent"), overdueCount: invRows.filter((i) => i.status === "sent" && (i.dueDate ?? "9999") < today).length, topOutstanding: invRows.filter((i) => i.status === "sent").sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0)).slice(0, 8).map((i) => ({ customer: i.customerName, amountGBP: round2(i.amount ?? 0), dueDate: i.dueDate ?? null, overdue: (i.dueDate ?? "9999") < today })) },
+  };
+
+  // Marketing: coupons, memberships, referrals.
+  const codes = couponsSnap.docs.map((d) => d.data() as { code?: string; type?: string; value?: number; usedCount?: number; active?: boolean; expiry?: string; membership?: boolean; referral?: boolean; referralReward?: boolean });
+  const mktCodes = codes.filter((c) => !c.membership && !c.referral && !c.referralReward);
+  const coupons = { activeCodes: mktCodes.filter((c) => c.active).length, totalRedemptions: mktCodes.reduce((s, c) => s + (c.usedCount ?? 0), 0), topCodes: [...mktCodes].sort((a, b) => (b.usedCount ?? 0) - (a.usedCount ?? 0)).slice(0, 8).map((c) => ({ code: c.code, type: c.type, value: c.value, usedCount: c.usedCount ?? 0, expiry: c.expiry ?? null })) };
+  const memRows = membersSnap.docs.map((d) => d.data() as { tierName?: string; priceMonthly?: number; status?: string });
+  const memberships = { activeMembers: memRows.filter((m) => m.status === "active").length, mrrGBP: sumBy(memRows, (m) => m.priceMonthly ?? 0, (m) => m.status === "active") };
+  const refRows = referralsSnap.docs.map((d) => d.data() as { referrerEmail?: string; friendSpend?: number; reward?: number });
+  const referrals = { friendsBooked: refRows.length, referredRevenueGBP: round2(refRows.reduce((s, r) => s + (r.friendSpend ?? 0), 0)), rewardsPaidGBP: round2(refRows.reduce((s, r) => s + (r.reward ?? 0), 0)) };
+
+  // Ops: purchase orders, inventory, messages, newsfeed, moments, customers.
+  const poRows = poSnap.docs.map((d) => d.data() as { supplier?: string; amount?: number; status?: string; dueDate?: string });
+  const purchaseOrders = { outstandingGBP: sumBy(poRows, (p) => p.amount ?? 0, (p) => p.status === "sent" || p.status === "received"), overdueCount: poRows.filter((p) => (p.status === "sent" || p.status === "received") && (p.dueDate ?? "9999") < today).length };
+  const invItems = inventorySnap.docs.map((d) => d.data() as { name?: string; quantity?: number; minQty?: number; location?: string });
+  const inventory = { items: invItems.length, lowStock: invItems.filter((i) => typeof i.quantity === "number" && typeof i.minQty === "number" && (i.quantity as number) <= (i.minQty as number)).slice(0, 12).map((i) => ({ name: i.name, quantity: i.quantity, minQty: i.minQty, location: i.location })) };
+  const threads = threadsSnap.docs.map((d) => d.data() as { parentName?: string; subject?: string; lastFrom?: string; lastAt?: string; operatorUnread?: number });
+  const messages = { threads: threads.length, unreadThreads: threads.filter((t) => (t.operatorUnread ?? 0) > 0).length, unreadMessages: threads.reduce((s, t) => s + (t.operatorUnread ?? 0), 0), recent: [...threads].filter((t) => (t.operatorUnread ?? 0) > 0).sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")).slice(0, 6).map((t) => ({ parent: t.parentName, subject: t.subject, from: t.lastFrom, unread: t.operatorUnread })) };
+  const postRows = postsSnap.docs.map((d) => d.data() as { title?: string; status?: string; createdAt?: string });
+  const newsfeed = { published: postRows.filter((p) => p.status === "published").length, drafts: postRows.filter((p) => p.status === "draft").length, scheduled: postRows.filter((p) => p.status === "scheduled").length, recent: postRows.filter((p) => p.status === "published").sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")).slice(0, 5).map((p) => ({ title: p.title, createdAt: p.createdAt })) };
+  const weekAgoDate = new Date(now.getTime() - 7 * 86_400_000).toISOString();
+  const momentRows = momentsSnap.docs.map((d) => d.data() as { createdAt?: string });
+  const moments = { total: momentRows.length, last7d: momentRows.filter((m) => (m.createdAt ?? "") >= weekAgoDate).length };
+  const customersCount = customersSnap.size;
+
   return {
     today: todayBlock,
     upcomingSessions,
     listings,
-    families,
+    families: { ...families, records: customersCount },
     childrenSummary,
     team,
     incidents,
+    finances,
+    coupons,
+    memberships,
+    referrals,
+    purchaseOrders,
+    inventory,
+    messages,
+    newsfeed,
+    moments,
     occupancy: { booked: openBooked, capacity: openCapacity, pct: openCapacity ? Math.round((openBooked / openCapacity) * 100) : 0 },
     bookings: {
       live: live.length,
@@ -400,7 +471,8 @@ ai.post("/chat", async (req, res) => {
     `You are talking to ${who}`,
     `Today is ${today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" })}, and the current UK time is ${today.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" })}. Use this time to judge which of today's sessions are running now, still to come, or already finished.`,
     "You are an expert on this platform and genuinely helpful. There are two kinds of question and you handle BOTH well:",
-    "1) DATA questions ('who's in today?', 'how much have I taken?', 'any allergies in?', 'how full is X?') — answer from the LIVE DATA below. Read it carefully and thoroughly; the answer is very often in there (attendance, care flags/SEND/allergies, sessions, bookings, families, listings, incidents, team, money). Never invent names, numbers or bookings, and never state a figure that isn't derivable from the data.",
+    "1) DATA questions ('who's in today?', 'how much have I taken?', 'any allergies in?', 'how full is X?', 'what are my biggest expenses?', 'which coupons are live?', 'am I owed on invoices?', 'anything low on stock?', 'any unread messages?') — answer from the LIVE DATA below. Read it ALL carefully; the answer is very often in there: today's attendance & care flags (SEND/allergy/medical/dietary), sessions, bookings & approvals, listings with fill, families, team roster, incidents, and — for operators — finances (received this week/month/year, other income, expenses by category, invoices outstanding/overdue), marketing (coupons, memberships/MRR, referrals), inventory low-stock, messages unread, newsfeed & moments counts. Never invent names, numbers or bookings, and never state a figure that isn't derivable from the data.",
+    "WHAT YOU CANNOT SEE (these live in the browser, not your data): the live day-rota / who is physically working today, clock-in & timesheets, staff holiday/absence, appraisals, learning/course completions & DBS/credential expiry, payroll, staff availability, the policy documents library, and milestone progress. If asked about any of these, say plainly you can't see it here and link the user to the right screen (use the NAVIGATION paths) — e.g. Schedule for the rota, Compliance & certificates for DBS, Learning Centre for training, Documents for policies. Do not guess.",
     "2) HOW-TO questions ('how do I take a register?', 'how do I add a listing / refund / message parents?') — answer from the HOW-TO GUIDE below with clear, numbered, step-by-step instructions naming the exact screens.",
     "NEVER reply with a bare 'I don't know' or 'I don't have that.' Always give the most useful answer you can: answer from the data if it's there; if a specific record genuinely isn't in the data, say what you CAN see and then tell them precisely where in the app to find or do the rest (and, if it's a how-to, give the steps). Be confident and practical.",
     "The ONE thing you cannot see is the live day-rota (who is physically working today) — that's held in the Schedule screen, not your data. If asked who's working today, say so and point to Schedule/Timetable; you CAN still name the team roster from the data.",
