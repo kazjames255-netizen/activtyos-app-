@@ -306,10 +306,10 @@ export function TasksApp() {
             );
           })}
         </div>}
-        {/* Section tabs live in the title card */}
-        <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-1 rounded-2xl border border-white/25 bg-white/95 p-1 text-[12.5px] font-bold shadow-sm">
-          {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 transition-colors" style={tab === k ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{l}</button>)}
-          {showMilestones && <button type="button" onClick={() => setTab("milestones")} className="ml-0.5 inline-flex items-center gap-1.5 rounded-xl px-4 py-2 transition-transform hover:-translate-y-px" style={onMilestones ? { background: "linear-gradient(135deg,#6d28d9,#0e7490)", color: "#fff", boxShadow: "0 6px 16px -6px rgba(109,40,217,.5)" } : { color: "#6d28d9", boxShadow: "inset 0 0 0 1.5px rgba(109,40,217,.28)" }}>📍 Milestones</button>}
+        {/* Section tabs — a segmented control that sits on the hero */}
+        <div className="mt-4 inline-flex max-w-full flex-wrap items-center gap-0.5 rounded-full bg-white/10 p-1 text-[12.5px] font-bold ring-1 ring-inset ring-white/15 backdrop-blur-sm">
+          {TABS.map(([k, l]) => <button key={k} type="button" onClick={() => setTab(k)} className="rounded-full px-3.5 py-1.5 transition-colors" style={tab === k ? { background: "#fff", color: BLUE } : { color: "rgba(255,255,255,.8)" }}>{l}</button>)}
+          {showMilestones && <button type="button" onClick={() => setTab("milestones")} className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition-colors" style={onMilestones ? { background: "#fff", color: "#6d28d9" } : { color: "rgba(255,255,255,.85)" }}>📍 Milestones</button>}
         </div>
       </div>
 
