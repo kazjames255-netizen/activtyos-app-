@@ -259,6 +259,15 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
     return { name: nm, status: l.status || "live", visibility: l.visibility || "public", fillPct: f && f.cap ? Math.round((f.booked / f.cap) * 100) : null };
   }).slice(0, 50);
 
+  // Session capacity — which upcoming sessions are full / nearly full / quiet.
+  const upOpen = sessions.filter((s) => s.date >= today && s.open);
+  const sessionCapacity = {
+    full: upOpen.filter((s) => s.spotsLeft <= 0).length,
+    nearlyFull: upOpen.filter((s) => s.spotsLeft > 0 && s.spotsLeft <= 3).length,
+    fillingFast: [...upOpen].filter((s) => s.spotsLeft > 0).sort((a, b) => a.spotsLeft - b.spotsLeft).slice(0, 5).map((s) => ({ date: s.date, listing: s.listing, spotsLeft: s.spotsLeft })),
+    quietest: [...upOpen].sort((a, b) => b.spotsLeft - a.spotsLeft).slice(0, 5).map((s) => ({ date: s.date, listing: s.listing, spotsLeft: s.spotsLeft })),
+  };
+
   // Families — unique bookers, and who spends the most.
   const spendByFamily = new Map<string, number>();
   for (const b of live) spendByFamily.set(b.booker, (spendByFamily.get(b.booker) ?? 0) + (b.amount ?? 0));
@@ -356,6 +365,7 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
     team,
     incidents,
     taskSummary,
+    sessionCapacity,
     finances,
     coupons,
     memberships,
@@ -518,6 +528,7 @@ ai.post("/chat", async (req, res) => {
     "LINKS — you can send the user straight to any screen. Whenever you tell them where to go, include a markdown link with the EXACT path from the NAVIGATION list below, e.g. [Discount codes](/" + portal + "/marketing) or [Setup → Payments](/" + portal + "/setup?tab=bookings). Use only paths from that list; never invent a path. Prefer ONE precise link per answer.",
     "ADVICE & CROSS-REFERENCING — when a question needs two things joined (e.g. children with allergies who haven't signed in; top families who also owe money; a fast-filling listing to add a session to), do the cross-reference yourself from the data. For 'should I…' questions, give a clear recommendation grounded in the numbers, and label it as a suggestion. If a list in the data is capped (e.g. top-N families/children) and the exact record isn't shown, say you're showing the busiest/top items and link to the full screen.",
     "TIME/TRENDS LIMIT — the data is a live snapshot (mostly today + this week). You do NOT have historical trends or last-month figures. If asked to compare periods or show a trend, say so briefly and link to Finance & analytics; don't invent past numbers.",
+    "STYLE — be warm, natural and conversational, like a sharp colleague. Lead with the direct answer, keep it tight, and where it helps offer the obvious next step (with its link). If a request is ambiguous — e.g. a parent with several children or bookings, or an operator naming a family that isn't in the data — briefly itemise the options or ask which one, rather than guessing. Vary your phrasing; don't sound templated.",
     "",
     `HOW-TO GUIDE (where things are done in the app):\n• ${HOWTO[howtoKey]}`,
     "",
