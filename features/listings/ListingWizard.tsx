@@ -1534,7 +1534,13 @@ function CapacityStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft
       <StepHead n={3} kicker="STEP · CAPACITY" title="How many can come" lede="The size, whether out-of-range children can request a place, and any per-age caps." />
       <div className="grid items-start gap-4 md:grid-cols-2">
         <RichCard icon="👧👦" title="Places & spaces">
-          <YesNo label="Allow children outside this age range to attend?" value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help="If No, out-of-range parents can't book. If Yes, they can request a place." />
+          <YesNo label="Allow children outside this age range to attend?" value={d.allowOutOfRange} onChange={(v) => upd({ allowOutOfRange: v })} help="If No, out-of-range parents can't book at all. If Yes, they can book — but it always comes to you as a request to approve or decline, even on an auto-confirm listing." />
+          {d.allowOutOfRange && (
+            <div className="mb-2 flex items-start gap-2 rounded-lg border border-[#f0d9b5] bg-[#fdf6ea] px-3 py-2 text-[11.5px] leading-[1.5] text-[#8a5a09]">
+              <span>ℹ️</span>
+              <span>Out-of-range bookings won&rsquo;t auto-confirm — each one lands in <b>Bookings → needs approval</b> for you to approve or decline. In-range children book as normal.</span>
+            </div>
+          )}
           <div className="my-2 flex flex-wrap items-end gap-2">
             <div className="w-[160px]"><FieldLabel>Maximum attendees</FieldLabel><Input type="number" min={1} value={d.maxAttendees} onChange={(e) => upd({ maxAttendees: e.target.value })} className="w-full" /></div>
             <div className="flex gap-1 pb-[3px]">

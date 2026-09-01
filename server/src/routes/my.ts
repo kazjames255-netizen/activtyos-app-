@@ -605,7 +605,19 @@ my.post("/bookings", async (req, res) => {
     waitlistMode?: "manual" | "auto";
     bookingType?: "auto" | "manual";
     discounts?: DiscountRule[];
+    ageFrom?: string;
+    ageTo?: string;
+    allowOutOfRange?: boolean;
   };
+  // An out-of-range child on a listing that ALLOWS them still can't be seated
+  // automatically — the place is a request the provider approves or declines,
+  // even on an auto-confirm listing. (When the listing doesn't allow them the
+  // checkout blocks the booking outright; this only bites the "Yes" case.)
+  const ageFrom = parseInt(listing.ageFrom ?? "", 10);
+  const ageTo = parseInt(listing.ageTo ?? "", 10);
+  const outOfRange = (age?: number) =>
+    typeof age === "number" && Number.isFinite(age) && age > 0 &&
+    ((Number.isFinite(ageFrom) && age < ageFrom) || (Number.isFinite(ageTo) && age > ageTo));
   // Lifecycle gates — the client-side lock is a courtesy, this is the control.
   if ((listing.status ?? "live") !== "live" || listing.archived) {
     res.status(409).json({ error: "This listing isn't open for booking" });
@@ -1165,7 +1177,10 @@ my.post("/bookings", async (req, res) => {
             // date + price per meal bought on this segment.
             ...(() => { const mi = segAddons.filter((a) => a.meal).map((a) => ({ date: a.onDays[0], name: a.name, price: a.price })); return mi.length ? { mealItems: mi } : {}; })(),
             sessions: block.sessions.filter((s) => seg.days.includes(s.date)).map(sessionLabel),
-            status: placed ? placedStatus : "Waitlisted",
+            // Out-of-range child on an allow-out-of-range listing → request a
+            // place (Approval needed), overriding an otherwise auto-confirm. An
+            // operator booking on-behalf is itself the approval, so it stands.
+            status: placed ? (!onBehalf && listing.allowOutOfRange && outOfRange(rc.age) ? "Approval needed" : placedStatus) : "Waitlisted",
             // Judged on what's left to pay, not the method: a HAF/free £0 place
             // — or one fully covered by store credit — is Funded, never Unpaid.
             // A voucher booking waits on the scheme's money, not the parent — a

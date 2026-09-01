@@ -168,6 +168,18 @@ export function ageProblem(d: WizardDraft, c: ChildProfile): string | null {
   if (Number.isFinite(to) && age > to) return `${c.name || "This child"} would be ${age} — this listing is for ${d.ageFrom}–${d.ageTo}.`;
   return null;
 }
+/** Out of range, but the listing accepts out-of-range children — a heads-up
+ *  (not a block) that the place has to be approved by the provider. */
+export function ageApprovalNote(d: WizardDraft, c: ChildProfile): string | null {
+  if (!d.allowOutOfRange) return null;
+  const from = parseInt(d.ageFrom, 10), to = parseInt(d.ageTo, 10);
+  if (!Number.isFinite(from) && !Number.isFinite(to)) return null;
+  const age = ageOn(c.dob, d.runFrom);
+  if (age === null) return null;
+  const outside = (Number.isFinite(from) && age < from) || (Number.isFinite(to) && age > to);
+  if (!outside) return null;
+  return `${c.name || "This child"} is outside the ${d.ageFrom}–${d.ageTo} age range, so this place has to be approved by the provider — you'll book now and they'll confirm.`;
+}
 /** Going back was a faint line of underlined text; at every stage it is now a
  *  button that looks like one, so the way out is as findable as the way on. */
 function BackBtn({ tk, onClick, children, className = "" }: {
@@ -208,6 +220,7 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
   // fields with no visible edge at all.
   const inpStyle = { background: tk.inputBg, borderColor: `${tk.ink}4d`, color: tk.ink };
   const problem = draft.name.trim() ? ageProblem(d, draft) : null;
+  const approvalNote = draft.name.trim() && !problem ? ageApprovalNote(d, draft) : null;
   // The provider's own questions, narrowed to this listing and this child's
   // age. `d.runFrom` rather than today, matching ageProblem above: the age
   // that matters is the one they'll be on the first day they attend, and two
@@ -390,6 +403,10 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
           {problem && (
             <div className={`mt-2 border px-3 py-2 text-[12px] font-bold ${tk.round}`}
               style={{ borderColor: "#f87171", background: "rgba(248,113,113,.12)", color: "#fca5a5" }}>{problem}</div>
+          )}
+          {approvalNote && (
+            <div className={`mt-2 border px-3 py-2 text-[12px] font-semibold leading-[1.5] ${tk.round}`}
+              style={{ borderColor: "#f59e0b", background: "rgba(245,158,11,.12)", color: "#e0a020" }}>{approvalNote}</div>
           )}
 
           {/* After the name, so it can be asked for by name, and so the two
