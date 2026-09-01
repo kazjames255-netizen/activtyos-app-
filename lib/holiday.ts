@@ -20,7 +20,9 @@ export interface Absence {
   kind: AbsenceKind;
   start: string;        // ISO yyyy-mm-dd
   end: string;          // ISO yyyy-mm-dd (== start for a single day)
-  half?: "am" | "pm" | null; // half-day, only meaningful when start === end
+  half?: "am" | "pm" | null; // legacy half-day marker (kept for older records)
+  fromTime?: string;    // "HH:mm" — set when a single day is booked for specific times
+  toTime?: string;      // "HH:mm" — paired with fromTime
   days: number;         // paid-leave working days this booking consumes
   status: AbsenceStatus;
   reason?: string;

@@ -73,7 +73,7 @@ export function MyHolidayApp() {
         <div className="divide-y divide-[var(--line)]">{mine.map((a) => { const km = KIND_META[a.kind]; const tone = a.status === "approved" ? "bg-[#e6f4ea] text-[#0f7a43]" : a.status === "pending" ? "bg-[#fdf3e0] text-[#8a5a09]" : "bg-[#eef1f6] text-[#64748b]"; return (
           <div key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
             <span className="grid h-8 w-8 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span>
-            <div className="min-w-[150px]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{km.label}{a.paid === false && <span className="ml-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b]">unpaid</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{fmtRange(a.start, a.end)}{a.half ? ` · ${a.half}` : ""} · {a.days}d</div></div>
+            <div className="min-w-[150px]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{km.label}{a.paid === false && <span className="ml-1.5 rounded-full bg-[#eef1f6] px-1.5 py-0.5 text-[9.5px] font-bold text-[#64748b]">unpaid</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{fmtRange(a.start, a.end)}{a.fromTime ? ` · ${a.fromTime}–${a.toTime}` : a.half ? ` · ${a.half}` : ""} · {a.days}d</div></div>
             {a.note && <div className="text-[11.5px] italic text-[var(--ink-3)]">“{a.note}”</div>}
             <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${tone}`}>{a.status}</span>
             {a.status === "pending" && <button type="button" onClick={() => cancel(a.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Cancel</button>}
@@ -203,7 +203,7 @@ export function MyHolidayApp() {
             <div className="divide-y divide-[var(--line)]">{mine.map((a) => { const km = KIND_META[a.kind]; const tone = a.status === "approved" ? "bg-[#e6f4ea] text-[#0f7a43]" : a.status === "pending" ? "bg-[#fdf3e0] text-[#8a5a09]" : "bg-[#eef1f6] text-[#64748b]"; return (
               <div key={a.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
                 <span className="grid h-8 w-8 place-items-center rounded-lg text-[14px]" style={{ background: km.tone + "1a" }}>{km.icon}</span>
-                <div className="min-w-[150px]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{km.label}</div><div className="text-[11.5px] text-[var(--ink-3)]">{fmtRange(a.start, a.end)}{a.half ? ` · ${a.half}` : ""} · {a.days}d</div></div>
+                <div className="min-w-[150px]"><div className="text-[12.5px] font-bold text-[var(--ink)]">{km.label}</div><div className="text-[11.5px] text-[var(--ink-3)]">{fmtRange(a.start, a.end)}{a.fromTime ? ` · ${a.fromTime}–${a.toTime}` : a.half ? ` · ${a.half}` : ""} · {a.days}d</div></div>
                 {a.note && <div className="text-[11.5px] italic text-[var(--ink-3)]">“{a.note}”</div>}
                 <span className={`ml-auto rounded-full px-2.5 py-0.5 text-[10.5px] font-bold ${tone}`}>{a.status}</span>
                 {a.status === "pending" && <button type="button" onClick={() => cancel(a.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Cancel</button>}
@@ -219,15 +219,22 @@ export function MyHolidayApp() {
   );
 }
 
-function RequestModal({ region, remaining, rolled, initialKind, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; rolled?: boolean; initialKind?: AbsenceKind; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; reason?: string; days: number }) => void; onClose: () => void }) {
+function RequestModal({ region, remaining, rolled, initialKind, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; rolled?: boolean; initialKind?: AbsenceKind; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; fromTime?: string; toTime?: string; reason?: string; days: number }) => void; onClose: () => void }) {
   const today = isoDate(new Date());
   const [kind, setKind] = useState<AbsenceKind>(initialKind ?? "annual");
   const [start, setStart] = useState(today);
   const [end, setEnd] = useState(today);
-  const [half, setHalf] = useState<"am" | "pm" | "">("");
+  const [dur, setDur] = useState<"all" | "times">("all");
+  const [fromTime, setFromTime] = useState("09:00");
+  const [toTime, setToTime] = useState("13:00");
   const [reason, setReason] = useState("");
   const single = start === end;
-  const days = workingDays(start, end, { half: single ? (half || null) : null, region });
+  const timed = single && dur === "times";
+  const mins = (t: string) => { const [h, m] = t.split(":").map(Number); return h * 60 + m; };
+  const timedHours = timed ? (mins(toTime) - mins(fromTime)) / 60 : 0;
+  // A part-day booking consumes a fraction of the day's allowance (rounded to the
+  // nearest half, capped at a full day) — a standard working day is taken as 7.5h.
+  const days = timed ? Math.min(1, Math.max(0.5, Math.round((timedHours / 7.5) * 2) / 2)) : workingDays(start, end, { region });
   const rolledUnpaid = rolled && kind === "annual"; // holiday already paid via rolled-up
   const overBudget = !rolledUnpaid && kind === "annual" && days > remaining;
   // context note that depends on the type chosen
@@ -246,12 +253,16 @@ function RequestModal({ region, remaining, rolled, initialKind, onSubmit, onClos
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">From</span><Input type="date" value={start} onChange={(e) => { setStart(e.target.value); if (e.target.value > end) setEnd(e.target.value); }} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">To</span><Input type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} className="w-full" /></label>
           </div>
-          {single && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Half day</span><Select value={half} onChange={(e) => setHalf(e.target.value as "am" | "pm" | "")} className="w-full"><option value="">Full day</option><option value="am">Morning (AM)</option><option value="pm">Afternoon (PM)</option></Select></label>}
+          {single && <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Duration</span><Select value={dur} onChange={(e) => setDur(e.target.value as "all" | "times")} className="w-full"><option value="all">All day</option><option value="times">Specific times</option></Select></label>}
+          {timed && <div className="grid grid-cols-2 gap-2">
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">From time</span><Input type="time" value={fromTime} onChange={(e) => { setFromTime(e.target.value); if (e.target.value >= toTime) setToTime(e.target.value); }} className="w-full" /></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Until</span><Input type="time" value={toTime} min={fromTime} onChange={(e) => setToTime(e.target.value)} className="w-full" /></label>
+          </div>}
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Reason (optional)</span><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. family trip" className="w-full" /></label>
           {context && <div className={`rounded-lg px-3 py-2 text-[11.5px] font-semibold ${context.tone}`}>{context.text}</div>}
-          <div className={`rounded-lg px-3 py-2 text-[12px] font-semibold ${overBudget ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{days} working day{days === 1 ? "" : "s"}{rolledUnpaid ? " · unpaid (already in your pay)" : kind === "annual" ? ` · ${remaining} left before this` : ""}{overBudget ? " — more than your remaining allowance" : ""}</div>
+          <div className={`rounded-lg px-3 py-2 text-[12px] font-semibold ${overBudget ? "bg-[#fdecec] text-[#c0392b]" : "bg-[#eef4fd] text-[#1d3a8f]"}`}>{timed ? `${fromTime}–${toTime} · ` : ""}{days} working day{days === 1 ? "" : "s"}{rolledUnpaid ? " · unpaid (already in your pay)" : kind === "annual" ? ` · ${remaining} left before this` : ""}{overBudget ? " — more than your remaining allowance" : ""}</div>
         </div>
-        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={days <= 0} onClick={() => onSubmit({ kind, start, end, half: single ? (half || null) : null, reason: reason || undefined, days })}>Send request</Button></div>
+        <div className="mt-3 flex justify-end gap-2"><Button onClick={onClose}>Cancel</Button><Button variant="primary" disabled={days <= 0 || (timed && timedHours <= 0)} onClick={() => onSubmit({ kind, start, end, half: null, fromTime: timed ? fromTime : undefined, toTime: timed ? toTime : undefined, reason: reason || undefined, days })}>Send request</Button></div>
       </div>
     </div>
   );
