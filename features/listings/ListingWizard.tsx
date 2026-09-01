@@ -1233,7 +1233,7 @@ function ChipStep({ n, kicker, title, lede, options, sel, onToggle, onAdd, onDel
 // lets Left/Right (x) AND Up/Down (y) both pan via background-position. (The old
 // object-position approach could only ever pan the single axis that happened to
 // overflow, so Left/Right was dead on portrait-ish images.)
-export function CroppedImage({ im, className, style }: { im: ListingImage; className?: string; style?: React.CSSProperties }) {
+export function CroppedImage({ im, className, style, contain }: { im: ListingImage; className?: string; style?: React.CSSProperties; contain?: boolean }) {
   const ref = useRef<HTMLDivElement>(null);
   const [ai, setAi] = useState(0); // image aspect (w/h)
   const [ac, setAc] = useState(0); // container aspect (w/h)
@@ -1265,15 +1265,17 @@ export function CroppedImage({ im, className, style }: { im: ListingImage; class
         ...style,
         backgroundImage: `url("${im.src}")`,
         backgroundRepeat: "no-repeat",
-        backgroundPosition: `${im.x}% ${im.y}%`,
-        backgroundSize: ready ? `${bgW}% ${bgH}%` : "cover",
+        // contain = show the WHOLE image (never crop — e.g. certificates/docs in
+        // the gallery); otherwise cover-crop with the pan/zoom focal point.
+        backgroundPosition: contain ? "center" : `${im.x}% ${im.y}%`,
+        backgroundSize: contain ? "contain" : ready ? `${bgW}% ${bgH}%` : "cover",
       }}
       role="img"
     />
   );
 }
 
-function ImageManager({ images, onChange, addLabel, previewAspect = "16 / 9" }: { images: ListingImage[]; onChange: (imgs: ListingImage[]) => void; addLabel: string; previewAspect?: string }) {
+function ImageManager({ images, onChange, addLabel, previewAspect = "16 / 9", contain = false }: { images: ListingImage[]; onChange: (imgs: ListingImage[]) => void; addLabel: string; previewAspect?: string; contain?: boolean }) {
   const fileRef = useRef<HTMLInputElement>(null);
   // In a walkthrough, the main photo is pre-seeded — open its crop panel on
   // mount so the tour can show the crop-and-move controls straight away.
@@ -1284,7 +1286,7 @@ function ImageManager({ images, onChange, addLabel, previewAspect = "16 / 9" }: 
     const files = Array.from(e.target.files || []);
     const add: ListingImage[] = [];
     for (const f of files) { try { add.push({ src: await fileToImage(f), x: 50, y: 50, zoom: 100 }); } catch { /* skip */ } }
-    if (add.length) { const start = images.length; onChange([...images, ...add]); setEditIdx(start); }
+    if (add.length) { const start = images.length; onChange([...images, ...add]); if (!contain) setEditIdx(start); }
   }
   const setCrop = (i: number, patch: Partial<ListingImage>) => onChange(images.map((x, j) => (j === i ? { ...x, ...patch } : x)));
   const im = editIdx !== null ? images[editIdx] : null;
@@ -1298,15 +1300,15 @@ function ImageManager({ images, onChange, addLabel, previewAspect = "16 / 9" }: 
         <div className="mb-2 flex flex-wrap gap-1.5">
           {images.map((x, i) => (
             <div key={i} className="relative">
-              <div onClick={() => setEditIdx(i)} className="cursor-pointer rounded-lg border" style={{ borderColor: editIdx === i ? "var(--brand-2)" : "var(--line)" }}>
-                <CroppedImage im={x} className="h-[64px] w-[96px] rounded-lg" />
+              <div onClick={() => { if (!contain) setEditIdx(i); }} className={`rounded-lg border ${contain ? "" : "cursor-pointer"}`} style={{ borderColor: editIdx === i && !contain ? "var(--brand-2)" : "var(--line)" }}>
+                <CroppedImage im={x} className="h-[64px] w-[96px] rounded-lg" contain={contain} />
               </div>
               <button type="button" onClick={() => { onChange(images.filter((_, j) => j !== i)); setEditIdx(null); }} className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-black/70 text-[10px] text-white">×</button>
             </div>
           ))}
         </div>
       )}
-      {im && editIdx !== null && (
+      {!contain && im && editIdx !== null && (
         <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
           <div className="mb-2 flex items-center justify-between">
             <span className="text-[12px] font-extrabold">✂ Crop &amp; move — drag the sliders (this is exactly what parents see)</span>
@@ -1411,8 +1413,8 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
           <div className="mt-1 text-[11px] text-[var(--ink-3)]">Pick the shape (tall <b>16:9</b> or short-wide <b>banner</b>) — the crop preview matches the customer hero exactly. <b>Add more than one photo and they rotate as a carousel.</b></div>
         </RichCard>
         <RichCard icon="📸" title="Gallery" subtitle="Extra photos for the page" tint="teal">
-          <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" previewAspect="1 / 1" />
-          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Shown as a gallery at the bottom of the customer page.</div>
+          <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" contain />
+          <div className="mt-1 text-[11px] text-[var(--ink-3)]">Shown in full at the bottom of the customer page — no cropping, so certificates &amp; docs stay whole.</div>
         </RichCard>
       </div>
     </div>
@@ -3483,7 +3485,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
             ) : (
               <span className="flex h-8 w-8 flex-none items-center justify-center rounded-lg text-[15px]" style={{ background: a.emoji ? "#e4f8ee" : "#06d6a0", color: a.emoji ? undefined : "#fff" }}>{a.emoji || "＋"}</span>
             )}{a.name}</span><b style={{ color: DEEP }}>{money(a.price)}</b></div>)}</div></PlayCard>}
-            {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title={headingOf(d, "gallery", "title")}><div className={`grid gap-2.5 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} />)}</div></PlayCard>}
+            {d.gallery.length > 0 && <PlayCard e="📸" tint="#fff6e0" title={headingOf(d, "gallery", "title")}><div className={`grid gap-2.5 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} className="rounded-2xl" style={{ aspectRatio: "1 / 1" }} contain />)}</div></PlayCard>}
           </div>
           {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
@@ -3850,7 +3852,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
               // eslint-disable-next-line @next/next/no-img-element
               <img src={a.image} alt="" className="h-8 w-8 flex-none object-cover" />
             ) : a.emoji ? <span className="text-[16px]">{a.emoji}</span> : null}{a.name}</span><span className={`font-black ${cond}`} style={{ color: LIME }}>{money(a.price)}</span></div>)}</SportSec>}
-            {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} />)}</div></SportSec>}
+            {d.gallery.length > 0 && <SportSec eye={headingOf(d, "gallery", "eyebrow")} title={headingOf(d, "gallery", "title")}><div className={`grid gap-2 ${full ? "grid-cols-2 sm:grid-cols-4" : "grid-cols-3"}`}>{d.gallery.map((im, i) => <CroppedImage key={i} im={im} style={{ aspectRatio: "1 / 1" }} contain />)}</div></SportSec>}
           </div>
           {full && <div id="aos-book" className="self-start lg:sticky lg:top-4">{widget}</div>}
         </div>
