@@ -584,6 +584,7 @@ function ListingsTab({
   const [statusFilter, setStatusFilter] = useState<"all" | "live" | "ended" | "draft">("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [linkWarnId, setLinkWarnId] = useState<string | null>(null);
+  const [qrFor, setQrFor] = useState<Listing | null>(null);
   const [archiveTick, setArchiveTick] = useState(0);
   const [showArchived, setShowArchived] = useState(false);
   // Confirmation + undo so archiving doesn't feel like the listing vanished.
@@ -937,14 +938,16 @@ function ListingsTab({
                           booking widget in operator mode. Only for listings that
                           can actually be booked (a draft has no dates/prices). */}
                       {!isDraft && isLive && (
-                        <Button sm onClick={() => takeBooking(l)}>📞 Book for a customer</Button>
+                        <Button sm className="!border-[#bbe7cb] !bg-[#eaf7ef] !text-[#0f7a43] hover:!bg-[#dcf0e4]" onClick={() => takeBooking(l)}>📞 Book for a customer</Button>
                       )}
-                      <Button sm onClick={() => copyLink(l, isDraft)}>{copiedId === l.id ? "✓ Copied" : "🔗 Link"}</Button>
+                      <Button sm className="!border-[#c3d6f7] !bg-[#eef4ff] !text-[#1d3a8f] hover:!bg-[#e2ecfd]" onClick={() => copyLink(l, isDraft)}>{copiedId === l.id ? "✓ Copied" : "🔗 Link"}</Button>
+                      {/* QR to the /book page — parents scan it (flyer, door, table). */}
+                      <Button sm className="!border-[#ddd0f7] !bg-[#f3effe] !text-[#6d28d9] hover:!bg-[#ece2fc]" onClick={() => setQrFor(l)}>▦ QR</Button>
                       {/* Opens the real parent page (/book/{id}) in a new tab —
                           the exact storefront a parent sees. ?preview=1 tells the
                           page to show a "Preview" bar instead of the parent-portal
                           nav, so the provider isn't dropped into the parent app. */}
-                      <Button sm onClick={() => window.open(`/book/${l.id}?preview=1`, "_blank", "noopener")}>View as parent ↗</Button>
+                      <Button sm className="!border-[#bfe6e2] !bg-[#e6f6f4] !text-[#0e7d74] hover:!bg-[#d7f0ec]" onClick={() => window.open(`/book/${l.id}?preview=1`, "_blank", "noopener")}>View as parent ↗</Button>
                       <Button sm variant="primary" onClick={() => onEdit(l)}>Edit</Button>
                       <div className="relative">
                         <Button sm onClick={() => setMenuId((m) => (m === l.id ? null : l.id))}>⋯</Button>
@@ -987,6 +990,39 @@ function ListingsTab({
           );
         })
       )}
+
+      {/* QR to the booking page — parents scan it from a flyer, door or table. */}
+      {qrFor && (() => {
+        const origin = typeof window !== "undefined" ? window.location.origin : "";
+        const url = `${origin}/book/${qrFor.id}`;
+        const qr = `https://api.qrserver.com/v1/create-qr-code/?size=320x320&margin=12&data=${encodeURIComponent(url)}`;
+        const draft = (serverDraft(qrFor)?.status ?? allDrafts[qrFor.id]?.status ?? "live") === "draft";
+        const printPoster = () => {
+          const w = window.open("", "_blank"); if (!w) return;
+          w.document.write(`<!doctype html><meta charset="utf-8"><title>${qrFor.name}</title><body style="font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;text-align:center;padding:48px;color:#171534"><h1 style="font-size:30px;margin:0 0 6px">${qrFor.name.replace(/</g, "&lt;")}</h1><p style="font-size:17px;color:#5b6478;margin:0 0 24px">📱 Scan to book your place</p><img src="${qr}" style="width:340px;height:340px" alt="QR"/><p style="font-size:13px;color:#8a86a3;margin-top:20px">${url}</p><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body>`);
+          w.document.close();
+        };
+        return (
+          <div onClick={(e) => e.target === e.currentTarget && setQrFor(null)} className="fixed inset-0 z-[10000] grid place-items-center overflow-auto bg-black/55 p-4">
+            <div className="w-full max-w-[360px] rounded-2xl bg-white p-5 shadow-2xl">
+              <div className="mb-3 flex items-center gap-2">
+                <span className="text-[14px] font-extrabold text-[var(--ink)]">📱 Scan to book</span>
+                <button type="button" onClick={() => setQrFor(null)} className="ml-auto text-[20px] leading-none text-[var(--ink-3)]">×</button>
+              </div>
+              <div className="truncate text-[12.5px] font-bold text-[var(--ink-2)]">{qrFor.name}</div>
+              <img src={qr} alt={`QR code for ${qrFor.name}`} className="mx-auto mt-3 h-[240px] w-[240px] rounded-xl border border-[var(--line)]" />
+              <p className="mt-2.5 text-center text-[11.5px] text-[var(--ink-3)]">Parents scan this with their phone camera to open the booking page. Put it on a flyer, poster, door or table.</p>
+              {draft && <div className="mt-2 rounded-lg border border-[#fed7aa] bg-[#fff7ed] px-3 py-2 text-[11.5px] text-[#9a3412]">This listing is <b>Unpublished</b> — publish it (Edit) before printing, or the QR shows &ldquo;not available&rdquo; to parents.</div>}
+              <div className="mt-2 truncate rounded-lg bg-[var(--panel)] px-3 py-2 text-center text-[11px] text-[var(--ink-3)]">{url}</div>
+              <div className="mt-3 flex gap-2">
+                <Button sm className="flex-1" onClick={() => { navigator.clipboard?.writeText(url).then(() => { setCopiedId(qrFor.id); setTimeout(() => setCopiedId(null), 1500); }).catch(() => {}); }}>{copiedId === qrFor.id ? "✓ Copied" : "🔗 Copy link"}</Button>
+                <Button sm className="flex-1" onClick={() => window.open(qr, "_blank", "noopener")}>⬇ Image</Button>
+                <Button sm variant="primary" className="flex-1" onClick={printPoster}>🖨 Poster</Button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Undo toast — makes clear where an archived listing went. */}
       {justArchived && (
