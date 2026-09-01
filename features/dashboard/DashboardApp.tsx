@@ -289,6 +289,7 @@ function TrendChart({ series, series2, fmt, color, color2 }: { series: { label: 
 export function DashboardApp() {
   const [d, setD] = useState<Dash | null>(null);
   const [bookings, setBookings] = useState<Booking[] | null>(null);
+  const [bookingsErr, setBookingsErr] = useState<string | null>(null);
   const [tasks, setTasks] = useState<DashTask[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [months, setMonths] = useState(6);
@@ -305,7 +306,9 @@ export function DashboardApp() {
 
   const load = useCallback(() => {
     apiGet<Dash>("/api/dashboard").then((x) => { setD(x); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-    apiGet<Booking[]>("/api/bookings").then(setBookings).catch(() => {});
+    // On failure keep bookings null but record the error, so the analytics
+    // section shows a retry instead of "Loading your figures…" forever.
+    apiGet<Booking[]>("/api/bookings").then((b) => { setBookings(b); setBookingsErr(null); }).catch((e) => setBookingsErr(e instanceof Error ? e.message : "Couldn’t load your figures"));
     apiGet<DashTask[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => setTasks([]));
     apiGet<{ id: string; seasonId?: string | null }[]>("/api/listings?mine=1")
       .then((ls) => setListingSeason(Object.fromEntries((ls ?? []).filter((l) => l.id && l.seasonId).map((l) => [l.id, l.seasonId as string]))))
@@ -461,7 +464,15 @@ export function DashboardApp() {
 
       {/* Today · Live listings · Tasks today — three across */}
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
-        <Panel title={`☀️ Today · ${fmtDay(d.today.date)}`} right={d.bookings.waitlist > 0 ? <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{d.bookings.waitlist} on waitlist</Badge> : undefined}>
+        <Panel
+          title={`☀️ Today · ${fmtDay(d.today.date)}`}
+          right={
+            <span className="flex items-center gap-2">
+              {d.bookings.waitlist > 0 && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{d.bookings.waitlist} on waitlist</Badge>}
+              <button type="button" onClick={() => router.push(`/${portal}/registers`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">Registers →</button>
+            </span>
+          }
+        >
           {d.today.sessions.length === 0 ? (
             <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing running today.</div>
           ) : (
@@ -470,7 +481,7 @@ export function DashboardApp() {
                 const c = actColor(s.listing);
                 const pct = s.capacity ? Math.round((s.booked / s.capacity) * 100) : 0;
                 return (
-                  <div key={i} className="flex items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5" style={{ borderLeft: `4px solid ${c}` }}>
+                  <button key={i} type="button" onClick={() => router.push(`/${portal}/registers`)} title="Open registers" className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-left transition-shadow hover:shadow-sm" style={{ borderLeft: `4px solid ${c}` }}>
                     <span className="rounded-lg px-2 py-1 text-[11.5px] font-extrabold tabular-nums text-white" style={{ background: c }}>{s.start}–{s.end}</span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{s.listing}</div>
@@ -480,13 +491,16 @@ export function DashboardApp() {
                       <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{s.booked}/{s.capacity}</div>
                       <div className="text-[10px] font-bold text-[var(--ink-3)]">{pct}% full</div>
                     </div>
-                  </div>
+                  </button>
                 );
               })}
             </div>
           )}
         </Panel>
-        <Panel title="🎟️ Live listings · places left">
+        <Panel
+          title="🎟️ Live listings · places left"
+          right={<button type="button" onClick={() => router.push(`/${portal}/listings`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">All listings →</button>}
+        >
           {d.byListing.length === 0 ? (
             <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">No open listings running.</div>
           ) : (
@@ -495,7 +509,7 @@ export function DashboardApp() {
                 const c = actColor(l.listing);
                 const t = availTone(l.spotsLeft, l.capacity);
                 return (
-                  <div key={i} className="flex items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5" style={{ borderLeft: `4px solid ${c}` }}>
+                  <button key={i} type="button" onClick={() => router.push(`/${portal}/listings`)} title="Manage listings" className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-left transition-shadow hover:shadow-sm" style={{ borderLeft: `4px solid ${c}` }}>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{l.listing}</div>
                       <div className="mt-1.5 flex items-center gap-2">
@@ -508,7 +522,7 @@ export function DashboardApp() {
                       <div className="text-[10px] font-bold text-[var(--ink-3)]">{l.pct}% full</div>
                     </div>
                     <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: t.bg, color: t.fg }}>{t.label}</span>
-                  </div>
+                  </button>
                 );
               })}
             </div>
@@ -559,7 +573,14 @@ export function DashboardApp() {
       </div>
 
       {!bookings ? (
-        <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-8 text-center text-[12.5px] text-[var(--ink-3)]">Loading your figures…</div>
+        bookingsErr ? (
+          <div className="mt-3 flex flex-col items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-8 text-center text-[12.5px] text-[var(--ink-3)]">
+            <span>Couldn’t load your figures — {bookingsErr}</span>
+            <button type="button" onClick={load} className="rounded-full bg-[var(--brand)] px-3 py-1 text-[11.5px] font-bold text-white">Try again</button>
+          </div>
+        ) : (
+          <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-8 text-center text-[12.5px] text-[var(--ink-3)]">Loading your figures…</div>
+        )
       ) : (
         <>
           <div className="mt-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
@@ -631,10 +652,16 @@ export function DashboardApp() {
               {a.recent.length ? (
                 <div className="flex flex-col divide-y divide-[var(--line)]">
                   {a.recent.map((b) => (
-                    <div key={`${b.tenantId}-${b.ref}`} className="flex items-center gap-2 py-2 text-[12.5px]">
+                    <button
+                      key={`${b.tenantId}-${b.ref}`}
+                      type="button"
+                      onClick={() => router.push(`/${portal}/bookings?ref=${encodeURIComponent(b.ref)}`)}
+                      className="-mx-1 flex items-center gap-2 rounded-lg px-1 py-2 text-left text-[12.5px] transition-colors hover:bg-[var(--panel)]"
+                      title="Open this booking"
+                    >
                       <span className="min-w-0 flex-1 truncate"><b>{b.child || b.booker}</b> <span className="text-[var(--ink-3)]">· {b.listing}</span></span>
                       <span className="whitespace-nowrap font-extrabold tabular-nums">{money(b.amount)}</span>
-                    </div>
+                    </button>
                   ))}
                 </div>
               ) : <Empty>No bookings yet.</Empty>}
