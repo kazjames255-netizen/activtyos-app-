@@ -95,12 +95,36 @@ function seed(): Record<string, ClockRecord> {
   { const r = out[slug("Tom Lewis")]; const t = at(2.2); const bs = at(0, 20); r.status = "break"; r.clockInAt = t; r.breakStart = bs; r.loc = "Milton Keynes"; r.events = [{ t, kind: "in", loc: "Milton Keynes" }, { t: bs, kind: "break-start" }]; }
   return out;
 }
+// So the scheduled-shift + on-time/late display has data even if the Schedule
+// page was never opened: seed a demo rota matching the clock records — each
+// clocked-in person's shift starts when they clocked in, minus any lateness, so
+// "in 12:50 · 12m late · shift 12:38" all agrees. Only writes when the rota is
+// empty, so a real/seeded schedule is never clobbered.
+function ensureDemoRota(recs: Record<string, ClockRecord>): void {
+  if (rota().shifts.length) return;
+  const day = todayISO();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  const hm = (t: number) => `${pad(Math.floor((((t % 1440) + 1440) % 1440) / 60))}:${pad(((t % 60) + 60) % 60)}`;
+  const staff: RotaStaff[] = []; const shifts: RotaShift[] = [];
+  for (const r of Object.values(recs)) {
+    staff.push({ id: r.id, name: r.name });
+    if (r.clockInAt) {
+      const startMin = mins(hhmm(r.clockInAt)) - (r.lateMin || 0);
+      shifts.push({ staffId: r.id, date: day, start: hm(startMin), end: hm(startMin + 360) });
+    } else {
+      shifts.push({ staffId: r.id, date: day, start: "09:00", end: "15:00" });
+    }
+  }
+  write(ROTA_KEY, { staff, shifts });
+}
 export const loadClock = (): Record<string, ClockRecord> => {
   const s = read<Record<string, ClockRecord>>(CLOCK_KEY);
-  if (!s || typeof s !== "object") return seed();
+  const fresh = () => { const x = seed(); ensureDemoRota(x); return x; };
+  if (!s || typeof s !== "object") return fresh();
   // daily reset: if the stored day isn't today, start fresh (keeps demo sane)
   const anyDay = Object.values(s)[0]?.day;
-  if (anyDay && anyDay !== todayISO()) return seed();
+  if (anyDay && anyDay !== todayISO()) return fresh();
+  ensureDemoRota(s);
   return s;
 };
 export const saveClock = (r: Record<string, ClockRecord>) => write(CLOCK_KEY, r);

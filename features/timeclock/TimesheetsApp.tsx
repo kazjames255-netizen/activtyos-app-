@@ -77,7 +77,7 @@ export function TimesheetsApp() {
     const sh = shiftToday(r.name);        // their rostered shift today (start/end)
     const late = r.lateMin || 0;
     const footTone = r.status === "in" ? { bg: "#e6f4ea", fg: "#0f7a43" } : r.status === "break" ? { bg: "#fdf3e0", fg: "#8a5a09" } : { bg: "var(--panel)", fg: "var(--ink-3)" };
-    const foot = r.status === "in" ? `${sh ? `Shift ${sh.start}–${sh.end} · ` : ""}in ${hhmm(r.clockInAt)}${late ? ` · ${fmtLate(late)} late` : sh ? " · on time" : ""}${r.loc ? ` · ${r.loc.startsWith("📍") ? "Location" : r.loc}` : ""}`
+    const foot = r.status === "in" ? `${sh ? `Shift ${sh.start}–${sh.end} · ` : ""}in ${hhmm(r.clockInAt)} · on shift ${fmtDur(workedMs(r))}${late ? ` · ${fmtLate(late)} late` : sh ? " · on time" : ""}${r.loc ? ` · ${r.loc.startsWith("📍") ? "Location" : r.loc}` : ""}`
       : r.status === "break" ? `On break since ${hhmm(r.breakStart)}${sh ? ` · shift ${sh.start}–${sh.end}` : ""}`
       : r.clockInAt ? `Worked ${fmtDur(workedMs(r))} today${sh ? ` · shift ${sh.start}–${sh.end}` : ""}` : `Not clocked in${sh ? ` · shift from ${sh.start}` : ""}`;
     return (
