@@ -2058,12 +2058,18 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
   // One form at a time: picking a type opens it here rather than stacking
   // another card onto the page.
   const [form, setForm] = useState<DiscountRule | null>(null);
+  // The name defaults to the auto-summary (e.g. "Siblings pay £3.50 each") and
+  // keeps following the settings — until the operator types their own.
+  const [nameEdited, setNameEdited] = useState(false);
+  const openForm = (r: DiscountRule | null, edited = false) => { setForm(r); setNameEdited(edited); };
   const editing = !!form && rules.some((r) => r.id === form.id);
   const set = (p: Partial<DiscountRule>) => setForm((f) => (f ? { ...f, ...p } : f));
   const save = () => {
     if (!form) return;
-    setRules(editing ? rules.map((r) => (r.id === form.id ? form : r)) : [...rules, form]);
-    setForm(null);
+    // Persist the shown name — the auto-summary when they didn't type their own.
+    const finalRule = nameEdited && form.name.trim() ? form : { ...form, name: ruleSummary(form) };
+    setRules(editing ? rules.map((r) => (r.id === form.id ? finalRule : r)) : [...rules, finalRule]);
+    openForm(null);
   };
   const kindOf = (k: DiscountKind) => DISCOUNT_KINDS.find((x) => x.kind === k)!;
 
@@ -2084,7 +2090,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
           {DISCOUNT_KINDS.map((k) => {
             const on = form?.kind === k.kind;
             return (
-              <button key={k.kind} type="button" onClick={() => setForm(on && form ? form : emptyRule(k.kind))}
+              <button key={k.kind} type="button" onClick={() => { if (!(on && form)) openForm(emptyRule(k.kind), false); }}
                 className="rounded-xl border-2 p-3 text-left transition-all"
                 style={on ? { borderColor: k.colour, background: `${k.colour}0f` } : { borderColor: "var(--line)" }}>
                 <div className="flex items-center gap-2">
@@ -2101,7 +2107,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
         {form && (
           <div className="border-t border-[var(--line)] p-4">
             <FieldLabel>Name your discount — parents see this on the booking page</FieldLabel>
-            <Input value={form.name} onChange={(e) => set({ name: e.target.value })} placeholder={ruleSummary(form)} className="mb-3.5 w-full text-[12.5px]" />
+            <Input value={nameEdited ? form.name : ruleSummary(form)} onChange={(e) => { const v = e.target.value; if (v.trim() === "") { setNameEdited(false); set({ name: "" }); } else { setNameEdited(true); set({ name: v }); } }} placeholder={ruleSummary(form)} className="mb-3.5 w-full text-[12.5px]" />
 
             <FieldLabel>Which tickets does it apply to?</FieldLabel>
             <div className="mb-3.5 flex flex-wrap gap-1.5">
@@ -2161,7 +2167,7 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
 
             <div className="mt-3 flex gap-2">
               <Button variant="primary" onClick={save}>{editing ? "Save changes" : "Add discount"}</Button>
-              <Button onClick={() => setForm(null)}>Cancel</Button>
+              <Button onClick={() => openForm(null)}>Cancel</Button>
             </div>
           </div>
         )}
@@ -2187,8 +2193,8 @@ function DiscountsStep({ d, upd, tickets }: { d: WizardDraft; upd: (p: Partial<W
                   <button type="button" onClick={() => setRules(rules.map((x) => (x.id === r.id ? { ...x, enabled: !x.enabled } : x)))}
                     className="rounded-full border px-2.5 py-1 text-[11px] font-bold"
                     style={r.enabled ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{r.enabled ? "On" : "Off"}</button>
-                  <Button sm onClick={() => setForm(r)}>Edit</Button>
-                  <button type="button" onClick={() => { setRules(rules.filter((x) => x.id !== r.id)); if (form?.id === r.id) setForm(null); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
+                  <Button sm onClick={() => openForm(r, !!r.name?.trim())}>Edit</Button>
+                  <button type="button" onClick={() => { setRules(rules.filter((x) => x.id !== r.id)); if (form?.id === r.id) openForm(null); }} className="text-[var(--ink-3)] hover:text-[var(--red)]">✕</button>
                 </div>
               );
             })}
