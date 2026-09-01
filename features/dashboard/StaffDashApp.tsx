@@ -96,6 +96,8 @@ export function StaffDashApp() {
   const [coworkers, setCoworkers] = useState<Coworker[]>([]);
   const [profile, setProfile] = useState<WatchKid | null>(null); // watch-list child card
   const [sendOpen, setSendOpen] = useState(false); // SEND names modal
+  const [likesOpen, setLikesOpen] = useState(false); // collapsed by default
+  const [permOpen, setPermOpen] = useState(false); // collapsed by default
   const [, tick] = useState(0); // live worked-time tick
   const { settings } = useSettings();
   const coworkerVis = settings.scheduling?.coworkerVisibility ?? "all";
@@ -288,57 +290,73 @@ export function StaffDashApp() {
               ))}
       </Card>
 
-      {/* Likes & dislikes */}
+      {/* Likes & dislikes — collapsed by default */}
       <Card className="p-4">
-        <div className="mb-3 flex items-center gap-2.5">
+        <button type="button" onClick={() => setLikesOpen((o) => !o)} aria-expanded={likesOpen} className="flex w-full items-center gap-2.5 text-left">
           <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#e9f7ef", color: "#0f7a43" }}>😊</span>
           <div>
             <div className="text-[14px] font-extrabold leading-tight">Likes &amp; dislikes</div>
             <div className="text-[11px] text-[var(--ink-3)]">Little things that make their day</div>
           </div>
-        </div>
-        {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-          : likesKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Nothing noted for today&rsquo;s children.</div>
-            : likesKids.slice(0, 8).map((k) => (
-              <div key={k.key} className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
-                <div className="text-[12.5px] font-extrabold">{k.name}</div>
-                <div className="mt-1 flex flex-wrap gap-1.5">
-                  {k.c.likes && <span className="rounded-full bg-[#e9f7ef] px-2 py-0.5 text-[11px] font-semibold text-[#0f7a43]">👍 {k.c.likes}</span>}
-                  {k.c.dislikes && <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[11px] font-semibold text-[#c0362c]">👎 {k.c.dislikes}</span>}
-                </div>
-              </div>
-            ))}
+          <span className="ml-auto flex items-center gap-2">
+            {regs !== null && likesKids.length > 0 && <span className="rounded-full bg-[#e9f7ef] px-2 py-0.5 text-[10.5px] font-extrabold text-[#0f7a43]">{likesKids.length}</span>}
+            <span className="text-[12px] text-[var(--ink-3)]">{likesOpen ? "▴" : "▾"}</span>
+          </span>
+        </button>
+        {likesOpen && (
+          <div className="mt-3">
+            {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+              : likesKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Nothing noted for today&rsquo;s children.</div>
+                : likesKids.slice(0, 8).map((k) => (
+                  <div key={k.key} className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+                    <div className="text-[12.5px] font-extrabold">{k.name}</div>
+                    <div className="mt-1 flex flex-wrap gap-1.5">
+                      {k.c.likes && <span className="rounded-full bg-[#e9f7ef] px-2 py-0.5 text-[11px] font-semibold text-[#0f7a43]">👍 {k.c.likes}</span>}
+                      {k.c.dislikes && <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[11px] font-semibold text-[#c0362c]">👎 {k.c.dislikes}</span>}
+                    </div>
+                  </div>
+                ))}
+          </div>
+        )}
       </Card>
 
-      {/* Collection & permissions — the "magic word" + consents */}
+      {/* Collection & permissions — the "magic word" + consents (collapsed by default) */}
       <Card className="p-4">
-        <div className="mb-3 flex items-center gap-2.5">
+        <button type="button" onClick={() => setPermOpen((o) => !o)} aria-expanded={permOpen} className="flex w-full items-center gap-2.5 text-left">
           <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#eef0fe", color: "#4f46e5" }}>🔑</span>
           <div>
             <div className="text-[14px] font-extrabold leading-tight">Collection &amp; permissions</div>
             <div className="text-[11px] text-[var(--ink-3)]">Passwords, contacts &amp; consents</div>
           </div>
-        </div>
-        {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-          : permKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No collection notes for today.</div>
-            : permKids.slice(0, 8).map((k) => (
-              <div key={k.key} className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[12.5px] font-extrabold">{k.name}</span>
-                  {k.c.collectionPassword && <span className="rounded-full bg-[#eef0fe] px-2 py-0.5 font-mono text-[11px] font-bold tracking-wide text-[#4f46e5]">🔑 {k.c.collectionPassword}</span>}
-                </div>
-                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--ink-3)]">
-                  {k.c.emergencyName && <span>📞 <b className="text-[var(--ink-2)]">{k.c.emergencyName}</b>{k.c.emergencyPhone ? ` · ${k.c.emergencyPhone}` : ""}</span>}
-                </div>
-                <div className="mt-1 flex flex-wrap gap-1">
-                  {([["📷 Photos", k.c.photoConsent], ["☀️ Suncream", k.c.suncreamConsent], ["🚶 Walk home", k.c.walkHomeConsent], ["⛑ First aid", k.c.firstAidConsent]] as const)
-                    .filter(([, v]) => v != null)
-                    .map(([label, v]) => (
-                      <span key={label} className={"rounded-full px-2 py-0.5 text-[10px] font-bold " + (v ? "bg-[#e9f7ef] text-[#0f7a43]" : "bg-[#f1f3f7] text-[#64748b] line-through")}>{label}</span>
-                    ))}
-                </div>
-              </div>
-            ))}
+          <span className="ml-auto flex items-center gap-2">
+            {regs !== null && permKids.length > 0 && <span className="rounded-full bg-[#eef0fe] px-2 py-0.5 text-[10.5px] font-extrabold text-[#4f46e5]">{permKids.length}</span>}
+            <span className="text-[12px] text-[var(--ink-3)]">{permOpen ? "▴" : "▾"}</span>
+          </span>
+        </button>
+        {permOpen && (
+          <div className="mt-3">
+            {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+              : permKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No collection notes for today.</div>
+                : permKids.slice(0, 8).map((k) => (
+                  <div key={k.key} className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[12.5px] font-extrabold">{k.name}</span>
+                      {k.c.collectionPassword && <span className="rounded-full bg-[#eef0fe] px-2 py-0.5 font-mono text-[11px] font-bold tracking-wide text-[#4f46e5]">🔑 {k.c.collectionPassword}</span>}
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--ink-3)]">
+                      {k.c.emergencyName && <span>📞 <b className="text-[var(--ink-2)]">{k.c.emergencyName}</b>{k.c.emergencyPhone ? ` · ${k.c.emergencyPhone}` : ""}</span>}
+                    </div>
+                    <div className="mt-1 flex flex-wrap gap-1">
+                      {([["📷 Photos", k.c.photoConsent], ["☀️ Suncream", k.c.suncreamConsent], ["🚶 Walk home", k.c.walkHomeConsent], ["⛑ First aid", k.c.firstAidConsent]] as const)
+                        .filter(([, v]) => v != null)
+                        .map(([label, v]) => (
+                          <span key={label} className={"rounded-full px-2 py-0.5 text-[10px] font-bold " + (v ? "bg-[#e9f7ef] text-[#0f7a43]" : "bg-[#f1f3f7] text-[#64748b] line-through")}>{label}</span>
+                        ))}
+                    </div>
+                  </div>
+                ))}
+          </div>
+        )}
       </Card>
 
       {/* Recent accidents */}
