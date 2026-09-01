@@ -97,7 +97,7 @@ export function MyHolidayApp() {
         </div>
       </Card>
       {historyRows}
-      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} rolled initialKind={reqKind} onSubmit={submit} onClose={() => setReqOpen(false)} />}
+      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} rolled initialKind={reqKind} sickOnly={reqKind === "sickness"} onSubmit={submit} onClose={() => setReqOpen(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
@@ -213,15 +213,17 @@ export function MyHolidayApp() {
         </Card>
       )}
 
-      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} initialKind={reqKind} onSubmit={submit} onClose={() => setReqOpen(false)} />}
+      {reqOpen && <RequestModal region={policy.region} remaining={s.remaining} initialKind={reqKind} sickOnly={reqKind === "sickness"} onSubmit={submit} onClose={() => setReqOpen(false)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] max-w-[92vw] -translate-x-1/2 rounded-2xl bg-[#111634] px-4 py-2.5 text-center text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
 }
 
-function RequestModal({ region, remaining, rolled, initialKind, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; rolled?: boolean; initialKind?: AbsenceKind; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; fromTime?: string; toTime?: string; reason?: string; days: number }) => void; onClose: () => void }) {
+function RequestModal({ region, remaining, rolled, initialKind, sickOnly, onSubmit, onClose }: { region: HolidayPolicy["region"]; remaining: number; rolled?: boolean; initialKind?: AbsenceKind; sickOnly?: boolean; onSubmit: (a: { kind: AbsenceKind; start: string; end: string; half: "am" | "pm" | null; fromTime?: string; toTime?: string; reason?: string; days: number }) => void; onClose: () => void }) {
   const today = isoDate(new Date());
-  const [kind, setKind] = useState<AbsenceKind>(initialKind ?? "annual");
+  // Off-sick flow is sickness-only; the general request flow excludes sickness (that has its own "I'm off sick" button).
+  const kindOptions = sickOnly ? (["sickness"] as AbsenceKind[]) : KINDS.filter((k) => k !== "sickness");
+  const [kind, setKind] = useState<AbsenceKind>(sickOnly ? "sickness" : initialKind && initialKind !== "sickness" ? initialKind : "annual");
   const [start, setStart] = useState(today);
   const [end, setEnd] = useState(today);
   const [dur, setDur] = useState<"all" | "times">("all");
@@ -246,9 +248,9 @@ function RequestModal({ region, remaining, rolled, initialKind, onSubmit, onClos
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{rolled ? "Book time off" : "Request time off"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{sickOnly ? "🤒 Report I'm off sick" : rolled ? "Book time off" : "Request time off"}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
-          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={kind} onChange={(e) => setKind(e.target.value as AbsenceKind)} className="w-full">{KINDS.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {KIND_META[k].label}</option>)}</Select></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={kind} onChange={(e) => setKind(e.target.value as AbsenceKind)} disabled={sickOnly} className="w-full disabled:opacity-70">{kindOptions.map((k) => <option key={k} value={k}>{KIND_META[k].icon} {KIND_META[k].label}</option>)}</Select></label>
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">From</span><Input type="date" value={start} onChange={(e) => { setStart(e.target.value); if (e.target.value > end) setEnd(e.target.value); }} className="w-full" /></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">To</span><Input type="date" value={end} min={start} onChange={(e) => setEnd(e.target.value)} className="w-full" /></label>
