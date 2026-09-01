@@ -266,7 +266,8 @@ export function AiAssistant({ kind }: { kind: Kind }) {
   const robotState: RobotState = busy ? "thinking" : tts.speaking ? "talking" : mic.listening ? "listening" : "idle";
   const status = busy ? "Thinking…" : tts.speaking ? "Speaking…" : mic.listening ? "Listening…" : "Ready when you are";
 
-  const newChat = () => { tts.cancel(); setMsgs([]); setDraft(""); setError(null); setPendingAction(null); setProposed(null); setActError(null); setChatId(uid()); };
+  const [ideasOpen, setIdeasOpen] = useState(false);
+  const newChat = () => { tts.cancel(); setMsgs([]); setDraft(""); setError(null); setPendingAction(null); setProposed(null); setActError(null); setChatId(uid()); setIdeasOpen(false); };
   const loadChat = (c: Chat) => { tts.cancel(); setMsgs(c.msgs); setChatId(c.id); setError(null); setPendingAction(null); setProposed(null); };
   const delChat = (id: string) => setChats((cur) => { const next = cur.filter((c) => c.id !== id); try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* ignore */ } return next; });
   const pinChat = (id: string) => setChats((cur) => { const next = cur.map((c) => c.id === id ? { ...c, pinned: !c.pinned } : c); try { localStorage.setItem(storeKey, JSON.stringify(next)); } catch { /* ignore */ } return next; });
@@ -437,8 +438,30 @@ export function AiAssistant({ kind }: { kind: Kind }) {
             </div>
           )}
 
+          {/* Suggested questions — reachable at any point in a chat, via the 💡 button */}
+          {ideasOpen && (
+            <div className="max-h-[42vh] overflow-y-auto border-t border-[var(--line)] px-3 py-2.5">
+              <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Try asking</div>
+              <div className="flex flex-col gap-2.5">
+                {STARTERS[kind].map((g) => (
+                  <div key={g.label}>
+                    <div className="mb-1 text-[11px] font-bold text-[var(--ink-2)]">{g.icon} {g.label}</div>
+                    <div className="flex flex-wrap gap-1.5">
+                      {g.qs.map((q) => (
+                        <button key={q} type="button" onClick={() => { setIdeasOpen(false); void send(q); }} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] text-[var(--ink-2)] transition hover:border-[#2f6bd8] hover:text-[var(--ink)]">{q}</button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Composer */}
           <div className="flex items-end gap-2 border-t border-[var(--line)] p-2.5">
+            <button type="button" onClick={() => setIdeasOpen((o) => !o)} title="Suggested questions" aria-expanded={ideasOpen}
+              className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-[16px] transition"
+              style={ideasOpen ? { background: "#2f6bd8", color: "#fff" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>💡</button>
             {mic.supported && (
               <button type="button" onClick={() => (mic.listening ? mic.stop() : mic.start())} title={mic.listening ? "Stop" : "Speak"}
                 className="flex h-10 w-10 flex-none items-center justify-center rounded-full text-[16px] transition"
