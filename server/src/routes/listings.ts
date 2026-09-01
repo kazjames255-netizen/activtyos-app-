@@ -159,7 +159,7 @@ const baseListingSchema = z
     cancellation: z.string().max(2_000).optional(),
     discounts: z.array(discountRuleSchema).max(30).optional(),
     // presentation & lifecycle
-    pageStyle: z.enum(["playful", "sport", "navy"]).optional(),
+    pageStyle: z.enum(["playful", "sport", "emerald", "teal", "royal", "aubergine", "burgundy", "terracotta", "slate", "crimson", "navy"]).optional(),
     status: z.enum(["draft", "live"]).optional(),
     archived: z.boolean().optional(),
   });

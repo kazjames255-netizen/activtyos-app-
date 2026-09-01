@@ -331,7 +331,7 @@ export interface WizardDraft {
   archived?: boolean;
   pageStyle?: PageTheme;
 }
-export type PageTheme = "playful" | "sport" | "navy";
+export type PageTheme = "playful" | "sport" | "emerald" | "teal" | "royal" | "aubergine" | "burgundy" | "terracotta" | "slate" | "crimson";
 
 // ── Automatic discounts ────────────────────────────────────────────────────
 // The engine lives in ./discounts — shared verbatim with the server, which
@@ -850,7 +850,7 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
       booking={withoutHiddenPasses(bookingFromBundle(listing.bundle), d.ticketOverrides)}
       blocks={listing.blocks}
       addons={lib?.addons ?? []}
-      theme={d.pageStyle ?? "sport"}
+      theme={resolveTheme(d.pageStyle)}
       brand={listing.tenantName}
       tenantId={listing.tenantId}
       mode="parent"
@@ -890,7 +890,7 @@ export function BookingOnly({ listing, onBook, bookState }: {
       mode="operator"
       onBook={onBook}
       bookState={bookState}
-      theme={d.pageStyle ?? "sport"}
+      theme={resolveTheme(d.pageStyle)}
     />
   );
 }
@@ -898,7 +898,7 @@ export function BookingOnly({ listing, onBook, bookState }: {
 // Standalone customer-page preview (for the "View" action on the Listings tab).
 export function ListingPreview({ draft, local, runs }: { draft: WizardDraft; local: LocalState; runs?: RunBlock[] }) {
   const blocks = useBlocks();
-  const [theme, setTheme] = useState<PageTheme>(draft.pageStyle ?? "sport");
+  const [theme, setTheme] = useState<PageTheme>(resolveTheme(draft.pageStyle));
   const norm = (arr: unknown) => ((arr as (string | ListingImage)[]) || []).map((im) => (typeof im === "string" ? { src: im, x: 50, y: 50, zoom: 100 } : im));
   const d2 = { ...draft, images: norm(draft.images), gallery: norm(draft.gallery), bookRules: draft.bookRules ?? {}, ticketOverrides: draft.ticketOverrides ?? {} };
   const venue = local.venues.find((v) => v.id === draft.venueId) || null;
@@ -1035,7 +1035,7 @@ export function ListingWizard({
     if (await syncApi("live")) { onSaved(); onClose(); }
   };
 
-  const previewProps = { d, venue, local, booking, addons, theme: d.pageStyle ?? "sport", onTheme: (t: PageTheme) => upd({ pageStyle: t }) };
+  const previewProps = { d, venue, local, booking, addons, theme: resolveTheme(d.pageStyle), onTheme: (t: PageTheme) => upd({ pageStyle: t }) };
   const stepKey = STEPS[step].key;
 
   return (
@@ -2703,7 +2703,7 @@ function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, on
   }, [b.stage]);
   return (
     <div ref={box}>
-      {theme === "playful" ? <PlayfulBooking {...view} /> : <SportBooking {...view} surf={theme === "navy" ? SPORT_NAVY : SPORT_BLACK} />}
+      {theme === "playful" ? <PlayfulBooking {...view} /> : <SportBooking {...view} surf={THEMES[theme]} />}
     </div>
   );
 }
@@ -2978,20 +2978,18 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
 
 // ── Booking · SPORT (dark, electric, lime) ─────────────────────────────────
 function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, bookState, surf, tenantId }: BookView & { surf: Surf }) {
-  const isNavy = surf === SPORT_NAVY;
-  const EL = "#0047ff";
-  const LIME = isNavy ? "#f5b81f" : "#c6ff00";      // gold accent on navy, lime on black
-  const MUTs = isNavy ? "#b9c7ec" : "#adb8ca";
-  // Section banners: a lighter blue on navy so they lift off the navy surface
-  // (electric blue would blend), matching the app's title-bar blues.
-  const BAR = isNavy ? "linear-gradient(120deg,#2f6bd8 0%,#4f9dff 100%)" : `linear-gradient(120deg,${EL},#0090ff)`;
+  const EL = surf.el;
+  const LIME = surf.accent;      // headline accent (price, chips) — dark ink sits on it
+  const INK = surf.accentInk;    // dark ink that reads on the accent
+  const MUTs = surf.muted;
+  const BAR = surf.bar;          // section-banner gradient
   const LINEs = surf.line, PANEL = surf.panel, CELL = surf.cell, CELLOFF = surf.cellOff;
   const idle = { background: CELL, color: "#dfe6f2", borderColor: LINEs };
   // Numbered so the order to work through is obvious. Timing is skipped when
   // the block has none, so dates become step 2.
   const step = (n: number, text: string) => (
     <div className="mb-2 mt-4 flex items-center gap-2">
-      <span className="flex h-[18px] w-[18px] items-center justify-center text-[10px] font-black" style={{ background: LIME, color: "#12280a" }}>{n}</span>
+      <span className="flex h-[18px] w-[18px] items-center justify-center text-[10px] font-black" style={{ background: LIME, color: INK }}>{n}</span>
       <span className="text-[10px] font-black uppercase tracking-[0.14em]" style={{ color: MUTs }}>{text}</span>
     </div>
   );
@@ -3001,17 +2999,17 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   if (b.stage === "done") return (
     <div className={wrap} style={wrapStyle}>
       <div className="p-5 text-center">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center text-[26px] font-black" style={{ background: LIME, color: "#12280a" }}>✓</div>
+        <div className="mx-auto flex h-14 w-14 items-center justify-center text-[26px] font-black" style={{ background: LIME, color: INK }}>✓</div>
         <div className="mt-3 text-[18px] font-black italic uppercase tracking-[-0.01em] text-white">Booked{b.child ? ` · ${b.child}` : ""}</div>
         <div className="mt-2 text-[12.5px] text-[#8f9bb0]">{d.bookingType === "auto" ? "Instantly confirmed." : "Provider will approve your booking."} Confirmation email incoming.</div>
-        <button className="mt-4 px-6 py-2.5 text-[13px] font-black italic uppercase text-[#12280a]" style={{ ...skew, background: LIME }} onClick={b.reset}><span style={unskew}>Book again</span></button>
+        <button className="mt-4 px-6 py-2.5 text-[13px] font-black italic uppercase" style={{ ...skew, background: LIME, color: INK }} onClick={b.reset}><span style={unskew}>Book again</span></button>
       </div>
     </div>
   );
   if (b.stage === "checkout") return (
     <div className={wrap} style={wrapStyle}>
       <div className="px-5 py-3.5 text-[18px] font-black italic uppercase text-white" style={{ background: BAR }}>Checkout</div>
-      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: "#12280a", round: "", inputBg: CELL, bar: BAR, barInk: "#fff" }} />
+      <CheckoutPanel b={b} d={d} addons={addons} mode={mode} onBook={onBook} booking={bookState} tenantId={tenantId} tk={{ bg: PANEL, line: LINEs, ink: "#ffffff", muted: MUTs, accent: LIME, accentInk: INK, round: "", inputBg: CELL, bar: BAR, barInk: "#fff" }} />
     </div>
   );
   return (
@@ -3028,7 +3026,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
         )}
         {/* How close they are to the next discount. */}
         {b.nudge && (
-          <div className="mt-1.5 flex items-start gap-1.5 rounded px-2.5 py-1.5 text-[11.5px] font-black" style={{ background: LIME, color: "#12280a" }}>
+          <div className="mt-1.5 flex items-start gap-1.5 rounded px-2.5 py-1.5 text-[11.5px] font-black" style={{ background: LIME, color: INK }}>
             <span aria-hidden>⚡</span><span>{b.nudge}</span>
           </div>
         )}
@@ -3058,7 +3056,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
                   style={waiting ? { borderColor: "#ffb020", color: "#ffb020", background: "#2a2110" }
                     : dPast ? { borderColor: LINEs, color: "#454d5e", background: CELLOFF, opacity: 0.5 }
                     : dOff || full ? { borderColor: LINEs, color: "#5a6478", background: CELLOFF }
-                    : sel ? { borderColor: LIME, color: "#12280a", background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
+                    : sel ? { borderColor: LIME, color: INK, background: LIME } : { borderColor: LINEs, color: "#fff", background: CELL }}>
                   <span className="text-[9px] font-bold uppercase">{dt.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" })}</span>
                   <span className="text-[14px] font-black leading-none" style={full || dPast ? { textDecoration: "line-through" } : undefined}>{dt.getUTCDate()}</span>
                   {dot && <span className="absolute -bottom-[3px] h-1.5 w-1.5" style={{ background: dot }} />}
@@ -3089,7 +3087,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               </div>
             ) : (
             <div className="relative mt-11">
-            <button className={`w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ ...skew, background: LIME, ["--aos-ready-ring" as string]: "rgba(198,255,0,.55)" } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
+            <button className={`w-full py-3.5 text-[13px] font-black italic uppercase disabled:opacity-40 ${b.canAdd ? "aos-ready" : ""}`} style={{ ...skew, background: LIME, color: INK, ["--aos-ready-ring" as string]: surf.ring } as React.CSSProperties} disabled={!b.canAdd} onClick={b.addToBasket}><span style={unskew}>
                 {b.locked ? "Booking not open yet" : b.soldOut ? (d.waitlist ? "Sold out — join the waiting list" : "Sold out") : !b.hasSpace ? (b.fullDates.length === 1 ? `${fmtDate(b.fullDates[0])} is full` : `${b.fullDates.length} of those days are full`) : b.canAdd ? (
                   <span className="inline-flex flex-wrap items-baseline justify-center gap-x-2">
                     <span>Add {b.isSingle ? `${b.sel.length} × ${b.pass?.name}` : b.pass?.name} to basket</span>
@@ -3150,7 +3148,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               <b className="italic text-white">{money(b.total)}</b>
             </span>
           </div>
-          <button className="mt-3 w-full py-3.5 text-[13px] font-black italic uppercase text-[#12280a] disabled:opacity-40" style={{ ...skew, background: LIME }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? "Next — add children" : `Checkout (${b.basket.length})`}</span></button>
+          <button className="mt-3 w-full py-3.5 text-[13px] font-black italic uppercase disabled:opacity-40" style={{ ...skew, background: LIME, color: INK }} disabled={b.basket.length === 0} onClick={() => b.setStage("checkout")}><span style={unskew}>{mode === "parent" ? "Next — add children" : `Checkout (${b.basket.length})`}</span></button>
         </div>
       </div>
     </div>
@@ -3194,14 +3192,21 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const opens = useOpensAt(d.opensAt);
   const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand(), topRight };
 
-  const LABEL: Record<PageTheme, string> = { playful: "A · Playful", sport: "B · Sport", navy: "C · Navy" };
   const flick = onTheme ? (
-    <div className="mb-3 flex items-center gap-2.5">
+    <div className="mb-3 flex flex-wrap items-center gap-2">
       <span className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Page style</span>
-      <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
-        {(["playful", "sport", "navy"] as PageTheme[]).map((t) => (
-          <button key={t} type="button" onClick={() => onTheme(t)} className="rounded-full px-3 py-1 text-[11.5px] font-bold transition-colors" style={theme === t ? { background: "var(--brand)", color: "#fff" } : { color: "var(--ink-3)" }}>{LABEL[t]}</button>
-        ))}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {(Object.values(THEMES)).map((t) => {
+          const on = theme === t.key;
+          return (
+            <button key={t.key} type="button" onClick={() => onTheme(t.key)} title={t.label}
+              className="flex items-center gap-1.5 rounded-full border px-2 py-1 text-[11px] font-bold transition-all"
+              style={on ? { borderColor: t.swatch, background: `${t.swatch}1f`, color: "var(--ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+              <span className="h-3.5 w-3.5 flex-none rounded-full ring-1 ring-black/10" style={{ background: t.swatch }} />
+              {t.label}{on ? " ✓" : ""}
+            </button>
+          );
+        })}
       </div>
     </div>
   ) : null;
@@ -3209,7 +3214,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   return (
     <div>
       {flick}
-      {theme === "playful" ? <PlayfulPage {...p} /> : <SportPage {...p} surf={theme === "navy" ? SPORT_NAVY : SPORT_BLACK} />}
+      {theme === "playful" ? <PlayfulPage {...p} /> : <SportPage {...p} surf={THEMES[theme]} />}
     </div>
   );
 }
@@ -3231,12 +3236,36 @@ interface PageProps {
   topRight?: React.ReactNode;
 }
 const HERO_FALLBACK = "linear-gradient(160deg,#7fd4d6,#2f7fae 55%,#1b4a6b)";
-// Dark surfaces for the Sport-style pages — swappable so the same design can be
-// near-black (Sport) or portal navy (Navy). Accents stay electric-blue + lime.
-type Surf = { bg: string; panel: string; line: string; cell: string; cellOff: string };
-const SPORT_BLACK: Surf = { bg: "#0b0d12", panel: "#12161f", line: "#1e2430", cell: "#0e131c", cellOff: "#0c0f16" };
-// Matches the app sidebar / title-bar blue (navy → card-blue).
-const SPORT_NAVY: Surf = { bg: "#16306e", panel: "#213f92", line: "#3457a8", cell: "#1c3a86", cellOff: "#142c66" };
+// A full theme for the bold "Sport"-style customer page. Every colour role is
+// here so one design renders in ten completely different, professionally-paired
+// palettes. Each dark ground has: a bright ACCENT (price/chips) with a dark
+// accentInk that sits on it, an EL mid-bright for borders/buttons, a lighter
+// SECONDARY for links/location, and a light MUTED for body text — all chosen for
+// legible contrast on the ground. Playful is the one light theme (own renderer).
+type Surf = {
+  key: PageTheme; label: string; swatch: string; // picker chip
+  bg: string; panel: string; line: string; cell: string; cellOff: string;
+  accent: string; accentInk: string; el: string; secondary: string; muted: string;
+  header?: string; bar: string; ring: string;
+};
+const THEMES: Record<PageTheme, Surf> = {
+  playful:    { key: "playful",    label: "Playful",     swatch: "#2f6bd8", bg: "#ffffff", panel: "#eef4fd", line: "#dbe7fb", cell: "#f4f9ff", cellOff: "#eaf1fc", accent: "#2f6bd8", accentInk: "#ffffff", el: "#2f6bd8", secondary: "#2f6bd8", muted: "#5a6b86", bar: "linear-gradient(120deg,#2f6bd8,#4f9dff)", ring: "rgba(47,107,216,.5)" },
+  sport:      { key: "sport",      label: "Midnight",    swatch: "#c6ff00", bg: "#0b0d12", panel: "#12161f", line: "#1e2430", cell: "#0e131c", cellOff: "#0c0f16", accent: "#c6ff00", accentInk: "#12280a", el: "#0047ff", secondary: "#00c2ff", muted: "#adb8ca", bar: "linear-gradient(120deg,#0047ff,#0090ff)", ring: "rgba(198,255,0,.55)" },
+  emerald:    { key: "emerald",    label: "Emerald",     swatch: "#10b981", bg: "#052a20", panel: "#0a3d2d", line: "#14563f", cell: "#0b3324", cellOff: "#08281d", accent: "#f5c451", accentInk: "#2a1e02", el: "#10b981", secondary: "#6ee7b7", muted: "#a6d8c7", header: "linear-gradient(120deg,#0a3d2d 0%,#12674a 100%)", bar: "linear-gradient(120deg,#0f9d6e,#34d399)", ring: "rgba(245,196,81,.5)" },
+  teal:       { key: "teal",       label: "Deep teal",   swatch: "#0e7490", bg: "#04262e", panel: "#073c47", line: "#0f5966", cell: "#063139", cellOff: "#04262d", accent: "#ff9d5c", accentInk: "#3a1608", el: "#22d3ee", secondary: "#67e8f9", muted: "#a4ccd6", header: "linear-gradient(120deg,#073c47 0%,#0a5e70 100%)", bar: "linear-gradient(120deg,#0891b2,#22d3ee)", ring: "rgba(255,157,92,.5)" },
+  royal:      { key: "royal",      label: "Royal",       swatch: "#4f46e5", bg: "#0d1533", panel: "#16204d", line: "#263272", cell: "#121b45", cellOff: "#0d1533", accent: "#f5b81f", accentInk: "#2a1e02", el: "#6366f1", secondary: "#a5b4fc", muted: "#b7c0e8", header: "linear-gradient(120deg,#16204d 0%,#2a3a86 100%)", bar: "linear-gradient(120deg,#4f46e5,#818cf8)", ring: "rgba(245,184,31,.5)" },
+  aubergine:  { key: "aubergine",  label: "Aubergine",   swatch: "#7c3aed", bg: "#1a1030", panel: "#271847", line: "#3d2a6b", cell: "#201541", cellOff: "#180f2e", accent: "#fbbf24", accentInk: "#2a1e02", el: "#a855f7", secondary: "#d8b4fe", muted: "#c7b6e6", header: "linear-gradient(120deg,#271847 0%,#3a2568 100%)", bar: "linear-gradient(120deg,#7c3aed,#a855f7)", ring: "rgba(251,191,36,.5)" },
+  burgundy:   { key: "burgundy",   label: "Burgundy",    swatch: "#9f1239", bg: "#260a14", panel: "#3a1020", line: "#571830", cell: "#2f0d19", cellOff: "#230912", accent: "#f6c453", accentInk: "#2e1e04", el: "#e11d48", secondary: "#fda4af", muted: "#e0b3bf", header: "linear-gradient(120deg,#3a1020 0%,#5a1c38 100%)", bar: "linear-gradient(120deg,#be123c,#e11d48)", ring: "rgba(246,196,83,.5)" },
+  terracotta: { key: "terracotta", label: "Terracotta",  swatch: "#c2410c", bg: "#2a140c", panel: "#3c1e12", line: "#5a2e1a", cell: "#331810", cellOff: "#26120a", accent: "#fbbf24", accentInk: "#2e1e04", el: "#f97316", secondary: "#fdba74", muted: "#e6c3ac", header: "linear-gradient(120deg,#3c1e12 0%,#5c3016 100%)", bar: "linear-gradient(120deg,#ea580c,#f97316)", ring: "rgba(251,191,36,.5)" },
+  slate:      { key: "slate",      label: "Slate",       swatch: "#64748b", bg: "#14181d", panel: "#1c222b", line: "#2b333f", cell: "#171c24", cellOff: "#12161c", accent: "#f59e0b", accentInk: "#2e1e04", el: "#38bdf8", secondary: "#7dd3fc", muted: "#aab6c6", header: "linear-gradient(120deg,#1c222b 0%,#2b3644 100%)", bar: "linear-gradient(120deg,#0ea5e9,#38bdf8)", ring: "rgba(245,158,11,.5)" },
+  crimson:    { key: "crimson",    label: "Crimson",     swatch: "#dc2626", bg: "#2a0a0a", panel: "#3d1212", line: "#5a1c1c", cell: "#330f0f", cellOff: "#260a0a", accent: "#fbbf24", accentInk: "#2e1e04", el: "#ef4444", secondary: "#fca5a5", muted: "#e6b3b3", header: "linear-gradient(120deg,#3d1212 0%,#5c1e1e 100%)", bar: "linear-gradient(120deg,#dc2626,#ef4444)", ring: "rgba(251,191,36,.5)" },
+};
+// Resolve a stored/absent page style to a valid theme: legacy "navy" → the new
+// "royal", anything unknown → "sport". Keeps old listings rendering.
+function resolveTheme(t?: string): PageTheme {
+  if (t === "navy") return "royal";
+  return t && t in THEMES ? (t as PageTheme) : "sport";
+}
 // Rolling hero carousel — auto-advances + arrows/dots when there's >1 photo.
 function HeroImages({ imgs, fallback }: { imgs: ListingImage[]; fallback: string }) {
   const [i, setI] = useState(0);
@@ -3503,15 +3532,12 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
 function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand, topRight }: PageProps & { surf: Surf }) {
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
-  const isNavy = surf === SPORT_NAVY;
-  // Navy suits the app: gold accent + bluer neutrals (matching the sidebar);
-  // the black Sport theme keeps its electric lime/cyan.
-  const EL = "#0047ff";
-  const LIME = isNavy ? "#f5b81f" : "#c6ff00";      // headline accent (price, chips, borders) — dark ink sits fine on both
-  const CY = isNavy ? "#9cc0ff" : "#00c2ff";        // location / secondary
-  const MUTs = isNavy ? "#b9c7ec" : "#adb8ca";      // muted text
-  // A hint of the app's blue/white title bars on the blue theme's header.
-  const headerBg = isNavy ? "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 68%,#5b8af0 100%)" : undefined;
+  const EL = surf.el;
+  const LIME = surf.accent;      // headline accent (price, chips, borders)
+  const INK = surf.accentInk;    // dark ink that reads on the accent
+  const CY = surf.secondary;     // location / secondary
+  const MUTs = surf.muted;       // muted body text
+  const headerBg = surf.header;  // top-bar gradient (undefined = plain ground)
   const cond = "italic uppercase tracking-[-0.01em]";
   const grid2 = full ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
   // Fixed ASPECT (not height) so the hero crops the same on every screen and
@@ -3565,7 +3591,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
       <div className="relative overflow-hidden" style={{ aspectRatio: heroAspect }}>
         <HeroImages imgs={imgs} fallback={`linear-gradient(120deg,${EL},#00a3ff 70%,#003)`} />
         <div className="pointer-events-none absolute inset-0 z-[1]" style={{ backgroundImage: "repeating-linear-gradient(115deg,transparent 0 46px,rgba(255,255,255,.05) 46px 48px)" }} />
-        {heroCat && <span className="absolute left-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#12280a]" style={{ background: LIME, transform: "skewX(-8deg)" }}>{heroCat.name}</span>}
+        {heroCat && <span className="absolute left-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em]" style={{ background: LIME, color: INK, transform: "skewX(-8deg)" }}>{heroCat.name}</span>}
       </div>
       {/* fancy info strip (under the image) */}
       <div className="flex flex-col border-y sm:flex-row" style={{ borderColor: LINEs, background: PANEL }}>
@@ -3616,7 +3642,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                       <div className={`mt-1 truncate text-[15px] font-black ${cond} text-white`}>{headingOf(d, "team", "title")}</div>
                       <div className="mt-1 truncate text-[11px]" style={{ color: "#c3ccdb" }}>{staffNames.join(" · ")}</div>
                     </div>
-                    <span className="flex h-5 w-5 flex-none items-center justify-center text-[14px] font-black" style={{ background: LIME, color: "#12280a" }}>{teamOpen ? "–" : "+"}</span>
+                    <span className="flex h-5 w-5 flex-none items-center justify-center text-[14px] font-black" style={{ background: LIME, color: INK }}>{teamOpen ? "–" : "+"}</span>
                   </div>
                 </button>
               )}
@@ -3705,7 +3731,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     <button type="button"
                       onClick={() => document.getElementById("aos-book")?.scrollIntoView({ behavior: "smooth", block: "center" })}
                       className="mt-2 w-full px-2 py-1.5 text-[11px] font-black uppercase tracking-[0.08em]"
-                      style={{ background: LIME, color: "#12280a" }}>
+                      style={{ background: LIME, color: INK }}>
                       Join the waiting list
                     </button>
                   ) : (
@@ -3748,7 +3774,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                       );
                     })}
                     {passesExtra > 0 && (
-                      <button type="button" onClick={() => setMorePasses((v) => !v)} className={`mt-0.5 self-start rounded-full px-3 py-1 text-[11px] font-black ${cond}`} style={{ background: LIME, color: "#12280a" }}>
+                      <button type="button" onClick={() => setMorePasses((v) => !v)} className={`mt-0.5 self-start rounded-full px-3 py-1 text-[11px] font-black ${cond}`} style={{ background: LIME, color: INK }}>
                         {morePasses ? "Show fewer" : `+${passesExtra} more`}
                       </button>
                     )}
@@ -3817,7 +3843,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
                     <span className="text-[11px] font-black uppercase tracking-[0.14em]" style={{ color: LIME }}>{whereHead.eyebrow}</span>
                     <span className={`text-[16px] font-black ${cond} text-white`}>{whereHead.title}</span>
                   </span>
-                  <span className="flex h-6 w-6 items-center justify-center text-[16px] font-black" style={{ background: LIME, color: "#12280a" }}>{whereOpen ? "–" : "+"}</span>
+                  <span className="flex h-6 w-6 items-center justify-center text-[16px] font-black" style={{ background: LIME, color: INK }}>{whereOpen ? "–" : "+"}</span>
                 </button>
                 {whereOpen && (<div className="mt-3">
                 <div className="text-[14px] font-black text-white">{venue.name}</div>
