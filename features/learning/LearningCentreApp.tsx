@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { Tile, Ring, GRAD } from "@/features/money/finance-kit";
 import { useSettings } from "@/lib/settings";
 import { SEED_LIBRARY, blankCourse, activeQuizVersion, quizVersions, QUIZ_VERSION_LABELS, type CourseDoc } from "./courseContent";
 import { CoursePlayer } from "./CoursePlayer";
@@ -202,6 +203,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const { settings } = useSettings();
   const [tab, setTab] = useState<"cat" | "assign" | "comp" | "cert" | "docs">("cat");
   const [help, setHelp] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(true);
   const [assignments, setAssignments] = useState<Assignment[]>(SEED_ASSIGNMENTS);
   const [courses, setCourses] = useState<CourseDoc[]>(SEED_LIBRARY);
   const [player, setPlayer] = useState<CourseDoc | null>(null);
@@ -444,25 +446,36 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
         <div className="p-4">
           {/* Catalogue */}
           {tab === "cat" && (<>
-            {/* Activity feed — the narrative lead */}
+            {/* Activity feed — collapsible, with a coloured accent per row */}
             {feed.length > 0 && (
-              <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
-                <div className="mb-2.5 flex items-center gap-2"><span className="grid h-6 w-6 place-items-center rounded-full bg-[var(--panel)] text-[12px]">📣</span><span className="text-[13px] font-extrabold text-[var(--ink)]">Recent activity</span></div>
-                <div className="flex flex-col gap-2.5">
-                  {feed.map((e, i) => (
-                    <div key={i} className="flex items-start gap-3">
-                      <span className="grid h-8 w-8 flex-none place-items-center rounded-full text-[14px]" style={{ background: e.tone + "1a", color: e.tone }}>{e.icon}</span>
-                      <div className="min-w-0"><div className="text-[13px] font-semibold leading-snug text-[var(--ink)]">{e.head}</div><div className="text-[11.5px] text-[var(--ink-3)]">{e.meta}</div></div>
-                    </div>
-                  ))}
-                </div>
+              <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,32,90,.04)]">
+                <button type="button" onClick={() => setActivityOpen((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--panel)]">
+                  <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[#eef4fd] text-[16px]">📣</span>
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[14.5px] font-extrabold text-[var(--ink)]">Recent activity</div>
+                    <div className="text-[11.5px] text-[var(--ink-3)]">{feed.length} update{feed.length === 1 ? "" : "s"}{activityOpen ? "" : " — tap to view"}</div>
+                  </div>
+                  {overdueN > 0 && <span className="rounded-full bg-[#fdebec] px-2.5 py-1 text-[11px] font-extrabold text-[#c0392b]">⏰ {overdueN} overdue</span>}
+                  <span className={`grid h-7 w-7 flex-none place-items-center rounded-full bg-[var(--panel)] text-[13px] text-[var(--ink-3)] transition-transform ${activityOpen ? "rotate-180" : ""}`}>▾</span>
+                </button>
+                {activityOpen && (
+                  <div className="divide-y divide-[var(--line)] border-t border-[var(--line)]">
+                    {feed.map((e, i) => (
+                      <div key={i} className="flex items-start gap-3 py-2.5 pl-4 pr-4 transition-colors hover:bg-[var(--panel)]" style={{ boxShadow: `inset 3px 0 0 ${e.tone}` }}>
+                        <span className="grid h-8 w-8 flex-none place-items-center rounded-full text-[14px]" style={{ background: e.tone + "1a", color: e.tone }}>{e.icon}</span>
+                        <div className="min-w-0"><div className="text-[13px] font-bold leading-snug text-[var(--ink)]">{e.head}</div><div className="text-[11.5px] text-[var(--ink-3)]">{e.meta}</div></div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
-            {/* At-a-glance stats */}
-            <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[[String(courses.length), "total courses", "#1d3a8f"], [String(assignedStaffN), "staff assigned to a course", "#0f7a43"], [`${overdueN} · ${overduePct}%`, "not met deadline", "#c0392b"], [`${avgScore}%`, "avg quiz score", "#6d28d9"]].map(([n, l, col], i) => (
-                <div key={i} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5"><div className="text-[20px] font-extrabold tabular-nums" style={{ color: col }}>{n}</div><div className="text-[11px] text-[var(--ink-3)]">{l}</div></div>
-              ))}
+            {/* At-a-glance stats — rich gradient KPI tiles */}
+            <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+              <Tile label="Total courses" icon="📚" grad={GRAD.blue} value={String(courses.length)} sub="in your library" />
+              <Tile label="Staff on a course" icon="👥" grad={GRAD.green} value={String(assignedStaffN)} sub="have training assigned" />
+              <Tile label="Missed a deadline" icon="⏰" grad={overdueN > 0 ? GRAD.pink : GRAD.green} value={String(overdueN)} sub={overdueN > 0 ? `${overduePct}% of assigned staff` : "all on track"} aside={<Ring pct={overduePct} label={`${overduePct}%`} />} />
+              <Tile label="Avg quiz score" icon="🎯" grad={GRAD.violet} value={`${avgScore}%`} sub="across passed quizzes" aside={<Ring pct={avgScore} label={`${avgScore}%`} />} />
             </div>
 
             {/* Assigned to you — personal learning only appears for courses assigned to you */}
