@@ -11,6 +11,7 @@ import { PageHero } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { useTenantSettings } from "@/lib/settings";
 import { VenueMap } from "./VenueMap";
+import { BlocksApp } from "@/features/blocks/BlocksApp";
 import { DEMO_STAFF } from "@/features/learning/credentials";
 import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
 
@@ -211,7 +212,7 @@ function saveLocal(s: LocalState) {
   }
 }
 
-type Tab = "listings" | "categories" | "locations";
+type Tab = "locations" | "blocks" | "listings";
 
 // The library lives server-side now (PUT /api/library — shared across the
 // tenant's machines and embedded into the parent's customer page). Add-on
@@ -235,7 +236,7 @@ export function FreelancerListingsApp() {
   const initialTab = (): Tab => {
     if (typeof window === "undefined") return "listings";
     const t = new URLSearchParams(window.location.search).get("tab");
-    return t === "categories" || t === "locations" ? t : "listings";
+    return t === "blocks" || t === "locations" ? t : "listings";
   };
   const [tab, setTab] = useState<Tab>(initialTab);
   const [listings, setListings] = useState<Listing[] | null>(null);
@@ -380,10 +381,11 @@ export function FreelancerListingsApp() {
       </div>
     );
 
+  // Left→right as the natural build order: where → when/pricing → the listing.
   const TABS: [Tab, string][] = [
-    ["listings", "Listings"],
-    ["categories", "Categories"],
     ["locations", "Locations"],
+    ["blocks", "Blocks"],
+    ["listings", "Listings"],
   ];
 
   return (
@@ -403,7 +405,7 @@ export function FreelancerListingsApp() {
         } as React.CSSProperties
       }
     >
-      <PageHero title="Listings, services & tickets" lede="Your own programmes" icon="🎫" />
+      <PageHero title="Blocks & listings" lede="Locations, scheduling blocks and your programmes" icon="🎫" />
       <div className="mb-3 flex flex-wrap items-center justify-end gap-2.5">
         <div className="flex items-center gap-2.5">
           {tab === "listings" && (
@@ -432,7 +434,7 @@ export function FreelancerListingsApp() {
         </div>
       </div>
 
-      <TourLauncher view="listings" />
+      <TourLauncher view={tab === "blocks" ? "blocks" : "listings"} />
 
       {/* Tabs */}
       <div className="mb-3 flex gap-1.5 border-b border-[var(--line)]">
@@ -490,7 +492,7 @@ export function FreelancerListingsApp() {
           refresh={refresh}
         />
       )}
-      {tab === "categories" && <CategoriesTab local={local} patch={patchLocal} usage={usage} />}
+      {tab === "blocks" && <BlocksApp embedded />}
       {tab === "locations" && <LocationsTab local={local} patch={patchLocal} usage={usage} onNewListing={startNew} />}
 
       {wizard && (
@@ -927,8 +929,10 @@ function ListingsTab({
                       )}
                       <Button sm onClick={() => copyLink(l, isDraft)}>{copiedId === l.id ? "✓ Copied" : "🔗 Link"}</Button>
                       {/* Opens the real parent page (/book/{id}) in a new tab —
-                          the exact storefront a parent sees, not a preview. */}
-                      <Button sm onClick={() => window.open(`/book/${l.id}`, "_blank", "noopener")}>View as parent ↗</Button>
+                          the exact storefront a parent sees. ?preview=1 tells the
+                          page to show a "Preview" bar instead of the parent-portal
+                          nav, so the provider isn't dropped into the parent app. */}
+                      <Button sm onClick={() => window.open(`/book/${l.id}?preview=1`, "_blank", "noopener")}>View as parent ↗</Button>
                       <Button sm variant="primary" onClick={() => onEdit(l)}>Edit</Button>
                       <div className="relative">
                         <Button sm onClick={() => setMenuId((m) => (m === l.id ? null : l.id))}>⋯</Button>
@@ -992,81 +996,6 @@ function ListingsTab({
         </div>
       )}
     </div>
-  );
-}
-
-// ── Categories tab ─────────────────────────────────────────────────────────
-function CategoriesTab({
-  local,
-  patch,
-  usage,
-}: {
-  local: LocalState;
-  patch: (fn: (s: LocalState) => LocalState) => void;
-  usage: { cats: Record<string, number>; venues: Record<string, number> };
-}) {
-  const [name, setName] = useState("");
-  const add = () => {
-    if (name.trim().length < 2) return;
-    patch((s) => ({ ...s, categories: [...s.categories, { id: uid(), name: name.trim() }] }));
-    setName("");
-  };
-  const remove = (id: string, nm: string) => {
-    const n = usage.cats[id] ?? 0;
-    const warn = n > 0 ? `\n\n${n} listing${n === 1 ? " uses" : "s use"} it — they'll lose this category.` : "";
-    if (!confirm(`Delete category “${nm}”?${warn}`)) return;
-    patch((s) => ({ ...s, categories: s.categories.filter((c) => c.id !== id) }));
-  };
-
-  return (
-    <Card className="p-4">
-      <div className="text-[15px] font-extrabold">Categories</div>
-      <p className="mb-3 text-[12px] text-[var(--ink-3)]">
-        Categories are how parents filter your storefront. These are the options offered when you
-        build a listing.
-      </p>
-
-      {/* Add first — this page is mostly visited to put something new in it. */}
-      <div className="mb-3.5 flex gap-1.5">
-        <Input
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && add()}
-          placeholder="New category name"
-          className="w-[240px]"
-        />
-        <Button variant="primary" onClick={add}>＋ Add category</Button>
-      </div>
-
-      <div className="flex flex-wrap gap-2">
-        {local.categories.map((c) => {
-          const n = usage.cats[c.id] ?? 0;
-          return (
-            <span
-              key={c.id}
-              title={n ? `Used by ${n} listing${n === 1 ? "" : "s"}` : "Not used by any listing yet"}
-              className="inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-[var(--panel)] py-1.5 pl-3.5 pr-1.5 text-[12.5px] font-bold"
-            >
-              {c.name}
-              {/* The count is the whole point — it's how you spot a dead category. */}
-              <span className="rounded-full px-1.5 py-[1px] text-[11px] font-bold"
-                style={n ? { background: "var(--brand-soft)", color: "var(--brand-ink)" } : { background: "var(--surface)", color: "var(--ink-3)" }}>{n}</span>
-              <button
-                type="button"
-                onClick={() => remove(c.id, c.name)}
-                aria-label={`Delete ${c.name}`}
-                className="px-1 text-[var(--ink-3)] hover:text-[var(--red)]"
-              >
-                ✕
-              </button>
-            </span>
-          );
-        })}
-        {local.categories.length === 0 && (
-          <span className="text-[12px] text-[var(--ink-3)]">No categories yet — add your first above.</span>
-        )}
-      </div>
-    </Card>
   );
 }
 

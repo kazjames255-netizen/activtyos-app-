@@ -195,7 +195,7 @@ const ARROW = (
 );
 
 /** Blocks (freelancer) — the manual's reusable scheduling-pattern builder. */
-export function BlocksApp() {
+export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [periods, setPeriods] = useState<Period[] | null>(null);
   const [passes, setPasses] = useState<Pass[] | null>(null);
   const [bundles, setBundles] = useState<Bundle[] | null>(null);
@@ -245,10 +245,13 @@ export function BlocksApp() {
     // Light palette to match the build manual (mirrors the custdash light theme).
     // Full-bleed: cancel the wrapper's p-5, re-pad, fill viewport minus the header.
     <div
-      className="-m-5 min-h-[calc(100vh-3.5rem)] p-5"
+      // Embedded as a tab inside the Listings page, which already supplies the
+      // light palette + padding — so drop the full-bleed wrapper, hero and tour
+      // launcher and render just the builder.
+      className={embedded ? "" : "-m-5 min-h-[calc(100vh-3.5rem)] p-5"}
       style={
         {
-          background: "var(--bg)",
+          ...(embedded ? {} : { background: "var(--bg)" }),
           color: "var(--ink)",
           "--bg": "#f5f8fd",
           "--surface": "#ffffff",
@@ -260,7 +263,7 @@ export function BlocksApp() {
         } as React.CSSProperties
       }
     >
-      <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🗓️" />
+      {!embedded && <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🗓️" />}
 
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red)] bg-[color-mix(in_srgb,var(--red)_8%,#ffffff)] px-3 py-2 text-[12.5px] text-[var(--red)]">
@@ -268,7 +271,7 @@ export function BlocksApp() {
         </div>
       )}
 
-      <TourLauncher view="blocks" />
+      {!embedded && <TourLauncher view="blocks" />}
 
       {loading ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>

@@ -27,6 +27,11 @@ export function BookPage({ id }: { id: string }) {
   const embedded = sp.has("embed");
   // Arrived from an embedded storefront grid — offer the way back.
   const fromStore = sp.get("from") === "store";
+  // ?preview=1 — the operator opened this from "View as parent". Show the exact
+  // storefront, but with a "Preview" bar instead of the parent-portal nav (My
+  // home page / My bookings / Back to activities), so a provider previewing
+  // isn't handed links that drop them into the parent app.
+  const preview = sp.get("preview") === "1";
 
   useEffect(() => {
     apiPublic<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)
@@ -73,7 +78,10 @@ export function BookPage({ id }: { id: string }) {
   // Styled to match the storefront's own nav — bold, uppercase, tracked, no
   // underline — inheriting the page font from the header wrapper.
   const linkCls = "text-[11.5px] font-extrabold uppercase tracking-[0.05em] transition-opacity hover:opacity-70";
-  const topRight = signedIn === false ? (
+  // In preview, the provider gets a single "Close" affordance, never parent nav.
+  const topRight = preview ? (
+    <button type="button" onClick={() => window.close()} className={linkCls}>Close preview ✕</button>
+  ) : signedIn === false ? (
     // Inside an embed, keep ?embed=1 through the sign-in round trip.
     <Link href={`/login?next=${encodeURIComponent(`/book/${id}${embedded ? "?embed=1" : ""}`)}`} className={linkCls}>Sign in</Link>
   ) : signedIn && !embedded ? (
@@ -88,6 +96,14 @@ export function BookPage({ id }: { id: string }) {
 
   return (
     <div className="min-h-screen pb-16">
+      {preview && (
+        // Provider-only bar; parents never see this. Distinct amber so it reads
+        // as "preview chrome", not part of the storefront.
+        <div className="flex flex-wrap items-center justify-center gap-x-2 gap-y-1 bg-[#fef3c7] px-4 py-2 text-center text-[12.5px] font-semibold text-[#92400e]">
+          <span>👁 Preview — this is exactly what a parent sees. This bar isn’t shown to them.</span>
+          <button type="button" onClick={() => window.close()} className="font-extrabold underline">Close</button>
+        </div>
+      )}
       {embedded && fromStore && (
         <div className="px-4 pt-3 text-[12.5px]">
           <button type="button" onClick={() => window.history.back()} className="font-bold text-[#2f6bd8] underline">← All activities</button>

@@ -67,11 +67,13 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
     },
     {
       label: "Blocks and listings",
-      pinned: false,
+      // One flat entry: Locations, Blocks and Listings are now tabs inside the
+      // listings view, so a single link (no section header) opens the lot.
+      pinned: true,
       footer: false,
       items: [
-        { view: "listings", legacyView: "listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
-        { view: "blocks", legacyView: "admin-blocks", label: "Blocks", icon: { type: "glyph", value: "▥" }, badge: null },
+        { view: "listings", legacyView: "listings", label: "Blocks & listings", icon: { type: "glyph", value: "▤" }, badge: null },
+        { view: "blocks", legacyView: "admin-blocks", label: "Blocks", hidden: true, icon: { type: "glyph", value: "▥" }, badge: null },
         { view: "bookings", legacyView: "bookings", label: "Bookings", hidden: true, icon: { type: "glyph", value: "◷" }, badge: null },
       ],
     },
@@ -190,8 +192,8 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
-        { view: "listings", legacyView: "franchise-listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
-        { view: "blocks", legacyView: "franchise-blocks", label: "Blocks", icon: { type: "glyph", value: "▥" }, badge: null },
+        { view: "listings", legacyView: "franchise-listings", label: "Blocks & listings", icon: { type: "glyph", value: "▤" }, badge: null },
+        { view: "blocks", legacyView: "franchise-blocks", label: "Blocks", hidden: true, icon: { type: "glyph", value: "▥" }, badge: null },
         { view: "bookings", legacyView: "franchise-bookings", label: "Bookings", hidden: true, icon: { type: "glyph", value: "◷" }, badge: null },
         { view: "customers", legacyView: "franchise-customers", label: "Families", icon: { type: "glyph", value: "◉" }, badge: null },
       ],
@@ -311,11 +313,12 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
     },
     {
       label: "Blocks and listings",
-      pinned: false,
+      // One flat entry: Locations, Blocks and Listings are tabs inside the view.
+      pinned: true,
       footer: false,
       items: [
-        { view: "listings", legacyView: "freelancer-listings", label: "Listings", icon: { type: "glyph", value: "▤" }, badge: null },
-        { view: "blocks", legacyView: "freelancer-blocks", label: "Blocks", icon: { type: "glyph", value: "▥" }, badge: null },
+        { view: "listings", legacyView: "freelancer-listings", label: "Blocks & listings", icon: { type: "glyph", value: "▤" }, badge: null },
+        { view: "blocks", legacyView: "freelancer-blocks", label: "Blocks", hidden: true, icon: { type: "glyph", value: "▥" }, badge: null },
         { view: "bookings", legacyView: "freelancer-bookings", label: "Bookings", hidden: true, icon: { type: "glyph", value: "◷" }, badge: null },
       ],
     },

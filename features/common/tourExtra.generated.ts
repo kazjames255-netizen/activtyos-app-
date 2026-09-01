@@ -1376,8 +1376,8 @@ export const LB_STEPS: Record<string, LiveTourSteps> = {
         "line": "Every card shows how full it is, and lets you flip a listing between public and hidden or copy its booking link."
       },
       {
-        "find": "Categories",
-        "line": "The Categories tab holds the filters parents browse by, like Holiday Camp or After-School Club."
+        "find": "Blocks",
+        "line": "Blocks are your reusable scheduling patterns — set your dates, times and prices once, then attach them to any listing."
       },
       {
         "find": "Locations",

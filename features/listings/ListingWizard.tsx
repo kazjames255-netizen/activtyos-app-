@@ -1081,7 +1081,7 @@ export function ListingWizard({
             {stepKey !== "preview" && <div className="h-1.5 w-full" style={{ background: "linear-gradient(90deg,#16306e,#3f78d8,#8fbcff)" }} />}
             <div className={stepKey === "preview" ? "" : "px-4 py-4 sm:px-7 sm:py-5"}>
             {stepKey === "basics" && <BasicsStep d={d} upd={upd} />}
-            {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} />}
+            {stepKey === "details" && <DetailsStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "capacity" && <CapacityStep d={d} upd={upd} />}
             {stepKey === "content" && <ContentStep d={d} upd={upd} local={local} patchLocal={patchLocal} />}
             {stepKey === "provided" && <ChipStep n={3} kicker="STEP 3 · PROVIDED" title="What is provided" cardTitle="What is provided" lede="Tick everything included — this shows on the listing." options={local.provided} sel={d.provided} emojis={local.emojis} onToggle={(v) => upd({ provided: toggle(d.provided, v) })} onAdd={(name, emoji) => { patchLocal((s) => ({ ...s, provided: [...s.provided, name], emojis: { ...s.emojis, [name]: emoji } })); upd({ provided: [...d.provided, name] }); }} onDelete={(v) => { patchLocal((s) => ({ ...s, provided: s.provided.filter((x) => x !== v) })); upd({ provided: d.provided.filter((x) => x !== v) }); }}
@@ -1426,7 +1426,25 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
 }
 
 // ── Step: Details (venue, ages, season, categories, capacity) ────────────────
-function DetailsStep({ d, upd, local }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState }) {
+function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void; local: LocalState; patchLocal: (fn: (s: LocalState) => LocalState) => void }) {
+  // Categories are created right here now (no separate Categories tab): type a
+  // new one, it's added to the tenant library and selected on this listing.
+  const [newCat, setNewCat] = useState("");
+  const addCat = () => {
+    const name = newCat.trim();
+    if (name.length < 2) return;
+    // Don't duplicate an existing category — just select it.
+    const existing = local.categories.find((c) => c.name.toLowerCase() === name.toLowerCase());
+    if (existing) {
+      if (!d.categoryIds.includes(existing.id)) upd({ categoryIds: [...d.categoryIds, existing.id] });
+      setNewCat("");
+      return;
+    }
+    const id = uid();
+    patchLocal((s) => ({ ...s, categories: [...s.categories, { id, name }] }));
+    upd({ categoryIds: [...d.categoryIds, id] });
+    setNewCat("");
+  };
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
   // Card is always accepted; these are the extra methods the tenant offers.
@@ -1465,14 +1483,32 @@ function DetailsStep({ d, upd, local }: { d: WizardDraft; upd: (p: Partial<Wizar
       </RichCard>
       <RichCard icon="🏷️" title="Categories" subtitle="What describes this listing" tint="teal">
       <div>
-      <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Choose what describes your listing — manage the options in the Categories tab.</div>
-      <div className="mb-3 flex flex-wrap gap-1.5">
+      <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Tap the ones that fit — or type a new category to add it. Parents use these to filter your storefront; your list grows as you go.</div>
+      <div className="mb-2 flex flex-wrap gap-1.5">
         {local.categories.map((c) => (
           <button key={c.id} type="button" onClick={() => upd({ categoryIds: toggle(d.categoryIds, c.id) })} className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
             style={d.categoryIds.includes(c.id) ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
-            {c.name}
+            {d.categoryIds.includes(c.id) ? "✓ " : ""}{c.name}
           </button>
         ))}
+        {local.categories.length === 0 && (
+          <span className="py-1.5 text-[12px] text-[var(--ink-3)]">No categories yet — add your first below.</span>
+        )}
+      </div>
+      {/* Add a new category inline — no separate Categories tab. */}
+      <div className="mb-3 flex gap-1.5">
+        <input
+          value={newCat}
+          onChange={(e) => setNewCat(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCat(); } }}
+          placeholder="Add a category (e.g. Football)"
+          className="h-9 w-[220px] max-w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 text-[12.5px] text-[var(--ink)] outline-none focus:border-[var(--brand-2)]"
+        />
+        <button type="button" onClick={addCat} disabled={newCat.trim().length < 2}
+          className="h-9 rounded-lg px-3.5 text-[12.5px] font-bold text-white transition-opacity disabled:opacity-40"
+          style={{ background: "var(--brand-2)" }}>
+          ＋ Add
+        </button>
       </div>
       {/* Orphaned tags: category ids saved earlier that no longer exist in the
           library (its ids were regenerated). Their names are gone, so the only
