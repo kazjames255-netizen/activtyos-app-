@@ -68,21 +68,48 @@ export function HolidayApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Leave & absence" icon="🏖" lede="Approve time off, manage sickness & SSP, see who's off and who needs covering, track everyone's entitlement, and keep the rota in step. Follows UK law (5.6 weeks holiday capped at 28 days; SSP from day 1)." />
 
-      {/* summary strip */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[
-          ["Pending requests", String(pending.length), "awaiting your decision", "linear-gradient(135deg,#9d174d,#f43f5e)"],
-          ["Off today", String(offToday.length), offToday.map((a) => a.name.split(" ")[0]).join(", ") || "everyone in", "linear-gradient(135deg,#1d3a8f,#3f7ae0)"],
-          ["Leave year", ly.label, "current year", "linear-gradient(135deg,#166534,#37b26a)"],
-          ["Team", `${profiles.length}`, "people tracked", "linear-gradient(135deg,#334155,#64748b)"],
-        ].map(([label, value, sub, grad]) => (
-          <div key={label} className="rounded-2xl p-4 text-white shadow-[0_18px_40px_-26px_rgba(16,32,90,.6)]" style={{ background: grad }}>
-            <div className="text-[11px] font-bold uppercase tracking-wide text-white/85">{label}</div>
-            <div className="mt-1 text-[22px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{value}</div>
-            <div className="mt-1 truncate text-[11.5px] text-white/85">{sub}</div>
-          </div>
-        ))}
-      </div>
+      {/* Overview — same BrightHR-style visuals as the staff "My time off" page:
+          a week strip of who's off, plus colourful counter cards that jump to
+          the relevant tab. Keeps all the info, just reads at a glance. */}
+      {(() => {
+        const wkNow = new Date(); const dow = (wkNow.getDay() + 6) % 7;
+        const mon = new Date(wkNow.getFullYear(), wkNow.getMonth(), wkNow.getDate() - dow);
+        const week = Array.from({ length: 7 }, (_, i) => isoDate(new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i)));
+        const today = isoDate(new Date());
+        const teamOff = (iso: string) => absences.filter((a) => a.status === "approved" && a.start <= iso && a.end >= iso).length;
+        const offThisWeek = new Set(absences.filter((a) => a.status === "approved" && a.start <= week[6] && a.end >= week[0]).map((a) => a.staffId)).size;
+        const cards: { icon: string; value: number; label: string; tone: string; tab: Tab }[] = [
+          { icon: "📋", value: pending.length, label: "Pending requests", tone: "#e11d63", tab: "requests" },
+          { icon: "🌴", value: offToday.length, label: "Off today", tone: "#1d3a8f", tab: "off" },
+          { icon: "🗓️", value: offThisWeek, label: "Off this week", tone: "#0f7a43", tab: "off" },
+          { icon: "👥", value: profiles.length, label: "Team", tone: "#64748b", tab: "allowances" },
+        ];
+        return (
+          <Card className="p-4">
+            <div className="mb-2 flex flex-wrap items-baseline gap-2">
+              <div className="text-[15px] font-extrabold text-[var(--ink)]">This week</div>
+              <span className="text-[11.5px] text-[var(--ink-3)]">{ly.label} leave year</span>
+            </div>
+            <div className="grid grid-cols-7 gap-1.5">
+              {week.map((iso) => { const n = teamOff(iso); const isToday = iso === today; const d = new Date(`${iso}T00:00:00`); return (
+                <div key={iso} className="text-center">
+                  <div className={`text-[10.5px] font-bold ${isToday ? "text-[#1d3a8f]" : "text-[var(--ink-3)]"}`}>{d.toLocaleDateString("en-GB", { weekday: "short" })} {d.getDate()}</div>
+                  <div className={`mx-auto mt-1 grid h-11 w-11 place-items-center rounded-full text-[15px] font-extrabold tabular-nums ${isToday ? "bg-[#1d3a8f] text-white" : n > 0 ? "bg-[#eef4fd] text-[#1d3a8f] ring-1 ring-[#cfe0fb]" : "bg-[var(--panel)] text-[var(--ink-3)]"}`}>{n}</div>
+                </div>
+              ); })}
+            </div>
+            <div className="mt-1 text-center text-[10px] text-[var(--ink-3)]">Team members off each day this week</div>
+            <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              {cards.map((c) => (
+                <button key={c.label} type="button" onClick={() => setTab(c.tab)} title={`Go to ${c.label}`} className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2.5 text-left transition hover:border-[var(--ink-3)] hover:bg-[var(--panel)]">
+                  <span className="grid h-7 w-7 flex-none place-items-center rounded-lg text-[14px]" style={{ background: c.tone + "1a" }}>{c.icon}</span>
+                  <div className="min-w-0"><div className="text-[16px] font-extrabold tabular-nums text-[var(--ink)]">{c.value}</div><div className="truncate text-[10.5px] font-semibold text-[var(--ink-3)]">{c.label}</div></div>
+                </button>
+              ))}
+            </div>
+          </Card>
+        );
+      })()}
 
       {/* tabs + add leave */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
