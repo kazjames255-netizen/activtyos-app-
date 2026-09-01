@@ -23,6 +23,8 @@ export function TimesheetsApp() {
   const [q, setQ] = useState("");
   const [locFilter, setLocFilter] = useState("all");
   const [edit, setEdit] = useState<ClockRecord | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"all" | "in" | "break" | "late" | "out">("all");
+  const [nudges, setNudges] = useState<Record<string, number>>({});
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => { setAll(loadClock()); setSettings(loadClockSettings()); }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
@@ -57,6 +59,12 @@ export function TimesheetsApp() {
   const tsPeople = people.filter((r) => r.clockInAt); // anyone who clocked in today
 
   const clockOutPerson = (r: ClockRecord) => { setAll(clockOut(all, r.id, r.name)); flash(`${r.name.split(" ")[0]} clocked out.`); };
+  // A reminder ping (same idea as Reconciliation's 🔔 nudge). Demo: flashes + counts.
+  const nudge = (r: ClockRecord) => {
+    const why = r.status === "out" ? " — a reminder to clock in." : r.lateMin ? " — checking they’re on site." : ".";
+    setNudges((n) => ({ ...n, [r.id]: (n[r.id] || 0) + 1 }));
+    flash(`🔔 Nudge sent to ${r.name.split(" ")[0]}${why}`);
+  };
   // BrightHR-style person card
   const personCard = (r: ClockRecord) => {
     // Status colour, not action colour: clocked in = green, on break = amber,
@@ -73,7 +81,10 @@ export function TimesheetsApp() {
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13.5px] font-extrabold text-[#1d3a8f]">{r.name}</div>
             <div className="truncate text-[11.5px] text-[var(--ink-3)]">{r.role}{r.op ? ` · ${r.op}` : ""}</div>
-            {(r.status === "in" || r.status === "break") && <button type="button" onClick={() => clockOutPerson(r)} className="mt-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f] hover:bg-[#eef4ff]">Clock out</button>}
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+              {(r.status === "in" || r.status === "break") && <button type="button" onClick={() => clockOutPerson(r)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f] hover:bg-[#eef4ff]">Clock out</button>}
+              <button type="button" onClick={() => nudge(r)} title={r.status === "out" ? "Nudge — remind them to clock in" : r.lateMin ? "Nudge — they clocked in late; check they're on site" : "Nudge — send a reminder ping"} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition-colors hover:border-[#f0b100] hover:bg-[#fdf6e3]">🔔 Nudge{nudges[r.id] ? <span className="ml-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#e88f1f] px-1 text-[9px] font-extrabold text-white">{nudges[r.id]}</span> : null}</button>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold" style={{ background: footTone.bg, color: footTone.fg }}><span>⏱</span>{foot}</div>
@@ -137,6 +148,15 @@ export function TimesheetsApp() {
 
       {tab === "in" && (() => {
         const outVisible = out.filter((r) => !offNames.has(r.name.trim().toLowerCase()));
+        const late = [...inNow, ...onBreak].filter((r) => (r.lateMin || 0) > 0);
+        const F = statusFilter;
+        const pills: [typeof statusFilter, string, number, string][] = [
+          ["all", "All", inNow.length + onBreak.length + outVisible.length, "#1d3a8f"],
+          ["in", "🟢 Clocked in", inNow.length, "#0f7a43"],
+          ["break", "⏸ On break", onBreak.length, "#f59e0b"],
+          ["late", "⏰ Late", late.length, "#c0392b"],
+          ["out", "⚪ Clocked out", outVisible.length, "#64748b"],
+        ];
         const section = (label: string, color: string, list: ClockRecord[], empty: string) => (
           <div className="mt-4">
             <div className="mb-2 flex items-center gap-2"><span className="text-[12px] font-extrabold uppercase tracking-wide" style={{ color }}>{label}</span><span className="grid h-[18px] min-w-[18px] place-items-center rounded-full px-1.5 text-[10.5px] font-extrabold text-white" style={{ background: color }}>{list.length}</span></div>
@@ -146,15 +166,26 @@ export function TimesheetsApp() {
         return (
           <Card className="mt-4 p-4">
             <div className="flex flex-wrap items-center gap-2"><div className="text-[13px] font-extrabold text-[var(--ink)]">Who&rsquo;s in — live</div><Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="ml-auto"><option value="all">All listings</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</Select><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter by employee…" className="w-52 rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] outline-none focus:border-[#1d3a8f]" /></div>
-            {section("🟢 Clocked in", "#0f7a43", inNow, "No one clocked in.")}
-            {section("⏸ On break", "#f59e0b", onBreak, "Nobody on a break.")}
-            <div className="mt-4">
-              <div className="mb-2 flex items-center gap-2"><span className="text-[12px] font-extrabold uppercase tracking-wide text-[#8b5cf6]">🏖 Off today</span><span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#8b5cf6] px-1.5 text-[10.5px] font-extrabold text-white">{off.length}</span></div>
-              {off.length === 0 ? <div className="rounded-2xl border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">Nobody booked off.</div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{off.map((o) => (
-                <div key={o.name} className="flex items-center gap-2.5 rounded-2xl border border-[var(--line)] bg-white p-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f3ecfb] text-[16px]">🏖</span><div className="min-w-0"><div className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{o.name}</div><div className="text-[11.5px] text-[#8b5cf6]">On leave · {o.kind}</div></div></div>
-              ))}</div>}
+            {/* status filter pills */}
+            <div className="mt-3 flex flex-wrap gap-1.5">
+              {pills.map(([k, l, n, c]) => { const on = F === k; return (
+                <button key={k} type="button" onClick={() => setStatusFilter(k)} className="inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12px] font-bold transition-colors" style={on ? { borderColor: c, background: c + "14", color: c } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>
+                  {l}<span className="grid h-[17px] min-w-[17px] place-items-center rounded-full px-1 text-[10px] font-extrabold text-white" style={{ background: on ? c : "#cbd5e1" }}>{n}</span>
+                </button>
+              ); })}
             </div>
-            {section("Clocked out", "#94a3b8", outVisible, "Everyone's clocked out or off.")}
+            {(F === "all" || F === "in") && section("🟢 Clocked in", "#0f7a43", inNow, "No one clocked in.")}
+            {(F === "all" || F === "break") && section("⏸ On break", "#f59e0b", onBreak, "Nobody on a break.")}
+            {F === "late" && section("⏰ Clocked in late", "#c0392b", late, "Nobody clocked in late — nice.")}
+            {F === "all" && (
+              <div className="mt-4">
+                <div className="mb-2 flex items-center gap-2"><span className="text-[12px] font-extrabold uppercase tracking-wide text-[#8b5cf6]">🏖 Off today</span><span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#8b5cf6] px-1.5 text-[10.5px] font-extrabold text-white">{off.length}</span></div>
+                {off.length === 0 ? <div className="rounded-2xl border border-dashed border-[var(--line)] p-4 text-center text-[12px] text-[var(--ink-3)]">Nobody booked off.</div> : <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">{off.map((o) => (
+                  <div key={o.name} className="flex items-center gap-2.5 rounded-2xl border border-[var(--line)] bg-white p-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-full bg-[#f3ecfb] text-[16px]">🏖</span><div className="min-w-0"><div className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{o.name}</div><div className="text-[11.5px] text-[#8b5cf6]">On leave · {o.kind}</div></div></div>
+                ))}</div>}
+              </div>
+            )}
+            {(F === "all" || F === "out") && section("Clocked out", "#94a3b8", outVisible, "Everyone's clocked out or off.")}
           </Card>
         );
       })()}
