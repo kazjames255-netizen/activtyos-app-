@@ -204,6 +204,8 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const [tab, setTab] = useState<"cat" | "assign" | "comp" | "cert" | "docs">("cat");
   const [help, setHelp] = useState(false);
   const [activityOpen, setActivityOpen] = useState(true);
+  const [focusOpen, setFocusOpen] = useState(true);
+  const [focusQ, setFocusQ] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>(SEED_ASSIGNMENTS);
   const [courses, setCourses] = useState<CourseDoc[]>(SEED_LIBRARY);
   const [player, setPlayer] = useState<CourseDoc | null>(null);
@@ -651,16 +653,46 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 </div>
               ))}
             </div>
-            {/* Individual focus areas */}
-            <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
-              <div className="text-[12px] font-extrabold text-[#1d3a8f]">🎯 Individual focus — strengths &amp; areas to practise</div>
-              <div className="mb-2 text-[11px] text-[var(--ink-3)]">Illustrative from quiz scores — the full per-question breakdown per person appears once answers are recorded (backend).</div>
-              <div className="grid gap-1.5 sm:grid-cols-2">
-                {staff.map((s) => (
-                  <div key={s.name} className="rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px]"><b className="text-[var(--ink)]">{s.name}</b> <span className="text-[var(--ink-3)]">— strong at <span className="font-semibold text-[#0f7a43]">{ranked[0]?.c.title}</span>; practise <span className="font-semibold text-[#c0392b]">{ranked[ranked.length - 1]?.c.title}</span></span></div>
-                ))}
-              </div>
-            </div>
+            {/* Individual focus areas — collapsible, name-filterable, per-person cards */}
+            {(() => {
+              const avc = ["#1d3a8f", "#0f857b", "#c2268f", "#c06a10", "#6366f1", "#b45309"];
+              const strong = ranked[0]?.c.title; const practise = ranked[ranked.length - 1]?.c.title;
+              const list = focusQ.trim() ? staff.filter((s) => s.name.toLowerCase().includes(focusQ.trim().toLowerCase())) : staff;
+              return (
+                <div className="mb-3 overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,32,90,.04)]">
+                  <button type="button" onClick={() => setFocusOpen((v) => !v)} className="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-[var(--panel)]">
+                    <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[#f3effe] text-[16px]">🎯</span>
+                    <div className="min-w-0 flex-1"><div className="text-[14.5px] font-extrabold text-[var(--ink)]">Individual focus</div><div className="text-[11.5px] text-[var(--ink-3)]">Strengths &amp; areas to practise · {staff.length} staff</div></div>
+                    <span className={`grid h-7 w-7 flex-none place-items-center rounded-full bg-[var(--panel)] text-[13px] text-[var(--ink-3)] transition-transform ${focusOpen ? "rotate-180" : ""}`}>▾</span>
+                  </button>
+                  {focusOpen && (
+                    <div className="border-t border-[var(--line)] p-4">
+                      <div className="mb-3 flex flex-wrap items-center gap-2">
+                        <input value={focusQ} onChange={(e) => setFocusQ(e.target.value)} placeholder="🔍 Filter by name…" className="h-9 w-full max-w-[260px] rounded-lg border border-[var(--line)] bg-white px-3 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+                        <span className="text-[11px] text-[var(--ink-3)]">{list.length} of {staff.length}</span>
+                        <span className="ml-auto text-[11px] text-[var(--ink-3)]">Illustrative from quiz scores — full per-question breakdown appears once answers are recorded (backend).</span>
+                      </div>
+                      {list.length === 0 ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No staff match &ldquo;{focusQ}&rdquo;.</div> : (
+                        <div className="grid gap-2.5 sm:grid-cols-2">
+                          {list.map((s) => { const col = avc[[...s.name].reduce((n, c) => n + c.charCodeAt(0), 0) % avc.length]; return (
+                            <div key={s.name} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+                              <div className="mb-2 flex items-center gap-2.5">
+                                <span className="grid h-8 w-8 flex-none place-items-center rounded-full text-[11px] font-extrabold text-white" style={{ background: col }}>{s.name.split(" ").map((w) => w[0]).slice(0, 2).join("")}</span>
+                                <div className="min-w-0"><div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{s.name}</div><div className="truncate text-[10.5px] text-[var(--ink-3)]">{s.role}{s.op ? ` · ${s.op}` : ""}</div></div>
+                              </div>
+                              <div className="flex flex-col gap-1.5">
+                                <div className="flex items-start gap-2"><span className="mt-[1px] flex-none rounded-md bg-[#e6f4ea] px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase text-[#0f7a43]">✓ Strong</span><span className="text-[12px] font-semibold text-[#0f7a43]">{strong}</span></div>
+                                <div className="flex items-start gap-2"><span className="mt-[1px] flex-none rounded-md bg-[#fdecec] px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase text-[#c0392b]">◎ Practise</span><span className="text-[12px] font-semibold text-[#c0392b]">{practise}</span></div>
+                              </div>
+                            </div>
+                          ); })}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
             <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
               <table className="w-full text-[13px]"><thead><tr className="bg-[var(--panel)] text-left text-[11px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th><th className="px-3 py-2.5 font-extrabold">Location</th><th className="px-3 py-2.5 font-extrabold">Role</th><th className="px-3 py-2.5 font-extrabold">Safeguarding</th><th className="px-3 py-2.5 font-extrabold">S/G quiz</th><th className="px-3 py-2.5 font-extrabold">First aid</th></tr></thead>
                 <tbody>{staff.map((s) => (
