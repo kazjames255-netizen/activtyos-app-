@@ -202,22 +202,19 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   // that moves to the footer. For an operator that's their tenant (business)
   // name; for a parent (no tenant) it's the provider they're linked to.
   const [brand, setBrand] = useState<string | null>(null);
-  const [brandLogo, setBrandLogo] = useState<string | null>(null);
   useEffect(() => {
     apiGet<Me>("/api/me")
       .then((m) => {
         if (m.tenantName) {
           setBrand(m.tenantName);
-          if (m.logoUrl) setBrandLogo(m.logoUrl); // operator's own logo in their portal chrome
           return;
         }
         // Parent side: brand with their provider (Phase 1 is single-provider) —
-        // their logo if uploaded, otherwise their customer-facing display name.
-        apiGet<{ name: string; logoUrl?: string | null }[]>("/api/my/providers")
+        // their customer-facing display name.
+        apiGet<{ name: string }[]>("/api/my/providers")
           .then((ps) => {
             const p = ps?.[0];
             if (p?.name) setBrand(p.name);
-            if (p?.logoUrl) setBrandLogo(p.logoUrl);
           })
           .catch(() => {});
       })
@@ -303,18 +300,9 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       }}
     >
       <div className={`flex items-center pb-4 ${collapsed ? "justify-center px-2" : "gap-2 px-4"}`}>
+        {/* Text name only — no logo in the portal chrome. */}
         {collapsed ? (
-          <img
-            src={brandLogo ?? undefined}
-            alt={brandName}
-            className={brandLogo ? "h-8 w-8 rounded-md bg-white object-contain p-0.5" : "hidden"}
-          />
-        ) : brandLogo ? (
-          <img
-            src={brandLogo}
-            alt={brandName}
-            className="h-10 max-w-[180px] rounded-md bg-white object-contain p-1"
-          />
+          <span className="grid h-8 w-8 place-items-center rounded-md text-[15px] font-extrabold" style={{ background: "rgba(255,255,255,0.12)", color: "var(--side-ink)" }}>{brandName.slice(0, 1)}</span>
         ) : (
           <span
             className={`block min-w-0 flex-1 break-words font-extrabold leading-[1.08] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden ${
@@ -325,9 +313,6 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
           >
             {brandName}
           </span>
-        )}
-        {collapsed && !brandLogo && (
-          <span className="grid h-8 w-8 place-items-center rounded-md text-[15px] font-extrabold" style={{ background: "rgba(255,255,255,0.12)", color: "var(--side-ink)" }}>{brandName.slice(0, 1)}</span>
         )}
         {!collapsed && (
           <button
