@@ -2340,6 +2340,11 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
   return (
     <div className="mx-auto max-w-[1120px]">
       <StepHead n={8} kicker="STEP 8 · ADD-ONS" title="Optional add-ons" lede="Per-day, whole-block or one-off extras. Add-ons you create are saved and reusable on any listing." />
+      <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-[#b7dde7] bg-[#eef8fb] px-3 py-2 text-[11.5px] leading-[1.5] text-[#0c4a5e]">
+        <span>🍽</span>
+        <span className="flex-1"><b>Food isn&rsquo;t an add-on.</b> Set meals up in the <b>Meals planner</b> — they get a day-by-day menu, allergens and dietary options, and their own checkout step. Add-ons here are for <b>non-food</b> extras (late pick-up, kit, photos…).</span>
+        <button type="button" onClick={() => window.open(window.location.pathname.replace(/\/[^/]*$/, "/meals"), "_blank")} className="whitespace-nowrap rounded-full border border-[#0c4a5e] bg-white px-2.5 py-1 text-[11px] font-bold text-[#0c4a5e] hover:bg-[#eef8fb]">Open Meals planner ↗</button>
+      </div>
       <div className="grid items-start gap-4 md:grid-cols-2">
       <RichCard icon="🧩" title="Your add-ons" subtitle="Tick the ones for this listing" tint="teal">
       {local.addons.length > 0 ? (
@@ -2368,11 +2373,11 @@ function AddonsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: Pa
       </RichCard>
       <RichCard icon={editing ? "✏️" : "➕"} title={editing ? `Editing “${local.addons.find((x) => x.id === editing)?.name ?? ""}”` : "Create a new add-on"} subtitle="Saved and reusable on any listing">
       <div className="flex flex-wrap items-end gap-2">
-        <div className="flex-1"><FieldLabel>Name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Hot lunch" className="w-full" /></div>
+        <div className="flex-1"><FieldLabel>Name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Late pick-up" className="w-full" /></div>
         <div><FieldLabel>Type</FieldLabel><Select value={type} onChange={(e) => setType(e.target.value as "perday" | "once")} className="w-[130px]">{Object.entries(types).map(([k, v]) => <option key={k} value={k}>{v}</option>)}</Select></div>
         <div className="w-[90px]"><FieldLabel>Price £</FieldLabel><Input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} className="w-full" /></div>
         <div className="w-full"><FieldLabel>Description <span className="font-normal text-[var(--ink-3)]">— optional, shown to parents</span></FieldLabel>
-          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Hot meal, dessert and a drink. Vegetarian by default — tell us about allergies when you book." className="w-full" /></div>
+          <Input value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="e.g. Collect any time up to 5:30 pm — a relaxed end to the day." className="w-full" /></div>
         <div className="w-full">
           <FieldLabel>Questions <span className="font-normal text-[var(--ink-3)]">— optional, asked per child at checkout</span></FieldLabel>
           {qs.map((q, i) => {
