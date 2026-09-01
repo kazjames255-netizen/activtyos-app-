@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { firebaseAuth } from "@/lib/firebase/client";
@@ -598,6 +599,16 @@ function ListingsTab({
     visNoteTimer.current = setTimeout(() => setVisNote(null), 8000);
   };
   useEffect(() => () => { if (visNoteTimer.current) clearTimeout(visNoteTimer.current); }, []);
+
+  // "Book for a customer" — jump to the Bookings page's Take-a-booking flow
+  // (the real booking widget in operator mode) with this listing preselected.
+  // Portal is the first path segment, so this works for freelancer/company/etc.
+  const router = useRouter();
+  const pathname = usePathname();
+  const takeBooking = (l: Listing) => {
+    const portal = (pathname || "/freelancer").split("/").filter(Boolean)[0] || "freelancer";
+    router.push(`/${portal}/bookings?take=${encodeURIComponent(l.id)}`);
+  };
   const [sortBy, setSortBy] = useState<SortKey>("soonest");
 
   const bookedCount = (l: Listing) => (l.blocks ?? []).reduce((s, b) => s + Math.max(0, b.capacity - b.spotsLeft), 0);
@@ -907,7 +918,13 @@ function ListingsTab({
                         )}
                       </div>
                     )}
-                    <div className="ml-auto flex items-center gap-2">
+                    <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                      {/* Take a phone/walk-in booking for a family, on the real
+                          booking widget in operator mode. Only for listings that
+                          can actually be booked (a draft has no dates/prices). */}
+                      {!isDraft && isLive && (
+                        <Button sm onClick={() => takeBooking(l)}>📞 Book for a customer</Button>
+                      )}
                       <Button sm onClick={() => copyLink(l, isDraft)}>{copiedId === l.id ? "✓ Copied" : "🔗 Link"}</Button>
                       {/* Opens the real parent page (/book/{id}) in a new tab —
                           the exact storefront a parent sees, not a preview. */}
@@ -936,10 +953,15 @@ function ListingsTab({
                   </div>
                 </div>
 
-                {/* cover, on the right */}
+                {/* cover, on the right — honour the operator's own focal point
+                    (x/y/zoom). CroppedImage measures this slot's aspect and
+                    focal-crops to it, so the subject the operator framed in the
+                    hero stays framed here too, whatever layout/size they chose.
+                    (It used to force dead-centre, which clipped off-centre
+                    subjects like a child's face.) */}
                 <div className="order-first h-[150px] w-full flex-none overflow-hidden sm:order-last sm:h-auto sm:w-[230px] sm:self-stretch sm:rounded-r-xl">
                   {info?.cover ? (
-                    <CroppedImage im={{ ...info.cover, x: 50, y: 50 }} className="h-full w-full" />
+                    <CroppedImage im={info.cover} className="h-full w-full" />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center bg-[var(--surface)] text-[26px]">🏕️</div>
                   )}

@@ -24,6 +24,8 @@ import { money } from "./helpers";
 
 export function TakeBookingModal() {
   const show = useBookingsStore((s) => s.showCreate);
+  // Set when opened from a listing card ("Book for a customer") — preselect it.
+  const preId = useBookingsStore((s) => s.createListingId);
   const close = useBookingsStore((s) => s.close);
   const setShow = useBookingsStore.setState;
 
@@ -126,10 +128,18 @@ export function TakeBookingModal() {
         const ls = all.filter((l) =>
           !l.archived && (l.status ?? "live") === "live" && !!l.blockId && (l.blocks?.length ?? 0) > 0);
         setListings(ls);
-        if (ls.length) setId(ls[0].id);
+        // Preselect the card the operator came from, if it's bookable.
+        if (ls.length) setId(preId && ls.some((l) => l.id === preId) ? preId : ls[0].id);
       })
       .catch((e) => setError(e instanceof Error ? e.message : "Couldn't load your listings"));
   }, [show, listings]);
+
+  // Reopened from a card after the list was already cached: jump to it. preId
+  // is stable through a session (cleared on dismiss), so this doesn't fight the
+  // operator changing the dropdown by hand.
+  useEffect(() => {
+    if (show && preId && listings?.some((l) => l.id === preId)) setId(preId);
+  }, [show, preId, listings]);
 
   useEffect(() => {
     if (!show || lib) return;
@@ -173,7 +183,7 @@ export function TakeBookingModal() {
   if (!show) return null;
 
   const dismiss = () => {
-    setShow({ showCreate: false });
+    setShow({ showCreate: false, createListingId: null });
     close();
     // The component stays mounted between opens — a finished booking must not
     // greet the next one.

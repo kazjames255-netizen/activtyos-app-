@@ -29,11 +29,16 @@ export function BookingsApp() {
 
   // Deep link (e.g. from the Referrals dashboard's "View booking"): open it.
   const open = useBookingsStore((s) => s.open);
+  const openCreate = useBookingsStore((s) => s.openCreate);
   const searchParams = useSearchParams();
   useEffect(() => {
     const ref = searchParams.get("ref");
     if (ref) open(ref);
-  }, [searchParams, open]);
+    // ?take={listingId} — arrived from a listing card's "Book for a customer":
+    // open the Take-a-booking modal with that listing preselected.
+    const take = searchParams.get("take");
+    if (take) openCreate(take);
+  }, [searchParams, open, openCreate]);
 
   return (
     // Listings and Sessions & blocks each set this light palette locally, so

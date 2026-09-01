@@ -31,6 +31,9 @@ interface BookingsState {
   selected: Record<string, boolean>;
   openRef: string | null;
   showCreate: boolean;
+  /** When "Take a booking" is opened from a specific listing's card, the
+   *  listing to preselect in the modal's dropdown. */
+  createListingId: string | null;
   /** Bulk-email compose: the selected bookers (deduped, valid emails only). */
   emailCompose: { emails: string[]; names: string[] } | null;
   emailSending: boolean;
@@ -63,7 +66,7 @@ interface BookingsState {
   cancelChange: (ref: string) => void;
   applyChangeDay: (ref: string, ki: number, oldDt: string, newDt: string) => void;
 
-  openCreate: () => void;
+  openCreate: (listingId?: string) => void;
   createBooking: (input: TakeBookingInput) => void;
 }
 
@@ -109,6 +112,7 @@ export const useBookingsStore = create<BookingsState>()(
       selected: {},
       openRef: null,
       showCreate: false,
+      createListingId: null,
       emailCompose: null,
       emailSending: false,
 
@@ -307,7 +311,7 @@ export const useBookingsStore = create<BookingsState>()(
           });
         }),
 
-      openCreate: () => set((s) => void (s.showCreate = true)),
+      openCreate: (listingId?: string) => set((s) => { s.showCreate = true; s.createListingId = listingId ?? null; }),
       createBooking: (input) =>
         void run(async () => {
           const created = await apiPost<Booking>(`/api/bookings`, input);
