@@ -1953,11 +1953,15 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
             const ov = d.ticketOverrides[t.name] || {};
             const closed = ov.capacity === "0";
             const hidden = ov.hidden === true;
-            // Accent bar reads the ticket's state at a glance: brand blue = live,
-            // red = closed, grey = hidden.
-            const accent = hidden ? "var(--ink-3)" : closed ? "#e21d27" : "var(--brand-2,#2f6bd8)";
+            // A pass needing more days than the whole run offers can't be booked
+            // at all — grey the whole card out (parents can't pick it either;
+            // the booking widget's passFits disables it the same way).
+            const unfit = t.days > totalRun;
+            // Accent bar reads state at a glance: red = closed / won't fit,
+            // grey = hidden, brand blue = live.
+            const accent = unfit ? "#c0392b" : hidden ? "var(--ink-3)" : closed ? "#e21d27" : "var(--brand-2,#2f6bd8)";
             return (
-              <div key={t.name} className="mb-2 flex overflow-hidden rounded-xl border bg-[var(--surface)]" style={{ borderColor: closed && !hidden ? "#f0b8b8" : "var(--line)", opacity: hidden ? 0.72 : 1, boxShadow: hidden ? "none" : "0 1px 0 rgba(20,30,60,.04)" }}>
+              <div key={t.name} className="mb-2 flex overflow-hidden rounded-xl border bg-[var(--surface)]" style={{ borderColor: unfit || (closed && !hidden) ? "#f0b8b8" : "var(--line)", opacity: unfit ? 0.6 : hidden ? 0.72 : 1, boxShadow: hidden ? "none" : "0 1px 0 rgba(20,30,60,.04)" }}>
                 <span className="w-[5px] flex-none" style={{ background: accent }} />
                 <div className="flex-1 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -1965,11 +1969,12 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                       <span className="text-[14px] font-extrabold">{t.name}</span>
                       <span className="rounded-full bg-[var(--panel)] px-2 py-[1px] text-[10.5px] font-bold text-[var(--ink-3)]">{t.days} day{t.days === 1 ? "" : "s"}</span>
                       {hidden && <span className="rounded-full bg-[var(--panel)] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Hidden</span>}
-                      {closed && !hidden && <span className="rounded-full bg-[#fdebec] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#c0392b]">Closed</span>}
+                      {unfit && !hidden && <span className="rounded-full bg-[#fdebec] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#c0392b]">Won&rsquo;t fit</span>}
+                      {closed && !hidden && !unfit && <span className="rounded-full bg-[#fdebec] px-2 py-[1px] text-[10px] font-extrabold uppercase tracking-[0.04em] text-[#c0392b]">Closed</span>}
                     </span>
                     <span className="flex items-center gap-2.5">
-                      <span className="text-[16px] font-black tracking-[-0.01em]" style={{ fontVariantNumeric: "tabular-nums", color: closed && !hidden ? "#c0392b" : "var(--ink)" }}>{money(t.price)}</span>
-                      {!hidden && (
+                      <span className="text-[16px] font-black tracking-[-0.01em]" style={{ fontVariantNumeric: "tabular-nums", color: (closed || unfit) && !hidden ? "#c0392b" : "var(--ink)", textDecoration: unfit ? "line-through" : undefined }}>{money(t.price)}</span>
+                      {!hidden && !unfit && (
                         <button type="button" onClick={() => toggleClosed(t.name, !closed)} title={closed ? "Reopen — parents can book again" : "Close — shows as Closed, can't be booked"}
                           className="rounded-full border px-3 py-[4px] text-[11px] font-bold transition-colors"
                           style={closed ? { borderColor: "#e21d27", background: "#e21d27", color: "#fff" } : { borderColor: "#f0b8b8", color: "#c0392b" }}>
@@ -1981,7 +1986,12 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                       </button>
                     </span>
                   </div>
-                  {!hidden && (
+                  {!hidden && unfit && (
+                    <div className="mt-2 rounded-lg bg-[#fdecec] px-2.5 py-2 text-[11.5px] font-semibold leading-[1.5] text-[#c0392b]">
+                      ⚠ <b>Not available for this run</b> — a {t.days}-day pass needs {t.days} days, but this run only offers {totalRun}. Parents can&rsquo;t book it. Lengthen the run/days, or <b>Hide</b> this pass.
+                    </div>
+                  )}
+                  {!hidden && !unfit && (
                     <div className="mt-2.5 flex flex-wrap items-end gap-2">
                       <div className="w-[84px]"><FieldLabel>Age from</FieldLabel><Input type="number" min={0} value={ov.ageFrom ?? ""} onChange={(e) => ovUpd(t.name, "ageFrom", e.target.value)} placeholder={d.ageFrom || "—"} className="w-full" /></div>
                       <div className="w-[84px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={ov.ageTo ?? ""} onChange={(e) => ovUpd(t.name, "ageTo", e.target.value)} placeholder={d.ageTo || "—"} className="w-full" /></div>
@@ -1992,17 +2002,11 @@ function TicketsStep({ d, upd, blocks, tickets }: { d: WizardDraft; upd: (p: Par
                   {hidden && <div className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Not offered on this listing. The pass still exists in your block — <b>Show</b> to bring it back.</div>}
                   {/* How parents can book this pass — on the card itself (multi-day
                       passes only; a single day is always just picked per day). */}
-                  {!hidden && t.days > 1 && (() => {
+                  {!hidden && !unfit && t.days > 1 && (() => {
                     const weekOk = t.days <= weekLen;
                     const blockOk = t.days === weekLen || t.days === totalRun;
                     const listingOk = t.days <= totalRun;
                     const okFor = (k: BookRule) => (k === "week" ? weekOk : k === "blocks" ? blockOk : listingOk);
-                    // Needs more days than the run offers → not bookable at all.
-                    if (!weekOk && !blockOk && !listingOk) return (
-                      <div className="mt-2.5 rounded-lg bg-[#fdecec] px-2.5 py-2 text-[11px] font-semibold leading-[1.5] text-[#c0392b]">
-                        ⚠ <b>Doesn&rsquo;t fit</b> — a {t.days}-day pass needs {t.days} days, but this run only offers {totalRun} ({weekLen} a week). Nobody can book it: lengthen the run/days, or drop this pass from the block.
-                      </div>
-                    );
                     const stored = (d.bookRules ?? {})[t.name];
                     const rule: BookRule = stored && okFor(stored) ? stored : (weekOk ? "week" : "listing");
                     const wasReset = !!stored && !okFor(stored);
