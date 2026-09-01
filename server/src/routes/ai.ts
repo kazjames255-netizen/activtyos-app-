@@ -60,6 +60,34 @@ const HOWTO: Record<"operator" | "staff" | "parent" | "platform", string> = {
     "Support: the Support inbox holds provider queries and bug reports.",
   ].join("\n• "),
 };
+
+// Deep-link map — page label → view slug, per portal. URL = /${portal}/${slug}.
+// So the assistant can link users straight to the exact screen.
+const NAV: Record<string, [string, string][]> = {
+  company: [["Dashboard", "dashboard"], ["Bookings", "bookings"], ["Blocks & listings", "listings"], ["Registers", "admin-registers"], ["Families", "customers"], ["Ratios & groups", "ratios"], ["Activity timetable", "timetable"], ["Events calendar", "calendar"], ["Meals", "meals"], ["Trips & visits", "trips"], ["Task manager", "tasks"], ["Discount codes", "marketing"], ["Referrals", "referrals"], ["Finance & analytics", "finance"], ["Money in", "purchasing"], ["Money out", "expenses"], ["Invoices", "invoices"], ["Reconciliation", "reconciliation"], ["Inventory", "inventory"], ["Staff", "staff"], ["Staff schedule", "schedule"], ["Leave & absence", "holiday"], ["Clock in/out & timesheets", "timesheets"], ["Payroll", "payroll"], ["Learning Centre", "learning"], ["Compliance & certificates", "credentials"], ["Documents", "documents"], ["Milestones", "ho-framework"], ["Messages", "messages"], ["Newsfeed", "newsfeed"], ["Moments", "moments"], ["Email", "email"], ["Subscription", "subscription"], ["Setup & features", "setup"], ["AI assistant", "ai"]],
+  freelancer: [["Dashboard", "dash"], ["Bookings", "bookings"], ["Blocks & listings", "listings"], ["Registers", "registers"], ["Families", "customers"], ["Ratios & groups", "ratios"], ["Activity timetable", "timetable"], ["Events calendar", "calendar"], ["Meals", "meals"], ["Trips & visits", "trips"], ["Task manager", "tasks"], ["Discount codes", "marketing"], ["Referrals", "referrals"], ["Finance & analytics", "finance"], ["Money in", "purchasing"], ["Money out", "expenses"], ["Invoices", "invoices"], ["Reconciliation", "reconciliation"], ["Inventory", "inventory"], ["Leave & absence", "holiday"], ["Clock in/out & timesheets", "timesheets"], ["Messages", "messages"], ["Newsfeed", "newsfeed"], ["Moments", "moments"], ["Email", "email"], ["Subscription", "subscription"], ["Setup & features", "setup"], ["AI assistant", "ai"]],
+  staff: [["Dashboard", "dash"], ["My shifts & clock in/out", "schedule"], ["My availability", "availability"], ["Time off", "holiday"], ["My tasks", "tasks"], ["Register", "registers"], ["Ratios & groups", "ratios"], ["Activity timetable", "timetable"], ["Meals", "meals"], ["Trips", "trips"], ["Moments", "moments"], ["Report a concern", "incident"], ["Accidents & first aid", "accidents"], ["Medication", "medication"], ["Certificates & courses", "certificates"], ["Documents", "documents"], ["Payslips", "payslips"], ["My expenses", "expenses"], ["Appraisals", "appraisals"], ["Onboarding", "onboarding"], ["Announcements", "announcements"], ["Messages", "messages"], ["Families", "customers"], ["Account settings", "account"], ["Ask AI", "ai"]],
+  custdash: [["Browse activities", "browse"], ["My bookings", "bookings"], ["Payments", "payments"], ["Wallet", "wallet"], ["Coupons & discount codes", "coupons"], ["Memberships", "memberships"], ["Refer a friend", "refer"], ["Child & details", "children"], ["Moments", "moments"], ["Newsfeed", "newsfeed"], ["Meals", "meals"], ["Trips & consent", "trips"], ["Activity timetable", "timetable"], ["Medication", "medication"], ["First aid & incidents", "accidents"], ["Messages", "messages"], ["My account", "account"], ["Data & privacy", "privacy"], ["Help & support", "activityos"], ["AI assistant", "ai"]],
+  platform: [["Analytics", "analytics"], ["Providers & billing", "providers"], ["Page engagement", "engagement"], ["At risk", "at-risk"], ["Sales pipeline", "sales"], ["Provider features", "features"], ["Messages & support", "messages"], ["AI assistant", "ai"]],
+};
+// franchise mirrors freelancer's slugs.
+NAV.franchise = NAV.freelancer;
+
+// Every Setup tab — deep-linked as /${portal}/setup?tab=<id>. Operator-only.
+const SETUP_TABS: [string, string][] = [
+  ["Notifications", "notifications"], ["Features — turn modules on/off & what families see", "features"], ["Company setup — name, contact, address", "company"], ["Branding — logo & colour", "branding"], ["Seasons", "seasons"], ["Child questions & consents", "people"], ["Staff & workforce — DBS, ratios, job roles", "staff"], ["Roles & permissions (company only)", "roles"], ["Learning & certificates", "learning"], ["Meals", "meals"], ["Medication", "medication"], ["Safeguarding — DSL, contacts, protocol", "safeguarding"], ["Register — what shows on a child's card", "registers"], ["Trips & visits", "trips"], ["Calendar", "calendar"], ["Inventory", "inventory"], ["Age groups & rooms (ratios)", "groups"], ["Cancellations & refunds", "cancel"], ["New listing defaults", "defaults"], ["Payments & pay methods", "bookings"], ["Money — invoices, bank details, accounting basis", "money"], ["Childcare vouchers", "vouchers"], ["Marketplace listing", "marketplace"], ["Refer a friend", "refer"], ["Memberships", "memberships"],
+];
+
+function navRef(portal: string): string {
+  const pages = NAV[portal] ?? NAV.company;
+  const lines = pages.map(([label, slug]) => `- ${label}: /${portal}/${slug}`);
+  if (portal !== "staff" && portal !== "custdash" && portal !== "platform") {
+    lines.push(`- Settings live under Setup — deep-link the exact tab as /${portal}/setup?tab=<id>:`);
+    for (const [label, tab] of SETUP_TABS) lines.push(`    · ${label} → /${portal}/setup?tab=${tab}`);
+    lines.push(`- Scheduling defaults (first day, break length, shift notifications, co-worker visibility) are on the Staff schedule page's Settings tab: /${portal}/schedule`);
+  }
+  return lines.join("\n");
+}
 const MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
 const chatSchema = z.object({
@@ -72,6 +100,9 @@ const chatSchema = z.object({
     )
     .min(1)
     .max(20),
+  // The portal segment the user is in (company/freelancer/franchise/staff/
+  // custdash/platform) — so deep links use the right URL prefix + slugs.
+  portal: z.enum(["company", "freelancer", "franchise", "staff", "custdash", "platform"]).optional(),
 });
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -358,6 +389,11 @@ ai.post("/chat", async (req, res) => {
       : "the owner/manager of a children's activity provider. The data is their business's live operational picture. Their portal's areas include: Dashboard, Bookings, Listings, Blocks & pricing, Registers, Families, Finances, Tasks, Messages.";
   }
 
+  // Resolve the portal (for correct deep-link URLs). Trust the client's value
+  // when it's consistent with the role; else fall back to the role's home.
+  const roleDefaultPortal = auth.role === "parent" ? "custdash" : auth.role === "platform" ? "platform" : auth.role === "staff" ? "staff" : "company";
+  const portal = parsed.data.portal ?? roleDefaultPortal;
+
   const today = new Date();
   const system = [
     "You are the ActivityOS assistant, embedded in a platform for children's activity providers (camps, clubs, classes).",
@@ -371,7 +407,13 @@ ai.post("/chat", async (req, res) => {
     "Money is in GBP — format amounts like £42.50. Be concise and concrete: lead with the answer, then only the supporting details that matter. Plain text, short paragraphs or simple bullet lists, no markdown tables.",
     "You are read-only: you cannot book, cancel, refund or message anyone yourself. When an action is wanted, give the steps and where to do it.",
     "",
+    "LINKS — you can send the user straight to any screen. Whenever you tell them where to go, include a markdown link with the EXACT path from the NAVIGATION list below, e.g. [Discount codes](/" + portal + "/marketing) or [Setup → Payments](/" + portal + "/setup?tab=bookings). Use only paths from that list; never invent a path. Prefer ONE precise link per answer.",
+    "ADVICE & CROSS-REFERENCING — when a question needs two things joined (e.g. children with allergies who haven't signed in; top families who also owe money; a fast-filling listing to add a session to), do the cross-reference yourself from the data. For 'should I…' questions, give a clear recommendation grounded in the numbers, and label it as a suggestion. If a list in the data is capped (e.g. top-N families/children) and the exact record isn't shown, say you're showing the busiest/top items and link to the full screen.",
+    "TIME/TRENDS LIMIT — the data is a live snapshot (mostly today + this week). You do NOT have historical trends or last-month figures. If asked to compare periods or show a trend, say so briefly and link to Finance & analytics; don't invent past numbers.",
+    "",
     `HOW-TO GUIDE (where things are done in the app):\n• ${HOWTO[howtoKey]}`,
+    "",
+    `NAVIGATION (exact deep-link paths for this user's portal):\n${navRef(portal)}`,
     "",
     `LIVE DATA (everything you can see — read it all before answering):\n${JSON.stringify(snapshot)}`,
   ].join("\n");

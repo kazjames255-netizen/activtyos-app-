@@ -114,7 +114,11 @@ function inlineHtml(s: string): string {
   return esc
     .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
     .replace(/`([^`]+)`/g, '<code class="rounded bg-black/5 px-1 py-0.5 text-[12px]">$1</code>')
-    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a class="text-[var(--brand,#2f6bd8)] underline" href="$2" target="_blank" rel="noreferrer">$1</a>');
+    // Links: internal /portal/view paths navigate in-app; external open a new tab.
+    .replace(/\[([^\]]+)\]\((\/[^)\s]+|https?:[^)\s]+)\)/g, (_m, label: string, href: string) => {
+      const external = /^https?:/.test(href);
+      return `<a class="font-semibold text-[var(--brand,#2f6bd8)] underline" href="${href}"${external ? ' target="_blank" rel="noreferrer"' : ""}>${label}</a>`;
+    });
 }
 function RichText({ text }: { text: string }) {
   const lines = text.replace(/\r/g, "").split("\n");
@@ -213,7 +217,7 @@ export function AiAssistant({ kind }: { kind: Kind }) {
     const history = [...msgs, { role: "user" as const, content: q }].slice(-20);
     setMsgs(history); persist(history); setBusy(true);
     try {
-      const res = await post<{ reply?: string; action?: ProposedAction }>("/api/ai/chat", { messages: history });
+      const res = await post<{ reply?: string; action?: ProposedAction }>("/api/ai/chat", { messages: history, portal });
       const reply = res.reply ?? res.action?.summary ?? "";
       const full = [...history, { role: "assistant" as const, content: reply }];
       setMsgs(full); persist(full);
