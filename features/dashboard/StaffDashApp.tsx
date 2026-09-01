@@ -214,10 +214,9 @@ export function StaffDashApp() {
 
       {error && <div className="mb-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
 
-      {/* My shift & clock — the first thing you see */}
-      <div className="mb-3 grid gap-3 md:grid-cols-2">
+      {/* My shift + at-a-glance & sessions */}
+      <div className="mb-3 grid items-start gap-3 md:grid-cols-2">
         <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-[0_14px_34px_-16px_rgba(29,58,143,.6)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(125deg,#16306e 0%,#2f5bc4 55%,#3f78d8 100%)`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
-          <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
           <div className="relative flex items-center justify-between">
             <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">🗓 My shift today</div>
             <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold backdrop-blur-sm">{shift ? "Rostered" : "Day off"}</span>
@@ -256,6 +255,7 @@ export function StaffDashApp() {
           )}
         </div>
 
+        <div className="flex flex-col gap-3">
         <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
           <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-3)]">Today at a glance</div>
           <div className="grid grid-cols-2 gap-2.5">
@@ -269,6 +269,23 @@ export function StaffDashApp() {
               </div>
             ))}
           </div>
+        </div>
+        <Section id="sessions" icon="🗓️" title="Today's sessions" sub="Registers &amp; ratios" tint="#eaf1ff" ink="#1d4ed8" defaultOpen action={<span className="flex flex-none gap-2">{timetableToday && <Link href="/staff/timetable"><Button sm>Day plan</Button></Link>}<Link href="/staff/registers"><Button sm variant="primary">Open registers</Button></Link></span>}>
+          {sessions === null ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+            : sessions.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing runs today.</div>
+              : sessions.map((s) => (
+                <div key={s.blockId} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+                  <span className="text-[12px] font-bold text-[var(--ink-3)]">{s.start}–{s.end}</span>
+                  <span className="text-[13px] font-extrabold">{s.listingName}</span>
+                  <span className="text-[12px] text-[var(--ink-3)]">{s.blockName}</span>
+                  <span className="ml-auto flex items-center gap-1.5 text-[11.5px]">
+                    <Badge tone={{ bg: "var(--brand-soft)", fg: "var(--brand-strong)" }}>{s.totalChildren} children</Badge>
+                    {s.sendCount > 0 && <Badge tone={{ bg: "#f3e8ff", fg: "#7c3aed" }}>{s.sendCount} SEND</Badge>}
+                    <Badge tone={s.met ? { bg: "#eaf0fc", fg: "#1d3a8f" } : { bg: "#fdf3d8", fg: "#9a5a00" }}>{s.staffAssigned}/{s.requiredStaff} staff</Badge>
+                  </span>
+                </div>
+              ))}
+        </Section>
         </div>
       </div>
 
@@ -365,24 +382,7 @@ export function StaffDashApp() {
 
       {/* ── My work ──────────────────────────────────────────────────── */}
       <GroupLabel>My work</GroupLabel>
-      <div className="mb-3 grid items-start gap-3 lg:grid-cols-2">
-      <Section id="sessions" icon="🗓️" title="Today's sessions" sub="Registers &amp; ratios" tint="#eaf1ff" ink="#1d4ed8" defaultOpen action={<span className="flex flex-none gap-2">{timetableToday && <Link href="/staff/timetable"><Button sm>Day plan</Button></Link>}<Link href="/staff/registers"><Button sm variant="primary">Open registers</Button></Link></span>}>
-          {sessions === null ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-            : sessions.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing runs today.</div>
-              : sessions.map((s) => (
-                <div key={s.blockId} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
-                  <span className="text-[12px] font-bold text-[var(--ink-3)]">{s.start}–{s.end}</span>
-                  <span className="text-[13px] font-extrabold">{s.listingName}</span>
-                  <span className="text-[12px] text-[var(--ink-3)]">{s.blockName}</span>
-                  <span className="ml-auto flex items-center gap-1.5 text-[11.5px]">
-                    <Badge tone={{ bg: "var(--brand-soft)", fg: "var(--brand-strong)" }}>{s.totalChildren} children</Badge>
-                    {s.sendCount > 0 && <Badge tone={{ bg: "#f3e8ff", fg: "#7c3aed" }}>{s.sendCount} SEND</Badge>}
-                    <Badge tone={s.met ? { bg: "#eaf0fc", fg: "#1d3a8f" } : { bg: "#fdf3d8", fg: "#9a5a00" }}>{s.staffAssigned}/{s.requiredStaff} staff</Badge>
-                  </span>
-                </div>
-              ))}
-      </Section>
-
+      <div className="mb-3">
       <Section id="tasks" icon="✅" title="Team tasks" sub="Everyone&rsquo;s to-dos" tint="#e4f5f6" ink="#0e7490" badge={tasks !== null && open.length > 0 ? open.length : undefined} defaultOpen action={<Link href="/staff/tasks"><Button sm>All tasks</Button></Link>}>
           {tasks === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
             : open.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">All done — nothing open. 🎉</div>
