@@ -630,10 +630,10 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 </div>
               </div>
             )}
-            <div className="mb-3 flex flex-wrap gap-2.5">
-              {[[String(staff.length), "staff in scope", "var(--ink)"], [String(compN), "safeguarding complete", "#0f7a43"], [String(overN), "overdue", "#c0392b"]].map(([n, l, c], i) => (
-                <div key={i} className="min-w-[130px] flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5"><div className="text-[22px] font-extrabold tabular-nums" style={{ color: c }}>{n}</div><div className="text-[11px] text-[var(--ink-3)]">{l}</div></div>
-              ))}
+            <div className="mb-3 grid grid-cols-1 gap-2.5 sm:grid-cols-3">
+              <Tile label="Staff in scope" icon="👥" grad={GRAD.blue} value={String(staff.length)} sub="assigned safeguarding" />
+              <Tile label="Safeguarding complete" icon="🛡️" grad={GRAD.green} value={String(compN)} sub={`${staff.length ? Math.round((compN / staff.length) * 100) : 0}% of staff`} aside={<Ring pct={staff.length ? (compN / staff.length) * 100 : 0} label={`${staff.length ? Math.round((compN / staff.length) * 100) : 0}%`} />} />
+              <Tile label="Overdue" icon="⏰" grad={overN > 0 ? GRAD.pink : GRAD.green} value={String(overN)} sub={overN > 0 ? "past their deadline" : "nobody overdue"} aside={<Ring pct={staff.length ? (overN / staff.length) * 100 : 0} label={`${staff.length ? Math.round((overN / staff.length) * 100) : 0}%`} />} />
             </div>
             {/* Top & bottom courses by average score */}
             <div className="mb-3 grid gap-2.5 md:grid-cols-2">
