@@ -60,10 +60,12 @@ export function TimesheetsApp() {
 
   const clockOutPerson = (r: ClockRecord) => { setAll(clockOut(all, r.id, r.name)); flash(`${r.name.split(" ")[0]} clocked out.`); };
   // A reminder ping (same idea as Reconciliation's 🔔 nudge). Demo: flashes + counts.
+  // Relevant to their state: clock IN if they haven't, clock OUT if they're on
+  // the clock. (Mirrors the Schedule's "Remind to check in".)
   const nudge = (r: ClockRecord) => {
-    const why = r.status === "out" ? " — a reminder to clock in." : r.lateMin ? " — checking they’re on site." : ".";
+    const what = r.status === "in" || r.status === "break" ? "clock out when they finish" : "clock in";
     setNudges((n) => ({ ...n, [r.id]: (n[r.id] || 0) + 1 }));
-    flash(`🔔 Nudge sent to ${r.name.split(" ")[0]}${why}`);
+    flash(`🔔 Reminder sent to ${r.name.split(" ")[0]} — a nudge to ${what}.`);
   };
   // BrightHR-style person card
   const personCard = (r: ClockRecord) => {
@@ -81,10 +83,19 @@ export function TimesheetsApp() {
           <div className="min-w-0 flex-1">
             <div className="truncate text-[13.5px] font-extrabold text-[#1d3a8f]">{r.name}</div>
             <div className="truncate text-[11.5px] text-[var(--ink-3)]">{r.role}{r.op ? ` · ${r.op}` : ""}</div>
-            <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-              {(r.status === "in" || r.status === "break") && <button type="button" onClick={() => clockOutPerson(r)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f] hover:bg-[#eef4ff]">Clock out</button>}
-              <button type="button" onClick={() => nudge(r)} title={r.status === "out" ? "Nudge — remind them to clock in" : r.lateMin ? "Nudge — they clocked in late; check they're on site" : "Nudge — send a reminder ping"} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition-colors hover:border-[#f0b100] hover:bg-[#fdf6e3]">🔔 Nudge{nudges[r.id] ? <span className="ml-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#e88f1f] px-1 text-[9px] font-extrabold text-white">{nudges[r.id]}</span> : null}</button>
-            </div>
+            {(() => {
+              const onClock = r.status === "in" || r.status === "break";
+              const notIn = r.status === "out" && !r.clockInAt; // scheduled but never clocked in
+              // Someone who clocked in AND out already is done — no reminder to send.
+              if (!onClock && !notIn) return null;
+              const nudgeLabel = onClock ? "Remind to clock out" : "Remind to clock in";
+              return (
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  {onClock && <button type="button" onClick={() => clockOutPerson(r)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:border-[#1d3a8f] hover:bg-[#eef4ff]">Clock out</button>}
+                  <button type="button" onClick={() => nudge(r)} title={onClock ? "Remind them to clock out when they finish" : "Remind them to clock in"} className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition-colors hover:border-[#f0b100] hover:bg-[#fdf6e3]">🔔 {nudges[r.id] ? `Remind again` : nudgeLabel}{nudges[r.id] ? <span className="ml-0.5 grid h-4 min-w-[16px] place-items-center rounded-full bg-[#e88f1f] px-1 text-[9px] font-extrabold text-white">{nudges[r.id]}</span> : null}</button>
+                </div>
+              );
+            })()}
           </div>
         </div>
         <div className="flex items-center gap-1.5 px-3 py-2 text-[11px] font-semibold" style={{ background: footTone.bg, color: footTone.fg }}><span>⏱</span>{foot}</div>
