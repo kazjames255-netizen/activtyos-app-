@@ -320,7 +320,7 @@ export function NewsfeedApp() {
   if (audience === "staff") {
     return (
       <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
-        <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: HERO }}>
+        <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
           <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Notifications</div>
           <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">Send updates to families or to your own team. Staff notices land on every team member’s Announcements board — never seen by parents.</p>
         </div>
@@ -335,7 +335,7 @@ export function NewsfeedApp() {
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
 
       {/* Hero */}
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: HERO }}>
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
         <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Newsfeed</div>
         <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">Post an update and every family with a booking sees it in their app — from a quick reminder to an event with RSVPs or an urgent closure.</p>
         <div className="mt-3.5 flex flex-wrap gap-2.5">

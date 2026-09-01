@@ -106,7 +106,7 @@ export function PlatformFeaturesApp() {
 
   return (
     <div className="text-[var(--ink)]">
-      <div className="overflow-hidden rounded-2xl text-white" style={{ background: HERO }}>
+      <div className="overflow-hidden rounded-2xl text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
         <div className="px-6 py-5">
           <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Platform · Head office</div>
           <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>🎛️ Provider features</h2>
