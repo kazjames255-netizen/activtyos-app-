@@ -34,6 +34,30 @@ const KIDS: Kid[] = [
   { first: "Charlie", last: "Hughes", age: 8, dob: "2018-10-05", booker: "Megan Hughes", block: "pm", flags: { likes: "Cars, racing games", dislikes: "Sharing new toys" }, att: { kind: "none" } },
 ];
 
+// Build a tiny but valid single-page PDF (with a correct xref table) so the
+// seeded SEND plan is a real openable document, not a stand-in.
+function makePdf(title: string, lines: string[]): Buffer {
+  const esc = (s: string) => s.replace(/\\/g, "\\\\").replace(/\(/g, "\\(").replace(/\)/g, "\\)");
+  let stream = `BT /F1 22 Tf 60 790 Td (${esc(title)}) Tj ET\n`;
+  let y = 752;
+  for (const ln of lines) { stream += `BT /F1 12 Tf 60 ${y} Td (${esc(ln)}) Tj ET\n`; y -= 18; }
+  const objs = [
+    `<< /Type /Catalog /Pages 2 0 R >>`,
+    `<< /Type /Pages /Kids [3 0 R] /Count 1 >>`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>`,
+    `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`,
+    `<< /Length ${Buffer.byteLength(stream)} >>\nstream\n${stream}endstream`,
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets: number[] = [];
+  objs.forEach((o, i) => { offsets.push(Buffer.byteLength(pdf, "latin1")); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+  const xrefStart = Buffer.byteLength(pdf, "latin1");
+  pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
+  offsets.forEach((off) => { pdf += `${String(off).padStart(10, "0")} 00000 n \n`; });
+  pdf += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`;
+  return Buffer.from(pdf, "latin1");
+}
+
 async function seedTenant(tid: string) {
   const tenant = (await db.collection("tenants").doc(tid).get()).data() as { name?: string } | undefined;
   if (!tenant) { console.log(`  ${tid}: tenant missing, skip`); return; }
@@ -44,6 +68,21 @@ async function seedTenant(tid: string) {
     pm: { id: ns("pm"), name: "Multi-Sports · Afternoon", start: "13:00", end: "16:00" },
   };
   const batch = db.batch();
+
+  // A real, openable SEND plan PDF, granted to this tenant's staff, shared by
+  // the SEND children so the dashboard's "Open plan" opens an actual document.
+  const planFileId = ns("sendplan");
+  const planPdf = makePdf("SEND Support Plan", [
+    "Holiday Multi-Sports Camp",
+    "This is a sample EHCP / support-plan document.",
+    "In the live app this is the file the parent or",
+    "provider uploaded to the child's record.",
+  ]);
+  batch.set(db.collection("childFiles").doc(planFileId), {
+    ownerUid: "regdemo", name: "SEND support plan.pdf", contentType: "application/pdf",
+    bytes: planPdf.length, total: 1, complete: true, tenantIds: [tid], createdAt: new Date().toISOString(),
+  }, { merge: true });
+  batch.set(db.collection("childFiles").doc(planFileId).collection("chunks").doc("0"), { b64: planPdf.toString("base64") }, { merge: true });
 
   batch.set(db.collection("listings").doc(listingId), {
     tenantId: tid, tenantName: tenant.name ?? "", name: "Holiday Multi-Sports Camp", passes: [{ name: "Morning", price: 22 }, { name: "Afternoon", price: 22 }],
@@ -68,6 +107,7 @@ async function seedTenant(tid: string) {
     batch.set(db.collection("children").doc(childId), {
       tenantId: tid, name, first: k.first, last: k.last, dob: k.dob, photoConsent: true,
       emergencyName: k.booker, emergencyPhone: "07700 900000", collectionPassword: "SUNSHINE", ...k.flags,
+      ...(k.flags.send ? { sendPlanId: planFileId } : {}),
     }, { merge: true });
     batch.set(db.collection("bookings").doc(ns(`b${i}`)), {
       ref, bid: `RD${1000 + i}`, tenantId: tid, blockId: blk.id, listingId, childId,
@@ -95,7 +135,7 @@ async function seedTenant(tid: string) {
 
 // Remove every regdemo-* doc across all collections (namespaced + legacy shared ids).
 async function clean() {
-  for (const coll of ["listings", "blocks", "bookings", "children", "registers"]) {
+  for (const coll of ["listings", "blocks", "bookings", "children", "registers", "childFiles"]) {
     const snap = await db.collection(coll).get();
     const del = snap.docs.filter((d) => d.id.startsWith("regdemo-") || d.id.startsWith("regdemo_"));
     for (let i = 0; i < del.length; i += 400) { const b = db.batch(); del.slice(i, i + 400).forEach((d) => b.delete(d.ref)); await b.commit(); }

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { get as apiGet, put as apiPut } from "@/lib/api";
+import { get as apiGet, put as apiPut, openFile } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
@@ -45,13 +45,13 @@ function flagsOf(c: ChildFlags): WatchFlag[] {
 }
 
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
+const addDaysIso = (iso: string, n: number) => { const d = new Date(`${iso}T00:00:00`); d.setDate(d.getDate() + n); const p = (x: number) => String(x).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 const to12 = (t: string) => { const [h, m] = (t || "0:0").split(":").map(Number); const ap = h >= 12 ? "pm" : "am"; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr}${m ? ":" + String(m).padStart(2, "0") : ""}${ap}`; };
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
-function myShiftToday(): MyShift | null {
+function myShiftToday(day: string): MyShift | null {
   try {
     const s = JSON.parse(localStorage.getItem(ROTA_KEY) || "null") as { staff?: { id: string; name: string }[]; shifts?: MyShift[] & { staffId?: string; date?: string }[] } | null;
     const ids = new Set((s?.staff || []).filter((x) => x.name === ME).map((x) => x.id));
-    const day = todayIso();
     return ((s?.shifts as (MyShift & { staffId?: string; date?: string })[]) || []).find((x) => x.staffId && ids.has(x.staffId) && x.date === day) ?? null;
   } catch { return null; }
 }
@@ -59,13 +59,12 @@ function myShiftToday(): MyShift | null {
 interface Coworker { name: string; start: string; end: string; role?: string; where?: string }
 // Who else is rostered today — gated by the same "co-worker visibility" setting
 // that controls MySchedule's "Who's on" tab (all / same-listing / leads / none).
-function coworkersToday(vis: "all" | "team" | "leads" | "none"): Coworker[] {
+function coworkersToday(vis: "all" | "team" | "leads" | "none", day: string): Coworker[] {
   if (vis === "none") return [];
   try {
     const s = JSON.parse(localStorage.getItem(ROTA_KEY) || "null") as { staff?: { id: string; name: string }[]; shifts?: (MyShift & { staffId?: string; date?: string })[] } | null;
     const staff = s?.staff || [];
     const shifts = (s?.shifts as (MyShift & { staffId?: string; date?: string })[]) || [];
-    const day = todayIso();
     const meIds = new Set(staff.filter((x) => x.name === ME).map((x) => x.id));
     const mine = shifts.filter((x) => x.date === day && x.staffId && meIds.has(x.staffId));
     const iAmLead = mine.some((x) => /lead|manager|owner/i.test(x.role || ""));
@@ -129,22 +128,24 @@ export function StaffDashApp() {
   const [profile, setProfile] = useState<WatchKid | null>(null); // watch-list child card
   const [sendOpen, setSendOpen] = useState(false); // SEND slideshow modal
   const [sendIdx, setSendIdx] = useState(0); // which SEND child is showing
-  const [sendPlanOpen, setSendPlanOpen] = useState(false); // plan document view
   const [, tick] = useState(0); // live worked-time tick
   const { settings } = useSettings();
   const coworkerVis = settings.scheduling?.coworkerVisibility ?? "all";
   const today = todayIso();
+  const [date, setDate] = useState(todayIso()); // the day the whole page is showing
+  const isToday = date === today;
 
   const refresh = useCallback(() => {
-    apiGet<{ sessions: RatioSession[] }>(`/api/ratios?date=${today}`).then((d) => setSessions(d?.sessions ?? [])).catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load today"));
-    apiGet<RegSession[]>(`/api/registers?date=${today}`).then((r) => setRegs(r ?? [])).catch(() => setRegs([]));
+    apiGet<{ sessions: RatioSession[] }>(`/api/ratios?date=${date}`).then((d) => setSessions(d?.sessions ?? [])).catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load that day"));
+    apiGet<RegSession[]>(`/api/registers?date=${date}`).then((r) => setRegs(r ?? [])).catch(() => setRegs([]));
     apiGet<Task[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => {});
     apiGet<Accident[]>("/api/incidents?kind=accident").then((l) => setAccidents(l ?? [])).catch(() => setAccidents([]));
-    apiGet<PublishedLite[]>("/api/timetables/published").then((w) => setTimetableToday((w ?? []).some((x) => x.dayList.some((d) => d.iso === today)))).catch(() => {});
+    apiGet<PublishedLite[]>("/api/timetables/published").then((w) => setTimetableToday((w ?? []).some((x) => x.dayList.some((d) => d.iso === date)))).catch(() => {});
     apiGet<{ venues?: { name: string; address?: string; city?: string }[] }>("/api/library").then((l) => setVenues(l.venues ?? [])).catch(() => {});
-  }, [today]);
-  useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); refresh(); setClock(loadClock()); setShift(myShiftToday()); }, [refresh]);
-  useEffect(() => { setCoworkers(coworkersToday(coworkerVis)); }, [coworkerVis]);
+  }, [date]);
+  useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); setClock(loadClock()); }, []);
+  useEffect(() => { setSessions(null); setRegs(null); refresh(); }, [refresh]);
+  useEffect(() => { setShift(myShiftToday(date)); setCoworkers(coworkersToday(coworkerVis, date)); }, [date, coworkerVis]);
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(id); }, []);
   useRealtime(["bookings", "blocks", "tasks", "timetables", "registers"], refresh);
 
@@ -168,7 +169,7 @@ export function StaffDashApp() {
   const permKids = kidsToday.filter((k) => k.c.collectionPassword || k.c.emergencyName || k.c.photoConsent != null || k.c.suncreamConsent != null || k.c.walkHomeConsent != null || k.c.firstAidConsent != null);
   const recentAccidents = (accidents ?? []).slice(0, 6);
   const tickTask = (t: Task) => { setTasks((list) => (list ?? []).map((x) => (x.id === t.id ? { ...x, done: true } : x))); void apiPut(`/api/tasks/${t.id}`, { done: true }).catch(() => refresh()); };
-  const dayLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+  const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   // Where I'm working today — match the shift's venue name to the library venue for its address.
   const myVenueName = shift?.site || shift?.listing || "";
   const myVenue = venues.find((v) => v.name === myVenueName);
@@ -183,9 +184,9 @@ export function StaffDashApp() {
   const doBreak = () => setClock((c) => (status === "break" ? endBreak(c || {}, meId) : startBreak(c || {}, meId)));
   // Clean white cards with a restrained, cohesive accent chip — no loud gradients.
   const STAT = [
-    { big: sessions === null ? "…" : String(sessions.length), small: "Sessions today", tint: "#eaf1ff", ink: "#1d4ed8", icon: "🎪", sub: "running at your site" },
+    { big: sessions === null ? "…" : String(sessions.length), small: "Sessions", tint: "#eaf1ff", ink: "#1d4ed8", icon: "🎪", sub: "running at your site" },
     { big: regs === null ? "…" : String(childrenIn), small: "Children in", tint: "#e4f5f6", ink: "#0e7490", icon: "🧒", sub: "signed in right now" },
-    { big: regs === null ? "…" : String(dueIn), small: "Due in today", tint: "#eceafe", ink: "#4f46e5", icon: "📋", sub: "expected across sessions" },
+    { big: regs === null ? "…" : String(dueIn), small: "Due in", tint: "#eceafe", ink: "#4f46e5", icon: "📋", sub: "expected across sessions" },
     { big: tasks === null ? "…" : String(open.length), small: "My open tasks", tint: "#f3ecfe", ink: "#7c3aed", icon: "✅", sub: "assigned to you" },
   ];
 
@@ -210,17 +211,31 @@ export function StaffDashApp() {
       <PageHero
         icon="👋"
         title={greeting(me?.name)}
-        lede={`${dayLabel}${me?.tenantName ? ` · ${me.tenantName}` : ""} — your shifts, registers and tasks for today.`}
+        lede={`${dayLabel}${me?.tenantName ? ` · ${me.tenantName}` : ""} — your shifts, registers and tasks.`}
         actions={clockWidget}
       />
 
       {error && <div className="mb-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
 
+      {/* Date navigator — the whole page follows this date */}
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--line)] bg-white p-1 shadow-sm">
+          <button type="button" onClick={() => setDate(addDaysIso(date, -1))} aria-label="Previous day" className="grid h-7 w-7 place-items-center rounded-lg text-[16px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">‹</button>
+          <label className="relative flex cursor-pointer items-center gap-1.5 px-2 text-[12.5px] font-bold text-[var(--ink)]">
+            <span>📅 {new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}{isToday ? " · Today" : ""}</span>
+            <input type="date" value={date} onChange={(e) => { if (e.target.value) setDate(e.target.value); }} className="absolute inset-0 cursor-pointer opacity-0" aria-label="Pick a date" />
+          </label>
+          <button type="button" onClick={() => setDate(addDaysIso(date, 1))} aria-label="Next day" className="grid h-7 w-7 place-items-center rounded-lg text-[16px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">›</button>
+        </div>
+        {!isToday && <button type="button" onClick={() => setDate(today)} className="rounded-xl border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] shadow-sm transition hover:bg-[var(--panel)]">Jump to today</button>}
+        <span className="text-[11.5px] text-[var(--ink-3)]">Everything below is for this date.</span>
+      </div>
+
       {/* My shift + at-a-glance & sessions */}
       <div className="mb-3 grid items-start gap-3 md:grid-cols-2">
         <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-[0_14px_34px_-16px_rgba(29,58,143,.6)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(125deg,#16306e 0%,#2f5bc4 55%,#3f78d8 100%)`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
           <div className="relative flex items-center justify-between">
-            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">🗓 My shift today</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">🗓 My shift</div>
             <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold backdrop-blur-sm">{shift ? "Rostered" : "Day off"}</span>
           </div>
           {shift ? (<>
@@ -236,12 +251,12 @@ export function StaffDashApp() {
               </div>
             )}
           </>) : (<>
-            <div className="relative mt-2 text-[18px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>You’re not rostered today</div>
-            <div className="relative mt-1 text-[13px] text-white/75">Enjoy your day off 🌿</div>
+            <div className="relative mt-2 text-[18px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{isToday ? "You’re not rostered today" : "No shift this day"}</div>
+            <div className="relative mt-1 text-[13px] text-white/75">{isToday ? "Enjoy your day off 🌿" : "You’re not on the rota for this date."}</div>
           </>)}
           {coworkers.length > 0 && (
             <div className="relative mt-3 border-t border-white/15 pt-3">
-              <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[0.1em] text-white/70">Working with you today</div>
+              <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[0.1em] text-white/70">Working with you</div>
               <div className="flex flex-col gap-2">
                 {coworkers.slice(0, 6).map((c, i) => (
                   <div key={i} className="flex items-center gap-2">
@@ -259,7 +274,7 @@ export function StaffDashApp() {
 
         <div className="flex flex-col gap-3">
         <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
-          <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-3)]">Today at a glance</div>
+          <div className="mb-3 text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-3)]">At a glance</div>
           <div className="grid grid-cols-2 gap-2.5">
             {STAT.map((t) => (
               <div key={t.small} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -272,9 +287,9 @@ export function StaffDashApp() {
             ))}
           </div>
         </div>
-        <Section id="sessions" icon="🗓️" title="Today's sessions" sub="Registers &amp; ratios" tint="#eaf1ff" ink="#1d4ed8" defaultOpen action={<span className="flex flex-none gap-2">{timetableToday && <Link href="/staff/timetable"><Button sm>Day plan</Button></Link>}<Link href="/staff/registers"><Button sm variant="primary">Open registers</Button></Link></span>}>
+        <Section id="sessions" icon="🗓️" title="Sessions" sub="Registers &amp; ratios" tint="#eaf1ff" ink="#1d4ed8" defaultOpen action={<span className="flex flex-none gap-2">{timetableToday && <Link href="/staff/timetable"><Button sm>Day plan</Button></Link>}<Link href="/staff/registers"><Button sm variant="primary">Open registers</Button></Link></span>}>
           {sessions === null ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-            : sessions.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing runs today.</div>
+            : sessions.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing scheduled.</div>
               : sessions.map((s) => (
                 <div key={s.blockId} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
                   <span className="text-[12px] font-bold text-[var(--ink-3)]">{s.start}–{s.end}</span>
@@ -292,22 +307,22 @@ export function StaffDashApp() {
       </div>
 
       {/* ── Children today ───────────────────────────────────────────── */}
-      <GroupLabel>Children today</GroupLabel>
+      <GroupLabel>Children</GroupLabel>
 
       {/* SEND at a glance — click to open the slideshow */}
-      <button type="button" onClick={() => { setSendIdx(0); setSendPlanOpen(false); setSendOpen(true); }} className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-[#e7e1fb] bg-white p-4 text-left shadow-[0_1px_3px_rgba(20,30,60,.06)] transition hover:bg-[#faf9ff]">
+      <button type="button" onClick={() => { setSendIdx(0); setSendOpen(true); }} className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-[#e7e1fb] bg-white p-4 text-left shadow-[0_1px_3px_rgba(20,30,60,.06)] transition hover:bg-[#faf9ff]">
         <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-[#efe9fe] text-[18px]">🧩</span>
         <div>
           <div className="text-[22px] font-extrabold leading-none tabular-nums text-[#6d28d9]" style={{ fontFamily: "var(--ff-display)" }}>{regs === null ? "…" : sendKids.length}</div>
-          <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">children marked SEND today</div>
+          <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">children marked SEND</div>
         </div>
         <span className="ml-auto flex-none rounded-full bg-[#6d28d9] px-3.5 py-1.5 text-[12px] font-extrabold text-white transition hover:brightness-110">View plans ›</span>
       </button>
 
       <div className="mb-3 grid items-start gap-3 lg:grid-cols-2">
-      <Section id="watch" icon="⚠️" title="Watch list — today" sub="Tap a child for their care card" tint="#fdecec" ink="#c0362c" badge={regs !== null && watch.length > 0 ? watch.length : undefined} defaultOpen>
+      <Section id="watch" icon="⚠️" title="Watch list" sub="Tap a child for their care card" tint="#fdecec" ink="#c0362c" badge={regs !== null && watch.length > 0 ? watch.length : undefined} defaultOpen>
           {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-            : watch.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No flagged children in today. 👍</div>
+            : watch.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No flagged children in. 👍</div>
               : watch.map((k) => (
                 <button type="button" key={k.key} onClick={() => setProfile(k)} title="View care card" className="-mx-1 flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border-b border-dashed border-[var(--line)] px-1 py-2 text-left transition-colors last:border-b-0 hover:bg-[var(--panel)]">
                   <span className="text-[13px] font-extrabold">{k.name}</span>
@@ -329,7 +344,7 @@ export function StaffDashApp() {
 
       <Section id="likes" icon="😊" title="Likes &amp; dislikes" sub="Little things that make their day" tint="#e9f7ef" ink="#0f7a43" badge={regs !== null && likesKids.length > 0 ? likesKids.length : undefined} defaultOpen={false}>
             {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-              : likesKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Nothing noted for today&rsquo;s children.</div>
+              : likesKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Nothing noted for these children.</div>
                 : likesKids.slice(0, 8).map((k) => (
                   <div key={k.key} className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
                     <div className="text-[12.5px] font-extrabold">{k.name}</div>
@@ -343,7 +358,7 @@ export function StaffDashApp() {
 
       <Section id="perm" icon="🔑" title="Collection &amp; permissions" sub="Passwords, contacts &amp; consents" tint="#eef0fe" ink="#4f46e5" badge={regs !== null && permKids.length > 0 ? permKids.length : undefined} defaultOpen={false}>
             {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-              : permKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No collection notes for today.</div>
+              : permKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No collection notes.</div>
                 : permKids.slice(0, 8).map((k) => (
                   <div key={k.key} className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
                     <div className="flex items-center justify-between gap-2">
@@ -404,92 +419,71 @@ export function StaffDashApp() {
         const n = sendKids.length;
         const idx = Math.min(sendIdx, Math.max(0, n - 1));
         const k = n > 0 ? sendKids[idx] : null;
-        const planHref = k?.c.sendPlanId ? `/api/my/files/${k.c.sendPlanId}` : null;
         return (
           <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4" onClick={() => setSendOpen(false)}>
             <div className="flex max-h-[calc(100vh-2rem)] w-full max-w-[560px] flex-col overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_rgba(0,0,0,.4)]" onClick={(e) => e.stopPropagation()}>
               <div className="flex items-start justify-between gap-3 px-5 py-4 text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(120deg,#5b21b6,#8b5cf6)`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
                 <div>
-                  <div className="text-[17px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>🧩 SEND today · {n}</div>
-                  <div className="mt-1 text-[12px] text-white/85">{sendPlanOpen ? "Support plan" : "Swipe through each child’s plan"}</div>
+                  <div className="text-[17px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>🧩 SEND · {n}</div>
+                  <div className="mt-1 text-[12px] text-white/85">Swipe through each child · open their uploaded plan</div>
                 </div>
                 <button type="button" onClick={() => setSendOpen(false)} aria-label="Close" className="flex-none text-[18px] leading-none text-white/80 hover:text-white">✕</button>
               </div>
 
               {n === 0 || !k ? (
-                <div className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">No children marked SEND in today. 👍</div>
+                <div className="p-6 text-center text-[12.5px] text-[var(--ink-3)]">No children marked SEND in. 👍</div>
               ) : (
                 <div className="flex min-h-0 flex-1 flex-col">
                   <div className="min-h-0 flex-1 overflow-y-auto p-5">
-                    {!sendPlanOpen ? (
-                      <div>
-                        <div className="flex items-center gap-3">
-                          <span className="grid h-12 w-12 flex-none place-items-center rounded-full bg-[#f3e8ff] text-[13px] font-extrabold text-[#7c3aed]">{initials(k.name)}</span>
-                          <div className="min-w-0">
-                            <div className="text-[17px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{k.name}</div>
-                            <div className="text-[12px] text-[var(--ink-3)]">{k.where}</div>
-                          </div>
-                          <span className="ml-auto flex-none rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{idx + 1} / {n}</span>
-                        </div>
-                        {k.c.send && (
-                          <div className="mt-4 rounded-xl border border-[#e7e1fb] bg-[#faf9ff] p-3.5">
-                            <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6d28d9]">SEND need</div>
-                            <p className="mt-1 text-[13px] leading-[1.55] text-[var(--ink-2)]">{k.c.send}</p>
-                          </div>
-                        )}
-                        {k.c.careNotes && (
-                          <div className="mt-2.5 rounded-xl border border-[var(--line)] p-3.5">
-                            <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Care notes</div>
-                            <p className="mt-1 text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{k.c.careNotes}</p>
-                          </div>
-                        )}
-                        {(k.c.likes || k.c.dislikes) && (
-                          <div className="mt-2.5 flex flex-wrap gap-1.5">
-                            {k.c.likes && <span className="rounded-full bg-[#e9f7ef] px-2.5 py-1 text-[11.5px] font-semibold text-[#0f7a43]">👍 {k.c.likes}</span>}
-                            {k.c.dislikes && <span className="rounded-full bg-[#fdecec] px-2.5 py-1 text-[11.5px] font-semibold text-[#c0362c]">👎 {k.c.dislikes}</span>}
-                          </div>
-                        )}
-                        {k.plan && (
-                          <button type="button" onClick={() => setSendPlanOpen(true)} className="mt-4 flex w-full items-center gap-3 rounded-xl border border-[#e7e1fb] bg-white p-3.5 text-left transition hover:bg-[#faf9ff]">
-                            <span className="grid h-10 w-10 flex-none place-items-center rounded-lg bg-[#efe9fe] text-[18px]">📄</span>
-                            <div className="min-w-0">
-                              <div className="text-[13px] font-extrabold text-[var(--ink)]">{k.plan}</div>
-                              <div className="text-[11px] text-[var(--ink-3)]">SEND support plan · tap to open</div>
-                            </div>
-                            <span className="ml-auto flex-none text-[#6d28d9]">›</span>
-                          </button>
-                        )}
+                    <div className="flex items-center gap-3">
+                      <span className="grid h-12 w-12 flex-none place-items-center rounded-full bg-[#f3e8ff] text-[13px] font-extrabold text-[#7c3aed]">{initials(k.name)}</span>
+                      <div className="min-w-0">
+                        <div className="text-[17px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{k.name}</div>
+                        <div className="text-[12px] text-[var(--ink-3)]">{k.where}</div>
                       </div>
-                    ) : (
-                      <div>
-                        <button type="button" onClick={() => setSendPlanOpen(false)} className="mb-3 text-[12px] font-bold text-[#6d28d9]">‹ Back to {k.name.split(" ")[0]}</button>
-                        <div className="overflow-hidden rounded-xl border border-[var(--line)] shadow-[0_1px_3px_rgba(20,30,60,.06)]">
-                          <div className="border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3">
-                            <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6d28d9]">SEND support plan</div>
-                            <div className="mt-0.5 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{k.plan}</div>
-                            <div className="text-[11.5px] text-[var(--ink-3)]">{k.name} · {k.where}</div>
-                          </div>
-                          <div className="space-y-3 p-4 text-[12.5px] leading-[1.55] text-[var(--ink-2)]">
-                            {k.c.send && <div><div className="text-[11px] font-extrabold text-[var(--ink)]">Primary need &amp; strategy</div><p className="mt-0.5">{k.c.send}</p></div>}
-                            {k.c.careNotes && <div><div className="text-[11px] font-extrabold text-[var(--ink)]">Care notes</div><p className="mt-0.5">{k.c.careNotes}</p></div>}
-                            {k.c.medical && <div><div className="text-[11px] font-extrabold text-[var(--ink)]">Medical</div><p className="mt-0.5">{k.c.medical}</p></div>}
-                            {(k.c.likes || k.c.dislikes) && <div><div className="text-[11px] font-extrabold text-[var(--ink)]">What helps</div><p className="mt-0.5">{[k.c.likes && `Likes: ${k.c.likes}`, k.c.dislikes && `Avoid: ${k.c.dislikes}`].filter(Boolean).join(" · ")}</p></div>}
-                          </div>
-                          <div className="border-t border-[var(--line)] px-4 py-3">
-                            {planHref
-                              ? <a href={planHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-[#6d28d9] px-3.5 py-2 text-[12px] font-extrabold text-white">📄 Open uploaded plan (PDF) ›</a>
-                              : <div className="text-[11.5px] text-[var(--ink-3)]">The uploaded EHCP / plan document opens here as a PDF when one is attached to the child’s record.</div>}
-                          </div>
+                      <span className="ml-auto flex-none rounded-full bg-[var(--panel)] px-2.5 py-1 text-[11px] font-bold tabular-nums text-[var(--ink-2)]">{idx + 1} / {n}</span>
+                    </div>
+
+                    {/* The uploaded support-plan DOCUMENT — an EHCP/PDF the parent or provider added */}
+                    <div className="mt-4 rounded-xl border border-[var(--line)] p-3.5">
+                      <div className="flex items-center gap-3">
+                        <span className="grid h-10 w-10 flex-none place-items-center rounded-lg bg-[#efe9fe] text-[18px]">📄</span>
+                        <div className="min-w-0">
+                          <div className="text-[13px] font-extrabold text-[var(--ink)]">{k.c.sendPlanName || "SEND support plan"}</div>
+                          <div className="text-[11px] text-[var(--ink-3)]">{k.c.sendPlanId ? "Uploaded document" : "No document uploaded yet"}</div>
                         </div>
+                        {k.c.sendPlanId && <button type="button" onClick={() => openFile(`/api/my/files/${k.c.sendPlanId}`).catch((e) => alert(e instanceof Error ? e.message : "Couldn’t open the plan."))} className="ml-auto flex-none rounded-lg bg-[#6d28d9] px-3.5 py-2 text-[12px] font-extrabold text-white transition hover:brightness-110">📄 Open plan ›</button>}
+                      </div>
+                      {!k.c.sendPlanId && <p className="mt-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">No plan file attached for {k.name.split(" ")[0]} yet. When the parent or provider uploads an EHCP / support plan, it opens here as a PDF.</p>}
+                    </div>
+
+                    {/* SEND notes from the register (context, not the plan itself) */}
+                    {k.c.send && (
+                      <div className="mt-2.5 rounded-xl border border-[#e7e1fb] bg-[#faf9ff] p-3.5">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[#6d28d9]">SEND note</div>
+                        <p className="mt-1 text-[13px] leading-[1.55] text-[var(--ink-2)]">{k.c.send}</p>
+                      </div>
+                    )}
+                    {k.c.careNotes && (
+                      <div className="mt-2.5 rounded-xl border border-[var(--line)] p-3.5">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Care notes</div>
+                        <p className="mt-1 text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{k.c.careNotes}</p>
+                      </div>
+                    )}
+                    {(k.c.likes || k.c.dislikes) && (
+                      <div className="mt-2.5 flex flex-wrap gap-1.5">
+                        {k.c.likes && <span className="rounded-full bg-[#e9f7ef] px-2.5 py-1 text-[11.5px] font-semibold text-[#0f7a43]">👍 {k.c.likes}</span>}
+                        {k.c.dislikes && <span className="rounded-full bg-[#fdecec] px-2.5 py-1 text-[11.5px] font-semibold text-[#c0362c]">👎 {k.c.dislikes}</span>}
                       </div>
                     )}
                   </div>
+
                   <div className="flex items-center justify-between gap-2 border-t border-[var(--line)] px-5 py-3">
-                    <button type="button" disabled={idx === 0} onClick={() => { setSendIdx((i) => Math.max(0, i - 1)); setSendPlanOpen(false); }} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] disabled:opacity-40">‹ Prev</button>
+                    <button type="button" disabled={idx === 0} onClick={() => setSendIdx((i) => Math.max(0, i - 1))} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] disabled:opacity-40">‹ Prev</button>
                     <div className="flex items-center gap-1.5">
                       {sendKids.map((_, i) => <span key={i} className="h-1.5 w-1.5 rounded-full" style={{ background: i === idx ? "#6d28d9" : "var(--line)" }} />)}
                     </div>
-                    <button type="button" disabled={idx >= n - 1} onClick={() => { setSendIdx((i) => Math.min(n - 1, i + 1)); setSendPlanOpen(false); }} className="rounded-lg bg-[#6d28d9] px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40">Next ›</button>
+                    <button type="button" disabled={idx >= n - 1} onClick={() => setSendIdx((i) => Math.min(n - 1, i + 1))} className="rounded-lg bg-[#6d28d9] px-3.5 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-40">Next ›</button>
                   </div>
                 </div>
               )}
