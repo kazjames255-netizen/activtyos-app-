@@ -33,6 +33,8 @@ const bookingAges = (b: Booking): number[] => {
 };
 const SOURCE_OF = (b: Booking) => (b.pay === "Funded" ? "Childcare / voucher" : b.method || "Card");
 const AGE_BUCKETS: [string, number, number][] = [["Under 5", 0, 4], ["5–7", 5, 7], ["8–10", 8, 10], ["11–13", 11, 13], ["14+", 14, 200]];
+const VALUE_BANDS: [string, number, number][] = [["£0–25", 0, 25], ["£25–50", 25, 50], ["£50–100", 50, 100], ["£100–200", 100, 200], ["£200+", 200, Infinity]];
+const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export function FinanceAnalyticsApp() {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
@@ -41,7 +43,7 @@ export function FinanceAnalyticsApp() {
   const [status, setStatus] = useState<PayStatus | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [months, setMonths] = useState(6);
-  const [tab, setTab] = useState<"overview" | "revenue" | "payouts" | "debts" | "people">("overview");
+  const [tab, setTab] = useState<"overview" | "revenue" | "addons" | "payouts" | "debts" | "people" | "insights">("overview");
   const [nowMs] = useState(() => Date.now());
   // Season + Location filters (a season/venue is a set of listings; we keep only
   // bookings whose listing is in it). "" = all.
@@ -53,6 +55,8 @@ export function FinanceAnalyticsApp() {
   const [listingVenue, setListingVenue] = useState<Record<string, string>>({});   // id → name
   const [listingVenueId, setListingVenueId] = useState<Record<string, string>>({}); // id → venueId
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
+  const [addonMeta, setAddonMeta] = useState<Record<string, { name: string; price: number }>>({}); // addon id → name/price
+  const [childSex, setChildSex] = useState<Record<string, "boy" | "girl">>({}); // learner name → sex
   const [connecting, setConnecting] = useState(false);
   const router = useRouter();
   const portal = (usePathname() ?? "/").split("/")[1] || "app";
@@ -77,7 +81,7 @@ export function FinanceAnalyticsApp() {
     // location line under top-listing rows.
     Promise.all([
       apiGet<{ id: string; seasonId?: string | null; venueId?: string | null }[]>("/api/listings?mine=1"),
-      apiGet<{ venues?: { id: string; name: string }[] } | null>("/api/library").catch(() => null),
+      apiGet<{ venues?: { id: string; name: string }[]; addons?: { id: string; name?: string; price?: number }[] } | null>("/api/library").catch(() => null),
     ]).then(([ls, lib]) => {
       const list = ls ?? [];
       setListingSeason(Object.fromEntries(list.filter((l) => l.id && l.seasonId).map((l) => [l.id, l.seasonId as string])));
@@ -86,7 +90,16 @@ export function FinanceAnalyticsApp() {
       setListingVenueId(Object.fromEntries(list.filter((l) => l.id && l.venueId).map((l) => [l.id, l.venueId as string])));
       const used = new Set(list.map((l) => l.venueId).filter(Boolean));
       setVenues((lib?.venues ?? []).filter((v) => used.has(v.id)));
+      setAddonMeta(Object.fromEntries((lib?.addons ?? []).map((x) => [x.id, { name: x.name || "Add-on", price: Number(x.price) || 0 }])));
     }).catch(() => {});
+    // Child sex lives on the customer/child record (a booking learner links by
+    // name), so the gender split needs the customers list. Empty if not collected.
+    apiGet<{ children?: { name?: string; sex?: "boy" | "girl" }[] }[]>("/api/customers")
+      .then((cs) => {
+        const m: Record<string, "boy" | "girl"> = {};
+        for (const c of cs ?? []) for (const k of c.children ?? []) if (k.name && (k.sex === "boy" || k.sex === "girl")) m[k.name.trim().toLowerCase()] = k.sex;
+        setChildSex(m);
+      }).catch(() => {});
   }, []);
   useEffect(load, [load]);
   useRealtime(["bookings", "payments", "invoices"], load);
@@ -220,6 +233,56 @@ export function FinanceAnalyticsApp() {
     };
   }, [bookings, months, nowMs, season, venue, listingSeason, listingVenue, listingVenueId]);
 
+  // Add-ons · value · pass · gender · day-of-week — the extra comparisons, same
+  // filters/window as `a`, kept separate to keep each concern legible.
+  const mix = useMemo(() => {
+    const all = (bookings ?? []).filter((b) =>
+      b.status !== "Declined" && b.status !== "Waitlisted"
+      && (!season || listingSeason[b.listingId ?? ""] === season)
+      && (!venue || listingVenueId[b.listingId ?? ""] === venue));
+    const now = new Date(nowMs);
+    const inWindow = new Set<string>();
+    for (let i = months - 1; i >= 0; i--) inWindow.add(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
+
+    const addonCount = new Map<string, number>();
+    const byPass = new Map<string, { count: number; revenue: number }>();
+    const gender = { boy: 0, girl: 0, unknown: 0 };
+    const dow = [0, 0, 0, 0, 0, 0, 0];
+    const amounts: number[] = [];
+    const seenLearner = new Set<string>();
+    let winBookings = 0, bookingsWithAddon = 0, addonUnits = 0, addonRevenue = 0;
+
+    for (const b of all) {
+      const m = monthOf(b);
+      if (!m || !inWindow.has(m) || isCancelled(b)) continue;
+      winBookings++;
+      amounts.push(b.amount);
+      if (b.pass) { const p = byPass.get(b.pass) ?? { count: 0, revenue: 0 }; p.count++; p.revenue += collectedNet(b); byPass.set(b.pass, p); }
+      const ad = b.addons ?? [];
+      if (ad.length) bookingsWithAddon++;
+      for (const id of ad) { addonCount.set(id, (addonCount.get(id) ?? 0) + 1); addonUnits++; addonRevenue += addonMeta[id]?.price ?? 0; }
+      for (const d of b.days ?? []) { const wd = new Date(`${d}T00:00:00Z`).getUTCDay(); if (wd >= 0 && wd <= 6) dow[wd]++; }
+      for (const ln of learnerNames(b)) { const k = ln.toLowerCase(); if (seenLearner.has(k)) continue; seenLearner.add(k); const s = childSex[k]; if (s === "boy") gender.boy++; else if (s === "girl") gender.girl++; else gender.unknown++; }
+    }
+
+    const valueBands = VALUE_BANDS.map(([label, lo, hi], i) => { const n = amounts.filter((v) => v >= lo && v < hi).length; return { label, value: n, sub: String(n), color: ACT_C[i % ACT_C.length] }; });
+    const topAddons = [...addonCount.entries()].map(([id, count]) => ({ label: addonMeta[id]?.name ?? "Add-on", count, rev: (addonMeta[id]?.price ?? 0) * count })).sort((x, y) => y.rev - x.rev || y.count - x.count).slice(0, 8)
+      .map((r, i) => ({ label: r.label, value: r.rev, sub: `${money(r.rev)} · ${r.count} sold`, color: ACT_C[i % ACT_C.length] }));
+    const passRows = [...byPass.entries()].sort((x, y) => y[1].revenue - x[1].revenue).slice(0, 8).map(([label, v], i) => ({ label, value: v.revenue, sub: `${money(v.revenue)} · ${v.count}`, color: ACT_C[i % ACT_C.length] }));
+    const dowRows = DOW.map((label, i) => ({ label, value: dow[i], sub: String(dow[i]), color: LIGHTB }));
+
+    return {
+      winBookings,
+      attachRate: winBookings ? Math.round((bookingsWithAddon / winBookings) * 100) : 0,
+      bookingsWithAddon, addonUnits, addonRevenue, topAddons,
+      avgBookingValue: amounts.length ? amounts.reduce((s, v) => s + v, 0) / amounts.length : 0,
+      medianValue: amounts.length ? [...amounts].sort((x, y) => x - y)[Math.floor(amounts.length / 2)] : 0,
+      valueBands, passRows,
+      gender, genderKnown: gender.boy + gender.girl,
+      dowRows,
+    };
+  }, [bookings, months, nowMs, season, venue, listingSeason, listingVenueId, addonMeta, childSex]);
+
   // ref → booker name, so a payout row can name who paid (payments carry only refs).
   const nameByRef = useMemo(() => {
     const m = new Map<string, string>();
@@ -275,7 +338,7 @@ export function FinanceAnalyticsApp() {
         actions={periodToggle}
       />
       <TabStrip
-        tabs={[["overview", "Overview"], ["revenue", "Revenue"], ["payouts", "Payouts"], ["debts", "Debts"], ["people", "Customers & learners"]]}
+        tabs={[["overview", "Overview"], ["revenue", "Revenue"], ["addons", "Add-ons"], ["payouts", "Payouts"], ["debts", "Debts"], ["people", "Customers & learners"], ["insights", "Insights"]]}
         value={tab}
         onChange={(t) => { setTabTouched(true); setTab(t); }}
       />
@@ -433,7 +496,7 @@ export function FinanceAnalyticsApp() {
             ) : <Empty>No unpaid invoices — nicely on top of it.</Empty>}
           </Panel>
         </div>
-      ) : (
+      ) : tab === "people" ? (
         <div className="flex flex-col gap-4">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Total bookers" icon="👤" grad={GRAD.blue} value={String(a.totalBookers)} sub={`in the last ${months} months`} />
@@ -461,6 +524,42 @@ export function FinanceAnalyticsApp() {
           <Panel title="Revenue over time" right={<Legend items={[["Collected", GREEN]]} />}>
             <TrendChart series={a.collectedByMonth} fmt={compactMoney} color={GREEN} />
           </Panel>
+        </div>
+      ) : tab === "addons" ? (
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            <Tile label="Add-on revenue (est.)" icon="🧩" grad={GRAD.violet} value={money(mix.addonRevenue)} sub="from paid add-ons" />
+            <Tile label="Attach rate" icon="📈" grad={GRAD.blue} value={`${mix.attachRate}%`} sub="of bookings add an extra" aside={<Ring pct={mix.attachRate} label={`${mix.attachRate}%`} />} />
+            <Tile label="Add-ons sold" icon="🛒" grad={GRAD.teal} value={String(mix.addonUnits)} sub="units in period" />
+            <Tile label="Bookings w/ add-ons" icon="✅" grad={GRAD.green} value={String(mix.bookingsWithAddon)} sub={`of ${mix.winBookings} bookings`} />
+          </div>
+          <Panel title="Top add-ons by revenue" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">est. price × units sold</span>}>
+            {mix.topAddons.length ? <Breakdown entries={mix.topAddons} /> : <Empty>No add-ons sold yet — create them in the listing builder&rsquo;s Add-ons step, and they&rsquo;ll show here once booked.</Empty>}
+          </Panel>
+          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">Add-on revenue is estimated (each add-on&rsquo;s library price × times booked); meals ride the add-on lines too.</div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+            <Tile label="Avg booking value" icon="🧮" grad={GRAD.blue} value={money(mix.avgBookingValue)} sub={`across ${mix.winBookings} bookings`} />
+            <Tile label="Median booking" icon="📊" grad={GRAD.teal} value={money(mix.medianValue)} sub="typical basket" />
+            <Tile label="Boys : girls" icon="🚻" grad={GRAD.violet} value={mix.genderKnown ? `${Math.round((mix.gender.boy / mix.genderKnown) * 100)}:${Math.round((mix.gender.girl / mix.genderKnown) * 100)}` : "—"} sub={mix.genderKnown ? `${mix.genderKnown} with gender set` : "no gender recorded"} />
+            <Tile label="Busiest day" icon="📅" grad={GRAD.amber} value={mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).value ? mix.dowRows.reduce((m, r) => (r.value > m.value ? r : m), mix.dowRows[0]).label : "—"} sub="most sessions" />
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Panel title="Booking value distribution"><Breakdown entries={mix.valueBands} /></Panel>
+            <Panel title="Pass / ticket mix" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">revenue · bookings</span>}>
+              {mix.passRows.some((r) => r.value > 0) ? <Breakdown entries={mix.passRows} /> : <Empty>No paid passes yet.</Empty>}
+            </Panel>
+          </div>
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Panel title="Gender split" right={<Info text="From each child's recorded sex (Setup → collect gender). Learners with none set aren't counted." />}>
+              {mix.genderKnown ? <Donut segments={[{ label: "Boys", value: mix.gender.boy, color: LIGHTB }, { label: "Girls", value: mix.gender.girl, color: PINK }]} center={`${Math.round((mix.gender.boy / mix.genderKnown) * 100)}%`} sub="boys" /> : <Empty>No gender recorded — turn on &ldquo;collect gender&rdquo; in Setup to compare.</Empty>}
+            </Panel>
+            <Panel title="Busiest days of the week">
+              <Breakdown entries={mix.dowRows} />
+            </Panel>
+          </div>
         </div>
       )}
     </div>
