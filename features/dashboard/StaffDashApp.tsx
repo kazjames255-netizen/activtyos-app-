@@ -26,7 +26,8 @@ interface PublishedLite { id: string; dayList: { iso: string }[] }
 interface Me { tenantName: string | null; name?: string }
 interface MyShift { start: string; end: string; role?: string; site?: string; listing?: string }
 // Register feed — the day's real attendance + safeguarding flags per child.
-interface ChildFlags { allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanId?: string; sendPlanName?: string; careNotes?: string }
+interface ChildFlags { allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanId?: string; sendPlanName?: string; careNotes?: string; likes?: string; dislikes?: string; collectionPassword?: string; photoConsent?: boolean; suncreamConsent?: boolean; firstAidConsent?: boolean; walkHomeConsent?: boolean; emergencyName?: string; emergencyPhone?: string }
+interface Accident { id: string; date: string; time?: string; childName: string; description: string; injury?: string; severity?: string }
 interface RegAttendee { ref: string; children: { name: string; age?: number }[]; child: ChildFlags | null; attendance: { status?: "in" | "absent"; collectedAt?: string } | null }
 interface RegSession { blockId: string; start: string; end: string; blockName: string; listingName: string; attendees: RegAttendee[]; counts: { expected: number; present: number; notArrived: number; absent: number; collected: number } }
 interface WatchFlag { k: string; detail?: string; bg: string; fg: string }
@@ -87,12 +88,14 @@ export function StaffDashApp() {
   const [sessions, setSessions] = useState<RatioSession[] | null>(null);
   const [tasks, setTasks] = useState<Task[] | null>(null);
   const [regs, setRegs] = useState<RegSession[] | null>(null);
+  const [accidents, setAccidents] = useState<Accident[] | null>(null);
   const [timetableToday, setTimetableToday] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clock, setClock] = useState<Record<string, ClockRecord> | null>(null);
   const [shift, setShift] = useState<MyShift | null>(null);
   const [coworkers, setCoworkers] = useState<Coworker[]>([]);
   const [profile, setProfile] = useState<WatchKid | null>(null); // watch-list child card
+  const [sendOpen, setSendOpen] = useState(false); // SEND names modal
   const [, tick] = useState(0); // live worked-time tick
   const { settings } = useSettings();
   const coworkerVis = settings.scheduling?.coworkerVisibility ?? "all";
@@ -102,6 +105,7 @@ export function StaffDashApp() {
     apiGet<{ sessions: RatioSession[] }>(`/api/ratios?date=${today}`).then((d) => setSessions(d?.sessions ?? [])).catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load today"));
     apiGet<RegSession[]>(`/api/registers?date=${today}`).then((r) => setRegs(r ?? [])).catch(() => setRegs([]));
     apiGet<Task[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => {});
+    apiGet<Accident[]>("/api/incidents?kind=accident").then((l) => setAccidents(l ?? [])).catch(() => setAccidents([]));
     apiGet<PublishedLite[]>("/api/timetables/published").then((w) => setTimetableToday((w ?? []).some((x) => x.dayList.some((d) => d.iso === today)))).catch(() => {});
     apiGet<{ venues?: { name: string; address?: string; city?: string }[] }>("/api/library").then((l) => setVenues(l.venues ?? [])).catch(() => {});
   }, [today]);
@@ -123,6 +127,12 @@ export function StaffDashApp() {
       status: a.attendance?.status === "in" ? "in" : a.attendance?.status === "absent" ? "absent" : "due",
       flags: flagsOf(a.child!),
     } as WatchKid)));
+  // Every child in today with a record — feeds the likes/dislikes + permissions cards.
+  const kidsToday = (regs ?? []).flatMap((s) => s.attendees.filter((a) => a.child).map((a) => ({ key: `${s.blockId}:${a.ref}`, name: a.children[0]?.name ?? "—", where: `${s.start}–${s.end} · ${s.listingName}`, c: a.child! })));
+  const likesKids = kidsToday.filter((k) => k.c.likes || k.c.dislikes);
+  const sendKids = kidsToday.filter((k) => k.c.send || k.c.sendPlanId || k.c.sendPlanName).map((k) => ({ ...k, plan: k.c.sendPlanName || k.c.send || "" }));
+  const permKids = kidsToday.filter((k) => k.c.collectionPassword || k.c.emergencyName || k.c.photoConsent != null || k.c.suncreamConsent != null || k.c.walkHomeConsent != null || k.c.firstAidConsent != null);
+  const recentAccidents = (accidents ?? []).slice(0, 6);
   const tickTask = (t: Task) => { setTasks((list) => (list ?? []).map((x) => (x.id === t.id ? { ...x, done: true } : x))); void apiPut(`/api/tasks/${t.id}`, { done: true }).catch(() => refresh()); };
   const dayLabel = new Date().toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   // Where I'm working today — match the shift's venue name to the library venue for its address.
@@ -167,6 +177,16 @@ export function StaffDashApp() {
           </div>
         ))}
       </div>
+
+      {/* SEND at a glance — click to see who */}
+      <button type="button" onClick={() => setSendOpen(true)} className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-[#e3ddfb] bg-[#f6f3ff] p-4 text-left transition hover:bg-[#efeaff]">
+        <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-[#ede9fe] text-[18px]">🧩</span>
+        <div>
+          <div className="text-[24px] font-extrabold leading-none tabular-nums text-[#5b21b6]" style={{ fontFamily: "var(--ff-display)" }}>{regs === null ? "…" : sendKids.length}</div>
+          <div className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">children marked SEND today</div>
+        </div>
+        <span className="ml-auto flex items-center gap-1 text-[12px] font-extrabold text-[#6d28d9]">View names <span className="text-[14px]">›</span></span>
+      </button>
 
       {/* My day + clock in/out */}
       <div className="mb-3 grid gap-3 md:grid-cols-2">
@@ -233,8 +253,10 @@ export function StaffDashApp() {
         </div>
       </div>
 
+      {/* Care, safeguarding & activity — two columns */}
+      <div className="grid items-start gap-3 lg:grid-cols-2">
       {/* Watch list — flagged children in today (SEND / allergy / medical / dietary) */}
-      <Card className="mb-3 p-4">
+      <Card className="p-4">
         <div className="mb-3 flex items-start justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#fdecec", color: "#c0362c" }}>⚠️</span>
@@ -266,8 +288,86 @@ export function StaffDashApp() {
               ))}
       </Card>
 
+      {/* Likes & dislikes */}
+      <Card className="p-4">
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#e9f7ef", color: "#0f7a43" }}>😊</span>
+          <div>
+            <div className="text-[14px] font-extrabold leading-tight">Likes &amp; dislikes</div>
+            <div className="text-[11px] text-[var(--ink-3)]">Little things that make their day</div>
+          </div>
+        </div>
+        {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+          : likesKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Nothing noted for today&rsquo;s children.</div>
+            : likesKids.slice(0, 8).map((k) => (
+              <div key={k.key} className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+                <div className="text-[12.5px] font-extrabold">{k.name}</div>
+                <div className="mt-1 flex flex-wrap gap-1.5">
+                  {k.c.likes && <span className="rounded-full bg-[#e9f7ef] px-2 py-0.5 text-[11px] font-semibold text-[#0f7a43]">👍 {k.c.likes}</span>}
+                  {k.c.dislikes && <span className="rounded-full bg-[#fdecec] px-2 py-0.5 text-[11px] font-semibold text-[#c0362c]">👎 {k.c.dislikes}</span>}
+                </div>
+              </div>
+            ))}
+      </Card>
+
+      {/* Collection & permissions — the "magic word" + consents */}
+      <Card className="p-4">
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#eef0fe", color: "#4f46e5" }}>🔑</span>
+          <div>
+            <div className="text-[14px] font-extrabold leading-tight">Collection &amp; permissions</div>
+            <div className="text-[11px] text-[var(--ink-3)]">Passwords, contacts &amp; consents</div>
+          </div>
+        </div>
+        {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+          : permKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No collection notes for today.</div>
+            : permKids.slice(0, 8).map((k) => (
+              <div key={k.key} className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12.5px] font-extrabold">{k.name}</span>
+                  {k.c.collectionPassword && <span className="rounded-full bg-[#eef0fe] px-2 py-0.5 font-mono text-[11px] font-bold tracking-wide text-[#4f46e5]">🔑 {k.c.collectionPassword}</span>}
+                </div>
+                <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-[var(--ink-3)]">
+                  {k.c.emergencyName && <span>📞 <b className="text-[var(--ink-2)]">{k.c.emergencyName}</b>{k.c.emergencyPhone ? ` · ${k.c.emergencyPhone}` : ""}</span>}
+                </div>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {([["📷 Photos", k.c.photoConsent], ["☀️ Suncream", k.c.suncreamConsent], ["🚶 Walk home", k.c.walkHomeConsent], ["⛑ First aid", k.c.firstAidConsent]] as const)
+                    .filter(([, v]) => v != null)
+                    .map(([label, v]) => (
+                      <span key={label} className={"rounded-full px-2 py-0.5 text-[10px] font-bold " + (v ? "bg-[#e9f7ef] text-[#0f7a43]" : "bg-[#f1f3f7] text-[#64748b] line-through")}>{label}</span>
+                    ))}
+                </div>
+              </div>
+            ))}
+      </Card>
+
+      {/* Recent accidents */}
+      <Card className="p-4">
+        <div className="mb-3 flex items-center gap-2.5">
+          <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#fef3e2", color: "#b45309" }}>🩹</span>
+          <div>
+            <div className="text-[14px] font-extrabold leading-tight">Recent accidents</div>
+            <div className="text-[11px] text-[var(--ink-3)]">Latest logged incidents</div>
+          </div>
+        </div>
+        {accidents === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+          : recentAccidents.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No accidents logged. 🎉</div>
+            : recentAccidents.map((a) => (
+              <div key={a.id} className="border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[12.5px] font-extrabold">{a.childName}</span>
+                  <span className="flex items-center gap-1.5">
+                    {a.severity && <span className={"rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase " + (a.severity === "serious" || a.severity === "major" ? "bg-[#fdecec] text-[#c0362c]" : "bg-[#fef3d8] text-[#9a5a00]")}>{a.severity}</span>}
+                    <span className="text-[11px] text-[var(--ink-3)]">{a.date}{a.time ? ` · ${a.time}` : ""}</span>
+                  </span>
+                </div>
+                <div className="mt-0.5 text-[11.5px] leading-snug text-[var(--ink-2)]">{a.injury ? <b>{a.injury}. </b> : ""}{a.description}</div>
+              </div>
+            ))}
+      </Card>
+
       {/* Today's sessions */}
-      <Card className="mb-3 p-4">
+      <Card className="p-4">
         <div className="mb-3 flex items-center justify-between gap-2">
           <div className="flex items-center gap-2.5">
             <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#eaf1ff", color: "#1d4ed8" }}>🗓️</span>
@@ -314,6 +414,35 @@ export function StaffDashApp() {
                 </div>
               ))}
       </Card>
+      </div>
+
+      {/* SEND — who's marked, and their plan */}
+      {sendOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4" onClick={() => setSendOpen(false)}>
+          <div className="w-full max-w-[460px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_rgba(0,0,0,.4)]" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-start justify-between gap-3 px-5 py-4 text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(120deg,#4c1d95,#7c3aed)`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
+              <div>
+                <div className="text-[18px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>🧩 SEND today · {sendKids.length}</div>
+                <div className="mt-1 text-[12px] text-white/85">Children with a special educational need or disability in today</div>
+              </div>
+              <button type="button" onClick={() => setSendOpen(false)} aria-label="Close" className="flex-none text-[18px] leading-none text-white/80 hover:text-white">✕</button>
+            </div>
+            <div className="max-h-[60vh] overflow-y-auto p-5">
+              {sendKids.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">No children marked SEND in today.</div>
+                : sendKids.map((k) => (
+                  <div key={k.key} className="flex items-center gap-3 border-b border-dashed border-[var(--line)] py-2.5 last:border-b-0">
+                    <span className="grid h-8 w-8 flex-none place-items-center rounded-full bg-[#f3e8ff] text-[10px] font-extrabold text-[#7c3aed]">{initials(k.name)}</span>
+                    <div className="min-w-0">
+                      <div className="text-[13px] font-extrabold">{k.name}</div>
+                      {k.plan && <div className="text-[11.5px] text-[#7c3aed]">{k.plan}</div>}
+                    </div>
+                    <span className="ml-auto flex-none text-[11px] text-[var(--ink-3)]">{k.where}</span>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Care card — the flagged child's needs at a glance */}
       {profile && (
