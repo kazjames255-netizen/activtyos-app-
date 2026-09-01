@@ -21,6 +21,45 @@ import type { Booking } from "../../../features/bookings/types";
 export const ai = Router();
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+// How-to knowledge base — where each job is done in the app, so the assistant
+// can give clear step-by-step guidance for "how do I…" questions.
+const HOWTO: Record<"operator" | "staff" | "parent" | "platform", string> = {
+  operator: [
+    "Take a register: Registers → choose the date and session at the top → tap a child to mark them In, Absent or Collected. Use “Roll call” for a quick head-count, “Message all attending” to text every parent at once, and tap a child's name to open their full care card (allergies, medical, SEND, collection password).",
+    "Add a new activity/listing: Blocks & listings → Listings tab → “+ New listing” → work through the wizard (details & photos, when it runs, tickets & pricing) → Publish. It then appears on the parents' Browse page.",
+    "Set dates & sessions: Blocks & listings → Blocks → create a Block with its sessions/dates and attach it to a listing. Capacity and one-per-day rules live on the block; prices live on the listing's tickets.",
+    "Approve or decline a booking: Bookings → the “Approval needed” filter → open it → Approve or Decline.",
+    "Take payment / refund / mark paid: Bookings → open the booking → use the payment actions (mark paid, send a payment link, or refund).",
+    "Chase money owed: Finance & analytics → Debts, or Bookings filtered by unpaid — each shows the family and amount; message or send a payment link from there.",
+    "Message parents: Messages, or from a Register (“Message all attending”), or from an individual booking. Templates and merge fields are in the ✉️ Messages area.",
+    "Add a discount code: Marketing → Coupons → create a code (percentage or fixed, all listings or a specific one, optional per-family limit or reserved group).",
+    "Log an accident/incident: Registers or the Incidents area → Log accident → child, what happened, first aid given, and whether to notify the parent (they get a copy in their portal).",
+    "See finances: Finance & analytics (revenue, payouts, debts, customers). Money in / Money out for income and expenses. Payroll for staff pay.",
+    "Add a team member: Team & invites → invite by email and choose their role; they join via the invite link. Rotas/shifts are set in Schedule.",
+    "Set up the business: Setup & features (seasons, child questions, consents, safeguarding options, portal toggles).",
+  ].join("\n• "),
+  staff: [
+    "Take a register: Registers → today's session → tap each child to mark them In, Absent or Collected. Use “Roll call” for a head-count. Tap a child's name to see their care card (allergies, medical, SEND, collection password).",
+    "Clock in / out: the Clock in/out page → Clock in when you arrive, Take a break, and Clock out when you finish. Your hours feed your timesheet.",
+    "Log an accident: Registers/Incidents → Log accident → child, what happened and any first aid; a manager and (if set) the parent are notified.",
+    "Your tasks: Tasks → tick one off or change its status. Team tasks are shared.",
+    "Who's in / who has SEND or allergies: Registers → the child cards show attendance and every care flag.",
+    "Time off & your shifts: My time off to request leave; My schedule / Timetable for your shifts.",
+  ].join("\n• "),
+  parent: [
+    "Pay what you owe: Payments → pay outstanding invoices/bookings (card, or store credit in your Wallet).",
+    "Book an activity: Browse → pick the activity and dates → checkout. Discount codes and wallet credit apply at checkout.",
+    "Change or cancel: My bookings → open the booking (cancellation follows the provider's cut-off).",
+    "Update your child's details: Children → edit allergies, medical, dietary, SEND/EHCP plan, consents and collection password.",
+    "Messages & updates: Messages for chats; Newsfeed/Moments for photos and updates the provider shares.",
+  ].join("\n• "),
+  platform: [
+    "Providers: the Providers area lists every tenant, their plan and activity.",
+    "Money & growth: Sales, Analytics and Engagement dashboards aggregate across all providers.",
+    "Support: the Support inbox holds provider queries and bug reports.",
+  ].join("\n• "),
+};
 const MODEL = process.env.GROQ_MODEL || "openai/gpt-oss-120b";
 
 const chatSchema = z.object({
@@ -43,13 +82,15 @@ const RECEIVED = new Set(["recorded", "succeeded"]);
 // ── Operator snapshot — the dashboard's numbers plus a compact booking list
 // so "who's in today" and "who still owes" have names, not just totals. ──
 async function tenantSnapshot(tenantId: string, forStaff = false) {
-  const [bookingsSnap, blocksSnap, listingsSnap, paymentsSnap, tasksSnap, childrenSnap] = await Promise.all([
+  const [bookingsSnap, blocksSnap, listingsSnap, paymentsSnap, tasksSnap, childrenSnap, invitesSnap, incidentsSnap] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("blocks").where("tenantId", "==", tenantId).get(),
     db.collection("listings").where("tenantId", "==", tenantId).get(),
     db.collection("payments").where("tenantId", "==", tenantId).get(),
     db.collection("tasks").where("tenantId", "==", tenantId).get(),
     db.collection("children").where("tenantId", "==", tenantId).get(),
+    db.collection("invites").where("tenantId", "==", tenantId).get(),
+    db.collection("incidents").where("tenantId", "==", tenantId).get(),
   ]);
 
   const now = new Date();
@@ -131,6 +172,48 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
     outstanding: round2(outstandingOf(b)),
   });
 
+  // Team roster — invited accounts (NOT the live day rota, which lives client-side).
+  const team = invitesSnap.docs.map((d) => d.data() as { name?: string; email?: string; role?: string; status?: string })
+    .map((t) => ({ name: t.name || t.email || "—", role: t.role || "staff", status: t.status || "invited" })).slice(0, 50);
+
+  // Recent accidents / incidents / safeguarding records.
+  const incidents = incidentsSnap.docs.map((d) => d.data() as { kind?: string; childName?: string; severity?: string; date?: string; description?: string })
+    .sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1)).slice(0, 12)
+    .map((r) => ({ kind: r.kind || "incident", child: r.childName, severity: r.severity, date: r.date, summary: (r.description || "").slice(0, 160) }));
+
+  // Care-flag totals across ALL of the setting's children (not just today's).
+  const allChildren = childrenSnap.docs.map((d) => d.data() as CDoc);
+  const childrenSummary = {
+    total: allChildren.length,
+    withSEND: allChildren.filter((c) => c.send || c.sendPlanId || c.sendPlanName).length,
+    withAllergies: allChildren.filter((c) => c.allergies).length,
+    withMedical: allChildren.filter((c) => c.medical).length,
+    withDietary: allChildren.filter((c) => c.dietary).length,
+  };
+
+  // Listings, with how full each one is right now.
+  const fillByListing = new Map<string, { cap: number; booked: number }>();
+  for (const d of blocksSnap.docs) {
+    const doc = d.data() as BlockDoc; const sum = blockSummary(d.id, doc);
+    const nm = title.get(doc.listingId) ?? "Untitled";
+    const f = fillByListing.get(nm) ?? { cap: 0, booked: 0 };
+    if (sum.open) { f.cap += sum.capacity; f.booked += sum.bookedCount; }
+    fillByListing.set(nm, f);
+  }
+  const listings = listingsSnap.docs.map((d) => {
+    const l = d.data() as { title?: string; name?: string; status?: string; visibility?: string };
+    const nm = l.title || l.name || "Untitled"; const f = fillByListing.get(nm);
+    return { name: nm, status: l.status || "live", visibility: l.visibility || "public", fillPct: f && f.cap ? Math.round((f.booked / f.cap) * 100) : null };
+  }).slice(0, 50);
+
+  // Families — unique bookers, and who spends the most.
+  const spendByFamily = new Map<string, number>();
+  for (const b of live) spendByFamily.set(b.booker, (spendByFamily.get(b.booker) ?? 0) + (b.amount ?? 0));
+  const families = {
+    total: spendByFamily.size,
+    topBySpend: [...spendByFamily.entries()].sort((a, b) => b[1] - a[1]).slice(0, 10).map(([family, gbp]) => ({ family, spentGBP: round2(gbp) })),
+  };
+
   const todayBlock = {
     date: today,
     sessions: sessions.filter((s) => s.date === today).map((s) => ({ listing: s.listing, start: s.start, end: s.end, booked: s.booked, capacity: s.capacity })),
@@ -145,12 +228,17 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   // never money, booking approvals or owing families. Those are the manager's,
   // and handing them to a coach would be wrong (and a data-minimisation issue).
   if (forStaff) {
-    return { today: todayBlock, upcomingSessions, openTasks };
+    return { today: todayBlock, upcomingSessions, openTasks, incidents, childrenSummary, team };
   }
 
   return {
     today: todayBlock,
     upcomingSessions,
+    listings,
+    families,
+    childrenSummary,
+    team,
+    incidents,
     occupancy: { booked: openBooked, capacity: openCapacity, pct: openCapacity ? Math.round((openBooked / openCapacity) * 100) : 0 },
     bookings: {
       live: live.length,
@@ -248,19 +336,23 @@ ai.post("/chat", async (req, res) => {
   const auth = req.auth!;
   let snapshot: unknown;
   let who: string;
+  let howtoKey: keyof typeof HOWTO = "operator";
   if (auth.role === "parent") {
     const email = req.user?.email;
     if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
     snapshot = await familySnapshot(email, req.user!.uid);
+    howtoKey = "parent";
     who = "a parent using the customer portal. The data is their own family's: their children, their bookings across providers, and their store credit. Their portal's areas are: Browse activities, My bookings, Payments (paying what's owed), Wallet (store credit), Children, Schedule, Messages.";
   } else if (auth.role === "platform") {
     snapshot = await platformSnapshot();
+    howtoKey = "platform";
     who = "the ActivityOS platform super-admin. The data is platform-wide aggregates across every provider.";
   } else {
     const scope = operatorScope(req, res);
     if (!scope || !scope.tenantId) return; // operatorScope has already responded
     const isStaff = auth.role === "staff";
     snapshot = await tenantSnapshot(scope.tenantId, isStaff);
+    howtoKey = isStaff ? "staff" : "operator";
     who = isStaff
       ? "a front-line staff member (e.g. a coach or activity leader) at an activity provider. The data is TODAY's operational picture only — the sessions running, the children expected in, and the team's tasks. You do NOT have their finances, revenue, who owes money, or booking approvals: those are the manager's, not a staff member's. If they ask about money, payments, owing families or approving bookings, say that's handled by their manager and you can't see it. Their portal's areas are: Dashboard, Timetable, Registers, Tasks, Messages."
       : "the owner/manager of a children's activity provider. The data is their business's live operational picture. Their portal's areas include: Dashboard, Bookings, Listings, Blocks & pricing, Registers, Families, Finances, Tasks, Messages.";
@@ -271,11 +363,17 @@ ai.post("/chat", async (req, res) => {
     "You are the ActivityOS assistant, embedded in a platform for children's activity providers (camps, clubs, classes).",
     `You are talking to ${who}`,
     `Today is ${today.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Europe/London" })}, and the current UK time is ${today.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", hour12: false, timeZone: "Europe/London" })}. Use this time to judge which of today's sessions are running now, still to come, or already finished.`,
-    "Answer ONLY from the live data below. It is the complete extent of what you can see — if the answer isn't in it, say so plainly and point at the area of the app that covers it (Bookings, Registers, Finances, Messages…). Never invent names, numbers or bookings.",
-    "Money is in GBP — format amounts like £42.50. Be concise and concrete: lead with the answer, then only the supporting details that matter. Plain text, no markdown tables.",
-    "You are read-only: you cannot book, cancel, refund or message anyone. When an action is wanted, say where in the app to do it.",
+    "You are an expert on this platform and genuinely helpful. There are two kinds of question and you handle BOTH well:",
+    "1) DATA questions ('who's in today?', 'how much have I taken?', 'any allergies in?', 'how full is X?') — answer from the LIVE DATA below. Read it carefully and thoroughly; the answer is very often in there (attendance, care flags/SEND/allergies, sessions, bookings, families, listings, incidents, team, money). Never invent names, numbers or bookings, and never state a figure that isn't derivable from the data.",
+    "2) HOW-TO questions ('how do I take a register?', 'how do I add a listing / refund / message parents?') — answer from the HOW-TO GUIDE below with clear, numbered, step-by-step instructions naming the exact screens.",
+    "NEVER reply with a bare 'I don't know' or 'I don't have that.' Always give the most useful answer you can: answer from the data if it's there; if a specific record genuinely isn't in the data, say what you CAN see and then tell them precisely where in the app to find or do the rest (and, if it's a how-to, give the steps). Be confident and practical.",
+    "The ONE thing you cannot see is the live day-rota (who is physically working today) — that's held in the Schedule screen, not your data. If asked who's working today, say so and point to Schedule/Timetable; you CAN still name the team roster from the data.",
+    "Money is in GBP — format amounts like £42.50. Be concise and concrete: lead with the answer, then only the supporting details that matter. Plain text, short paragraphs or simple bullet lists, no markdown tables.",
+    "You are read-only: you cannot book, cancel, refund or message anyone yourself. When an action is wanted, give the steps and where to do it.",
     "",
-    `LIVE DATA:\n${JSON.stringify(snapshot)}`,
+    `HOW-TO GUIDE (where things are done in the app):\n• ${HOWTO[howtoKey]}`,
+    "",
+    `LIVE DATA (everything you can see — read it all before answering):\n${JSON.stringify(snapshot)}`,
   ].join("\n");
 
   const groqRes = await fetch(GROQ_URL, {
