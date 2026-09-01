@@ -1272,7 +1272,7 @@ export function CroppedImage({ im, className, style }: { im: ListingImage; class
   );
 }
 
-function ImageManager({ images, onChange, addLabel }: { images: ListingImage[]; onChange: (imgs: ListingImage[]) => void; addLabel: string }) {
+function ImageManager({ images, onChange, addLabel, previewAspect = "16 / 9" }: { images: ListingImage[]; onChange: (imgs: ListingImage[]) => void; addLabel: string; previewAspect?: string }) {
   const fileRef = useRef<HTMLInputElement>(null);
   // In a walkthrough, the main photo is pre-seeded — open its crop panel on
   // mount so the tour can show the crop-and-move controls straight away.
@@ -1311,7 +1311,7 @@ function ImageManager({ images, onChange, addLabel }: { images: ListingImage[]; 
             <span className="text-[12px] font-extrabold">✂ Crop &amp; move — drag the sliders (this is exactly what parents see)</span>
             <Button sm variant="primary" onClick={() => setEditIdx(null)}>Done</Button>
           </div>
-          <CroppedImage im={im} className="w-full max-w-[320px] rounded-lg border border-[var(--line)]" style={{ aspectRatio: "16 / 9" }} />
+          <CroppedImage im={im} className="w-full max-w-[420px] rounded-lg border border-[var(--line)]" style={{ aspectRatio: previewAspect }} />
           <div className="mt-2 flex max-w-[320px] flex-col gap-1.5 text-[11.5px] text-[var(--ink-3)]">
             <label className="flex items-center gap-2">Zoom<input type="range" min={100} max={300} value={im.zoom} onChange={(e) => setCrop(editIdx, { zoom: +e.target.value })} className="flex-1" /></label>
             <label className="flex items-center gap-2">Left ⇄ Right<input type="range" min={0} max={100} value={im.x} onChange={(e) => setCrop(editIdx, { x: +e.target.value })} className="flex-1" /></label>
@@ -1406,11 +1406,11 @@ function BasicsStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
               </button>
             ))}
           </div>
-          <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel="＋ Add main photo" />
+          <ImageManager images={d.images} onChange={(imgs) => upd({ images: imgs })} addLabel="＋ Add main photo" previewAspect={d.layout === "banner" ? "3 / 1" : "16 / 9"} />
           <div className="mt-1 text-[11px] text-[var(--ink-3)]">Crop to fit — the preview matches the customer page. Add more than one and it rotates as a carousel.</div>
         </RichCard>
         <RichCard icon="📸" title="Gallery" subtitle="Extra photos for the page" tint="teal">
-          <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" />
+          <ImageManager images={d.gallery} onChange={(imgs) => upd({ gallery: imgs })} addLabel="＋ Add gallery image" previewAspect="1 / 1" />
           <div className="mt-1 text-[11px] text-[var(--ink-3)]">Shown as a gallery at the bottom of the customer page.</div>
         </RichCard>
       </div>
@@ -3287,7 +3287,9 @@ function SportSec({ eye, title, children }: { eye: string; title: string; childr
 // ── PAGE · PLAYFUL (bright, rounded, friendly) ─────────────────────────────
 function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, brand, topRight }: PageProps) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
-  const heroH = full ? 320 : 220;
+  // Fixed ASPECT (not height) so the hero crops identically on every screen and
+  // matches the wizard's crop preview exactly — WYSIWYG.
+  const heroAspect = d.layout === "banner" ? "3 / 1" : "16 / 9";
   // Show the first few passes, then a "+N more" toggle so a long block list
   // doesn't run down the whole hero.
   const [morePasses, setMorePasses] = useState(false);
@@ -3341,7 +3343,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
           )}
         </div>
         {/* hero image (no text on it) */}
-        <div className="relative overflow-hidden rounded-[28px]" style={{ height: heroH }}>
+        <div className="relative overflow-hidden rounded-[28px]" style={{ aspectRatio: heroAspect }}>
           <HeroImages imgs={imgs} fallback={HERO_FALLBACK} />
           {heroCat && <span className="absolute left-4 top-4 z-[2] rounded-full bg-white px-3.5 py-2 text-[12px] font-extrabold" style={{ color: BLUE, transform: "rotate(-3deg)" }}>🎉 {heroCat.name}</span>}
         </div>
@@ -3509,7 +3511,9 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   const headerBg = isNavy ? "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 68%,#5b8af0 100%)" : undefined;
   const cond = "italic uppercase tracking-[-0.01em]";
   const grid2 = full ? "grid-cols-1 sm:grid-cols-2" : "grid-cols-1";
-  const heroH = full ? 340 : 240;
+  // Fixed ASPECT (not height) so the hero crops the same on every screen and
+  // matches the wizard's crop preview exactly — WYSIWYG.
+  const heroAspect = d.layout === "banner" ? "3 / 1" : "16 / 9";
   const [teamOpen, setTeamOpen] = useState(true);
   const [whereOpen, setWhereOpen] = useState(false);
   const [morePasses, setMorePasses] = useState(false);
@@ -3555,7 +3559,7 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
         )}
       </div>
       {/* hero image (no text on it) */}
-      <div className="relative overflow-hidden" style={{ height: heroH }}>
+      <div className="relative overflow-hidden" style={{ aspectRatio: heroAspect }}>
         <HeroImages imgs={imgs} fallback={`linear-gradient(120deg,${EL},#00a3ff 70%,#003)`} />
         <div className="pointer-events-none absolute inset-0 z-[1]" style={{ backgroundImage: "repeating-linear-gradient(115deg,transparent 0 46px,rgba(255,255,255,.05) 46px 48px)" }} />
         {heroCat && <span className="absolute left-6 top-5 z-[2] px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.1em] text-[#12280a]" style={{ background: LIME, transform: "skewX(-8deg)" }}>{heroCat.name}</span>}
