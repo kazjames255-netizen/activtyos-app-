@@ -233,7 +233,7 @@ export function StaffDashApp() {
 
       {/* My shift + at-a-glance & sessions */}
       <div className="mb-3 grid items-start gap-3 md:grid-cols-2">
-        <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-[0_14px_34px_-16px_rgba(29,58,143,.6)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(125deg,#16306e 0%,#2f5bc4 55%,#3f78d8 100%)`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
+        <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-[0_14px_34px_-16px_rgba(29,58,143,.6)]" style={{ background: "linear-gradient(125deg,#16306e 0%,#2f5bc4 55%,#3f78d8 100%)" }}>
           <div className="relative flex items-center justify-between">
             <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">🗓 My shift</div>
             <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold backdrop-blur-sm">{shift ? "Rostered" : "Day off"}</span>
