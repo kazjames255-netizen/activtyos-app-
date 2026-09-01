@@ -1,10 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { get as apiGet, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { Badge, Button, Card } from "@/components/ui";
+import { Badge, Button } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
 import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDur, workedMs, type ClockRecord } from "@/features/timeclock/data";
 import { greeting } from "@/lib/greeting";
@@ -82,6 +82,38 @@ function coworkersToday(vis: "all" | "team" | "leads" | "none"): Coworker[] {
   } catch { return []; }
 }
 
+// A collapsible card with a richly-coloured header band. Remembers open/closed
+// per id. Used for most of the staff dashboard's cards so they read as one set.
+function Section({ id, icon, title, sub, tint, ink, badge, action, defaultOpen = true, children }: {
+  id: string; icon: string; title: string; sub?: string; tint: string; ink: string; badge?: ReactNode; action?: ReactNode; defaultOpen?: boolean; children: ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  useEffect(() => { try { const v = localStorage.getItem(`aos.sdash.${id}`); if (v === "1") setOpen(true); else if (v === "0") setOpen(false); } catch { /* ignore */ } }, [id]);
+  const toggle = () => setOpen((o) => { const n = !o; try { localStorage.setItem(`aos.sdash.${id}`, n ? "1" : "0"); } catch { /* ignore */ } return n; });
+  return (
+    <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+      <div className="flex items-center gap-2 px-4 py-3" style={{ background: tint }}>
+        <button type="button" onClick={toggle} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+          <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-white text-[16px] shadow-sm" style={{ color: ink }}>{icon}</span>
+          <div className="min-w-0">
+            <div className="text-[14px] font-extrabold leading-tight" style={{ color: ink }}>{title}</div>
+            {sub && <div className="truncate text-[11px]" style={{ color: ink, opacity: 0.72 }}>{sub}</div>}
+          </div>
+        </button>
+        {badge != null && <span className="flex-none rounded-full bg-white px-2 py-0.5 text-[10.5px] font-extrabold shadow-sm" style={{ color: ink }}>{badge}</span>}
+        {action}
+        <button type="button" onClick={toggle} aria-label={open ? "Collapse" : "Expand"} className="flex-none text-[13px] font-bold" style={{ color: ink }}>{open ? "▴" : "▾"}</button>
+      </div>
+      {open && <div className="p-4 pt-3">{children}</div>}
+    </div>
+  );
+}
+
+// Small uppercase group label to break the page into sections.
+function GroupLabel({ children }: { children: ReactNode }) {
+  return <div className="mb-2 mt-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[var(--ink-3)]">{children}</div>;
+}
+
 export function StaffDashApp() {
   const [me, setMe] = useState<Me | null>(null);
   const [venues, setVenues] = useState<{ name: string; address?: string; city?: string }[]>([]);
@@ -96,8 +128,6 @@ export function StaffDashApp() {
   const [coworkers, setCoworkers] = useState<Coworker[]>([]);
   const [profile, setProfile] = useState<WatchKid | null>(null); // watch-list child card
   const [sendOpen, setSendOpen] = useState(false); // SEND names modal
-  const [likesOpen, setLikesOpen] = useState(false); // collapsed by default
-  const [permOpen, setPermOpen] = useState(false); // collapsed by default
   const [, tick] = useState(0); // live worked-time tick
   const { settings } = useSettings();
   const coworkerVis = settings.scheduling?.coworkerVisibility ?? "all";
@@ -167,65 +197,43 @@ export function StaffDashApp() {
 
       {error && <div className="mb-3 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
 
-      {/* Today at a glance — one unified bar, hairline dividers */}
-      <div className="mb-3 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--line)] shadow-[0_1px_3px_rgba(20,30,60,.06)] sm:grid-cols-4">
-        {STAT.map((t) => (
-          <div key={t.small} className="flex items-center gap-3 bg-white p-4">
-            <span className="grid h-11 w-11 flex-none place-items-center rounded-xl text-[18px]" style={{ background: t.tint, color: t.ink }}>{t.icon}</span>
-            <div className="min-w-0">
-              <div className="text-[27px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
-              <div className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">{t.small}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* SEND at a glance — click to see who */}
-      <button type="button" onClick={() => setSendOpen(true)} className="mb-3 flex w-full items-center gap-3 rounded-2xl border border-[#e3ddfb] bg-[#f6f3ff] p-4 text-left transition hover:bg-[#efeaff]">
-        <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-[#ede9fe] text-[18px]">🧩</span>
-        <div>
-          <div className="text-[24px] font-extrabold leading-none tabular-nums text-[#5b21b6]" style={{ fontFamily: "var(--ff-display)" }}>{regs === null ? "…" : sendKids.length}</div>
-          <div className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">children marked SEND today</div>
-        </div>
-        <span className="ml-auto flex items-center gap-1 text-[12px] font-extrabold text-[#6d28d9]">View names <span className="text-[14px]">›</span></span>
-      </button>
-
-      {/* My day + clock in/out */}
+      {/* My shift & clock — the first thing you see */}
       <div className="mb-3 grid gap-3 md:grid-cols-2">
-        <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
-          <div className="flex items-center justify-between">
-            <div className="text-[11px] font-bold uppercase tracking-[0.12em] text-[var(--ink-3)]">🗓 My shift today</div>
-            <span className="rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold" style={shift ? { background: "#eaf0fc", color: "#1d3a8f" } : { background: "#eef1f6", color: "#64748b" }}>{shift ? "Rostered" : "Day off"}</span>
+        <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-[0_14px_34px_-16px_rgba(29,58,143,.6)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(125deg,#16306e 0%,#2f5bc4 55%,#3f78d8 100%)`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
+          <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-white/10" />
+          <div className="relative flex items-center justify-between">
+            <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">🗓 My shift today</div>
+            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold backdrop-blur-sm">{shift ? "Rostered" : "Day off"}</span>
           </div>
           {shift ? (<>
-            <div className="mt-2 text-[24px] font-extrabold leading-none text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>{to12(shift.start)} – {to12(shift.end)}</div>
-            {shift.role && <div className="mt-1.5 text-[12.5px] font-semibold text-[var(--ink-2)]">{shift.role}</div>}
+            <div className="relative mt-2 text-[30px] font-extrabold leading-none tracking-[-0.02em]" style={{ fontFamily: "var(--ff-display)" }}>{to12(shift.start)} – {to12(shift.end)}</div>
+            {shift.role && <div className="relative mt-2 inline-block rounded-full bg-white/15 px-2.5 py-0.5 text-[12px] font-bold backdrop-blur-sm">{shift.role}</div>}
             {myVenueName && (
-              <div className="mt-2.5 flex items-start gap-2 rounded-xl bg-[var(--panel)] px-3 py-2">
+              <div className="relative mt-3 flex items-start gap-2 rounded-xl bg-white/10 px-3 py-2 backdrop-blur-sm">
                 <span className="text-[14px] leading-none">📍</span>
                 <div className="min-w-0">
-                  <div className="text-[12.5px] font-bold text-[var(--ink)]">{myVenueName}</div>
-                  <div className="text-[11.5px] text-[var(--ink-3)]">{myAddress || "Address on the register"}</div>
+                  <div className="text-[12.5px] font-bold text-white">{myVenueName}</div>
+                  <div className="text-[11.5px] text-white/75">{myAddress || "Address on the register"}</div>
                 </div>
               </div>
             )}
           </>) : (<>
-            <div className="mt-2 text-[17px] font-extrabold leading-tight text-[#1d3a8f]" style={{ fontFamily: "var(--ff-display)" }}>You’re not rostered today</div>
-            <div className="mt-1 text-[13px] text-[var(--ink-3)]">Enjoy your day off 🌿</div>
+            <div className="relative mt-2 text-[18px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>You’re not rostered today</div>
+            <div className="relative mt-1 text-[13px] text-white/75">Enjoy your day off 🌿</div>
           </>)}
           {coworkers.length > 0 && (
-            <div className="mt-3 border-t border-[var(--line)] pt-3">
-              <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Working with you today</div>
+            <div className="relative mt-3 border-t border-white/15 pt-3">
+              <div className="mb-2 text-[10.5px] font-bold uppercase tracking-[0.1em] text-white/70">Working with you today</div>
               <div className="flex flex-col gap-2">
                 {coworkers.slice(0, 6).map((c, i) => (
                   <div key={i} className="flex items-center gap-2">
-                    <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-[#eaf0fc] text-[9.5px] font-extrabold text-[#1d3a8f]">{initials(c.name)}</span>
-                    <span className="text-[12.5px] font-bold text-[var(--ink)]">{c.name}</span>
-                    {c.role && <span className="truncate text-[11px] text-[var(--ink-3)]">{c.role}</span>}
-                    <span className="ml-auto flex-none tabular-nums text-[12px] font-semibold text-[var(--ink-2)]">{to12(c.start)}–{to12(c.end)}</span>
+                    <span className="grid h-6 w-6 flex-none place-items-center rounded-full bg-white/20 text-[9.5px] font-extrabold text-white">{initials(c.name)}</span>
+                    <span className="text-[12.5px] font-bold text-white">{c.name}</span>
+                    {c.role && <span className="truncate text-[11px] text-white/70">{c.role}</span>}
+                    <span className="ml-auto flex-none tabular-nums text-[12px] font-semibold text-white/90">{to12(c.start)}–{to12(c.end)}</span>
                   </div>
                 ))}
-                {coworkers.length > 6 && <div className="pl-8 text-[11px] text-[var(--ink-3)]">+{coworkers.length - 6} more rostered</div>}
+                {coworkers.length > 6 && <div className="pl-8 text-[11px] text-white/70">+{coworkers.length - 6} more rostered</div>}
               </div>
             </div>
           )}
@@ -255,20 +263,34 @@ export function StaffDashApp() {
         </div>
       </div>
 
-      {/* Care, safeguarding & activity — two columns */}
-      <div className="grid items-start gap-3 lg:grid-cols-2">
-      {/* Watch list — flagged children in today (SEND / allergy / medical / dietary) */}
-      <Card className="p-4">
-        <div className="mb-3 flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#fdecec", color: "#c0362c" }}>⚠️</span>
-            <div>
-              <div className="text-[14px] font-extrabold leading-tight">Watch list — today</div>
-              <div className="text-[11px] text-[var(--ink-3)]">Tap a child for their care card</div>
+      {/* Today at a glance — one unified bar, hairline dividers */}
+      <div className="mb-3 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--line)] shadow-[0_1px_3px_rgba(20,30,60,.06)] sm:grid-cols-4">
+        {STAT.map((t) => (
+          <div key={t.small} className="flex items-center gap-3 bg-white p-4">
+            <span className="grid h-11 w-11 flex-none place-items-center rounded-xl text-[18px]" style={{ background: t.tint, color: t.ink }}>{t.icon}</span>
+            <div className="min-w-0">
+              <div className="text-[27px] font-extrabold leading-none tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{t.big}</div>
+              <div className="mt-1 truncate text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">{t.small}</div>
             </div>
           </div>
-          {regs !== null && watch.length > 0 && <span className="flex-none rounded-full bg-[#fdecec] px-2.5 py-1 text-[10.5px] font-extrabold text-[#c0362c]">{watch.length} to watch</span>}
+        ))}
+      </div>
+
+      {/* ── Children today ───────────────────────────────────────────── */}
+      <GroupLabel>Children today</GroupLabel>
+
+      {/* SEND at a glance — click to see who */}
+      <button type="button" onClick={() => setSendOpen(true)} className="mb-3 flex w-full items-center gap-3 rounded-2xl p-4 text-left text-white shadow-[0_10px_30px_-14px_rgba(76,29,149,.65)] transition hover:brightness-105" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.12) 1px, transparent 1.6px), linear-gradient(120deg,#4c1d95,#7c3aed)`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
+        <span className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-white/20 text-[18px]">🧩</span>
+        <div>
+          <div className="text-[24px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{regs === null ? "…" : sendKids.length}</div>
+          <div className="mt-1 text-[10.5px] font-bold uppercase tracking-[0.07em] text-white/85">children marked SEND today</div>
         </div>
+        <span className="ml-auto flex-none rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-extrabold">View names ›</span>
+      </button>
+
+      <div className="mb-3 grid items-start gap-3 lg:grid-cols-2">
+      <Section id="watch" icon="⚠️" title="Watch list — today" sub="Tap a child for their care card" tint="#fdecec" ink="#c0362c" badge={regs !== null && watch.length > 0 ? watch.length : undefined} defaultOpen>
           {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
             : watch.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No flagged children in today. 👍</div>
               : watch.map((k) => (
@@ -288,23 +310,9 @@ export function StaffDashApp() {
                   <span className="ml-auto flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">{k.where}<span className="text-[var(--brand,#1d3a8f)]">›</span></span>
                 </button>
               ))}
-      </Card>
+      </Section>
 
-      {/* Likes & dislikes — collapsed by default */}
-      <Card className="p-4">
-        <button type="button" onClick={() => setLikesOpen((o) => !o)} aria-expanded={likesOpen} className="flex w-full items-center gap-2.5 text-left">
-          <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#e9f7ef", color: "#0f7a43" }}>😊</span>
-          <div>
-            <div className="text-[14px] font-extrabold leading-tight">Likes &amp; dislikes</div>
-            <div className="text-[11px] text-[var(--ink-3)]">Little things that make their day</div>
-          </div>
-          <span className="ml-auto flex items-center gap-2">
-            {regs !== null && likesKids.length > 0 && <span className="rounded-full bg-[#e9f7ef] px-2 py-0.5 text-[10.5px] font-extrabold text-[#0f7a43]">{likesKids.length}</span>}
-            <span className="text-[12px] text-[var(--ink-3)]">{likesOpen ? "▴" : "▾"}</span>
-          </span>
-        </button>
-        {likesOpen && (
-          <div className="mt-3">
+      <Section id="likes" icon="😊" title="Likes &amp; dislikes" sub="Little things that make their day" tint="#e9f7ef" ink="#0f7a43" badge={regs !== null && likesKids.length > 0 ? likesKids.length : undefined} defaultOpen={false}>
             {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
               : likesKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Nothing noted for today&rsquo;s children.</div>
                 : likesKids.slice(0, 8).map((k) => (
@@ -316,25 +324,9 @@ export function StaffDashApp() {
                     </div>
                   </div>
                 ))}
-          </div>
-        )}
-      </Card>
+      </Section>
 
-      {/* Collection & permissions — the "magic word" + consents (collapsed by default) */}
-      <Card className="p-4">
-        <button type="button" onClick={() => setPermOpen((o) => !o)} aria-expanded={permOpen} className="flex w-full items-center gap-2.5 text-left">
-          <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#eef0fe", color: "#4f46e5" }}>🔑</span>
-          <div>
-            <div className="text-[14px] font-extrabold leading-tight">Collection &amp; permissions</div>
-            <div className="text-[11px] text-[var(--ink-3)]">Passwords, contacts &amp; consents</div>
-          </div>
-          <span className="ml-auto flex items-center gap-2">
-            {regs !== null && permKids.length > 0 && <span className="rounded-full bg-[#eef0fe] px-2 py-0.5 text-[10.5px] font-extrabold text-[#4f46e5]">{permKids.length}</span>}
-            <span className="text-[12px] text-[var(--ink-3)]">{permOpen ? "▴" : "▾"}</span>
-          </span>
-        </button>
-        {permOpen && (
-          <div className="mt-3">
+      <Section id="perm" icon="🔑" title="Collection &amp; permissions" sub="Passwords, contacts &amp; consents" tint="#eef0fe" ink="#4f46e5" badge={regs !== null && permKids.length > 0 ? permKids.length : undefined} defaultOpen={false}>
             {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
               : permKids.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No collection notes for today.</div>
                 : permKids.slice(0, 8).map((k) => (
@@ -355,19 +347,9 @@ export function StaffDashApp() {
                     </div>
                   </div>
                 ))}
-          </div>
-        )}
-      </Card>
+      </Section>
 
-      {/* Recent accidents */}
-      <Card className="p-4">
-        <div className="mb-3 flex items-center gap-2.5">
-          <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#fef3e2", color: "#b45309" }}>🩹</span>
-          <div>
-            <div className="text-[14px] font-extrabold leading-tight">Recent accidents</div>
-            <div className="text-[11px] text-[var(--ink-3)]">Latest logged incidents</div>
-          </div>
-        </div>
+      <Section id="accidents" icon="🩹" title="Recent accidents" sub="Latest logged incidents" tint="#fef3e2" ink="#b45309" badge={accidents !== null && recentAccidents.length > 0 ? recentAccidents.length : undefined} defaultOpen={false}>
         {accidents === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
           : recentAccidents.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No accidents logged. 🎉</div>
             : recentAccidents.map((a) => (
@@ -382,20 +364,13 @@ export function StaffDashApp() {
                 <div className="mt-0.5 text-[11.5px] leading-snug text-[var(--ink-2)]">{a.injury ? <b>{a.injury}. </b> : ""}{a.description}</div>
               </div>
             ))}
-      </Card>
+      </Section>
+      </div>
 
-      {/* Today's sessions */}
-      <Card className="p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#eaf1ff", color: "#1d4ed8" }}>🗓️</span>
-            <div className="text-[14px] font-extrabold leading-tight">Today&rsquo;s sessions</div>
-          </div>
-          <span className="flex gap-2">
-            {timetableToday && <Link href="/staff/timetable"><Button sm>Day plan</Button></Link>}
-            <Link href="/staff/registers"><Button sm variant="primary">Open registers</Button></Link>
-          </span>
-        </div>
+      {/* ── My work ──────────────────────────────────────────────────── */}
+      <GroupLabel>My work</GroupLabel>
+      <div className="mb-3 grid items-start gap-3 lg:grid-cols-2">
+      <Section id="sessions" icon="🗓️" title="Today's sessions" sub="Registers &amp; ratios" tint="#eaf1ff" ink="#1d4ed8" defaultOpen action={<span className="flex flex-none gap-2">{timetableToday && <Link href="/staff/timetable"><Button sm>Day plan</Button></Link>}<Link href="/staff/registers"><Button sm variant="primary">Open registers</Button></Link></span>}>
           {sessions === null ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
             : sessions.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing runs today.</div>
               : sessions.map((s) => (
@@ -410,17 +385,9 @@ export function StaffDashApp() {
                   </span>
                 </div>
               ))}
-      </Card>
+      </Section>
 
-      {/* Team tasks */}
-      <Card className="p-4">
-        <div className="mb-3 flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2.5">
-            <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: "#fef3e2", color: "#b45309" }}>✅</span>
-            <div className="text-[14px] font-extrabold leading-tight">Team tasks</div>
-          </div>
-          <Link href="/staff/tasks"><Button sm>All tasks</Button></Link>
-        </div>
+      <Section id="tasks" icon="✅" title="Team tasks" sub="Everyone&rsquo;s to-dos" tint="#e4f5f6" ink="#0e7490" badge={tasks !== null && open.length > 0 ? open.length : undefined} defaultOpen action={<Link href="/staff/tasks"><Button sm>All tasks</Button></Link>}>
           {tasks === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
             : open.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">All done — nothing open. 🎉</div>
               : open.slice(0, 6).map((t) => (
@@ -431,7 +398,7 @@ export function StaffDashApp() {
                   {t.dueDate && <span className="text-[11px] text-[var(--ink-3)]">{t.dueDate}</span>}
                 </div>
               ))}
-      </Card>
+      </Section>
       </div>
 
       {/* SEND — who's marked, and their plan */}
