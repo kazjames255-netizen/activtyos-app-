@@ -63,6 +63,7 @@ export function StaffDashApp() {
   const [error, setError] = useState<string | null>(null);
   const [clock, setClock] = useState<Record<string, ClockRecord> | null>(null);
   const [shift, setShift] = useState<MyShift | null>(null);
+  const [profile, setProfile] = useState<WatchKid | null>(null); // watch-list child card
   const [, tick] = useState(0); // live worked-time tick
   const today = todayIso();
 
@@ -177,7 +178,7 @@ export function StaffDashApp() {
           {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
             : watch.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">No flagged children in today. 👍</div>
               : watch.map((k) => (
-                <div key={k.key} className="flex flex-wrap items-center gap-x-2 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
+                <button type="button" key={k.key} onClick={() => setProfile(k)} title="View care card" className="-mx-1 flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border-b border-dashed border-[var(--line)] px-1 py-2 text-left transition-colors last:border-b-0 hover:bg-[var(--panel)]">
                   <span className="text-[13px] font-extrabold">{k.name}</span>
                   <span className={"rounded-full px-1.5 py-0.5 text-[9.5px] font-extrabold uppercase " + (k.status === "in" ? "bg-[#d7f5e3] text-[#0f7a43]" : k.status === "absent" ? "bg-[#eef1f6] text-[#64748b]" : "bg-[#fef3d8] text-[#9a5a00]")}>{k.status === "in" ? "In" : k.status === "absent" ? "Absent" : "Due"}</span>
                   <span className="flex flex-wrap gap-1">
@@ -190,8 +191,8 @@ export function StaffDashApp() {
                       </span>
                     ))}
                   </span>
-                  <span className="ml-auto text-[11px] text-[var(--ink-3)]">{k.where}</span>
-                </div>
+                  <span className="ml-auto flex items-center gap-1.5 text-[11px] text-[var(--ink-3)]">{k.where}<span className="text-[var(--brand,#1d3a8f)]">›</span></span>
+                </button>
               ))}
         </div>
       </Card>
@@ -244,6 +245,39 @@ export function StaffDashApp() {
               ))}
         </div>
       </Card>
+
+      {/* Care card — the flagged child's needs at a glance */}
+      {profile && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4" onClick={() => setProfile(null)}>
+          <div className="w-full max-w-[440px] overflow-hidden rounded-2xl bg-white shadow-[0_24px_60px_rgba(0,0,0,.4)]" onClick={(e) => e.stopPropagation()}>
+            <div className="px-5 py-4 text-white" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(120deg,#16306e,#3f78d8)`, backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[19px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{profile.name}</div>
+                  <div className="mt-1 text-[12px] text-white/85">{profile.where}</div>
+                </div>
+                <button type="button" onClick={() => setProfile(null)} aria-label="Close" className="flex-none text-[18px] leading-none text-white/80 hover:text-white">✕</button>
+              </div>
+              <span className="mt-2.5 inline-block rounded-full px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide" style={profile.status === "in" ? { background: "#d7f5e3", color: "#0f7a43" } : profile.status === "absent" ? { background: "#eef1f6", color: "#334155" } : { background: "#fef3d8", color: "#9a5a00" }}>{profile.status === "in" ? "In now" : profile.status === "absent" ? "Absent" : "Due in"}</span>
+            </div>
+            <div className="p-5">
+              <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Care needs</div>
+              <div className="mt-2 flex flex-col gap-2">
+                {profile.flags.map((f, i) => (
+                  <div key={i} className="rounded-xl border border-[var(--line)] p-3">
+                    <span className="rounded-full px-2 py-0.5 text-[10px] font-bold" style={{ background: f.bg, color: f.fg }}>{f.k}</span>
+                    <p className="mt-1.5 text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{f.detail || "No detail recorded — check the register or ask your lead."}</p>
+                  </div>
+                ))}
+              </div>
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <p className="text-[11.5px] text-[var(--ink-3)]">Open the register for the full care plan.</p>
+                <Link href="/staff/registers" onClick={() => setProfile(null)}><Button sm variant="primary">Open register</Button></Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
