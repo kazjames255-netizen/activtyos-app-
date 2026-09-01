@@ -10,6 +10,7 @@ import { PageHero } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { useTenantSettings } from "@/lib/settings";
 import { VenueMap } from "./VenueMap";
+import { DEMO_STAFF } from "@/features/learning/credentials";
 import { whereHeading, WHERE_HEAD_DEFAULT, ListingWizard, ListingPreview, CroppedImage, listingRowInfo, listingRunsOn, emptyDraft, loadDrafts, deleteDraft, getDraftVisibility, getDraftArchived, copyDraft, draftFromListing, type ServerListing, type WizardDraft } from "./ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -149,7 +150,13 @@ function seedLocal(): LocalState {
     send: ["Wheelchair accessible", "1:1 support available", "Quiet space", "Visual timetables", "SEND-trained staff"],
     outcomes: ["Teamwork", "Confidence", "New skills", "Physical activity", "Creativity", "Making friends"],
     addons: [],
-    staff: [{ id: uid(), first: myName().split(" ")[0] || "Me", last: myName().split(" ").slice(1).join(" "), bio: "" }],
+    // Seeds the team library with your demo staff so you can preview the
+    // "pick who's onsite" flow (real onboarded/invited accounts feed this once
+    // Amir wires it). All are editable/removable like any other example content.
+    staff: [
+      { id: uid(), first: myName().split(" ")[0] || "Me", last: myName().split(" ").slice(1).join(" "), bio: "" },
+      ...DEMO_STAFF.map((s) => ({ id: uid(), first: s.name.split(" ")[0], last: s.name.split(" ").slice(1).join(" "), bio: s.role })),
+    ],
     emojis: {},
   };
 }
@@ -170,9 +177,12 @@ function loadLocal(): LocalState {
     if (!raw) return seed;
     const p = JSON.parse(raw) as Partial<LocalState> & { staff?: (string | StaffMember)[] };
     const rawStaff = (p.staff ?? []) as (string | StaffMember)[];
-    const staff = rawStaff.length
+    const mappedStaff = rawStaff.length
       ? rawStaff.map((s) => (typeof s === "string" ? { id: uid(), first: s.split(" ")[0], last: s.split(" ").slice(1).join(" "), bio: "" } : s))
       : seed.staff;
+    // Preview the "assign your team" flow: a still-default library (just "Me")
+    // gets topped up with the demo team; a real, customised one is left alone.
+    const staff = mappedStaff.length <= 1 ? seed.staff : mappedStaff;
     return {
       categories: p.categories ?? seed.categories,
       // Strip the old demo venues from any state that saved them before the
