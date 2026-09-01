@@ -211,7 +211,7 @@ export function TakeBookingModal() {
         } as React.CSSProperties
       }
     >
-      <div className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-[960px] flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
+      <div className="flex max-h-[calc(100vh-1.5rem)] w-full max-w-[1400px] flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
         {/* Fixed header — the body below scrolls, so the page never does. */}
         <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-[22px] py-3">
           <h3 className="m-0 font-[var(--ff-display)] text-[18px] font-extrabold">Take a booking</h3>
