@@ -171,8 +171,9 @@ export function SettingsLink({ tone = "hero", className = "" }: { tone?: "hero" 
       title="Change settings"
       aria-label="Change settings for this page"
       // Inconspicuous: a bare gear, no background. White on blue heroes; navy on
-      // light title cards so it stays visible either way.
-      className={`grid flex-none place-items-center opacity-90 transition hover:opacity-100 ${tone === "light" ? "text-[#1d3a8f]" : "text-white"} ${className}`}
+      // light title cards so it stays visible either way. `order-last` keeps it the
+      // right-most control in whatever header row it sits in, on every page.
+      className={`order-last grid flex-none place-items-center opacity-90 transition hover:opacity-100 ${tone === "light" ? "text-[#1d3a8f]" : "text-white"} ${className}`}
     >
       <GearIcon />
     </Link>
