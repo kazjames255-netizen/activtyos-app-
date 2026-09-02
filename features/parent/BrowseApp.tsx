@@ -57,6 +57,23 @@ function dateRange(l: ListingSummary): string | null {
   return until && until !== from ? `${from} – ${until}` : from;
 }
 
+// Every day the listing actually runs (from the block sessions), unique + sorted,
+// grouped by month — powers the hover popover on the date pill.
+function runDatesByMonth(l: ListingSummary): { count: number; months: { label: string; days: number[] }[] } {
+  const set = new Set<string>();
+  (l.blocks ?? []).forEach((b) => (b.sessions ?? []).forEach((s) => { if (s.date) set.add(s.date); }));
+  const dates = [...set].sort();
+  const map = new Map<string, number[]>();
+  dates.forEach((d) => {
+    const dt = new Date(`${d}T00:00:00Z`);
+    if (Number.isNaN(dt.getTime())) return;
+    const key = dt.toLocaleString("en-GB", { month: "long", year: "numeric", timeZone: "UTC" });
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(dt.getUTCDate());
+  });
+  return { count: dates.length, months: [...map.entries()].map(([label, days]) => ({ label, days })) };
+}
+
 type LatLng = { lat: number; lng: number };
 // Radius options in miles; 0 = any distance.
 const RADII = [0, 1, 3, 5, 10, 25];
@@ -527,7 +544,25 @@ export function BrowseApp() {
                   {(agesLabel(l) || dateRange(l)) && (
                     <div className="flex flex-none flex-col items-end gap-1">
                       {agesLabel(l) && <span className="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f] shadow-sm">{agesLabel(l)}</span>}
-                      {dateRange(l) && <span className="whitespace-nowrap rounded-full bg-[#c9f24a] px-2 py-0.5 text-[11px] font-extrabold text-[#2a3400] shadow-sm">📅 {dateRange(l)}</span>}
+                      {dateRange(l) && (() => { const rd = runDatesByMonth(l); return (
+                        <span className="group/date relative whitespace-nowrap rounded-full bg-[#c9f24a] px-2 py-0.5 text-[11px] font-extrabold text-[#2a3400] shadow-sm">
+                          📅 {dateRange(l)}
+                          {rd.count > 0 && (
+                            <span className="pointer-events-none absolute bottom-full right-0 z-40 mb-2 hidden w-[230px] max-w-[80vw] rounded-xl bg-white p-3 text-left text-[var(--ink)] shadow-[0_16px_40px_-8px_rgba(15,23,42,.5)] ring-1 ring-black/5 group-hover/date:block">
+                              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-[#1d3a8f]">{t("parent.datesItRuns", { n: rd.count })}</span>
+                              {rd.months.map((m) => (
+                                <span key={m.label} className="mb-1.5 block last:mb-0">
+                                  <span className="block text-[11px] font-bold">{m.label}</span>
+                                  <span className="mt-1 flex flex-wrap gap-1">
+                                    {m.days.map((d, i) => <span key={i} className="inline-flex h-[19px] min-w-[19px] items-center justify-center rounded-md bg-[#eef4ff] px-1 text-[10px] font-bold text-[#1d3a8f]">{d}</span>)}
+                                  </span>
+                                </span>
+                              ))}
+                              <span className="absolute right-4 top-full block h-2 w-2 -translate-y-1 rotate-45 bg-white ring-1 ring-black/5" />
+                            </span>
+                          )}
+                        </span>
+                      ); })()}
                     </div>
                   )}
                 </div>

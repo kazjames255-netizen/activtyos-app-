@@ -28,6 +28,7 @@ const parent = {
     vouchersAccepted: "Childcare vouchers",
     moreOffers: "+{n} more",
     showLess: "Show less",
+    datesItRuns: "{n} dates it runs",
     hideFilters: "Filters",
     showFilters: "Filters",
     // generic
