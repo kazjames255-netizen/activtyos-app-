@@ -16,12 +16,11 @@ import { PlatformBell } from "./PlatformBell";
 import { Sidebar } from "./Sidebar";
 import { ChildLookupModal } from "@/features/registers/ChildLookupModal";
 
-// The house sidebar blue, shared by every top-bar control so the bar matches the
-// sidebar. Each control keeps a differently-coloured symbol so they don't all
+// Shared pill for the top-bar controls: white with a hairline border and blue
+// writing. Each control keeps a differently-coloured symbol so they don't all
 // read as one block.
-const BLUE_DOTS = {
-  backgroundImage: "linear-gradient(165deg,#16306e 0%,#23479f 50%,#3f78d8 100%)",
-} as const;
+const PILL = { background: "#ffffff", boxShadow: "inset 0 0 0 1px #e3e9f5" } as const;
+const PILL_INK = "#1d3a8f";
 
 // Lives in the portal layout (not the per-view page) so it persists across
 // view navigation; derives the current view from the URL rather than a prop
@@ -147,7 +146,7 @@ export function Header({ portal }: { portal: PortalKey }) {
             // Every tab wears the house sidebar blue with the same white dot
             // texture, so the bar matches the sidebar; the active tab just lifts
             // with a soft shadow.
-            const colourStyle = { ...BLUE_DOTS, color: "#fff", boxShadow: active ? "0 4px 12px -2px rgba(29,58,143,.55)" : undefined };
+            const colourStyle = { ...PILL, color: PILL_INK, boxShadow: active ? "inset 0 0 0 1px #b9c8ee, 0 4px 12px -2px rgba(29,58,143,.28)" : PILL.boxShadow };
             return (
               <Link
                 key={t.view}
@@ -177,7 +176,7 @@ export function Header({ portal }: { portal: PortalKey }) {
                 onClick={() => setCommOpen((o) => !o)}
                 title="Contact parents — newsfeed, messages and email"
                 className="relative inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105"
-                style={{ ...BLUE_DOTS, color: "#fff", boxShadow: commActive || commOpen ? "0 4px 12px -2px rgba(29,58,143,.55)" : undefined }}
+                style={{ ...PILL, color: PILL_INK, boxShadow: commActive || commOpen ? "inset 0 0 0 1px #b9c8ee, 0 4px 12px -2px rgba(29,58,143,.28)" : PILL.boxShadow }}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{CHAT}</span>
                 <span className="hidden truncate sm:inline">Contact parents</span>
@@ -211,10 +210,10 @@ export function Header({ portal }: { portal: PortalKey }) {
           type="button"
           onClick={() => setLookupOpen(true)}
           title="Find a child — key info card"
-          className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold text-white transition-all duration-150 hover:-translate-y-px hover:brightness-105"
-          style={BLUE_DOTS}
+          className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105"
+          style={{ ...PILL, color: PILL_INK }}
         >
-          <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" style={{ color: "#7dd3fc" }} aria-hidden>{SEARCH}</span>
+          <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" style={{ color: "#0ea5e9" }} aria-hidden>{SEARCH}</span>
           <span className="hidden sm:inline">Find a child</span>
         </button>
       )}
@@ -231,14 +230,14 @@ export function Header({ portal }: { portal: PortalKey }) {
         {/* On phones the drawer's "Log out" item covers this. */}
         <button
           type="button"
-          className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold text-white transition-all duration-150 hover:-translate-y-px hover:brightness-105 max-sm:hidden"
-          style={BLUE_DOTS}
+          className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105 max-sm:hidden"
+          style={{ ...PILL, color: PILL_INK }}
           onClick={async () => {
             await signOutUser();
             router.replace("/login");
           }}
         >
-          <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" style={{ color: "#fb7185" }} aria-hidden>{EXIT}</span>
+          <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" style={{ color: "#e11d48" }} aria-hidden>{EXIT}</span>
           Sign out
         </button>
       </div>
@@ -299,7 +298,7 @@ function BugReport() {
         aria-label="Report a bug"
         title="Report a bug"
         className="relative inline-flex h-[34px] w-[34px] flex-none cursor-pointer items-center justify-center rounded-full transition-all hover:-translate-y-px hover:brightness-105"
-        style={BLUE_DOTS}
+        style={PILL}
       >
         <span className="text-[15px] leading-none" aria-hidden>🐞</span>
       </button>
