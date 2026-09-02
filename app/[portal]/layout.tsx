@@ -6,7 +6,6 @@ import { Header } from "@/components/shell/Header";
 import { RequireAuth } from "@/components/auth/AuthProvider";
 import { PortalGuard } from "@/components/auth/PortalGuard";
 import { SubscriptionGate } from "@/components/auth/SubscriptionGate";
-import { TrialBanner } from "@/components/billing/TrialBanner";
 import { PageTracker } from "@/components/analytics/PageTracker";
 import { CouponTicker } from "@/features/parent/CouponTicker";
 import { NewsflashBanner } from "@/features/parent/NewsflashBanner";
@@ -66,8 +65,9 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             {portalKey === "custdash" && <NewsflashBanner />}
             {/* Customer-only running bar of the family's usable discount codes. */}
             {portalKey === "custdash" && <CouponTicker />}
-            {/* Operator trial / cancellation nudge bar. */}
-            {!light && <TrialBanner portal={portalKey} />}
+            {/* Operator trial / cancellation nudge bar — removed on request 2026-09-02;
+                revisit where/how to reinstate it. Component kept at
+                components/billing/TrialBanner.tsx. */}
             {/* The operator views each wrap themselves in the light palette, but
                 the main surface itself must be light too — otherwise the dark
                 --bg shows through as a black flash while a route loads. */}
