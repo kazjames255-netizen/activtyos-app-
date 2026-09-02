@@ -93,9 +93,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
         aria-label={unread > 0 ? `Notifications (${unread} new)` : "Notifications"}
         className="relative inline-flex h-[34px] w-[34px] cursor-pointer items-center justify-center rounded-full transition-all hover:-translate-y-px hover:brightness-105"
         style={{
-          backgroundImage: "radial-gradient(rgba(255,255,255,0.16) 1px, transparent 1.6px), linear-gradient(165deg,#16306e 0%,#23479f 50%,#3f78d8 100%)",
-          backgroundSize: "11px 11px, cover",
-          backgroundRepeat: "repeat, no-repeat",
+          backgroundImage: "linear-gradient(165deg,#16306e 0%,#23479f 50%,#3f78d8 100%)",
           color: "#fcd34d",
         }}
       >

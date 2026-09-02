@@ -16,13 +16,11 @@ import { PlatformBell } from "./PlatformBell";
 import { Sidebar } from "./Sidebar";
 import { ChildLookupModal } from "@/features/registers/ChildLookupModal";
 
-// The house sidebar blue + white dot texture, shared by every top-bar control so
-// the bar matches the sidebar. Each control keeps a differently-coloured symbol
-// so they don't all read as one block.
+// The house sidebar blue, shared by every top-bar control so the bar matches the
+// sidebar. Each control keeps a differently-coloured symbol so they don't all
+// read as one block.
 const BLUE_DOTS = {
-  backgroundImage: "radial-gradient(rgba(255,255,255,0.16) 1px, transparent 1.6px), linear-gradient(165deg,#16306e 0%,#23479f 50%,#3f78d8 100%)",
-  backgroundSize: "11px 11px, cover",
-  backgroundRepeat: "repeat, no-repeat",
+  backgroundImage: "linear-gradient(165deg,#16306e 0%,#23479f 50%,#3f78d8 100%)",
 } as const;
 
 // Lives in the portal layout (not the per-view page) so it persists across
