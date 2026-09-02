@@ -1359,8 +1359,8 @@ export function SetupApp() {
       icon="⚙️"
       lede="How your account runs — set once, used everywhere"
       actions={
-        <span className="text-[12px] text-[var(--ink-3)]">
-          {error ? <span className="font-bold text-[var(--red,#e21d27)]">{error}</span> : savedAt ? `Saved ${savedAt}` : "Changes save as you make them"}
+        <span className="rounded-full bg-white/15 px-3 py-1 text-[11.5px] font-semibold text-white backdrop-blur-sm">
+          {error ? <span className="font-bold text-[#ffd5d5]">{error}</span> : savedAt ? `✓ Saved ${savedAt}` : "Changes save as you make them"}
         </span>
       }
     >
