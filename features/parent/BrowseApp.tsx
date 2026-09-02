@@ -622,7 +622,7 @@ export function BrowseApp() {
                     so cards stay the same height: offers · time slots · payments. */}
                 {(() => {
                   const offers = (l.offers ?? []).map((o) => `🏷️ ${o.label}`);
-                  const slots = timeSlots(l).map((s) => `🕘 ${s}`);
+                  const slots = ((l.timings && l.timings.length ? l.timings : timeSlots(l))).map((s) => `🕘 ${s}`);
                   const pays = [l.acceptsTFC ? `✓ ${t("parent.tfcAccepted")}` : "", l.acceptsVouchers ? `✓ ${t("parent.vouchersAccepted")}` : ""].filter(Boolean);
                   if (!offers.length && !slots.length && !pays.length) return null;
                   return (

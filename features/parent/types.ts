@@ -50,6 +50,8 @@ export interface ListingSummary {
   /** Whether the provider accepts these childcare payment methods. */
   acceptsTFC?: boolean;
   acceptsVouchers?: boolean;
+  /** The bundle's timing options (e.g. "8am – 5:30pm", "8am – 9am"). */
+  timings?: string[];
   /** Venue coordinates when the operator geocoded it — lets the browse compute
    *  distance without a lookup. Absent venues are geocoded from their postcode
    *  on the client instead. */

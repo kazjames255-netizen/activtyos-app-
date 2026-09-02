@@ -327,6 +327,24 @@ listings.get("/", async (req, res) => {
     return { label, percent: pct ? r.value : undefined };
   };
 
+  // Bundle timings (periods) per listing — the real "Choose a timing" options,
+  // so the card shows every timing, not just what the sessions happened to store.
+  const fmtT = (hhmm?: string): string | null => {
+    const m = /^(\d{1,2}):(\d{2})/.exec(hhmm ?? "");
+    if (!m) return null;
+    let h = Number(m[1]); const mn = Number(m[2]); const ap = h < 12 ? "am" : "pm"; h = h % 12 || 12;
+    return mn ? `${h}:${String(mn).padStart(2, "0")}${ap}` : `${h}${ap}`;
+  };
+  const bundleIds = [...new Set(visible.map((d) => d.data().blockId).filter(Boolean) as string[])];
+  const bundleSnaps = await Promise.all(bundleIds.map((id) => db.collection("blockBundles").doc(id).get()));
+  const bundlePeriodIds = new Map<string, string[]>();
+  const allPeriodIds = new Set<string>();
+  bundleSnaps.forEach((s) => { if (s.exists) { const pids = ((s.data() as { periodIds?: string[] }).periodIds) ?? []; bundlePeriodIds.set(s.id, pids); pids.forEach((p) => allPeriodIds.add(p)); } });
+  const periodSnaps = await Promise.all([...allPeriodIds].map((id) => db.collection("periods").doc(id).get()));
+  const periodLabel = new Map<string, string>();
+  periodSnaps.forEach((s) => { if (s.exists) { const p = s.data() as PeriodDoc; const a = fmtT(p.start); const z = fmtT(p.finish); if (a && z) periodLabel.set(s.id, `${a} – ${z}`); } });
+  const timingsFor = (bid?: string): string[] => (bid ? (bundlePeriodIds.get(bid) ?? []) : []).map((pid) => periodLabel.get(pid)).filter((x): x is string => !!x);
+
   // A listing only reaches the marketplace while it still has a run that hasn't
   // finished. Past-only listings (every block ended) have nothing to book, so
   // they drop out of Browse automatically — no manual un-publishing needed.
@@ -360,7 +378,8 @@ listings.get("/", async (req, res) => {
       const pm = payMethodsByTenant.get(l.tenantId as string) ?? [];
       const acceptsTFC = pm.includes("Tax-Free Childcare");
       const acceptsVouchers = pm.includes("Childcare vouchers");
-      return { ...l, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
+      const timings = timingsFor(l.blockId as string | undefined);
+      return { ...l, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
     }),
   );
 });
