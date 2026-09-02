@@ -89,6 +89,34 @@ availability.get("/requests", async (req, res) => {
   res.json(list);
 });
 
+// operator → the staff member's submitted availability for a request (so the
+// manager can see what they chose and assign specific days).
+availability.get("/requests/:id/submission", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
+  const s = await reqs.doc(req.params.id).get();
+  if (!s.exists || s.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Not found" }); return; }
+  const email = lc(`${s.data()!.staffEmail}`);
+  const pat = await patterns.doc(`${auth.tenantId}_${email}`).get();
+  res.json({ request: { id: s.id, ...(s.data() as Record<string, unknown>) }, pattern: pat.exists ? pat.data() : null });
+});
+
+// operator → set which dates the staff member is assigned/rostered to.
+const assignSchema = z.object({ assignedDates: z.array(z.string().max(10)).max(200) });
+availability.patch("/requests/:id/assign", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
+  const p = assignSchema.safeParse(req.body);
+  if (!p.success) { res.status(400).json({ error: p.error.issues }); return; }
+  const ref = reqs.doc(req.params.id);
+  const s = await ref.get();
+  if (!s.exists || s.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Not found" }); return; }
+  const camp = (s.data()!.camp ?? null) as Record<string, unknown> | null;
+  if (!camp) { res.status(400).json({ error: "This request has no camp to assign against." }); return; }
+  await ref.set({ camp: { ...camp, assignedDates: p.data.assignedDates } }, { merge: true });
+  res.json({ ok: true, assignedDates: p.data.assignedDates });
+});
+
 // operator → withdraw a request
 availability.delete("/requests/:id", async (req, res) => {
   const auth = req.auth!;
