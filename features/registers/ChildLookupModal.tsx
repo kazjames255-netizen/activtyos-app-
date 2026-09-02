@@ -4,6 +4,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n/provider";
 import { ChildCard, type ChildInfo } from "./ChildCard";
 
 interface LookupRow { childId: string; name: string; dob: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string; town?: string; photo?: string }
@@ -18,6 +19,7 @@ const WA_ICON = (
 
 /** The "Find a child" popup — search the tenant's children, open their card. */
 export function ChildLookupModal({ onClose }: { onClose: () => void }) {
+  const t = useT();
   const router = useRouter();
   const portal = usePathname()?.split("/")[1] || "freelancer";
   const { settings, questions } = useSettings();
@@ -33,7 +35,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
 
   useEffect(() => {
     let alive = true;
-    apiGet<LookupRow[]>("/api/children/lookup").then((r) => { if (alive) setRows(r); }).catch((e) => { if (alive) setErr(e instanceof Error ? e.message : "Couldn’t load children"); });
+    apiGet<LookupRow[]>("/api/children/lookup").then((r) => { if (alive) setRows(r); }).catch((e) => { if (alive) setErr(e instanceof Error ? e.message : t("registers.couldntLoadChildren")); });
     return () => { alive = false; };
   }, []);
 
@@ -55,7 +57,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
         attending: (d.bookings ?? []).map((bk) => ({ label: bk.dates || bk.listing || `#${bk.ref}`, start: bk.start || "", end: bk.end || "", listing: [bk.listing, bk.pass].filter(Boolean).join(" · ") })),
       };
       setOpenInfo({ info, name: d.name, email: d.parentEmail, phone: d.parentPhone });
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t load the child card"); }
+    } catch (e) { setErr(e instanceof Error ? e.message : t("registers.couldntLoadChildCard")); }
     setLoadingCard(false);
   }
 
@@ -98,11 +100,11 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
     );
     return (
       <div className="flex flex-none items-center gap-1.5">
-        {acts.firstAid !== false && b("⛑️", "First aid", "#be123c", `/${portal}/accidents?child=${n}`)}
-        {acts.incident !== false && b("⚠️", "Log concern", "#b45309", `/${portal}/${incidentSeg}?child=${n}`)}
-        {acts.medication !== false && b("💊", "Medication", "#15803d", `/${portal}/medication?child=${n}`)}
-        {acts.meals !== false && b("🍽️", "Meals", "#0f766e", `/${portal}/meals?child=${n}`)}
-        {acts.moments !== false && b("📸", "Moment", "#7c3aed", `/${portal}/moments?child=${n}`)}
+        {acts.firstAid !== false && b("⛑️", t("registers.firstAid"), "#be123c", `/${portal}/accidents?child=${n}`)}
+        {acts.incident !== false && b("⚠️", t("registers.logConcern"), "#b45309", `/${portal}/${incidentSeg}?child=${n}`)}
+        {acts.medication !== false && b("💊", t("registers.medication"), "#15803d", `/${portal}/medication?child=${n}`)}
+        {acts.meals !== false && b("🍽️", t("registers.meals"), "#0f766e", `/${portal}/meals?child=${n}`)}
+        {acts.moments !== false && b("📸", t("registers.moment"), "#7c3aed", `/${portal}/moments?child=${n}`)}
       </div>
     );
   };
@@ -117,21 +119,21 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
     // a child with no booking they'd never link to the parent, so disable them.
     const noBooking = !((openInfo.info.attending ?? []).length);
     const log: ReactNode[] = [];
-    if (acts.firstAid !== false) log.push(tile("⛑️", "First aid", "#be123c", `/${portal}/accidents?child=${name}`, noBooking));
-    if (acts.incident !== false) log.push(tile("⚠️", "Log concern", "#b45309", `/${portal}/${incidentSeg}?child=${name}`, noBooking));
-    if (acts.medication !== false) log.push(tile("💊", "Medication", "#15803d", `/${portal}/medication?child=${name}`, noBooking));
-    if (acts.meals !== false) log.push(tile("🍽️", "Meals", "#0f766e", `/${portal}/meals?child=${name}`, noBooking));
-    if (acts.moments !== false) log.push(tile("📸", "Moment", "#7c3aed", `/${portal}/moments?child=${name}`, noBooking));
+    if (acts.firstAid !== false) log.push(tile("⛑️", t("registers.firstAid"), "#be123c", `/${portal}/accidents?child=${name}`, noBooking));
+    if (acts.incident !== false) log.push(tile("⚠️", t("registers.logConcern"), "#b45309", `/${portal}/${incidentSeg}?child=${name}`, noBooking));
+    if (acts.medication !== false) log.push(tile("💊", t("registers.medication"), "#15803d", `/${portal}/medication?child=${name}`, noBooking));
+    if (acts.meals !== false) log.push(tile("🍽️", t("registers.meals"), "#0f766e", `/${portal}/meals?child=${name}`, noBooking));
+    if (acts.moments !== false) log.push(tile("📸", t("registers.moment"), "#7c3aed", `/${portal}/moments?child=${name}`, noBooking));
     const fam: ReactNode[] = [];
-    if (acts.message !== false) fam.push(tile("💬", "Message parent", "#1d3a8f", `/${portal}/messages?compose=1&emails=${email}`, !openInfo.email));
-    if (acts.email !== false) fam.push(tile("✉️", "Email parent", "#0e7490", `/${portal}/email?to=${email}`, !openInfo.email));
-    if (acts.whatsapp !== false) fam.push(tile(WA_ICON, "WhatsApp", "#128c7e", `https://wa.me/${wa}`, !wa, true));
+    if (acts.message !== false) fam.push(tile("💬", t("registers.messageParent"), "#1d3a8f", `/${portal}/messages?compose=1&emails=${email}`, !openInfo.email));
+    if (acts.email !== false) fam.push(tile("✉️", t("registers.emailParent"), "#0e7490", `/${portal}/email?to=${email}`, !openInfo.email));
+    if (acts.whatsapp !== false) fam.push(tile(WA_ICON, t("registers.whatsapp"), "#128c7e", `https://wa.me/${wa}`, !wa, true));
     quickLinks = (
       <div className="w-full">
-        <div className="flex w-full flex-wrap gap-2">{wheel("Log", "#be123c", log)}{wheel("Family", "#1d3a8f", fam)}</div>
+        <div className="flex w-full flex-wrap gap-2">{wheel(t("registers.logTitle"), "#be123c", log)}{wheel(t("registers.familyTitle"), "#1d3a8f", fam)}</div>
         {noBooking && (
           <div className="mt-2 text-[11px] leading-[1.5] text-[var(--ink-3)]">
-            First aid, concerns, medication, meals &amp; moments unlock once <b>{openInfo.name}</b> has a booking — they&rsquo;re on-the-day records that only reach the parent for a child who&rsquo;s attending.
+            {t("registers.noBookingLead")}<b>{openInfo.name}</b>{t("registers.noBookingTail")}
           </div>
         )}
       </div>
@@ -144,23 +146,23 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
         {openInfo ? (
           <div>
             <div className="mb-2 flex items-center justify-between">
-              <button type="button" onClick={() => setOpenInfo(null)} className="rounded-full bg-white/90 px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">‹ Back to search</button>
-              <button type="button" onClick={onClose} className="rounded-full bg-white/90 px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">Close</button>
+              <button type="button" onClick={() => setOpenInfo(null)} className="rounded-full bg-white/90 px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">‹ {t("registers.backToSearch")}</button>
+              <button type="button" onClick={onClose} className="rounded-full bg-white/90 px-3 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{t("registers.close")}</button>
             </div>
             <ChildCard info={openInfo.info} card={card} questions={questions} fields={fields} actions={quickLinks} />
           </div>
         ) : (
           <div className="overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl">
             <div className="flex items-center justify-between px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
-              <div className="text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>🔎 Find a child</div>
+              <div className="text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>🔎 {t("registers.findAChild")}</div>
               <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
             </div>
             <div className="p-4">
-              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search by child, parent or where they live…" className="mb-2 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+              <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("registers.searchByChildParent")} className="mb-2 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
               {err && <div className="mb-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
               <div className="max-h-[52vh] overflow-y-auto">
-                {rows === null ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-                  : shown.length === 0 ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{term ? "No child matches." : "No children on your list yet."}</div>
+                {rows === null ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("registers.loading")}</div>
+                  : shown.length === 0 ? <div className="py-8 text-center text-[12.5px] text-[var(--ink-3)]">{term ? t("registers.noChildMatches") : t("registers.noChildrenYet")}</div>
                     : <ul className="space-y-1">{shown.map((r) => (
                         <li key={r.childId}>
                           <div className="flex items-center gap-2 rounded-xl border border-[var(--line)] px-3 py-2 transition hover:border-[#1d3a8f] hover:bg-[#f7faff]">

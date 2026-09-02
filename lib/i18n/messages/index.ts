@@ -16,6 +16,8 @@ import customers from "./areas/customers";
 import meals from "./areas/meals";
 import setup from "./areas/setup";
 import team from "./areas/team";
+import registers from "./areas/registers";
+import schedule from "./areas/schedule";
 
 type Dict = Record<string, string>;
 type ByLocale = Partial<Record<LocaleCode, Dict>>;
@@ -38,7 +40,7 @@ const BASE: Record<LocaleCode, Namespaces> = {
 };
 
 // area namespace -> its per-locale dictionaries.
-const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team };
+const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team, registers, schedule };
 
 const LOCALE_CODES: LocaleCode[] = ["en", "pl", "ro", "ur", "pa", "bn", "ar", "pt", "es", "fr", "cy"];
 

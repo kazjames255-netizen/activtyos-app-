@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings, needsNappies, type ChildQuestion } from "@/lib/settings";
+import { useT } from "@/lib/i18n/provider";
 import { Button } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
@@ -152,12 +153,14 @@ const avBg = (n: string) => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) %
 
 
 function AlertSq({ kind, text }: { kind: "allergy" | "medical" | "send"; text: string }) {
-  const m = kind === "allergy" ? { bg: "#fde2e4", fg: "#c02636", label: "Allergy" } : kind === "medical" ? { bg: "#e0e9ff", fg: BLUE, label: "Medical" } : { bg: "#f3e8ff", fg: "#6d28d9", label: "SEND" };
+  const t = useT();
+  const m = kind === "allergy" ? { bg: "#fde2e4", fg: "#c02636", label: t("registers.allergy") } : kind === "medical" ? { bg: "#e0e9ff", fg: BLUE, label: t("registers.medical") } : { bg: "#f3e8ff", fg: "#6d28d9", label: t("registers.sendShort") };
   return <span title={text} className="rounded-md px-1.5 py-[2px] text-[9.5px] font-extrabold uppercase tracking-[0.03em]" style={{ background: m.bg, color: m.fg }}>{m.label}</span>;
 }
 
 // Searchable listing picker for the hero — a button + type-to-filter popover.
 function ListingPicker({ listings, venues, active, activeName, onPick }: { listings: [string, string][]; venues: Record<string, string>; active: string; activeName: string; onPick: (id: string) => void }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState("");
   // Match on the venue too — "Loughton" should find the camp held there.
@@ -165,17 +168,17 @@ function ListingPicker({ listings, venues, active, activeName, onPick }: { listi
   const shown = listings.filter(([id, n]) => `${n} ${venues[id] ?? ""}`.toLowerCase().includes(needle));
   return (
     <div className="relative">
-      <button type="button" aria-label="Choose listing" onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName || "Choose listing"} <span className="text-[9px]">▾</span></button>
+      <button type="button" aria-label={t("registers.chooseListing")} onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName || t("registers.chooseListing")} <span className="text-[9px]">▾</span></button>
       {open && (<>
         <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
         <div className="absolute left-0 z-20 mt-1 w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--line)] bg-white p-1.5 shadow-xl">
-          <div className="px-1.5 pb-1 pt-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">Choose listing</div>
-          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search listings or venues…" className="mb-1 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+          <div className="px-1.5 pb-1 pt-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("registers.chooseListing")}</div>
+          <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("registers.searchListingsVenues")} className="mb-1 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
           <div className="max-h-[280px] overflow-y-auto">
-            {shown.length === 0 ? <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">No listing matches.</div> : shown.map(([id, n]) => (
+            {shown.length === 0 ? <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">{t("registers.noListingMatches")}</div> : shown.map(([id, n]) => (
               <button key={id} type="button" onClick={() => { onPick(id); setOpen(false); setQ(""); }} className="block w-full rounded-lg px-2.5 py-1.5 text-left" style={id === active ? { background: "#eef4fd" } : undefined}>
                 <span className="block truncate text-[12.5px] font-semibold" style={{ color: id === active ? "#1d3a8f" : "var(--ink-2)" }}>{n}</span>
-                <span className="mt-0.5 block truncate text-[11px] text-[var(--ink-3)]">📍 {venues[id] || "No venue set"}</span>
+                <span className="mt-0.5 block truncate text-[11px] text-[var(--ink-3)]">📍 {venues[id] || t("registers.noVenueSet")}</span>
               </button>
             ))}
           </div>
@@ -187,10 +190,11 @@ function ListingPicker({ listings, venues, active, activeName, onPick }: { listi
 
 // ── Child detail card — shared layout lives in ./ChildCard ──────────────────
 function ChildModal({ a, showTimes, fields, card, questions, ctx, edit, canEdit, onSaveEdit, onOpenFamilies, onClose }: { a: Attendee; showTimes: boolean; fields: { contact?: boolean; emergency?: boolean; password?: boolean; school?: boolean }; card: Record<string, boolean | undefined>; questions: ChildQuestion[]; ctx: { attend: { date: string; start: string; end: string; listing: string }[]; siblings: string[] }; edit?: ChildEdit; canEdit: boolean; onSaveEdit: (patch: ChildEdit) => void; onOpenFamilies: () => void; onClose: () => void }) {
+  const t = useT();
   const c = a.child; const kid = a.children[0]; const state = st(a);
   const statusChip = state === "present"
-    ? { text: showTimes && a.attendance?.inAt ? `Signed in \u00b7 ${timeOf(a.attendance.inAt)}` : "Signed in" }
-    : state === "absent" ? { text: "Absent / ill" } : { text: "Not arrived", bg: "rgba(255,255,255,.16)" };
+    ? { text: showTimes && a.attendance?.inAt ? `${t("registers.signedIn")} \u00b7 ${timeOf(a.attendance.inAt)}` : t("registers.signedIn") }
+    : state === "absent" ? { text: t("registers.absentIll") } : { text: t("registers.notArrived"), bg: "rgba(255,255,255,.16)" };
   const info: ChildInfo = {
     name: kid?.name ?? "", age: kid?.age, dob: c?.dob, sex: c?.sex, photo: c?.photo,
     allergies: c?.allergies, medical: c?.medical, dietary: c?.dietary, send: c?.send, sendPlanName: c?.sendPlanName, swimming: c?.swimming,
@@ -245,6 +249,7 @@ function cell(key: string, s: Session, a: Attendee): string {
   }
 }
 function DownloadDialog({ sessions, date, allDates, listingName, sessionsForDates, onClose }: { sessions: Session[]; date: string; allDates: string[]; listingName: string; sessionsForDates: (dates: string[]) => Promise<{ date: string; sessions: Session[] }[]>; onClose: () => void }) {
+  const t = useT();
   const [on, setOn] = useState<Set<string>>(new Set(DL_COLS.filter((c) => c.on).map((c) => c.key)));
   const cols = DL_COLS.filter((c) => on.has(c.key));
   const total = sessions.reduce((n, s) => n + s.attendees.length, 0);
@@ -283,12 +288,12 @@ function DownloadDialog({ sessions, date, allDates, listingName, sessionsForDate
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[560px] overflow-y-auto rounded-2xl bg-[var(--surface)] p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 text-[15px] font-extrabold">Download register — {multi ? `${dates.length} dates` : dayLabel(date)}</div>
-        <p className="mb-2 text-[12px] text-[var(--ink-3)]">{multi ? <>Exporting {dates.length} dates from {listingName}. Each day is a separate section.</> : <>{total} {total === 1 ? "child" : "children"} across {sessions.length} {sessions.length === 1 ? "session" : "sessions"}.</>} The child&rsquo;s name is always included — tick any extra columns to include.</p>
+        <div className="mb-1 text-[15px] font-extrabold">{multi ? t("registers.downloadRegisterDates", { n: dates.length }) : t("registers.downloadRegisterDay", { day: dayLabel(date) })}</div>
+        <p className="mb-2 text-[12px] text-[var(--ink-3)]">{multi ? <>{t("registers.exportingDates", { n: dates.length, listing: listingName })}</> : <>{total === 1 ? t("registers.oneChildAcross", { sessions: sessions.length, sessionWord: sessions.length === 1 ? t("registers.sessionWord") : t("registers.sessionsWord") }) : t("registers.manyChildrenAcross", { total, sessions: sessions.length, sessionWord: sessions.length === 1 ? t("registers.sessionWord") : t("registers.sessionsWord") })}</>} {t("registers.childNameAlwaysIncluded")}</p>
         <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel)]/40 px-3 py-2">
           <div className="flex flex-wrap items-center gap-1.5">
-            <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Dates</span>
-            {([["one", dayLabel(date)], ["all", `All dates (${allDates.length})`], ["pick", "Pick dates…"]] as const).map(([k, label]) => (
+            <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("registers.dates")}</span>
+            {([["one", dayLabel(date)], ["all", t("registers.allDatesN", { n: allDates.length })], ["pick", t("registers.pickDates")]] as const).map(([k, label]) => (
               <button key={k} type="button" disabled={k !== "one" && allDates.length === 0} onClick={() => setScope(k)} className="rounded-lg border px-2.5 py-1 text-[11.5px] font-bold disabled:opacity-40" style={sel(scope === k)}>{label}</button>
             ))}
           </div>
@@ -300,33 +305,33 @@ function DownloadDialog({ sessions, date, allDates, listingName, sessionsForDate
                 ))}
               </div>
               <div className="mt-1.5 flex items-center gap-2 text-[11px]">
-                <button type="button" onClick={() => setPicked(new Set(allDates))} className="font-bold text-[#1d3a8f] underline">select all</button>
-                <button type="button" onClick={() => setPicked(new Set())} className="font-bold text-[var(--ink-3)] underline">clear</button>
-                <span className="text-[var(--ink-3)]">{picked.size} selected</span>
+                <button type="button" onClick={() => setPicked(new Set(allDates))} className="font-bold text-[#1d3a8f] underline">{t("registers.selectAllLower")}</button>
+                <button type="button" onClick={() => setPicked(new Set())} className="font-bold text-[var(--ink-3)] underline">{t("registers.clearLower")}</button>
+                <span className="text-[var(--ink-3)]">{t("registers.nSelected", { n: picked.size })}</span>
               </div>
             </div>
           )}
-          {allDates.length === 0 && <div className="mt-1 text-[11px] text-[var(--ink-3)]">Only this date is available — this listing&rsquo;s other dates haven&rsquo;t loaded.</div>}
+          {allDates.length === 0 && <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t("registers.onlyThisDate")}</div>}
         </div>
         <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-          <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Columns · {cols.length}</span>
-          <button type="button" onClick={() => setAll(DL_COLS.map((c) => c.key), true)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">Select all</button>
-          <button type="button" onClick={() => setAll(DL_COLS.map((c) => c.key), false)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">Clear</button>
-          <button type="button" onClick={() => setOn(new Set(DL_COLS.filter((c) => c.on).map((c) => c.key)))} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">Reset</button>
+          <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("registers.columns")} · {cols.length}</span>
+          <button type="button" onClick={() => setAll(DL_COLS.map((c) => c.key), true)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">{t("registers.selectAll")}</button>
+          <button type="button" onClick={() => setAll(DL_COLS.map((c) => c.key), false)} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">{t("registers.clear")}</button>
+          <button type="button" onClick={() => setOn(new Set(DL_COLS.filter((c) => c.on).map((c) => c.key)))} className="rounded-full border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-2)]">{t("registers.reset")}</button>
         </div>
         <div className="space-y-2.5">
           {DL_GROUPS.map((g) => { const gc = DL_COLS.filter((c) => c.group === g); const allOn = gc.every((c) => on.has(c.key)); return (
             <div key={g}>
               <div className="mb-1 flex items-center gap-2">
                 <span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{g}</span>
-                {g === "Sensitive" && <span className="rounded px-1.5 py-[1px] text-[9px] font-bold uppercase text-[#c02636]" style={{ background: "#fde2e4" }}>handle with care</span>}
-                <button type="button" onClick={() => setAll(gc.map((c) => c.key), !allOn)} className="text-[10.5px] font-bold text-[#1d3a8f]">{allOn ? "clear" : "all"}</button>
+                {g === "Sensitive" && <span className="rounded px-1.5 py-[1px] text-[9px] font-bold uppercase text-[#c02636]" style={{ background: "#fde2e4" }}>{t("registers.handleWithCare")}</span>}
+                <button type="button" onClick={() => setAll(gc.map((c) => c.key), !allOn)} className="text-[10.5px] font-bold text-[#1d3a8f]">{allOn ? t("registers.clearLower") : t("registers.allLower")}</button>
               </div>
               <div className="flex flex-wrap gap-1.5">{gc.map((c) => { const s = on.has(c.key); return <button key={c.key} type="button" onClick={() => setOn((x) => { const n = new Set(x); if (n.has(c.key)) n.delete(c.key); else n.add(c.key); return n; })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={s ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{s ? "✓ " : ""}{c.label}</button>; })}</div>
             </div>
           ); })}
         </div>
-        <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3"><Button sm onClick={onClose}>Cancel</Button><div className="flex gap-2"><Button sm disabled={!!busy || !dates.length} onClick={pdf}>{busy === "pdf" ? "Preparing…" : "🖨 PDF (printable)"}</Button><Button sm variant="solid" disabled={!!busy || !dates.length} onClick={csv}>{busy === "csv" ? "Preparing…" : "⭳ CSV"}</Button></div></div>
+        <div className="mt-3 flex items-center justify-between gap-2 border-t border-[var(--line)] pt-3"><Button sm onClick={onClose}>{t("registers.cancel")}</Button><div className="flex gap-2"><Button sm disabled={!!busy || !dates.length} onClick={pdf}>{busy === "pdf" ? t("registers.preparing") : `🖨 ${t("registers.pdfPrintable")}`}</Button><Button sm variant="solid" disabled={!!busy || !dates.length} onClick={csv}>{busy === "csv" ? t("registers.preparing") : "⭳ CSV"}</Button></div></div>
       </div>
     </div>
   );
@@ -339,23 +344,24 @@ function DownloadDialog({ sessions, date, allDates, listingName, sessionsForDate
 // window, and allergy / medical / dietary / SEND flags under the name.
 // Tap the PHOTO to sign in / out; tap the NAME for the full child card.
 function GalTile({ a, start, end, showTimes, busy, showConsent, onMark, onOpen }: { a: Attendee; start: string; end: string; showTimes: boolean; busy: boolean; showConsent: boolean; onMark?: (action: Action) => void; onOpen: () => void }) {
+  const t = useT();
   const state = st(a);
   const collected = !!a.attendance?.collectedAt;
   const dim = state !== "present"; // grey unless they're actually on site
   const kid = a.children[0];
   const initials = (kid?.name || "?").split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  const badge = collected ? { t: "Out", bg: "#e0e9ff", fg: BLUE }
-    : state === "present" ? { t: "In", bg: "#e7f6ee", fg: GREEN }
-    : state === "absent" ? { t: "Absent", bg: "#fde2e4", fg: RED }
-    : { t: "Due", bg: "#fef3d8", fg: AMBER };
+  const badge = collected ? { t: t("registers.badgeOut"), bg: "#e0e9ff", fg: BLUE }
+    : state === "present" ? { t: t("registers.badgeIn"), bg: "#e7f6ee", fg: GREEN }
+    : state === "absent" ? { t: t("registers.badgeAbsent"), bg: "#fde2e4", fg: RED }
+    : { t: t("registers.badgeDue"), bg: "#fef3d8", fg: AMBER };
   // tap cycles: due/absent → in, in → collect (out), collected → reset (back to due)
   const nextAction: Action = collected ? "reset" : state === "present" ? "collect" : "in";
-  const tapHint = busy ? "…" : collected ? "Tap to reset" : state === "present" ? "Tap to sign out" : "Tap to sign in";
+  const tapHint = busy ? "…" : collected ? t("registers.tapToReset") : state === "present" ? t("registers.tapToSignOut") : t("registers.tapToSignIn");
   const flags: { t: string; bg: string; fg: string }[] = [];
-  if (a.child?.allergies) flags.push({ t: "Allergy", bg: "#fde2e4", fg: "#c02636" });
-  if (a.child?.medical) flags.push({ t: "Medical", bg: "#e0e9ff", fg: BLUE });
-  if (a.child?.dietary) flags.push({ t: "Dietary", bg: "#dcfce7", fg: "#15803d" });
-  if (a.child?.send || a.child?.sendPlanName) flags.push({ t: "SEND", bg: "#f3e8ff", fg: "#6d28d9" });
+  if (a.child?.allergies) flags.push({ t: t("registers.allergy"), bg: "#fde2e4", fg: "#c02636" });
+  if (a.child?.medical) flags.push({ t: t("registers.medical"), bg: "#e0e9ff", fg: BLUE });
+  if (a.child?.dietary) flags.push({ t: t("registers.dietary"), bg: "#dcfce7", fg: "#15803d" });
+  if (a.child?.send || a.child?.sendPlanName) flags.push({ t: t("registers.sendShort"), bg: "#f3e8ff", fg: "#6d28d9" });
   return (
     <div className="flex flex-col items-center rounded-xl p-2 text-center">
       <button type="button" disabled={!onMark || busy} onClick={() => onMark?.(nextAction)} title={onMark ? tapHint : undefined} className="relative disabled:cursor-default">
@@ -368,9 +374,9 @@ function GalTile({ a, start, end, showTimes, busy, showConsent, onMark, onOpen }
       {flags.length > 0 && <div className="mt-1 flex flex-wrap justify-center gap-1">{flags.map((f) => <span key={f.t} className="rounded px-1 py-[1px] text-[8.5px] font-extrabold uppercase" style={{ background: f.bg, color: f.fg }}>{f.t}</span>)}</div>}
       {showConsent && a.child?.photoConsent != null && <div className="mt-1 flex justify-center"><PhotoConsentChip ok={!!a.child.photoConsent} /></div>}
       <div className="mt-1 text-[10px] leading-[1.35] text-[var(--ink-3)]">
-        {showTimes && a.attendance?.inAt && <div>In {timeOf(a.attendance.inAt)}</div>}
-        {collected && <div>Out {timeOf(a.attendance?.collectedAt)}{a.attendance?.collectedBy ? ` · ${a.attendance.collectedBy}` : ""}</div>}
-        {(start || end) && <div className="opacity-80">Exp {start}–{end}</div>}
+        {showTimes && a.attendance?.inAt && <div>{t("registers.inShort")} {timeOf(a.attendance.inAt)}</div>}
+        {collected && <div>{t("registers.outShort")} {timeOf(a.attendance?.collectedAt)}{a.attendance?.collectedBy ? ` · ${a.attendance.collectedBy}` : ""}</div>}
+        {(start || end) && <div className="opacity-80">{t("registers.expShort")} {start}–{end}</div>}
       </div>
       {onMark && <div className="mt-0.5 text-[9px] font-bold uppercase tracking-wide text-[#1d3a8f]/70">{tapHint}</div>}
     </div>
@@ -397,9 +403,10 @@ const NOTE_SVG = <svg viewBox="0 0 24 24" width="14" height="14" fill="none" str
 // A small note icon on the row — amber with a red dot when an active note
 // exists; clicking opens the note popup.
 function NoteChip({ note, onClick }: { note?: RegNote; onClick: () => void }) {
+  const t = useT();
   const active = !!note?.text?.trim() && !note?.archived;
   return (
-    <button type="button" onClick={onClick} title={active ? "Important note — click to view" : "Add an important note"} aria-label="Important note"
+    <button type="button" onClick={onClick} title={active ? t("registers.importantNoteView") : t("registers.addImportantNote")} aria-label={t("registers.importantNote")}
       className={"relative grid h-7 w-7 place-items-center rounded-lg border transition " + (active ? "border-[#f3d9a7] bg-[#fff7e6] text-[#b45309]" : "border-[var(--line)] bg-white text-[var(--ink-3)] hover:border-[#c9dcfa] hover:text-[#1d3a8f]")}>
       {NOTE_SVG}
       {active && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#e11d48] ring-2 ring-white" />}
@@ -410,6 +417,7 @@ function NoteChip({ note, onClick }: { note?: RegNote; onClick: () => void }) {
 // Fancy click-popup for an Important note — edit, delete (→ archive), and (admins
 // only) restore / delete forever.
 function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore, onDeleteForever, onClose }: { name: string; note?: RegNote; canDeleteForever: boolean; onSave: (text: string, shareParent: boolean) => void; onArchive: () => void; onRestore: () => void; onDeleteForever: () => void; onClose: () => void }) {
+  const t = useT();
   const archived = !!note?.text && !!note?.archived;
   // When the existing note is archived the editor starts BLANK — you're writing
   // a fresh note, not editing the filed-away one. The old note stays reachable
@@ -422,8 +430,8 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="w-full max-w-[440px] overflow-hidden rounded-2xl bg-white shadow-[0_30px_70px_-20px_rgba(0,0,0,.5)]" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 bg-gradient-to-r from-[#fff7e6] to-[#fdeede] px-4 py-3 text-[#b45309]">
-          {NOTE_SVG}<span className="text-[14px] font-extrabold">Important note</span>{name && <span className="text-[12px] font-semibold text-[#b45309]/70">· {name}</span>}
-          <button type="button" onClick={onClose} aria-label="Close" className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#b45309] hover:bg-white/60">✕</button>
+          {NOTE_SVG}<span className="text-[14px] font-extrabold">{t("registers.importantNote")}</span>{name && <span className="text-[12px] font-semibold text-[#b45309]/70">· {name}</span>}
+          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#b45309] hover:bg-white/60">✕</button>
         </div>
         <div className="p-4">
           {/* The archive is a closed folder — click to look inside. It never
@@ -432,25 +440,25 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
             <div className="mb-3 overflow-hidden rounded-lg border border-[var(--line)]">
               <button type="button" onClick={() => setOpenArchive((v) => !v)} aria-expanded={openArchive} className="flex w-full items-center gap-2 bg-[#eef1f6] px-3 py-2 text-left text-[12px] font-bold text-[var(--ink-2)]">
                 <span>{openArchive ? "📂" : "🗄️"}</span>
-                <span>Archived note — not shown on the register</span>
-                <span className="ml-auto text-[10px] text-[var(--ink-3)]">{openArchive ? "hide" : "view"} ▾</span>
+                <span>{t("registers.archivedNoteHidden")}</span>
+                <span className="ml-auto text-[10px] text-[var(--ink-3)]">{openArchive ? t("registers.hide") : t("registers.view")} ▾</span>
               </button>
               {openArchive && (
                 <div className="border-t border-[var(--line)] p-3">
                   <p className="whitespace-pre-wrap rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3 text-[13px] leading-snug text-[var(--ink-2)]">{note!.text}</p>
-                  {note!.at && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Archived {stamp(note!.at)}{note!.by ? ` · by ${note!.by}` : ""}</p>}
+                  {note!.at && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("registers.archivedStamp", { when: stamp(note!.at) })}{note!.by ? t("registers.byNameDot", { name: note!.by }) : ""}</p>}
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
-                    <button type="button" onClick={() => { onRestore(); onClose(); }} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white hover:brightness-110">↩ Restore</button>
+                    <button type="button" onClick={() => { onRestore(); onClose(); }} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white hover:brightness-110">↩ {t("registers.restore")}</button>
                     {canDeleteForever ? (confirmDel
-                      ? <span className="flex items-center gap-2 text-[12px]"><b className="text-[#c02636]">Delete permanently?</b><button type="button" onClick={() => { onDeleteForever(); onClose(); }} className="rounded-full bg-[#c02636] px-3 py-1 text-[11.5px] font-extrabold text-white">Yes, forever</button><button type="button" onClick={() => setConfirmDel(false)} className="text-[11.5px] font-bold text-[var(--ink-3)]">cancel</button></span>
-                      : <button type="button" onClick={() => setConfirmDel(true)} className="rounded-full border border-[#f3c6c1] bg-white px-4 py-1.5 text-[12px] font-extrabold text-[#c02636] hover:bg-[#fdecec]">🗑 Delete forever</button>)
-                      : <span className="text-[11px] text-[var(--ink-3)]">Only an admin can delete forever.</span>}
+                      ? <span className="flex items-center gap-2 text-[12px]"><b className="text-[#c02636]">{t("registers.deletePermanently")}</b><button type="button" onClick={() => { onDeleteForever(); onClose(); }} className="rounded-full bg-[#c02636] px-3 py-1 text-[11.5px] font-extrabold text-white">{t("registers.yesForever")}</button><button type="button" onClick={() => setConfirmDel(false)} className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("registers.cancelLower")}</button></span>
+                      : <button type="button" onClick={() => setConfirmDel(true)} className="rounded-full border border-[#f3c6c1] bg-white px-4 py-1.5 text-[12px] font-extrabold text-[#c02636] hover:bg-[#fdecec]">🗑 {t("registers.deleteForever")}</button>)
+                      : <span className="text-[11px] text-[var(--ink-3)]">{t("registers.onlyAdminDelete")}</span>}
                   </div>
                 </div>
               )}
             </div>
           )}
-          {archived && <div className="mb-2 text-[11.5px] font-bold text-[var(--ink-3)]">✍️ Write a new note</div>}
+          {archived && <div className="mb-2 text-[11.5px] font-bold text-[var(--ink-3)]">✍️ {t("registers.writeNewNote")}</div>}
           <>
               {/* Legal-pad look: ruled lines + a red margin painted as the
                   textarea's own background, so they scroll with the text
@@ -461,9 +469,9 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
                   <span className="h-2 w-2 rounded-full bg-[#d9c092] shadow-[inset_0_1px_1px_rgba(0,0,0,.18)]" />
                   <span className="h-2 w-2 rounded-full bg-[#d9c092] shadow-[inset_0_1px_1px_rgba(0,0,0,.18)]" />
                   <span className="h-2 w-2 rounded-full bg-[#d9c092] shadow-[inset_0_1px_1px_rgba(0,0,0,.18)]" />
-                  <span className="ml-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.14em] text-[#b45309]/60">Notepad</span>
+                  <span className="ml-1.5 text-[9.5px] font-extrabold uppercase tracking-[0.14em] text-[#b45309]/60">{t("registers.notepad")}</span>
                 </div>
-                <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} autoFocus placeholder="Note for the team — e.g. leaving early with grandma, didn’t eat much lunch…"
+                <textarea value={text} onChange={(e) => setText(e.target.value)} rows={4} autoFocus placeholder={t("registers.notePlaceholder")}
                   className="block w-full resize-y border-0 bg-transparent py-0 pl-11 pr-3 text-[13.5px] text-[var(--ink)] outline-none placeholder:text-[#bda981]"
                   style={{
                     lineHeight: "28px",
@@ -473,14 +481,14 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
                   }} />
               </div>
               <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
-                <div><div className="text-[12.5px] font-bold text-[var(--ink)]">👪 Let the parent see this note</div><div className="text-[11px] text-[var(--ink-3)]">{share ? "The family will see it in their app." : "Staff-only — hidden from the parent."}</div></div>
+                <div><div className="text-[12.5px] font-bold text-[var(--ink)]">👪 {t("registers.letParentSeeNote")}</div><div className="text-[11px] text-[var(--ink-3)]">{share ? t("registers.familyWillSee") : t("registers.staffOnlyHidden")}</div></div>
                 <button type="button" role="switch" aria-checked={share} onClick={() => setShare((s) => !s)} className={"relative h-6 w-11 flex-none rounded-full transition-colors " + (share ? "bg-[#0f9d58]" : "bg-[#cbd5e1]")}><span className={"absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all " + (share ? "left-[22px]" : "left-0.5")} /></button>
               </div>
               <div className="mt-3 flex items-center gap-3">
-                <button type="button" disabled={!text.trim()} onClick={() => { onSave(text.trim(), share); onClose(); }} className="rounded-full bg-[#b45309] px-5 py-2 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">Save note</button>
-                {!archived && note?.text && <button type="button" onClick={() => { onArchive(); onClose(); }} className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">🗑 Delete</button>}
+                <button type="button" disabled={!text.trim()} onClick={() => { onSave(text.trim(), share); onClose(); }} className="rounded-full bg-[#b45309] px-5 py-2 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{t("registers.saveNote")}</button>
+                {!archived && note?.text && <button type="button" onClick={() => { onArchive(); onClose(); }} className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">🗑 {t("registers.delete")}</button>}
               </div>
-              <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">{!archived && note?.at ? `Updated ${stamp(note.at)}${note.by ? ` by ${note.by}` : ""}. ` : ""}{archived ? "Saving replaces the archived note on the register." : <>Deleting <b>archives</b> it — an admin can then remove it for good.</>}</p>
+              <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">{!archived && note?.at ? `${t("registers.updatedStamp", { when: stamp(note.at) })}${note.by ? t("registers.byName2", { name: note.by }) : ""}. ` : ""}{archived ? t("registers.savingReplacesArchived") : <>{t("registers.deletingArchivesLead")}<b>{t("registers.archivesWord")}</b>{t("registers.deletingArchivesTail")}</>}</p>
             </>
         </div>
       </div>
@@ -498,6 +506,7 @@ type ChildEdit = Partial<{ allergies: string; medical: string; dietary: string; 
 const loadChildEdits = (): Record<string, ChildEdit> => { try { return JSON.parse(localStorage.getItem(CHILD_EDITS_KEY) || "{}") || {}; } catch { return {}; } };
 
 function SafeguardingEditor({ child, edit, canEdit, onSave, onOpenFamilies }: { child: { allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; careNotes?: string } | null; edit?: ChildEdit; canEdit: boolean; onSave: (patch: ChildEdit) => void; onOpenFamilies: () => void }) {
+  const t = useT();
   const cur = { ...(child ?? {}), ...(edit ?? {}) };
   const [f, setF] = useState({ allergies: cur.allergies ?? "", medical: cur.medical ?? "", send: cur.send ?? cur.sendPlanName ?? "", dietary: cur.dietary ?? "", careNotes: cur.careNotes ?? "" });
   const [saved, setSaved] = useState(false);
@@ -513,22 +522,22 @@ function SafeguardingEditor({ child, edit, canEdit, onSave, onOpenFamilies }: { 
     <div className="rounded-2xl border border-[#e0d3f5] bg-[#faf7ff] p-4 shadow-sm">
       <button type="button" onClick={() => setOpen((o) => !o)} className="flex w-full items-center gap-2 text-left">
         <span className="text-[15px]">🛟</span>
-        <span className="text-[13px] font-extrabold text-[#6d28d9]">SEND, allergies &amp; medical — add / amend</span>
+        <span className="text-[13px] font-extrabold text-[#6d28d9]">{t("registers.sendAllergiesMedicalAmend")}</span>
         <span className="ml-auto text-[12px] text-[var(--ink-3)]">{open ? "▲" : "▼"}</span>
       </button>
       {open && (<>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {Field("Allergies", "allergies", "#c02636", "e.g. Peanuts — EpiPen in bag")}
-          {Field("Medical", "medical", "#1d3a8f", "e.g. Asthma — blue inhaler with staff")}
-          {Field("SEND / additional needs", "send", "#6d28d9", "e.g. ASD — needs a quiet space")}
-          {Field("Dietary", "dietary", "#15803d", "e.g. Halal · vegetarian")}
-          <div className="sm:col-span-2">{Field("Care notes", "careNotes", "#b45309", "Anything the team should know today")}</div>
+          {Field(t("registers.allergies"), "allergies", "#c02636", t("registers.phAllergies"))}
+          {Field(t("registers.medical"), "medical", "#1d3a8f", t("registers.phMedical"))}
+          {Field(t("registers.sendAdditionalNeeds"), "send", "#6d28d9", t("registers.phSend"))}
+          {Field(t("registers.dietary"), "dietary", "#15803d", t("registers.phDietary"))}
+          <div className="sm:col-span-2">{Field(t("registers.careNotes"), "careNotes", "#b45309", t("registers.phCareNotes"))}</div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <button type="button" onClick={save} className="rounded-full bg-[#6d28d9] px-4 py-1.5 text-[12px] font-extrabold text-white hover:brightness-110">{saved ? "Saved to register ✓" : "Save to register"}</button>
-          <button type="button" onClick={onOpenFamilies} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Also update the family record →</button>
+          <button type="button" onClick={save} className="rounded-full bg-[#6d28d9] px-4 py-1.5 text-[12px] font-extrabold text-white hover:brightness-110">{saved ? t("registers.savedToRegister") : t("registers.saveToRegister")}</button>
+          <button type="button" onClick={onOpenFamilies} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{t("registers.alsoUpdateFamily")} →</button>
         </div>
-        <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">Shows on today’s register straight away. The permanent per-child record + other devices sync once your provider’s staff-edit update is live.</p>
+        <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">{t("registers.showsOnRegisterSync")}</p>
       </>)}
     </div>
   );
@@ -547,11 +556,12 @@ function LikesChip({ likes, dislikes }: { likes?: string; dislikes?: string }) {
   // feel unreliable. Hover shows it always; click/focus pins it for touch and
   // keyboard. The panel is INSIDE the hover target, so moving the pointer onto
   // the text doesn't dismiss it mid-read.
+  const t = useT();
   const [pinned, setPinned] = useState(false);
   if (!likes && !dislikes) return null;
   return (
     <span className="group relative inline-flex">
-      <button type="button" aria-label="Likes and dislikes" aria-expanded={pinned}
+      <button type="button" aria-label={t("registers.likesAndDislikes")} aria-expanded={pinned}
         onClick={() => setPinned((v) => !v)}
         className="grid h-7 w-7 place-items-center rounded-lg border border-[#cbead8] bg-[#eafaf1] text-[13px] leading-none transition hover:brightness-95">😊</button>
       {/* Hover is pure CSS — the browser's own hit-testing, so it can't miss an
@@ -560,8 +570,8 @@ function LikesChip({ likes, dislikes }: { likes?: string; dislikes?: string }) {
       <span role="tooltip"
         className={"absolute left-1/2 top-full z-30 mt-1.5 w-[248px] -translate-x-1/2 rounded-xl border border-[var(--line)] bg-white p-2.5 text-left shadow-xl "
           + (pinned ? "block" : "hidden group-hover:block group-focus-within:block")}>
-          {likes && <span className="block"><b className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#15803d]">Likes</b><span className="mt-0.5 block text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{likes}</span></span>}
-          {dislikes && <span className={"block " + (likes ? "mt-2" : "")}><b className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#b45309]">Dislikes / avoid</b><span className="mt-0.5 block text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{dislikes}</span></span>}
+          {likes && <span className="block"><b className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#15803d]">{t("registers.likes")}</b><span className="mt-0.5 block text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{likes}</span></span>}
+          {dislikes && <span className={"block " + (likes ? "mt-2" : "")}><b className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#b45309]">{t("registers.dislikesAvoid")}</b><span className="mt-0.5 block text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{dislikes}</span></span>}
       </span>
     </span>
   );
@@ -604,8 +614,9 @@ function MenuItem({ on, onClick, dot, children, hint }: { on: boolean; onClick: 
   );
 }
 function PhotoConsentChip({ ok }: { ok: boolean }) {
+  const t = useT();
   return (
-    <span title={ok ? "Photo permission: yes" : "Photo permission: no — do not photograph"} aria-label={ok ? "Photos allowed" : "No photos"}
+    <span title={ok ? t("registers.photoPermissionYes") : t("registers.photoPermissionNo")} aria-label={ok ? t("registers.photosAllowed") : t("registers.noPhotos")}
       className={"grid h-7 w-7 place-items-center rounded-lg border " + (ok ? "border-[#bfe6cf] bg-[#eafaf1] text-[#0f7a43]" : "border-[#f3c6c1] bg-[#fdecec] text-[#c02636]")}>
       <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round">
         <path d="M4 7h3l1.4-2h7.2L18 7h2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V8a1 1 0 0 1 1-1z" /><circle cx="12" cy="13" r="3.2" />
@@ -617,10 +628,11 @@ function PhotoConsentChip({ ok }: { ok: boolean }) {
 
 // Collection password — hidden by default; tap the key to reveal (auto-hides).
 function CollectPin({ pw }: { pw: string }) {
+  const t = useT();
   const [show, setShow] = useState(false);
-  useEffect(() => { if (!show) return; const t = setTimeout(() => setShow(false), 4000); return () => clearTimeout(t); }, [show]);
+  useEffect(() => { if (!show) return; const timer = setTimeout(() => setShow(false), 4000); return () => clearTimeout(timer); }, [show]);
   return (
-    <button type="button" onClick={() => setShow((s) => !s)} title="Collection password — tap to reveal"
+    <button type="button" onClick={() => setShow((s) => !s)} title={t("registers.collectionPasswordReveal")}
       className={"inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-extrabold transition-all " + (show ? "border-[#f3d9a7] bg-[#fff7e6] text-[#b45309] shadow-sm" : "border-[var(--line)] bg-white text-[var(--ink-3)] hover:border-[#c9dcfa] hover:text-[#1d3a8f]")}>
       🔑 <span className={"tabular-nums " + (show ? "tracking-normal" : "tracking-[0.15em]")}>{show ? pw : "••••"}</span>
     </button>
@@ -628,6 +640,7 @@ function CollectPin({ pw }: { pw: string }) {
 }
 
 export function RegistersApp() {
+  const t = useT();
   const { settings, questions } = useSettings();
   const router = useRouter();
   const portal = (usePathname()?.split("/")[1]) || "freelancer";
@@ -747,7 +760,7 @@ export function RegistersApp() {
         setDays(Object.fromEntries(ok));
         setReady(true); setError(null);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load the register"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("registers.failedToLoad")));
   }, [WINDOW]);
   useEffect(() => { refresh(); }, [refresh]);
   // Fetch a single day the initial 10-day window didn't cover (calendar jumps /
@@ -766,18 +779,18 @@ export function RegistersApp() {
   async function mark(blockId: string, ref: string, action: Action) {
     setBusyRef(ref); setError(null);
     try { await apiPost(`/api/registers/${encodeURIComponent(blockId)}/${date}/mark`, { ref, action }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update the register"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("registers.couldntUpdate")); }
     setBusyRef(null);
   }
   async function signAllIn(items: { blockId: string; a: Attendee }[]) {
     setBulkBusy("all"); setError(null);
     try { for (const it of items) await apiPost(`/api/registers/${encodeURIComponent(it.blockId)}/${date}/mark`, { ref: it.a.ref, action: "in" }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update the register"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("registers.couldntUpdate")); }
     setBulkBusy(null);
   }
   async function logHead(s: Session, n: number) {
     try { await apiPost(`/api/registers/${encodeURIComponent(s.blockId)}/${date}/headcount`, { n }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t log the head count"); }
+    catch (e) { setError(e instanceof Error ? e.message : t("registers.couldntLogHeadCount")); }
   }
   // Messaging deep-links into the Messages composer, pre-addressed. "All
   // attending" pushes every shown family's email; a single row pushes just that
@@ -787,13 +800,13 @@ export function RegistersApp() {
     router.push(`/${portal}/messages?compose=1&emails=${encodeURIComponent(attendingEmails.join(","))}`);
   }
   function messageOne(a: Attendee) {
-    if (!a.email) { setError(`No contact email on file for ${a.booker}.`); return; }
+    if (!a.email) { setError(t("registers.noContactEmail", { name: a.booker })); return; }
     router.push(`/${portal}/messages?compose=1&emails=${encodeURIComponent(a.email.trim().toLowerCase())}`);
   }
   // Nudge a late parent — opens a composer OVER the register rather than
   // navigating away, so nobody loses their place mid-register.
   function nudge(a: Attendee, late: Late) {
-    if (!a.email) { setError(`No contact email on file for ${a.booker}.`); return; }
+    if (!a.email) { setError(t("registers.noContactEmail", { name: a.booker })); return; }
     setNudgeFor({ a, late });
   }
   // Quick-log med / first-aid / incident straight from the register, child pre-filled.
@@ -801,8 +814,8 @@ export function RegistersApp() {
   const accidentFor = (a: Attendee) => router.push(`/${portal}/accidents?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
   const incidentFor = (a: Attendee) => router.push(`${incidentHref}?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
   const momentsFor = (a: Attendee) => router.push(`/${portal}/moments?child=${encodeURIComponent(a.children[0]?.name ?? "")}`);
-  const emailFor = (a: Attendee) => { if (!a.email) { setError(`No contact email on file for ${a.booker}.`); return; } router.push(`/${portal}/email?to=${encodeURIComponent(a.email.trim().toLowerCase())}`); };
-  const whatsappFor = (a: Attendee) => { const n = waNumber(a.phone); if (!n) { setError(`No phone on file for ${a.booker}.`); return; } const el = document.createElement("a"); el.href = `https://wa.me/${n}`; el.target = "_blank"; el.rel = "noopener noreferrer"; document.body.appendChild(el); el.click(); el.remove(); };
+  const emailFor = (a: Attendee) => { if (!a.email) { setError(t("registers.noContactEmail", { name: a.booker })); return; } router.push(`/${portal}/email?to=${encodeURIComponent(a.email.trim().toLowerCase())}`); };
+  const whatsappFor = (a: Attendee) => { const n = waNumber(a.phone); if (!n) { setError(t("registers.noPhoneOnFile", { name: a.booker })); return; } const el = document.createElement("a"); el.href = `https://wa.me/${n}`; el.target = "_blank"; el.rel = "noopener noreferrer"; document.body.appendChild(el); el.click(); el.remove(); };
 
   // Listings that run somewhere in the window; pick the active one.
   const listingsEvery = useMemo(() => {
@@ -862,8 +875,8 @@ export function RegistersApp() {
   const passOpts = useMemo(() => {
     const m = new Map<string, string>();
     for (const s of daySessions) {
-      m.set(`in|${s.start}`, `${fmt12(s.start)} drop-off`);
-      m.set(`out|${s.end}`, `${fmt12(s.end)} collection`);
+      m.set(`in|${s.start}`, `${fmt12(s.start)} ${t("registers.dropOff")}`);
+      m.set(`out|${s.end}`, `${fmt12(s.end)} ${t("registers.collection")}`);
     }
     return [...m.entries()].map(([v, label]) => ({ v, label })).sort((a, b) => passTime(a.v).localeCompare(passTime(b.v)) || a.v.localeCompare(b.v));
   }, [daySessions]);
@@ -957,7 +970,7 @@ export function RegistersApp() {
     return { attend, siblings: [...sibs] };
   };
 
-  if (!ready) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">Loading the register…</div></div>;
+  if (!ready) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">{t("registers.loadingRegister")}</div></div>;
 
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -965,12 +978,12 @@ export function RegistersApp() {
       {listingsAll.length === 0 ? (
         loadFailed ? (
           <div className="rounded-2xl border border-[#f6c9cc] bg-[#fdebec] px-4 py-12 text-center">
-            <div className="text-[14px] font-extrabold text-[#c02636]">Couldn&rsquo;t load the register</div>
-            <p className="mx-auto mt-1 max-w-[420px] text-[12.5px] text-[#c02636]/85">The service didn&rsquo;t respond — this is usually temporary. Your bookings are safe; nothing has been lost.</p>
-            <button type="button" onClick={refresh} className="mt-3 rounded-full bg-[#c02636] px-4 py-1.5 text-[12px] font-extrabold text-white">Try again</button>
+            <div className="text-[14px] font-extrabold text-[#c02636]">{t("registers.couldntLoadRegister")}</div>
+            <p className="mx-auto mt-1 max-w-[420px] text-[12.5px] text-[#c02636]/85">{t("registers.serviceDidntRespond")}</p>
+            <button type="button" onClick={refresh} className="mt-3 rounded-full bg-[#c02636] px-4 py-1.5 text-[12px] font-extrabold text-white">{t("registers.tryAgain")}</button>
           </div>
         ) : (
-          <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[13px] text-[var(--ink-3)]">Nothing runs in the next few days — nothing to register.</div>
+          <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[13px] text-[var(--ink-3)]">{t("registers.nothingRunsFewDays")}</div>
         )
       ) : (
         <>
@@ -984,8 +997,8 @@ export function RegistersApp() {
               <div className="flex flex-wrap items-center gap-2">
                 {seasons.length > 0 && (
                   <span className="relative inline-flex items-center">
-                    <select value={regSeason} onChange={(e) => { setRegSeason(e.target.value); setActiveListing(""); }} title="Filter listings by season" className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 pl-3 pr-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
-                      <option value="">📅 All seasons</option>
+                    <select value={regSeason} onChange={(e) => { setRegSeason(e.target.value); setActiveListing(""); }} title={t("registers.filterBySeason")} className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 pl-3 pr-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
+                      <option value="">📅 {t("registers.allSeasons")}</option>
                       {seasons.map((s) => <option key={s.id} value={s.id}>📅 {s.name}</option>)}
                     </select>
                     <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-white/70">▾</span>
@@ -996,29 +1009,29 @@ export function RegistersApp() {
                   : <span className={GHOST}>🎟 {activeName || "—"}</span>}
                 {activeSeason && <span className="rounded-lg border border-white/25 bg-white/10 px-3 py-1.5 text-[12px] font-bold text-white/90">📅 {activeSeason}</span>}
                 <div className="flex items-center gap-0.5 rounded-lg border border-white/30 bg-white/10 px-1 py-0.5">
-                  <button type="button" onClick={() => goDay(-1)} aria-label="Previous day" className="flex h-7 w-7 items-center justify-center rounded-md text-[17px] font-extrabold leading-none text-white hover:bg-white/20">‹</button>
-                  <span className="min-w-[168px] px-1 text-center text-[12.5px] font-bold text-white" style={{ fontVariantNumeric: "tabular-nums" }}>{rel(date)} · {dow(date)}{dayCounts(date).booked ? ` — ${dayCounts(date).booked} booked` : ""}</span>
-                  <button type="button" onClick={() => goDay(1)} aria-label="Next day" className="flex h-7 w-7 items-center justify-center rounded-md text-[17px] font-extrabold leading-none text-white hover:bg-white/20">›</button>
-                  <label className="relative flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-[13px] hover:bg-white/20" title="Pick any date">📅
+                  <button type="button" onClick={() => goDay(-1)} aria-label={t("registers.previousDay")} className="flex h-7 w-7 items-center justify-center rounded-md text-[17px] font-extrabold leading-none text-white hover:bg-white/20">‹</button>
+                  <span className="min-w-[168px] px-1 text-center text-[12.5px] font-bold text-white" style={{ fontVariantNumeric: "tabular-nums" }}>{rel(date)} · {dow(date)}{dayCounts(date).booked ? t("registers.bookedSuffix", { n: dayCounts(date).booked }) : ""}</span>
+                  <button type="button" onClick={() => goDay(1)} aria-label={t("registers.nextDay")} className="flex h-7 w-7 items-center justify-center rounded-md text-[17px] font-extrabold leading-none text-white hover:bg-white/20">›</button>
+                  <label className="relative flex h-7 w-7 cursor-pointer items-center justify-center rounded-md text-[13px] hover:bg-white/20" title={t("registers.pickAnyDate")}>📅
                     <input type="date" value={date} onChange={(e) => pickDate(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" />
                   </label>
                 </div>
                 <div className="ml-auto flex flex-wrap items-center gap-2">
                   <TourLauncher view="registers" compact />
                   <SettingsLink />
-                  <button type="button" onClick={() => setDlOpen(true)} className={GHOST}>⬇ Download</button>
-                  <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? "Collapse header" : "Expand header"} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+                  <button type="button" onClick={() => setDlOpen(true)} className={GHOST}>⬇ {t("registers.download")}</button>
+                  <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? t("registers.collapseHeader") : t("registers.expandHeader")} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? t("registers.hideWord") : t("registers.showWord")}</button>
                 </div>
               </div>
 
               {/* Collapsed: a slim one-line summary so the numbers stay visible. */}
               {!heroOpen && (
                 <button type="button" onClick={() => setHeroOpen(true)} className="mt-3 flex w-full flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-white/15 bg-white/[0.06] px-3 py-2 text-left hover:bg-white/10">
-                  <span className="text-[15px] font-extrabold tracking-[-0.02em]" style={{ fontVariantNumeric: "tabular-nums" }}>{agg.present} of {agg.expected} <span className="font-semibold text-white/55">signed in</span></span>
-                  <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#ffb020" }} />{agg.notArrived} not arrived</span>
-                  <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#ff6b81" }} />{agg.absent} absent</span>
-                  {agg.collectedCount > 0 && <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#3ddc84" }} />{agg.collectedCount} collected</span>}
-                  <span className="ml-auto text-[11.5px] font-bold text-white/60">▾ Expand</span>
+                  <span className="text-[15px] font-extrabold tracking-[-0.02em]" style={{ fontVariantNumeric: "tabular-nums" }}>{agg.present} {t("registers.ofWord")} {agg.expected} <span className="font-semibold text-white/55">{t("registers.signedInLower")}</span></span>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#ffb020" }} />{agg.notArrived} {t("registers.notArrivedLower")}</span>
+                  <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#ff6b81" }} />{agg.absent} {t("registers.absentLower")}</span>
+                  {agg.collectedCount > 0 && <span className="inline-flex items-center gap-1.5 text-[12px]"><span className="h-2 w-2 rounded-full" style={{ background: "#3ddc84" }} />{agg.collectedCount} {t("registers.collectedLower")}</span>}
+                  <span className="ml-auto text-[11.5px] font-bold text-white/60">▾ {t("registers.expand")}</span>
                 </button>
               )}
 
@@ -1027,16 +1040,16 @@ export function RegistersApp() {
               <div className="mt-5 flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
                 <div className="min-w-0">
                   <div className="text-[10.5px] font-bold uppercase tracking-[0.16em] text-white/60">
-                    {dayLabel(date)} · {daySessions[0]?.blockName ?? "No session"}
+                    {dayLabel(date)} · {daySessions[0]?.blockName ?? t("registers.noSession")}
                   </div>
                   <div className="mt-1.5 text-[34px] font-extrabold leading-none tracking-[-0.03em]" style={{ fontFamily: "var(--ff-display)", fontVariantNumeric: "tabular-nums" }}>
-                    {agg.present} of {agg.expected} <span className="font-semibold text-white/55">signed in</span>
+                    {agg.present} {t("registers.ofWord")} {agg.expected} <span className="font-semibold text-white/55">{t("registers.signedInLower")}</span>
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-[12.5px]">
-                  <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#ffb020" }} />{agg.notArrived} not arrived</span>
-                  <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#ff6b81" }} />{agg.absent} absent</span>
-                  {agg.collectedCount > 0 && <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#3ddc84" }} />{agg.collectedCount} collected</span>}
+                  <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#ffb020" }} />{agg.notArrived} {t("registers.notArrivedLower")}</span>
+                  <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#ff6b81" }} />{agg.absent} {t("registers.absentLower")}</span>
+                  {agg.collectedCount > 0 && <span className="inline-flex items-center gap-2"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#3ddc84" }} />{agg.collectedCount} {t("registers.collectedLower")}</span>}
                 </div>
               </div>
 
@@ -1046,58 +1059,58 @@ export function RegistersApp() {
                 <div className="mt-5 flex flex-wrap items-center gap-2 border-t border-white/15 pt-4">
                   {passOpts.length > 1 && (
                     <span className="relative inline-flex items-center">
-                      <select value={pass} onChange={(e) => setPass(e.target.value)} aria-label="Filter by drop-off or collection" className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 pl-3 pr-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
-                        <option value="">🕒 All sessions</option>
+                      <select value={pass} onChange={(e) => setPass(e.target.value)} aria-label={t("registers.filterDropoffCollection")} className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 pl-3 pr-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
+                        <option value="">🕒 {t("registers.allSessions")}</option>
                         {passOpts.map((o) => <option key={o.v} value={o.v}>🕒 {o.label}</option>)}
                       </select>
                       <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-white/70">▾</span>
                     </span>
                   )}
-                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔎 Search this register…" className="w-[210px] rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-[12.5px] text-white outline-none placeholder:text-white/55 focus:border-white/70" />
+                  <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("registers.searchThisRegister")} className="w-[210px] rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-[12.5px] text-white outline-none placeholder:text-white/55 focus:border-white/70" />
 
-                  <Menu label="⚗ Filter" on={!!flag || addonsOnly} badge={(flag ? 1 : 0) + (addonsOnly ? 1 : 0)} width={264} dark>
+                  <Menu label={`⚗ ${t("registers.filter")}`} on={!!flag || addonsOnly} badge={(flag ? 1 : 0) + (addonsOnly ? 1 : 0)} width={264} dark>
                     {(close) => (<>
-                      <div className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Show only children with…</div>
+                      <div className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">{t("registers.showOnlyChildrenWith")}</div>
                       {FLAGS.filter((f) => f.k !== "nappy" || flagCounts.nappy).map((f) => (
                         <MenuItem key={f.k} on={flag === f.k} dot={f.fg} hint={flagCounts[f.k as keyof typeof flagCounts] || 0}
-                          onClick={() => { setFlag(flag === f.k ? "" : (f.k as FlagKind)); close(); }}>{f.label}</MenuItem>
+                          onClick={() => { setFlag(flag === f.k ? "" : (f.k as FlagKind)); close(); }}>{f.k === "allergy" ? t("registers.allergy") : f.k === "medical" ? t("registers.medical") : f.k === "dietary" ? t("registers.dietary") : f.k === "send" ? t("registers.sendNeeds") : `🚼 ${t("registers.notToiletTrained")}`}</MenuItem>
                       ))}
                       {flat.some((r) => (r.a.addons?.length ?? 0) > 0) && (<>
                         <div className="my-1 h-px bg-[var(--line)]" />
                         <MenuItem on={addonsOnly} hint={flat.filter((r) => (r.a.addons?.length ?? 0) > 0).length}
-                          onClick={() => setAddonsOnly((v) => !v)}>🧩 Add-ons only</MenuItem>
+                          onClick={() => setAddonsOnly((v) => !v)}>🧩 {t("registers.addonsOnly")}</MenuItem>
                       </>)}
                       {(flag || addonsOnly) && (<>
                         <div className="my-1 h-px bg-[var(--line)]" />
-                        <button type="button" onClick={() => { setFlag(""); setAddonsOnly(false); close(); }} className="w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] font-bold text-[#c02636] hover:bg-[var(--panel)]">Clear filters</button>
+                        <button type="button" onClick={() => { setFlag(""); setAddonsOnly(false); close(); }} className="w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] font-bold text-[#c02636] hover:bg-[var(--panel)]">{t("registers.clearFilters")}</button>
                       </>)}
-                      <p className="px-2.5 pb-1 pt-1.5 text-[11px] leading-snug text-[var(--ink-3)]">Picking one shows those children with the note typed out.</p>
+                      <p className="px-2.5 pb-1 pt-1.5 text-[11px] leading-snug text-[var(--ink-3)]">{t("registers.pickingOneShows")}</p>
                     </>)}
                   </Menu>
 
-                  <Menu label={`↕ ${sort === "start" ? "Earliest start" : sort === "old" ? "Age · oldest" : "Age · youngest"}`} width={220} dark>
+                  <Menu label={`↕ ${sort === "start" ? t("registers.earliestStart") : sort === "old" ? t("registers.ageOldest") : t("registers.ageYoungest")}`} width={220} dark>
                     {(close) => (<>
-                      {([["young", "Age · youngest first"], ["old", "Age · oldest first"], ["start", "Earliest start"]] as const).map(([k, label]) => (
-                        <MenuItem key={k} on={sort === k} onClick={() => { setSort(k); close(); }}>{label}</MenuItem>
+                      {([["young", t("registers.ageYoungestFirst")], ["old", t("registers.ageOldestFirst")], ["start", t("registers.earliestStart")]] as const).map(([k, label]) => (
+                        <MenuItem key={k} on={sort === k} onClick={() => { setSort(k as "young" | "old" | "start"); close(); }}>{label}</MenuItem>
                       ))}
                     </>)}
                   </Menu>
 
-                  <Menu label="👁 Show" on={showConsent || showLikes} badge={(showConsent ? 1 : 0) + (showLikes ? 1 : 0)} width={240} dark>
+                  <Menu label={`👁 ${t("registers.show")}`} on={showConsent || showLikes} badge={(showConsent ? 1 : 0) + (showLikes ? 1 : 0)} width={240} dark>
                     {() => (<>
-                      <MenuItem on={showConsent} onClick={() => setShowConsent((v) => !v)}>📷 Photo consent</MenuItem>
-                      {likesOn && <MenuItem on={showLikes} onClick={() => setShowLikes((v) => !v)}>😊 Likes &amp; dislikes</MenuItem>}
+                      <MenuItem on={showConsent} onClick={() => setShowConsent((v) => !v)}>📷 {t("registers.photoConsent")}</MenuItem>
+                      {likesOn && <MenuItem on={showLikes} onClick={() => setShowLikes((v) => !v)}>😊 {t("registers.likesDislikes")}</MenuItem>}
                     </>)}
                   </Menu>
 
                   <div className="ml-auto flex flex-wrap items-center gap-2">
                     <span className="inline-flex overflow-hidden rounded-lg border border-white/30">
-                      {([["list", "☰ List"], ["gallery", "▦ Photos"]] as const).map(([k, label]) => (
-                        <button key={k} type="button" onClick={() => setView(k)} className="px-3 py-1.5 text-[12.5px] font-bold" style={view === k ? { background: "#fff", color: AURORA_BG } : { background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.9)" }}>{label}</button>
+                      {([["list", `☰ ${t("registers.listView")}`], ["gallery", `▦ ${t("registers.photosView")}`]] as const).map(([k, label]) => (
+                        <button key={k} type="button" onClick={() => setView(k as "list" | "gallery")} className="px-3 py-1.5 text-[12.5px] font-bold" style={view === k ? { background: "#fff", color: AURORA_BG } : { background: "rgba(255,255,255,.08)", color: "rgba(255,255,255,.9)" }}>{label}</button>
                       ))}
                     </span>
-                    <button type="button" onClick={() => setRollCall((v) => !v)} className={rollCall ? GHOST_ON : GHOST}>🚨 Roll call</button>
-                    <button type="button" onClick={() => messageAttending()} disabled={attendingEmails.length === 0} title={attendingEmails.length ? `${attendingEmails.length} famil${attendingEmails.length === 1 ? "y" : "ies"} — a parent is messaged once` : ""} className="rounded-lg bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#0f2452] transition hover:bg-white/90 disabled:opacity-40">Message all attending{attendingKids ? ` (${attendingKids})` : ""}</button>
+                    <button type="button" onClick={() => setRollCall((v) => !v)} className={rollCall ? GHOST_ON : GHOST}>🚨 {t("registers.rollCall")}</button>
+                    <button type="button" onClick={() => messageAttending()} disabled={attendingEmails.length === 0} title={attendingEmails.length ? (attendingEmails.length === 1 ? t("registers.oneFamilyMessagedOnce") : t("registers.manyFamiliesMessagedOnce", { n: attendingEmails.length })) : ""} className="rounded-lg bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#0f2452] transition hover:bg-white/90 disabled:opacity-40">{t("registers.messageAllAttending")}{attendingKids ? ` (${attendingKids})` : ""}</button>
                   </div>
                 </div>
               )}
@@ -1105,10 +1118,10 @@ export function RegistersApp() {
             </div>
           </div>
 
-          {pinRequired && <div className="mb-3 rounded-2xl border border-[#cfe0f7] bg-[#f5f9ff] px-4 py-3 text-[12.5px] text-[var(--ink-2)]"><span className="mr-1">🔒</span><b>Collection PIN required.</b> Ask whoever collects for the family&rsquo;s 4-digit PIN and check it matches before releasing a child.</div>}
+          {pinRequired && <div className="mb-3 rounded-2xl border border-[#cfe0f7] bg-[#f5f9ff] px-4 py-3 text-[12.5px] text-[var(--ink-2)]"><span className="mr-1">🔒</span><b>{t("registers.collectionPinRequired")}</b> {t("registers.collectionPinAsk")}</div>}
 
           {daySessions.length === 0 ? (
-            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">{days[date] === undefined ? `Loading ${dayLabel(date)}…` : `Nothing runs for ${activeName} on ${dayLabel(date)}.`}</div>
+            <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">{days[date] === undefined ? t("registers.loadingDay", { day: dayLabel(date) }) : t("registers.nothingRunsForListing", { listing: activeName, day: dayLabel(date) })}</div>
           ) : (
             <>
               {rollCall && <RollCallDialog expected={agg.expected} present={agg.present} presentAll={presentAll} heads={allHeads} readOnly={readOnly} onLog={(n) => logHead(passBlocks[0], n)} onClose={() => setRollCall(false)} />}
@@ -1119,7 +1132,7 @@ export function RegistersApp() {
                     roll-call card. Absent entirely until something is logged. */}
                 {passBlocks[0] && lastHead && (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[var(--line)] bg-[var(--panel)]/40 px-4 py-2 text-[12px]">
-                    <button type="button" onClick={() => setRollCall(true)} className="font-semibold underline" style={{ color: lastHead.n >= agg.present ? GREEN : AMBER }}>Head count — last {lastHead.n}/{agg.expected} · {timeOf(lastHead.at)}</button>
+                    <button type="button" onClick={() => setRollCall(true)} className="font-semibold underline" style={{ color: lastHead.n >= agg.present ? GREEN : AMBER }}>{t("registers.headCountLast", { n: lastHead.n, expected: agg.expected, time: timeOf(lastHead.at) })}</button>
                   </div>
                 )}
                 {/* Selection / bulk-action bar */}
@@ -1127,27 +1140,27 @@ export function RegistersApp() {
                   <div className="flex flex-wrap items-center gap-2 border-b border-[#dbe6fb] bg-[#f2f7ff] px-4 py-2">
                     <label className="flex cursor-pointer items-center gap-2 text-[12px] font-bold text-[var(--ink-2)]">
                       <input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 accent-[#1d3a8f]" />
-                      {selected.size > 0 ? `${selected.size} selected` : "Select all"}
+                      {selected.size > 0 ? t("registers.nSelected", { n: selected.size }) : t("registers.selectAll")}
                     </label>
                     {selected.size > 0 ? (
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Mark</span>
-                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("in")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: GREEN, background: "#e7f6ee", color: GREEN }}>{bulkBusy === "in" ? "…" : "In"}</button>
-                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("collect")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: BLUE, background: "#eef4fd", color: BLUE }}>{bulkBusy === "collect" ? "…" : "Collect"}</button>
-                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("absent")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: RED, background: "#fde2e4", color: RED }}>{bulkBusy === "absent" ? "…" : "Absent"}</button>
-                        <button type="button" onClick={() => setSelected(new Set())} className="text-[11.5px] font-bold text-[var(--ink-3)] underline">clear</button>
+                        <span className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("registers.mark")}</span>
+                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("in")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: GREEN, background: "#e7f6ee", color: GREEN }}>{bulkBusy === "in" ? "…" : t("registers.inBtn")}</button>
+                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("collect")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: BLUE, background: "#eef4fd", color: BLUE }}>{bulkBusy === "collect" ? "…" : t("registers.collectBtn")}</button>
+                        <button type="button" disabled={!!bulkBusy} onClick={() => bulkMark("absent")} className="rounded-lg border px-2.5 py-1 text-[12px] font-extrabold disabled:opacity-40" style={{ borderColor: RED, background: "#fde2e4", color: RED }}>{bulkBusy === "absent" ? "…" : t("registers.absentBtn")}</button>
+                        <button type="button" onClick={() => setSelected(new Set())} className="text-[11.5px] font-bold text-[var(--ink-3)] underline">{t("registers.clearLower")}</button>
                       </div>
-                    ) : notInRefs.length > 0 && <button type="button" disabled={!!bulkBusy} onClick={() => signAllIn(notInRefs)} className="rounded-lg border border-[#bfead0] bg-[#e7f6ee] px-2.5 py-1 text-[12px] font-extrabold text-[#0f9d58] disabled:opacity-40">{bulkBusy === "all" ? "Working…" : `✓ Sign all in (${notInRefs.length})`}</button>}
+                    ) : notInRefs.length > 0 && <button type="button" disabled={!!bulkBusy} onClick={() => signAllIn(notInRefs)} className="rounded-lg border border-[#bfead0] bg-[#e7f6ee] px-2.5 py-1 text-[12px] font-extrabold text-[#0f9d58] disabled:opacity-40">{bulkBusy === "all" ? t("registers.working") : `✓ ${t("registers.signAllIn", { n: notInRefs.length })}`}</button>}
                   </div>
                 )}
                 {view === "gallery" ? (
                   <div className="p-4">
                     <div className="mb-3.5 flex flex-wrap gap-1.5">
-                      {([["all", "All", galCounts.all], ["present", "Checked in", galCounts.present], ["notArrived", "Not in yet", galCounts.notArrived], ["absent", "Absent", galCounts.absent], ["collected", "Collected", galCounts.collected]] as const).map(([k, label, n]) => (
-                        <button key={k} type="button" onClick={() => setGalFilter(k)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={sel(galFilter === k)}>{label} · {n}</button>
+                      {([["all", t("registers.galAll"), galCounts.all], ["present", t("registers.galCheckedIn"), galCounts.present], ["notArrived", t("registers.galNotInYet"), galCounts.notArrived], ["absent", t("registers.galAbsent"), galCounts.absent], ["collected", t("registers.galCollected"), galCounts.collected]] as const).map(([k, label, n]) => (
+                        <button key={k} type="button" onClick={() => setGalFilter(k as "all" | "present" | "notArrived" | "absent" | "collected")} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={sel(galFilter === k)}>{label} · {n}</button>
                       ))}
                     </div>
-                    {galRows.length === 0 ? <div className="px-4 py-8 text-center text-[12.5px] text-[var(--ink-3)]">No children match.</div> : (
+                    {galRows.length === 0 ? <div className="px-4 py-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("registers.noChildrenMatch")}</div> : (
                       <div className="grid grid-cols-3 gap-x-2 gap-y-4 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8">
                         {galRows.map(({ a, blockId, start, end }) => <GalTile key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} busy={busyRef === a.ref} showConsent={showConsent} onMark={readOnly ? undefined : (action) => mark(blockId, a.ref, action)} onOpen={() => setOpenKid(a)} />)}
                       </div>
@@ -1155,9 +1168,9 @@ export function RegistersApp() {
                   </div>
                 ) : (<>
                 <div className="hidden grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)] gap-3 border-b-2 border-[#dbe6fb] bg-[#eef4fd] px-4 py-2.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#1d3a8f] md:grid">
-                  <span>Child</span><span>Alerts</span><span>Attendance</span><span className="md:text-right">Quick actions</span>
+                  <span>{t("registers.colChild")}</span><span>{t("registers.colAlerts")}</span><span>{t("registers.colAttendance")}</span><span className="md:text-right">{t("registers.colQuickActions")}</span>
                 </div>
-                {flatShown.length === 0 ? <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No children match.</div> : flatShown.map(({ a, blockId, start, end }) => (
+                {flatShown.length === 0 ? <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("registers.noChildrenMatch")}</div> : flatShown.map(({ a, blockId, start, end }) => (
                   <Row key={`${blockId}-${a.ref}`} a={a} start={start} end={end} showTimes={showTimes} busy={busyRef === a.ref || readOnly} age={ageOf(a)} flag={flag} acts={acts} note={notes[noteKey(a.ref)]} showConsent={showConsent} selected={selected.has(a.ref)} showLikes={showLikes} late={visibleLate(a, start, end)} nudgedAt={nudges[`${date}|${a.ref}`]} nappy={needsNappies(questions, a.child?.answers)} nappyLog={nappies[`${date}|${a.ref}`] ?? []} readOnlyRow={readOnly} onLogNappy={() => logNappy(a.ref, date, meName)} onNudge={() => { const l = visibleLate(a, start, end); if (l) nudge(a, l); }} onSelect={() => toggleSel(a.ref)} onOpen={() => setOpenKid(a)} onOpenNote={() => setNoteFor({ ref: a.ref, name: a.children[0]?.name ?? "" })} onMark={(action) => mark(blockId, a.ref, action)} onMsg={() => messageOne(a)} onMed={() => medFor(a)} onAccident={() => accidentFor(a)} onIncident={() => incidentFor(a)} onMoments={() => momentsFor(a)} onEmail={() => emailFor(a)} onWhatsapp={() => whatsappFor(a)} />
                 ))}
                 </>)}
@@ -1186,6 +1199,7 @@ export function RegistersApp() {
 // log more heads than the number of children in the register for the day
 // (`expected`) — a miscount safeguard.
 function RollCallDialog({ expected, present, presentAll, heads, readOnly, onLog, onClose }: { expected: number; present: number; presentAll: Attendee[]; heads: Head[]; readOnly: boolean; onLog: (n: number) => Promise<void>; onClose: () => void }) {
+  const t = useT();
   const [n, setN] = useState(String(present));
   const [busy, setBusy] = useState(false);
   const [open, setOpen] = useState(false);
@@ -1197,40 +1211,40 @@ function RollCallDialog({ expected, present, presentAll, heads, readOnly, onLog,
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[560px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center justify-between gap-2 bg-[#fdebec] px-4 py-2.5">
-          <span className="text-[13px] font-extrabold text-[#c02636]">🚨 Roll call — {present} on site now</span>
-          <button type="button" onClick={onClose} aria-label="Close roll call" className="text-[18px] font-extrabold leading-none text-[#c02636]">×</button>
+          <span className="text-[13px] font-extrabold text-[#c02636]">🚨 {t("registers.rollCallOnSite", { n: present })}</span>
+          <button type="button" onClick={onClose} aria-label={t("registers.closeRollCall")} className="text-[18px] font-extrabold leading-none text-[#c02636]">×</button>
         </div>
         <div className="p-4">
           <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)]/40 px-3 py-2">
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[12px]">
-              <span className="font-extrabold">Head count</span>
+              <span className="font-extrabold">{t("registers.headCount")}</span>
               {!readOnly && (
                 <span className="flex items-center gap-1.5">
                   <input type="number" min={0} max={expected} value={n} onChange={(e) => setN(e.target.value)} className="w-14 rounded-md border bg-[var(--surface)] px-2 py-1 text-[12px]" style={{ borderColor: over ? RED : "var(--line)" }} />
-                  <Button sm variant="solid" disabled={busy || !canLog} onClick={async () => { setBusy(true); await onLog(val); setBusy(false); }}>{busy ? "…" : "Log"}</Button>
+                  <Button sm variant="solid" disabled={busy || !canLog} onClick={async () => { setBusy(true); await onLog(val); setBusy(false); }}>{busy ? "…" : t("registers.log")}</Button>
                 </span>
               )}
-              {over ? <span className="font-semibold text-[#c02636]">Only {expected} on the register — can&rsquo;t log more</span>
-                : <span className="text-[11px] text-[var(--ink-3)]">{heads.length} logged · max {expected}</span>}
-              {last && <span className="font-semibold" style={{ color: last.n >= present ? GREEN : AMBER }}>Last {last.n}/{expected} · {timeOf(last.at)}</span>}
-              <button type="button" onClick={() => setOpen((v) => !v)} className="text-[11px] font-bold text-[#1d3a8f] underline">{open ? "hide log" : `records (${heads.length})`}</button>
+              {over ? <span className="font-semibold text-[#c02636]">{t("registers.onlyNCantLogMore", { expected })}</span>
+                : <span className="text-[11px] text-[var(--ink-3)]">{t("registers.nLoggedMax", { n: heads.length, expected })}</span>}
+              {last && <span className="font-semibold" style={{ color: last.n >= present ? GREEN : AMBER }}>{t("registers.lastNOfExpected", { n: last.n, expected, time: timeOf(last.at) })}</span>}
+              <button type="button" onClick={() => setOpen((v) => !v)} className="text-[11px] font-bold text-[#1d3a8f] underline">{open ? t("registers.hideLog") : t("registers.recordsN", { n: heads.length })}</button>
             </div>
             {open && (
               <div className="mt-2 border-t border-[var(--line)] pt-2">
-                {heads.length === 0 ? <div className="text-[11.5px] text-[var(--ink-3)]">No head counts logged yet today.</div>
+                {heads.length === 0 ? <div className="text-[11.5px] text-[var(--ink-3)]">{t("registers.noHeadCountsYet")}</div>
                   : <ol className="space-y-1">{heads.slice().reverse().map((h, i) => (
                       <li key={`${h.at}-${i}`} className="flex items-center gap-2 text-[11.5px]">
                         <span className="inline-flex h-5 min-w-[38px] items-center justify-center rounded-md px-1.5 font-extrabold" style={{ background: h.n >= present ? "#e7f6ee" : "#fff4e5", color: h.n >= present ? GREEN : AMBER }}>{h.n}/{expected}</span>
                         <span className="font-semibold">{timeOf(h.at)}</span>
-                        <span className="text-[var(--ink-3)]">· by {h.by}</span>
-                        {h.n < present && <span className="text-[#c02636]">· {present - h.n} short of {present} in</span>}
+                        <span className="text-[var(--ink-3)]">{t("registers.byNameDot", { name: h.by })}</span>
+                        {h.n < present && <span className="text-[#c02636]">{t("registers.nShortOfIn", { short: present - h.n, present })}</span>}
                       </li>
                     ))}</ol>}
               </div>
             )}
           </div>
-          <div className="mb-2 text-[11.5px] font-semibold text-[#c02636]">Count heads against this list.</div>
-          {presentAll.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nobody is signed in right now.</div> : <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">{presentAll.map((a) => <div key={a.ref} className="flex items-center gap-2 text-[12.5px]"><span className="font-bold">{a.children.map((c) => c.name).join(", ")}</span>{a.child?.allergies && <span className="text-[10.5px] font-bold text-[#c02636]">⚠</span>}</div>)}</div>}
+          <div className="mb-2 text-[11.5px] font-semibold text-[#c02636]">{t("registers.countHeadsAgainst")}</div>
+          {presentAll.length === 0 ? <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">{t("registers.nobodySignedIn")}</div> : <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">{presentAll.map((a) => <div key={a.ref} className="flex items-center gap-2 text-[12.5px]"><span className="font-bold">{a.children.map((c) => c.name).join(", ")}</span>{a.child?.allergies && <span className="text-[10.5px] font-bold text-[#c02636]">⚠</span>}</div>)}</div>}
         </div>
       </div>
     </div>
@@ -1258,6 +1272,7 @@ function QuickLink({ label, tint, onClick }: { label: string; tint: string; onCl
 // their place. Sends straight to the parent's thread; the text stays editable
 // because the right wording depends on the family.
 function NudgeDialog({ kid, late, email, parentName, refId, subject: subject0, body: body0, others, from, onSent, onClose }: { kid: string; late: Late; email: string; parentName: string; refId: string; subject: string; body: string; others: { a: Attendee; late: Late }[]; from?: string; onSent: (refs: string[]) => void; onClose: () => void }) {
+  const t = useT();
   const [subject, setSubject] = useState(subject0);
   const [body, setBody] = useState(body0);
   const [all, setAll] = useState(false);
@@ -1307,31 +1322,31 @@ function NudgeDialog({ kid, late, email, parentName, refId, subject: subject0, b
         onSent(done); setSent(groups.length);
       }
       setTimeout(onClose, 1100);
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn't send — try again."); }
+    } catch (e) { setErr(e instanceof Error ? e.message : t("registers.couldntSend")); }
     finally { setBusy(false); }
   };
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
       <div className="max-h-[86vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-white shadow-[0_30px_70px_-20px_rgba(0,0,0,.5)]" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 bg-[#fdecec] px-4 py-3 text-[#c02636]">
-          <span className="text-[14px] font-extrabold">🔔 Nudge {parentName || "parent"}</span>
-          <span className="text-[11.5px] font-semibold text-[#c02636]/75">· {kid} · {late.kind === "collect" ? "collection" : "arrival"} {lateFor(late.mins)} late</span>
-          <button type="button" onClick={onClose} aria-label="Close" className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#c02636] hover:bg-white/60">✕</button>
+          <span className="text-[14px] font-extrabold">🔔 {t("registers.nudgeParent", { parent: parentName || t("registers.parentWord") })}</span>
+          <span className="text-[11.5px] font-semibold text-[#c02636]/75">· {kid} · {late.kind === "collect" ? t("registers.collectionLower") : t("registers.arrivalLower")} {t("registers.lateSuffix", { time: lateFor(late.mins) })}</span>
+          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#c02636] hover:bg-white/60">✕</button>
         </div>
         <div className="p-4">
           {others.length > 1 && (
             <div className="mb-3 flex flex-wrap items-center gap-1.5">
-              <button type="button" onClick={() => setAll(false)} className="rounded-lg border px-2.5 py-1 text-[11.5px] font-bold" style={sel(!all)}>Just this family</button>
-              <button type="button" onClick={() => setAll(true)} className="rounded-lg border px-2.5 py-1 text-[11.5px] font-bold" style={sel(all)}>All late families ({allGroups.length})</button>
+              <button type="button" onClick={() => setAll(false)} className="rounded-lg border px-2.5 py-1 text-[11.5px] font-bold" style={sel(!all)}>{t("registers.justThisFamily")}</button>
+              <button type="button" onClick={() => setAll(true)} className="rounded-lg border px-2.5 py-1 text-[11.5px] font-bold" style={sel(all)}>{t("registers.allLateFamilies", { n: allGroups.length })}</button>
             </div>
           )}
           {all ? (
             <>
               <div className="mb-2 flex items-center gap-2 text-[11.5px] text-[var(--ink-3)]">
-                <span>One message per family, timed to <b className="text-[var(--ink-2)]">their</b> child:</span>
+                <span>{t("registers.oneMessagePerFamilyLead")}<b className="text-[var(--ink-2)]">{t("registers.theirWord")}</b>{t("registers.oneMessagePerFamilyTail")}</span>
                 <span className="ml-auto flex items-center gap-2">
-                  <button type="button" onClick={() => setPicked(new Set(others.map((o) => o.a.ref)))} className="font-bold text-[#1d3a8f] underline">all</button>
-                  <button type="button" onClick={() => setPicked(new Set())} className="font-bold text-[var(--ink-3)] underline">none</button>
+                  <button type="button" onClick={() => setPicked(new Set(others.map((o) => o.a.ref)))} className="font-bold text-[#1d3a8f] underline">{t("registers.allLower")}</button>
+                  <button type="button" onClick={() => setPicked(new Set())} className="font-bold text-[var(--ink-3)] underline">{t("registers.noneLower")}</button>
                 </span>
               </div>
               <div className="max-h-[220px] overflow-y-auto rounded-lg border border-[var(--line)]">
@@ -1343,34 +1358,34 @@ function NudgeDialog({ kid, late, email, parentName, refId, subject: subject0, b
                       <label className="flex cursor-pointer items-center gap-2 font-bold text-[var(--ink-2)]">
                         <input type="checkbox" checked={on > 0} ref={(el) => { if (el) el.indeterminate = on > 0 && on < refs.length; }} onChange={() => toggleFamily(refs)} className="h-3.5 w-3.5 accent-[#c02636]" />
                         {g.parentName || g.email}
-                        {g.items.length > 1 && <span className="text-[10.5px] font-extrabold text-[#1d3a8f]">· {on === refs.length ? `${refs.length} children, one message` : `${on}/${refs.length} selected`}</span>}
+                        {g.items.length > 1 && <span className="text-[10.5px] font-extrabold text-[#1d3a8f]">· {on === refs.length ? t("registers.childrenOneMessage", { n: refs.length }) : t("registers.nOfMSelected", { on, total: refs.length })}</span>}
                       </label>
                       {g.items.map((i) => (
                         <label key={i.a.ref} className="flex cursor-pointer items-center gap-2 pl-5">
                           <input type="checkbox" checked={picked.has(i.a.ref)} onChange={() => toggle(i.a.ref)} className="h-3.5 w-3.5 accent-[#c02636]" />
                           <span className="text-[var(--ink-3)]">{i.a.children[0]?.name ?? "—"}</span>
-                          <span className="ml-auto font-extrabold text-[#c02636]">{i.late.kind === "collect" ? "collection" : "arrival"} {lateFor(i.late.mins)} late</span>
+                          <span className="ml-auto font-extrabold text-[#c02636]">{i.late.kind === "collect" ? t("registers.collectionLower") : t("registers.arrivalLower")} {t("registers.lateSuffix", { time: lateFor(i.late.mins) })}</span>
                         </label>
                       ))}
                     </div>
                   );
                 })}
               </div>
-              <p className="mt-2 text-[11px] text-[var(--ink-3)]">Wording is the standard reminder above, with each child&rsquo;s own name and time filled in.</p>
+              <p className="mt-2 text-[11px] text-[var(--ink-3)]">{t("registers.wordingStandardReminder")}</p>
             </>
           ) : (
             <>
-              <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">To <b className="text-[var(--ink-2)]">{email}</b></div>
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Subject" className="mb-2 w-full rounded-lg border border-[var(--line)] px-3 py-2 text-[12.5px] font-bold outline-none focus:border-[#c02636]" />
+              <div className="mb-2 text-[11.5px] text-[var(--ink-3)]">{t("registers.toWord")} <b className="text-[var(--ink-2)]">{email}</b></div>
+              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t("registers.subject")} className="mb-2 w-full rounded-lg border border-[var(--line)] px-3 py-2 text-[12.5px] font-bold outline-none focus:border-[#c02636]" />
               <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={9} className="w-full resize-y rounded-lg border border-[var(--line)] px-3 py-2 text-[13px] leading-relaxed outline-none focus:border-[#c02636]" />
             </>
           )}
           {err && <div className="mt-2 rounded-lg bg-[#fde2e4] px-3 py-2 text-[12px] font-semibold text-[#c02636]">{err}</div>}
           <div className="mt-3 flex items-center gap-3">
-            <button type="button" disabled={busy || !!sent || (all ? groups.length === 0 : !body.trim())} onClick={send} className="rounded-full bg-[#c02636] px-5 py-2 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{sent ? `Sent ✓ ${sent > 1 ? `(${sent})` : ""}` : busy ? "Sending…" : all ? `Send ${groups.length} ${groups.length === 1 ? "nudge" : "nudges"}` : "Send nudge"}</button>
-            <button type="button" onClick={onClose} className="text-[12px] font-bold text-[var(--ink-3)]">Cancel</button>
+            <button type="button" disabled={busy || !!sent || (all ? groups.length === 0 : !body.trim())} onClick={send} className="rounded-full bg-[#c02636] px-5 py-2 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{sent ? `${t("registers.sentTick")} ${sent > 1 ? `(${sent})` : ""}` : busy ? t("registers.sending") : all ? (groups.length === 1 ? t("registers.sendOneNudge") : t("registers.sendNNudges", { n: groups.length })) : t("registers.sendNudge")}</button>
+            <button type="button" onClick={onClose} className="text-[12px] font-bold text-[var(--ink-3)]">{t("registers.cancel")}</button>
           </div>
-          <p className="mt-2 text-[11px] text-[var(--ink-3)]">Goes to your existing message thread with {all ? "each family" : "this family"} — they&rsquo;ll see it in their app.</p>
+          <p className="mt-2 text-[11px] text-[var(--ink-3)]">{all ? t("registers.goesToThreadEach") : t("registers.goesToThreadThis")}</p>
         </div>
       </div>
     </div>
@@ -1378,36 +1393,38 @@ function NudgeDialog({ kid, late, email, parentName, refId, subject: subject0, b
 }
 // Collapses the row's quick actions behind one funky pill — tap to reveal.
 function QuickActionsMenu({ acts, onMsg, onMed, onAccident, onIncident, onMoments, onEmail, onWhatsapp }: { acts: { firstAid?: boolean; incident?: boolean; medication?: boolean; message?: boolean; moments?: boolean; email?: boolean; whatsapp?: boolean }; onMsg: () => void; onMed: () => void; onAccident: () => void; onIncident: () => void; onMoments: () => void; onEmail: () => void; onWhatsapp: () => void }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const links = [
-    acts.firstAid !== false && <QuickLink key="fa" label="First aid" tint="#be123c" onClick={onAccident} />,
-    acts.incident !== false && <QuickLink key="in" label="Incident" tint="#b45309" onClick={onIncident} />,
-    acts.medication !== false && <QuickLink key="md" label="Medication" tint="#15803d" onClick={onMed} />,
-    acts.moments !== false && <QuickLink key="mo" label="Add moment" tint="#7c3aed" onClick={onMoments} />,
-    acts.email !== false && <QuickLink key="em" label="Email parent" tint="#0e7490" onClick={onEmail} />,
-    acts.message !== false && <QuickLink key="ms" label="Message parent" tint="#1d3a8f" onClick={onMsg} />,
-    acts.whatsapp !== false && <QuickLink key="wa" label="WhatsApp" tint="#128c7e" onClick={onWhatsapp} />,
+    acts.firstAid !== false && <QuickLink key="fa" label={t("registers.firstAid")} tint="#be123c" onClick={onAccident} />,
+    acts.incident !== false && <QuickLink key="in" label={t("registers.incident")} tint="#b45309" onClick={onIncident} />,
+    acts.medication !== false && <QuickLink key="md" label={t("registers.medication")} tint="#15803d" onClick={onMed} />,
+    acts.moments !== false && <QuickLink key="mo" label={t("registers.addMoment")} tint="#7c3aed" onClick={onMoments} />,
+    acts.email !== false && <QuickLink key="em" label={t("registers.emailParent")} tint="#0e7490" onClick={onEmail} />,
+    acts.message !== false && <QuickLink key="ms" label={t("registers.messageParent")} tint="#1d3a8f" onClick={onMsg} />,
+    acts.whatsapp !== false && <QuickLink key="wa" label={t("registers.whatsapp")} tint="#128c7e" onClick={onWhatsapp} />,
   ].filter(Boolean);
   if (!links.length) return null;
   return (
     <div className="md:text-right">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-1.5 rounded-full border border-[#c9dcfa] bg-gradient-to-r from-[#eef4ff] to-[#f6ecff] px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm transition hover:brightness-[0.98]">⚡ Quick actions <span className="text-[9px]">{open ? "▲" : "▼"}</span></button>
+      <button type="button" onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-1.5 rounded-full border border-[#c9dcfa] bg-gradient-to-r from-[#eef4ff] to-[#f6ecff] px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm transition hover:brightness-[0.98]">⚡ {t("registers.quickActions")} <span className="text-[9px]">{open ? "▲" : "▼"}</span></button>
       {open && <div className="mt-1.5 flex flex-wrap gap-1.5 md:justify-end">{links}</div>}
     </div>
   );
 }
 
 function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsent, selected, showLikes, late, nudgedAt, nappy, nappyLog, readOnlyRow, onLogNappy, onNudge, onSelect, onOpen, onOpenNote, onMark, onMsg, onMed, onAccident, onIncident, onMoments, onEmail, onWhatsapp }: { a: Attendee; start: string; end: string; showTimes: boolean; busy: boolean; age?: number; flag: FlagKind; acts: { firstAid?: boolean; incident?: boolean; medication?: boolean; message?: boolean; moments?: boolean; email?: boolean; whatsapp?: boolean }; note?: RegNote; showConsent: boolean; selected: boolean; showLikes: boolean; late: Late | null; nudgedAt?: string; nappy: boolean; nappyLog: NappyChange[]; readOnlyRow: boolean; onLogNappy: () => void; onNudge: () => void; onSelect: () => void; onOpen: () => void; onOpenNote: () => void; onMark: (action: Action) => void; onMsg: () => void; onMed: () => void; onAccident: () => void; onIncident: () => void; onMoments: () => void; onEmail: () => void; onWhatsapp: () => void }) {
+  const t = useT();
   const state = st(a); const c = a.child; const collected = !!a.attendance?.collectedAt; const kid = a.children[0];
   const lastNappy = nappyLog.at(-1); const nappyCount = nappyLog.length;
-  const flagText = flag === "allergy" ? c?.allergies : flag === "medical" ? c?.medical : flag === "dietary" ? c?.dietary : flag === "send" ? (c?.send || (c?.sendPlanName ? "SEND plan on file" : "")) : flag === "nappy" ? (lastNappy ? `Last change ${timeOf(lastNappy.at)} by ${lastNappy.by}` : "No change logged yet") : "";
+  const flagText = flag === "allergy" ? c?.allergies : flag === "medical" ? c?.medical : flag === "dietary" ? c?.dietary : flag === "send" ? (c?.send || (c?.sendPlanName ? t("registers.sendPlanOnFile") : "")) : flag === "nappy" ? (lastNappy ? t("registers.lastChangeBy", { time: timeOf(lastNappy.at), name: lastNappy.by }) : t("registers.noChangeLoggedYet")) : "";
   const fs = flag === "allergy" ? { bg: "#fde2e4", fg: "#c02636" } : flag === "medical" ? { bg: "#e0e9ff", fg: BLUE } : flag === "dietary" ? { bg: "#dcfce7", fg: "#15803d" } : { bg: "#f3e8ff", fg: "#6d28d9" };
   const inAt = showTimes && a.attendance?.inAt ? timeOf(a.attendance.inAt) : "";
   const outAt = showTimes && a.attendance?.collectedAt ? timeOf(a.attendance.collectedAt) : "";
   return (
     <div data-ui="card" className="grid grid-cols-1 items-center gap-3 border-b border-[var(--line)] px-4 py-3 transition-colors last:border-b-0 md:grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)]" style={selected ? { background: "#eef4fd" } : undefined}>
       <div className="flex min-w-0 items-center gap-2.5">
-        <input type="checkbox" checked={selected} onChange={onSelect} aria-label={`Select ${kid?.name}`} className="h-4 w-4 flex-none accent-[#1d3a8f]" />
+        <input type="checkbox" checked={selected} onChange={onSelect} aria-label={t("registers.selectChild", { name: kid?.name ?? "" })} className="h-4 w-4 flex-none accent-[#1d3a8f]" />
         <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
           {c?.photo
             // eslint-disable-next-line @next/next/no-img-element
@@ -1416,21 +1433,21 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
           <div className="min-w-0">
             <div className="truncate text-[13.5px] font-extrabold">
               {a.children.map((k) => k.name).join(", ")}
-              {nappy && <span className="ml-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold align-middle" style={{ background: "#f3e8ff", color: "#6d28d9" }} title="Not toilet trained — nappy changes needed">🚼 Nappies</span>}
-              {" "}<span className="text-[11px] font-bold text-[#1d3a8f]">view ›</span>
+              {nappy && <span className="ml-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold align-middle" style={{ background: "#f3e8ff", color: "#6d28d9" }} title={t("registers.notToiletTrainedNappy")}>🚼 {t("registers.nappies")}</span>}
+              {" "}<span className="text-[11px] font-bold text-[#1d3a8f]">{t("registers.view")} ›</span>
             </div>
-            <div className="truncate text-[11.5px] text-[var(--ink-3)]">{age != null ? `Age ${age} · ` : ""}<span className="font-bold text-[var(--ink-2)]">🕒 {start}–{end}</span></div>
+            <div className="truncate text-[11.5px] text-[var(--ink-3)]">{age != null ? t("registers.ageDot", { age }) : ""}<span className="font-bold text-[var(--ink-2)]">🕒 {start}–{end}</span></div>
             {nappy && (
               <div className="truncate text-[11px]" style={{ color: "#6d28d9" }}>
-                {lastNappy ? <>Changed {timeOf(lastNappy.at)} by {lastNappy.by}{nappyCount > 1 ? ` · ${nappyCount} today` : ""}</> : <span className="text-[var(--ink-3)]">No change logged yet today</span>}
+                {lastNappy ? <>{t("registers.changedBy", { time: timeOf(lastNappy.at), name: lastNappy.by })}{nappyCount > 1 ? t("registers.nTodaySuffix", { n: nappyCount }) : ""}</> : <span className="text-[var(--ink-3)]">{t("registers.noChangeLoggedYetToday")}</span>}
               </div>
             )}
           </div>
         </button>
         <span className="ml-auto flex flex-none items-center gap-1.5">
           {nappy && !readOnlyRow && (
-            <button type="button" onClick={onLogNappy} title="Log a nappy change — stamps the time and your name"
-              className="grid h-7 w-7 place-items-center rounded-lg border text-[13px]" style={{ borderColor: "#e2d3f7", background: "#faf5ff", color: "#6d28d9" }} aria-label="Log a nappy change">🚼</button>
+            <button type="button" onClick={onLogNappy} title={t("registers.logNappyChangeStamp")}
+              className="grid h-7 w-7 place-items-center rounded-lg border text-[13px]" style={{ borderColor: "#e2d3f7", background: "#faf5ff", color: "#6d28d9" }} aria-label={t("registers.logNappyChange")}>🚼</button>
           )}
           {showLikes && <LikesChip likes={c?.likes} dislikes={c?.dislikes} />}
           {showConsent && c?.photoConsent != null && <PhotoConsentChip ok={!!c.photoConsent} />}
@@ -1442,20 +1459,20 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
         {flag
           ? (flagText ? <span className="rounded-md px-2 py-1 text-[11px] font-bold leading-tight" style={{ background: fs.bg, color: fs.fg }}>{flagText}</span> : <span className="text-[12px] text-[var(--ink-3)]">—</span>)
           : <>
-              {c?.allergies && <AlertSq kind="allergy" text={`Allergy: ${c.allergies}`} />}
-              {c?.medical && <AlertSq kind="medical" text={`Medical: ${c.medical}`} />}
-              {(c?.send || c?.sendPlanName) && <AlertSq kind="send" text="SEND / needs" />}
+              {c?.allergies && <AlertSq kind="allergy" text={t("registers.allergyColon", { value: c.allergies })} />}
+              {c?.medical && <AlertSq kind="medical" text={t("registers.medicalColon", { value: c.medical })} />}
+              {(c?.send || c?.sendPlanName) && <AlertSq kind="send" text={t("registers.sendNeeds")} />}
               {!c?.allergies && !c?.medical && !c?.send && !c?.sendPlanName && <span className="text-[12px] text-[var(--ink-3)]">—</span>}
             </>}
       </div>
       {/* Attendance — three compact buttons */}
       <div>
         <div className="flex gap-1">
-          <StBtn label="In" active={state === "present" || collected} tint={GREEN} soft="#e7f6ee" disabled={busy} onClick={() => onMark("in")} />
-          <StBtn label="Collect" active={collected} tint={BLUE} soft="#eef4fd" disabled={busy || (state !== "present" && !collected)} onClick={() => onMark("collect")} />
-          <StBtn label="Absent" active={state === "absent"} tint={RED} soft="#fde2e4" disabled={busy} onClick={() => onMark(state === "absent" ? "reset" : "absent")} />
+          <StBtn label={t("registers.inBtn")} active={state === "present" || collected} tint={GREEN} soft="#e7f6ee" disabled={busy} onClick={() => onMark("in")} />
+          <StBtn label={t("registers.collectBtn")} active={collected} tint={BLUE} soft="#eef4fd" disabled={busy || (state !== "present" && !collected)} onClick={() => onMark("collect")} />
+          <StBtn label={t("registers.absentBtn")} active={state === "absent"} tint={RED} soft="#fde2e4" disabled={busy} onClick={() => onMark(state === "absent" ? "reset" : "absent")} />
         </div>
-        {(inAt || outAt) && <div className="mt-1 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">{inAt && `In ${inAt}`}{inAt && outAt ? " · " : ""}{outAt && `Out ${outAt}`}</div>}
+        {(inAt || outAt) && <div className="mt-1 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">{inAt && `${t("registers.inShort")} ${inAt}`}{inAt && outAt ? " · " : ""}{outAt && `${t("registers.outShort")} ${outAt}`}</div>}
       </div>
       {/* Quick actions — collapsed behind a funky pill; tap to reveal.
           The nudge bell sits outside the menu on purpose: it's an alert, and
@@ -1463,12 +1480,12 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
       <div className="flex flex-wrap items-start gap-1.5 md:justify-end">
         {late && (
           <button type="button" onClick={onNudge}
-            title={nudgedAt ? `Nudged at ${timeOf(nudgedAt)} — click to nudge again` : late.kind === "collect" ? `Collection was due at ${late.at} — nudge the parent` : `Session started at ${late.at} — nudge the parent`}
+            title={nudgedAt ? t("registers.nudgedAtAgain", { time: timeOf(nudgedAt) }) : late.kind === "collect" ? t("registers.collectionWasDue", { at: late.at }) : t("registers.sessionStartedAt", { at: late.at })}
             className="inline-flex items-center gap-1 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-extrabold"
             style={nudgedAt ? { borderColor: "#b7e2c8", background: "#e7f6ee", color: GREEN } : { borderColor: "#f3c6c1", background: "#fdecec", color: "#c02636" }}>
             {nudgedAt
-              ? <>✓ Nudged {timeOf(nudgedAt)}</>
-              : <>🔔 {late.kind === "collect" ? "Collection" : "Arrival"} {lateFor(late.mins)} late</>}
+              ? <>✓ {t("registers.nudgedAt", { time: timeOf(nudgedAt) })}</>
+              : <>🔔 {late.kind === "collect" ? t("registers.collectionWord") : t("registers.arrivalWord")} {t("registers.lateSuffix", { time: lateFor(late.mins) })}</>}
           </button>
         )}
         <QuickActionsMenu acts={acts} onMsg={onMsg} onMed={onMed} onAccident={onAccident} onIncident={onIncident} onMoments={onMoments} onEmail={onEmail} onWhatsapp={onWhatsapp} />

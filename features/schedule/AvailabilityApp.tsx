@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api, get as apiGet } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n/provider";
 import { Button, Card, Input } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 
@@ -46,6 +47,7 @@ const blankWeekly = (): Weekly => ({ days: Object.fromEntries(DAYS.map(([k]) => 
 const loadWeekly = (): Weekly => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.days ? v : blankWeekly(); } catch { return blankWeekly(); } };
 
 export function AvailabilityApp() {
+  const t = useT();
   const { settings } = useSettings();
   const lockHours = settings.scheduling?.availabilityLockHours ?? 24;
   const [requests, setRequests] = useState<AvailRequest[]>([]);
@@ -64,7 +66,7 @@ export function AvailabilityApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="My availability" icon="⏱" lede={campReq ? "Tell your manager which days and hours you can work across this camp — they build the rota around it." : "Set your usual working week — the days and hours you can normally work. It's the starting point your manager uses when building the rota."} />
+      <PageHero title={t("schedule.myAvailability")} icon="⏱" lede={campReq ? t("schedule.availLedeCamp") : t("schedule.availLedeStanding")} />
 
       {campReq ? (
         <CampAvailability req={campReq} initialGrid={pattern?.grid ?? {}} lockHours={lockHours} onSubmitted={refresh} />
@@ -73,7 +75,7 @@ export function AvailabilityApp() {
       )}
 
       <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">
-        Your manager sees your submission against the rota. Change it any time before shifts are published — they&rsquo;ll always see the latest.
+        {t("schedule.availFooter")}
       </p>
     </div>
   );
@@ -81,6 +83,7 @@ export function AvailabilityApp() {
 
 // ── Camp grid ───────────────────────────────────────────────────────────────
 function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: AvailRequest; initialGrid: Record<string, DayAvail>; lockHours: number; onSubmitted: () => void }) {
+  const t = useT();
   const camp = req.camp!;
   const cell0 = (): DayAvail => ({ on: false, from: camp.open, to: camp.close });
   const [grid, setGrid] = useState<Record<string, DayAvail>>(() => ({ ...initialGrid }));
@@ -143,26 +146,26 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[#e3ebff] px-4 py-3">
           <span className="grid h-9 w-9 flex-none place-items-center rounded-xl bg-[#1d3a8f] text-[16px] text-white">📍</span>
           <div className="min-w-0">
-            <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">You&rsquo;ve been assigned to</div>
+            <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">{t("schedule.youveBeenAssignedTo")}</div>
             <div className="text-[15px] font-black tracking-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{camp.listingName}{camp.location ? <span className="text-[var(--ink-3)]"> · {camp.location}</span> : null}</div>
           </div>
           <div className="ml-auto flex items-center gap-3">
             <div className="flex flex-col items-end gap-1">
               {req.status === "submitted"
-                ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]" title={req.submittedAt ? `Last edited ${fmtStamp(req.submittedAt)}` : undefined}>✓ Submitted{req.submittedAt ? ` · ${fmtStamp(req.submittedAt)}` : ""}</span>
-                : <span className="rounded-full bg-[#fdf6e3] px-2.5 py-0.5 text-[11px] font-extrabold text-[#8a5a09]">Awaiting your reply</span>}
-              <span className="text-[11px] text-[var(--ink-3)]">Requested by {requesterOf(req)}</span>
+                ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]" title={req.submittedAt ? t("schedule.lastEdited", { when: fmtStamp(req.submittedAt) }) : undefined}>✓ {t("schedule.submitted")}{req.submittedAt ? ` · ${fmtStamp(req.submittedAt)}` : ""}</span>
+                : <span className="rounded-full bg-[#fdf6e3] px-2.5 py-0.5 text-[11px] font-extrabold text-[#8a5a09]">{t("schedule.awaitingReply")}</span>}
+              <span className="text-[11px] text-[var(--ink-3)]">{t("schedule.requestedByWho", { who: requesterOf(req) })}</span>
             </div>
-            <button type="button" onClick={toggleCard} aria-expanded={cardOpen} title={cardOpen ? "Hide details" : "Show details"} className="grid h-8 w-8 flex-none place-items-center rounded-lg border border-[var(--line)] bg-white text-[13px] text-[var(--ink-2)] transition hover:bg-[var(--panel)]">{cardOpen ? "▾" : "▸"}</button>
+            <button type="button" onClick={toggleCard} aria-expanded={cardOpen} title={cardOpen ? t("schedule.hideDetails") : t("schedule.showDetails")} className="grid h-8 w-8 flex-none place-items-center rounded-lg border border-[var(--line)] bg-white text-[13px] text-[var(--ink-2)] transition hover:bg-[var(--panel)]">{cardOpen ? "▾" : "▸"}</button>
           </div>
         </div>
         {cardOpen && (<>
         <div className="grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-4">
           {([
-            { ic: "🗓", big: `${camp.weeks} weeks`, small: `${fmtDay(req.window.from)} – ${fmtDay(req.window.to)}`, col: "#1d3a8f", bg: "#eef4fd", expand: true },
-            { ic: "🕘", big: `${camp.open}–${camp.close}`, small: "camp opening hours", col: "#0f857b", bg: "#e6f6f3" },
-            { ic: "✅", big: `${selected.length}`, small: `day${selected.length === 1 ? "" : "s"} you've chosen`, col: "#0f7a43", bg: "#e7f5ec" },
-            { ic: "⏱", big: hLabel(totalH), small: "hours you've chosen", col: "#7c3aed", bg: "#f1ecfe" },
+            { ic: "🗓", big: t("schedule.weeksCount", { n: camp.weeks }), small: `${fmtDay(req.window.from)} – ${fmtDay(req.window.to)}`, col: "#1d3a8f", bg: "#eef4fd", expand: true },
+            { ic: "🕘", big: `${camp.open}–${camp.close}`, small: t("schedule.campOpeningHours"), col: "#0f857b", bg: "#e6f6f3" },
+            { ic: "✅", big: `${selected.length}`, small: selected.length === 1 ? t("schedule.dayChosen") : t("schedule.daysChosen"), col: "#0f7a43", bg: "#e7f5ec" },
+            { ic: "⏱", big: hLabel(totalH), small: t("schedule.hoursChosen"), col: "#7c3aed", bg: "#f1ecfe" },
           ] as { ic: string; big: string; small: string; col: string; bg: string; expand?: boolean }[]).map((c) => {
             const inner = (
               <div className="relative h-full overflow-hidden rounded-2xl border p-3 shadow-sm" style={{ borderColor: c.bg, background: `linear-gradient(135deg, ${c.bg} 0%, #ffffff 68%)` }}>
@@ -174,7 +177,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                   </div>
                   {c.expand && <span className="ml-auto flex-none text-[11px] font-black" style={{ color: c.col }}>{datesOpen ? "▾" : "▸"}</span>}
                 </div>
-                {c.expand && <div className="mt-1.5 text-[10.5px] font-extrabold" style={{ color: c.col }}>{datesOpen ? "Hide dates" : "View all dates ›"}</div>}
+                {c.expand && <div className="mt-1.5 text-[10.5px] font-extrabold" style={{ color: c.col }}>{datesOpen ? t("schedule.hideDates") : t("schedule.viewAllDates")}</div>}
                 <span className="absolute inset-x-0 bottom-0 h-[3px]" style={{ background: c.col }} />
               </div>
             );
@@ -186,13 +189,13 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
 
         {datesOpen && (
           <div className="border-t border-[#e3ebff] bg-white/70 px-4 py-3">
-            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Every date this camp runs · {allDates.length} days over {camp.weeks} weeks</div>
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.everyDateCampRuns", { days: allDates.length, weeks: camp.weeks })}</div>
             <div className="flex flex-col gap-1.5">
               {weeks.map((wk, wi) => (
                 <div key={wi} className="flex flex-wrap items-center gap-1.5">
-                  <span className="w-[112px] flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">Week {wi + 1} <span className="font-semibold text-[var(--ink-3)]">· {dNum(wk[0])} {dMon(wk[0])}</span></span>
+                  <span className="w-[112px] flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">{t("schedule.weekN", { n: wi + 1 })} <span className="font-semibold text-[var(--ink-3)]">· {dNum(wk[0])} {dMon(wk[0])}</span></span>
                   {wk.map((dt) => { const as = assigned.has(dt); const on = cell(dt).on; return (
-                    <span key={dt} className={"rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums " + (as ? "bg-[#1d3a8f] text-white ring-2 ring-[#f5c542]" : on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")} title={as ? "On the rota — request time off to change" : on ? `Available ${cell(dt).from}–${cell(dt).to}` : "Not chosen"}>{as ? "📌 " : ""}{WD_SHORT[wdOf(dt)]} {dNum(dt)}</span>
+                    <span key={dt} className={"rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums " + (as ? "bg-[#1d3a8f] text-white ring-2 ring-[#f5c542]" : on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")} title={as ? t("schedule.onRotaRequestOff") : on ? t("schedule.availableRange", { from: cell(dt).from, to: cell(dt).to }) : t("schedule.notChosen")}>{as ? "📌 " : ""}{WD_SHORT[wdOf(dt)]} {dNum(dt)}</span>
                   ); })}
                 </div>
               ))}
@@ -206,10 +209,10 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
 
       {/* Quick-fill toolbar */}
       <div className="flex flex-wrap items-center gap-2 rounded-xl bg-[var(--panel)] px-3 py-2.5">
-        <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Quick fill</span>
-        <button type="button" onClick={weekdaysAllWeeks} className="rounded-full bg-[#1d3a8f] px-3 py-1.5 text-[11.5px] font-bold text-white transition hover:brightness-110">Weekdays {camp.open}–{camp.close}, every week</button>
-        <button type="button" onClick={clearAll} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:bg-white/70">Clear all</button>
-        <button type="button" onClick={undo} disabled={!history.length} className="ml-auto rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition enabled:hover:bg-white/70 disabled:opacity-40">↩ Undo</button>
+        <span className="text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.quickFill")}</span>
+        <button type="button" onClick={weekdaysAllWeeks} className="rounded-full bg-[#1d3a8f] px-3 py-1.5 text-[11.5px] font-bold text-white transition hover:brightness-110">{t("schedule.weekdaysEveryWeek", { open: camp.open, close: camp.close })}</button>
+        <button type="button" onClick={clearAll} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:bg-white/70">{t("schedule.clearAll")}</button>
+        <button type="button" onClick={undo} disabled={!history.length} className="ml-auto rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition enabled:hover:bg-white/70 disabled:opacity-40">↩ {t("schedule.undo")}</button>
       </div>
 
       {/* The rules — assigned days & the edit cutoff */}
@@ -230,12 +233,12 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
             <Card key={wi} className="overflow-hidden p-0">
               <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
                 <div className="flex items-baseline gap-2">
-                  <span className="text-[13px] font-black text-[var(--ink)]">Week {wi + 1}</span>
+                  <span className="text-[13px] font-black text-[var(--ink)]">{t("schedule.weekN", { n: wi + 1 })}</span>
                   <span className="text-[11.5px] font-semibold text-[var(--ink-3)]">{dNum(wk[0])} {dMon(wk[0])} – {dNum(wk[6])} {dMon(wk[6])}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold text-[var(--ink-3)]">{onCount}/7</span>
-                  <button type="button" onClick={() => copyWeekToAll(wi)} className={"rounded-full px-2.5 py-1 text-[11px] font-bold transition " + (weeksAllEqual ? "bg-[#1d3a8f] text-white" : "border border-[var(--line)] bg-white text-[#1d3a8f] hover:bg-[#eef4fd]")} title="Copy this week's pattern to every week">{weeksAllEqual ? "✓ All weeks match" : "⧉ Copy to all weeks"}</button>
+                  <button type="button" onClick={() => copyWeekToAll(wi)} className={"rounded-full px-2.5 py-1 text-[11px] font-bold transition " + (weeksAllEqual ? "bg-[#1d3a8f] text-white" : "border border-[var(--line)] bg-white text-[#1d3a8f] hover:bg-[#eef4fd]")} title={t("schedule.copyWeekPatternTitle")}>{weeksAllEqual ? t("schedule.allWeeksMatch") : t("schedule.copyToAllWeeks")}</button>
                 </div>
               </div>
               <ul className="divide-y divide-[var(--line-2,#eef2f8)]">
@@ -252,8 +255,8 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                           <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG[wd]}</div>
                           <div className="text-[11px] font-semibold text-[var(--ink-3)]">{dNum(dt)} {dMon(dt)}</div>
                         </div>
-                        <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f]">On rota · {camp.open}–{camp.close}</span>
-                        <Link href="/staff/holiday" className="ml-auto flex-none rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#eef4fd]">Request time off →</Link>
+                        <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f]">{t("schedule.onRotaRange", { open: camp.open, close: camp.close })}</span>
+                        <Link href="/staff/holiday" className="ml-auto flex-none rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#eef4fd]">{t("schedule.requestTimeOff")} →</Link>
                       </li>
                     );
                   }
@@ -266,7 +269,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                           <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG[wd]}</div>
                           <div className="text-[11px] font-semibold text-[var(--ink-3)]">{dNum(dt)} {dMon(dt)}</div>
                         </div>
-                        <span className="text-[12px] font-semibold text-[var(--ink-3)]">{c.on ? `Locked · was ${c.from}–${c.to}` : "Locked — too close to the day to change"}</span>
+                        <span className="text-[12px] font-semibold text-[var(--ink-3)]">{c.on ? t("schedule.lockedWas", { from: c.from, to: c.to }) : t("schedule.lockedTooClose")}</span>
                       </li>
                     );
                   }
@@ -292,7 +295,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                           ); })()}
                         </>
                       ) : (
-                        <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">Not available</span>
+                        <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">{t("schedule.notAvailable")}</span>
                       )}
                     </li>
                   );
@@ -305,11 +308,11 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
 
       {/* Submit */}
       <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--line)] bg-white/95 p-3.5 shadow-[0_10px_30px_-16px_rgba(20,30,60,.5)] backdrop-blur">
-        <Button variant="primary" disabled={!selected.length || busy} onClick={submit} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{busy ? "Sending…" : req.status === "submitted" ? "Update & resend" : "Submit to manager"}</Button>
-        {saved ? <span className="text-[12.5px] font-bold text-[#0f7a43]">✓ Sent — your manager can see it now</span>
-          : <span className="text-[12.5px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{selected.length}</b> day{selected.length === 1 ? "" : "s"} · <b className="text-[var(--ink)]">{hLabel(totalH)}</b> across the camp</span>}
-        {!selected.length && <span className="text-[12px] text-[var(--ink-3)]">Choose at least one day — try a quick-fill above.</span>}
-        {req.status === "submitted" && req.submittedAt && <span className="ml-auto text-[11.5px] font-semibold text-[#0f7a43]">Last submitted {fmtStamp(req.submittedAt)} — edit &amp; resend any time.</span>}
+        <Button variant="primary" disabled={!selected.length || busy} onClick={submit} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{busy ? t("schedule.sending") : req.status === "submitted" ? t("schedule.updateResend") : t("schedule.submitToManager")}</Button>
+        {saved ? <span className="text-[12.5px] font-bold text-[#0f7a43]">✓ {t("schedule.sentManagerCanSee")}</span>
+          : <span className="text-[12.5px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{selected.length}</b> day{selected.length === 1 ? "" : "s"} · <b className="text-[var(--ink)]">{hLabel(totalH)}</b> {t("schedule.acrossTheCamp")}</span>}
+        {!selected.length && <span className="text-[12px] text-[var(--ink-3)]">{t("schedule.chooseAtLeastOne")}</span>}
+        {req.status === "submitted" && req.submittedAt && <span className="ml-auto text-[11.5px] font-semibold text-[#0f7a43]">{t("schedule.lastSubmittedResend", { when: fmtStamp(req.submittedAt) })}</span>}
       </div>
     </div>
   );
@@ -317,6 +320,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
 
 // ── Standing weekly pattern ─────────────────────────────────────────────────
 function StandingWeekly({ pendingReq, lastReq, pattern, onSubmitted }: { requests: AvailRequest[]; pendingReq: AvailRequest | null; lastReq: AvailRequest | null; pattern: Pattern | null; onSubmitted: () => void }) {
+  const t = useT();
   const [a, setA] = useState<Weekly>(blankWeekly);
   const [saved, setSaved] = useState(false);
   useEffect(() => { setA(loadWeekly()); }, []);
@@ -329,7 +333,7 @@ function StandingWeekly({ pendingReq, lastReq, pattern, onSubmitted }: { request
     persist({ ...a, submittedAt: new Date().toISOString() }); setSaved(true); setTimeout(() => setSaved(false), 2500);
     void api("/api/availability/mine", { method: "PUT", body: JSON.stringify({ days: a.days, note: a.note }) }).then(() => onSubmitted()).catch(() => {});
   };
-  const submittedLabel = a.submittedAt ? `Submitted ${fmtStamp(a.submittedAt)}` : "Not submitted yet";
+  const submittedLabel = a.submittedAt ? t("schedule.submittedAt", { when: fmtStamp(a.submittedAt) }) : t("schedule.notSubmittedYet");
 
   return (
     <>
@@ -367,20 +371,20 @@ function StandingWeekly({ pendingReq, lastReq, pattern, onSubmitted }: { request
                     <Input type="time" value={day.to} onChange={(e) => setDay(k, { to: e.target.value })} className="w-[112px]" style={FIELD_STYLE} />
                   </div>
                 ) : (
-                  <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">Not available</span>
+                  <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">{t("schedule.notAvailable")}</span>
                 )}
               </div>
             );
           })}
         </div>
         <div className="mt-3">
-          <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Anything your manager should know <span className="font-normal normal-case">— optional</span></label>
-          <textarea value={a.note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="e.g. can do extra Saturdays in August, prefer mornings…" className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
+          <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.anythingManagerShouldKnow")} <span className="font-normal normal-case">{t("schedule.optionalSuffix")}</span></label>
+          <textarea value={a.note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder={t("schedule.noteExamplePlaceholder")} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand)]" />
         </div>
         <div className="mt-3.5 flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-3.5">
-          <Button variant="primary" disabled={!anyOn} onClick={submit} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">Submit to manager</Button>
-          {saved ? <span className="text-[12.5px] font-bold text-[#0f7a43]">✓ Sent to your manager</span> : <span className="text-[12.5px] text-[var(--ink-3)]">{submittedLabel}</span>}
-          {!anyOn && <span className="text-[12px] text-[var(--ink-3)]">Turn on at least one day first.</span>}
+          <Button variant="primary" disabled={!anyOn} onClick={submit} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{t("schedule.submitToManager")}</Button>
+          {saved ? <span className="text-[12.5px] font-bold text-[#0f7a43]">✓ {t("schedule.sentToYourManager")}</span> : <span className="text-[12.5px] text-[var(--ink-3)]">{submittedLabel}</span>}
+          {!anyOn && <span className="text-[12px] text-[var(--ink-3)]">{t("schedule.turnOnOneDay")}</span>}
         </div>
       </Card>
     </>

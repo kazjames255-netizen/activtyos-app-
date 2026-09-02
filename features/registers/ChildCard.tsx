@@ -3,6 +3,7 @@
 import { useState, type ReactNode } from "react";
 import { needsNappies, type ChildQuestion } from "@/lib/settings";
 import { openFile } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 
 // Shared child-info card — the blue-header, colour-coded card used on the
 // Register (in a modal) and in the Bookings detail (inline as a tab). One
@@ -38,6 +39,7 @@ export const T = {
 // which is what made a card of eight facts read like a paint chart.
 // Long text stays in a 2-line box with a Show-more arrow (no card growth).
 export function Fact({ label, value, tint, full, icon }: { label: string; value?: ReactNode; tint: Tint; full?: boolean; icon?: string }) {
+  const t = useT();
   const [exp, setExp] = useState(false);
   if (value === undefined || value === null || value === "" || value === false) return null;
   const long = typeof value === "string" && value.length > (full ? 130 : 46);
@@ -50,7 +52,7 @@ export function Fact({ label, value, tint, full, icon }: { label: string; value?
       <div className="min-w-0 flex-1">
         <div className="text-[9.5px] font-bold uppercase tracking-[0.14em]" style={{ color: tint.fg, opacity: 0.78 }}>{label}</div>
         <div className={`mt-1 text-[15.5px] font-bold leading-snug tracking-[-0.01em] text-[var(--ink)] ${long && !exp ? "line-clamp-2" : ""}`}>{value}</div>
-        {long && <button type="button" onClick={() => setExp((v) => !v)} className="mt-1.5 text-[11px] font-extrabold" style={{ color: tint.fg }}>{exp ? "▲ Show less" : "▾ Show more"}</button>}
+        {long && <button type="button" onClick={() => setExp((v) => !v)} className="mt-1.5 text-[11px] font-extrabold" style={{ color: tint.fg }}>{exp ? `▲ ${t("registers.showLess")}` : `▾ ${t("registers.showMore")}`}</button>}
       </div>
     </div>
   );
@@ -71,6 +73,7 @@ export function SectionTitle({ dot, children }: { dot: string; children: ReactNo
 // operator's token and hand the browser a blob — never an attachment or a
 // shareable link.
 function PlanButton({ id, name }: { id: string; name?: string }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   return (
@@ -81,12 +84,12 @@ function PlanButton({ id, name }: { id: string; name?: string }) {
         onClick={async () => {
           setErr(null); setBusy(true);
           try { await openFile(`/api/my/files/${id}`); }
-          catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t open the plan."); }
+          catch (e) { setErr(e instanceof Error ? e.message : t("registers.couldntOpenPlan")); }
           finally { setBusy(false); }
         }}
         className="inline-flex items-center gap-1.5 rounded-full border border-[#c9d8f6] bg-[#eef3ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#e2ecfe] disabled:opacity-60"
       >
-        📎 {busy ? "Opening…" : `Open EHCP plan${name ? ` — ${name}` : ""}`}
+        📎 {busy ? t("registers.opening") : `${t("registers.openEhcpPlan")}${name ? ` — ${name}` : ""}`}
       </button>
       {err && <div className="mt-1 text-[11.5px] font-semibold text-[var(--red,#e21d27)]">{err}</div>}
     </div>
@@ -135,10 +138,11 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
   canSeeSafeguarding?: boolean;
   onClose?: () => void;
 }) {
+  const t = useT();
   const [showDays, setShowDays] = useState(false);
   const on = (k: string) => (card ?? {})[k] !== false;
   const flds = fields ?? { emergency: true, password: true, school: true };
-  const yesNo = (v?: boolean) => (v === true ? "Yes" : v === false ? "No" : undefined);
+  const yesNo = (v?: boolean) => (v === true ? t("registers.yes") : v === false ? t("registers.no") : undefined);
   const qById = new Map((questions ?? []).map((q) => [q.id, q] as const));
   const answered = on("answers") ? Object.entries(info.answers ?? {}).filter(([id, v]) => v != null && String(v).trim() !== "" && (qById.get(id)?.showOnRegister !== false)) : [];
   const anyMain = (on("allergies") && info.allergies) || (on("medical") && info.medical) || (on("dietary") && info.dietary) || (on("send") && (info.send || info.sendPlanName)) || (on("swimming") && info.swimming);
@@ -153,15 +157,15 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
   const hasFamily = !!(info.contactName || info.contactPhone || info.contactEmail || info.contactAddress || info.emergencyName);
   const hasBooking = !!(info.bookingRef || (on("bookingNotes") && info.bookingNotes) || info.collected || info.contactName || attend.length);
   const tabs = [
-    { id: "main", label: "Allergies & needs" },
-    ...(hasLikes ? [{ id: "likes", label: "Likes & dislikes" }] : []),
-    ...(hasMedical ? [{ id: "medical", label: "Medical & first aid" }] : []),
+    { id: "main", label: t("registers.tabAllergiesNeeds") },
+    ...(hasLikes ? [{ id: "likes", label: t("registers.tabLikesDislikes") }] : []),
+    ...(hasMedical ? [{ id: "medical", label: t("registers.tabMedicalFirstAid") }] : []),
     // Gated: safeguarding detail isn't for whoever happens to be holding the
     // tablet. Hidden entirely rather than shown-and-locked — a greyed tab still
     // tells you something exists.
-    ...(canSeeSafeguarding ? [{ id: "safeguarding", label: "🔒 Safeguarding" }] : []),
-    ...(hasFamily ? [{ id: "family", label: "Family" }] : []),
-    ...(hasBooking ? [{ id: "booking", label: "Booking & notes", count: attend.length || undefined }] : []),
+    ...(canSeeSafeguarding ? [{ id: "safeguarding", label: `🔒 ${t("registers.tabSafeguarding")}` }] : []),
+    ...(hasFamily ? [{ id: "family", label: t("registers.tabFamily") }] : []),
+    ...(hasBooking ? [{ id: "booking", label: t("registers.tabBookingNotes"), count: attend.length || undefined }] : []),
   ] as { id: string; label: string; count?: number }[];
 
   const [tab, setTab] = useState("main");
@@ -189,7 +193,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
           backgroundSize: "18px 18px, cover, cover, cover, cover",
           backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat",
         }}>
-        {onClose && <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full text-[17px] font-bold leading-none text-white/70 transition hover:bg-white/15 hover:text-white md:hidden">×</button>}
+        {onClose && <button type="button" onClick={onClose} aria-label={t("registers.close")} className="absolute right-3 top-3 grid h-8 w-8 place-items-center rounded-full text-[17px] font-bold leading-none text-white/70 transition hover:bg-white/15 hover:text-white md:hidden">×</button>}
 
         {info.photo
           // eslint-disable-next-line @next/next/no-img-element
@@ -199,7 +203,7 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
         <div className="min-w-0">
           <h2 className="text-[23px] font-extrabold leading-tight tracking-[-0.025em]" style={{ fontFamily: "var(--ff-display)" }}>{info.name}</h2>
           <div className="mt-1.5 text-[12.5px] text-white/70">
-            {[info.age != null ? `Age ${info.age}` : "", info.dob ? `born ${info.dob}` : "", info.sex || ""].filter(Boolean).join(" · ")}
+            {[info.age != null ? t("registers.ageLabel", { age: info.age }) : "", info.dob ? t("registers.bornLabel", { dob: info.dob }) : "", info.sex || ""].filter(Boolean).join(" · ")}
           </div>
           {info.school && <div className="mt-0.5 truncate text-[12px] text-white/55">🏫 {info.school}</div>}
         </div>
@@ -214,35 +218,35 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
             on the navy these need to read as facts, not decorated boxes. */}
         <div className="flex flex-col gap-3.5">
           {on("allergies") && info.allergies && (
-            <div><div className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/55">Allergies</div>
+            <div><div className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/55">{t("registers.allergies")}</div>
               <div className="mt-1 text-[14.5px] font-bold leading-snug">⚠ {info.allergies}</div></div>
           )}
           {on("medical") && info.medical && (
-            <div><div className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/55">Medical</div>
+            <div><div className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/55">{t("registers.medical")}</div>
               <div className="mt-1 text-[14.5px] font-bold leading-snug">{info.medical}</div></div>
           )}
           {on("send") && (info.send || info.sendPlanName) && (
-            <div><div className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/55">SEND / needs</div>
-              <div className="mt-1 text-[14.5px] font-bold leading-snug">{info.send ?? ""}{info.sendPlanName ? `${info.send ? " · " : ""}plan on file` : ""}</div></div>
+            <div><div className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/55">{t("registers.sendNeeds")}</div>
+              <div className="mt-1 text-[14.5px] font-bold leading-snug">{info.send ?? ""}{info.sendPlanName ? `${info.send ? " · " : ""}${t("registers.planOnFile")}` : ""}</div></div>
           )}
           {nappies && (
-            <div><div className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/55">Continence</div>
-              <div className="mt-1 text-[14.5px] font-bold leading-snug">🚼 Nappy changes needed</div></div>
+            <div><div className="text-[9.5px] font-bold uppercase tracking-[0.16em] text-white/55">{t("registers.continence")}</div>
+              <div className="mt-1 text-[14.5px] font-bold leading-snug">🚼 {t("registers.nappyChangesNeeded")}</div></div>
           )}
           {!anyMain && !nappies && (
-            <div className="rounded-xl bg-white/12 px-3.5 py-2.5 text-[13px] font-semibold text-white/85">✓ Nothing flagged</div>
+            <div className="rounded-xl bg-white/12 px-3.5 py-2.5 text-[13px] font-semibold text-white/85">✓ {t("registers.nothingFlagged")}</div>
           )}
         </div>
 
         {info.siblings && info.siblings.length > 0 && (
-          <div className="mt-auto pt-2 text-[12px] text-white/60">👥 Sibling of {info.siblings.join(", ")}</div>
+          <div className="mt-auto pt-2 text-[12px] text-white/60">👥 {t("registers.siblingOf", { names: info.siblings.join(", ") })}</div>
         )}
       </aside>
 
       {/* ── Content column ── */}
       <div className={`flex min-w-0 flex-col ${inline ? "" : "max-h-[90vh]"}`}>
         <div className="relative flex-none border-b border-[var(--line)]">
-          {onClose && <button type="button" onClick={onClose} aria-label="Close" className="absolute right-3 top-2.5 z-10 hidden h-8 w-8 place-items-center rounded-full text-[17px] font-bold leading-none text-[var(--ink-3)] transition hover:bg-[var(--line)] md:grid">×</button>}
+          {onClose && <button type="button" onClick={onClose} aria-label={t("registers.close")} className="absolute right-3 top-2.5 z-10 hidden h-8 w-8 place-items-center rounded-full text-[17px] font-bold leading-none text-[var(--ink-3)] transition hover:bg-[var(--line)] md:grid">×</button>}
       {/* Tabs — the card carries more than fits comfortably on one screen, and
           safeguarding needs gating anyway. Tabs build themselves from what this
           child actually has, so an empty one never appears. */}
@@ -269,60 +273,60 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
         <div key={live} className={dir >= 0 ? "aos-tab-r" : "aos-tab-l"}>
 
           {live === "main" && <>
-            <SectionTitle dot={T.allergy.fg}>Allergies, medical, dietary &amp; SEND</SectionTitle>
+            <SectionTitle dot={T.allergy.fg}>{t("registers.allergiesMedicalDietarySend")}</SectionTitle>
             {anyMain ? (
               <div className="grid gap-2 sm:grid-cols-2">
-                {on("allergies") && <Fact label="Allergies" tint={T.allergy} full value={info.allergies && `⚠ ${info.allergies}`} />}
-                {on("medical") && <Fact label="Medical" tint={T.medical} full value={info.medical} />}
-                {on("dietary") && <Fact label="Dietary" tint={T.dietary} full value={info.dietary} />}
-                {on("send") && <Fact label="SEND / needs" tint={T.send} full value={(info.send || info.sendPlanName) && `${info.send ?? ""}${info.sendPlanName ? `${info.send ? " · " : ""}plan on file` : ""}`} />}
-                {on("swimming") && <Fact label="Swimming" tint={T.swim} value={info.swimming && (SWIM_LABEL[info.swimming] ?? info.swimming)} />}
+                {on("allergies") && <Fact label={t("registers.allergies")} tint={T.allergy} full value={info.allergies && `⚠ ${info.allergies}`} />}
+                {on("medical") && <Fact label={t("registers.medical")} tint={T.medical} full value={info.medical} />}
+                {on("dietary") && <Fact label={t("registers.dietary")} tint={T.dietary} full value={info.dietary} />}
+                {on("send") && <Fact label={t("registers.sendNeeds")} tint={T.send} full value={(info.send || info.sendPlanName) && `${info.send ?? ""}${info.sendPlanName ? `${info.send ? " · " : ""}${t("registers.planOnFile")}` : ""}`} />}
+                {on("swimming") && <Fact label={t("registers.swimming")} tint={T.swim} value={info.swimming && (SWIM_LABEL[info.swimming] ?? info.swimming)} />}
               </div>
-            ) : <div className="rounded-lg border border-[#bbf7d0] bg-[#f0fdf4] px-3.5 py-2.5 text-[14px] font-semibold text-[#15803d]">✓ Nothing flagged</div>}
+            ) : <div className="rounded-lg border border-[#bbf7d0] bg-[#f0fdf4] px-3.5 py-2.5 text-[14px] font-semibold text-[#15803d]">✓ {t("registers.nothingFlagged")}</div>}
             {on("send") && info.sendPlanId && <PlanButton id={info.sendPlanId} name={info.sendPlanName} />}
 
             {on("consents") && <>
-              <SectionTitle dot={T.send.fg}>Permissions</SectionTitle>
+              <SectionTitle dot={T.send.fg}>{t("registers.permissions")}</SectionTitle>
               <div className="flex flex-wrap gap-2">
-                {([["Photos", info.photoConsent === false ? "No" : yesNo(info.photoConsent)], ["Suncream", yesNo(info.suncreamConsent)], ["First aid", yesNo(info.firstAidConsent)], ["Walk home", yesNo(info.walkHomeConsent)]] as [string, string | undefined][]).map(([l, v]) => v == null ? null : (
-                  <span key={l} className="rounded-full border px-3 py-1.5 text-[13px] font-bold" style={v === "Yes" ? { borderColor: "#bbf7d0", background: "#f0fdf4", color: "#15803d" } : { borderColor: "#fecdd3", background: "#fff1f2", color: "#be123c" }}>{l}: {v}</span>
+                {([[t("registers.photos"), info.photoConsent === false ? t("registers.no") : yesNo(info.photoConsent)], [t("registers.suncream"), yesNo(info.suncreamConsent)], [t("registers.firstAid"), yesNo(info.firstAidConsent)], [t("registers.walkHome"), yesNo(info.walkHomeConsent)]] as [string, string | undefined][]).map(([l, v]) => v == null ? null : (
+                  <span key={l} className="rounded-full border px-3 py-1.5 text-[13px] font-bold" style={v === t("registers.yes") ? { borderColor: "#bbf7d0", background: "#f0fdf4", color: "#15803d" } : { borderColor: "#fecdd3", background: "#fff1f2", color: "#be123c" }}>{l}: {v}</span>
                 ))}
               </div>
             </>}
 
             {answered.length > 0 && <>
-              <SectionTitle dot={T.ask.fg}>Parent&rsquo;s answers</SectionTitle>
+              <SectionTitle dot={T.ask.fg}>{t("registers.parentsAnswers")}</SectionTitle>
               <div className="grid gap-2 sm:grid-cols-2">{answered.map(([id, v]) => <Fact key={id} label={qById.get(id)?.label ?? id} tint={T.ask} full value={String(v)} />)}</div>
             </>}
           </>}
 
           {live === "likes" && (
             <div className="grid gap-2 sm:grid-cols-2">
-              {on("likes") && <Fact label="Likes / settles them" tint={T.likes} full value={info.likes} />}
-              {on("dislikes") && <Fact label="Dislikes / avoid" tint={T.dislikes} full value={info.dislikes} />}
-              {on("careNotes") && <Fact label="Care notes" tint={T.care} full value={info.careNotes} />}
+              {on("likes") && <Fact label={t("registers.likesSettles")} tint={T.likes} full value={info.likes} />}
+              {on("dislikes") && <Fact label={t("registers.dislikesAvoid")} tint={T.dislikes} full value={info.dislikes} />}
+              {on("careNotes") && <Fact label={t("registers.careNotes")} tint={T.care} full value={info.careNotes} />}
             </div>
           )}
 
           {live === "medical" && (
             <div className="grid gap-2 sm:grid-cols-2">
-              {on("medical") && <Fact label="Medical" tint={T.medical} full value={info.medical} />}
-              {on("dietary") && <Fact label="Dietary" tint={T.dietary} full value={info.dietary} />}
-              <Fact label="First-aid consent" tint={T.medical} value={yesNo(info.firstAidConsent)} />
-              <Fact label="Suncream consent" tint={T.medical} value={yesNo(info.suncreamConsent)} />
+              {on("medical") && <Fact label={t("registers.medical")} tint={T.medical} full value={info.medical} />}
+              {on("dietary") && <Fact label={t("registers.dietary")} tint={T.dietary} full value={info.dietary} />}
+              <Fact label={t("registers.firstAidConsent")} tint={T.medical} value={yesNo(info.firstAidConsent)} />
+              <Fact label={t("registers.suncreamConsent")} tint={T.medical} value={yesNo(info.suncreamConsent)} />
             </div>
           )}
 
           {live === "safeguarding" && (
             <>
               <div className="mb-2.5 rounded-lg border border-[#e2d3f7] bg-[#faf5ff] px-3.5 py-2 text-[12.5px] font-semibold text-[#6d28d9]">
-                🔒 Restricted — visible to admins and your safeguarding lead only.
+                🔒 {t("registers.restrictedSafeguarding")}
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
-                {on("send") && <Fact label="SEND / needs" tint={T.send} full value={(info.send || info.sendPlanName) && `${info.send ?? ""}${info.sendPlanName ? `${info.send ? " · " : ""}plan on file` : ""}`} />}
-                {on("careNotes") && <Fact label="Care notes" tint={T.care} full value={info.careNotes} />}
-                {on("emergency") && flds.emergency && <Fact label="Emergency contact" tint={T.emergency} full value={(info.emergencyName || info.emergencyPhone) && `${info.emergencyName ?? ""}${info.emergencyPhone ? ` · ${info.emergencyPhone}` : ""}`} />}
-                {on("password") && flds.password && <Fact label="Collection password" tint={T.password} value={info.collectionPassword && <span>🔑 {info.collectionPassword}</span>} />}
+                {on("send") && <Fact label={t("registers.sendNeeds")} tint={T.send} full value={(info.send || info.sendPlanName) && `${info.send ?? ""}${info.sendPlanName ? `${info.send ? " · " : ""}${t("registers.planOnFile")}` : ""}`} />}
+                {on("careNotes") && <Fact label={t("registers.careNotes")} tint={T.care} full value={info.careNotes} />}
+                {on("emergency") && flds.emergency && <Fact label={t("registers.emergencyContact")} tint={T.emergency} full value={(info.emergencyName || info.emergencyPhone) && `${info.emergencyName ?? ""}${info.emergencyPhone ? ` · ${info.emergencyPhone}` : ""}`} />}
+                {on("password") && flds.password && <Fact label={t("registers.collectionPassword")} tint={T.password} value={info.collectionPassword && <span>🔑 {info.collectionPassword}</span>} />}
               </div>
               {on("send") && info.sendPlanId && <PlanButton id={info.sendPlanId} name={info.sendPlanName} />}
             </>
@@ -330,34 +334,34 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
 
           {live === "family" && (
             <>
-              <SectionTitle dot={T.medical.fg}>Parent / carer</SectionTitle>
+              <SectionTitle dot={T.medical.fg}>{t("registers.parentCarer")}</SectionTitle>
               <div className="grid gap-2 sm:grid-cols-2">
-                <Fact label="Name" tint={T.medical} value={info.contactName} />
-                <Fact label="Phone" tint={T.medical} value={info.contactPhone} />
-                <Fact label="Email" tint={T.medical} full value={info.contactEmail} />
-                <Fact label="Address" tint={T.neutral} full value={info.contactAddress} />
+                <Fact label={t("registers.name")} tint={T.medical} value={info.contactName} />
+                <Fact label={t("registers.phone")} tint={T.medical} value={info.contactPhone} />
+                <Fact label={t("registers.email")} tint={T.medical} full value={info.contactEmail} />
+                <Fact label={t("registers.address")} tint={T.neutral} full value={info.contactAddress} />
               </div>
               {/* Straight to the phone's own dialler / mail app — on a tablet
                   mid-register that beats copying a number out by hand. */}
               <div className="mt-2.5 flex flex-wrap gap-2">
-                {info.contactPhone && <ContactLink href={`tel:${info.contactPhone.replace(/[^\d+]/g, "")}`}>📞 Call</ContactLink>}
-                {info.contactPhone && <ContactLink href={`sms:${info.contactPhone.replace(/[^\d+]/g, "")}`}>💬 Text</ContactLink>}
-                {info.contactPhone && <ContactLink href={`https://wa.me/${info.contactPhone.replace(/[^\d]/g, "").replace(/^0/, "44")}`} external>🟢 WhatsApp</ContactLink>}
-                {info.contactEmail && <ContactLink href={`mailto:${info.contactEmail}`}>✉️ Email</ContactLink>}
-                {info.contactAddress && <ContactLink href={`https://maps.google.com/?q=${encodeURIComponent(info.contactAddress)}`} external>🗺️ Map</ContactLink>}
+                {info.contactPhone && <ContactLink href={`tel:${info.contactPhone.replace(/[^\d+]/g, "")}`}>📞 {t("registers.call")}</ContactLink>}
+                {info.contactPhone && <ContactLink href={`sms:${info.contactPhone.replace(/[^\d+]/g, "")}`}>💬 {t("registers.text")}</ContactLink>}
+                {info.contactPhone && <ContactLink href={`https://wa.me/${info.contactPhone.replace(/[^\d]/g, "").replace(/^0/, "44")}`} external>🟢 {t("registers.whatsapp")}</ContactLink>}
+                {info.contactEmail && <ContactLink href={`mailto:${info.contactEmail}`}>✉️ {t("registers.email")}</ContactLink>}
+                {info.contactAddress && <ContactLink href={`https://maps.google.com/?q=${encodeURIComponent(info.contactAddress)}`} external>🗺️ {t("registers.map")}</ContactLink>}
               </div>
 
               {(info.emergencyName || info.emergencyPhone) && <>
-                <SectionTitle dot={T.emergency.fg}>Emergency contact</SectionTitle>
+                <SectionTitle dot={T.emergency.fg}>{t("registers.emergencyContact")}</SectionTitle>
                 <div className="grid gap-2 sm:grid-cols-2">
-                  <Fact label="Name" tint={T.emergency} value={info.emergencyName} />
-                  <Fact label="Phone" tint={T.emergency} value={info.emergencyPhone} />
+                  <Fact label={t("registers.name")} tint={T.emergency} value={info.emergencyName} />
+                  <Fact label={t("registers.phone")} tint={T.emergency} value={info.emergencyPhone} />
                 </div>
-                {info.emergencyPhone && <div className="mt-2.5"><ContactLink href={`tel:${info.emergencyPhone.replace(/[^\d+]/g, "")}`}>📞 Call emergency contact</ContactLink></div>}
+                {info.emergencyPhone && <div className="mt-2.5"><ContactLink href={`tel:${info.emergencyPhone.replace(/[^\d+]/g, "")}`}>📞 {t("registers.callEmergencyContact")}</ContactLink></div>}
               </>}
 
               {info.siblings && info.siblings.length > 0 && <>
-                <SectionTitle dot={BLUE}>Siblings</SectionTitle>
+                <SectionTitle dot={BLUE}>{t("registers.siblings")}</SectionTitle>
                 <div className="flex flex-wrap gap-2">{info.siblings.map((n) => <span key={n} className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[13px] font-bold text-[var(--ink-2)]">👥 {n}</span>)}</div>
               </>}
             </>
@@ -365,21 +369,21 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
 
           {live === "booking" && (
             <>
-              <SectionTitle dot={T.medical.fg}>Contact &amp; collection</SectionTitle>
+              <SectionTitle dot={T.medical.fg}>{t("registers.contactCollection")}</SectionTitle>
               <div className="grid gap-2 sm:grid-cols-2">
-                {on("mainContact") && <Fact label="Main contact" tint={T.medical} full value={info.contactName && `${info.contactName}${info.contactPhone ? ` · ${info.contactPhone}` : ""}${info.contactEmail ? ` · ${info.contactEmail}` : ""}`} />}
-                {on("emergency") && flds.emergency && <Fact label="Emergency contact" tint={T.emergency} full value={(info.emergencyName || info.emergencyPhone) && `${info.emergencyName ?? ""}${info.emergencyPhone ? ` · ${info.emergencyPhone}` : ""}`} />}
-                {on("password") && flds.password && <Fact label="Collection password" tint={T.password} value={info.collectionPassword && <span>🔑 {info.collectionPassword}</span>} />}
-                {info.bookingRef && <Fact label="Booking ref" tint={T.neutral} value={`#${info.bookingRef}`} />}
-                {on("bookingNotes") && <Fact label="Booking notes" tint={T.neutral} full value={info.bookingNotes} />}
-                {info.collected && <Fact label="Collected" tint={T.dietary} full value={info.collected} />}
+                {on("mainContact") && <Fact label={t("registers.mainContact")} tint={T.medical} full value={info.contactName && `${info.contactName}${info.contactPhone ? ` · ${info.contactPhone}` : ""}${info.contactEmail ? ` · ${info.contactEmail}` : ""}`} />}
+                {on("emergency") && flds.emergency && <Fact label={t("registers.emergencyContact")} tint={T.emergency} full value={(info.emergencyName || info.emergencyPhone) && `${info.emergencyName ?? ""}${info.emergencyPhone ? ` · ${info.emergencyPhone}` : ""}`} />}
+                {on("password") && flds.password && <Fact label={t("registers.collectionPassword")} tint={T.password} value={info.collectionPassword && <span>🔑 {info.collectionPassword}</span>} />}
+                {info.bookingRef && <Fact label={t("registers.bookingRef")} tint={T.neutral} value={`#${info.bookingRef}`} />}
+                {on("bookingNotes") && <Fact label={t("registers.bookingNotes")} tint={T.neutral} full value={info.bookingNotes} />}
+                {info.collected && <Fact label={t("registers.collected")} tint={T.dietary} full value={info.collected} />}
               </div>
 
               {on("attending") && attend.length > 0 && <>
-                <SectionTitle dot={BLUE}>Attending</SectionTitle>
+                <SectionTitle dot={BLUE}>{t("registers.attending")}</SectionTitle>
                 <button type="button" onClick={() => setShowDays((v) => !v)} className="flex w-full items-center justify-between rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-left">
-                  <span className="text-[14px] font-extrabold text-[var(--ink-2)]">📅 {attend.length} {attend.length === 1 ? "session" : "sessions"} booked</span>
-                  <span className="text-[12.5px] font-bold text-[#1d3a8f]">{showDays ? "hide ▲" : "show all ▼"}</span>
+                  <span className="text-[14px] font-extrabold text-[var(--ink-2)]">📅 {attend.length === 1 ? t("registers.oneSessionBooked", { n: attend.length }) : t("registers.manySessionsBooked", { n: attend.length })}</span>
+                  <span className="text-[12.5px] font-bold text-[#1d3a8f]">{showDays ? `${t("registers.hide")} ▲` : `${t("registers.showAll")} ▼`}</span>
                 </button>
                 {showDays && <ol className="mt-1.5 space-y-1">{attend.map((s, i) => (
                   <li key={`${s.label}-${s.start}-${i}`} className="flex flex-wrap items-center gap-x-2 gap-y-0.5 rounded-lg border border-[var(--line)] px-3.5 py-2 text-[13px]">

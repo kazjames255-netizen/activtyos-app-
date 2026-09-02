@@ -6,6 +6,7 @@
 // Demo/localStorage-backed and today-only; historical days + real per-listing
 // grouping are Amir's (the timesheet backend).
 import { useEffect, useMemo, useState } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { loadClock, workedMs, fmtDur, hhmm, type ClockRecord } from "@/features/timeclock/data";
 
 const GREEN = "#0f9d58", BLUE = "#1d3a8f", AMBER = "#b45309";
@@ -16,6 +17,7 @@ const initials = (n: string) => n.split(" ").map((w) => w[0]).slice(0, 2).join("
 const checkedIn = (r: ClockRecord) => !!r.clockInAt;
 
 export function StaffAttendanceBoard() {
+  const t = useT();
   const [all, setAll] = useState<Record<string, ClockRecord> | null>(null);
   const [site, setSite] = useState("all");
   const [date, setDate] = useState(todayISO());
@@ -46,11 +48,11 @@ export function StaffAttendanceBoard() {
     <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
       <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-3">
         <span className="text-[15px]">🗓️</span>
-        <span className="text-[14px] font-extrabold text-[var(--ink)]">Staff attendance</span>
-        <span className="rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-bold text-[#1d3a8f]">{inRecs.length} of {shown.length} on site · {pctIn(shown)}%</span>
+        <span className="text-[14px] font-extrabold text-[var(--ink)]">{t("schedule.staffAttendance")}</span>
+        <span className="rounded-full bg-white px-2.5 py-0.5 text-[11.5px] font-bold text-[#1d3a8f]">{t("schedule.onSiteCount", { in: inRecs.length, total: shown.length, pct: pctIn(shown) })}</span>
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <select value={site} onChange={(e) => setSite(e.target.value)} className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-semibold text-[var(--ink)]">
-            <option value="all">All sites / listings</option>
+            <option value="all">{t("schedule.allSitesListings")}</option>
             {sites.map((s) => <option key={s} value={s}>{s}</option>)}
           </select>
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-semibold text-[var(--ink)]" />
@@ -58,9 +60,9 @@ export function StaffAttendanceBoard() {
       </div>
 
       {!isToday ? (
-        <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">Live attendance is today only. Past-day history comes from the timesheet backend (Amir&rsquo;s).</div>
+        <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("schedule.attendanceTodayOnly")}</div>
       ) : groups.length === 0 ? (
-        <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">No staff clocked in{site === "all" ? "" : ` at ${site}`} yet today.</div>
+        <div className="px-4 py-10 text-center text-[12.5px] text-[var(--ink-3)]">{site === "all" ? t("schedule.noStaffClockedIn") : t("schedule.noStaffClockedInAt", { where: site })}</div>
       ) : (
         <div className="p-4">
           <div className="relative mb-2 hidden h-4 text-[10.5px] font-semibold text-[var(--ink-3)] sm:block" style={{ marginLeft: 176, marginRight: 128 }}>
@@ -73,7 +75,7 @@ export function StaffAttendanceBoard() {
               <div key={room}>
                 <div className="mb-1.5 flex items-baseline gap-2">
                   <span className="text-[12.5px] font-extrabold text-[var(--ink)]">{room}</span>
-                  <span className="text-[11px] text-[var(--ink-3)]">{rs.filter(checkedIn).length} of {rs.length} in · {pctIn(rs)}%</span>
+                  <span className="text-[11px] text-[var(--ink-3)]">{t("schedule.inCount", { in: rs.filter(checkedIn).length, total: rs.length, pct: pctIn(rs) })}</span>
                 </div>
                 <div className="flex flex-col gap-1.5">
                   {rs.slice().sort((a, b) => Number(checkedIn(b)) - Number(checkedIn(a)) || a.name.localeCompare(b.name)).map((r) => {
@@ -95,10 +97,10 @@ export function StaffAttendanceBoard() {
                         <div className="text-right text-[10.5px] leading-tight">
                           {isIn ? (
                             <>
-                              <div className="font-extrabold tabular-nums text-[var(--ink-2)]">{hhmm(r.clockInAt)}–{r.clockOutAt ? hhmm(r.clockOutAt) : "now"}</div>
-                              <div className="text-[var(--ink-3)]">{fmtDur(workedMs(r))}{r.status === "break" ? " · on break" : r.lateMin ? " · late" : ""}</div>
+                              <div className="font-extrabold tabular-nums text-[var(--ink-2)]">{hhmm(r.clockInAt)}–{r.clockOutAt ? hhmm(r.clockOutAt) : t("schedule.now")}</div>
+                              <div className="text-[var(--ink-3)]">{fmtDur(workedMs(r))}{r.status === "break" ? t("schedule.onBreakDot") : r.lateMin ? t("schedule.lateDot") : ""}</div>
                             </>
-                          ) : <div className="font-bold text-[var(--ink-3)]">Off / not in</div>}
+                          ) : <div className="font-bold text-[var(--ink-3)]">{t("schedule.offNotIn")}</div>}
                         </div>
                       </div>
                     );
@@ -107,7 +109,7 @@ export function StaffAttendanceBoard() {
               </div>
             ))}
           </div>
-          <p className="mt-3 text-[11px] text-[var(--ink-3)]">Green = time on site, amber = a break. The % is how many rostered staff are checked in. Live from staff clock-ins.</p>
+          <p className="mt-3 text-[11px] text-[var(--ink-3)]">{t("schedule.attendanceLegend")}</p>
         </div>
       )}
     </div>

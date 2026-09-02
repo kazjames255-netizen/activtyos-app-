@@ -11,6 +11,7 @@
 // server-side (per-user identity + deployment = Amir).
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
@@ -51,6 +52,7 @@ const addDaysISO = (iso: string, n: number) => { const d = dt(iso); d.setDate(d.
 type Tab = "upcoming" | "clock" | "team" | "timesheet";
 
 export function MyScheduleApp() {
+  const t = useT();
   const { settings } = useSettings();
   const [shifts, setShifts] = useState<Shift[]>([]);      // mine
   const [allShifts, setAllShifts] = useState<Shift[]>([]); // whole team (assigned)
@@ -150,21 +152,21 @@ export function MyScheduleApp() {
   const todayShift = shifts.find((s) => s.date === today);
 
   const TABS: [Tab, string][] = [
-    ["upcoming", "Upcoming"],
-    ["clock", "Clock in/out"],
-    ...(teamVisible ? ([["team", "Who’s on"]] as [Tab, string][]) : []),
-    ["timesheet", "Timesheet"],
+    ["upcoming", t("schedule.tabUpcoming")],
+    ["clock", t("schedule.tabClock")],
+    ...(teamVisible ? ([["team", t("schedule.tabWhosOn")]] as [Tab, string][]) : []),
+    ["timesheet", t("schedule.tabTimesheet")],
   ];
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="My schedule" icon="🗓" lede="Your rota shifts and clock in/out, all in one place. Check your times, then clock in when you arrive." />
+      <PageHero title={t("schedule.myScheduleTitle")} icon="🗓" lede={t("schedule.myScheduleLede")} />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {([
-          ["📅", "Next shift", nextShift ? dayLabel(nextShift.date) : "—", nextShift ? `${to12(nextShift.start)}–${to12(nextShift.end)} · ${nextShift.role}` : "nothing booked", "#1d3a8f", "#eef4fd"],
-          ["⏱", "This week", hLabel(thisWeekHrs), "rota hours", "#0f857b", "#e6f6f3"],
-          ["🗓", "Upcoming shifts", String(upcoming.length), "on your rota", "#7c3aed", "#f1ecfe"],
+          ["📅", t("schedule.nextShift"), nextShift ? dayLabel(nextShift.date) : "—", nextShift ? `${to12(nextShift.start)}–${to12(nextShift.end)} · ${nextShift.role}` : t("schedule.nothingBooked"), "#1d3a8f", "#eef4fd"],
+          ["⏱", t("schedule.thisWeek"), hLabel(thisWeekHrs), t("schedule.rotaHours"), "#0f857b", "#e6f6f3"],
+          ["🗓", t("schedule.upcomingShifts"), String(upcoming.length), t("schedule.onYourRota"), "#7c3aed", "#f1ecfe"],
         ] as [string, string, string, string, string, string][]).map(([ic, label, value, sub, col, bg]) => (
           <div key={label} className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
             <span className="grid h-11 w-11 flex-none place-items-center rounded-xl text-[19px]" style={{ background: bg }}>{ic}</span>
@@ -194,13 +196,13 @@ export function MyScheduleApp() {
       {/* ── Upcoming ── */}
       {tab === "upcoming" && (
         weeks.length === 0 ? (
-          <Card className="p-10 text-center text-[13px] text-[var(--ink-3)]">No shifts on your rota yet. Your manager will publish them here — you&rsquo;ll see your times and can clock in on the day.</Card>
+          <Card className="p-10 text-center text-[13px] text-[var(--ink-3)]">{t("schedule.noShiftsYet")}</Card>
         ) : weeks.map(([wk, ss], wi) => (
           <div key={wk} className="mb-4">
             <div className="mb-2 flex items-center gap-2">
-              <span className="text-[11px] font-black uppercase tracking-wide text-[var(--ink-2)]">{wi === 0 ? "This week" : `Week of ${dt(wk).toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`}</span>
+              <span className="text-[11px] font-black uppercase tracking-wide text-[var(--ink-2)]">{wi === 0 ? t("schedule.thisWeek") : t("schedule.weekOf", { date: dt(wk).toLocaleDateString("en-GB", { day: "numeric", month: "long" }) })}</span>
               <span className="h-px flex-1 bg-[var(--line)]" />
-              <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)]">{ss.length} shift{ss.length === 1 ? "" : "s"} · {hLabel(ss.reduce((a, s) => a + hrsOf(s.start, s.end), 0))}</span>
+              <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)]">{ss.length} {ss.length === 1 ? t("schedule.shift") : t("schedule.shifts")} · {hLabel(ss.reduce((a, s) => a + hrsOf(s.start, s.end), 0))}</span>
             </div>
             <Card className="p-0"><ul className="divide-y divide-[var(--line)]">
               {ss.map((s) => {
@@ -216,7 +218,7 @@ export function MyScheduleApp() {
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{dt(s.date).toLocaleDateString("en-GB", { weekday: "long" })}</span>
-                        {isToday && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">Today</span>}
+                        {isToday && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">{t("schedule.today")}</span>}
                         <span className="ml-auto tabular-nums text-[12.5px] font-bold text-[var(--ink)]">{to12(s.start)}–{to12(s.end)}</span>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
@@ -252,44 +254,44 @@ export function MyScheduleApp() {
               <span className="grid h-12 w-12 place-items-center rounded-full bg-[#eef4fd] text-[16px] font-extrabold text-[#1d3a8f]">{ME.split(" ").map((w) => w[0]).join("")}</span>
               <div>
                 <div className="text-[15px] font-extrabold text-[var(--ink)]">{ME}</div>
-                <span className="mt-0.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold" style={status === "in" ? { background: "#e6f4ea", color: "#0f7a43" } : status === "break" ? { background: "#fdf3e0", color: "#8a5a09" } : { background: "#eef1f6", color: "#64748b" }}><span className="h-2 w-2 rounded-full" style={{ background: status === "in" ? "#12b76a" : status === "break" ? "#f59e0b" : "#94a3b8" }} />{status === "in" ? "Clocked in" : status === "break" ? "On break" : "Clocked out"}{status !== "out" && rec?.clockInAt ? ` · since ${hhmm(rec.clockInAt)}` : ""}</span>
+                <span className="mt-0.5 inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11.5px] font-bold" style={status === "in" ? { background: "#e6f4ea", color: "#0f7a43" } : status === "break" ? { background: "#fdf3e0", color: "#8a5a09" } : { background: "#eef1f6", color: "#64748b" }}><span className="h-2 w-2 rounded-full" style={{ background: status === "in" ? "#12b76a" : status === "break" ? "#f59e0b" : "#94a3b8" }} />{status === "in" ? t("schedule.clockedIn") : status === "break" ? t("schedule.onBreak") : t("schedule.clockedOut")}{status !== "out" && rec?.clockInAt ? ` · ${t("schedule.sinceTime", { time: hhmm(rec.clockInAt) })}` : ""}</span>
               </div>
             </div>
 
             {status === "out" && !rec?.clockOutAt ? (
               <div className="mt-4 flex items-center gap-3 rounded-2xl bg-[var(--panel)] p-4 text-[13px] text-[var(--ink-2)]">
                 <span className="text-[18px]">👋</span>
-                <span>You&rsquo;re not clocked in yet.{todayShift ? <> You&rsquo;re scheduled <b className="text-[var(--ink)]">{todayShift.start}–{todayShift.end}</b> today.</> : " Tap below when your shift starts."}</span>
+                <span>{t("schedule.notClockedInYet")}{todayShift ? <> {t("schedule.youreScheduled")} <b className="text-[var(--ink)]">{todayShift.start}–{todayShift.end}</b> {t("schedule.todayLower")}</> : ` ${t("schedule.tapBelowWhenStarts")}`}</span>
               </div>
             ) : (
               <div className="mt-4 flex items-center gap-4 rounded-2xl bg-[var(--panel)] p-4">
-                <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Worked today</div><div className="text-[26px] font-extrabold tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{status === "in" ? fmtDurSec(worked) : fmtDur(worked)}</div></div>
-                {rec && rec.breakMs > 0 && <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Break</div><div className="text-[15px] font-extrabold tabular-nums text-[#8a5a09]">{fmtDur(rec.breakMs)}</div></div>}
-                {todayShift && <div className="ml-auto text-right"><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Scheduled</div><div className="text-[13px] font-bold text-[var(--ink-2)]">{todayShift.start}–{todayShift.end}</div></div>}
+                <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.workedToday")}</div><div className="text-[26px] font-extrabold tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{status === "in" ? fmtDurSec(worked) : fmtDur(worked)}</div></div>
+                {rec && rec.breakMs > 0 && <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.breakLabel")}</div><div className="text-[15px] font-extrabold tabular-nums text-[#8a5a09]">{fmtDur(rec.breakMs)}</div></div>}
+                {todayShift && <div className="ml-auto text-right"><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.scheduled")}</div><div className="text-[13px] font-bold text-[var(--ink-2)]">{todayShift.start}–{todayShift.end}</div></div>}
               </div>
             )}
-            {rec?.lateMin ? <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-1.5 text-[11.5px] font-semibold text-[#8a5a09]">Clocked in {rec.lateMin} min after your {todayShift?.start} start.</div> : null}
+            {rec?.lateMin ? <div className="mt-2 rounded-lg bg-[#fdf3e0] px-3 py-1.5 text-[11.5px] font-semibold text-[#8a5a09]">{t("schedule.clockedInLate", { min: rec.lateMin, start: todayShift?.start ?? "" })}</div> : null}
 
             <div className="mt-4 flex flex-wrap gap-2">
-              {status === "out" && <button type="button" onClick={doIn} className="flex-1 rounded-full bg-[#0f9d58] px-6 py-3 text-[15px] font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(15,157,88,.6)] hover:brightness-105">⏱ {rec?.clockOutAt ? "Clock back in" : "Clock in"}</button>}
+              {status === "out" && <button type="button" onClick={doIn} className="flex-1 rounded-full bg-[#0f9d58] px-6 py-3 text-[15px] font-extrabold text-white shadow-[0_10px_24px_-10px_rgba(15,157,88,.6)] hover:brightness-105">⏱ {rec?.clockOutAt ? t("schedule.clockBackIn") : t("schedule.clockIn")}</button>}
               {status === "in" && <>
-                <button type="button" onClick={doOut} className="flex-1 rounded-full bg-[#1d3a8f] px-6 py-3 text-[15px] font-extrabold text-white hover:brightness-110">Clock out</button>
-                <Button onClick={doBreak}>Start break</Button>
+                <button type="button" onClick={doOut} className="flex-1 rounded-full bg-[#1d3a8f] px-6 py-3 text-[15px] font-extrabold text-white hover:brightness-110">{t("schedule.clockOut")}</button>
+                <Button onClick={doBreak}>{t("schedule.startBreak")}</Button>
               </>}
               {status === "break" && <>
-                <button type="button" onClick={doBreak} className="flex-1 rounded-full bg-[#f59e0b] px-6 py-3 text-[15px] font-extrabold text-white hover:brightness-105">End break</button>
-                <Button onClick={doOut}>Clock out</Button>
+                <button type="button" onClick={doBreak} className="flex-1 rounded-full bg-[#f59e0b] px-6 py-3 text-[15px] font-extrabold text-white hover:brightness-105">{t("schedule.endBreak")}</button>
+                <Button onClick={doOut}>{t("schedule.clockOut")}</Button>
               </>}
             </div>
           </Card>
 
           <Card className="p-4">
-            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Today</div>
-            {!rec || rec.events.length === 0 ? <div className="py-3 text-[12.5px] text-[var(--ink-3)]">No clock activity yet — hit <b>Clock in</b> to start.</div> : (
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.todayLabel")}</div>
+            {!rec || rec.events.length === 0 ? <div className="py-3 text-[12.5px] text-[var(--ink-3)]">{t("schedule.noClockActivity")}</div> : (
               <div className="divide-y divide-[var(--line)]">{rec.events.map((e, i) => (
                 <div key={i} className="flex items-center gap-2 py-1.5 text-[12.5px]">
                   <span>{e.kind === "in" ? "🟢" : e.kind === "out" ? "🔴" : e.kind === "break-start" ? "⏸" : "▶️"}</span>
-                  <span className="font-semibold text-[var(--ink)]">{e.kind === "in" ? "Clocked in" : e.kind === "out" ? "Clocked out" : e.kind === "break-start" ? "Break started" : "Break ended"}</span>
+                  <span className="font-semibold text-[var(--ink)]">{e.kind === "in" ? t("schedule.clockedIn") : e.kind === "out" ? t("schedule.clockedOut") : e.kind === "break-start" ? t("schedule.breakStarted") : t("schedule.breakEnded")}</span>
                   <span className="ml-auto tabular-nums text-[var(--ink-3)]">{hhmm(e.t)}</span>
                 </div>
               ))}</div>
@@ -304,20 +306,20 @@ export function MyScheduleApp() {
           {/* header: week stepper + scope */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-1">
-              <button type="button" onClick={() => setWeekOff((w) => w - 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label="Previous week">‹</button>
-              <span className="min-w-[112px] px-2 text-center text-[13px] font-extrabold text-[var(--ink)]">{weekOff === 0 ? "This week" : weekLabel}</span>
-              <button type="button" onClick={() => setWeekOff((w) => w + 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label="Next week">›</button>
-              {weekOff !== 0 && <button type="button" onClick={() => setWeekOff(0)} className="ml-1 rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-extrabold text-[#1d3a8f] hover:brightness-95">Jump to today</button>}
+              <button type="button" onClick={() => setWeekOff((w) => w - 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label={t("schedule.previousWeek")}>‹</button>
+              <span className="min-w-[112px] px-2 text-center text-[13px] font-extrabold text-[var(--ink)]">{weekOff === 0 ? t("schedule.thisWeek") : weekLabel}</span>
+              <button type="button" onClick={() => setWeekOff((w) => w + 1)} className="grid h-9 w-9 place-items-center rounded-xl border border-[var(--line)] bg-white text-[15px] text-[var(--ink-2)] shadow-sm transition hover:bg-[var(--panel)] hover:text-[var(--ink)]" aria-label={t("schedule.nextWeek")}>›</button>
+              {weekOff !== 0 && <button type="button" onClick={() => setWeekOff(0)} className="ml-1 rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-extrabold text-[#1d3a8f] hover:brightness-95">{t("schedule.jumpToToday")}</button>}
             </div>
-            <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-[11px] font-bold text-[var(--ink-3)]">{vis === "team" ? "Your listings" : "Whole team"}</span>
+            <span className="rounded-full bg-[var(--panel)] px-3 py-1 text-[11px] font-bold text-[var(--ink-3)]">{vis === "team" ? t("schedule.yourListings") : t("schedule.wholeTeam")}</span>
           </div>
 
           {/* summary strip */}
           <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-3">
             {([
-              ["👥", String(weekStats.people), weekStats.people === 1 ? "person on" : "people on", "#1d3a8f", "#eef4fd"],
-              ["🗓", String(teamCount), teamCount === 1 ? "shift" : "shifts", "#0f857b", "#e6f6f3"],
-              ["⏱", hLabel(weekStats.hours), "team hours", "#7c3aed", "#f1ecfe"],
+              ["👥", String(weekStats.people), weekStats.people === 1 ? t("schedule.personOn") : t("schedule.peopleOn"), "#1d3a8f", "#eef4fd"],
+              ["🗓", String(teamCount), teamCount === 1 ? t("schedule.shift") : t("schedule.shifts"), "#0f857b", "#e6f6f3"],
+              ["⏱", hLabel(weekStats.hours), t("schedule.teamHours"), "#7c3aed", "#f1ecfe"],
             ] as [string, string, string, string, string][]).map(([ic, big, small, col, bg]) => (
               <div key={small} className="flex items-center gap-2.5 rounded-2xl border border-[var(--line)] bg-white p-3 shadow-sm">
                 <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: bg }}>{ic}</span>
@@ -332,7 +334,7 @@ export function MyScheduleApp() {
           {/* role legend */}
           {weekStats.roles.length > 0 && (
             <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl bg-[var(--panel)] px-3 py-2">
-              <span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Roles</span>
+              <span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.roles")}</span>
               {weekStats.roles.map((r) => (
                 <span key={r} className="inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-[var(--ink-2)]">
                   <span className="h-2.5 w-2.5 rounded-full" style={{ background: roleCol(r) }} />{r}
@@ -351,17 +353,17 @@ export function MyScheduleApp() {
                     <div className="flex items-baseline gap-2">
                       <span className={"text-[13px] font-black " + (isToday ? "text-white" : "text-[var(--ink)]")}>{dt(date).toLocaleDateString("en-GB", { weekday: "long" })}</span>
                       <span className={"text-[11.5px] font-semibold " + (isToday ? "text-white/80" : "text-[var(--ink-3)]")}>{dt(date).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}</span>
-                      {isToday && <span className="rounded-full bg-white/20 px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide">Today</span>}
+                      {isToday && <span className="rounded-full bg-white/20 px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide">{t("schedule.today")}</span>}
                     </div>
-                    <span className={"text-[11px] font-bold " + (isToday ? "text-white/90" : "text-[var(--ink-3)]")}>{rows.length === 0 ? "No one on" : `${rows.length} on`}</span>
+                    <span className={"text-[11px] font-bold " + (isToday ? "text-white/90" : "text-[var(--ink-3)]")}>{rows.length === 0 ? t("schedule.noOneOn") : t("schedule.nOn", { n: rows.length })}</span>
                   </div>
                   {rows.length === 0 ? (
-                    <div className="px-4 py-4 text-center text-[12px] text-[var(--ink-3)]">Nobody on the rota.</div>
+                    <div className="px-4 py-4 text-center text-[12px] text-[var(--ink-3)]">{t("schedule.nobodyOnRota")}</div>
                   ) : (
                     <ul className="divide-y divide-[var(--line)]">
                       {rows.map((s) => {
                         const isMe = s.staffId === myId || s.staffId === AVAIL_ID;
-                        const name = isMe ? "You" : (staffById[s.staffId!] ?? "Staff");
+                        const name = isMe ? t("schedule.you") : (staffById[s.staffId!] ?? t("schedule.staff"));
                         const col = roleCol(s.role);
                         const pos = barPos(s.start, s.end);
                         return (
@@ -370,7 +372,7 @@ export function MyScheduleApp() {
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="truncate text-[13px] font-extrabold text-[var(--ink)]">{name}</span>
-                                {isMe && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">You</span>}
+                                {isMe && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">{t("schedule.you")}</span>}
                                 <span className="ml-auto tabular-nums text-[12px] font-bold text-[var(--ink-2)]">{to12(s.start)}–{to12(s.end)}</span>
                               </div>
                               <div className="mt-1 flex items-center gap-2">
@@ -391,14 +393,14 @@ export function MyScheduleApp() {
               );
             })}
           </div>
-          <p className="text-[11.5px] text-[var(--ink-3)]">{vis === "team" ? "You can see everyone on the rota for the listings you work on." : vis === "leads" ? "As a lead you can see the whole team's rota." : "Your provider shows the whole team's rota."} The bar shows each shift across a 7am–7pm day. Times are the published rota.</p>
+          <p className="text-[11.5px] text-[var(--ink-3)]">{vis === "team" ? t("schedule.visTeam") : vis === "leads" ? t("schedule.visLeads") : t("schedule.visAll")} {t("schedule.barExplainer")}</p>
         </div>
       )}
 
       {/* ── Timesheet ── */}
       {tab === "timesheet" && (
         past.length === 0 ? (
-          <Card className="p-10 text-center text-[13px] text-[var(--ink-3)]">No past shifts yet. Once you&rsquo;ve worked, your hours appear here — scheduled vs actually clocked.</Card>
+          <Card className="p-10 text-center text-[13px] text-[var(--ink-3)]">{t("schedule.noPastShifts")}</Card>
         ) : (() => {
           const schedTotal = past.reduce((a, s) => a + hrsOf(s.start, s.end), 0);
           const clockedTotal = past.reduce((a, s) => a + (s.in && s.out ? hrsOf(s.in, s.out) : 0), 0);
@@ -407,9 +409,9 @@ export function MyScheduleApp() {
             <div className="flex flex-col gap-3">
               <div className="grid grid-cols-3 gap-2.5">
                 {([
-                  ["🗓", String(past.length), past.length === 1 ? "shift worked" : "shifts worked", "#1d3a8f", "#eef4fd"],
-                  ["📋", hLabel(schedTotal), "scheduled", "#0f857b", "#e6f6f3"],
-                  ["✅", hLabel(clockedTotal), `clocked · ${clockedCount}/${past.length}`, "#0f7a43", "#e7f5ec"],
+                  ["🗓", String(past.length), past.length === 1 ? t("schedule.shiftWorked") : t("schedule.shiftsWorked"), "#1d3a8f", "#eef4fd"],
+                  ["📋", hLabel(schedTotal), t("schedule.scheduledLower"), "#0f857b", "#e6f6f3"],
+                  ["✅", hLabel(clockedTotal), t("schedule.clockedCount", { done: clockedCount, total: past.length }), "#0f7a43", "#e7f5ec"],
                 ] as [string, string, string, string, string][]).map(([ic, big, small, col, bg]) => (
                   <div key={small} className="flex items-center gap-2.5 rounded-2xl border border-[var(--line)] bg-white p-3 shadow-sm">
                     <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px]" style={{ background: bg }}>{ic}</span>
@@ -421,7 +423,7 @@ export function MyScheduleApp() {
                 ))}
               </div>
               <Card className="p-0">
-                <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5"><span className="text-[11px] font-black uppercase tracking-wide text-[var(--ink-3)]">Recent shifts</span><span className="text-[12px] font-bold text-[var(--ink-3)]">Scheduled vs clocked</span></div>
+                <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5"><span className="text-[11px] font-black uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.recentShifts")}</span><span className="text-[12px] font-bold text-[var(--ink-3)]">{t("schedule.scheduledVsClocked")}</span></div>
                 <ul className="divide-y divide-[var(--line)]">
                   {past.map((s) => {
                     const sched = hrsOf(s.start, s.end);
@@ -442,9 +444,9 @@ export function MyScheduleApp() {
                           </div>
                         </div>
                         <div className="flex-none text-right">
-                          <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Sched <b className="text-[var(--ink-2)]">{hLabel(sched)}</b></div>
+                          <div className="text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.sched")} <b className="text-[var(--ink-2)]">{hLabel(sched)}</b></div>
                           {clockH == null ? (
-                            <span className="mt-1 inline-block rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)]">Not clocked</span>
+                            <span className="mt-1 inline-block rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)]">{t("schedule.notClocked")}</span>
                           ) : (
                             <span className="mt-1 inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={Math.abs(diff!) < 0.08 ? { background: "#e7f5ec", color: "#0f7a43" } : diff! < 0 ? { background: "#fdf3e0", color: "#8a5a09" } : { background: "#eef4fd", color: "#1d3a8f" }}>
                               {hLabel(clockH)}{Math.abs(diff!) >= 0.08 && <span className="tabular-nums">({diff! > 0 ? "+" : "−"}{hLabel(Math.abs(diff!))})</span>}
@@ -460,7 +462,7 @@ export function MyScheduleApp() {
           );
         })()
       )}
-      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">Times are your employer&rsquo;s published rota. If something looks wrong, message your manager.</p>
+      <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">{t("schedule.timesFooter")}</p>
     </div>
   );
 }

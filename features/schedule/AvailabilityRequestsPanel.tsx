@@ -6,6 +6,7 @@
 // page (they can only request time off). Real store: /api/availability.
 import { useEffect, useMemo, useState } from "react";
 import { get, post, patch, del } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import { Button, Card, Input } from "@/components/ui";
 
 interface ReqWindow { kind: "week" | "range" | "ongoing" | "camp"; label: string; from?: string; to?: string }
@@ -35,12 +36,13 @@ const WINDOWS: [string, () => ReqWindow][] = [
 ];
 
 export function AvailabilityRequestsPanel() {
+  const t = useT();
   const [rows, setRows] = useState<AvailRequest[]>([]);
   const [invited, setInvited] = useState<string[]>([]);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
   const [winIdx, setWinIdx] = useState(1);
-  const [note, setNote] = useState("We're building the rota — please add the days and hours you can work.");
+  const [note, setNote] = useState(() => t("schedule.requestNoteDefault"));
   const [flash, setFlash] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
@@ -58,11 +60,11 @@ export function AvailabilityRequestsPanel() {
     try {
       const window = WINDOWS[winIdx][1]();
       await post("/api/availability/requests", { staffEmail: email.trim(), staffName: name.trim() || undefined, window, note: note.trim() || undefined });
-      setFlash(`Requested from ${email.trim()} · ${window.label}.`);
+      setFlash(t("schedule.requestedFromFlash", { email: email.trim(), window: window.label }));
       setEmail(""); setName("");
       await load();
       setTimeout(() => setFlash(null), 4000);
-    } catch (e) { setFlash(e instanceof Error ? e.message : "Couldn't send the request"); }
+    } catch (e) { setFlash(e instanceof Error ? e.message : t("schedule.requestSendError")); }
     finally { setBusy(false); }
   };
   const withdraw = async (id: string) => { await del(`/api/availability/requests/${id}`).catch(() => {}); await load(); };
@@ -72,11 +74,11 @@ export function AvailabilityRequestsPanel() {
   return (
     <div className="flex flex-col gap-3">
       <Card className="p-4">
-        <div className="mb-1 text-[14px] font-extrabold text-[var(--ink)]">Request availability from a team member</div>
-        <p className="mb-3 text-[12px] text-[var(--ink-3)]">They&rsquo;ll see it on their <b>My availability</b> page and submit for the dates you choose. Once submitted, open it here to <b>assign</b> them to days.</p>
+        <div className="mb-1 text-[14px] font-extrabold text-[var(--ink)]">{t("schedule.requestAvailTitle")}</div>
+        <p className="mb-3 text-[12px] text-[var(--ink-3)]">{t("schedule.requestAvailIntro")}</p>
         <div className="grid gap-2.5 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Staff email</label>
+            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.staffEmail")}</label>
             <Input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="name@example.com" className="w-full" />
             {invited.length > 0 && (
               <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -85,33 +87,33 @@ export function AvailabilityRequestsPanel() {
             )}
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Name <span className="font-normal normal-case">— optional</span></label>
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Kaz James" className="w-full" />
+            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.name")} <span className="font-normal normal-case">{t("schedule.optionalSuffix")}</span></label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("schedule.namePlaceholder")} className="w-full" />
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">For</label>
+            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.forLabel")}</label>
             <select value={winIdx} onChange={(e) => setWinIdx(Number(e.target.value))} className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] text-[var(--ink)]">
               {WINDOWS.map(([label], i) => <option key={label} value={i}>{label}</option>)}
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Note <span className="font-normal normal-case">— optional</span></label>
+            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.note")} <span className="font-normal normal-case">{t("schedule.optionalSuffix")}</span></label>
             <Input value={note} onChange={(e) => setNote(e.target.value)} className="w-full" />
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-3">
-          <Button variant="primary" disabled={!valid || busy} onClick={send} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{busy ? "Sending…" : "Send request"}</Button>
+          <Button variant="primary" disabled={!valid || busy} onClick={send} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{busy ? t("schedule.sending") : t("schedule.sendRequest")}</Button>
           {flash && <span className="text-[12.5px] font-semibold text-[#0f7a43]">✓ {flash}</span>}
         </div>
       </Card>
 
       <Card className="p-0">
         <div className="flex items-center justify-between border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
-          <span className="text-[11px] font-black uppercase tracking-wide text-[var(--ink-3)]">Requests</span>
-          <span className="text-[12px] font-bold text-[var(--ink-3)]">{pending} awaiting · {rows.length} total</span>
+          <span className="text-[11px] font-black uppercase tracking-wide text-[var(--ink-3)]">{t("schedule.requests")}</span>
+          <span className="text-[12px] font-bold text-[var(--ink-3)]">{t("schedule.awaitingTotal", { awaiting: pending, total: rows.length })}</span>
         </div>
         {rows.length === 0 ? (
-          <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">No requests yet — send one above.</div>
+          <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("schedule.noRequestsYet")}</div>
         ) : (
           <ul className="divide-y divide-[var(--line)]">
             {rows.map((r) => {
@@ -122,15 +124,15 @@ export function AvailabilityRequestsPanel() {
                     <span className="text-[13px] font-extrabold text-[var(--ink)]">{r.staffName || r.staffEmail}</span>
                     {r.staffName && <span className="text-[11.5px] text-[var(--ink-3)]">{r.staffEmail}</span>}
                     <span className="text-[12px] text-[var(--ink-2)]">· {r.window.label}{r.window.from ? ` (${fmt(r.window.from)}–${fmt(r.window.to)})` : ""}</span>
-                    {assignedN > 0 && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">📌 {assignedN} assigned</span>}
+                    {assignedN > 0 && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">📌 {t("schedule.assignedCount", { count: assignedN })}</span>}
                     <span className="ml-auto flex items-center gap-2">
                       {r.status === "submitted"
-                        ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">✓ Submitted</span>
-                        : <span className="rounded-full bg-[#fdf6e3] px-2.5 py-0.5 text-[11px] font-extrabold text-[#8a5a09]">Awaiting</span>}
+                        ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">✓ {t("schedule.submitted")}</span>
+                        : <span className="rounded-full bg-[#fdf6e3] px-2.5 py-0.5 text-[11px] font-extrabold text-[#8a5a09]">{t("schedule.awaiting")}</span>}
                       {r.camp && r.status === "submitted" && (
-                        <button type="button" onClick={() => setOpenId((o) => (o === r.id ? null : r.id))} className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11px] font-bold text-white transition hover:brightness-110">{openId === r.id ? "Close" : "View & assign"}</button>
+                        <button type="button" onClick={() => setOpenId((o) => (o === r.id ? null : r.id))} className="rounded-full bg-[#1d3a8f] px-3 py-1 text-[11px] font-bold text-white transition hover:brightness-110">{openId === r.id ? t("schedule.close") : t("schedule.viewAssign")}</button>
                       )}
-                      <button type="button" onClick={() => withdraw(r.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Withdraw</button>
+                      <button type="button" onClick={() => withdraw(r.id)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{t("schedule.withdraw")}</button>
                     </span>
                   </div>
                   {openId === r.id && r.camp && <AssignPanel req={r} onSaved={load} />}
@@ -146,6 +148,7 @@ export function AvailabilityRequestsPanel() {
 
 // Operator view of a staff member's submitted camp availability + day assignment.
 function AssignPanel({ req, onSaved }: { req: AvailRequest; onSaved: () => void }) {
+  const t = useT();
   const camp = req.camp!;
   const [grid, setGrid] = useState<Record<string, DayAvail> | null>(null);
   const [assigned, setAssigned] = useState<Set<string>>(new Set(camp.assignedDates ?? []));
@@ -175,16 +178,16 @@ function AssignPanel({ req, onSaved }: { req: AvailRequest; onSaved: () => void 
         <span className="text-[var(--ink-3)]">{camp.open}–{camp.close}</span>
         <span className="text-[var(--ink-3)]">· {chosenCount} days available · <b className="text-[#1d3a8f]">{assigned.size} assigned</b></span>
       </div>
-      {grid === null ? <div className="py-3 text-center text-[12px] text-[var(--ink-3)]">Loading their availability…</div> : (
+      {grid === null ? <div className="py-3 text-center text-[12px] text-[var(--ink-3)]">{t("schedule.loadingAvailability")}</div> : (
         <div className="flex flex-col gap-1.5">
           {weeks.map((wk, wi) => (
             <div key={wi} className="flex flex-wrap items-center gap-1.5">
-              <span className="w-[60px] flex-none text-[11px] font-extrabold text-[#1d3a8f]">Week {wi + 1}</span>
+              <span className="w-[60px] flex-none text-[11px] font-extrabold text-[#1d3a8f]">{t("schedule.weekN", { n: wi + 1 })}</span>
               {wk.map((dt) => {
                 const ok = chose(dt); const on = assigned.has(dt);
                 return (
                   <button key={dt} type="button" disabled={!ok} onClick={() => toggle(dt)}
-                    title={ok ? `${grid![dt].from}–${grid![dt].to} available — click to ${on ? "unassign" : "assign"}` : "Not available"}
+                    title={ok ? t("schedule.availClickTo", { from: grid![dt].from, to: grid![dt].to, action: on ? t("schedule.unassign") : t("schedule.assign") }) : t("schedule.notAvailable")}
                     className={"rounded-md px-2 py-1 text-[11px] font-bold tabular-nums transition " + (on ? "bg-[#1d3a8f] text-white" : ok ? "bg-white text-[#1d3a8f] ring-1 ring-[#c9d6f5] hover:bg-[#eef4fd]" : "cursor-not-allowed bg-[var(--panel)] text-[var(--ink-3)] opacity-60")}>
                     {on ? "📌 " : ""}{wdShort(dt)} {dNum(dt)}
                   </button>
@@ -195,9 +198,9 @@ function AssignPanel({ req, onSaved }: { req: AvailRequest; onSaved: () => void 
         </div>
       )}
       <div className="mt-3 flex items-center gap-3">
-        <Button variant="primary" disabled={busy} onClick={save} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{busy ? "Saving…" : "Save assignments"}</Button>
-        {saved && <span className="text-[12px] font-bold text-[#0f7a43]">✓ Assigned — locked on their availability page</span>}
-        <span className="ml-auto text-[11px] text-[var(--ink-3)]">Click their available days (white) to assign · 📌 = assigned</span>
+        <Button variant="primary" disabled={busy} onClick={save} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{busy ? t("schedule.saving") : t("schedule.saveAssignments")}</Button>
+        {saved && <span className="text-[12px] font-bold text-[#0f7a43]">✓ {t("schedule.assignedLocked")}</span>}
+        <span className="ml-auto text-[11px] text-[var(--ink-3)]">{t("schedule.assignDaysHint")}</span>
       </div>
     </div>
   );
