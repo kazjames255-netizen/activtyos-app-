@@ -18,13 +18,21 @@ function mondayNext(): Date {
   return m;
 }
 
+const WEEKS = 6;
+// Real listing/venue/hours pulled from the company's Summer Holiday Camp
+// (sessions 09:00–15:00 at Loughton Leisure Centre).
+const CAMP = { listingName: "Summer Holiday Camp", location: "Loughton Leisure Centre", open: "09:00", close: "15:00", weeks: WEEKS };
+
 async function main() {
   const mon = mondayNext();
-  const sun = new Date(mon);
-  sun.setDate(mon.getDate() + 6);
-  const label = `week of ${mon.toLocaleDateString("en-GB", { day: "numeric", month: "long" })}`;
-  const id = `availreq-${COMPANY}-kazj181-${iso(mon)}`;
+  const end = new Date(mon);
+  end.setDate(mon.getDate() + WEEKS * 7 - 1); // last day of the 6-week block
+  const label = `Summer Holiday Camp · ${WEEKS} weeks`;
+  const id = `availreq-${COMPANY}-kazj181-camp-${iso(mon)}`;
   const ref = db.collection("availabilityRequests").doc(id);
+
+  // Remove the earlier single-week seed if present, so there's just the camp one.
+  await db.collection("availabilityRequests").doc(`availreq-${COMPANY}-kazj181-${iso(mon)}`).delete().catch(() => {});
 
   if (process.argv[2] === "clean") {
     await ref.delete();
@@ -37,15 +45,16 @@ async function main() {
       tenantId: COMPANY,
       staffEmail: STAFF_EMAIL,
       staffName: "Kaz James",
-      window: { kind: "week", label, from: iso(mon), to: iso(sun) },
-      note: "We're building next week's rota — please add the days and hours you can work.",
+      window: { kind: "camp", label, from: iso(mon), to: iso(end) },
+      camp: { ...CAMP, startDate: iso(mon) },
+      note: "You've been assigned to this camp — please add the days and hours you can work across the 6 weeks.",
       status: "pending",
       createdAt: new Date().toISOString(),
       createdBy: "kazjames80@gmail.co.uk",
     },
     { merge: true },
   );
-  console.log(`Seeded availability request ${id} → ${STAFF_EMAIL} · ${label} (${iso(mon)}–${iso(sun)})`);
+  console.log(`Seeded camp availability request ${id} → ${STAFF_EMAIL} · ${CAMP.listingName} @ ${CAMP.location} · ${WEEKS} weeks (${iso(mon)}–${iso(end)}) · ${CAMP.open}–${CAMP.close}`);
   process.exit(0);
 }
 

@@ -20,15 +20,26 @@ const canManage = (r: Role) => r === "company" || r === "franchise" || r === "fr
 const lc = (s: string) => s.trim().toLowerCase();
 
 const windowSchema = z.object({
-  kind: z.enum(["week", "range", "ongoing"]),
+  kind: z.enum(["week", "range", "ongoing", "camp"]),
   label: z.string().trim().max(80),
   from: z.string().max(10).optional(),
   to: z.string().max(10).optional(),
+});
+// When the request is for a specific listing/camp, we carry the assignment and
+// the camp's operating hours so the staff page can frame + bound the grid.
+const campSchema = z.object({
+  listingName: z.string().trim().max(120),
+  location: z.string().trim().max(160).optional(),
+  open: z.string().max(8),
+  close: z.string().max(8),
+  weeks: z.number().int().min(1).max(26),
+  startDate: z.string().max(10), // Monday of week 1
 });
 const createSchema = z.object({
   staffEmail: z.string().trim().email().max(160),
   staffName: z.string().trim().max(80).optional(),
   window: windowSchema,
+  camp: campSchema.optional(),
   note: z.string().trim().max(500).optional(),
 });
 
@@ -43,6 +54,7 @@ availability.post("/requests", async (req, res) => {
     staffEmail: lc(p.data.staffEmail),
     staffName: p.data.staffName ?? null,
     window: p.data.window,
+    camp: p.data.camp ?? null,
     note: p.data.note ?? "",
     status: "pending" as const,
     createdAt: new Date().toISOString(),
@@ -89,7 +101,8 @@ availability.get("/mine", async (req, res) => {
 // staff → save my availability pattern and mark my pending requests submitted
 const daySchema = z.object({ on: z.boolean(), from: z.string().max(8), to: z.string().max(8) });
 const saveSchema = z.object({
-  days: z.record(z.string(), daySchema),
+  days: z.record(z.string(), daySchema).optional(),  // standing weekly pattern (mon..sun)
+  grid: z.record(z.string(), daySchema).optional(),  // per-date grid (camp requests)
   note: z.string().max(1000).optional(),
 });
 availability.put("/mine", async (req, res) => {
@@ -100,7 +113,12 @@ availability.put("/mine", async (req, res) => {
   if (!p.success) { res.status(400).json({ error: p.error.issues }); return; }
   const now = new Date().toISOString();
   await patterns.doc(`${auth.tenantId}_${email}`).set(
-    { tenantId: auth.tenantId, staffEmail: email, staffName: req.user?.name ?? null, days: p.data.days, note: p.data.note ?? "", submittedAt: now },
+    {
+      tenantId: auth.tenantId, staffEmail: email, staffName: req.user?.name ?? null,
+      ...(p.data.days ? { days: p.data.days } : {}),
+      ...(p.data.grid ? { grid: p.data.grid } : {}),
+      note: p.data.note ?? "", submittedAt: now,
+    },
     { merge: true },
   );
   const snap = await reqs.where("tenantId", "==", auth.tenantId).get();
