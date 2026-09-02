@@ -67,6 +67,7 @@ import { WalletApp } from "@/features/parent/WalletApp";
 import { CouponsApp } from "@/features/parent/CouponsApp";
 import { ReferApp } from "@/features/parent/ReferApp";
 import { MembershipsApp } from "@/features/parent/MembershipsApp";
+import { FeedbackApp } from "@/features/parent/FeedbackApp";
 import { ChildrenApp } from "@/features/parent/ChildrenApp";
 import { BookingsHubApp } from "@/features/parent/BookingsHub";
 import { ProvidersApp } from "@/features/platform/ProvidersApp";
@@ -304,6 +305,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     privacy: PrivacyApp,
     ai: () => <AiAssistant kind="parent" />,
     memberships: MembershipsApp,
+    feedback: FeedbackApp,
     dash: BrowseApp, // routable alias — parents' home is Browse
   },
   platform: {

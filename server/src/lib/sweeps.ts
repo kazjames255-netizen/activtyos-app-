@@ -489,34 +489,37 @@ async function reviewRequests(): Promise<void> {
   if (snap.empty) return;
   const libFor = libraryLoader();
 
-  // tenant__email → the latest booked day across every active booking.
-  const lastDay = new Map<string, { tenantId: string; email: string; last: string }>();
+  // tenant__email → the latest booked day (with its activity + child) across
+  // every active booking, so the prompt can name what they did.
+  const lastDay = new Map<string, { tenantId: string; email: string; last: string; listing?: string; child?: string }>();
   for (const d of snap.docs) {
-    const b = d.data() as SweepBooking & { tenantId?: string };
+    const b = d.data() as SweepBooking & { tenantId?: string; listing?: string };
     if (!b.tenantId || !b.email?.includes("@") || b.status !== "Confirmed" || !b.days?.length) continue;
     const key = `${b.tenantId}__${b.email.toLowerCase()}`;
     const max = [...b.days].sort().pop()!;
     const hit = lastDay.get(key);
-    if (!hit || max > hit.last) lastDay.set(key, { tenantId: b.tenantId, email: b.email.toLowerCase(), last: max });
+    if (!hit || max > hit.last) lastDay.set(key, { tenantId: b.tenantId, email: b.email.toLowerCase(), last: max, listing: b.listing, child: kidNames(b) });
   }
 
-  for (const { tenantId, email, last } of lastDay.values()) {
+  for (const { tenantId, email, last, listing, child } of lastDay.values()) {
     if (last >= today) continue; // still booked in — not their last session yet
     const age = Math.floor((Date.parse(today) - Date.parse(last)) / 86_400_000);
     if (age < 1 || age > 2) continue; // the day after (with one day's grace)
     if (!autoEmailsOf(await libFor(tenantId)).reviewRequests) continue;
+    const what = listing ? `${child ? `${child}'s ` : "your "}last session — ${listing}` : "your last booked session with us";
+    const href = `/custdash/feedback?p=${tenantId}${listing ? `&listing=${encodeURIComponent(listing)}` : ""}`;
     await fireOnce(`review_${tenantId}_${email}_${last}`, { tenantId }, () =>
       notify({
         tenantId,
         to: { kind: "parent", email },
         category: "booking",
         title: "How did we do? We'd love your feedback",
-        body: `Your last booked session with us was on ${niceDate(last)} — if you have a minute, we'd love to hear how it went.`,
+        body: `${what[0].toUpperCase()}${what.slice(1)} was on ${niceDate(last)}. Tap to leave a quick star rating — it only takes a moment.`,
         subject: "How did we do? We'd love your feedback",
         emailHtml:
-          `<p>Your last booked session with us was on <b>${niceDate(last)}</b>.</p>` +
-          `<p>If you have a minute, reply to this email with your thoughts — or leave us a review. It genuinely helps a small provider.</p>`,
-        href: "/custdash",
+          `<p>${what[0].toUpperCase()}${what.slice(1)} was on <b>${niceDate(last)}</b>.</p>` +
+          `<p>If you have a minute, leave us a quick star rating and a few words — it genuinely helps a small provider.</p>`,
+        href,
       }),
     ).catch((err) => console.error(`[sweeps] review request ${tenantId}/${email}:`, (err as Error).message));
   }
