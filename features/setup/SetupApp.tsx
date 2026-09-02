@@ -1500,6 +1500,29 @@ export function SetupApp() {
         const toggleSrc = (s: "google" | "trustpilot") => set("reviews", { ...rv, sources: has(s) ? selected.filter((x) => x !== s) : [...selected, s] });
         return (
         <Section title="Reviews" lede="Blend your in-house feedback with the review sites you already use. Compliance is built in — every customer is invited to review on Google, never only the happy ones.">
+          <div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">How do you want to collect reviews?</div>
+          <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">Both are fully compliant. Pick the one that suits how you like to run things — you can change it any time.</p>
+          <div className="mb-4 grid gap-2.5 sm:grid-cols-2">
+            {([
+              { k: "inhouse", icon: "🛡️", title: "In-house first", tag: "Recommended", benefits: ["Catch a problem privately and fix it before it's public", "Captures feedback from every parent, even the quiet ones", "No accounts to set up — works today", "Still invites happy parents to Google/Trustpilot afterwards"] },
+              { k: "external", icon: "🌟", title: "Send straight to Google / Trustpilot", tag: "Most public reviews", benefits: ["More public reviews → better search ranking & trust", "No double entry — one review, on the big sites", "Trustpilot reviews link back to the booking automatically", "Note: unhappy reviews go public too (no gating allowed)"] },
+            ] as { k: "inhouse" | "external"; icon: string; title: string; tag: string; benefits: string[] }[]).map((o) => {
+              const on = (rv.captureMode ?? "inhouse") === o.k;
+              return (
+                <button key={o.k} type="button" onClick={() => set("reviews", { ...rv, captureMode: o.k })} className={"rounded-xl border-2 p-3.5 text-left transition " + (on ? "border-[#1d3a8f] bg-[#f5f8ff]" : "border-[var(--line)] bg-white hover:border-[#c9d6f5]")}>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[18px]">{o.icon}</span>
+                    <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{o.title}</span>
+                    <span className={"ml-auto rounded-full px-2 py-0.5 text-[9.5px] font-black uppercase tracking-wide " + (on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")}>{on ? "Selected" : o.tag}</span>
+                  </div>
+                  <ul className="mt-2 flex flex-col gap-1">
+                    {o.benefits.map((b) => <li key={b} className="flex gap-1.5 text-[11.5px] leading-[1.4] text-[var(--ink-2)]"><span className="flex-none text-[#0f7a43]">✓</span>{b}</li>)}
+                  </ul>
+                </button>
+              );
+            })}
+          </div>
+
           <div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">Which review sites do you use?</div>
           <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">In-house feedback is always on. Pick the external sites you collect reviews on — we&rsquo;ll only ask for what those need.</p>
           <div className="mb-4 flex flex-wrap gap-2">

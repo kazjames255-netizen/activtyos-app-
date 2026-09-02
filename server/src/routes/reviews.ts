@@ -129,7 +129,7 @@ reviews.get("/invite/:tenantId", async (req, res) => {
   const cfg = await tenantReviewCfg(req.params.tenantId);
   const url = cfg.inviteToGoogle === false ? null
     : cfg.googleReviewUrl?.trim() || (cfg.googlePlaceId ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(cfg.googlePlaceId)}` : null);
-  res.json({ url });
+  res.json({ url, mode: (cfg as { captureMode?: string }).captureMode ?? "inhouse" });
 });
 
 // ── Google Business Profile connect (P2) ────────────────────────────────────

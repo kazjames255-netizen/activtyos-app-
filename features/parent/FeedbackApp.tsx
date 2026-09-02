@@ -32,6 +32,7 @@ export function FeedbackApp() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [googleUrl, setGoogleUrl] = useState<string | null>(null);
+  const [captureMode, setCaptureMode] = useState<"inhouse" | "external">("inhouse");
 
   const refreshMine = () => apiGet<Feedback[]>("/api/my/feedback").then(setMine).catch(() => {});
   useEffect(() => {
@@ -48,7 +49,7 @@ export function FeedbackApp() {
     try {
       await apiPost("/api/my/feedback", { tenantId, rating, comment: comment.trim() || undefined, listing: listing.trim() || undefined });
       // Compliant: invite EVERYONE (any score) to also review on Google.
-      apiGet<{ url: string | null }>(`/api/reviews/invite/${tenantId}`).then((r) => setGoogleUrl(r.url)).catch(() => {});
+      apiGet<{ url: string | null; mode?: "inhouse" | "external" }>(`/api/reviews/invite/${tenantId}`).then((r) => { setGoogleUrl(r.url); setCaptureMode(r.mode ?? "inhouse"); }).catch(() => {});
       setSent(true); setComment(""); setRating(0);
       await refreshMine();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn't send your feedback"); }
@@ -67,12 +68,17 @@ export function FeedbackApp() {
           <div className="text-[34px]">🎉</div>
           <div className="mt-1 text-[16px] font-extrabold text-[var(--ink)]">Thank you!</div>
           <p className="mx-auto mt-1 max-w-[440px] text-[13px] text-[var(--ink-3)]">That&rsquo;s everything — your feedback is in with <b className="text-[var(--ink-2)]">{providerName}</b> and it really helps them.</p>
-          {googleUrl && (
+          {googleUrl && (captureMode === "external" ? (
+            <div className="mx-auto mt-4 max-w-[440px]">
+              <div className="text-[13px] font-semibold text-[var(--ink-2)]">One more step — please pop your review on <b>Google</b> so other families can see it too:</div>
+              <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center gap-2 rounded-full bg-[#1d3a8f] px-6 py-3 text-[14px] font-extrabold text-white shadow-sm transition hover:brightness-110"><span style={{ color: "#ffd35c" }}>★</span> Leave your Google review ↗</a>
+            </div>
+          ) : (
             <div className="mx-auto mt-4 max-w-[440px] rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
               <div className="text-[12px] font-semibold text-[var(--ink-2)]">Optional — got another 20 seconds? A public <b>Google</b> review helps a small provider most. (You&rsquo;re done either way.)</div>
               <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-extrabold text-[#1d3a8f] shadow-sm ring-1 ring-[#dbe3f4] transition hover:bg-[#f6f9ff]"><span style={{ color: "#ea4335" }}>★</span> Add a Google review ↗</a>
             </div>
-          )}
+          ))}
           <div><button type="button" onClick={() => setSent(false)} className="mt-3 rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)]">Leave more feedback</button></div>
         </Card>
       ) : (
