@@ -98,6 +98,26 @@ function Flag({ bg, fg, children }: { bg: string; fg: string; children: React.Re
   );
 }
 
+// A compact label chip (Allergy / Medical / SEND …) that reveals its full note
+// on click — keeps long care notes from cluttering the card.
+function FlagChip({ icon, label, detail, bg, fg }: { icon?: string; label: string; detail: string; bg: string; fg: string }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={() => setOpen((o) => !o)}
+      aria-expanded={open}
+      title={open ? "Hide details" : "Click to see details"}
+      className="inline-flex max-w-full items-center gap-1 rounded-lg px-2.5 py-[3px] text-left text-[10.5px] font-bold transition hover:brightness-95"
+      style={{ background: bg, color: fg }}
+    >
+      <span className="whitespace-nowrap">{icon ? `${icon} ` : ""}{label}</span>
+      {open && <span className="min-w-0 break-words font-semibold opacity-90">— {detail}</span>}
+      <span aria-hidden className="text-[8px] opacity-70">{open ? "▲" : "▼"}</span>
+    </button>
+  );
+}
+
 function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { child?: Child; tenantId?: string; defaultCollectionPassword?: string; onDone: (changed: boolean) => void }) {
   const editing = !!child;
   // The provider's settings + custom questions. A parent has no tenant of their
@@ -146,18 +166,21 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
   const [planError, setPlanError] = useState<string | null>(null);
 
   // The family-level emergency contact (captured once with the parent's own
-  // details) pre-fills a NEW child's emergency contact — it's the same across
-  // children. Editable, in case one child needs a different contact.
+  // details) pre-fills the child's emergency contact — it's the same across
+  // children. Runs on ADD and on EDIT of a child saved before it was captured;
+  // only fills BLANKS (never overwrites a contact this child already has), and
+  // is always editable ("Change for this child").
   useEffect(() => {
-    if (editing) return;
     apiGet<{ emergencyName?: string; emergencyPhone?: string }>("/api/account")
       .then((p) => {
         if (p.emergencyName) setEmergencyName((v) => v || p.emergencyName!);
         if (p.emergencyPhone) setEmergencyPhone((v) => v || p.emergencyPhone!);
-        if (p.emergencyName && p.emergencyPhone) setEmergencyFromAccount(true);
+        // Show the "confirm your details" chip only when the child had none of
+        // its own — i.e. we genuinely inherited the family contact.
+        if (p.emergencyName && p.emergencyPhone && !child?.emergencyName && !child?.emergencyPhone) setEmergencyFromAccount(true);
       })
       .catch(() => {});
-  }, [editing]);
+  }, [child]);
 
   // The provider's own "once" questions — the stable ones asked when a child is
   // set up (the every-booking ones are asked on the booking itself). Age-gated
@@ -312,39 +335,44 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       ok: true,
       body: (
         <>
-          <Area label="Allergies" placeholder="e.g. nuts — leave blank if none" value={allergies} onChange={setAllergies} max={limitFor(settings, "allergies", CHILD_LIMITS)} rows={2} />
-          <Area label="Medical (e.g. asthma)" value={medical} onChange={setMedical} max={limitFor(settings, "medical", CHILD_LIMITS)} rows={2} />
-          {/* Dietary requirements sit here under allergies/medical (not on the
-              separate questions page) — it's the provider's "Dietary" question. */}
-          {dietaryQ && (
-            <QuestionFields questions={[dietaryQ]} answers={answers} onChange={setAnswers} />
-          )}
-          {settings.collectSend && (
-            <div>
-              <div className="mb-1 text-[12px] font-bold text-[var(--ink)]">Does your child have any SEND or additional needs?</div>
-              <div className="flex gap-2">
-                {([["No", false], ["Yes", true]] as const).map(([lbl, val]) => (
-                  <button
-                    key={lbl}
-                    type="button"
-                    onClick={() => {
-                      setHasSend(val);
-                      if (!val) { setSend(""); setSendPlanId(null); setSendPlanName(null); }
-                    }}
-                    className="flex-1 rounded-lg border-2 px-3 py-2 text-[12.5px] font-bold transition-colors"
-                    style={hasSend === val
-                      ? { borderColor: "var(--brand-2)", background: "var(--brand-soft,#eaf0fc)", color: "var(--brand-ink,#1d3a8f)" }
-                      : { borderColor: "var(--line)", color: "var(--ink-2)" }}
-                  >
-                    {lbl}
-                  </button>
-                ))}
+          {/* Two columns throughout so the whole step fits without scrolling. */}
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Area label="Allergies" placeholder="e.g. nuts — leave blank if none" value={allergies} onChange={setAllergies} max={limitFor(settings, "allergies", CHILD_LIMITS)} rows={2} />
+            <Area label="Medical (e.g. asthma)" value={medical} onChange={setMedical} max={limitFor(settings, "medical", CHILD_LIMITS)} rows={2} />
+            {/* Dietary sits here (the provider's "Dietary" question), not on the
+                separate questions page. */}
+            {dietaryQ && (
+              <div><QuestionFields questions={[dietaryQ]} answers={answers} onChange={setAnswers} /></div>
+            )}
+            {settings.collectSend && (
+              <div>
+                <div className="mb-1 text-[12px] font-bold text-[var(--ink)]">Does your child have any SEND or additional needs?</div>
+                <div className="flex gap-2">
+                  {([["No", false], ["Yes", true]] as const).map(([lbl, val]) => (
+                    <button
+                      key={lbl}
+                      type="button"
+                      onClick={() => {
+                        setHasSend(val);
+                        if (!val) { setSend(""); setSendPlanId(null); setSendPlanName(null); }
+                      }}
+                      className="flex-1 rounded-lg border-2 px-3 py-2 text-[12.5px] font-bold transition-colors"
+                      style={hasSend === val
+                        ? { borderColor: "var(--brand-2)", background: "var(--brand-soft,#eaf0fc)", color: "var(--brand-ink,#1d3a8f)" }
+                        : { borderColor: "var(--line)", color: "var(--ink-2)" }}
+                    >
+                      {lbl}
+                    </button>
+                  ))}
+                </div>
               </div>
-              {hasSend === true && (
-              <div className="mt-2">
-              <Area label={<>Tell us about their SEND / additional needs</>} placeholder="Describe the support they need — e.g. autism, ADHD, 1:1 support, sensory needs" value={send} onChange={setSend} max={limitFor(settings, "send", CHILD_LIMITS)} rows={3} />
+            )}
+          </div>
+          {settings.collectSend && hasSend === true && (
+            <div className="grid items-start gap-3 sm:grid-cols-2">
+              <Area label={<>Tell us about their SEND / additional needs</>} placeholder="Describe the support they need — e.g. autism, ADHD, 1:1 support, sensory needs" value={send} onChange={setSend} max={limitFor(settings, "send", CHILD_LIMITS)} rows={4} />
               {settings.collectSendPlan && (
-                <div className="mt-2 rounded-lg border border-dashed border-[var(--line)] p-2.5">
+                <div className="rounded-lg border border-dashed border-[var(--line)] p-2.5">
                   <div className="text-[11px] font-bold">SEND or EHCP plan <span className="font-normal text-[var(--ink-3)]">— optional</span></div>
                   <div className="mt-0.5 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
                     If you have one, upload it so staff can read it before day one. PDF or image, up to {PLAN_MAX_BYTES / 1_000_000}MB.
@@ -369,8 +397,6 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                   )}
                   {planError && <div className="mt-1.5 text-[11px] font-bold text-[var(--red)]">{planError}</div>}
                 </div>
-              )}
-              </div>
               )}
             </div>
           )}
@@ -496,7 +522,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto px-3.5 py-8"
       style={{ background: "rgba(12,18,40,.55)", backdropFilter: "blur(3px)" }}
     >
-      <div className="w-full max-w-[600px] overflow-hidden rounded-2xl bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
+      <div className="w-full max-w-[880px] overflow-hidden rounded-2xl bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
         {/* Branded header + progress — matches the welcome onboarding card. */}
         <div className="relative px-6 py-5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 70%,#5a93f0 100%)" }}>
           <button type="button" onClick={() => onDone(false)} aria-label="Close"
@@ -722,10 +748,10 @@ export function ChildrenApp() {
                   </div>
                   {/* Key info pulled to the front — allergies, medical, diet, SEND. */}
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {c.allergies && <Flag bg="rgba(245,158,11,.14)" fg="#b26a00">⚠ Allergy: {c.allergies}</Flag>}
-                    {c.medical && <Flag bg="rgba(239,68,68,.14)" fg="#c0392b">{c.medical}</Flag>}
-                    {c.dietary && <Flag bg="rgba(20,184,166,.14)" fg="#0f766e">{c.dietary}</Flag>}
-                    {c.send && <Flag bg="rgba(122,90,248,.14)" fg="#6a4fd0">SEND: {c.send}</Flag>}
+                    {c.allergies && <FlagChip icon="⚠" label="Allergy" detail={c.allergies} bg="rgba(245,158,11,.14)" fg="#b26a00" />}
+                    {c.medical && <FlagChip icon="🩺" label="Medical" detail={c.medical} bg="rgba(239,68,68,.14)" fg="#c0392b" />}
+                    {c.dietary && <FlagChip icon="🍽" label="Dietary" detail={c.dietary} bg="rgba(20,184,166,.14)" fg="#0f766e" />}
+                    {c.send && <FlagChip icon="🧩" label="SEND" detail={c.send} bg="rgba(122,90,248,.14)" fg="#6a4fd0" />}
                     <Flag bg={c.photoConsent ? "rgba(21,179,100,.14)" : "rgba(120,126,142,.14)"} fg={c.photoConsent ? "#1d3a8f" : "var(--ink-3)"}>
                       {c.photoConsent ? "📷 Photos OK" : "🚫 No photos"}
                     </Flag>

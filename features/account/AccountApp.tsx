@@ -9,7 +9,7 @@ import { get as apiGet, api } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 
-interface Profile { email: string | null; name: string; phone: string; address: string; postcode: string; marketingConsent: boolean; role: string }
+interface Profile { email: string | null; name: string; phone: string; address: string; postcode: string; marketingConsent: boolean; role: string; emergencyName?: string; emergencyPhone?: string }
 const roleLabel: Record<string, string> = { parent: "Parent", staff: "Staff", company: "Company / head office", franchise: "Franchise", freelancer: "Freelancer", platform: "Platform" };
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -61,6 +61,9 @@ export function AccountApp() {
   const [address, setAddress] = useState("");
   const [postcode, setPostcode] = useState("");
   const [marketing, setMarketing] = useState(false);
+  // Family-level emergency contact (parents) — the same one used to pre-fill each child.
+  const [emergencyName, setEmergencyName] = useState("");
+  const [emergencyPhone, setEmergencyPhone] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [ok, setOk] = useState<string | null>(null);
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
@@ -79,6 +82,8 @@ export function AccountApp() {
       setAddress(looksEmail(prof.address) ? "" : (prof.address ?? ""));
       setPostcode(looksEmail(prof.postcode) ? "" : (prof.postcode ?? ""));
       setMarketing(prof.marketingConsent);
+      setEmergencyName(prof.emergencyName ?? "");
+      setEmergencyPhone(prof.emergencyPhone ?? "");
     }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -133,7 +138,7 @@ export function AccountApp() {
   async function saveProfile() {
     setError(null); setOk(null);
     try {
-      await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, address, postcode, marketingConsent: marketing }) });
+      await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, address, postcode, marketingConsent: marketing, ...(p?.role === "parent" ? { emergencyName: emergencyName.trim(), emergencyPhone: emergencyPhone.trim() } : {}) }) });
       setOk("Saved.");
       // Let the header (and anything else showing my name) update without a reload.
       window.dispatchEvent(new CustomEvent("aos:me-updated", { detail: { name: name.trim() } }));
@@ -249,6 +254,16 @@ export function AccountApp() {
             <div><FieldLabel>Postcode</FieldLabel><Input value={postcode} onChange={(e) => setPostcode(e.target.value)} className="w-full" placeholder="e.g. MK1 1AA" /></div>
           </div>
           {p?.role === "parent" && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Your address helps your provider keep accurate records for registers and safeguarding.</p>}
+          {p?.role === "parent" && (
+            <div className="mt-3 border-t border-[var(--line)] pt-3">
+              <FieldLabel>Emergency contact</FieldLabel>
+              <div className="mt-1 grid gap-2.5 sm:grid-cols-2">
+                <Input value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} className="w-full" placeholder="Name — e.g. Aunt Priya" />
+                <Input value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="w-full" inputMode="tel" placeholder="Phone" />
+              </div>
+              <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Who staff ring if they can’t reach you. This pre-fills each child’s emergency contact — you can still set a different one per child.</p>
+            </div>
+          )}
           <label className="mt-2.5 flex items-center gap-2 text-[12.5px]"><input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />Email me occasional news and offers</label>
           <div className="mt-3"><Button variant="primary" onClick={saveProfile}>Save profile</Button></div>
         </Card>
