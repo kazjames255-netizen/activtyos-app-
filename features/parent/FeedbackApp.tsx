@@ -31,6 +31,7 @@ export function FeedbackApp() {
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [googleUrl, setGoogleUrl] = useState<string | null>(null);
 
   const refreshMine = () => apiGet<Feedback[]>("/api/my/feedback").then(setMine).catch(() => {});
   useEffect(() => {
@@ -46,6 +47,8 @@ export function FeedbackApp() {
     setBusy(true); setError(null);
     try {
       await apiPost("/api/my/feedback", { tenantId, rating, comment: comment.trim() || undefined, listing: listing.trim() || undefined });
+      // Compliant: invite EVERYONE (any score) to also review on Google.
+      apiGet<{ url: string | null }>(`/api/reviews/invite/${tenantId}`).then((r) => setGoogleUrl(r.url)).catch(() => {});
       setSent(true); setComment(""); setRating(0);
       await refreshMine();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn't send your feedback"); }
@@ -64,7 +67,10 @@ export function FeedbackApp() {
           <div className="text-[34px]">🎉</div>
           <div className="mt-1 text-[16px] font-extrabold text-[var(--ink)]">Thank you!</div>
           <p className="mx-auto mt-1 max-w-[420px] text-[13px] text-[var(--ink-3)]">Your feedback has been sent to <b className="text-[var(--ink-2)]">{providerName}</b>. It really helps them.</p>
-          <button type="button" onClick={() => setSent(false)} className="mt-3 rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-extrabold text-white">Leave more feedback</button>
+          {googleUrl && (
+            <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13.5px] font-extrabold text-[#1d3a8f] shadow-sm ring-1 ring-[#dbe3f4] transition hover:bg-[#f6f9ff]"><span style={{ color: "#ea4335" }}>★</span> Also leave a Google review ↗</a>
+          )}
+          <div><button type="button" onClick={() => setSent(false)} className="mt-3 rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-extrabold text-white">Leave more feedback</button></div>
         </Card>
       ) : (
         <Card className="p-4 sm:p-5">

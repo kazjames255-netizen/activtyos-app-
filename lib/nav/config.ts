@@ -99,6 +99,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "marketing", legacyView: "admin-marketing", label: "Discount codes", icon: { type: "glyph", value: "◎" }, badge: null },
         { view: "referrals", legacyView: "admin-referrals", label: "Referrals", icon: { type: "glyph", value: "🎁" }, badge: null },
+        { view: "reviews", legacyView: "admin-reviews", label: "Reviews", icon: { type: "glyph", value: "⭐" }, badge: null },
         { view: "marketing-strategies", legacyView: "marketing-strategies", label: "Marketing strategies", icon: { type: "glyph", value: "🎯" }, badge: null },
       ],
     },
@@ -230,6 +231,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "marketing", legacyView: "franchise-marketing", label: "Discount codes", icon: { type: "glyph", value: "◎" }, badge: null },
         { view: "referrals", legacyView: "franchise-referrals", label: "Referrals", icon: { type: "glyph", value: "🎁" }, badge: null },
+        { view: "reviews", legacyView: "franchise-reviews", label: "Reviews", icon: { type: "glyph", value: "⭐" }, badge: null },
         { view: "marketing-strategies", legacyView: "marketing-strategies", label: "Marketing strategies", icon: { type: "glyph", value: "🎯" }, badge: null },
       ],
     },
@@ -346,6 +348,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "marketing", legacyView: "freelancer-marketing", label: "Discount codes", icon: { type: "glyph", value: "◎" }, badge: null },
         { view: "referrals", legacyView: "freelancer-referrals", label: "Referrals", icon: { type: "glyph", value: "🎁" }, badge: null },
+        { view: "reviews", legacyView: "freelancer-reviews", label: "Reviews", icon: { type: "glyph", value: "⭐" }, badge: null },
         { view: "marketing-strategies", legacyView: "marketing-strategies", label: "Marketing strategies", icon: { type: "glyph", value: "🎯" }, badge: null },
       ],
     },

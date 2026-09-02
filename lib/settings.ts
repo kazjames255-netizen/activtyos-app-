@@ -771,6 +771,18 @@ export interface TenantSettings {
     whoCanPlan?: "all" | "leads" | "managers"; // who may create/plan a trip (staff-side gate)
   };
 
+  /** Reviews hub — blend in-house feedback with external platforms. Connectors
+   *  activate when credentials are present; no review gating (offered to all). */
+  reviews?: {
+    googlePlaceId?: string;      // Places API display + "review us on Google" link (P1)
+    googleReviewUrl?: string;    // override the writereview link if they have a custom one
+    showGoogleRating?: boolean;  // show the live Google rating on Browse/feedback (default true)
+    inviteToGoogle?: boolean;    // after in-house feedback, invite EVERYONE to Google (default true)
+    googleConnected?: boolean;   // Business Profile OAuth linked (P2) — set by the callback
+    trustpilotBusinessUnitId?: string; // Trustpilot connector (P3)
+    publicWidget?: boolean;      // expose the public embed + rich-snippet schema (P3)
+  };
+
   /** Calendar — reusable event categories + start-time reminders. */
   calendar?: {
     categories?: { id: string; name: string; color: string }[];
@@ -1158,6 +1170,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
   safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true, dslTitle: "Designated Safeguarding Lead (DSL)", contacts: { nspccPhone: "0808 800 5000", policePhone: "999 (emergency) / 101" } },
   trips: { notifyParent: true, requireConsent: true, ratioTarget: 8, whoCanPlan: "all" },
+  reviews: { showGoogleRating: true, inviteToGoogle: true, publicWidget: false },
   calendar: {
     categories: [
       { id: "general", name: "General", color: "#7A5AF8" },
@@ -1269,6 +1282,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     medication: { ...DEFAULT_SETTINGS.medication, ...(s.medication ?? {}) },
     safeguarding: { ...DEFAULT_SETTINGS.safeguarding, ...(s.safeguarding ?? {}), contacts: { ...DEFAULT_SETTINGS.safeguarding!.contacts, ...(s.safeguarding?.contacts ?? {}) } },
     trips: { ...DEFAULT_SETTINGS.trips, ...(s.trips ?? {}) },
+    reviews: { ...DEFAULT_SETTINGS.reviews, ...(s.reviews ?? {}) },
     calendar: { ...DEFAULT_SETTINGS.calendar, ...(s.calendar ?? {}), categories: s.calendar?.categories ?? DEFAULT_SETTINGS.calendar!.categories },
     moments: { activities: s.moments?.activities?.length ? s.moments.activities : DEFAULT_SETTINGS.moments!.activities },
     registers: {

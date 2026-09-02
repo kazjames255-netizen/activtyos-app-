@@ -43,6 +43,7 @@ const VIEW_SETTINGS: Record<string, string> = {
   credentials: "staff",
   learning: "learning",
   referrals: "refer",
+  reviews: "reviews",
 };
 
 // ─────────────────────────────────────────────────────────────────────────

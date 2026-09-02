@@ -84,7 +84,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "company" | "branding" | "people" | "staff" | "announcements" | "roles" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
+type Tab = "features" | "company" | "branding" | "people" | "staff" | "announcements" | "roles" | "reviews" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1295,7 +1295,7 @@ export function SetupApp() {
     finance: "Finance", reconciliation: "Reconciliation", locations: "Locations", staff: "Team",
   };
   const backLabel = fromView ? (FROM_LABELS[fromView] ?? fromView.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase())) : "";
-  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "announcements", "roles", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "announcements", "roles", "reviews", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1348,6 +1348,7 @@ export function SetupApp() {
     ["people", "Child questions"],
     ["staff", "Staff & workforce"],
     ["announcements", "Announcements"],
+    ["reviews", "Reviews"],
     ...(portal === "company" ? [["roles", "Roles & permissions"] as [Tab, string]] : []),
     ["learning", "Learning"],
     ["meals", "Meals"],
@@ -1488,6 +1489,29 @@ export function SetupApp() {
           <Row label="Start new notices as Important" hint="New notices begin with the red Important flag ticked — you can still turn it off per notice.">
             <Toggle on={settings.announcements?.defaultImportant ?? false} onChange={(v) => set("announcements", { ...settings.announcements, defaultImportant: v })} labels={["Yes", "No"]} />
           </Row>
+        </Section>
+      )}
+
+      {tab === "reviews" && (
+        <Section title="Reviews" lede="Blend your in-house feedback with Google & Trustpilot. Compliance is built in — every customer is invited to review on Google, never only the happy ones.">
+          <Row label="Google review link or Place ID" hint="Paste your Google 'Get more reviews' link, or your Place ID. Powers the live Google rating on your Browse page and the one-tap 'review us on Google' button after feedback. No API setup needed.">
+            <Input value={settings.reviews?.googleReviewUrl || settings.reviews?.googlePlaceId || ""} placeholder="https://g.page/r/… or ChIJ…" onChange={(e) => { const v = e.target.value.trim(); const isUrl = /^https?:\/\//.test(v); set("reviews", { ...settings.reviews, googleReviewUrl: isUrl ? v : "", googlePlaceId: isUrl ? (settings.reviews?.googlePlaceId ?? "") : v }); }} className="w-full" />
+          </Row>
+          <Row label="Show my Google rating publicly" hint="Display your live Google star rating on your Browse page and blend it into your overall score.">
+            <Toggle on={settings.reviews?.showGoogleRating ?? true} onChange={(v) => set("reviews", { ...settings.reviews, showGoogleRating: v })} labels={["On", "Off"]} />
+          </Row>
+          <Row label="Invite customers to review on Google" hint="After a parent leaves in-house feedback, show a 'review us on Google' button — to EVERYONE, whatever they rated (this is what keeps you compliant with Google & the FTC).">
+            <Toggle on={settings.reviews?.inviteToGoogle ?? true} onChange={(v) => set("reviews", { ...settings.reviews, inviteToGoogle: v })} labels={["On", "Off"]} />
+          </Row>
+          <Row label="Trustpilot Business Unit ID" hint="If you use Trustpilot, paste your Business Unit ID to pull those reviews into your score." note="Needs platform key">
+            <Input value={settings.reviews?.trustpilotBusinessUnitId ?? ""} placeholder="e.g. 4b… " onChange={(e) => set("reviews", { ...settings.reviews, trustpilotBusinessUnitId: e.target.value.trim() })} className="w-full" />
+          </Row>
+          <Row label="Public reviews widget & rich-snippet stars" hint="Expose a public feed of your reviews for embedding on your own website, plus AggregateRating data for Google star snippets." note="Backend">
+            <Toggle on={settings.reviews?.publicWidget ?? false} onChange={(v) => set("reviews", { ...settings.reviews, publicWidget: v })} labels={["On", "Off"]} />
+          </Row>
+          <div className="mt-2 rounded-lg border border-[#cde0f7] bg-[#eef5ff] px-3.5 py-3 text-[12px] leading-relaxed text-[#1d3a8f]">
+            <b>Full Google sync &amp; replies</b> (pull every Google review + reply from ActivityOS) needs a one-time platform connection to Google Business Profile — <b>Connect</b> from the <b>Reviews</b> page once it&rsquo;s enabled. Until then, the link above already shows your rating and invites reviews.
+          </div>
         </Section>
       )}
 
