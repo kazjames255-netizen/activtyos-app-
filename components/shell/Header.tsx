@@ -142,13 +142,16 @@ export function Header({ portal }: { portal: PortalKey }) {
             const fancyStyle = active
               ? { background: "linear-gradient(120deg,#d4a017,#f5c542)", color: "#3a2a00", boxShadow: "0 2px 8px rgba(212,160,23,.5)" }
               : { background: "linear-gradient(120deg,#f7d774,#ffe9a8)", color: "#6b4e00", boxShadow: "0 1px 5px rgba(212,160,23,.35)" };
-            // Each tab carries its own colour — a soft tint at rest, a vibrant
-            // gradient when active — so the bar reads as bright action buttons.
-            const accent = t.accent ?? "#2f6bd8";
-            const accentLight = t.accentLight ?? "#5b9bff";
-            const colourStyle = active
-              ? { background: `linear-gradient(120deg, ${accent}, ${accentLight})`, color: "#fff", boxShadow: `0 4px 12px -2px ${accent}80` }
-              : { background: `${accent}18`, color: accent };
+            // Every tab wears the house sidebar blue with the same white dot
+            // texture, so the bar matches the sidebar; the active tab just lifts
+            // with a soft shadow.
+            const colourStyle = {
+              backgroundImage: "radial-gradient(rgba(255,255,255,0.16) 1px, transparent 1.6px), linear-gradient(165deg,#16306e 0%,#23479f 50%,#3f78d8 100%)",
+              backgroundSize: "11px 11px, cover",
+              backgroundRepeat: "repeat, no-repeat",
+              color: "#fff",
+              boxShadow: active ? "0 4px 12px -2px rgba(29,58,143,.55)" : undefined,
+            } as const;
             return (
               <Link
                 key={t.view}
@@ -178,7 +181,13 @@ export function Header({ portal }: { portal: PortalKey }) {
                 onClick={() => setCommOpen((o) => !o)}
                 title="Contact parents — newsfeed, messages and email"
                 className="relative inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105"
-                style={commActive || commOpen ? { background: "linear-gradient(120deg,#0f9d58,#3ddc84)", color: "#fff", boxShadow: "0 4px 12px -2px #0f9d5880" } : { background: "#0f9d5818", color: "#0b7a43" }}
+                style={{
+                  backgroundImage: "radial-gradient(rgba(255,255,255,0.16) 1px, transparent 1.6px), linear-gradient(165deg,#16306e 0%,#23479f 50%,#3f78d8 100%)",
+                  backgroundSize: "11px 11px, cover",
+                  backgroundRepeat: "repeat, no-repeat",
+                  color: "#fff",
+                  boxShadow: commActive || commOpen ? "0 4px 12px -2px rgba(29,58,143,.55)" : undefined,
+                }}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{CHAT}</span>
                 <span className="hidden truncate sm:inline">Contact parents</span>
