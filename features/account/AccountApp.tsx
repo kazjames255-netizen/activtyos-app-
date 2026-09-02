@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import type { CSSProperties } from "react";
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword } from "firebase/auth";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { get as apiGet, api } from "@/lib/api";
@@ -68,6 +68,7 @@ export function AccountApp() {
   const [ok, setOk] = useState<string | null>(null);
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const [pwMsg, setPwMsg] = useState<{ err?: string; ok?: string }>({});
+  const [showPw, setShowPw] = useState(false);
   // The registration card is editable right here (not only in Setup).
   const [editReg, setEditReg] = useState(false);
   const [rf, setRf] = useState({ businessName: "", providerName: "", activityKinds: "", address: "", postcode: "", email: "", phone: "", vatNumber: "" });
@@ -160,7 +161,21 @@ export function AccountApp() {
       setPwMsg({ ok: "Password changed." });
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Couldn’t change password";
-      setPwMsg({ err: /auth\/(wrong-password|invalid-credential)/.test(msg) ? "Current password is incorrect." : msg });
+      setPwMsg({ err: /auth\/(wrong-password|invalid-credential)/.test(msg) ? "Current password is incorrect — if you’ve forgotten it, use “Forgot your current password?” below." : msg });
+    }
+  }
+
+  // Forgot the current password → email a reset link (Firebase-hosted reset page,
+  // no current password needed).
+  async function resetPassword() {
+    setPwMsg({});
+    const em = firebaseAuth.currentUser?.email || p?.email;
+    if (!em) { setPwMsg({ err: "No email on this account to send a reset to." }); return; }
+    try {
+      await sendPasswordResetEmail(firebaseAuth, em);
+      setPwMsg({ ok: `We’ve emailed a password-reset link to ${em}. Open it to set a new password — no need for your old one.` });
+    } catch (e) {
+      setPwMsg({ err: e instanceof Error ? e.message : "Couldn’t send the reset email" });
     }
   }
 
@@ -269,15 +284,21 @@ export function AccountApp() {
         </Card>
 
         <Card className="mb-3 p-4">
-          <div className="mb-2 text-[13.5px] font-extrabold">Change password</div>
+          <div className="mb-2 flex items-center justify-between gap-2">
+            <div className="text-[13.5px] font-extrabold">Change password</div>
+            <button type="button" onClick={() => setShowPw((s) => !s)} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{showPw ? "🙈 Hide" : "👁 Show"} passwords</button>
+          </div>
           {pwMsg.err && <div className="mb-2 text-[12px] text-[var(--red)]">{pwMsg.err}</div>}
           {pwMsg.ok && <div className="mb-2 text-[12px] text-[#1d3a8f]">{pwMsg.ok}</div>}
           <div className="grid gap-2.5 sm:grid-cols-3">
-            <div><FieldLabel>Current</FieldLabel><Input type="password" value={pw.current} onChange={(e) => setPw((s) => ({ ...s, current: e.target.value }))} className="w-full" /></div>
-            <div><FieldLabel>New</FieldLabel><Input type="password" value={pw.next} onChange={(e) => setPw((s) => ({ ...s, next: e.target.value }))} className="w-full" /></div>
-            <div><FieldLabel>Confirm</FieldLabel><Input type="password" value={pw.confirm} onChange={(e) => setPw((s) => ({ ...s, confirm: e.target.value }))} className="w-full" /></div>
+            <div><FieldLabel>Current</FieldLabel><Input type={showPw ? "text" : "password"} value={pw.current} onChange={(e) => setPw((s) => ({ ...s, current: e.target.value }))} className="w-full" /></div>
+            <div><FieldLabel>New</FieldLabel><Input type={showPw ? "text" : "password"} value={pw.next} onChange={(e) => setPw((s) => ({ ...s, next: e.target.value }))} className="w-full" /></div>
+            <div><FieldLabel>Confirm</FieldLabel><Input type={showPw ? "text" : "password"} value={pw.confirm} onChange={(e) => setPw((s) => ({ ...s, confirm: e.target.value }))} className="w-full" /></div>
           </div>
-          <div className="mt-3"><Button onClick={changePassword} disabled={!pw.current || !pw.next}>Update password</Button></div>
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <Button onClick={changePassword} disabled={!pw.current || !pw.next}>Update password</Button>
+            <button type="button" onClick={resetPassword} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Forgot your current password?</button>
+          </div>
         </Card>
 
         <Card className="flex flex-wrap items-center justify-between gap-2 p-4">
