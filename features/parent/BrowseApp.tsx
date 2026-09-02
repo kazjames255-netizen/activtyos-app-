@@ -511,13 +511,15 @@ export function BrowseApp() {
                     {t("parent.saveBadge", { n: l.bestOfferPercent })}
                   </span>
                 ) : null}
-                <div className="absolute inset-x-0 bottom-0 px-3.5 py-2.5 text-left" style={{ background: "rgba(23,35,90,.62)" }}>
-                  <div className="truncate text-[15px] font-extrabold text-white">{l.title || l.name}</div>
-                  <div className="truncate text-[11.5px] text-[#cdddf7]">{l.tenantName} · {t("parent.fromWord")} {money(from)} <span className="opacity-90">/ {priceBasis(l)}</span></div>
+                <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 px-3.5 py-2.5 text-left" style={{ background: "rgba(23,35,90,.62)" }}>
+                  <div className="min-w-0">
+                    <div className="truncate text-[15px] font-extrabold text-white">{l.title || l.name}</div>
+                    <div className="truncate text-[11.5px] text-[#cdddf7]">{l.tenantName} · {t("parent.fromWord")} {money(from)} <span className="opacity-90">/ {priceBasis(l)}</span></div>
+                  </div>
                   {(agesLabel(l) || dateRange(l)) && (
-                    <div className="mt-2 flex flex-wrap gap-1.5">
-                      {agesLabel(l) && <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm">🎂 {agesLabel(l)}</span>}
-                      {dateRange(l) && <span className="inline-flex items-center gap-1 rounded-full bg-[#c9f24a] px-2.5 py-1 text-[12px] font-extrabold text-[#2a3400] shadow-sm">📅 {dateRange(l)}</span>}
+                    <div className="flex flex-none flex-col items-end gap-1">
+                      {agesLabel(l) && <span className="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f] shadow-sm">{agesLabel(l)}</span>}
+                      {dateRange(l) && <span className="whitespace-nowrap rounded-full bg-[#c9f24a] px-2 py-0.5 text-[11px] font-extrabold text-[#2a3400] shadow-sm">📅 {dateRange(l)}</span>}
                     </div>
                   )}
                 </div>
