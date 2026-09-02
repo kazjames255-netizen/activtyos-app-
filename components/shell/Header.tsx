@@ -44,6 +44,9 @@ export function Header({ portal }: { portal: PortalKey }) {
     if (portal !== "custdash") return;
     apiGet<{ tenantId: string; name: string }[]>("/api/my/providers").then(setProviders).catch(() => {});
   }, [portal]);
+  // The signed-in person's name for the top bar (falls back to email).
+  const [meName, setMeName] = useState("");
+  useEffect(() => { apiGet<{ name?: string }>("/api/me").then((m) => setMeName(m?.name ?? "")).catch(() => {}); }, []);
   const messageLabel = providers.length === 1 ? `Message ${providers[0].name}` : "Messages";
 
   // Live unread total — drives the "new" bubble on the Messages tab so a reply
@@ -209,7 +212,7 @@ export function Header({ portal }: { portal: PortalKey }) {
       )}
 
       <div className="flex flex-none items-center gap-2 sm:gap-3">
-        {user?.email && portal !== "custdash" && <span className="hidden text-[12px] text-[var(--ink-3)] xl:inline">{user.email}</span>}
+        {portal !== "custdash" && (meName || user?.displayName || user?.email) && <span className="hidden text-[12px] font-semibold text-[var(--ink-2)] xl:inline" title={user?.email ?? undefined}>{meName || user?.displayName || user?.email}</span>}
         {/* Platform accounts have no tenant, so no bell of their own (the API
             would return an empty list anyway). HQ triages bug reports rather
             than filing them, so no bug button either. */}
