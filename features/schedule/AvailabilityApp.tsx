@@ -97,6 +97,10 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
 
   const selected = allDates.filter((dt) => cell(dt).on);
   const totalH = selected.reduce((n, dt) => n + hoursOf(cell(dt).from, cell(dt).to), 0);
+  // "Applied?" checks so the quick-fill buttons show when a rule is in force.
+  const cellEq = (x: DayAvail, y: DayAvail) => x.on === y.on && x.from === y.from && x.to === y.to;
+  const weekdaySynced = (wd: number) => { const cs = allDates.filter((dt) => wdOf(dt) === wd).map(cell); return cs.length > 1 && cs.every((c) => cellEq(c, cs[0])); };
+  const weeksAllEqual = weeks.length > 1 && weeks.every((wk) => wk.every((dt, di) => cellEq(cell(dt), cell(weeks[0][di]))));
 
   const submit = () => {
     if (!selected.length || busy) return;
@@ -158,7 +162,7 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
                 </div>
                 <div className="flex items-center gap-2">
                   <span className="text-[11px] font-bold text-[var(--ink-3)]">{onCount}/7</span>
-                  <button type="button" onClick={() => copyWeekToAll(wi)} className="rounded-full border border-[var(--line)] bg-white px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#eef4fd]" title="Copy this week's pattern to every week">⧉ Copy to all weeks</button>
+                  <button type="button" onClick={() => copyWeekToAll(wi)} className={"rounded-full px-2.5 py-1 text-[11px] font-bold transition " + (weeksAllEqual ? "bg-[#1d3a8f] text-white" : "border border-[var(--line)] bg-white text-[#1d3a8f] hover:bg-[#eef4fd]")} title="Copy this week's pattern to every week">{weeksAllEqual ? "✓ All weeks match" : "⧉ Copy to all weeks"}</button>
                 </div>
               </div>
               <ul className="divide-y divide-[var(--line-2,#eef2f8)]">
@@ -181,7 +185,9 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
                             <span className="text-[var(--ink-3)]">to</span>
                             <Input type="time" min={camp.open} max={camp.close} value={c.to} onChange={(e) => setTo(dt, e.target.value)} className="w-[104px]" style={FIELD_STYLE} />
                           </div>
-                          <button type="button" onClick={() => repeatWeekday(dt)} className="ml-auto flex-none rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:brightness-95" title={`Apply these hours to every ${WD_LONG[wd]}`}>↻ Every {WD_SHORT[wd]}</button>
+                          {(() => { const synced = weekdaySynced(wd); return (
+                            <button type="button" onClick={() => repeatWeekday(dt)} className={"ml-auto flex-none rounded-full px-2.5 py-1 text-[11px] font-bold transition " + (synced ? "bg-[#1d3a8f] text-white" : "bg-[#eef4fd] text-[#1d3a8f] hover:brightness-95")} title={synced ? `Every ${WD_LONG[wd]} matches this` : `Apply these hours to every ${WD_LONG[wd]}`}>{synced ? `✓ Every ${WD_SHORT[wd]}` : `↻ Every ${WD_SHORT[wd]}`}</button>
+                          ); })()}
                         </>
                       ) : (
                         <span className="text-[12.5px] font-semibold text-[var(--ink-3)]">Not available</span>
