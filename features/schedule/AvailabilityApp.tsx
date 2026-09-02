@@ -50,7 +50,15 @@ export function AvailabilityApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="My availability" icon="⏱" lede="Tell your manager which days and hours you can work — they build the rota around it." />
+      <PageHero title="My availability" icon="⏱" lede="Set your usual working week — the days and hours you can normally work. It's the starting point your manager uses when building the rota." />
+
+      <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#cde0f7] bg-[#eef5ff] p-3.5 text-[12.5px] leading-relaxed text-[#1d3a8f]">
+        <span className="mt-px flex-none text-[16px] leading-none">🔁</span>
+        <div>
+          <b>This is your standard weekly availability</b> — a repeating pattern, not a specific week. You&rsquo;re not being asked to fill in particular dates: it applies from today and stays in place until you change it.
+          <div className="mt-1.5 text-[var(--ink-2)]">As the rota for upcoming weeks is published, <b className="text-[#1d3a8f]">you&rsquo;ll be notified here</b> — and you can update your hours or flag a one-off change then.</div>
+        </div>
+      </div>
 
       <Card className="p-4">
         <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
@@ -103,7 +111,7 @@ export function AvailabilityApp() {
       </Card>
 
       <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">
-        Coming soon: request holiday &amp; time off, and your manager building the rota straight from everyone&rsquo;s availability.
+        Coming soon: availability for specific published weeks, a notification each time new shifts are released, and your manager building the rota straight from everyone&rsquo;s availability.
       </p>
     </div>
   );
