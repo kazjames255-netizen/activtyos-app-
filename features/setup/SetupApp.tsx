@@ -1780,6 +1780,13 @@ export function SetupApp() {
           <Row label="Target staff-to-child ratio" hint="The most children per staff member you're happy with on a trip. A trip over this is flagged so you can add staff or split it.">
             <NumberBox value={settings.trips?.ratioTarget ?? 8} onChange={(n) => set("trips", { ...settings.trips, ratioTarget: Math.max(1, n) })} min={1} max={30} suffix=":1" />
           </Row>
+          <Row label="Who can plan a trip" hint="Who is allowed to create an off-site trip. Managers/owners can always plan; this controls staff. (Enforcement of leads-only on the staff side needs the roles system — backend.)" note="Enforcement: backend">
+            <Select value={settings.trips?.whoCanPlan ?? "all"} onChange={(e) => set("trips", { ...settings.trips, whoCanPlan: e.target.value as "all" | "leads" | "managers" })}>
+              <option value="all">All staff</option>
+              <option value="leads">Leads &amp; managers only</option>
+              <option value="managers">Managers &amp; owners only</option>
+            </Select>
+          </Row>
         </Section>
       )}
 

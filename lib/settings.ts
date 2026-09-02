@@ -768,6 +768,7 @@ export interface TenantSettings {
     notifyParent?: boolean;   // email + bell + ask consent when a child is on a trip
     requireConsent?: boolean; // a trip can't be marked ready/completed until every child has consent
     ratioTarget?: number;     // target children-per-staff; the trip flags when it's exceeded
+    whoCanPlan?: "all" | "leads" | "managers"; // who may create/plan a trip (staff-side gate)
   };
 
   /** Calendar — reusable event categories + start-time reminders. */
@@ -1156,7 +1157,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   meals: { ordering: true, showAllergens: true, orderCutoffHours: 18, menuNote: "", allergenNote: "", menuShare: "booked", cutoffWhen: "off", cutoffTime: "08:00", changeApproval: "auto" },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
   safeguarding: { notifyParentAccident: true, notifyParentIncident: false, notifyStaffAcknowledged: true, dslTitle: "Designated Safeguarding Lead (DSL)", contacts: { nspccPhone: "0808 800 5000", policePhone: "999 (emergency) / 101" } },
-  trips: { notifyParent: true, requireConsent: true, ratioTarget: 8 },
+  trips: { notifyParent: true, requireConsent: true, ratioTarget: 8, whoCanPlan: "all" },
   calendar: {
     categories: [
       { id: "general", name: "General", color: "#7A5AF8" },

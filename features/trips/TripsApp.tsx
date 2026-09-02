@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -732,6 +733,11 @@ function TripPlanner({ existing, ratioTarget, providerName, onSaved, onClose }: 
 
 export function TripsApp() {
   const { settings } = useSettings();
+  // Who can plan a trip. Operators (company/franchise/freelancer) always can; on
+  // the staff portal we honour the setting — "all" lets staff plan, otherwise
+  // only leads/managers may (true per-user role gating is Amir's roles system).
+  const onStaffPortal = (usePathname()?.split("/")[1] ?? "") === "staff";
+  const canPlan = !onStaffPortal || (settings.trips?.whoCanPlan ?? "all") === "all";
   const ratioTarget = settings.trips?.ratioTarget ?? 8;
   const notifies = settings.trips?.notifyParent ?? true;
   const [trips, setTrips] = useState<Trip[] | null>(null);
@@ -776,7 +782,9 @@ export function TripsApp() {
           <div className="flex flex-none flex-wrap items-center gap-2">
             <TourLauncher view="trips" compact />
             <SettingsLink />
-            {!planning && <button type="button" onClick={() => setPlanning({})} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Plan a trip</button>}
+            {!planning && (canPlan
+              ? <button type="button" onClick={() => setPlanning({})} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Plan a trip</button>
+              : <span className="rounded-full bg-white/15 px-3 py-1.5 text-[11.5px] font-semibold text-white/85 backdrop-blur-sm" title="Set in Setup → Trips">Only leads &amp; managers can plan trips</span>)}
           </div>
         </div>
         {trips && (
