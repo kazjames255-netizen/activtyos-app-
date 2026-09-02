@@ -125,6 +125,8 @@ export function StaffDashApp() {
   const [error, setError] = useState<string | null>(null);
   const [clock, setClock] = useState<Record<string, ClockRecord> | null>(null);
   const [shift, setShift] = useState<MyShift | null>(null);
+  // My real assigned camp days (backend), keyed by date, so the shift card shows them.
+  const [assignedByDate, setAssignedByDate] = useState<Record<string, MyShift>>({});
   const [coworkers, setCoworkers] = useState<Coworker[]>([]);
   const [profile, setProfile] = useState<WatchKid | null>(null); // watch-list child card
   const [sendOpen, setSendOpen] = useState(false); // SEND slideshow modal
@@ -148,8 +150,16 @@ export function StaffDashApp() {
     apiGet<{ venues?: { name: string; address?: string; city?: string }[] }>("/api/library").then((l) => setVenues(l.venues ?? [])).catch(() => {});
   }, [date]);
   useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); setClock(loadClock()); setAnnouncements(loadAnnouncements()); setAnnRead(loadRead()); }, []);
+  useEffect(() => {
+    apiGet<{ requests: { camp?: { listingName: string; location?: string; open: string; close: string; assignedDates?: string[] } | null }[]; pattern: { grid?: Record<string, { from: string; to: string }> } | null }>("/api/availability/mine")
+      .then((r) => {
+        const grid = r.pattern?.grid ?? {}; const map: Record<string, MyShift> = {};
+        for (const req of r.requests || []) { const c = req.camp; if (!c?.assignedDates?.length) continue; for (const d of c.assignedDates) { const g = grid[d]; map[d] = { start: g?.from ?? c.open, end: g?.to ?? c.close, listing: c.listingName, site: c.location }; } }
+        setAssignedByDate(map);
+      }).catch(() => {});
+  }, []);
   useEffect(() => { setSessions(null); setRegs(null); refresh(); }, [refresh]);
-  useEffect(() => { setShift(myShiftToday(date)); setCoworkers(coworkersToday(coworkerVis, date)); }, [date, coworkerVis]);
+  useEffect(() => { setShift(myShiftToday(date) ?? assignedByDate[date] ?? null); setCoworkers(coworkersToday(coworkerVis, date)); }, [date, coworkerVis, assignedByDate]);
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(id); }, []);
   useRealtime(["bookings", "blocks", "tasks", "timetables", "registers"], refresh);
 

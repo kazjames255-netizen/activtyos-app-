@@ -88,6 +88,9 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
   const [datesOpen, setDatesOpen] = useState(false);
+  const [cardOpen, setCardOpen] = useState(true);
+  useEffect(() => { try { if (localStorage.getItem(`aos.availcamp.${req.id}`) === "0") setCardOpen(false); } catch { /* ignore */ } }, [req.id]);
+  const toggleCard = () => setCardOpen((o) => { const n = !o; try { localStorage.setItem(`aos.availcamp.${req.id}`, n ? "1" : "0"); } catch { /* ignore */ } return n; });
 
   useEffect(() => { setGrid((g) => (Object.keys(g).length ? g : { ...initialGrid })); }, [initialGrid]);
 
@@ -143,13 +146,17 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
             <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">You&rsquo;ve been assigned to</div>
             <div className="text-[15px] font-black tracking-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{camp.listingName}{camp.location ? <span className="text-[var(--ink-3)]"> · {camp.location}</span> : null}</div>
           </div>
-          <div className="ml-auto flex flex-col items-end gap-1">
-            {req.status === "submitted"
-              ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]" title={req.submittedAt ? `Last edited ${fmtStamp(req.submittedAt)}` : undefined}>✓ Submitted{req.submittedAt ? ` · ${fmtStamp(req.submittedAt)}` : ""}</span>
-              : <span className="rounded-full bg-[#fdf6e3] px-2.5 py-0.5 text-[11px] font-extrabold text-[#8a5a09]">Awaiting your reply</span>}
-            <span className="text-[11px] text-[var(--ink-3)]">Requested by {requesterOf(req)}</span>
+          <div className="ml-auto flex items-center gap-3">
+            <div className="flex flex-col items-end gap-1">
+              {req.status === "submitted"
+                ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]" title={req.submittedAt ? `Last edited ${fmtStamp(req.submittedAt)}` : undefined}>✓ Submitted{req.submittedAt ? ` · ${fmtStamp(req.submittedAt)}` : ""}</span>
+                : <span className="rounded-full bg-[#fdf6e3] px-2.5 py-0.5 text-[11px] font-extrabold text-[#8a5a09]">Awaiting your reply</span>}
+              <span className="text-[11px] text-[var(--ink-3)]">Requested by {requesterOf(req)}</span>
+            </div>
+            <button type="button" onClick={toggleCard} aria-expanded={cardOpen} title={cardOpen ? "Hide details" : "Show details"} className="grid h-8 w-8 flex-none place-items-center rounded-lg border border-[var(--line)] bg-white text-[13px] text-[var(--ink-2)] transition hover:bg-[var(--panel)]">{cardOpen ? "▾" : "▸"}</button>
           </div>
         </div>
+        {cardOpen && (<>
         <div className="grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-4">
           {([
             { ic: "🗓", big: `${camp.weeks} weeks`, small: `${fmtDay(req.window.from)} – ${fmtDay(req.window.to)}`, col: "#1d3a8f", bg: "#eef4fd", expand: true },
@@ -194,6 +201,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
           </div>
         )}
         {req.note && <div className="border-t border-[#e3ebff] px-4 py-2.5 text-[12px] italic text-[#7a5a12]">“{req.note}”</div>}
+        </>)}
       </div>
 
       {/* Quick-fill toolbar */}
