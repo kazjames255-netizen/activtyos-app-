@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
+import { QuickBookModal } from "./QuickBookModal";
 import { useRealtime } from "@/lib/realtime";
 import { useT } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
@@ -155,6 +156,7 @@ export function BrowseApp() {
   // their postcodes (for venues the operator never geocoded).
   const [myCoords, setMyCoords] = useState<LatLng | null>(null);
   const [myPostcode, setMyPostcode] = useState("");
+  const [quickBook, setQuickBook] = useState<string | null>(null); // listing id in the quick-book modal
   // Which cards have their extra offers expanded (best offer shown by default so
   // every card is the same height).
   // Which chip groups are expanded, keyed `${listingId}:${group}` — so each card
@@ -633,14 +635,20 @@ export function BrowseApp() {
                     </div>
                   );
                 })()}
-                <button type="button" onClick={() => router.push(`/book/${l.id}`)} className="mt-3 w-full rounded-lg bg-[var(--brand-2,#2f6bd8)] py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90">
-                  {t("parent.moreDetails")}
-                </button>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <button type="button" onClick={() => router.push(`/book/${l.id}`)} className="rounded-lg border border-[var(--brand-2,#2f6bd8)] py-2.5 text-[13px] font-bold text-[var(--brand-2,#2f6bd8)] transition-colors hover:bg-[#eef4ff]">
+                    {t("parent.moreInfo")}
+                  </button>
+                  <button type="button" onClick={() => setQuickBook(l.id)} className="rounded-lg bg-[var(--brand-2,#2f6bd8)] py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90">
+                    {t("parent.quickBook")}
+                  </button>
+                </div>
               </div>
             </Card>
           );
         })}
       </div>
+      {quickBook && <QuickBookModal id={quickBook} onClose={() => setQuickBook(null)} />}
     </div>
   );
 }

@@ -615,7 +615,7 @@ function withoutHiddenPasses(booking: BlockBooking | null, overrides: Record<str
 /** The customer page a PARENT sees — rendered purely from the API's
  * GET /api/listings/:id response, so it is pixel-for-pixel the operator's
  * "Preview as a parent" (same ParentPreview component, same data shape). */
-export function CustomerPage({ listing, topRight }: { listing: ServerListing; topRight?: React.ReactNode }) {
+export function CustomerPage({ listing, topRight, bookingOnly }: { listing: ServerListing; topRight?: React.ReactNode; bookingOnly?: boolean }) {
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
@@ -842,6 +842,18 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
     );
   }
 
+  // Quick book (from the browse card): just the booking flow, forced to the
+  // white/blue theme, using the SAME parent submission + success as the page.
+  if (bookingOnly) return (
+    <BookingOnly
+      listing={listing}
+      mode="parent"
+      theme="playful"
+      bookState={bookState}
+      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes, p.voucherRefs, p.walletCap, p.phone, p.mealSel)}
+    />
+  );
+
   return (
     <ParentPreview
       d={d}
@@ -870,10 +882,14 @@ export function CustomerPage({ listing, topRight }: { listing: ServerListing; to
  *
  * Same component the parent gets, in operator mode, so the two can't diverge.
  */
-export function BookingOnly({ listing, onBook, bookState }: {
+export function BookingOnly({ listing, onBook, bookState, mode = "operator", theme }: {
   listing: ServerListing;
   onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
   bookState?: { busy: boolean; error: string | null };
+  /** "operator" (Take booking) or "parent" (Quick book). */
+  mode?: "operator" | "parent";
+  /** Override the listing's page style — Quick book forces the white/blue theme. */
+  theme?: PageTheme;
 }) {
   const d = draftFromListing(listing);
   const lib = listing.library;
@@ -887,10 +903,11 @@ export function BookingOnly({ listing, onBook, bookState }: {
       spacesLeft={d.showSpaces && Number.isFinite(capParsed) ? capParsed : null}
       addons={(lib?.addons ?? []).filter((a) => d.addonIds.includes(a.id))}
       blocks={listing.blocks}
-      mode="operator"
+      mode={mode}
       onBook={onBook}
       bookState={bookState}
-      theme={resolveTheme(d.pageStyle)}
+      theme={theme ?? resolveTheme(d.pageStyle)}
+      tenantId={listing.tenantId}
     />
   );
 }

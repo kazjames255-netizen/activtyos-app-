@@ -29,6 +29,8 @@ const parent = {
     moreOffers: "+{n} more",
     showLess: "Show less",
     datesItRuns: "{n} dates it runs",
+    moreInfo: "More information",
+    quickBook: "Quick book",
     hideFilters: "Filters",
     showFilters: "Filters",
     // generic
