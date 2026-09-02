@@ -6,7 +6,7 @@ import { get as apiGet, put as apiPut, openFile } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
-import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDur, workedMs, type ClockRecord } from "@/features/timeclock/data";
+import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDurSec, workedMs, type ClockRecord } from "@/features/timeclock/data";
 import { greeting } from "@/lib/greeting";
 import { useSettings } from "@/lib/settings";
 import { loadAnnouncements, loadRead, saveRead, type Announcement } from "@/features/staff/announcements";
@@ -150,7 +150,7 @@ export function StaffDashApp() {
   useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); setClock(loadClock()); setAnnouncements(loadAnnouncements()); setAnnRead(loadRead()); }, []);
   useEffect(() => { setSessions(null); setRegs(null); refresh(); }, [refresh]);
   useEffect(() => { setShift(myShiftToday(date)); setCoworkers(coworkersToday(coworkerVis, date)); }, [date, coworkerVis]);
-  useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(id); }, []);
+  useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(id); }, []);
   useRealtime(["bookings", "blocks", "tasks", "timetables", "registers"], refresh);
 
   const open = (tasks ?? []).filter((t) => !t.done);
@@ -199,7 +199,7 @@ export function StaffDashApp() {
     <div className="flex flex-wrap items-center gap-2">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-extrabold text-white backdrop-blur-sm">
         <span className="h-2 w-2 rounded-full" style={{ background: status === "in" ? "#3ddc84" : status === "break" ? "#f5b81f" : "#cbd5e1" }} />
-        {status === "in" ? `Clocked in · ${fmtDur(workedMs(rec!))}` : status === "break" ? `On break · ${fmtDur(workedMs(rec!))}` : "Clocked out"}
+        {status === "in" ? `Clocked in · ${fmtDurSec(workedMs(rec!))}` : status === "break" ? `On break · ${fmtDurSec(workedMs(rec!))}` : "Clocked out"}
       </span>
       {status === "out" ? (
         <button type="button" onClick={doIn} className="rounded-full bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[#0b6b3a] shadow-sm transition hover:brightness-95">⏱ Clock in</button>

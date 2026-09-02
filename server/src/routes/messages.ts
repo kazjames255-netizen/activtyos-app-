@@ -516,52 +516,85 @@ const DEFAULT_TEMPLATES = [
   { id: "preset:welcome", name: "Welcome / first booking", subject: "Welcome to {ProviderName}!",
     body: "Hi {ParentName},\n\nWelcome! Your account is ready and {ChildName} is all set. Manage bookings, receipts and messages any time from your dashboard." },
 ] as const;
-messages.get("/templates", async (req, res) => {
+// Staff get their OWN starter set — day-to-day notes a team member sends parents
+// from the floor. Kept separate from the tenant-wide (operator) templates.
+const STAFF_DEFAULT_TEMPLATES = [
+  { name: "Collection reminder", subject: "Collection time for {ChildName}", body: "Hi {ParentName},\n\nJust a reminder that {ChildName}'s session at {VenueName} finishes soon. See you at pick-up!" },
+  { name: "Not arrived yet", subject: "Checking in — {ChildName}", body: "Hi {ParentName},\n\nWe've not seen {ChildName} yet today and wanted to check everything's OK. No rush — just reply if plans have changed and we'll mark them absent." },
+  { name: "Great day!", subject: "{ChildName} had a brilliant day", body: "Hi {ParentName},\n\nJust wanted to say {ChildName} had a great day with us — lots of smiles. See you next time!" },
+  { name: "Lost property", subject: "Did {ChildName} leave something?", body: "Hi {ParentName},\n\n{ChildName} may have left something with us today. We'll keep it safe at reception — pop by whenever suits." },
+  { name: "Quick question", subject: "Quick question about {ChildName}", body: "Hi {ParentName},\n\nQuick one about {ChildName} — could you let us know when you have a moment? Thanks!" },
+] as const;
+
+// Templates are tenant-wide for operators, but private to the staff member for
+// staff — so a team member builds their own set without touching the company's.
+function templateScope(req: import("express").Request, res: import("express").Response): { tenantId: string; ownerUid: string | null } | null {
   const tenantId = operatorTenant(req, res);
-  if (!tenantId) return;
-  // First visit: seed the provider's own editable copies of the presets, once.
-  // (Head-Office-owned defaults → each tenant gets their own to edit/delete.)
-  const tRef = db.collection("tenants").doc(tenantId);
-  const tSnap = await tRef.get();
-  if (!tSnap.data()?.templatesSeeded) {
-    const now = new Date().toISOString();
-    const batch = db.batch();
-    for (const t of DEFAULT_TEMPLATES) batch.set(templatesCol.doc(), { tenantId, name: t.name, subject: t.subject, body: t.body, createdAt: now });
-    batch.set(tRef, { templatesSeeded: true }, { merge: true });
-    await batch.commit();
+  if (!tenantId) return null;
+  const ownerUid = req.auth!.role === "staff" ? (req.user?.uid ?? null) : null;
+  return { tenantId, ownerUid };
+}
+const ownsTemplate = (data: FirebaseFirestore.DocumentData, tenantId: string, ownerUid: string | null) =>
+  data.tenantId === tenantId && (ownerUid ? data.ownerUid === ownerUid : !data.ownerUid);
+
+messages.get("/templates", async (req, res) => {
+  const scope = templateScope(req, res);
+  if (!scope) return;
+  const { tenantId, ownerUid } = scope;
+  const now = new Date().toISOString();
+  if (ownerUid) {
+    // First visit for this staff member → seed their private starter set once.
+    const uRef = db.collection("users").doc(ownerUid);
+    if (!(await uRef.get()).data()?.staffTemplatesSeeded) {
+      const batch = db.batch();
+      for (const t of STAFF_DEFAULT_TEMPLATES) batch.set(templatesCol.doc(), { tenantId, ownerUid, name: t.name, subject: t.subject, body: t.body, createdAt: now });
+      batch.set(uRef, { staffTemplatesSeeded: true }, { merge: true });
+      await batch.commit();
+    }
+  } else {
+    // First visit for the tenant → seed the provider's editable copies once.
+    const tRef = db.collection("tenants").doc(tenantId);
+    if (!(await tRef.get()).data()?.templatesSeeded) {
+      const batch = db.batch();
+      for (const t of DEFAULT_TEMPLATES) batch.set(templatesCol.doc(), { tenantId, name: t.name, subject: t.subject, body: t.body, createdAt: now });
+      batch.set(tRef, { templatesSeeded: true }, { merge: true });
+      await batch.commit();
+    }
   }
   const snap = await templatesCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  const list = snap.docs
+    .filter((d) => ownsTemplate(d.data(), tenantId, ownerUid))
+    .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
   list.sort((a, b) => ((a.name ?? "") < (b.name ?? "") ? -1 : 1));
   res.json(list);
 });
 messages.post("/templates", async (req, res) => {
-  const tenantId = operatorTenant(req, res);
-  if (!tenantId) return;
+  const scope = templateScope(req, res);
+  if (!scope) return;
   const parsed = templateSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { tenantId, name: parsed.data.name, subject: parsed.data.subject ?? "", body: parsed.data.body, createdAt: new Date().toISOString() };
+  const doc = { tenantId: scope.tenantId, ownerUid: scope.ownerUid, name: parsed.data.name, subject: parsed.data.subject ?? "", body: parsed.data.body, createdAt: new Date().toISOString() };
   const ref = await templatesCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
 messages.put("/templates/:id", async (req, res) => {
-  const tenantId = operatorTenant(req, res);
-  if (!tenantId) return;
+  const scope = templateScope(req, res);
+  if (!scope) return;
   if (req.params.id.startsWith("preset:")) { res.status(400).json({ error: "Presets can’t be edited — duplicate one to make your own." }); return; }
   const parsed = templateSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const ref = templatesCol.doc(req.params.id);
   const snap = await ref.get();
-  if (!snap.exists || snap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Template not found" }); return; }
+  if (!snap.exists || !ownsTemplate(snap.data()!, scope.tenantId, scope.ownerUid)) { res.status(404).json({ error: "Template not found" }); return; }
   await ref.set({ name: parsed.data.name, subject: parsed.data.subject ?? "", body: parsed.data.body }, { merge: true });
   res.json({ id: ref.id, ...snap.data(), name: parsed.data.name, subject: parsed.data.subject ?? "", body: parsed.data.body });
 });
 messages.delete("/templates/:id", async (req, res) => {
-  const tenantId = operatorTenant(req, res);
-  if (!tenantId) return;
+  const scope = templateScope(req, res);
+  if (!scope) return;
   const ref = templatesCol.doc(req.params.id);
   const snap = await ref.get();
-  if (!snap.exists || snap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Template not found" }); return; }
+  if (!snap.exists || !ownsTemplate(snap.data()!, scope.tenantId, scope.ownerUid)) { res.status(404).json({ error: "Template not found" }); return; }
   await ref.delete();
   res.json({ ok: true });
 });

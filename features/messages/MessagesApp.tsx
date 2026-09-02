@@ -422,7 +422,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           <div className="flex flex-none flex-wrap items-center gap-2">
             {mode === "operator" && <TourLauncher view="messages" compact />}
             <SettingsLink />
-            {themeControl}
+            {portalSeg !== "staff" && themeControl}
             <button type="button" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
               ＋ {mode === "operator" ? "Message customers" : "New message"}
             </button>

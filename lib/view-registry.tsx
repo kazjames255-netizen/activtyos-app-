@@ -270,6 +270,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     announcements: StaffAnnouncementsApp,
     onboarding: StaffOnboardingApp,
     messages: () => <MessagesApp mode="operator" />,
+    templates: TemplatesApp,
     compliance: ComplianceApp,
     account: AccountApp,
     ai: () => <AiAssistant kind="staff" />,
