@@ -9,7 +9,7 @@ import { PageHero } from "@/components/OperatorPage";
 import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDur, workedMs, type ClockRecord } from "@/features/timeclock/data";
 import { greeting } from "@/lib/greeting";
 import { useSettings } from "@/lib/settings";
-import { loadAnnouncements, loadRead, type Announcement } from "@/features/staff/announcements";
+import { loadAnnouncements, loadRead, saveRead, type Announcement } from "@/features/staff/announcements";
 
 // ─────────────────────────────────────────────────────────────────────────
 // staff/dash — the staff member's colourful landing page. Live tenant data:
@@ -132,6 +132,7 @@ export function StaffDashApp() {
   const [, tick] = useState(0); // live worked-time tick
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [annRead, setAnnRead] = useState<string[]>([]);
+  const [annOpen, setAnnOpen] = useState(false); // is the current announcement expanded
   const { settings } = useSettings();
   const coworkerVis = settings.scheduling?.coworkerVisibility ?? "all";
   const today = todayIso();
@@ -209,11 +210,14 @@ export function StaffDashApp() {
     </div>
   );
 
-  const topAnn = [...announcements]
-    .sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (Number(!!b.important) - Number(!!a.important)) || b.date.localeCompare(a.date))
-    .slice(0, 3);
-  const annUnread = announcements.filter((a) => !annRead.includes(a.id)).length;
+  // Only the last 24 hours (by date), unread, newest/most-important first, one at a time.
+  const sinceIso = addDaysIso(today, -1);
+  const recentUnread = [...announcements]
+    .filter((a) => a.date >= sinceIso && !annRead.includes(a.id))
+    .sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (Number(!!b.important) - Number(!!a.important)) || b.date.localeCompare(a.date));
+  const curAnn = recentUnread[0] ?? null;
   const annDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  const markAnnRead = (id: string) => { const next = Array.from(new Set([...annRead, id])); setAnnRead(next); saveRead(next); setAnnOpen(false); };
 
   return (
     <div className="text-[var(--ink)]">
@@ -240,34 +244,33 @@ export function StaffDashApp() {
         <span className="text-[11.5px] text-[var(--ink-3)]">Everything below is for this date.</span>
       </div>
 
-      {/* Staff announcements — the manager's notice board, surfaced up top */}
-      {topAnn.length > 0 && (
-        <div className="mb-3 rounded-2xl border border-[#e3ebff] bg-gradient-to-br from-[#f4f8ff] to-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
-          <div className="mb-2.5 flex items-center gap-2">
+      {/* Staff announcements — newest unread from the last 24h, one at a time; open to read, mark read to dismiss */}
+      {curAnn && (
+        <div className="mb-3 overflow-hidden rounded-2xl border border-[#e3ebff] bg-gradient-to-br from-[#f4f8ff] to-white shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+          <div className="flex items-center gap-2 px-4 pt-3.5">
             <span className="grid h-8 w-8 flex-none place-items-center rounded-xl bg-[#1d3a8f] text-[15px]">📣</span>
-            <div className="text-[13px] font-black tracking-tight text-[var(--ink)]">Staff announcements</div>
-            {annUnread > 0 && <span className="rounded-full bg-[#e21d27] px-2 py-0.5 text-[10px] font-black text-white">{annUnread} new</span>}
+            <div className="text-[13px] font-black tracking-tight text-[var(--ink)]">Staff announcement</div>
+            {recentUnread.length > 1 && <span className="rounded-full bg-[#e21d27] px-2 py-0.5 text-[10px] font-black text-white">{recentUnread.length} new</span>}
             <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">View all ›</Link>
           </div>
-          <div className="flex flex-col gap-2">
-            {topAnn.map((a) => {
-              const unread = !annRead.includes(a.id);
-              return (
-                <Link key={a.id} href="/staff/announcements" className="flex items-start gap-2.5 rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 transition hover:border-[#c9d6f5] hover:shadow-sm">
-                  <span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: a.important ? "#e21d27" : unread ? "#1d3a8f" : "var(--line)" }} />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-1.5">
-                      {a.pinned && <span className="flex-none text-[10px]">📌</span>}
-                      <span className="truncate text-[13px] font-extrabold text-[var(--ink)]">{a.title}</span>
-                      {a.important && <span className="flex-none rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#c0362c]">Important</span>}
-                      {unread && !a.important && <span className="flex-none rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#1d3a8f]">New</span>}
-                    </div>
-                    <div className="mt-0.5 line-clamp-1 text-[12px] text-[var(--ink-3)]">{a.body}</div>
-                    <div className="mt-1 text-[10.5px] font-semibold text-[var(--ink-3)]">{a.author}{a.role ? ` · ${a.role}` : ""} · {annDate(a.date)}</div>
-                  </div>
-                </Link>
-              );
-            })}
+          <div className="px-4 pb-3.5 pt-2.5">
+            <div className="flex items-start gap-2.5">
+              <span className="mt-1.5 h-2 w-2 flex-none rounded-full" style={{ background: curAnn.important ? "#e21d27" : "#1d3a8f" }} />
+              <div className="min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {curAnn.pinned && <span className="flex-none text-[10px]">📌</span>}
+                  <span className="text-[14px] font-black text-[var(--ink)]">{curAnn.title}</span>
+                  {curAnn.important && <span className="flex-none rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#c0362c]">Important</span>}
+                </div>
+                <div className={"mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)] " + (annOpen ? "" : "line-clamp-1")}>{curAnn.body}</div>
+                <div className="mt-1.5 text-[10.5px] font-semibold text-[var(--ink-3)]">{curAnn.author}{curAnn.role ? ` · ${curAnn.role}` : ""} · {annDate(curAnn.date)}</div>
+              </div>
+            </div>
+            <div className="mt-3 flex items-center gap-2">
+              <button type="button" onClick={() => setAnnOpen((o) => !o)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white transition hover:brightness-110">{annOpen ? "Close" : "Open"}</button>
+              <button type="button" onClick={() => markAnnRead(curAnn.id)} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">✓ Mark as read</button>
+              {annOpen && <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">View all announcements ›</Link>}
+            </div>
           </div>
         </div>
       )}
