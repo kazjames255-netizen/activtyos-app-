@@ -263,7 +263,7 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
         } as React.CSSProperties
       }
     >
-      {!embedded && <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🗓️" />}
+      {!embedded && <PageHero title="Sessions & blocks" lede="Reusable scheduling patterns" icon="🗓️" actions={<TourLauncher view="blocks" compact />} />}
 
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red)] bg-[color-mix(in_srgb,var(--red)_8%,#ffffff)] px-3 py-2 text-[12.5px] text-[var(--red)]">
@@ -271,7 +271,6 @@ export function BlocksApp({ embedded = false }: { embedded?: boolean } = {}) {
         </div>
       )}
 
-      {!embedded && <TourLauncher view="blocks" />}
 
       {loading ? (
         <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>

@@ -26,9 +26,6 @@ import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { useSettings } from "@/lib/settings";
 import { ExportWizard } from "./ExportWizard";
 import { PageHero } from "@/components/OperatorPage";
-import { HowItWorks } from "@/components/HowItWorks";
-import { GuidedTour } from "@/features/common/GuidedTour";
-import { TOUR_CONFIGS } from "@/features/common/tourConfigs";
 
 // Status → identity-panel gradient. Same hue family as the status pill, but a
 // brighter, friendlier version (with a text shadow so white stays legible).
@@ -168,8 +165,6 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
         </>}
       />
       )}
-
-      {!compact && <HowItWorks tour={<GuidedTour config={TOUR_CONFIGS.bookings} />} />}
 
       {/* Filter chips */}
       <div className="mb-2.5 flex flex-wrap gap-[7px]">

@@ -5,6 +5,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { TourLauncher } from "@/features/common/TourLauncher";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -207,9 +208,12 @@ export function MarketingApp() {
             </div>
             <p className="mt-1.5 max-w-[540px] text-[12.5px] leading-[1.5] text-white/85">Codes families type at checkout — a percentage or fixed amount off, with optional min-spend, expiry and usage caps. Redemptions update live.</p>
           </div>
-          {!open && (
-            <button type="button" onClick={openCreate} className="z-10 flex-none rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New code</button>
-          )}
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            <TourLauncher view="marketing" compact />
+            {!open && (
+              <button type="button" onClick={openCreate} className="z-10 flex-none rounded-full bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white shadow-md transition-transform hover:-translate-y-px">＋ New code</button>
+            )}
+          </div>
         </div>
         {codes && codes.length > 0 && (
           <div className="mt-4 flex flex-wrap gap-2.5">

@@ -8,6 +8,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import type { SavedImage } from "@/lib/settings";
 import { composeMomentImage, triggerDownload } from "@/lib/momentImage";
+import { TourLauncher } from "@/features/common/TourLauncher";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Moments (operator/staff) — share the day with parents: a square-cropped photo
@@ -363,7 +364,10 @@ export function MomentsApp() {
             <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📷</span>Moments</div>
             <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">Share each child&rsquo;s day with their parents — activities, highlights and photos. Only children with photo consent can be in a child photo; parents see the moments their own child is in.</p>
           </div>
-          {!posting && <button type="button" onClick={() => setPosting(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Share a moment</button>}
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            <TourLauncher view="moments" compact />
+            {!posting && <button type="button" onClick={() => setPosting(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Share a moment</button>}
+          </div>
         </div>
         {moments && <div className="mt-4 flex flex-wrap gap-2.5">{tiles.map(([label, v]) => <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{v}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{label}</div></div>)}</div>}
       </div>

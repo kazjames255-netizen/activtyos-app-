@@ -3,6 +3,7 @@
 import { useState } from "react";
 import type { CSSProperties } from "react";
 import { SettingsLink } from "@/components/OperatorPage";
+import { TourLauncher } from "@/features/common/TourLauncher";
 import { IncidentsApp } from "./IncidentsApp";
 import { SafeguardingApp } from "./SafeguardingApp";
 
@@ -35,7 +36,7 @@ export function LogConcernApp() {
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">⚑</span>Log a concern
           </div>
-          <div className="flex flex-none flex-wrap items-center gap-2"><SettingsLink /></div>
+          <div className="flex flex-none flex-wrap items-center gap-2"><TourLauncher view="incidents" compact /><SettingsLink /></div>
         </div>
         <p className="mt-1.5 max-w-[620px] text-[12.5px] leading-[1.5] text-white/85">{active.sub}</p>
         <div className="mt-4 flex flex-wrap gap-1.5">

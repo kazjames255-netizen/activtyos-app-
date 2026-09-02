@@ -5,9 +5,7 @@ import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { MERGE_FIELDS, mergeFieldsFor } from "@/lib/merge-fields";
-import { HowItWorks } from "@/components/HowItWorks";
-import { GuidedTour } from "@/features/common/GuidedTour";
-import { TOUR_CONFIGS } from "@/features/common/tourConfigs";
+import { TourLauncher } from "@/features/common/TourLauncher";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
@@ -422,6 +420,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
             <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{mode === "operator" ? "Message one family or a whole listing at once — replies come back as normal 1:1 conversations. Switch on Pro for templates & merge fields." : "Message your activity provider — questions, changes or anything about your bookings."}</p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
+            {mode === "operator" && <TourLauncher view="messages" compact />}
             <SettingsLink />
             {themeControl}
             <button type="button" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
@@ -441,7 +440,6 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         </div>
       </div>
 
-      {mode === "operator" && <HowItWorks tour={<GuidedTour config={TOUR_CONFIGS.messages} />} />}
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {notice && <div className="mb-3 rounded-lg border border-[#cdddf7] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">✓ {notice}</div>}
 

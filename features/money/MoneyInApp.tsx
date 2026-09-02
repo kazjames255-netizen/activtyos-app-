@@ -7,6 +7,7 @@ import { money } from "@/features/bookings/helpers";
 import { InvoicesApp } from "@/features/money/InvoicesApp";
 import { IncomeApp } from "@/features/money/IncomeApp";
 import { SettingsLink } from "@/components/OperatorPage";
+import { TourLauncher } from "@/features/common/TourLauncher";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -70,6 +71,7 @@ export function MoneyInApp() {
           </div>
           {/* In/out sub-view switch, on the hero */}
           <div className="flex flex-none flex-wrap items-center gap-2">
+            <TourLauncher view="purchasing" compact />
             <SettingsLink />
             <div className="inline-flex flex-none gap-1 rounded-2xl border border-white/70 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
               {([["income", "💰 Income"], ["invoices", "📄 Invoices"]] as const).map(([k, label]) => (

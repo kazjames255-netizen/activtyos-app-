@@ -339,7 +339,7 @@ export function NewsfeedApp() {
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Newsfeed</div>
-          <div className="flex flex-none flex-wrap items-center gap-2"><SettingsLink /></div>
+          <div className="flex flex-none flex-wrap items-center gap-2"><TourLauncher view="newsfeed" compact /><SettingsLink /></div>
         </div>
         <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">Post an update and every family with a booking sees it in their app — from a quick reminder to an event with RSVPs or an urgent closure.</p>
         <div className="mt-3.5 flex flex-wrap gap-2.5">
@@ -350,8 +350,6 @@ export function NewsfeedApp() {
       </div>
 
       {audienceSwitch}
-
-      <TourLauncher view="newsfeed" />
 
       {canManage && (
         <div className="mb-4 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">

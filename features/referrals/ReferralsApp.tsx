@@ -8,6 +8,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
+import { TourLauncher } from "@/features/common/TourLauncher";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -64,7 +65,7 @@ export function ReferralsApp() {
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Hero — kept compact: title + inline stats on the left, small leaderboard on the right */}
       <div className="relative mb-4 overflow-hidden rounded-2xl p-4 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
-        <div className="absolute right-4 top-4 z-10"><SettingsLink /></div>
+        <div className="absolute right-4 top-4 z-10 flex items-center gap-2"><TourLauncher view="referrals" compact /><SettingsLink /></div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-[240px] flex-1">
             <div className="flex items-center gap-2 text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>

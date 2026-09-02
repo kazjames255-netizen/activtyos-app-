@@ -188,7 +188,7 @@ export function TeamApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero icon="👥" title="Team &amp; invites" lede="Invite people, set their role and where they work — then onboard, deploy and review them." />
+      <PageHero icon="👥" title="Team &amp; invites" lede="Invite people, set their role and where they work — then onboard, deploy and review them." actions={<TourLauncher view={{ team: "staff", applications: "staff-applications", onboarding: "staff-onboarding", locations: "staff-deployment", appraisals: "staff-appraisals" }[tab]} compact />} />
 
       <div className="mb-3 mt-4 flex flex-wrap items-center gap-3">
         <div className="inline-flex rounded-xl bg-[var(--panel)] p-1">
@@ -196,8 +196,6 @@ export function TeamApp() {
             <button key={t} type="button" onClick={() => setTab(t)} className={"rounded-lg px-4 py-1.5 text-[13px] font-bold transition-colors " + (tab === t ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)]")}>{lbl}</button>
           ))}
         </div>
-        {/* Each tab has its own guided walkthrough. */}
-        <div className="ml-auto"><TourLauncher view={{ team: "staff", applications: "staff-applications", onboarding: "staff-onboarding", locations: "staff-deployment", appraisals: "staff-appraisals" }[tab]} /></div>
       </div>
 
       {tab === "applications" ? <ApplicationsPanel /> : tab === "onboarding" ? <OnboardingPanel /> : tab === "locations" ? <LocationsApp embedded /> : tab === "appraisals" ? <AppraisalsApp embedded /> : (

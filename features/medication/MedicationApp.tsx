@@ -9,6 +9,7 @@ import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { ChildPicker, type ChildOption } from "@/components/pickers/ChildPicker";
 import { SettingsLink } from "@/components/OperatorPage";
+import { TourLauncher } from "@/features/common/TourLauncher";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -401,6 +402,7 @@ export function MedicationApp() {
             <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Authorised medicines and every dose given — nothing is administered without a parent’s consent.</p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
+            <TourLauncher view="medication" compact />
             <SettingsLink />
             {!adding && (
               <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">

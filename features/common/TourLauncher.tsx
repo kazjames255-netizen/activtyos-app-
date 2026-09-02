@@ -12,7 +12,7 @@ import { TOUR_CONFIGS } from "./tourConfigs";
 // walkthrough in a popup. The tour only mounts while the popup is open (so the
 // voice/iframe don't run in the background), and closing it unmounts the tour,
 // which stops the narration.
-export function TourLauncher({ view, portal: portalProp, custom }: { view: string; portal?: string; custom?: ReactNode }) {
+export function TourLauncher({ view, portal: portalProp, custom, compact }: { view: string; portal?: string; custom?: ReactNode; compact?: boolean }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const portal = portalProp || pathname?.split("/")[1] || "freelancer";
@@ -32,6 +32,18 @@ export function TourLauncher({ view, portal: portalProp, custom }: { view: strin
 
   return (
     <>
+      {compact ? (
+        // Sits inside the blue title card, next to the settings gear.
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          title="How it works — watch the walkthrough"
+          className="inline-flex flex-none items-center gap-1.5 rounded-full border border-white/25 px-3 py-1.5 text-[12px] font-bold text-white backdrop-blur-sm transition hover:bg-white/10"
+          style={{ background: "rgba(12,26,68,.32)" }}
+        >
+          <span aria-hidden>ℹ️</span>How it works
+        </button>
+      ) : (
       <button
         type="button"
         onClick={() => setOpen(true)}
@@ -46,6 +58,7 @@ export function TourLauncher({ view, portal: portalProp, custom }: { view: strin
           ▶ Watch walkthrough
         </span>
       </button>
+      )}
 
       {open && (
         <div

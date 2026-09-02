@@ -6,7 +6,6 @@ import { useRealtime } from "@/lib/realtime";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { Button, Card } from "@/components/ui";
 import { OperatorPage } from "@/components/OperatorPage";
-import { TourLauncher } from "@/features/common/TourLauncher";
 import { useSettings, groupForAge, DEFAULT_RATIO_GROUPS, type RatioGroup } from "@/lib/settings";
 import type { ServerListing } from "@/features/listings/ListingWizard";
 
@@ -858,9 +857,6 @@ export function RatiosApp() {
       icon="🏅"
       lede="Set your groups and target ratios, and track live cover as you take registers"
     >
-      {/* How ratios work — folded away, with a walkthrough video to come. */}
-      <TourLauncher view="ratios" />
-
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c0392b]">{error}</div>}
 
       {/* Listing picker — the live listings running today. No "whole site":

@@ -8,6 +8,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings, needsNappies, type ChildQuestion } from "@/lib/settings";
 import { Button } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
+import { TourLauncher } from "@/features/common/TourLauncher";
 import { ChildCard, type ChildInfo } from "./ChildCard";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -1003,6 +1004,7 @@ export function RegistersApp() {
                   </label>
                 </div>
                 <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <TourLauncher view="registers" compact />
                   <SettingsLink />
                   <button type="button" onClick={() => setDlOpen(true)} className={GHOST}>⬇ Download</button>
                   <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? "Collapse header" : "Expand header"} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>

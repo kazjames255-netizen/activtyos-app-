@@ -409,7 +409,9 @@ export function FreelancerListingsApp() {
         title="Blocks & listings"
         lede="Locations, scheduling blocks and your programmes"
         icon="🎫"
-        actions={tab === "listings" ? (
+        actions={<>
+          <TourLauncher view={tab === "blocks" ? "blocks" : "listings"} compact />
+          {tab === "listings" && (
           <>
             <button
               type="button"
@@ -437,10 +439,9 @@ export function FreelancerListingsApp() {
               ＋ New listing
             </button>
           </>
-        ) : undefined}
+          )}
+        </>}
       />
-
-      <TourLauncher view={tab === "blocks" ? "blocks" : "listings"} />
 
       {/* Tabs */}
       <div className="mb-3 flex gap-1.5 border-b border-[var(--line)]">

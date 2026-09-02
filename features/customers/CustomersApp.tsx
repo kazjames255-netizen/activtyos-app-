@@ -9,7 +9,6 @@ import { Pill, PillSelect } from "@/features/listings/FreelancerListingsApp";
 import { bookingKids, sessionIsoDates } from "@/features/bookings/helpers";
 import { uploadPlan } from "@/features/listings/planUpload";
 import { CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
-import { TourLauncher } from "@/features/common/TourLauncher";
 import { useTenantSettings, questionsFor, dobRequired, limitFor } from "@/lib/settings";
 import { QuestionFields } from "@/components/QuestionFields";
 
@@ -605,7 +604,6 @@ export function CustomersApp() {
           </>}
         />
       </div>
-      <TourLauncher view="customers" />
 
       {error && (
         <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">

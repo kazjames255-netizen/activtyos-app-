@@ -6,6 +6,7 @@ import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { SettingsLink } from "@/components/OperatorPage";
+import { TourLauncher } from "@/features/common/TourLauncher";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Calendar — every session across the operator's listings PLUS manually-added
@@ -269,6 +270,7 @@ export function CalendarApp() {
             <p className="mt-1.5 max-w-[620px] text-[12.5px] leading-[1.5] text-white/85">Your sessions across all listings, plus your own events — switch between Month, Week and Day, and pick any range.</p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
+            <TourLauncher view="calendar" compact />
             <SettingsLink />
             <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Add event</button>
           </div>

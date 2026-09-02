@@ -289,7 +289,10 @@ export function TasksApp() {
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Task manager</div>
-          <button type="button" onClick={toggleHero} aria-expanded={heroOpen} title={heroOpen ? "Collapse cards" : "Show cards"} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            <TourLauncher view="tasks" compact />
+            <button type="button" onClick={toggleHero} aria-expanded={heroOpen} title={heroOpen ? "Collapse cards" : "Show cards"} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+          </div>
         </div>
         {heroOpen && <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">{sub}</p>}
         {heroOpen && <div className="mt-3.5 flex flex-wrap gap-2.5">
@@ -312,8 +315,6 @@ export function TasksApp() {
           {showMilestones && <button type="button" onClick={() => setTab("milestones")} className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-1.5 transition-colors" style={onMilestones ? { background: "#fff", color: "#6d28d9" } : { color: "rgba(255,255,255,.85)" }}>📍 Milestones</button>}
         </div>
       </div>
-
-      <TourLauncher view="tasks" />
 
       {/* Quick add */}
       {!onMilestones && <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">

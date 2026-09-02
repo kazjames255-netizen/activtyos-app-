@@ -3,6 +3,7 @@
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { TourLauncher } from "@/features/common/TourLauncher";
 
 // ─────────────────────────────────────────────────────────────────────────
 // "Change settings" deep-links. Every operator page whose behaviour is shaped
@@ -97,6 +98,12 @@ export function PageHero({
   collapseId?: string;
 }) {
   const foldable = !!stats;
+  // A compact "How it works" launcher lives inside the title card on operator
+  // pages that have a walkthrough. Pages with bespoke per-tab launchers manage
+  // their own, so they're excluded here.
+  const heroParts = (usePathname() ?? "").split("/");
+  const heroView = heroParts[2] ?? "";
+  const showTour = OPERATOR_PORTALS.has(heroParts[1] ?? "") && !["listings", "blocks", "staff"].includes(heroView);
   const key = foldable ? `aos.hero.${collapseId ?? slug(title)}` : "";
   const [open, setOpen] = useState(true);
   useEffect(() => {
@@ -132,6 +139,7 @@ export function PageHero({
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <SettingsLink />
+            {showTour && <TourLauncher view={heroView} compact />}
             {actions}
             {foldable && (
               <button
