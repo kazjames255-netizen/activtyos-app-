@@ -19,6 +19,8 @@ interface NormReview { source: "inhouse" | "google" | "trustpilot"; rating: numb
 async function tenantReviewCfg(tenantId: string) {
   const lib = await db.collection("libraries").doc(tenantId).get();
   return (lib.data()?.settings?.reviews ?? {}) as {
+    captureMode?: "inhouse" | "external";
+    googlePlaces?: { id: string; label: string; placeId?: string; reviewUrl?: string }[];
     googlePlaceId?: string; googleReviewUrl?: string; showGoogleRating?: boolean;
     inviteToGoogle?: boolean; googleConnected?: boolean; trustpilotBusinessUnitId?: string; publicWidget?: boolean;
   };
@@ -74,7 +76,8 @@ async function buildSummary(tenantId: string) {
   const cfg = await tenantReviewCfg(tenantId);
   const inhouse = await inhouseReviews(tenantId);
   const inAvg = inhouse.length ? inhouse.reduce((n, r) => n + r.rating, 0) / inhouse.length : null;
-  const google = cfg.showGoogleRating !== false ? await googleLive(cfg.googlePlaceId) : null;
+  const primaryPlaceId = cfg.googlePlaces?.find((p) => p.placeId)?.placeId || cfg.googlePlaceId;
+  const google = cfg.showGoogleRating !== false ? await googleLive(primaryPlaceId) : null;
   const trustpilot = await trustpilotLive(cfg.trustpilotBusinessUnitId);
   const summary = blend([
     { avg: inAvg, count: inhouse.length },
@@ -125,11 +128,35 @@ reviews.get("/public/:tenantId", async (req, res) => {
 
 // parent/public → the compliant "also review us on Google" link (shown to
 // EVERYONE after in-house feedback — never gated on the score).
+//   Multi-location: a business has one Google listing per location, so we route
+//   the parent to the location they attended (matched from ?listing= / ?loc=).
+//   When we can't tell and there's more than one, we return the list so the
+//   parent taps which location.
+const reviewUrlFor = (p: { placeId?: string; reviewUrl?: string }): string | null =>
+  p.reviewUrl?.trim() || (p.placeId ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(p.placeId)}` : null);
+
 reviews.get("/invite/:tenantId", async (req, res) => {
   const cfg = await tenantReviewCfg(req.params.tenantId);
-  const url = cfg.inviteToGoogle === false ? null
-    : cfg.googleReviewUrl?.trim() || (cfg.googlePlaceId ? `https://search.google.com/local/writereview?placeid=${encodeURIComponent(cfg.googlePlaceId)}` : null);
-  res.json({ url, mode: (cfg as { captureMode?: string }).captureMode ?? "inhouse" });
+  const mode = cfg.captureMode ?? "inhouse";
+  if (cfg.inviteToGoogle === false) { res.json({ url: null, mode }); return; }
+
+  // Effective location list (fall back to the legacy single-location fields).
+  const raw = cfg.googlePlaces?.length
+    ? cfg.googlePlaces
+    : (cfg.googlePlaceId || cfg.googleReviewUrl ? [{ id: "loc1", label: "", placeId: cfg.googlePlaceId, reviewUrl: cfg.googleReviewUrl }] : []);
+  const usable = raw.map((p) => ({ label: p.label || "", url: reviewUrlFor(p) })).filter((p): p is { label: string; url: string } => !!p.url);
+
+  if (usable.length === 0) { res.json({ url: null, mode }); return; }
+  if (usable.length === 1) { res.json({ url: usable[0].url, mode }); return; }
+
+  // Try to match the attended location by name.
+  const hint = String(req.query.loc || req.query.listing || "").toLowerCase().trim();
+  if (hint) {
+    const hit = usable.find((p) => p.label && (hint.includes(p.label.toLowerCase()) || p.label.toLowerCase().includes(hint)));
+    if (hit) { res.json({ url: hit.url, mode, matched: hit.label }); return; }
+  }
+  // Ambiguous → let the parent choose their location.
+  res.json({ url: null, mode, places: usable });
 });
 
 // ── Google Business Profile connect (P2) ────────────────────────────────────

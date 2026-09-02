@@ -1498,6 +1498,19 @@ export function SetupApp() {
         const selected = rv.sources ?? ([...(rv.googlePlaceId || rv.googleReviewUrl ? ["google"] : []), ...(rv.trustpilotBusinessUnitId ? ["trustpilot"] : [])] as ("google" | "trustpilot")[]);
         const has = (s: "google" | "trustpilot") => selected.includes(s);
         const toggleSrc = (s: "google" | "trustpilot") => set("reviews", { ...rv, sources: has(s) ? selected.filter((x) => x !== s) : [...selected, s] });
+        // Accept anything they copy — a ChIJ Place ID, a review/maps link, or a
+        // Google search/maps URL — and pull out the right identifier.
+        const parseGoogle = (v: string): { googlePlaceId: string; googleReviewUrl: string } => {
+          const s = v.trim();
+          if (!s) return { googlePlaceId: "", googleReviewUrl: "" };
+          if (/^ChIJ[\w-]+$/.test(s)) return { googlePlaceId: s, googleReviewUrl: "" };
+          const wr = s.match(/writereview\?placeid=([\w-]+)/i); if (wr) return { googlePlaceId: wr[1], googleReviewUrl: "" };
+          const pid = s.match(/place_id[:=]([\w-]{20,})/i); if (pid) return { googlePlaceId: pid[1], googleReviewUrl: "" };
+          const cid = s.match(/[?&#]cid=(\d+)/); if (cid) return { googlePlaceId: "", googleReviewUrl: `https://www.google.com/maps?cid=${cid[1]}` };
+          const hex = s.match(/(?:lrd=|!1s)0x[0-9a-f]+:0x([0-9a-f]+)/i); if (hex) { try { return { googlePlaceId: "", googleReviewUrl: `https://www.google.com/maps?cid=${BigInt("0x" + hex[1]).toString()}` }; } catch { /* fall through */ } }
+          if (/^https?:\/\//.test(s)) return { googlePlaceId: "", googleReviewUrl: s };
+          return { googlePlaceId: s, googleReviewUrl: "" };
+        };
         return (
         <Section title="Reviews" lede="Blend your in-house feedback with the review sites you already use. Compliance is built in — every customer is invited to review on Google, never only the happy ones.">
           <div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">How do you want to collect reviews?</div>
@@ -1534,41 +1547,103 @@ export function SetupApp() {
             ))}
           </div>
 
-          {has("google") && (<>
-            <div className="mb-1 mt-1 text-[11px] font-extrabold uppercase tracking-wide text-[#ea4335]">Google</div>
-            {/* Dead-simple: find your camp → copy the ID → paste it. */}
-            <div className="mb-3 rounded-xl border border-[#f6d3cd] bg-[#fdf3f1] p-3.5">
-              <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
-                <span className="text-[12.5px] font-extrabold text-[#b3261e]">Get your camp&rsquo;s Google ID — takes 30 seconds</span>
-                {!(rv.googlePlaceId || rv.googleReviewUrl) && <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#ea4335] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">🔎 Find my camp on Google →</a>}
+          {has("google") && (() => {
+            type Place = { id: string; label: string; placeId?: string; reviewUrl?: string };
+            const places: Place[] = rv.googlePlaces?.length
+              ? rv.googlePlaces
+              : [{ id: "loc1", label: "", placeId: rv.googlePlaceId || "", reviewUrl: rv.googleReviewUrl || "" }];
+            const writePlaces = (list: Place[]) => {
+              const first = list[0];
+              set("reviews", { ...rv, googlePlaces: list, googlePlaceId: first?.placeId || "", googleReviewUrl: first?.reviewUrl || "" });
+            };
+            const patch = (id: string, p: Partial<Place>) => writePlaces(places.map((x) => (x.id === id ? { ...x, ...p } : x)));
+            const multi = places.length > 1;
+            const connected = (p: Place) => !!(p.placeId || p.reviewUrl);
+            const precise = (p: Place) => !!p.placeId || /writereview/i.test(p.reviewUrl || ""); // true one-tap star box (ChIJ) vs listing link
+            const FINDER = "https://developers.google.com/maps/documentation/javascript/examples/places-placeid-finder";
+            return (<>
+              <div className="mb-2 mt-1 flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-wide text-[#ea4335]">Google{multi && <span className="rounded-full bg-[#fdece9] px-2 py-0.5 text-[9.5px] font-black tracking-wide text-[#b3261e]">{places.length} locations</span>}</div>
+
+              {/* Grab the Place ID from Google's finder — a visual shows exactly what to copy. */}
+              <div className="mb-3 rounded-xl border border-[#f6d3cd] bg-[#fdf3f1] p-3.5">
+                <div className="mb-2 flex flex-wrap items-center gap-2.5">
+                  <a href={FINDER} target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#ea4335] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">🔎 Get my Place ID from Google ↗</a>
+                  <span className="text-[12px] font-extrabold text-[#b3261e]">then copy your ChIJ… code</span>
+                </div>
+                <ol className="ml-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#7a2a22]">
+                  <li>In the map&rsquo;s search box, type your business name <b>+ town</b>, spelled exactly (e.g. <b>Kings Camps Sheffield</b>), and pick it from the list.</li>
+                  <li>A white box pops up on the pin. Copy the <b>ChIJ…</b> code shown after <b>Place ID:</b> — like the highlighted bit below.</li>
+                  <li>Paste it into your location&rsquo;s box underneath.</li>
+                </ol>
+                {/* Visual: a mock of Google's info window, with the Place ID highlighted. */}
+                <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                  <div className="relative w-[340px] max-w-full rounded-md border border-[#e4e4e4] bg-white p-2.5 shadow-[0_4px_16px_rgba(0,0,0,.14)]">
+                    <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-sm text-[12px] text-[#70757a]">✕</div>
+                    <div className="text-[12.5px] font-bold text-[#3c4043]">Kings Camps - Sheffield</div>
+                    <div className="mt-1 text-[11.5px] text-[#3c4043]"><span className="font-bold">Place ID:</span> <mark className="rounded bg-[#fff2a8] px-1 py-0.5 font-mono text-[11px] font-bold text-[#7a2a22] ring-1 ring-[#efcf3d]">ChIJSbBEmHOCeUgRTzxu9F_YMUg</mark></div>
+                    <div className="mt-1 text-[10.5px] text-[#70757a]">High School, 10 Rutland Park, Broomhall, Sheffield S10 2PE, UK</div>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-[12px] font-black text-[#0f7a43]"><span className="text-[16px]">👈</span> copy this bit</div>
+                </div>
+                <p className="mt-2 text-[10.5px] text-[#9a5148]"><b>Map opens in Sydney?</b> Ignore it — putting your <b>town</b> in the search (as above) finds you in the UK.</p>
               </div>
-              <ol className="ml-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#7a2a22]">
-                <li>Click <b>Find my camp on Google</b> above — a map opens in a new tab.</li>
-                <li>Type your <b>camp&rsquo;s name</b> in the map&rsquo;s search box and pick it from the list.</li>
-                <li>A little box pops up showing the <b>Place ID</b> — it starts with <b>ChIJ</b>. Copy it.</li>
-                <li>Paste it into the box below and hit save. Done — your parents now get a one-tap Google review link.</li>
-              </ol>
-              <p className="mt-1.5 text-[11px] text-[#9a5148]">Got several camps? Each site has its own ID — use the one you want reviews for.</p>
-            </div>
-            <Row label="Paste your Place ID (or Google review link) here" hint="It starts with ChIJ… (or paste a g.page/r/… link). This powers the live Google rating on your Browse page and the one-tap 'review us on Google' button after feedback.">
-              <Input value={rv.googleReviewUrl || rv.googlePlaceId || ""} placeholder="ChIJ…  (or https://g.page/r/…)" onChange={(e) => { const v = e.target.value.trim(); const isUrl = /^https?:\/\//.test(v); set("reviews", { ...rv, googleReviewUrl: isUrl ? v : "", googlePlaceId: isUrl ? (rv.googlePlaceId ?? "") : v }); }} className="w-full" />
-            </Row>
-            {(rv.googlePlaceId || rv.googleReviewUrl) && <div className="mb-3 -mt-1 flex items-center gap-2 text-[11.5px] font-bold text-[#0f7a43]">✓ Google connected — parents will be sent to your review page. <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener noreferrer" className="font-bold text-[#1d3a8f] hover:underline">Change ID</a></div>}
-            <Row label="Show my Google rating publicly" hint="Display your live Google star rating on your Browse page and blend it into your overall score.">
-              <Toggle on={rv.showGoogleRating ?? true} onChange={(v) => set("reviews", { ...rv, showGoogleRating: v })} labels={["On", "Off"]} />
-            </Row>
-            <Row label="Invite customers to review on Google" hint="After a parent leaves in-house feedback, show a 'review us on Google' button — to EVERYONE, whatever they rated (this is what keeps you compliant with Google & the FTC).">
-              <Toggle on={rv.inviteToGoogle ?? true} onChange={(v) => set("reviews", { ...rv, inviteToGoogle: v })} labels={["On", "Off"]} />
-            </Row>
-            <div className="mb-4 rounded-lg border border-[#cde0f7] bg-[#eef5ff] px-3.5 py-2.5 text-[11.5px] leading-relaxed text-[#1d3a8f]">
-              Want to <b>pull every Google review + reply from ActivityOS</b>? That needs a one-time <b>Connect Google Business Profile</b> from the <b>Reviews</b> page (enabled once the platform link is live). The link above already shows your rating and invites reviews without it.
-            </div>
-          </>)}
+
+              <div className="mb-3 flex flex-col gap-2.5">
+                {places.map((p, i) => (
+                  <div key={p.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
+                    <div className="mb-2 flex flex-wrap items-center gap-2">
+                      {multi ? (
+                        <input value={p.label} placeholder={`Location ${i + 1} name — e.g. Ashford`} onChange={(e) => patch(p.id, { label: e.target.value })} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-bold text-[var(--ink)]" />
+                      ) : (
+                        <span className="flex-1 text-[12px] font-extrabold text-[var(--ink-2)]">Your Google listing</span>
+                      )}
+                      {multi && <button type="button" onClick={() => writePlaces(places.filter((x) => x.id !== p.id))} className="flex-none rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--ink-3)] transition hover:bg-[var(--panel)]" aria-label="Remove location">✕</button>}
+                    </div>
+                    <input value={p.placeId || p.reviewUrl || ""} placeholder="Paste your ChIJ… Place ID here" onChange={(e) => { const g = parseGoogle(e.target.value); patch(p.id, { placeId: g.googlePlaceId, reviewUrl: g.googleReviewUrl }); }} className="w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--ink)]" />
+                    {connected(p) && <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#0f7a43]">✓ Connected{multi && p.label ? ` — ${p.label}` : ""} — {precise(p) ? "parents get a one-tap review box." : "parents land on your listing (one extra tap)."}<button type="button" onClick={() => patch(p.id, { placeId: "", reviewUrl: "" })} className="text-[var(--ink-3)] underline hover:text-[var(--ink)]">Clear</button></div>}
+                  </div>
+                ))}
+              </div>
+              <button type="button" onClick={() => writePlaces([...places, { id: "loc" + (places.length + 1) + Date.now().toString(36), label: "", placeId: "", reviewUrl: "" }])} className="mb-4 rounded-full border border-dashed border-[#c9d6f5] bg-[#f5f8ff] px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4ff]">+ Add another location</button>
+
+              <Row label="Show my Google rating publicly" hint="Display your live Google star rating on your Browse page and blend it into your overall score.">
+                <Toggle on={rv.showGoogleRating ?? true} onChange={(v) => set("reviews", { ...rv, showGoogleRating: v })} labels={["On", "Off"]} />
+              </Row>
+              <Row label="Invite customers to review on Google" hint="After a parent leaves in-house feedback, show a 'review us on Google' button — to EVERYONE, whatever they rated (this is what keeps you compliant with Google & the FTC).">
+                <Toggle on={rv.inviteToGoogle ?? true} onChange={(v) => set("reviews", { ...rv, inviteToGoogle: v })} labels={["On", "Off"]} />
+              </Row>
+              <div className="mb-4 rounded-lg border border-[#cde0f7] bg-[#eef5ff] px-3.5 py-2.5 text-[11.5px] leading-relaxed text-[#1d3a8f]">
+                Want to <b>pull every Google review + reply from ActivityOS</b>? That needs a one-time <b>Connect Google Business Profile</b> from the <b>Reviews</b> page (enabled once the platform link is live). The links above already show your rating and invite reviews without it.
+              </div>
+            </>);
+          })()}
 
           {has("trustpilot") && (<>
-            <div className="mb-1 mt-1 text-[11px] font-extrabold uppercase tracking-wide text-[#00b67a]">Trustpilot</div>
+            <div className="mb-2 mt-1 text-[11px] font-extrabold uppercase tracking-wide text-[#00b67a]">Trustpilot</div>
+
+            {/* Precise steps to find the Trustpilot Business Unit ID, with a visual. */}
+            <div className="mb-3 rounded-xl border border-[#bfeadb] bg-[#e9f9f2] p-3.5">
+              <div className="mb-2 flex flex-wrap items-center gap-2.5">
+                <a href="https://www.trustpilot.com/" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#00b67a] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">🔎 Open my Trustpilot page ↗</a>
+                <span className="text-[12px] font-extrabold text-[#05603a]">then grab your Business Unit ID</span>
+              </div>
+              <ol className="ml-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#0b5a3f]">
+                <li>Go to your own Trustpilot page — <b>trustpilot.com/review/yourwebsite.co.uk</b> (swap in your domain).</li>
+                <li>Press <b>Ctrl+U</b> (Mac: <b>⌥⌘U</b>) to view the page source, then <b>Ctrl/⌘+F</b> and search <b>businessUnitId</b>.</li>
+                <li>Copy the <b>24-character code</b> right after it (letters + numbers) and paste it below.</li>
+              </ol>
+              {/* Visual: a mock of the page-source line, with the ID highlighted. */}
+              <div className="mt-2.5 flex flex-wrap items-center gap-3">
+                <div className="w-[360px] max-w-full overflow-x-auto rounded-md border border-[#cfe9df] bg-[#0b2b22] p-2.5 font-mono text-[11px] leading-relaxed text-[#9fe7cd] shadow-[0_4px_16px_rgba(0,0,0,.16)]">
+                  <span className="text-[#7fb8a6]">…,</span>&quot;<span className="text-[#e6f6ef]">businessUnitId</span>&quot;:&quot;<mark className="rounded bg-[#fff2a8] px-1 py-0.5 font-bold text-[#0b2b22] ring-1 ring-[#efcf3d]">4b2f1a9c00006400051a3c4e</mark>&quot;<span className="text-[#7fb8a6]">,&quot;displayName&quot;:…</span>
+                </div>
+                <div className="flex items-center gap-1.5 text-[12px] font-black text-[#05603a]"><span className="text-[16px]">👈</span> copy this bit</div>
+              </div>
+              <p className="mt-2 text-[10.5px] text-[#3a6a58]"><b>Got a Trustpilot Business login?</b> It&rsquo;s also under Settings → Integrations, or in your <b>businessapp.b2b.trustpilot.com</b> address bar.</p>
+            </div>
+
             <Row label="Trustpilot Business Unit ID" hint="Paste your Business Unit ID to pull your Trustpilot reviews into your blended score." note="Needs platform key">
-              <Input value={rv.trustpilotBusinessUnitId ?? ""} placeholder="e.g. 4b… " onChange={(e) => set("reviews", { ...rv, trustpilotBusinessUnitId: e.target.value.trim() })} className="w-full" />
+              <Input value={rv.trustpilotBusinessUnitId ?? ""} placeholder="e.g. 4b2f1a9c00006400051a3c4e" onChange={(e) => set("reviews", { ...rv, trustpilotBusinessUnitId: e.target.value.trim() })} className="w-full" />
             </Row>
           </>)}
 

@@ -32,6 +32,7 @@ export function FeedbackApp() {
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [googleUrl, setGoogleUrl] = useState<string | null>(null);
+  const [googlePlaces, setGooglePlaces] = useState<{ label: string; url: string }[] | null>(null);
   const [captureMode, setCaptureMode] = useState<"inhouse" | "external">("inhouse");
 
   const refreshMine = () => apiGet<Feedback[]>("/api/my/feedback").then(setMine).catch(() => {});
@@ -48,8 +49,9 @@ export function FeedbackApp() {
     setBusy(true); setError(null);
     try {
       await apiPost("/api/my/feedback", { tenantId, rating, comment: comment.trim() || undefined, listing: listing.trim() || undefined });
-      // Compliant: invite EVERYONE (any score) to also review on Google.
-      apiGet<{ url: string | null; mode?: "inhouse" | "external" }>(`/api/reviews/invite/${tenantId}`).then((r) => { setGoogleUrl(r.url); setCaptureMode(r.mode ?? "inhouse"); }).catch(() => {});
+      // Compliant: invite EVERYONE (any score) to also review on Google. Pass the
+      // activity so multi-location businesses route to the right listing.
+      apiGet<{ url: string | null; mode?: "inhouse" | "external"; places?: { label: string; url: string }[] }>(`/api/reviews/invite/${tenantId}?listing=${encodeURIComponent(listing.trim())}`).then((r) => { setGoogleUrl(r.url); setCaptureMode(r.mode ?? "inhouse"); setGooglePlaces(r.places ?? null); }).catch(() => {});
       setSent(true); setComment(""); setRating(0);
       await refreshMine();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn't send your feedback"); }
@@ -68,7 +70,16 @@ export function FeedbackApp() {
           <div className="text-[34px]">🎉</div>
           <div className="mt-1 text-[16px] font-extrabold text-[var(--ink)]">Thank you!</div>
           <p className="mx-auto mt-1 max-w-[440px] text-[13px] text-[var(--ink-3)]">That&rsquo;s everything — your feedback is in with <b className="text-[var(--ink-2)]">{providerName}</b> and it really helps them.</p>
-          {googleUrl && (captureMode === "external" ? (
+          {googlePlaces && googlePlaces.length > 1 ? (
+            <div className="mx-auto mt-4 max-w-[460px]">
+              <div className="text-[13px] font-semibold text-[var(--ink-2)]">{captureMode === "external" ? "One more step — pop your review on " : "Optional — got 20 seconds? A quick review on "}<b>Google</b> helps other families. Which location did you visit?</div>
+              <div className="mt-2.5 flex flex-wrap justify-center gap-2">
+                {googlePlaces.map((pl) => (
+                  <a key={pl.label + pl.url} href={pl.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-4 py-2.5 text-[13px] font-extrabold text-white shadow-sm transition hover:brightness-110"><span style={{ color: "#ffd35c" }}>★</span> {pl.label || "Review on Google"} ↗</a>
+                ))}
+              </div>
+            </div>
+          ) : googleUrl && (captureMode === "external" ? (
             <div className="mx-auto mt-4 max-w-[440px]">
               <div className="text-[13px] font-semibold text-[var(--ink-2)]">One more step — please pop your review on <b>Google</b> so other families can see it too:</div>
               <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center gap-2 rounded-full bg-[#1d3a8f] px-6 py-3 text-[14px] font-extrabold text-white shadow-sm transition hover:brightness-110"><span style={{ color: "#ffd35c" }}>★</span> Leave your Google review ↗</a>

@@ -776,7 +776,13 @@ export interface TenantSettings {
   reviews?: {
     captureMode?: "inhouse" | "external"; // in-house first (private, catch issues) vs send straight to Google/Trustpilot (public)
     sources?: ("google" | "trustpilot")[]; // which external platforms this provider uses
-    googlePlaceId?: string;      // Places API display + "review us on Google" link (P1)
+    // Google listings. A business with several locations has a SEPARATE Google
+    // listing (and Place ID / rating) per location, so this is a list. Parents are
+    // routed to the location they attended (matched from their booking's location).
+    // Back-compat: legacy single-location providers still use googlePlaceId/Url below.
+    googleConnectMethod?: "quick" | "id"; // quick one-click link vs paste a Place ID for the direct star box
+    googlePlaces?: { id: string; label: string; placeId?: string; reviewUrl?: string }[];
+    googlePlaceId?: string;      // Places API display + "review us on Google" link (P1) — single-location fallback
     googleReviewUrl?: string;    // override the writereview link if they have a custom one
     showGoogleRating?: boolean;  // show the live Google rating on Browse/feedback (default true)
     inviteToGoogle?: boolean;    // after in-house feedback, invite EVERYONE to Google (default true)
