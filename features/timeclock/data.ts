@@ -44,6 +44,8 @@ export const slug = (name: string) => name.trim().toLowerCase().replace(/\s+/g, 
 const todayISO = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 export const hhmm = (iso?: string) => (iso ? new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) : "");
 export const fmtDur = (ms: number) => { const m = Math.max(0, Math.round(ms / 60000)); return `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m`; };
+// Same, but with live seconds — for the ticking "worked today" clock.
+export const fmtDurSec = (ms: number) => { const s = Math.max(0, Math.floor(ms / 1000)); return `${Math.floor(s / 3600)}h ${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}m ${String(s % 60).padStart(2, "0")}s`; };
 export function sinceLabel(iso?: string): string { if (!iso) return ""; const min = Math.floor((Date.now() - new Date(iso).getTime()) / 60000); if (min < 1) return "just now"; if (min < 60) return `${min}m ago`; return `${Math.floor(min / 60)}h ${min % 60}m ago`; }
 
 const read = <T,>(key: string): T | null => { try { return JSON.parse(localStorage.getItem(key) || "null"); } catch { return null; } };

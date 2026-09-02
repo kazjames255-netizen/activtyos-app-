@@ -13,7 +13,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
-import { type ClockRecord, loadClock, slug, clockIn, clockOut, startBreak, endBreak, workedMs, fmtDur, hhmm } from "@/features/timeclock/data";
+import { type ClockRecord, loadClock, slug, clockIn, clockOut, startBreak, endBreak, workedMs, fmtDur, fmtDurSec, hhmm } from "@/features/timeclock/data";
 
 const ME = "Marcus Bell";
 const ME_ROLE = "Lead Coach"; // demo role (per-user identity is Amir's)
@@ -75,7 +75,7 @@ export function MyScheduleApp() {
     } catch { /* ignore */ }
     setClock(loadClock());
   }, []);
-  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(t); }, []);
+  useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
 
   const today = todayISO();
   const upcoming = useMemo(() => shifts.filter((s) => s.date >= today).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start)), [shifts, today]);
@@ -232,7 +232,7 @@ export function MyScheduleApp() {
               </div>
             ) : (
               <div className="mt-4 flex items-center gap-4 rounded-2xl bg-[var(--panel)] p-4">
-                <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Worked today</div><div className="text-[26px] font-extrabold tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{fmtDur(worked)}</div></div>
+                <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Worked today</div><div className="text-[26px] font-extrabold tabular-nums text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{status === "in" ? fmtDurSec(worked) : fmtDur(worked)}</div></div>
                 {rec && rec.breakMs > 0 && <div><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Break</div><div className="text-[15px] font-extrabold tabular-nums text-[#8a5a09]">{fmtDur(rec.breakMs)}</div></div>}
                 {todayShift && <div className="ml-auto text-right"><div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Scheduled</div><div className="text-[13px] font-bold text-[var(--ink-2)]">{todayShift.start}–{todayShift.end}</div></div>}
               </div>
