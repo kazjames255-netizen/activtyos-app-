@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { DEFAULT_LOCALE, LOCALE_STORAGE_KEY, isRTL, type LocaleCode } from "./config";
-import { CATALOGS, en } from "./messages";
+import { CATALOGS } from "./messages";
 
 type Vars = Record<string, string | number>;
 interface Ctx {
@@ -20,8 +20,8 @@ function resolve(obj: unknown, path: string): string | undefined {
 }
 
 function translate(locale: LocaleCode, key: string, vars?: Vars): string {
-  const cat = CATALOGS[locale] ?? en;
-  let s = resolve(cat, key) ?? resolve(en, key) ?? key;
+  const cat = CATALOGS[locale] ?? CATALOGS.en;
+  let s = resolve(cat, key) ?? resolve(CATALOGS.en, key) ?? key;
   if (vars) for (const [k, v] of Object.entries(vars)) s = s.split(`{${k}}`).join(String(v));
   return s;
 }

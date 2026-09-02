@@ -3,6 +3,9 @@
 import { Fragment, useState } from "react";
 import { ROLE_CAPS, DEFAULT_ROLES, type StaffRole, type CapLevel } from "@/lib/settings";
 import { Button, Input } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
+
+const levelKey = (v: CapLevel) => (v === "none" ? "setup.levelNone" : v === "view" ? "setup.levelView" : "setup.levelEdit");
 
 // ── Roles & permissions matrix (company / head-office) ─────────────────────
 // Define named roles and, per area, how much access each gets: None / View /
@@ -24,6 +27,7 @@ const uid = () => `role-${Math.random().toString(36).slice(2, 9)}`;
 const GROUPS = ROLE_CAPS.reduce<string[]>((acc, c) => (acc.includes(c.group) ? acc : [...acc, c.group]), []);
 
 function LevelPicker({ value, disabled, onChange }: { value: CapLevel; disabled?: boolean; onChange: (v: CapLevel) => void }) {
+  const t = useT();
   return (
     <div className="inline-flex items-center gap-0.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-[3px]">
       {LEVELS.map((l) => {
@@ -40,7 +44,7 @@ function LevelPicker({ value, disabled, onChange }: { value: CapLevel; disabled?
               ? { background: l.bg, color: l.fg, boxShadow: `inset 0 0 0 1px ${l.ring}, 0 1px 2px rgba(20,40,90,.08)` }
               : { color: "var(--ink-3)" }}
           >
-            {l.label}
+            {t(levelKey(l.v))}
           </button>
         );
       })}
@@ -49,6 +53,7 @@ function LevelPicker({ value, disabled, onChange }: { value: CapLevel; disabled?
 }
 
 export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onChange: (roles: StaffRole[]) => void }) {
+  const t = useT();
   const list = roles.length ? roles : DEFAULT_ROLES;
   const [newName, setNewName] = useState("");
 
@@ -81,8 +86,8 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
           {LEVELS.map((l) => (
             <span key={l.v} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={{ background: l.bg, color: l.fg, boxShadow: `inset 0 0 0 1px ${l.ring}` }}>
               <span className="h-1.5 w-1.5 rounded-full" style={{ background: l.fg }} />
-              {l.label}
-              <span className="font-semibold opacity-70">{l.v === "none" ? "· hidden" : l.v === "view" ? "· read-only" : "· can change"}</span>
+              {t(levelKey(l.v))}
+              <span className="font-semibold opacity-70">{l.v === "none" ? t("setup.legendHidden") : l.v === "view" ? t("setup.legendReadOnly") : t("setup.legendCanChange")}</span>
             </span>
           ))}
         </div>
@@ -94,7 +99,7 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
           <thead>
             <tr>
               <th className="sticky left-0 z-20 min-w-[240px] border-b border-[var(--line)] bg-[var(--surface)] px-4 py-3 align-bottom shadow-[6px_0_10px_-8px_rgba(20,35,90,.25)]">
-                <span className="text-[10px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-3)]">Area of the app</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.09em] text-[var(--ink-3)]">{t("setup.areaOfApp")}</span>
               </th>
               {list.map((r) => (
                 <th key={r.id} className="min-w-[176px] border-b border-l border-[var(--line)] bg-gradient-to-b from-[var(--panel)] to-[var(--surface)] px-3 py-2.5 align-bottom">
@@ -102,32 +107,32 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
                     <input
                       value={r.name}
                       onChange={(e) => rename(r.id, e.target.value)}
-                      title="Rename this role — used everywhere it appears"
+                      title={t("setup.renameRoleTitle")}
                       className="w-full min-w-0 rounded-md border border-transparent bg-transparent text-[13.5px] font-extrabold text-[var(--ink)] outline-none hover:border-[var(--line)] focus:border-[var(--brand)]"
                     />
                     {r.owner ? (
-                      <span title="Full access — locked" className="flex-none text-[11px] text-[var(--ink-3)]">🔒</span>
+                      <span title={t("setup.fullAccessLocked")} className="flex-none text-[11px] text-[var(--ink-3)]">🔒</span>
                     ) : !r.builtin ? (
-                      <button type="button" onClick={() => remove(r.id)} title="Delete role" className="flex-none rounded px-1 text-[13px] leading-none text-[var(--ink-3)] hover:bg-[#fdebec] hover:text-[#c0392b]">×</button>
+                      <button type="button" onClick={() => remove(r.id)} title={t("setup.deleteRole")} className="flex-none rounded px-1 text-[13px] leading-none text-[var(--ink-3)] hover:bg-[#fdebec] hover:text-[#c0392b]">×</button>
                     ) : null}
                   </div>
                   <div className="mt-1.5 flex items-center gap-1.5">
-                    <span className="text-[9.5px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Sees</span>
+                    <span className="text-[9.5px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("setup.sees")}</span>
                     <div className="inline-flex overflow-hidden rounded-md border border-[var(--line)]">
                       {(["all", "assigned"] as const).map((s) => {
                         const on = (r.scope ?? "all") === s;
                         return (
                           <button key={s} type="button" disabled={r.owner} onClick={() => setScope(r.id, s)}
-                            title={s === "all" ? "Sees every site / listing" : "Sees only listings they're assigned to"}
+                            title={s === "all" ? t("setup.seesEverySite") : t("setup.seesAssignedOnly")}
                             className="px-2 py-[3px] text-[9.5px] font-extrabold uppercase tracking-[0.03em] transition-colors disabled:opacity-60"
                             style={on ? { background: "#eef4fd", color: "#1d3a8f" } : { background: "transparent", color: "var(--ink-3)" }}>
-                            {s === "all" ? "All sites" : "Assigned"}
+                            {s === "all" ? t("setup.allSites") : t("setup.assigned")}
                           </button>
                         );
                       })}
                     </div>
                   </div>
-                  <div className="mt-1 text-[9.5px] font-semibold uppercase tracking-[0.05em] text-[var(--ink-3)]">{r.builtin ? "Built-in" : "Custom"}</div>
+                  <div className="mt-1 text-[9.5px] font-semibold uppercase tracking-[0.05em] text-[var(--ink-3)]">{r.builtin ? t("setup.builtIn") : t("setup.custom")}</div>
                 </th>
               ))}
             </tr>
@@ -146,9 +151,9 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
                   <tr key={cap.key} className="group border-t border-[var(--line-2,#eef2f8)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand)_4%,transparent)]">
                     <td className="sticky left-0 z-10 min-w-[240px] bg-[var(--surface)] px-4 py-2.5 shadow-[6px_0_10px_-8px_rgba(20,35,90,.18)] group-hover:bg-[color-mix(in_srgb,var(--brand)_4%,var(--surface))]">
                       <div className="text-[13px] font-semibold text-[var(--ink)]">
-                        {cap.sensitive && <span title="Sensitive data" className="mr-1 text-[10.5px]">🔒</span>}
+                        {cap.sensitive && <span title={t("setup.sensitiveData")} className="mr-1 text-[10.5px]">🔒</span>}
                         {cap.label}
-                        {cap.scoped && <span title="Honours the role's Assigned-only scope" className="ml-1.5 text-[10px] text-[#2f6bd8]">◎</span>}
+                        {cap.scoped && <span title={t("setup.honoursScope")} className="ml-1.5 text-[10px] text-[#2f6bd8]">◎</span>}
                       </div>
                       {cap.note && <div className="mt-0.5 text-[10.5px] leading-tight text-[var(--ink-3)]">{cap.note}</div>}
                     </td>
@@ -175,12 +180,12 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
           value={newName}
           onChange={(e) => setNewName(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") addRole(); }}
-          placeholder="New role name — e.g. Senior Coach"
+          placeholder={t("setup.newRolePlaceholder")}
           className="w-[240px]"
         />
-        <Button variant="primary" onClick={addRole} disabled={!newName.trim()}>＋ Add role</Button>
+        <Button variant="primary" onClick={addRole} disabled={!newName.trim()}>＋ {t("setup.addRole")}</Button>
         <button type="button" onClick={resetDefaults} className="ml-auto text-[12px] font-semibold text-[var(--ink-3)] underline hover:text-[var(--ink)]">
-          Reset to defaults
+          {t("setup.resetToDefaults")}
         </button>
       </div>
     </div>

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { MasterCard } from "@/components/OperatorPage";
@@ -22,6 +23,7 @@ const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.r
 const blankItem = (): MenuItem => ({ id: uid(), name: "", price: 0, allergens: [], description: "" });
 
 function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave: (m: { name: string; items: MenuItem[] }) => Promise<void>; onCancel: () => void }) {
+  const t = useT();
   const [name, setName] = useState(initial.name);
   const [items, setItems] = useState<MenuItem[]>(initial.items.length ? initial.items : [blankItem()]);
   const [busy, setBusy] = useState(false);
@@ -33,30 +35,30 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
 
   async function save() {
     const clean = items.map((i) => ({ ...i, name: i.name.trim() })).filter((i) => i.name);
-    if (!name.trim()) { setErr("Give the menu a name."); return; }
-    if (clean.length === 0) { setErr("Add at least one meal."); return; }
+    if (!name.trim()) { setErr(t("meals.nameRequired")); return; }
+    if (clean.length === 0) { setErr(t("meals.mealRequired")); return; }
     setBusy(true); setErr(null);
     try { await onSave({ name: name.trim(), items: clean.map((i) => ({ ...i, price: Number(i.price) || 0 })) }); }
-    catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
+    catch (e) { setErr(e instanceof Error ? e.message : t("meals.couldntSave")); setBusy(false); }
   }
 
   return (
     <Card className="mb-2.5 border-l-[3px] border-l-[#2f6bd8] p-3.5">
       {err && <div className="mb-2.5 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{err}</div>}
-      <div className="mb-3"><FieldLabel>Menu name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Summer week A" className="w-full max-w-[320px]" /></div>
-      <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Meals on this menu</div>
+      <div className="mb-3"><FieldLabel>{t("meals.menuName")}</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("meals.menuNamePlaceholder")} className="w-full max-w-[320px]" /></div>
+      <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("meals.mealsOnThisMenu")}</div>
       <div className="flex flex-col gap-2">
         {items.map((it) => (
           <div key={it.id} className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
             <div className="flex flex-wrap items-end gap-2">
-              <div className="min-w-[160px] flex-1"><FieldLabel>Meal</FieldLabel><Input value={it.name} onChange={(e) => upd(it.id, { name: e.target.value })} placeholder="Hot lunch — chicken" className="w-full" /></div>
-              <div className="w-[92px]"><FieldLabel>Price (£)</FieldLabel><Input type="number" min="0" step="0.01" value={it.price} onChange={(e) => upd(it.id, { price: Number(e.target.value) })} className="w-full" /></div>
-              <div className="w-[92px]"><FieldLabel>Limit/day</FieldLabel><Input type="number" min="1" step="1" value={it.capacity ?? ""} placeholder="∞" onChange={(e) => upd(it.id, { capacity: e.target.value.trim() === "" ? undefined : Math.max(1, Math.round(Number(e.target.value))) })} className="w-full" /></div>
-              <button type="button" onClick={() => setItems((xs) => (xs.length > 1 ? xs.filter((x) => x.id !== it.id) : xs))} className="pb-1.5 text-[var(--ink-3)] hover:text-[var(--red)]" aria-label="Remove meal">×</button>
+              <div className="min-w-[160px] flex-1"><FieldLabel>{t("meals.mealLabel")}</FieldLabel><Input value={it.name} onChange={(e) => upd(it.id, { name: e.target.value })} placeholder={t("meals.mealPlaceholder")} className="w-full" /></div>
+              <div className="w-[92px]"><FieldLabel>{t("meals.priceLabel")}</FieldLabel><Input type="number" min="0" step="0.01" value={it.price} onChange={(e) => upd(it.id, { price: Number(e.target.value) })} className="w-full" /></div>
+              <div className="w-[92px]"><FieldLabel>{t("meals.limitDay")}</FieldLabel><Input type="number" min="1" step="1" value={it.capacity ?? ""} placeholder="∞" onChange={(e) => upd(it.id, { capacity: e.target.value.trim() === "" ? undefined : Math.max(1, Math.round(Number(e.target.value))) })} className="w-full" /></div>
+              <button type="button" onClick={() => setItems((xs) => (xs.length > 1 ? xs.filter((x) => x.id !== it.id) : xs))} className="pb-1.5 text-[var(--ink-3)] hover:text-[var(--red)]" aria-label={t("meals.removeMeal")}>×</button>
             </div>
-            <div className="mt-2"><Input value={it.description ?? ""} onChange={(e) => upd(it.id, { description: e.target.value })} placeholder="Description (optional) — e.g. served with salad" className="w-full" /></div>
+            <div className="mt-2"><Input value={it.description ?? ""} onChange={(e) => upd(it.id, { description: e.target.value })} placeholder={t("meals.descPlaceholder")} className="w-full" /></div>
             <div className="mt-2 flex flex-wrap items-center gap-1">
-              <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Type</span>
+              <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("meals.typeLabel")}</span>
               {DIETS.map((d) => {
                 const on = it.diet === d.key;
                 return (
@@ -69,7 +71,7 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
               })}
             </div>
             <div className="mt-2">
-              <span className="mr-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">Contains</span>
+              <span className="mr-1.5 text-[10px] font-bold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("meals.containsLabel")}</span>
               {UK_ALLERGENS.map((a) => (
                 <button key={a} type="button" onClick={() => toggleAllergen(it.id, a)}
                   className="m-0.5 rounded-full border px-2 py-[1px] text-[10.5px] font-bold capitalize transition-colors"
@@ -81,36 +83,37 @@ function MenuEditor({ initial, onSave, onCancel }: { initial: SavedMenu; onSave:
           </div>
         ))}
       </div>
-      <button type="button" onClick={() => setItems((xs) => [...xs, blankItem()])} className="mt-2 self-start text-[12px] font-bold text-[var(--brand-2,#2f6bd8)] underline">+ Add another meal</button>
-      <div className="mt-3 flex gap-2"><Button variant="primary" disabled={busy} onClick={save}>{busy ? "Saving…" : "Save menu"}</Button><Button disabled={busy} onClick={onCancel}>Cancel</Button></div>
+      <button type="button" onClick={() => setItems((xs) => [...xs, blankItem()])} className="mt-2 self-start text-[12px] font-bold text-[var(--brand-2,#2f6bd8)] underline">{t("meals.addAnotherMeal")}</button>
+      <div className="mt-3 flex gap-2"><Button variant="primary" disabled={busy} onClick={save}>{busy ? t("meals.savingWord") : t("meals.saveMenu")}</Button><Button disabled={busy} onClick={onCancel}>{t("meals.cancel")}</Button></div>
     </Card>
   );
 }
 
 export function SavedMenus({ bare = false }: { bare?: boolean }) {
+  const t = useT();
   const [menus, setMenus] = useState<SavedMenu[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null); // menu id, or "new"
 
   const refresh = useCallback(() => {
-    apiGet<SavedMenu[]>("/api/meal-menus").then(setMenus).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-  }, []);
+    apiGet<SavedMenu[]>("/api/meal-menus").then(setMenus).catch((e) => setError(e instanceof Error ? e.message : t("meals.failedLoad")));
+  }, [t]);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["mealMenus"], refresh);
 
   async function create(body: { name: string; items: MenuItem[] }) { await api("/api/meal-menus", { method: "POST", body: JSON.stringify(body) }); setEditing(null); refresh(); }
   async function update(id: string, body: { name: string; items: MenuItem[] }) { await api(`/api/meal-menus/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) }); setEditing(null); refresh(); }
-  async function duplicate(m: SavedMenu) { try { await api("/api/meal-menus", { method: "POST", body: JSON.stringify({ name: `${m.name} (copy)`, items: m.items.map((i) => ({ ...i, id: uid() })) }) }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
-  async function remove(m: SavedMenu) { if (!confirm(`Delete the “${m.name}” menu?`)) return; try { await api(`/api/meal-menus/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
+  async function duplicate(m: SavedMenu) { try { await api("/api/meal-menus", { method: "POST", body: JSON.stringify({ name: `${m.name} (copy)`, items: m.items.map((i) => ({ ...i, id: uid() })) }) }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("meals.failed")); } }
+  async function remove(m: SavedMenu) { if (!confirm(t("meals.deleteMenuConfirm", { name: m.name }))) return; try { await api(`/api/meal-menus/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : t("meals.failed")); } }
 
-  const newBtnBare = editing !== "new" && <button type="button" onClick={() => setEditing("new")} className="flex-none rounded-full px-3 py-1.5 text-[12px] font-extrabold text-white transition" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ New menu</button>;
+  const newBtnBare = editing !== "new" && <button type="button" onClick={() => setEditing("new")} className="flex-none rounded-full px-3 py-1.5 text-[12px] font-extrabold text-white transition" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>＋ {t("meals.newMenu")}</button>;
 
   const body = (
     <>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {editing === "new" && <MenuEditor initial={{ id: "", name: "", items: [] }} onSave={create} onCancel={() => setEditing(null)} />}
-      {!menus ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Loading…</div>
-      : menus.length === 0 && editing !== "new" ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No saved menus yet — create your first above.</Card>
+      {!menus ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{t("meals.loading")}</div>
+      : menus.length === 0 && editing !== "new" ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{t("meals.noSavedMenus")}</Card>
       : (
         <div className="grid gap-2 sm:grid-cols-2">
           {menus.map((m) => editing === m.id ? (
@@ -121,9 +124,9 @@ export function SavedMenus({ bare = false }: { bare?: boolean }) {
                 <span className="text-[14px] font-extrabold">{m.name}</span>
                 <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>{m.items.length} meal{m.items.length === 1 ? "" : "s"}</Badge>
                 <div className="ml-auto flex gap-1.5">
-                  <Button sm onClick={() => setEditing(m.id)}>Edit</Button>
-                  <Button sm onClick={() => duplicate(m)}>Duplicate</Button>
-                  <Button sm variant="danger" onClick={() => remove(m)}>Delete</Button>
+                  <Button sm onClick={() => setEditing(m.id)}>{t("meals.edit")}</Button>
+                  <Button sm onClick={() => duplicate(m)}>{t("meals.duplicate")}</Button>
+                  <Button sm variant="danger" onClick={() => remove(m)}>{t("meals.delete")}</Button>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-1.5">
@@ -147,8 +150,8 @@ export function SavedMenus({ bare = false }: { bare?: boolean }) {
     <div>
       <div className="mb-3 flex items-center justify-between gap-3">
         <div>
-          <div className="text-[15px] font-extrabold text-[var(--ink)]">Saved menus</div>
-          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">Build a menu once — meals with prices and allergens — then reuse it across your listings’ days.</div>
+          <div className="text-[15px] font-extrabold text-[var(--ink)]">{t("meals.savedMenusTitle")}</div>
+          <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{t("meals.savedMenusDesc")}</div>
         </div>
         {newBtnBare}
       </div>
@@ -160,10 +163,10 @@ export function SavedMenus({ bare = false }: { bare?: boolean }) {
     <MasterCard className="mb-4" header={
       <div className="flex items-center justify-between gap-3">
         <div>
-          <div className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="text-[15px]">🥗</span> Saved menus</div>
-          <div className="mt-0.5 text-[11.5px] text-white/80">Build a menu once — meals with prices and allergens — then reuse it across your listings’ days.</div>
+          <div className="flex items-center gap-2 text-[14px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="text-[15px]">🥗</span> {t("meals.savedMenusTitle")}</div>
+          <div className="mt-0.5 text-[11.5px] text-white/80">{t("meals.savedMenusDesc")}</div>
         </div>
-        {editing !== "new" && <button type="button" onClick={() => setEditing("new")} className="flex-none rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-extrabold text-white ring-1 ring-white/30 transition hover:bg-white/25">＋ New menu</button>}
+        {editing !== "new" && <button type="button" onClick={() => setEditing("new")} className="flex-none rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-extrabold text-white ring-1 ring-white/30 transition hover:bg-white/25">＋ {t("meals.newMenu")}</button>}
       </div>
     }>
       {body}

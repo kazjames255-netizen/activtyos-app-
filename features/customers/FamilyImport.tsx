@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { post as apiPost } from "@/lib/api";
 import { Button, Card } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
 
 // Bulk-add families from a spreadsheet: paste rows (straight from Excel / Google
 // Sheets) or upload a CSV/TSV file, we detect the columns, create each family
@@ -75,6 +76,7 @@ function toRows(grid: string[][]): Row[] {
 type Result = { created: number; invited: number; noEmail: number; failed: number };
 
 export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+  const t = useT();
   const [text, setText] = useState("");
   const [sendInvite, setSendInvite] = useState(true);
   const [running, setRunning] = useState(false);
@@ -121,7 +123,7 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
   return (
     <div onClick={(e) => e.target === e.currentTarget && !running && onClose()} className="fixed inset-0 z-[9999] flex items-start justify-center overflow-auto bg-black/55 px-3.5 py-8">
       <Card className="w-full max-w-[620px] px-5 py-[18px]">
-        <h3 className="m-0 font-[var(--ff-display)] text-[19px] leading-tight text-[var(--ink)]">Import families</h3>
+        <h3 className="m-0 font-[var(--ff-display)] text-[19px] leading-tight text-[var(--ink)]">{t("customers.importFamiliesTitle")}</h3>
         <p className="mt-1 mb-2 text-[12.5px] leading-[1.5] text-[var(--ink-3)]">
           Paste rows straight from <b>Excel or Google Sheets</b>, or upload a <b>CSV / TSV</b> file. We detect the columns
           (first name, surname, email, phone) — a header row helps but isn’t needed. Each becomes a family, and you can email
@@ -134,22 +136,22 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
 
         {result ? (
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[13px]">
-            <div className="font-extrabold text-[#0f7a43]">✓ Done</div>
+            <div className="font-extrabold text-[#0f7a43]">{t("customers.doneCheck")}</div>
             <div className="mt-1 text-[var(--ink-2)]">
               {result.created} famil{result.created === 1 ? "y" : "ies"} added{result.invited ? ` · ${result.invited} sign-up invite${result.invited === 1 ? "" : "s"} sent` : ""}
               {result.noEmail ? ` · ${result.noEmail} had no email (added, not invited)` : ""}
               {result.failed ? ` · ${result.failed} failed` : ""}.
             </div>
-            <div className="mt-3 text-right"><Button variant="primary" onClick={onClose}>Close</Button></div>
+            <div className="mt-3 text-right"><Button variant="primary" onClick={onClose}>{t("customers.close")}</Button></div>
           </div>
         ) : (
           <>
             <div className="mb-2 flex items-center gap-2">
               <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">
-                ⬆ Choose a file<input type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void readFile(f); e.target.value = ""; }} />
+                {t("customers.chooseFile")}<input type="file" accept=".csv,.tsv,.txt,text/csv,text/tab-separated-values,text/plain" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void readFile(f); e.target.value = ""; }} />
               </label>
-              <button type="button" onClick={downloadTemplate} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">⬇ Download CSV template</button>
-              <span className="text-[11.5px] text-[var(--ink-3)]">or paste below</span>
+              <button type="button" onClick={downloadTemplate} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("customers.downloadCsvTemplate")}</button>
+              <span className="text-[11.5px] text-[var(--ink-3)]">{t("customers.orPasteBelow")}</span>
             </div>
             <textarea
               value={text}
@@ -171,20 +173,20 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
                       {rows.slice(0, 8).map((r, i) => (
                         <tr key={i} className="border-t border-[var(--line)]">
                           <td className="px-3 py-1.5 font-semibold text-[var(--ink)]">{[r.firstName, r.lastName].filter(Boolean).join(" ")}</td>
-                          <td className="px-3 py-1.5 text-[var(--ink-2)]">{EMAIL_RE.test(r.email) ? r.email : <span className="text-[var(--ink-3)]">no email</span>}</td>
+                          <td className="px-3 py-1.5 text-[var(--ink-2)]">{EMAIL_RE.test(r.email) ? r.email : <span className="text-[var(--ink-3)]">{t("customers.noEmailShort")}</span>}</td>
                           <td className="px-3 py-1.5 text-[var(--ink-3)]">{r.phone}</td>
                         </tr>
                       ))}
                     </tbody>
                   </table>
-                  {rows.length > 8 && <div className="px-3 py-1.5 text-[11px] text-[var(--ink-3)]">…and {rows.length - 8} more</div>}
+                  {rows.length > 8 && <div className="px-3 py-1.5 text-[11px] text-[var(--ink-3)]">{t("customers.andNMore", { n: rows.length - 8 })}</div>}
                 </div>
               </div>
             )}
 
             <label className="mt-3 flex items-center gap-2 text-[12.5px] text-[var(--ink-2)]">
               <input type="checkbox" checked={sendInvite} onChange={(e) => setSendInvite(e.target.checked)} disabled={running} />
-              Email each family a sign-up invite (those without an email are added but not invited)
+              {t("customers.emailInviteLabel")}
             </label>
 
             {running && (
@@ -192,14 +194,14 @@ export function FamilyImport({ onClose, onDone }: { onClose: () => void; onDone:
                 <div className="h-1.5 w-full overflow-hidden rounded-full bg-[var(--line)]">
                   <div className="h-full bg-[var(--brand,#1d3a8f)] transition-all" style={{ width: `${rows.length ? Math.round((progress / rows.length) * 100) : 0}%` }} />
                 </div>
-                <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">Importing {progress} of {rows.length}…</div>
+                <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("customers.importingProgress", { done: progress, total: rows.length })}</div>
               </div>
             )}
 
             <div className="mt-4 flex justify-end gap-2">
-              <Button onClick={onClose} disabled={running}>Cancel</Button>
+              <Button onClick={onClose} disabled={running}>{t("customers.cancel")}</Button>
               <Button variant="primary" onClick={run} disabled={running || rows.length === 0}>
-                {running ? "Importing…" : sendInvite ? `Import & invite ${rows.length || ""}` : `Import ${rows.length || ""}`}
+                {running ? t("customers.importingEllipsis") : sendInvite ? t("customers.importAndInvite", { n: rows.length || "" }) : t("customers.importN", { n: rows.length || "" })}
               </Button>
             </div>
           </>

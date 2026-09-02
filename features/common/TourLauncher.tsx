@@ -2,6 +2,7 @@
 
 import { useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
+import { useT } from "@/lib/i18n/provider";
 import { LiveTour } from "./LiveTour";
 import { GuidedTour } from "./GuidedTour";
 import { TOUR_STEPS } from "./tourSteps";
@@ -13,6 +14,7 @@ import { TOUR_CONFIGS } from "./tourConfigs";
 // voice/iframe don't run in the background), and closing it unmounts the tour,
 // which stops the narration.
 export function TourLauncher({ view, portal: portalProp, custom, compact }: { view: string; portal?: string; custom?: ReactNode; compact?: boolean }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
   const portal = portalProp || pathname?.split("/")[1] || "freelancer";
@@ -37,11 +39,11 @@ export function TourLauncher({ view, portal: portalProp, custom, compact }: { vi
         <button
           type="button"
           onClick={() => setOpen(true)}
-          title="How it works — watch the walkthrough"
+          title={t("common.howItWorksWatch")}
           className="inline-flex flex-none items-center gap-1.5 rounded-full border border-white/25 px-3 py-1.5 text-[12px] font-bold text-white backdrop-blur-sm transition hover:bg-white/10"
           style={{ background: "rgba(12,26,68,.32)" }}
         >
-          <span aria-hidden>ℹ️</span>How it works
+          <span aria-hidden>ℹ️</span>{t("common.howItWorks")}
         </button>
       ) : (
       <button
@@ -50,12 +52,12 @@ export function TourLauncher({ view, portal: portalProp, custom, compact }: { vi
         className="group inline-flex items-center gap-2 rounded-full border px-4 py-2 text-[13px] font-extrabold shadow-sm transition-all hover:-translate-y-px"
         style={{ background: "#ffffff", borderColor: "#e6ebf5", color: "#1d3a8f" }}
       >
-        <span>ℹ️ How it works</span>
+        <span>ℹ️ {t("common.howItWorks")}</span>
         <span
           className="rounded-full px-2.5 py-1 text-[11px] font-extrabold text-white"
           style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}
         >
-          ▶ Watch walkthrough
+          ▶ {t("common.watchWalkthrough")}
         </span>
       </button>
       )}
@@ -74,7 +76,7 @@ export function TourLauncher({ view, portal: portalProp, custom, compact }: { vi
             <button
               type="button"
               onClick={() => setOpen(false)}
-              aria-label="Close walkthrough"
+              aria-label={t("common.closeWalkthrough")}
               style={{ position: "absolute", top: 12, right: 12, zIndex: 5, width: 34, height: 34, borderRadius: 999, border: "1px solid #e6ebf5", background: "#fff", color: "#3a4a68", fontSize: 18, fontWeight: 800, cursor: "pointer", lineHeight: 1 }}
             >
               ×

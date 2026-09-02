@@ -302,18 +302,46 @@ listings.get("/", async (req, res) => {
   const libs = await Promise.all(tenantIds.map((id) => db.collection("libraries").doc(id).get()));
   const catNames = new Map<string, Map<string, string>>();
   const venueById = new Map<string, Map<string, { name: string; address?: string; city?: string; lat?: number; lng?: number }>>();
+  const seasonNames = new Map<string, Map<string, string>>(); // tenant → seasonId → name
+  const payMethodsByTenant = new Map<string, string[]>();     // tenant → accepted payment methods
   libs.forEach((snap, i) => {
     const data = snap.data() ?? {};
     const cats = (data.categories ?? []) as { id: string; name: string }[];
     const venues = (data.venues ?? []) as { id: string; name: string; address?: string; city?: string; lat?: number; lng?: number }[];
+    const settings = (data.settings ?? {}) as { seasons?: { id: string; name: string }[]; payMethods?: string[] };
     catNames.set(tenantIds[i], new Map(cats.map((c) => [c.id, c.name])));
     venueById.set(tenantIds[i], new Map(venues.map((v) => [v.id, { name: v.name, address: v.address, city: v.city, lat: v.lat, lng: v.lng }])));
+    seasonNames.set(tenantIds[i], new Map((settings.seasons ?? []).map((s) => [s.id, s.name])));
+    payMethodsByTenant.set(tenantIds[i], settings.payMethods ?? []);
   });
 
+  // Auto-applied discounts (siblings / multi-day) are the ones safe to advertise
+  // on a card — they need no code. Batch per tenant, then match to each listing.
+  type AutoD = { kind?: string; from?: number; mode?: string; value?: number; listingIds?: string[] | null; active?: boolean };
+  const autoSnaps = await Promise.all(tenantIds.map((id) => db.collection("autoDiscounts").where("tenantId", "==", id).get()));
+  const autoByTenant = new Map<string, AutoD[]>();
+  autoSnaps.forEach((snap, i) => autoByTenant.set(tenantIds[i], snap.docs.map((d) => d.data() as AutoD)));
+  const offerLabel = (a: AutoD): { label: string; percent?: number } => {
+    const pct = a.mode === "pct";
+    const amt = `£${a.value}`;
+    if (a.kind === "person") return { label: pct ? `Siblings ${a.value}% off` : `${amt} off per sibling`, percent: pct ? a.value : undefined };
+    return { label: pct ? `${a.value}% off ${a.from}+ days` : `${amt} off ${a.from}+ days`, percent: pct ? a.value : undefined };
+  };
+
+  // NOTE: we deliberately do NOT advertise discount CODES on the card — codes are
+  // entered at checkout, some are personal/referral codes, and dumping them here
+  // leaks them + clutters. Only auto-discounts (above) are shown.
+
+  // A listing only reaches the marketplace while it still has a run that hasn't
+  // finished. Past-only listings (every block ended) have nothing to book, so
+  // they drop out of Browse automatically — no manual un-publishing needed.
+  const todayYmd = new Date().toISOString().slice(0, 10);
+  const hasUpcomingBlock = (blocks: unknown[]) =>
+    (blocks as { endDate?: string }[]).some((b) => (b.endDate ?? "") >= todayYmd);
   const list = (await withBlocks(visible.map((d) => ({ id: d.id, data: d.data() }))))
-    // Bookability guard: a publicly-shown listing must have at least one block
-    // (a dated run with sessions) — otherwise there's literally nothing to book.
-    .filter((l) => Array.isArray(l.blocks) && (l.blocks as unknown[]).length > 0);
+    // Bookability guard: at least one block (a dated run with sessions) that
+    // hasn't already ended — otherwise there's literally nothing to book.
+    .filter((l) => Array.isArray(l.blocks) && (l.blocks as unknown[]).length > 0 && hasUpcomingBlock(l.blocks as unknown[]));
   res.json(
     list.map((l) => {
       const byCat = catNames.get(l.tenantId as string);
@@ -328,7 +356,16 @@ listings.get("/", async (req, res) => {
       // ones as `title`. The browse UI reads `title`, so fall back to `name`
       // rather than showing a blank card.
       const title = ((l.title as string) ?? (l.name as string) ?? "").trim();
-      return { ...l, title, categories, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
+      const season = l.seasonId ? (seasonNames.get(l.tenantId as string)?.get(l.seasonId as string) ?? null) : null;
+      // Advertisable auto-discounts (siblings / multi-day) for this listing, best
+      // % first so the top chip always matches the "SAVE %" ribbon.
+      const autos = (autoByTenant.get(l.tenantId as string) ?? []).filter((a) => a.active !== false && (!a.listingIds || a.listingIds.length === 0 || a.listingIds.includes(l.id as string)));
+      const offers = autos.map(offerLabel).sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0));
+      const bestOfferPercent = offers.reduce((m, o) => (o.percent && o.percent > m ? o.percent : m), 0) || null;
+      const pm = payMethodsByTenant.get(l.tenantId as string) ?? [];
+      const acceptsTFC = pm.includes("Tax-Free Childcare");
+      const acceptsVouchers = pm.includes("Childcare vouchers");
+      return { ...l, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
     }),
   );
 });

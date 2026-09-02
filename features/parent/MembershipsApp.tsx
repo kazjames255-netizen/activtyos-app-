@@ -3,6 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import { Card, Button } from "@/components/ui";
 
 // custdash/memberships — a family joins one of their provider's monthly tiers.
@@ -46,6 +47,7 @@ export function MembershipTierCard({ tier, footer, highlight }: {
   footer?: ReactNode;
   highlight?: boolean;
 }) {
+  const tr = useT();
   const bn = benefit(tier);
   const perks = (tier.perks ?? []).filter(extraPerk);
   return (
@@ -54,7 +56,7 @@ export function MembershipTierCard({ tier, footer, highlight }: {
       {tier.blurb && <div className="mt-0.5 text-[12px] text-[var(--ink-3)]">{tier.blurb}</div>}
       <div className="mt-3 flex items-baseline gap-1">
         <span className="font-[var(--ff-display)] text-[30px] leading-none text-[var(--ink)]">{money(tier.priceMonthly)}</span>
-        <span className="text-[12.5px] text-[var(--ink-3)]">/ month</span>
+        <span className="text-[12.5px] text-[var(--ink-3)]">{tr("parent.perMonth")}</span>
       </div>
       <div className="mt-3 rounded-xl bg-gradient-to-br from-[#eef4ff] to-[#e4ecff] px-3.5 py-3">
         <div className="text-[15.5px] font-extrabold leading-tight text-[#1d3a8f]">{bn.emoji} {bn.headline}</div>
@@ -75,6 +77,7 @@ export function MembershipTierCard({ tier, footer, highlight }: {
 }
 
 export function MembershipsApp() {
+  const tr = useT();
   const [p, setP] = useState<Payload | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -86,26 +89,26 @@ export function MembershipsApp() {
   async function join(tenantId: string, tierId: string) {
     setBusy(tierId); setError(null);
     try { await apiPost("/api/my/memberships/join", { tenantId, tierId }); await load(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t join — try again."); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("parent.errCouldntJoin")); }
     finally { setBusy(null); }
   }
   async function cancel(tenantId: string) {
-    if (!confirm("Cancel your membership? Your perks stop at the end of this month. Wallet credit you’ve already received stays yours.")) return;
+    if (!confirm(tr("parent.cancelMembershipConfirm"))) return;
     setBusy("cancel"); setError(null);
     try { await apiPost("/api/my/memberships/cancel", { tenantId }); await load(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t cancel — try again."); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("parent.errCouldntCancel")); }
     finally { setBusy(null); }
   }
 
-  if (!p) return <div className="p-4 text-[13px] text-[var(--ink-3)]">Loading…</div>;
+  if (!p) return <div className="p-4 text-[13px] text-[var(--ink-3)]">{tr("parent.loading")}</div>;
 
   if (!p.enabled) {
     return (
       <Card className="mx-auto max-w-[640px] px-5 py-8 text-center">
         <div className="text-[40px]">⭐</div>
-        <h2 className="mt-1 font-[var(--ff-display)] text-[20px] text-[var(--ink)]">Memberships</h2>
+        <h2 className="mt-1 font-[var(--ff-display)] text-[20px] text-[var(--ink)]">{tr("parent.membershipsTitle")}</h2>
         <p className="mx-auto mt-1 max-w-[420px] text-[13.5px] leading-relaxed text-[var(--ink-3)]">
-          {p.reason ?? "Your provider isn’t offering memberships just yet — check back soon."}
+          {p.reason ?? tr("parent.membershipsNotOn")}
         </p>
       </Card>
     );
@@ -118,8 +121,8 @@ export function MembershipsApp() {
   return (
     <div className="mx-auto max-w-[900px]">
       <div className="mb-4">
-        <h2 className="m-0 font-[var(--ff-display)] text-[22px] text-[var(--ink)]">{p.provider} memberships</h2>
-        <p className="mt-1 text-[13.5px] text-[var(--ink-3)]">Join a monthly plan and save on every booking — cancel any time.</p>
+        <h2 className="m-0 font-[var(--ff-display)] text-[22px] text-[var(--ink)]">{tr("parent.providerMemberships", { provider: p.provider ?? "" })}</h2>
+        <p className="mt-1 text-[13.5px] text-[var(--ink-3)]">{tr("parent.membershipsSubtitle")}</p>
       </div>
 
       {error && <div className="mb-3 rounded-lg bg-[#fdecec] px-3 py-2 text-[12.5px] font-semibold text-[#c0392b]">{error}</div>}
@@ -130,11 +133,11 @@ export function MembershipsApp() {
           <Card className="mb-4 border-l-4 border-[#15b364] px-5 py-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
-                <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#0f7a43]">Your membership</div>
-                <div className="mt-0.5 text-[16px] font-extrabold text-[var(--ink)]">{t?.name ?? "Member"} · {money(current.priceMonthly)}/mo</div>
+                <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#0f7a43]">{tr("parent.yourMembership")}</div>
+                <div className="mt-0.5 text-[16px] font-extrabold text-[var(--ink)]">{t?.name ?? tr("parent.memberFallback")} · {money(current.priceMonthly)}/mo</div>
                 <div className="text-[12.5px] text-[var(--ink-2)]">{benefit(current).emoji} {benefitShort(current)}{current.renewsAt ? ` · renews ${fmtDate(current.renewsAt)}` : ""}</div>
               </div>
-              <Button variant="ghost" sm onClick={() => cancel(tenantId)} disabled={busy === "cancel"}>{busy === "cancel" ? "Cancelling…" : "Cancel membership"}</Button>
+              <Button variant="ghost" sm onClick={() => cancel(tenantId)} disabled={busy === "cancel"}>{busy === "cancel" ? tr("parent.cancelling") : tr("parent.cancelMembership")}</Button>
             </div>
           </Card>
         );
@@ -147,9 +150,9 @@ export function MembershipsApp() {
           return (
             <MembershipTierCard key={t.id} tier={t} highlight={isCurrent}
               footer={isCurrent
-                ? <div className="rounded-full bg-[#e6f6ec] py-2 text-center text-[12.5px] font-extrabold text-[#0f7a43]">Current plan</div>
+                ? <div className="rounded-full bg-[#e6f6ec] py-2 text-center text-[12.5px] font-extrabold text-[#0f7a43]">{tr("parent.currentPlan")}</div>
                 : <Button variant="primary" className="w-full justify-center" onClick={() => join(tenantId, t.id)} disabled={!!busy}>
-                    {busy === t.id ? "Joining…" : isSwitch ? `Switch to ${t.name}` : `Join ${t.name}`}
+                    {busy === t.id ? tr("parent.joining") : isSwitch ? tr("parent.switchTo", { name: t.name }) : tr("parent.joinTier", { name: t.name })}
                   </Button>}
             />
           );
@@ -157,7 +160,7 @@ export function MembershipsApp() {
       </div>
 
       <p className="mt-4 text-center text-[11.5px] text-[var(--ink-3)]">
-        Membership perks apply on top of any coupons you have. Cancel any time — you keep wallet credit you’ve already received.
+        {tr("parent.membershipsFooter")}
       </p>
     </div>
   );

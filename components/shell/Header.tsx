@@ -222,7 +222,7 @@ export function Header({ portal }: { portal: PortalKey }) {
       )}
 
       <div className="flex flex-none items-center gap-2 sm:gap-3">
-        {(meName || user?.displayName || user?.email) && <span className="hidden max-w-[180px] truncate text-[12px] font-semibold text-[var(--ink-2)] lg:inline" title={user?.email ?? undefined}>{meName || user?.displayName || user?.email}</span>}
+        {portal !== "custdash" && (meName || user?.displayName || user?.email) && <span className="hidden max-w-[180px] truncate text-[12px] font-semibold text-[var(--ink-2)] xl:inline" title={user?.email ?? undefined}>{meName || user?.displayName || user?.email}</span>}
         {/* Platform accounts have no tenant, so no bell of their own (the API
             would return an empty list anyway). HQ triages bug reports rather
             than filing them, so no bug button either. */}

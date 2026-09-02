@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import type { Me } from "@/lib/roles";
 
 interface GeoHit { label: string; lat: number; lng: number }
@@ -18,6 +19,7 @@ interface AccountProfile { name: string; phone: string; address: string; postcod
 // `welcomedAt` on their user record is stamped on finish/dismiss (via POST
 // /api/me/welcome), so it never shows again.
 export function ParentWelcome() {
+  const t = useT();
   const router = useRouter();
   // ?welcome=1 forces the popup open regardless of the seen-flag — handy for
   // re-viewing it during testing without clearing the flag each time.
@@ -102,7 +104,7 @@ export function ParentWelcome() {
     && !!form.emergencyName.trim() && !!form.emergencyPhone.trim();
 
   async function saveDetails() {
-    if (!detailsOk) { setErr("Please fill in your details, address and an emergency contact."); return; }
+    if (!detailsOk) { setErr(t("parent.errFillDetails")); return; }
     setSaving(true); setErr(null);
     try {
       await apiPut("/api/account", {
@@ -111,7 +113,7 @@ export function ParentWelcome() {
       });
       setPhase("go");
     } catch (e) {
-      setErr(e instanceof Error ? e.message : "Couldn’t save — please try again.");
+      setErr(e instanceof Error ? e.message : t("parent.errCouldntSave"));
     } finally {
       setSaving(false);
     }
@@ -137,47 +139,47 @@ export function ParentWelcome() {
           <button
             type="button"
             onClick={markSeen}
-            aria-label="Close"
+            aria-label={t("parent.close")}
             className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30"
           >
             ×
           </button>
           <h2 id="welcome-title" className="text-[21px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>
-            👋 Welcome{firstName ? `, ${firstName}` : ""}!
+            👋 {firstName ? t("parent.welcomeName", { name: firstName }) : t("parent.welcomeNoName")}
           </h2>
           <p className="mt-1 text-[12.5px] leading-[1.45] text-white/90">
-            Your home for booking{provider ? ` ${provider}’s activities` : " activities"} — plus your children&rsquo;s details, messages, vouchers &amp; wallet, all in one place.
+            {provider ? t("parent.welcomeBlurbProvider", { provider }) : t("parent.welcomeBlurbNoProvider")}
           </p>
           <p className="mt-2 text-[11px] font-bold uppercase tracking-wide text-white/70">
-            Step {phase === "details" ? "1" : "2"} of 2 — {phase === "details" ? "Your details" : "Get going"}
+            {t("parent.stepXof2", { n: phase === "details" ? "1" : "2", label: phase === "details" ? t("parent.yourDetailsStep") : t("parent.getGoingStep") })}
           </p>
         </div>
 
         {phase === "details" ? (
           /* ── Phase 1: the parent's own details ─────────────────────────── */
           <div className="px-6 py-4">
-            <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">A few details about you</div>
+            <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">{t("parent.detailsHeading")}</div>
             <p className="mt-0.5 text-[12px] leading-[1.4] text-[var(--ink-3,#8a86a3)]">
-              So {provider || "your provider"} can reach you about bookings. Change them any time in My account.
+              {t("parent.detailsSub", { provider: provider || t("parent.yourProvider") })}
             </p>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
               <div>
-                <span className={label}>Your name <span className="text-[#e21d27]">*</span></span>
-                <input className={inp} style={inpStyle} value={form.name} onChange={set("name")} placeholder="First and last name" />
+                <span className={label}>{t("parent.yourName")} <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.name} onChange={set("name")} placeholder={t("parent.firstLastName")} />
               </div>
               <div>
-                <span className={label}>Contact number <span className="text-[#e21d27]">*</span></span>
-                <input className={inp} style={inpStyle} value={form.phone} onChange={set("phone")} placeholder="Mobile we can reach you on" inputMode="tel" />
+                <span className={label}>{t("parent.contactNumber")} <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.phone} onChange={set("phone")} placeholder={t("parent.mobilePlaceholder")} inputMode="tel" />
               </div>
               <div className="relative sm:col-span-2">
-                <span className={label}>Find your address <span className="font-normal normal-case text-[var(--ink-3,#8a86a3)]">— start typing</span></span>
+                <span className={label}>{t("parent.findYourAddress")} <span className="font-normal normal-case text-[var(--ink-3,#8a86a3)]">{t("parent.startTypingSuffix")}</span></span>
                 <input
                   className={inp}
                   style={inpStyle}
                   value={query}
                   onChange={(e) => onQuery(e.target.value)}
                   onFocus={() => hits.length && setShowHits(true)}
-                  placeholder="Start typing your address or postcode…"
+                  placeholder={t("parent.addressSearchPlaceholder")}
                   autoComplete="off"
                 />
                 {showHits && hits.length > 0 && (
@@ -198,31 +200,31 @@ export function ParentWelcome() {
                 )}
               </div>
               <div className="sm:col-span-2">
-                <span className={label}>Home address <span className="text-[#e21d27]">*</span></span>
-                <input className={inp} style={inpStyle} value={form.address} onChange={set("address")} placeholder="House, street, town" />
+                <span className={label}>{t("parent.homeAddress")} <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.address} onChange={set("address")} placeholder={t("parent.homeAddressPlaceholder")} />
               </div>
               <div>
-                <span className={label}>Postcode <span className="text-[#e21d27]">*</span></span>
-                <input className={inp} style={inpStyle} value={form.postcode} onChange={set("postcode")} placeholder="e.g. MK1 1AA" />
+                <span className={label}>{t("parent.postcode")} <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.postcode} onChange={set("postcode")} placeholder={t("parent.postcodePlaceholder")} />
               </div>
 
               {/* Family-level emergency contact — the same for every child, so
                   it's asked once here rather than on each child profile. */}
               <div className="mt-1 sm:col-span-2">
-                <div className="text-[12.5px] font-extrabold text-[var(--ink,#171534)]">Emergency contact</div>
-                <div className="text-[11px] leading-[1.4] text-[var(--ink-3,#8a86a3)]">Who staff should ring if they can&rsquo;t reach you. We&rsquo;ll use this for all your children.</div>
+                <div className="text-[12.5px] font-extrabold text-[var(--ink,#171534)]">{t("parent.emergencyContact")}</div>
+                <div className="text-[11px] leading-[1.4] text-[var(--ink-3,#8a86a3)]">{t("parent.emergencyContactSub")}</div>
               </div>
               <div>
-                <span className={label}>Contact name <span className="text-[#e21d27]">*</span></span>
-                <input className={inp} style={inpStyle} value={form.emergencyName} onChange={set("emergencyName")} placeholder="e.g. Grandparent, partner" />
+                <span className={label}>{t("parent.contactName")} <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.emergencyName} onChange={set("emergencyName")} placeholder={t("parent.emergencyNamePlaceholder")} />
               </div>
               <div>
-                <span className={label}>Contact number <span className="text-[#e21d27]">*</span></span>
-                <input className={inp} style={inpStyle} value={form.emergencyPhone} onChange={set("emergencyPhone")} placeholder="Their phone number" inputMode="tel" />
+                <span className={label}>{t("parent.contactNumber")} <span className="text-[#e21d27]">*</span></span>
+                <input className={inp} style={inpStyle} value={form.emergencyPhone} onChange={set("emergencyPhone")} placeholder={t("parent.emergencyPhonePlaceholder")} inputMode="tel" />
               </div>
             </div>
             <p className="mt-1.5 text-[11px] leading-[1.4] text-[var(--ink-3,#8a86a3)]">
-              Your children&rsquo;s details come next — this emergency contact is applied to each of them.
+              {t("parent.childrenNextNote")}
             </p>
             {err && <div className="mt-2 text-[12px] font-bold text-[#e21d27]">{err}</div>}
             <button
@@ -232,7 +234,7 @@ export function ParentWelcome() {
               className="mt-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:opacity-60"
               style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
             >
-              {saving ? "Saving…" : "Continue →"}
+              {saving ? t("parent.saving") : t("parent.continueArrow")}
             </button>
           </div>
         ) : (
@@ -243,9 +245,9 @@ export function ParentWelcome() {
                 <div className="flex items-start gap-3">
                   <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#2f6bd8] text-[15px] font-extrabold text-white">1</span>
                   <div className="min-w-0">
-                    <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">Add your children</div>
+                    <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">{t("parent.addYourChildren")}</div>
                     <div className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
-                      Tell us who&rsquo;s coming along — names, ages, medical &amp; SEND needs, an emergency contact and anything {provider || "your provider"} asks. It makes booking quick and keeps them safe on the day.
+                      {t("parent.addChildrenSub", { provider: provider || t("parent.yourProvider") })}
                     </div>
                   </div>
                 </div>
@@ -255,16 +257,16 @@ export function ParentWelcome() {
                   className="mt-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px"
                   style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
                 >
-                  Add my children →
+                  {t("parent.addMyChildren")}
                 </button>
               </div>
 
               <div className="mt-3 flex items-start gap-3 px-1">
                 <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[15px] font-extrabold text-[#2f6bd8]">2</span>
                 <div className="min-w-0">
-                  <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">Then find what&rsquo;s on</div>
+                  <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">{t("parent.thenFindWhatsOn")}</div>
                   <div className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
-                    Head to Browse activities to see everything {provider || "your provider"} has on — and book your place.
+                    {t("parent.browseSub", { provider: provider || t("parent.yourProvider") })}
                   </div>
                 </div>
               </div>
@@ -272,14 +274,14 @@ export function ParentWelcome() {
 
             <div className="mt-4 flex items-center justify-between gap-2 border-t border-[var(--line,#ece6f1)] bg-[var(--panel,#fbf8fc)] px-6 py-3">
               <button type="button" onClick={markSeen} className="text-[12.5px] font-bold text-[var(--ink-3,#8a86a3)] hover:text-[var(--ink-2,#4a4763)]">
-                I&rsquo;ll do it later
+                {t("parent.illDoItLater")}
               </button>
               <button
                 type="button"
                 onClick={() => go("/custdash/browse")}
                 className="rounded-full border border-[var(--line,#ece6f1)] bg-white px-4 py-2 text-[13px] font-bold text-[#1d3a8f] hover:border-[#2f6bd8]"
               >
-                Browse activities
+                {t("parent.browseActivities")}
               </button>
             </div>
           </>

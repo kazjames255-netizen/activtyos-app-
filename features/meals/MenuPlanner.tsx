@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { FieldLabel, Input, Select } from "@/components/ui";
 import { MasterCard } from "@/components/OperatorPage";
@@ -38,6 +39,7 @@ const MENU_PAL: [string, string, string][] = [
 ];
 
 export function MenuPlanner() {
+  const t = useT();
   const { settings } = useSettings();
   const seasons = settings.seasons ?? [];
 
@@ -54,7 +56,7 @@ export function MenuPlanner() {
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<string | null>(null);
 
-  const loadLists = useCallback(() => { apiGet<Listing[]>("/api/listings?mine=1").then(setListings).catch((e) => setError(e instanceof Error ? e.message : "Failed to load listings")); }, []);
+  const loadLists = useCallback(() => { apiGet<Listing[]>("/api/listings?mine=1").then(setListings).catch((e) => setError(e instanceof Error ? e.message : t("meals.failedLoadListings"))); }, [t]);
   const loadMenus = useCallback(() => { apiGet<SavedMenu[]>("/api/meal-menus").then(setMenus).catch(() => setMenus([])); }, []);
   useEffect(() => { loadLists(); loadMenus(); }, [loadLists, loadMenus]);
   useRealtime(["listings", "mealMenus"], () => { loadLists(); loadMenus(); });
@@ -89,13 +91,13 @@ export function MenuPlanner() {
   const commit = useCallback((nextPlan: Record<string, MealDayPlan>) => {
     setPlan(nextPlan); setFlash(null);
     if (!listingId) return;
-    api(`/api/listings/${encodeURIComponent(listingId)}`, { method: "PUT", body: JSON.stringify({ mealsEnabled: Object.keys(nextPlan).length > 0, mealPlan: nextPlan }) }).catch((e) => setError(e instanceof Error ? e.message : "Couldn’t save"));
-  }, [listingId]);
+    api(`/api/listings/${encodeURIComponent(listingId)}`, { method: "PUT", body: JSON.stringify({ mealsEnabled: Object.keys(nextPlan).length > 0, mealPlan: nextPlan }) }).catch((e) => setError(e instanceof Error ? e.message : t("meals.couldntSave")));
+  }, [listingId, t]);
   const saveNow = () => {
     if (!listingId) return;
     api(`/api/listings/${encodeURIComponent(listingId)}`, { method: "PUT", body: JSON.stringify({ mealsEnabled: Object.keys(plan).length > 0, mealPlan: plan }) })
-      .then(() => { setFlash("✓ Saved — showing your saved meal plans."); setTab("saved"); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t save"));
+      .then(() => { setFlash(t("meals.savedFlash")); setTab("saved"); })
+      .catch((e) => setError(e instanceof Error ? e.message : t("meals.couldntSave")));
   };
 
   const daysOfWeekday = (n: number) => dates.filter((d) => new Date(`${d}T00:00:00Z`).getUTCDay() === n);
@@ -172,7 +174,8 @@ export function MenuPlanner() {
 
   // Tab button on the blue header. `green` gives the two tool tabs the Bookings
   // tab's teal-green so they read as a separate group.
-  const tabBtn = ([key, label]: [Tab, string], green = false) => {
+  const TAB_LABEL: Record<Tab, string> = { season: t("meals.tabSeason"), menu: t("meals.tabMenu"), days: t("meals.tabDays"), saved: t("meals.tabSaved"), sharing: t("meals.tabSharing") };
+  const tabBtn = ([key]: [Tab, string], green = false) => {
     const on = tab === key;
     const active = green
       ? { background: "linear-gradient(120deg,#0ea5a5,#3fd0c9)", color: "#fff", boxShadow: "0 4px 12px -2px rgba(14,165,165,.55)" }
@@ -184,7 +187,7 @@ export function MenuPlanner() {
       <button key={key} type="button" onClick={() => setTab(key)}
         className="rounded-full px-3 py-1.5 text-[12px] font-extrabold transition"
         style={on ? active : idle}>
-        {label}
+        {TAB_LABEL[key]}
       </button>
     );
   };
@@ -194,8 +197,8 @@ export function MenuPlanner() {
   const pickCampFirst = (
     <div className="grid min-h-[300px] place-items-center">
       <div className="text-center">
-        <div className="text-[13px] font-bold text-[var(--ink-2)]">Pick a listing first</div>
-        <button type="button" onClick={() => setTab("season")} className="mt-2 rounded-lg px-4 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>← Season &amp; listing</button>
+        <div className="text-[13px] font-bold text-[var(--ink-2)]">{t("meals.pickListingFirst")}</div>
+        <button type="button" onClick={() => setTab("season")} className="mt-2 rounded-lg px-4 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>← {t("meals.tabSeason")}</button>
       </div>
     </div>
   );
@@ -204,7 +207,7 @@ export function MenuPlanner() {
     <MasterCard bodyClassName="p-5 sm:p-6 bg-gradient-to-br from-[#eef4ff] via-white to-[#eafbf7]" header={
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2 text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span className="text-[16px]">🍽️</span> Meals{listing ? <span className="font-semibold text-white/70"> · {listing.title || listing.name}</span> : null}
+          <span className="text-[16px]">🍽️</span> {t("meals.mealsWord")}{listing ? <span className="font-semibold text-white/70"> · {listing.title || listing.name}</span> : null}
         </div>
         <div className="flex flex-wrap items-center gap-1.5">
           {PLAN_TABS.map((t) => tabBtn(t))}
@@ -219,40 +222,40 @@ export function MenuPlanner() {
       {tab === "season" && (
         <div className="min-h-[300px]">
           <style>{`@keyframes mealsRevealRight{from{opacity:0;transform:translateX(-56px) scale(.94)}to{opacity:1;transform:none}}`}</style>
-          <div className="text-[20px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}>Choose your season &amp; listing</div>
-          <p className="mb-5 mt-1 text-[13px] text-[var(--ink-2)]">Pick the season — its listings then slide out for you to choose from.</p>
+          <div className="text-[20px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}>{t("meals.chooseSeasonListing")}</div>
+          <p className="mb-5 mt-1 text-[13px] text-[var(--ink-2)]">{t("meals.chooseSeasonListingSub")}</p>
           {(() => { const showListing = seasonTouched || seasons.length === 0; return (
           <div className={`grid max-w-[760px] gap-4 ${showListing ? "sm:grid-cols-2" : "sm:grid-cols-1 sm:max-w-[380px]"}`}>
             {/* Season card */}
             <div className="rounded-2xl border p-4 shadow-[0_8px_24px_-16px_rgba(31,84,163,.5)]" style={{ borderColor: "#cfe0fb", background: "linear-gradient(160deg,#eef5ff 0%,#ffffff 70%)" }}>
               <div className="mb-2.5 flex items-center gap-2">
                 <span className="grid h-9 w-9 place-items-center rounded-full text-[16px] text-white shadow" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>📅</span>
-                <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#1d3a8f]">Season</span>
+                <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#1d3a8f]">{t("meals.seasonLabel")}</span>
               </div>
-              {seasons.length ? <SeasonPicker seasons={seasons} value={season} onChange={(id) => { setSeason(id); setSeasonTouched(true); setListingId(""); }} allLabel="All seasons" className="w-full !border-[#a9c6f4] !bg-white !py-2.5 !text-[13.5px] !font-bold !text-[#12306e]" />
-                : <div className="rounded-lg border border-dashed border-[#a9c6f4] bg-white px-3 py-2.5 text-[12px] text-[var(--ink-3)]">No seasons set up — add them in Setup. Showing all listings.</div>}
+              {seasons.length ? <SeasonPicker seasons={seasons} value={season} onChange={(id) => { setSeason(id); setSeasonTouched(true); setListingId(""); }} allLabel={t("meals.allSeasons")} className="w-full !border-[#a9c6f4] !bg-white !py-2.5 !text-[13.5px] !font-bold !text-[#12306e]" />
+                : <div className="rounded-lg border border-dashed border-[#a9c6f4] bg-white px-3 py-2.5 text-[12px] text-[var(--ink-3)]">{t("meals.noSeasons")}</div>}
             </div>
             {/* Listing card — slides out of the season card once a season is picked */}
             {showListing && (
               <div className="rounded-2xl border p-4 shadow-[0_8px_24px_-16px_rgba(14,165,165,.5)]" style={{ borderColor: "#bfeae4", background: "linear-gradient(160deg,#eafbf7 0%,#ffffff 70%)", animation: "mealsRevealRight .45s cubic-bezier(.2,.8,.2,1) both" }}>
                 <div className="mb-2.5 flex items-center gap-2">
                   <span className="grid h-9 w-9 place-items-center rounded-full text-[16px] text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>🎟️</span>
-                  <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#0e7a75]">Listing</span>
+                  <span className="text-[12px] font-extrabold uppercase tracking-[0.06em] text-[#0e7a75]">{t("meals.listingLabel")}</span>
                 </div>
                 <Select value={listingId} onChange={(e) => setListingId(e.target.value)} className="w-full !border-[#8fdcd4] !bg-white !py-2.5 !text-[13.5px] !font-bold !text-[#0e5b57]">
-                  <option value="">Choose a listing…</option>
-                  {seasonListings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || "Untitled"}</option>)}
+                  <option value="">{t("meals.chooseListing")}</option>
+                  {seasonListings.map((l) => <option key={l.id} value={l.id}>{l.title || l.name || t("meals.untitled")}</option>)}
                 </Select>
-                {season && seasonListings.length === 0 && <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">No listings in this season yet.</p>}
+                {season && seasonListings.length === 0 && <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("meals.noListingsSeason")}</p>}
               </div>
             )}
           </div>
           ); })()}
-          {listing && dates.length === 0 && <div className="mt-4 rounded-xl border border-dashed border-[#f0c98a] bg-[#fff8ec] p-3.5 text-[12.5px] text-[#8a5a00]">This listing has no run dates yet — set them in the listing’s <b>When it runs</b> step.</div>}
+          {listing && dates.length === 0 && <div className="mt-4 rounded-xl border border-dashed border-[#f0c98a] bg-[#fff8ec] p-3.5 text-[12.5px] text-[#8a5a00]">{t("meals.noRunDatesPre")}<b>{t("meals.whenItRuns")}</b>{t("meals.noRunDatesPost")}</div>}
           {ready && (
             <div className="mt-6 flex flex-wrap items-center gap-3">
-              {nextBtn("menu", "Next: choose a menu →")}
-              <span className="rounded-full px-3 py-1.5 text-[12px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>{dates.length} run-days · {planned} planned</span>
+              {nextBtn("menu", t("meals.nextChooseMenu"))}
+              <span className="rounded-full px-3 py-1.5 text-[12px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>{t("meals.runDaysPlanned", { days: dates.length, planned })}</span>
             </div>
           )}
 
@@ -262,7 +265,7 @@ export function MenuPlanner() {
             if (saved.length === 0) return null;
             return (
               <div className="mt-7 border-t border-[var(--line)] pt-4">
-                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Your saved meal plans</div>
+                <div className="mb-2 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("meals.yourSavedPlans")}</div>
                 <div className="grid gap-2.5 lg:grid-cols-2">
                   {saved.map((l) => (
                     <SavedPlanCard key={l.id} listing={l}
@@ -284,12 +287,12 @@ export function MenuPlanner() {
       {/* ── SLIDE 2 · MENU ── */}
       {tab === "menu" && (
         !ready ? pickCampFirst
-        : menus === null ? <div className="grid min-h-[300px] place-items-center text-[12px] text-[var(--ink-3)]">Loading menus…</div>
-        : menus.length === 0 ? <div className="grid min-h-[300px] place-items-center text-center text-[12.5px] text-[var(--ink-2)]"><div>No menus yet. Open the <b>Saved menus</b> tab to build one, then come back.</div></div>
+        : menus === null ? <div className="grid min-h-[300px] place-items-center text-[12px] text-[var(--ink-3)]">{t("meals.loadingMenus")}</div>
+        : menus.length === 0 ? <div className="grid min-h-[300px] place-items-center text-center text-[12.5px] text-[var(--ink-2)]"><div>{t("meals.noMenusPre")}<b>{t("meals.tabSavedShort")}</b>{t("meals.noMenusPost")}</div></div>
         : (
           <div className="min-h-[300px]">
-            <div className="text-[20px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}>Choose a menu</div>
-            <p className="mb-4 mt-1 text-[13px] text-[var(--ink-2)]">Tap a menu, then tick the dish(es) to serve — one is fine, or offer a few (e.g. meat &amp; veg) for parents to choose between at checkout.</p>
+            <div className="text-[20px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}>{t("meals.chooseMenu")}</div>
+            <p className="mb-4 mt-1 text-[13px] text-[var(--ink-2)]">{t("meals.chooseMenuSub")}</p>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {menus.map((m, i) => {
                 const [dark, light, tint] = MENU_PAL[i % MENU_PAL.length];
@@ -306,7 +309,7 @@ export function MenuPlanner() {
                     <div className="p-3" style={sel ? { background: tint } : undefined}>
                       {sel ? (
                         <>
-                          <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>Pick a day, then choose its meal(s)</div>
+                          <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>{t("meals.pickDayMeals")}</div>
                           <div className="flex flex-wrap gap-1.5">
                             {weekdaysPresent.map((n) => {
                               const count = weekdayServed(m.id, n).size;
@@ -322,7 +325,7 @@ export function MenuPlanner() {
                           </div>
                           {focusDay !== null ? (
                             <div className="mt-3 border-t pt-2.5" style={{ borderColor: `${dark}22` }}>
-                              <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>Meals on every {WEEKDAYS.find(([w]) => w === focusDay)?.[1]}</div>
+                              <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.05em]" style={{ color: dark }}>{t("meals.mealsOnEvery", { day: WEEKDAYS.find(([w]) => w === focusDay)?.[1] ?? "" })}</div>
                               <div className="flex flex-wrap gap-1.5">
                                 {m.items.map((it) => {
                                   const on = weekdayServed(m.id, focusDay!).has(it.id);
@@ -335,9 +338,9 @@ export function MenuPlanner() {
                                   );
                                 })}
                               </div>
-                              <p className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">Tick one, or a few for parents to choose between. Fine-tune single days on the Days slide.</p>
+                              <p className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">{t("meals.tickOneOrFew")}</p>
                             </div>
-                          ) : <p className="mt-2 text-[11px] text-[var(--ink-3)]">Tap a day above to choose the meal(s) it serves.</p>}
+                          ) : <p className="mt-2 text-[11px] text-[var(--ink-3)]">{t("meals.tapDayAbove")}</p>}
                         </>
                       ) : (
                         <div className="flex flex-wrap gap-1.5">
@@ -350,8 +353,8 @@ export function MenuPlanner() {
               })}
             </div>
             <div className="mt-6 flex items-center gap-3">
-              {nextBtn("days", "Next: fine-tune the days →", brushReady)}
-              {!brushReady && <span className="text-[12px] text-[var(--ink-3)]">Pick a day on a menu and choose its meal(s).</span>}
+              {nextBtn("days", t("meals.nextFineTuneDays"), brushReady)}
+              {!brushReady && <span className="text-[12px] text-[var(--ink-3)]">{t("meals.pickDayOnMenu")}</span>}
             </div>
           </div>
         )
@@ -363,18 +366,18 @@ export function MenuPlanner() {
         : (
           <div className="min-h-[300px]">
             <div className="flex flex-wrap items-center gap-3">
-              <div className="text-[18px] font-extrabold text-[var(--ink)]">Drop it onto the days</div>
+              <div className="text-[18px] font-extrabold text-[var(--ink)]">{t("meals.dropOntoDays")}</div>
               <div className="ml-auto flex items-center gap-2">
-                <span className="rounded-full bg-[#eef4fd] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">{planned} of {dates.length} planned</span>
-                <button type="button" onClick={saveNow} className="rounded-lg px-4 py-2 text-[12.5px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>✓ Save</button>
+                <span className="rounded-full bg-[#eef4fd] px-3 py-1 text-[12px] font-bold text-[#1d3a8f]">{t("meals.plannedOf", { planned, total: dates.length })}</span>
+                <button type="button" onClick={saveNow} className="rounded-lg px-4 py-2 text-[12.5px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>✓ {t("meals.save")}</button>
               </div>
             </div>
-            <p className="mb-3 mt-1 text-[12.5px] text-[var(--ink-2)]">Pick a menu below, then tap the days to add it (tap again on a day’s dish chips to fine-tune, or erase).</p>
+            <p className="mb-3 mt-1 text-[12.5px] text-[var(--ink-2)]">{t("meals.pickMenuBelow")}</p>
             {/* Pick which menu you're adding — the "brush" — right here. */}
             <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">Adding:</span>
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.04em] text-[var(--ink-3)]">{t("meals.addingLabel")}</span>
               {(menus ?? []).length === 0
-                ? <button type="button" onClick={() => setTab("saved")} className="text-[12px] font-bold text-[#2f6bd8] underline">Create a menu first</button>
+                ? <button type="button" onClick={() => setTab("saved")} className="text-[12px] font-bold text-[#2f6bd8] underline">{t("meals.createMenuFirst")}</button>
                 : (menus ?? []).map((m, mi) => {
                     const on = !erase && brushMenuId === m.id;
                     const c = MENU_PAL[mi % MENU_PAL.length][0];
@@ -385,11 +388,11 @@ export function MenuPlanner() {
                       </button>
                     );
                   })}
-              {!brushMenuId && !erase && (menus ?? []).length > 0 && <span className="text-[11px] font-semibold text-[#c0392b]">← tap a menu, then tap the days</span>}
+              {!brushMenuId && !erase && (menus ?? []).length > 0 && <span className="text-[11px] font-semibold text-[#c0392b]">{t("meals.tapMenuThenDays")}</span>}
             </div>
             <div className="mb-4 flex flex-wrap items-center gap-1.5">
-              <button type="button" onClick={() => setErase((e) => !e)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={erase ? { borderColor: "transparent", background: "#e21d27", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{erase ? "✓ Erasing" : "Erase a day"}</button>
-              <button type="button" onClick={clearAll} className="text-[12px] font-bold text-[var(--red,#e21d27)] underline">Clear all</button>
+              <button type="button" onClick={() => setErase((e) => !e)} className="rounded-full border px-3 py-1.5 text-[12px] font-bold" style={erase ? { borderColor: "transparent", background: "#e21d27", color: "#fff" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{erase ? t("meals.erasing") : t("meals.eraseDay")}</button>
+              <button type="button" onClick={clearAll} className="text-[12px] font-bold text-[var(--red,#e21d27)] underline">{t("meals.clearAll")}</button>
             </div>
             <div className="grid gap-3 lg:grid-cols-2">
               {weeks.map((w, wi) => {
@@ -399,8 +402,8 @@ export function MenuPlanner() {
                   <div key={w.mon} className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white">
                     <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${hd}, ${hl})` }}>
                       <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/25 text-[13px]">📅</span>
-                      <span className="text-[14px] font-extrabold">Week {w.n}</span>
-                      <span className="text-[12px] font-semibold text-white/85">· from {fmtDate(w.mon)}</span>
+                      <span className="text-[14px] font-extrabold">{t("meals.weekN", { n: w.n })}</span>
+                      <span className="text-[12px] font-semibold text-white/85">· {t("meals.fromDate", { date: fmtDate(w.mon) })}</span>
                       <span className="ml-auto flex-none rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-bold">{set}/{w.days.length}</span>
                     </div>
                     <div className="grid grid-cols-2 gap-2 p-3 sm:grid-cols-3">
@@ -438,8 +441,8 @@ export function MenuPlanner() {
                                     })}
                                   </div>
                                 )
-                            ) : <span className="mt-1 text-[11.5px] text-[var(--ink-3)]">＋ tap to add</span>}
-                            {warnVeg && <span className="mt-1 text-[10px] font-bold text-[#c0392b]">⚠ no veg/vegan option</span>}
+                            ) : <span className="mt-1 text-[11.5px] text-[var(--ink-3)]">＋ {t("meals.tapToAdd")}</span>}
+                            {warnVeg && <span className="mt-1 text-[10px] font-bold text-[#c0392b]">⚠ {t("meals.noVegOption")}</span>}
                           </div>
                         );
                       })}
@@ -450,10 +453,10 @@ export function MenuPlanner() {
             </div>
 
             <div className="mt-6 flex flex-wrap items-center gap-3 border-t border-[var(--line)] pt-4">
-              <button type="button" onClick={saveNow} className="rounded-lg px-5 py-2.5 text-[13px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>✓ Save plan</button>
-              <button type="button" onClick={() => setTab("season")} className="rounded-lg border px-4 py-2.5 text-[13px] font-bold text-[var(--ink-2)]" style={{ borderColor: "var(--line)" }}>View all saved plans</button>
+              <button type="button" onClick={saveNow} className="rounded-lg px-5 py-2.5 text-[13px] font-extrabold text-white shadow" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>✓ {t("meals.savePlan")}</button>
+              <button type="button" onClick={() => setTab("season")} className="rounded-lg border px-4 py-2.5 text-[13px] font-bold text-[var(--ink-2)]" style={{ borderColor: "var(--line)" }}>{t("meals.viewAllPlans")}</button>
               {flash ? <span className="text-[12.5px] font-bold text-[#0e9a75]">{flash}</span>
-                : <span className="text-[11.5px] text-[var(--ink-3)]">Changes save automatically as you go.</span>}
+                : <span className="text-[11.5px] text-[var(--ink-3)]">{t("meals.changesAutoSave")}</span>}
             </div>
           </div>
         )
@@ -473,6 +476,7 @@ export function MenuPlanner() {
 // Saved to the listing's mealConfig. (Caterer emailing is a backend cron —
 // Amir; cut-off is enforced at the meal-order checkout.)
 function SavedPlanCard({ listing, days, seasonName, current, defaultCutoff, onEdit }: { listing: Listing; days: number; seasonName?: string; current: boolean; defaultCutoff: { when: "off" | "same" | "prev" | "2days"; time: string }; onEdit: () => void }) {
+  const t = useT();
   const [cfg, setCfg] = useState<MealConfig>(listing.mealConfig ?? {});
   const [ok, setOk] = useState(false);
   const [open, setOpen] = useState(false);
@@ -488,45 +492,45 @@ function SavedPlanCard({ listing, days, seasonName, current, defaultCutoff, onEd
         <span className="grid h-10 w-10 flex-none place-items-center rounded-full text-[17px] text-white" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>🍽️</span>
         <div className="min-w-0">
           <div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{listing.title || listing.name}</div>
-          <div className="text-[11.5px] text-[var(--ink-3)]">{days} day{days === 1 ? "" : "s"} planned{seasonName ? ` · ${seasonName}` : ""}</div>
+          <div className="text-[11.5px] text-[var(--ink-3)]">{days} day{days === 1 ? "" : "s"} {t("meals.plannedWord")}{seasonName ? ` · ${seasonName}` : ""}</div>
         </div>
-        <button type="button" onClick={() => setOpen((o) => !o)} className="ml-auto flex-none rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{open ? "Options ▲" : "Options ▼"}</button>
-        <button type="button" onClick={onEdit} className="flex-none rounded-lg border px-3 py-1.5 text-[12px] font-extrabold text-[#2f6bd8]" style={{ borderColor: "#bcd3f7", background: "#eef4fd" }}>Edit plan →</button>
+        <button type="button" onClick={() => setOpen((o) => !o)} className="ml-auto flex-none rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">{t("meals.options")} {open ? "▲" : "▼"}</button>
+        <button type="button" onClick={onEdit} className="flex-none rounded-lg border px-3 py-1.5 text-[12px] font-extrabold text-[#2f6bd8]" style={{ borderColor: "#bcd3f7", background: "#eef4fd" }}>{t("meals.editPlan")}</button>
       </div>
 
       {open && (<>
       {/* a) Caterer email digest */}
       <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-        <div className="mb-1.5 text-[11.5px] font-extrabold text-[var(--ink)]">📧 Email the caterer the orders</div>
+        <div className="mb-1.5 text-[11.5px] font-extrabold text-[var(--ink)]">📧 {t("meals.emailCaterer")}</div>
         <Input type="email" value={cfg.catererEmail ?? ""} placeholder="caterer@company.com" className="w-full"
           onChange={(e) => setCfg((c) => ({ ...c, catererEmail: e.target.value }))} onBlur={(e) => save({ ...cfg, catererEmail: e.target.value })} />
         <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[12px] text-[var(--ink-2)]">
-          <span>Send</span>
+          <span>{t("meals.sendWord")}</span>
           <Select value={every} onChange={(e) => save({ ...cfg, catererEvery: e.target.value as MealConfig["catererEvery"] })} className="!py-1.5 !text-[12px]">
-            <option value="off">— don’t email —</option>
-            <option value="day">every day</option>
-            <option value="week">every week</option>
+            <option value="off">{t("meals.catererOff")}</option>
+            <option value="day">{t("meals.everyDay")}</option>
+            <option value="week">{t("meals.everyWeek")}</option>
           </Select>
-          {every !== "off" && <><span>at</span><Input type="time" value={cfg.catererAt ?? "07:00"} onChange={(e) => save({ ...cfg, catererAt: e.target.value })} className="!py-1.5 !text-[12px]" /></>}
+          {every !== "off" && <><span>{t("meals.atWord")}</span><Input type="time" value={cfg.catererAt ?? "07:00"} onChange={(e) => save({ ...cfg, catererAt: e.target.value })} className="!py-1.5 !text-[12px]" /></>}
         </div>
       </div>
 
       {/* b) Order cut-off — pre-filled from the Settings default, editable here */}
       <div className="mt-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
-        <div className="mb-1.5 text-[11.5px] font-extrabold text-[var(--ink)]">⏰ Ordering closes {cfg.cutoffWhen === undefined && <span className="font-semibold text-[var(--ink-3)]">· using Settings default</span>}</div>
+        <div className="mb-1.5 text-[11.5px] font-extrabold text-[var(--ink)]">⏰ {t("meals.orderingClosesShort")} {cfg.cutoffWhen === undefined && <span className="font-semibold text-[var(--ink-3)]">{t("meals.usingDefault")}</span>}</div>
         <div className="flex flex-wrap items-center gap-1.5 text-[12px] text-[var(--ink-2)]">
           <Select value={when} onChange={(e) => save({ ...cfg, cutoffWhen: e.target.value as MealConfig["cutoffWhen"] })} className="!py-1.5 !text-[12px]">
-            <option value="off">anytime — no cut-off</option>
-            <option value="same">the same day</option>
-            <option value="prev">the day before</option>
-            <option value="2days">2 days before</option>
+            <option value="off">{t("meals.cutoffOff")}</option>
+            <option value="same">{t("meals.cutoffSame")}</option>
+            <option value="prev">{t("meals.cutoffPrev")}</option>
+            <option value="2days">{t("meals.cutoff2days")}</option>
           </Select>
-          {when !== "off" && <><span>at</span><Input type="time" value={cfg.cutoffTime ?? defaultCutoff.time} onChange={(e) => save({ ...cfg, cutoffTime: e.target.value })} className="!py-1.5 !text-[12px]" /></>}
+          {when !== "off" && <><span>{t("meals.atWord")}</span><Input type="time" value={cfg.cutoffTime ?? defaultCutoff.time} onChange={(e) => save({ ...cfg, cutoffTime: e.target.value })} className="!py-1.5 !text-[12px]" /></>}
         </div>
-        {when === "off" && <p className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">No cut-off set — parents can order right up to the day of the meal.</p>}
+        {when === "off" && <p className="mt-1.5 text-[10.5px] text-[var(--ink-3)]">{t("meals.noCutoffSet")}</p>}
       </div>
       </>)}
-      {ok && open && <div className="mt-2 text-[11.5px] font-bold text-[#0e9a75]">✓ Saved</div>}
+      {ok && open && <div className="mt-2 text-[11.5px] font-bold text-[#0e9a75]">✓ {t("meals.saved")}</div>}
     </div>
   );
 }

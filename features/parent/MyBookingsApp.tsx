@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost, apiPublic } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import { bookingDateSummary, money, payLabelFor, payTone } from "@/features/bookings/helpers";
 import { PayModal } from "@/features/payments/PayModal";
 import type { Booking } from "@/features/bookings/types";
@@ -57,6 +58,7 @@ function PCol({ label, w, children }: { label: string; w: string; children: Reac
 // whether a date is bookable or not.
 const monthKey = (iso: string) => { const [y, m] = iso.split("-").map(Number); return y * 12 + (m - 1); };
 function AvailabilityCalendar({ available, taken, value, onPick }: { available: string[]; taken?: string[]; value?: string; onPick: (iso: string) => void }) {
+  const t = useT();
   const avail = new Set(available);
   const blocked = new Set(taken ?? []);
   const anchor = value || available[0] || new Date().toISOString().slice(0, 10);
@@ -90,7 +92,7 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
           return (
             <button key={i} type="button" disabled={!free} onClick={() => onPick(s)}
               className="flex h-8 items-center justify-center rounded-md text-[12px] font-bold transition-transform enabled:hover:-translate-y-px"
-              title={free ? "Available — pick this day" : isTaken ? "Already picked for another day" : "Not running / full"}
+              title={free ? t("parent.availablePick") : isTaken ? t("parent.alreadyPicked") : t("parent.notRunningFull")}
               style={sel ? { background: "#1d3a8f", color: "#fff", boxShadow: "0 2px 6px -1px rgba(29,58,143,.5)" }
                 : free ? { background: "#e7f6ee", color: "#0f7a43" }
                 : isTaken ? { background: "#fdebec", color: "#c0392b" }
@@ -99,15 +101,16 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
         })}
       </div>
       <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[var(--ink-3)]">
-        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#e7f6ee" }} /> Available</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#1d3a8f" }} /> Chosen</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#fdebec" }} /> Taken</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#e7f6ee" }} /> {t("parent.availableWord")}</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#1d3a8f" }} /> {t("parent.chosenWord")}</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#fdebec" }} /> {t("parent.takenWord")}</span>
       </div>
     </div>
   );
 }
 
 function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: Booking; listing: AmendListing | null; hasPendingMove?: boolean; onDone: () => void }) {
+  const t = useT();
   const [reason, setReason] = useState("");
   const [otherReason, setOtherReason] = useState("");
   const [msg, setMsg] = useState("");
@@ -271,18 +274,18 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       });
       onDone();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Request failed");
+      setError(e instanceof Error ? e.message : t("parent.errRequestFailed"));
       setBusy(false);
     }
   }
 
   return (
     <div className="mt-3 rounded-xl border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] p-3">
-      <div className="mb-1.5 text-[12.5px] font-bold text-[var(--red,#e21d27)]">Request cancellation</div>
+      <div className="mb-1.5 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{t("parent.requestCancellation")}</div>
 
       {hasPendingMove && (
         <div className="mb-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[11.5px] font-semibold text-[#8a5300]">
-          ⏳ You have a date-change request still pending. Cancelling the whole booking will withdraw that request too.
+          {t("parent.cancelWithdrawsMove")}
         </div>
       )}
 
@@ -290,7 +293,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       {canPartial && (
         <div className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] p-2">
           <div className="grid grid-cols-2 gap-1.5">
-            {([["all", "Whole booking"], ["days", "Choose days"]] as const).map(([v, l]) => (
+            {([["all", t("parent.wholeBooking")], ["days", t("parent.chooseDays")]] as const).map(([v, l]) => (
               <button key={v} type="button" onClick={() => setScope(v)} className="rounded-lg border p-2 text-[12px] font-extrabold"
                 style={scope === v ? { borderColor: "var(--brand-2)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>{l}</button>
             ))}
@@ -331,7 +334,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                   <div className="flex flex-col gap-1.5">
                     {resOptions.map((o) => {
                       const on = res === o;
-                      const label = o === "refund" ? "Refund" : o === "wallet" ? "Wallet credit" : "Move to another date";
+                      const label = o === "refund" ? t("parent.refundOption") : o === "wallet" ? t("parent.walletCreditOption") : t("parent.moveToAnotherDate");
                       const detail = o === "refund"
                         ? (pickedRefund > 0 ? `${money(pickedRefund)} back — the ${money(perSlotPaid)}/day pro-rata, less any day inside its notice window` : "no cash refund — every selected day is inside the no-refund window")
                         : o === "wallet" ? `${money(pickedWallet)} to your wallet — the full ${money(perSlotPaid)}/day, no notice deadline`
@@ -405,18 +408,18 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
         <>
           <select value={reason} onChange={(e) => setReason(e.target.value)}
             className="mb-2 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)]">
-            <option value="">Reason for cancelling…</option>
+            <option value="">{t("parent.reasonForCancelling")}</option>
             {cfg.reasons.map((r) => <option key={r.id} value={r.label}>{r.label}</option>)}
-            <option value="__other__">Other…</option>
+            <option value="__other__">{t("parent.otherOption")}</option>
           </select>
           {reason === "__other__" && (
-            <input value={otherReason} onChange={(e) => setOtherReason(e.target.value)} placeholder="Tell us your reason…"
+            <input value={otherReason} onChange={(e) => setOtherReason(e.target.value)} placeholder={t("parent.tellUsReason")}
               className="mb-2 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
           )}
         </>
       )}
 
-      <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Anything to add? (optional)…" rows={2}
+      <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={t("parent.anythingToAdd")} rows={2}
         className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none" />
 
       {/* Where a refund goes. Voucher / Tax-Free Childcare money can never return
@@ -425,10 +428,10 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
           card vs wallet when the provider lets them. */}
       {refundDue && (cfg?.letChoose || noBankRefund) && (() => {
         const options: readonly (readonly ["wallet" | "card", string])[] = noBankRefund
-          ? (walletOn ? [["wallet", "👛 Wallet credit"]] : [])
+          ? (walletOn ? [["wallet", t("parent.walletCreditBtn")]] : [])
           : [
-              ...(walletOn ? ([["wallet", "👛 Wallet credit"]] as const) : []),
-              ["card", "💳 Back to card"],
+              ...(walletOn ? ([["wallet", t("parent.walletCreditBtn")]] as const) : []),
+              ["card", t("parent.backToCard")],
             ];
         return (
           <div className="mt-2">
@@ -537,6 +540,7 @@ const weekKey = (iso: string) => {
 };
 
 function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: AmendListing | null; onDone: (changed: boolean) => void }) {
+  const t = useT();
   const [policy, setPolicy] = useState<AmendPolicy>(AMEND_FALLBACK);
   const [moves, setMoves] = useState<Record<string, string>>({});
   const [msg, setMsg] = useState("");
@@ -644,9 +648,9 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
       <div className="w-full max-w-[460px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
         <div className="flex items-center justify-between border-b border-[var(--line)] px-5 py-4">
           <h3 className="m-0 text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-            {selfService ? "Change your dates" : "Request a date change"}
+            {selfService ? t("parent.changeYourDates") : t("parent.requestDateChange")}
           </h3>
-          <button type="button" onClick={() => onDone(false)} className="cursor-pointer text-[20px] leading-none text-[var(--ink-3)]" aria-label="Close">×</button>
+          <button type="button" onClick={() => onDone(false)} className="cursor-pointer text-[20px] leading-none text-[var(--ink-3)]" aria-label={t("parent.close")}>×</button>
         </div>
 
         <div className="flex flex-col gap-3 px-5 py-4">
@@ -660,7 +664,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
                   : <>Date changes aren&rsquo;t available online for <b>{booking.listing}</b> yet. To move a date, please <b>message your provider</b> and they&rsquo;ll sort it.</>}
               </div>
               <div className="flex justify-end">
-                <Button onClick={() => onDone(false)}>Close</Button>
+                <Button onClick={() => onDone(false)}>{t("parent.closeText")}</Button>
               </div>
             </>
           ) : (
@@ -676,9 +680,9 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
           {/* Whose booking to change — multi-child bookings can move just one. */}
           {kidsList.length > 1 && (
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Change this for</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.changeThisFor")}</div>
               <div className="flex flex-wrap gap-1.5">
-                {[["", "All children"], ...kidsList.map((n) => [n, n] as [string, string])].map(([val, label]) => {
+                {[["", t("parent.allChildren")], ...kidsList.map((n) => [n, n] as [string, string])].map(([val, label]) => {
                   const on = who === val;
                   return (
                     <button key={val || "all"} type="button" onClick={() => setWho(val)}
@@ -695,7 +699,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
 
           {days.length > 0 ? (
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Your dates</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.yourDates")}</div>
               {fixed ? (
                 <div className="rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2.5 text-[11.5px] leading-[1.5] text-[#7a5b06]">
                   This pass is a <b>fixed block</b> — its dates move together, not one at a time. To change them, cancel and rebook, or message your provider.
@@ -712,8 +716,8 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
                           <span className="w-[120px] font-semibold">{fmtIso(iso)}</span>
                           <span className="text-[var(--ink-3)]">→</span>
                           <select value={moves[iso] ?? ""} onChange={(e) => setMove(iso, e.target.value)}
-                            className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]" aria-label={`Move ${fmtIso(iso)} to`}>
-                            <option value="">Keep this date</option>
+                            className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px]" aria-label={t("parent.moveDateTo", { date: fmtIso(iso) })}>
+                            <option value="">{t("parent.keepThisDate")}</option>
                             {opts.map((dt) => <option key={dt} value={dt}>{fmtIso(dt)}</option>)}
                           </select>
                         </div>
@@ -730,11 +734,11 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
             </div>
           ) : (
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Which date would you like?</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.whichDate")}</div>
               {available.length > 0 ? (
                 <select value={preferredDate} onChange={(e) => setPreferredDate(e.target.value)}
-                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" aria-label="Preferred date">
-                  <option value="">Pick a date…</option>
+                  className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" aria-label={t("parent.preferredDate")}>
+                  <option value="">{t("parent.pickADate")}</option>
                   {available.map((dt) => <option key={dt} value={dt}>{fmtIso(dt)}</option>)}
                 </select>
               ) : (
@@ -748,10 +752,10 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
           {/* Timing — ONLY the pass's listed periods, never a free time. */}
           {periods.length > 0 && (
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Timing{who ? ` · ${who}` : ""}</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.timing")}{who ? ` · ${who}` : ""}</div>
               <select value={newTiming} onChange={(e) => setNewTiming(e.target.value)}
-                className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" aria-label="Timing">
-                <option value="">Keep current{booking.timing ? ` (${booking.timing})` : ""}</option>
+                className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[13px] text-[var(--ink)]" aria-label={t("parent.timing")}>
+                <option value="">{t("parent.keepCurrent")}{booking.timing ? ` (${booking.timing})` : ""}</option>
                 {periods.filter((p) => p.title !== booking.timing).map((p) => (
                   <option key={p.id ?? p.title} value={p.title}>{p.title}{p.start && p.finish ? ` · ${p.start}–${p.finish}` : ""}</option>
                 ))}
@@ -765,9 +769,9 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
               new dates come out cheaper (the difference is refundable). */}
           {(letChoose || noBankRefund) && moneyBack && (
             <div>
-              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">If money comes back, send it to</div>
+              <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.ifMoneyComesBack")}</div>
               <div className={`grid ${noBankRefund ? "grid-cols-1" : "grid-cols-2"} gap-2`}>
-                {(noBankRefund ? ([["wallet", "👛 Wallet credit"]] as const) : ([["card", "💳 My card"], ["wallet", "👛 Wallet credit"]] as const)).map(([v, l]) => (
+                {(noBankRefund ? ([["wallet", t("parent.walletCreditBtn")]] as const) : ([["card", t("parent.myCard")], ["wallet", t("parent.walletCreditBtn")]] as const)).map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setRefundTo(v)} className="rounded-xl border p-2.5 text-[12.5px] font-extrabold"
                     style={refundTo === v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink)" }}>
                     {l}
@@ -782,9 +786,9 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
 
           {error && <div className="text-[12.5px] text-[var(--red)]">{error}</div>}
           <Button variant="primary" disabled={busy || !hasChanges || !weekOk} onClick={submit} className="w-full justify-center">
-            {busy ? "Sending…" : selfService ? "Confirm change" : "Send request"}
+            {busy ? t("parent.sending") : selfService ? t("parent.confirmChange") : t("parent.sendRequest")}
           </Button>
-          <div className="rounded-full bg-[#fff3e0] px-3 py-1 text-center text-[10.5px] font-extrabold text-[#8a5300]">Applied once the backend is built (§U)</div>
+          <div className="rounded-full bg-[#fff3e0] px-3 py-1 text-center text-[10.5px] font-extrabold text-[#8a5300]">{t("parent.appliedOnceBackend")}</div>
           </>
           )}
         </div>
@@ -794,6 +798,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
 }
 
 function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, clash, listingInfo, venue, mealOrders = [] }: { b: Booking; refresh: () => void; autoPay?: boolean; autoAmend?: boolean; autoCancel?: boolean; autoOpen?: boolean; clash?: boolean; listingInfo?: AmendListing | null; venue?: { location?: string | null; address?: string | null; city?: string | null }; mealOrders?: MealOrder[] }) {
+  const t = useT();
   const [expanded, setExpanded] = useState(!!(autoAmend || autoCancel || autoPay || autoOpen));
   // Meals on this booking: those bought at checkout (b.mealItems) + any ordered
   // later from the Meals area (matched orders). "later" ones are tagged.
@@ -845,7 +850,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/amend/withdraw`, {});
       try { localStorage.removeItem(`aos.pendingMove.${b.ref}`); } catch { /* ignore */ }
       refresh();
-    } catch (e) { alert(e instanceof Error ? e.message : "Couldn’t cancel the date change"); }
+    } catch (e) { alert(e instanceof Error ? e.message : t("parent.errCancelDateChange")); }
     finally { setWithdrawing(false); }
   }
   const answerOffer = async (action: "accept-offer" | "decline-offer") => {
@@ -854,7 +859,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/${action}`, {});
       refresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Something went wrong");
+      alert(e instanceof Error ? e.message : t("parent.errSomethingWrong"));
     }
     setOfferBusy(false);
   };
@@ -914,16 +919,16 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           </div>
         </div>
         <div onClick={() => setExpanded((x) => !x)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 overflow-hidden px-4 py-2 hover:bg-[var(--panel)]">
-          <PCol label="🎟 Listing" w="min-w-[120px] flex-1">
+          <PCol label={t("parent.listingCol")} w="min-w-[120px] flex-1">
             <span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span>
             {loc.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {loc.location}</span>}
             {(loc.address || loc.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(", ")}</span>}
           </PCol>
-          <PCol label="📆 Dates" w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}{sessCount > 1 ? " · tap to view all" : ""}</span></PCol>
-          <PCol label="Status" w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? "Date change" : b.status}</span></PCol>
-          {!cancelled && <PCol label="Payment" w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></PCol>}
+          <PCol label={t("parent.datesCol")} w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}{sessCount > 1 ? " · tap to view all" : ""}</span></PCol>
+          <PCol label={t("parent.statusCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? t("parent.dateChangeStatus") : b.status}</span></PCol>
+          {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></PCol>}
           <div className="ml-auto flex-none text-right">
-            <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">Amount</div>
+            <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.amountCol")}</div>
             <div className="text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>
             {mealRows.length > 0 && <div className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-[#fff3e0] px-2 py-[2px] text-[10.5px] font-extrabold text-[#96631a]">🍽 {mealRows.length} meal{mealRows.length === 1 ? "" : "s"} · {money(mealTotal)}</div>}
           </div>
@@ -935,13 +940,13 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       {clash && !cancelled && (
         <div className="mt-2 flex items-start gap-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c0392b]">
           <span aria-hidden>⚠️</span>
-          <span>{b.child} is booked onto more than one session on a day here — check this is right; you may want to move or cancel one.</span>
+          <span>{t("parent.clashWarning", { child: b.child })}</span>
         </div>
       )}
 
       {dateChange?.status === "pending" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2 text-[12px] text-[#8a5300]">
-          <div className="font-bold">⏳ Change of date requested — pending your provider&rsquo;s approval.</div>
+          <div className="font-bold">{t("parent.dateChangePending")}</div>
           {dateChange.moves.length > 0 && (
             <ul className="mt-1 flex flex-col gap-0.5">
               {dateChange.moves.map((m, i) => (
@@ -959,7 +964,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
         const declined = dateChange.moves.filter((m) => m.approved === false);
         return (
           <div className="mt-2 rounded-lg border border-[#cfe9d8] bg-[#eef8f1] px-3 py-2 text-[12px] text-[#0f7a43]">
-            <div className="font-bold">✓ {declined.length ? "Some dates were moved" : "Date change approved — your booking has been moved."}</div>
+            <div className="font-bold">✓ {declined.length ? t("parent.someDatesMoved") : t("parent.dateChangeApproved")}</div>
             {approved.length > 0 && (
               <ul className="mt-1 flex flex-col gap-0.5">
                 {approved.map((m, i) => (
@@ -969,7 +974,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
             )}
             {declined.length > 0 && (
               <div className="mt-1.5 border-t border-[#cfe9d8] pt-1.5 text-[#8a5300]">
-                <div className="font-bold">Not moved:</div>
+                <div className="font-bold">{t("parent.notMoved")}</div>
                 <ul className="flex flex-col gap-0.5">
                   {declined.map((m, i) => <li key={i} className="font-semibold">{dcMultiChild && m.childName ? `${m.childName}: ` : ""}{fmtIso(m.from)} (kept)</li>)}
                 </ul>
@@ -982,7 +987,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
 
       {dateChange?.status === "denied" && (
         <div className="mt-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] text-[#c0392b]">
-          <div className="font-bold">✗ Your date-change request was declined — the booking is unchanged.</div>
+          <div className="font-bold">{t("parent.dateChangeDeclined")}</div>
           {dateChange.reason && <div className="mt-0.5 text-[11.5px] text-[#8a3a3a]">Reason: {dateChange.reason}</div>}
         </div>
       )}
@@ -1006,45 +1011,45 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
       <div className="mt-2 flex flex-wrap gap-2">
         {payable && (
           <Button sm variant="primary" onClick={() => setPaying(true)}>
-            Pay {money(b.amount)}
+            {t("parent.payAmount", { amount: money(b.amount) })}
           </Button>
         )}
         <Button sm onClick={() => setExpanded((x) => !x)}>
-          {expanded ? "Hide details" : "Details"}
+          {expanded ? t("parent.hideDetails") : t("parent.details")}
         </Button>
         {(b.status === "Confirmed" || b.status === "Approval needed") && (
           <Button sm onClick={() => setAmending(true)}>
-            {pendingMove ? "Edit date change…" : "Change dates…"}
+            {pendingMove ? t("parent.editDateChange") : t("parent.changeDatesBtn")}
           </Button>
         )}
         {pendingMove && (
           <Button sm disabled={withdrawing} onClick={withdrawMove}>
-            {withdrawing ? "Cancelling…" : "Cancel date change"}
+            {withdrawing ? t("parent.cancelling") : t("parent.cancelDateChange")}
           </Button>
         )}
         {!cancelled && (
           <Button sm variant="cta" onClick={() => setCancelling((x) => !x)}>
-            Cancel booking…
+            {t("parent.cancelBookingBtn")}
           </Button>
         )}
       </div>
       {pendingMove && !cancelling && (
-        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">Your date change is pending. You can still edit the dates (a new request replaces this one), cancel the request, or wait for your provider to approve.</div>
+        <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">{t("parent.pendingMoveNote")}</div>
       )}
 
       {amending && <AmendModal booking={b} listing={info} onDone={(changed) => { setAmending(false); if (changed) refresh(); }} />}
 
       {b.status === "Offered" && (
         <div className="mt-2 rounded-lg border border-[#fde3a7] bg-[#fdf3d8] px-3 py-2.5 text-[12.5px] text-[#7a5200]">
-          <b>A place has opened up!</b> It&apos;s held for you
-          {b.offerExpiresAt ? ` until ${new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}` : ""} —
-          accept to take it, or it passes to the next family.
+          <b>{t("parent.placeOpenedUp")}</b> {t("parent.placeHeldFor")}
+          {b.offerExpiresAt ? ` ${t("parent.until", { time: new Date(b.offerExpiresAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }) })}` : ""} —
+          {t("parent.acceptOrPasses")}
           <div className="mt-2 flex gap-2">
             <Button sm variant="primary" disabled={offerBusy} onClick={() => answerOffer("accept-offer")}>
-              Accept the place
+              {t("parent.acceptPlace")}
             </Button>
             <Button sm disabled={offerBusy} onClick={() => answerOffer("decline-offer")}>
-              Give it up
+              {t("parent.giveItUp")}
             </Button>
           </div>
         </div>
@@ -1054,24 +1059,24 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
 
       {expanded && (
         <div className="mt-2">
-          <SectionHead>Booking</SectionHead>
-          <DefRow label="Child" value={b.child} />
-          <DefRow label="Pass" value={b.pass} />
-          {b.timing && <DefRow label="Timing" value={b.timing} />}
+          <SectionHead>{t("parent.bookingSection")}</SectionHead>
+          <DefRow label={t("parent.childDefLabel")} value={b.child} />
+          <DefRow label={t("parent.passLabel")} value={b.pass} />
+          {b.timing && <DefRow label={t("parent.timing")} value={b.timing} />}
           {(info?.location || info?.address || times || (detail?.staff && detail.staff.length > 0)) && (
             <>
-              <SectionHead>Where &amp; when</SectionHead>
+              <SectionHead>{t("parent.whereWhen")}</SectionHead>
               {info?.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {info.location}</div>}
               {(info?.address || info?.city) && (
                 <div className="pb-[4px] text-[12px] text-[var(--ink-3)]">{[info.address, info.city].filter(Boolean).join(" · ")}</div>
               )}
               {times && <div className="py-[2px] text-[12.5px]">🕒 {times}</div>}
               {detail?.staff && detail.staff.length > 0 && (
-                <div className="py-[2px] text-[12.5px]">👤 Staff onsite: {detail.staff.map((s) => s.name).join(", ")}</div>
+                <div className="py-[2px] text-[12.5px]">👤 {t("parent.staffOnsite")} {detail.staff.map((s) => s.name).join(", ")}</div>
               )}
             </>
           )}
-          <SectionHead>Sessions</SectionHead>
+          <SectionHead>{t("parent.sessionsSection")}</SectionHead>
           {(b.sessions || []).map((s, i) => (
             <div key={i} className="border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">
               {s}
@@ -1081,28 +1086,28 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
               own section below so they don't double up). */}
           {(() => { const extras = (b.addons ?? []).filter((a) => !a.startsWith("🍽")); return extras.length > 0 && (
             <>
-              <SectionHead>Add-ons</SectionHead>
+              <SectionHead>{t("parent.addOns")}</SectionHead>
               {extras.map((a, i) => <div key={i} className="border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">{a}</div>)}
             </>
           ); })()}
           {mealRows.length > 0 && (
             <>
-              <SectionHead>Meals</SectionHead>
+              <SectionHead>{t("parent.mealsSection")}</SectionHead>
               {mealRows.map((m, i) => (
                 <div key={i} className="flex items-baseline justify-between gap-2 border-b border-dashed border-[var(--line)] py-[4px] text-[12.5px]">
                   <span>
                     <span className="mr-1">🍽</span><b>{m.name}</b>
                     <span className="text-[var(--ink-3)]"> · {new Date(`${m.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}{m.child ? ` · ${m.child}` : ""}</span>
-                    {m.later && <span className="ml-1 rounded bg-[#eef4fd] px-1 py-[0.5px] text-[9.5px] font-bold uppercase tracking-[0.03em] text-[#2f6bd8]">added later</span>}
+                    {m.later && <span className="ml-1 rounded bg-[#eef4fd] px-1 py-[0.5px] text-[9.5px] font-bold uppercase tracking-[0.03em] text-[#2f6bd8]">{t("parent.addedLater")}</span>}
                   </span>
                   {m.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(m.price)}</span>}
                 </div>
               ))}
             </>
           )}
-          <SectionHead>Payment</SectionHead>
-          <DefRow label="Method" value={b.method} />
-          <DefRow label="Total" value={money(b.amount)} />
+          <SectionHead>{t("parent.paymentSection")}</SectionHead>
+          <DefRow label={t("parent.methodLabel")} value={b.method} />
+          <DefRow label={t("parent.totalLabel")} value={money(b.amount)} />
           {/* Voucher payment received — the provider reconciled the money. */}
           {!cancelled && isVoucher && b.pay === "Paid" && (
             <div className="mt-2 rounded-lg border border-[#bfe6cd] bg-[#eaf0fc] px-3 py-2.5 text-[12.5px] font-semibold text-[#1d3a8f]">
@@ -1128,10 +1133,10 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           )}
           {b.cancel && (
             <>
-              <SectionHead>Cancellation</SectionHead>
-              <DefRow label="Requested" value={b.cancel.on} />
-              <DefRow label="Refund" value={b.cancel.refund ?? "—"} />
-              {b.cancel.msg && <DefRow label="Message" value={b.cancel.msg} />}
+              <SectionHead>{t("parent.cancellationSection")}</SectionHead>
+              <DefRow label={t("parent.requestedLabel")} value={b.cancel.on} />
+              <DefRow label={t("parent.refundLabel")} value={b.cancel.refund ?? "—"} />
+              {b.cancel.msg && <DefRow label={t("parent.messageLabel")} value={b.cancel.msg} />}
             </>
           )}
         </div>
@@ -1157,15 +1162,16 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
 // A waitlisted place, shown up front so a parent can see exactly which dates
 // and times they're queued for — not buried in the general list.
 function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const leave = async () => {
-    if (!confirm(`Leave the waiting list for ${b.listing}?`)) return;
+    if (!confirm(t("parent.leaveWaitlistConfirm", { listing: b.listing }))) return;
     setBusy(true);
     try {
       await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/cancel`, {});
       refresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : "Couldn’t leave the waiting list");
+      alert(e instanceof Error ? e.message : t("parent.errLeaveWaitlist"));
       setBusy(false);
     }
   };
@@ -1176,19 +1182,19 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
           <div className="text-[14px] font-extrabold text-[#9a3412]">{b.listing}</div>
           <div className="text-[12px] text-[#b45309]">{b.child} · {b.pass}</div>
         </div>
-        <Badge tone={{ bg: "#fed7aa", fg: "#9a3412" }}>On the waiting list</Badge>
+        <Badge tone={{ bg: "#fed7aa", fg: "#9a3412" }}>{t("parent.onWaitingList")}</Badge>
       </div>
       {/* The exact dates + timings — each session string already carries both. */}
       <div className="mt-2 rounded-lg bg-white/70 px-2.5 py-1.5">
-        <div className="text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[#b45309]">Waiting for</div>
+        <div className="text-[10.5px] font-extrabold uppercase tracking-[0.04em] text-[#b45309]">{t("parent.waitingFor")}</div>
         {(b.sessions && b.sessions.length ? b.sessions : [b.dates]).map((s, i) => (
           <div key={i} className="text-[12.5px] font-semibold text-[#7c2d12]">{s}</div>
         ))}
       </div>
       <div className="mt-2 text-[11px] leading-[1.5] text-[#b45309]">
-        We&rsquo;ll email you the moment a place comes up. Nothing to pay unless you take it.
+        {t("parent.waitlistNote")}
       </div>
-      <Button sm className="mt-2" disabled={busy} onClick={leave}>{busy ? "Leaving…" : "Leave waiting list"}</Button>
+      <Button sm className="mt-2" disabled={busy} onClick={leave}>{busy ? t("parent.leaving") : t("parent.leaveWaitlist")}</Button>
     </div>
   );
 }
@@ -1201,6 +1207,7 @@ interface MealOrder { id: string; listingId?: string; childName: string; date: s
 const splitKidNames = (s?: string) => (s ?? "").split(/,|&/).map((x) => x.trim()).filter(Boolean);
 
 export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } = {}) {
+  const tr = useT();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [mealOrders, setMealOrders] = useState<MealOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -1271,7 +1278,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!bookings)
-    return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading your bookings…</div>;
+    return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{tr("parent.loadingBookings")}</div>;
 
   return (
     <div className="text-[var(--ink)]">
@@ -1279,14 +1286,14 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
         <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
           <div>
             <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-              My bookings
+              {tr("parent.myBookings")}
             </h2>
             <p className="text-[12.5px] text-[var(--ink-3)]">
-              Your family’s places — status updates as the provider confirms.
+              {tr("parent.myBookingsLede")}
             </p>
           </div>
           <Link href="/custdash/browse">
-            <Button variant="primary">+ Book an activity</Button>
+            <Button variant="primary">{tr("parent.bookActivity")}</Button>
           </Link>
         </div>
       )}
@@ -1296,8 +1303,8 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
         if (bookings.length === 0)
           return (
             <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
-              No bookings yet —{" "}
-              <Link href="/custdash/browse" className="font-bold text-[var(--brand-2)]">browse activities</Link> to get started.
+              {tr("parent.noBookingsYet")}{" "}
+              <Link href="/custdash/browse" className="font-bold text-[var(--brand-2)]">{tr("parent.browseActivitiesLink")}</Link> {tr("parent.toGetStarted")}
             </Card>
           );
 
@@ -1352,10 +1359,10 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
         };
         const shown = restF.filter(match);
         const tabs: { key: BookingFilter; label: string }[] = [
-          { key: "all", label: "All" },
-          { key: "upcoming", label: "Upcoming" },
-          { key: "past", label: "Past" },
-          { key: "cancelled", label: "Cancelled & refunded" },
+          { key: "all", label: tr("parent.tabAll") },
+          { key: "upcoming", label: tr("parent.tabUpcoming") },
+          { key: "past", label: tr("parent.tabPast") },
+          { key: "cancelled", label: tr("parent.tabCancelledRefunded") },
         ];
 
         return (
@@ -1371,8 +1378,8 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                   <span className="flex items-center gap-2">
                     <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-white/20 text-[14px]">⏳</span>
                     <span>
-                      <span className="block text-[14px] font-extrabold">My waiting list</span>
-                      <span className="block text-[11px] text-white/85">Dates you&rsquo;re queued for — we&rsquo;ll message you the moment a place frees up.</span>
+                      <span className="block text-[14px] font-extrabold">{tr("parent.myWaitingList")}</span>
+                      <span className="block text-[11px] text-white/85">{tr("parent.waitlistHeaderSub")}</span>
                     </span>
                   </span>
                   <span className="flex items-center gap-2 text-[12px] font-bold">
@@ -1389,12 +1396,12 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
             )}
             {rest.length > 0 && (
               <>
-                {waiting.length > 0 && <SectionHead>My bookings</SectionHead>}
+                {waiting.length > 0 && <SectionHead>{tr("parent.myBookings")}</SectionHead>}
                 {childOptions.length > 1 && (
                   <div className="mb-3 flex flex-wrap gap-1.5">
                     <button type="button" onClick={() => setChildF("")} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
                       style={!childF ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-                      All children
+                      {tr("parent.allChildren")}
                     </button>
                     {childOptions.map((name) => {
                       const t = genderTone(kidsSex[name]);
@@ -1410,23 +1417,23 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 )}
                 <div className="mb-3 flex flex-wrap items-end gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5">
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Activity</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.activityFilterLabel")}</span>
                     <select value={listingF} onChange={(e) => setListingF(e.target.value)} className="max-w-[190px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
-                      <option value="">All activities</option>
+                      <option value="">{tr("parent.allActivities")}</option>
                       {listingOptions.map((l) => <option key={l} value={l}>{l}</option>)}
                     </select>
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">From</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.fromLabel")}</span>
                     <input type="date" value={fromF} onChange={(e) => setFromF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
                   </label>
                   <label className="flex flex-col gap-1">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">To</span>
+                    <span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.toLabel")}</span>
                     <input type="date" value={toF} onChange={(e) => setToF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
                   </label>
                   {filtersOn && (
                     <button onClick={() => { setChildF(""); setListingF(""); setFromF(""); setToF(""); }} className="py-1.5 text-[12px] font-bold text-[var(--ink-3)] hover:underline">
-                      Clear
+                      {tr("parent.clearBtn")}
                     </button>
                   )}
                 </div>
@@ -1450,7 +1457,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                   })}
                 </div>
                 {shown.length === 0 ? (
-                  <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{filtersOn ? "No bookings match these filters." : "Nothing here right now."}</Card>
+                  <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{filtersOn ? tr("parent.noBookingsMatch") : tr("parent.nothingHereRightNow")}</Card>
                 ) : (
                   <div className="flex flex-col gap-3">
                     {shown.map((b) => (

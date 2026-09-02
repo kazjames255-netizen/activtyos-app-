@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import { OperatorPage } from "@/components/OperatorPage";
 import { MenuPlanner } from "./MenuPlanner";
 
@@ -12,13 +13,14 @@ import { MenuPlanner } from "./MenuPlanner";
 // ─────────────────────────────────────────────────────────────────────────
 
 export function MealsApp() {
+  const t = useT();
   const [canManage, setCanManage] = useState(false);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
 
   return (
-    <OperatorPage title="Meals" icon="🍽️" lede="Build a menu, plan its dishes onto your listings’ days, and choose who sees it. Families add meals to their basket at checkout.">
+    <OperatorPage title={t("meals.title")} icon="🍽️" lede={t("meals.lede")}>
       {canManage ? <MenuPlanner /> : (
-        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-6 text-center text-[12.5px] text-[var(--ink-3)]">Menus are managed by your provider’s admins.</div>
+        <div className="rounded-xl border border-[var(--line)] bg-[var(--panel)] p-6 text-center text-[12.5px] text-[var(--ink-3)]">{t("meals.managedByAdmins")}</div>
       )}
     </OperatorPage>
   );

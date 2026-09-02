@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { csvFilename, toCsv, type Col } from "@/features/bookings/helpers";
 import { downloadCsv, printRows } from "@/features/bookings/exportFile";
 import { Button } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Export the families list — the same shape as the bookings wizard, and the
@@ -66,6 +67,7 @@ export function FamiliesExport({
   locations: { id: string; name: string }[];
   onClose: () => void;
 }) {
+  const t = useT();
   const [text, setText] = useState("");
   const [stage, setStage] = useState<string[]>([]);
   const [locs, setLocs] = useState<string[]>([]);
@@ -98,7 +100,7 @@ export function FamiliesExport({
 
   const subtitle = [
     `${shown.length} famil${shown.length === 1 ? "y" : "ies"}`,
-    consent === "yes" ? "consented to marketing only" : null,
+    consent === "yes" ? t("customers.consentedOnly") : null,
     stage.length ? stage.map((k) => stages.find((s) => s.key === k)?.label ?? k).join(", ") : null,
     locs.length ? locs.map((id) => locations.find((l) => l.id === id)?.name ?? id).join(", ") : null,
   ]
@@ -108,7 +110,7 @@ export function FamiliesExport({
   const run = () => {
     if (!shown.length || !cols.length) return;
     if (format === "csv") downloadCsv(csvFilename("families"), toCsv(shown, cols));
-    else printRows(shown, cols, "Families", subtitle);
+    else printRows(shown, cols, t("customers.familiesTitle"), subtitle);
     onClose();
   };
 
@@ -150,9 +152,9 @@ export function FamiliesExport({
       <div className="w-full max-w-[1000px] rounded-2xl border border-[var(--line)] bg-[var(--panel)] text-[var(--ink)] shadow-[0_24px_60px_rgba(0,0,0,.5)]">
         <div className="flex items-center gap-2.5 border-b border-[var(--line)] px-5 py-3.5">
           <div>
-            <h3 className="m-0 font-[var(--ff-display)] text-[17px] font-extrabold">Export families</h3>
+            <h3 className="m-0 font-[var(--ff-display)] text-[17px] font-extrabold">{t("customers.exportFamiliesTitle")}</h3>
             <div className="text-[11.5px] text-[var(--ink-3)]">
-              Narrow them down, choose what goes in, pick a format.
+              {t("customers.exportSubtitle")}
             </div>
           </div>
           <span onClick={onClose} className="ml-auto cursor-pointer text-[22px] text-[var(--ink-3)]">
@@ -162,9 +164,9 @@ export function FamiliesExport({
 
         <div className="grid gap-4 px-5 py-4 md:grid-cols-2">
           <div>
-            <b className="mb-2 block text-[13px]">1 · Which families</b>
+            <b className="mb-2 block text-[13px]">{t("customers.step1Which")}</b>
 
-            <label className={lab}>Name, email, phone or child</label>
+            <label className={lab}>{t("customers.nameEmailPhoneChild")}</label>
             <input
               value={text}
               onChange={(e) => setText(e.target.value)}
@@ -172,7 +174,7 @@ export function FamiliesExport({
               className="mb-3 w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none"
             />
 
-            <label className={lab}>Stage {stage.length ? `(${stage.length})` : "— all"}</label>
+            <label className={lab}>{t("customers.stageWord")} {stage.length ? `(${stage.length})` : t("customers.dashAll")}</label>
             <div className="mb-3 flex flex-wrap gap-1.5">
               {stages.map((s) => (
                 <button key={s.key} type="button" onClick={() => toggle(stage, s.key, setStage)} className={chip(stage.includes(s.key))}>
@@ -183,7 +185,7 @@ export function FamiliesExport({
 
             {locations.length > 0 && (
               <>
-                <label className={lab}>Location {locs.length ? `(${locs.length})` : "— all"}</label>
+                <label className={lab}>{t("customers.locationWord")} {locs.length ? `(${locs.length})` : t("customers.dashAll")}</label>
                 <div className="mb-3 flex flex-wrap gap-1.5">
                   {locations.map((l) => (
                     <button key={l.id} type="button" onClick={() => toggle(locs, l.id, setLocs)} className={chip(locs.includes(l.id))}>
@@ -195,24 +197,24 @@ export function FamiliesExport({
             )}
 
             {/* The one that stops an unlawful mailshot. */}
-            {tri("Marketing consent", consent, setConsent as (v: never) => void, [
-              ["yes", "Agreed to hear from you"],
-              ["no", "Hasn't agreed"],
+            {tri(t("customers.marketingConsent"), consent, setConsent as (v: never) => void, [
+              ["yes", t("customers.agreedToHear")],
+              ["no", t("customers.hasntAgreed")],
             ])}
-            {tri("Sign-up link", invited, setInvited as (v: never) => void, [
-              ["yes", "Invited"],
-              ["no", "Not invited"],
+            {tri(t("customers.signupLinkLabel"), invited, setInvited as (v: never) => void, [
+              ["yes", t("customers.invited")],
+              ["no", t("customers.notInvited")],
             ])}
-            {tri("Has a", contact, setContact as (v: never) => void, [
-              ["email", "Email address"],
-              ["phone", "Phone number"],
+            {tri(t("customers.hasA"), contact, setContact as (v: never) => void, [
+              ["email", t("customers.emailAddress")],
+              ["phone", t("customers.phoneNumber")],
             ])}
           </div>
 
           <div>
             <div className="mb-2 flex items-baseline gap-2">
-              <b className="text-[13px]">2 · What goes in</b>
-              <span className="text-[11px] text-[var(--ink-3)]">{keys.length} columns</span>
+              <b className="text-[13px]">{t("customers.step2What")}</b>
+              <span className="text-[11px] text-[var(--ink-3)]">{t("customers.nColumns", { n: keys.length })}</span>
             </div>
 
             <div className="mb-2.5 flex flex-wrap gap-1.5">
@@ -245,13 +247,13 @@ export function FamiliesExport({
 
         <div className="px-5 pb-1">
           <div className="mb-1.5 flex items-baseline gap-2">
-            <b className="text-[13px]">3 · Check it</b>
-            <span className="text-[11px] text-[var(--ink-3)]">first {Math.min(3, shown.length)} of {shown.length}</span>
+            <b className="text-[13px]">{t("customers.step3Check")}</b>
+            <span className="text-[11px] text-[var(--ink-3)]">{t("customers.firstOf", { a: Math.min(3, shown.length), b: shown.length })}</span>
           </div>
           <div className="overflow-x-auto rounded-xl border border-[var(--line)] bg-[var(--surface)]">
             {shown.length === 0 || cols.length === 0 ? (
               <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">
-                {cols.length === 0 ? "Choose at least one column." : "Nobody matches those filters."}
+                {cols.length === 0 ? t("customers.chooseOneColumn") : t("customers.nobodyMatchesFilters")}
               </div>
             ) : (
               <table className="w-full border-collapse text-[11.5px]">
@@ -284,8 +286,8 @@ export function FamiliesExport({
           <div className="inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5">
             {(
               [
-                ["csv", "CSV / Excel"],
-                ["pdf", "PDF / print"],
+                ["csv", t("customers.csvExcel")],
+                ["pdf", t("customers.pdfPrint")],
               ] as ["csv" | "pdf", string][]
             ).map(([f, l]) => (
               <button
@@ -303,9 +305,9 @@ export function FamiliesExport({
           <div className="text-[11.5px] text-[var(--ink-3)]">{subtitle}</div>
 
           <div className="ml-auto flex gap-2">
-            <Button onClick={onClose}>Cancel</Button>
+            <Button onClick={onClose}>{t("customers.cancel")}</Button>
             <Button variant="primary" disabled={!shown.length || !cols.length} onClick={run}>
-              {format === "csv" ? "⬇ Download CSV" : "🖨 Open print / PDF"}
+              {format === "csv" ? t("customers.downloadCsvBtn") : t("customers.openPrintPdf")}
             </Button>
           </div>
         </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 
@@ -53,6 +54,7 @@ const fmtWhen = (iso: string) => {
 };
 
 export function WalletApp() {
+  const tr = useT();
   const [balances, setBalances] = useState<WalletBalance[] | null>(null);
   const [membership, setMembership] = useState<MembershipPayload | null>(null);
 
@@ -72,10 +74,10 @@ export function WalletApp() {
   // The active membership for a given provider (Phase 1 is single-provider).
   const memFor = (tenantId: string) =>
     membership?.current && membership.tenantId === tenantId ? membership : null;
-  const tierName = (m: MembershipPayload) => m.tiers?.find((t) => t.id === m.current?.tierId)?.name ?? "Member";
+  const tierName = (m: MembershipPayload) => m.tiers?.find((t) => t.id === m.current?.tierId)?.name ?? tr("parent.memberFallback");
 
   if (!balances) {
-    return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading your wallet…</div>;
+    return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{tr("parent.loadingWallet")}</div>;
   }
 
   const funded = balances.filter((b) => b.balance > 0 || b.transactions.length > 0);
@@ -84,16 +86,16 @@ export function WalletApp() {
   return (
     <div className="text-[var(--ink)]">
       <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-        Wallet
+        {tr("parent.walletTitle")}
       </h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">
-        Credit you can spend on future bookings — it stays with your provider and applies at checkout.
+        {tr("parent.walletIntro")}
       </p>
 
       {funded.length === 0 ? (
         <Card className="p-6 text-center">
           <div className="text-[30px]">👛</div>
-          <div className="mt-1 text-[14px] font-extrabold">No credit yet</div>
+          <div className="mt-1 text-[14px] font-extrabold">{tr("parent.noCreditYet")}</div>
           <p className="mx-auto mt-1 max-w-[420px] text-[12.5px] leading-[1.6] text-[var(--ink-3)]">
             When a booking is cancelled and you choose <b>wallet credit</b> — or a provider gives you a credit note —
             it lands here, ready to spend on your next booking with them.
@@ -103,7 +105,7 @@ export function WalletApp() {
         <>
           {/* Total across providers, up top. */}
           <div className="mb-4 rounded-2xl px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)" }}>
-            <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#cdddf7]">Credit to spend</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#cdddf7]">{tr("parent.creditToSpend")}</div>
             <div className="text-[30px] font-extrabold leading-tight">{money(total)}</div>
             <div className="text-[11.5px] text-[#cdddf7]">
               across {funded.length} provider{funded.length === 1 ? "" : "s"} · applied automatically at checkout
@@ -128,14 +130,14 @@ export function WalletApp() {
                   </div>
                   <div className="text-right">
                     <div className="text-[16px] font-extrabold text-[#1d3a8f]">{money(b.balance)}</div>
-                    <div className="text-[10.5px] text-[var(--ink-3)]">to spend</div>
+                    <div className="text-[10.5px] text-[var(--ink-3)]">{tr("parent.toSpend")}</div>
                   </div>
                 </div>
                 {/* The membership plan that tops this wallet up, if any — its
                     own clearly-labelled block, not part of the history. */}
                 {mem?.current && (
                   <div className="border-b border-[var(--line)] bg-[#fff8e6] px-4 py-2.5">
-                    <div className="text-[9.5px] font-bold uppercase tracking-[0.07em] text-[#b08600]">Your plan</div>
+                    <div className="text-[9.5px] font-bold uppercase tracking-[0.07em] text-[#b08600]">{tr("parent.yourPlan")}</div>
                     <div className="mt-0.5 flex flex-wrap items-center justify-between gap-x-3 gap-y-0.5">
                       <span className="text-[12.5px] font-extrabold text-[#8a5b00]">⭐ {tierName(mem)} membership <span className="font-semibold text-[var(--ink-3)]">· {money(mem.current.priceMonthly)}/mo</span></span>
                       <span className="text-[11.5px] font-semibold text-[var(--ink-2)]">
@@ -146,9 +148,9 @@ export function WalletApp() {
                   </div>
                 )}
                 <div className="px-4 pb-2 pt-2.5">
-                  <div className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">Activity</div>
+                  <div className="mb-0.5 text-[10px] font-bold uppercase tracking-[0.07em] text-[var(--ink-3)]">{tr("parent.activityLabel")}</div>
                   {b.transactions.length === 0 ? (
-                    <div className="py-2 text-[12px] text-[var(--ink-3)]">No activity yet.</div>
+                    <div className="py-2 text-[12px] text-[var(--ink-3)]">{tr("parent.noActivityYet")}</div>
                   ) : (
                     b.transactions.map((t) => (
                       <div key={t.id} className="flex items-center justify-between gap-3 border-b border-dashed border-[var(--line)] py-2 text-[12.5px] last:border-b-0">

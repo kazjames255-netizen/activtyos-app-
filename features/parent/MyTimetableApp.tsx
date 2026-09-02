@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import type { Booking } from "@/features/bookings/types";
 
 // Boy → blue, Girl → pink, unknown → grey (matches the bookings pills).
@@ -28,6 +29,7 @@ interface Detail { location?: string | null; staff: { name: string }[]; periods:
  * filterable by child. Read-only companion to the My bookings cards.
  */
 export function MyTimetableApp() {
+  const t = useT();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [details, setDetails] = useState<Record<string, Detail>>({});
@@ -95,7 +97,7 @@ export function MyTimetableApp() {
     .filter((d) => d.sessions.length > 0);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
-  if (!bookings) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading your timetable…</div>;
+  if (!bookings) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("parent.loadingTimetable")}</div>;
 
   return (
     <div>
@@ -103,7 +105,7 @@ export function MyTimetableApp() {
         <div className="mb-3.5 flex flex-wrap gap-1.5">
           <button type="button" onClick={() => setChildF("")} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
             style={!childF ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-            All children
+            {t("parent.allChildren")}
           </button>
           {childNames.map((name) => {
             const t = genderTone(kidsSex[name]);
@@ -120,13 +122,13 @@ export function MyTimetableApp() {
 
       {shownDays.length === 0 ? (
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-5 py-10 text-center">
-          <div className="text-[15px] font-extrabold text-[var(--ink)]">Nothing booked yet</div>
-          <div className="mt-1 text-[12.5px] text-[var(--ink-3)]">Booked sessions show here as a day-by-day timetable.</div>
+          <div className="text-[15px] font-extrabold text-[var(--ink)]">{t("parent.nothingBookedYet")}</div>
+          <div className="mt-1 text-[12.5px] text-[var(--ink-3)]">{t("parent.timetableEmptyHint")}</div>
         </div>
       ) : (
         <div className="flex flex-col gap-4">
           {shownDays.map(({ date, sessions }) => {
-            const rel = date === todayIso ? "Today" : null;
+            const rel = date === todayIso ? t("parent.today") : null;
             return (
               <div key={date}>
                 <div className="mb-2 flex items-center gap-2">
@@ -151,7 +153,7 @@ export function MyTimetableApp() {
                           </div>
                           {times && <div className="text-[12px] font-bold" style={{ color: col }}>🕒 {times}</div>}
                           {venue && <div className="text-[12px] text-[var(--ink-2)]">📍 {venue}</div>}
-                          <div className="text-[11.5px] text-[var(--ink-3)]">👤 {staff.length ? staff.join(", ") : "Team confirmed nearer the day"}</div>
+                          <div className="text-[11.5px] text-[var(--ink-3)]">👤 {staff.length ? staff.join(", ") : t("parent.teamConfirmedNearer")}</div>
                         </div>
                       </div>
                     );

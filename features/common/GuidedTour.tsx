@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { useT } from "@/lib/i18n/provider";
 import { NARRATOR_CSS, narratorScene, settingsScene, type SettingsLink } from "./tourNarrator";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -62,6 +63,7 @@ const CSS = `
 const scene = narratorScene;
 
 export function GuidedTour({ config }: { config: TourConfig }) {
+  const t = useT();
   const rootRef = useRef<HTMLDivElement | null>(null);
   const cfgRef = useRef(config);
   cfgRef.current = config;
@@ -126,12 +128,13 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     }
     const frame = (i: number) => {
       const cfg = cfgRef.current, s = cfg.steps[i], pct = Math.round((i + 1) / cfg.steps.length * 100);
-      return `<div class="wcard"><div class="whead"><div><div class="wstage">${s.stage}</div><div class="wtitle">${s.label}</div></div><div class="wstep">Step ${i + 1} of ${cfg.steps.length}</div></div>
+      const nextLabel = i === cfg.steps.length - 1 ? `${t("common.done")} ✓` : `${t("common.next")} →`;
+      return `<div class="wcard"><div class="whead"><div><div class="wstage">${s.stage}</div><div class="wtitle">${s.label}</div></div><div class="wstep">${t("common.stepXofY", { current: i + 1, total: cfg.steps.length })}</div></div>
         <div class="wbar"><span style="width:${pct}%"></span></div>
         <div class="wbody">${s.bodyHtml}</div>
-        <div class="wfoot"><span class="btn ghost">← Back</span><span class="btn amber" id="gtnext">${i === cfg.steps.length - 1 ? "Done ✓" : "Next →"}</span></div></div>`;
+        <div class="wfoot"><span class="btn ghost">← ${t("common.back")}</span><span class="btn amber" id="gtnext">${nextLabel}</span></div></div>`;
     };
-    const doneView = scene("✓ Complete", "All done", "You've seen the essentials of this page.");
+    const doneView = scene(t("common.completeBadge"), t("common.allDone"), t("common.seenEssentials"));
 
     async function run(startIdx = 0) {
       const cfg = cfgRef.current;
@@ -142,7 +145,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
       cursor.style.transform = "translate(24px,20px) scale(1)";
       if (startIdx <= 0) {
         if (splash) { splash.style.display = "flex"; splash.classList.remove("hide"); void splash.offsetWidth; await sleep(2200); if (!alive()) return; splash.classList.add("hide"); await sleep(500); splash.style.display = "none"; }
-        currentIdx = -1; content.innerHTML = scene("Guided walkthrough", cfg.title, "Sit back — I'll show you round this page.");
+        currentIdx = -1; content.innerHTML = scene(t("common.guidedWalkthrough"), cfg.title, t("common.sitBack"));
         await line(cfg.introLine); if (!alive()) return;
       } else if (splash) { splash.style.display = "none"; }
       for (let i = Math.max(0, startIdx); i < cfg.steps.length; i++) {
@@ -155,14 +158,14 @@ export function GuidedTour({ config }: { config: TourConfig }) {
       if (cfg.settings?.length) {
         currentIdx = cfg.steps.length; content.innerHTML = settingsScene(portal, cfg.settings);
         const names = cfg.settings.map((x) => x.label).join(", ");
-        await line(`One last thing — a few of these live in your Settings: ${names}. Tap any card to jump straight there.`);
+        await line(t("common.settingsReminder", { names }));
         if (!alive()) return;
       }
       currentIdx = cfg.steps.length; content.innerHTML = doneView;
       if (!alive()) return; await line(cfg.doneLine);
     }
 
-    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? "🔊 Sound on" : "▶ Play with sound"; capEl.style.display = on ? "none" : ""; };
+    const setSound = (on: boolean) => { soundOn = on; soundBtn.classList.toggle("on", on); soundBtn.textContent = on ? t("common.soundOn") : t("common.playWithSound"); capEl.style.display = on ? "none" : ""; };
     // Voices load asynchronously — poll until the fixed narrator resolves.
     let vp = 0; const pollIv = hasSpeech ? window.setInterval(() => { if (window.speechSynthesis.getVoices().length) { voice = pickVoice(); window.clearInterval(pollIv); } else if (++vp > 24) window.clearInterval(pollIv); }, 250) : 0;
     if (hasSpeech) { voice = pickVoice(); window.speechSynthesis.onvoiceschanged = () => { voice = pickVoice(); }; }
@@ -170,7 +173,7 @@ export function GuidedTour({ config }: { config: TourConfig }) {
     if (backBtn) backBtn.onclick = () => { run(currentIdx - 1); };
     if (fwdBtn) fwdBtn.onclick = () => { run(currentIdx + 1); };
     soundBtn.onclick = () => { const on = !soundOn; setSound(on); if (hasSpeech) window.speechSynthesis.cancel(); if (on) speak(strip(capEl.innerHTML)); };
-    if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶" : "⏸"; pauseBtn.title = paused ? "Resume" : "Pause"; if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); root.querySelector(".tnr-bot")?.classList.toggle("speaking", !paused && soundOn && window.speechSynthesis.speaking); } if (!paused) waiters.splice(0).forEach((f) => f()); };
+    if (pauseBtn) pauseBtn.onclick = () => { paused = !paused; pauseBtn.textContent = paused ? "▶" : "⏸"; pauseBtn.title = paused ? t("common.resume") : t("common.pause"); if (hasSpeech) { if (paused) window.speechSynthesis.pause(); else window.speechSynthesis.resume(); root.querySelector(".tnr-bot")?.classList.toggle("speaking", !paused && soundOn && window.speechSynthesis.speaking); } if (!paused) waiters.splice(0).forEach((f) => f()); };
     run();
 
     return () => { dead = true; token++; window.clearInterval(pollIv); if (hasSpeech) { window.speechSynthesis.cancel(); window.speechSynthesis.onvoiceschanged = null; } };
@@ -182,17 +185,17 @@ export function GuidedTour({ config }: { config: TourConfig }) {
       <div className="tctl gt-controls">
         <span className="tctl-count gt-count" />
         <div className="tctl-grp">
-          <button type="button" className="tctl-btn ico gt-back" title="Back a step" aria-label="Back a step">⏮</button>
-          <button type="button" className="tctl-btn primary gt-pause" title="Pause or resume" aria-label="Pause or resume">⏸</button>
-          <button type="button" className="tctl-btn ico gt-fwd" title="Skip forward" aria-label="Skip forward">⏭</button>
+          <button type="button" className="tctl-btn ico gt-back" title={t("common.backAStep")} aria-label={t("common.backAStep")}>⏮</button>
+          <button type="button" className="tctl-btn primary gt-pause" title={t("common.pauseOrResume")} aria-label={t("common.pauseOrResume")}>⏸</button>
+          <button type="button" className="tctl-btn ico gt-fwd" title={t("common.skipForward")} aria-label={t("common.skipForward")}>⏭</button>
         </div>
-        <button type="button" className="tctl-btn gt-replay" title="Start again">↺ Replay</button>
-        <button type="button" className="tctl-btn gt-sound">▶ Play with sound</button>
+        <button type="button" className="tctl-btn gt-replay" title={t("common.startAgain")}>↺ {t("common.replay")}</button>
+        <button type="button" className="tctl-btn gt-sound">▶ {t("common.playWithSoundLabel")}</button>
       </div>
       <div className="gt-stage">
         <div className="gt-cursor down"><span className="ring" /><svg width="22" height="22" viewBox="0 0 24 24"><path d="M4 2 L4 19 L8.5 14.5 L11.5 21.5 L14 20.5 L11 13.8 L18 13.8 Z" fill="#12203c" stroke="#fff" strokeWidth="1.3" strokeLinejoin="round" /></svg></div>
         <div className="gt-content" />
-        <div className="gt-splash"><div className="splmark">◈</div><div className="splogo">Activity<span className="splos">OS</span></div><div className="sptitle">{config.title}</div><div className="spsub">a quick guided walkthrough</div></div>
+        <div className="gt-splash"><div className="splmark">◈</div><div className="splogo">Activity<span className="splos">OS</span></div><div className="sptitle">{config.title}</div><div className="spsub">{t("common.quickGuidedWalkthrough")}</div></div>
       </div>
       <div className="gt-cap" />
     </div>

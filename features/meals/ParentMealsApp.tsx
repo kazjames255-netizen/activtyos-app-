@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { groupWeeks, fmtDate } from "@/features/listings/format";
@@ -55,12 +56,16 @@ const dietClash = (it: MenuItem, dietary: string | undefined): string | null => 
   return null;
 };
 
-const Allergens = ({ list }: { list?: string[] }) => (list?.length ? <span className="rounded-md bg-[#fdf3e3] px-1.5 py-[1px] text-[10px] font-semibold capitalize text-[#96631a]">contains {list.join(", ")}</span> : null);
+const Allergens = ({ list }: { list?: string[] }) => {
+  const t = useT();
+  return list?.length ? <span className="rounded-md bg-[#fdf3e3] px-1.5 py-[1px] text-[10px] font-semibold capitalize text-[#96631a]">{t("meals.contains")} {list.join(", ")}</span> : null;
+};
 const DietBadge = ({ diet }: { diet?: string }) => { const d = dietMeta(diet); return d ? <span className="rounded-full px-2 py-[1.5px] text-[10px] font-extrabold" style={{ background: d.bg, color: d.fg }}>{d.icon} {d.label}</span> : null; };
 // A clear coloured letter (V / M / VG) — explained by the key at the top.
 const DietLetter = ({ diet, on }: { diet?: string; on?: boolean }) => { const d = dietMeta(diet); return d ? <span className="grid h-[15px] min-w-[15px] flex-none place-items-center rounded px-[3px] text-[9px] font-extrabold" title={d.label} style={{ background: on ? "rgba(255,255,255,.9)" : d.fg, color: on ? d.fg : "#fff" }}>{d.letter}</span> : null; };
 
 export function ParentMealsApp() {
+  const t = useT();
   const [days, setDays] = useState<MealDay[] | null>(null);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
@@ -81,11 +86,11 @@ export function ParentMealsApp() {
   const [todayIso] = useState(() => new Date().toISOString().slice(0, 10));
 
   const load = useCallback(() => {
-    apiGet<MealDay[]>("/api/my/meal-days").then(setDays).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<MealDay[]>("/api/my/meal-days").then(setDays).catch((e) => setError(e instanceof Error ? e.message : t("meals.failedLoad")));
     apiGet<Booking[]>("/api/my/bookings").then(setBookings).catch(() => {});
     apiGet<Order[]>("/api/meal-orders").then((o) => { setOrders(o); setOrdersWarn(false); }).catch(() => setOrdersWarn(true));
     apiGet<Child[]>("/api/my/children").then(setChildren).catch(() => {});
-  }, []);
+  }, [t]);
   useEffect(() => { load(); }, [load]);
   useRealtime(["listings", "bookings", "mealOrders", "mealMenus"], load);
 
@@ -177,12 +182,12 @@ export function ParentMealsApp() {
       const already = basketKeys.has(`${e.date}|${e.listingId}|${it.id}|${child}`);
       if (!already) {
         const left = dishLeft(e, it);
-        if (left !== undefined && left <= 0) { setToast(`Sorry — ${it.name} is fully booked that day.`); return; }
+        if (left !== undefined && left <= 0) { setToast(t("meals.fullyBooked", { name: it.name })); return; }
         const c = childInfo.get(child);
         if ((allergenClash(it.allergens, c?.allergies).length || dietClash(it, c?.dietary)) && typeof window !== "undefined" && !window.confirm(`Please check — ${it.name} may not suit ${child}:\n\n${[allergenClash(it.allergens, c?.allergies).length ? `contains ${allergenClash(it.allergens, c?.allergies).join(", ")}` : "", dietClash(it, c?.dietary) || ""].filter(Boolean).join("; ")}\n\nAllergen info is a guide; confirm with your provider. Choose anyway?`)) return;
       }
       setBasket((prev) => [...prev.filter((l) => !(l.child === child && l.listingId === e.listingId && l.date === e.date)), { tenantId: e.tenantId, listingId: e.listingId, listingName: e.listingName, date: e.date, dishId: it.id, name: it.name, price: it.price, child }]);
-      setToast(`${it.name} added for ${child} · ${fmtDay(e.date)}`);
+      setToast(t("meals.addedForChild", { name: it.name, child, day: fmtDay(e.date) }));
     } else {
       setBasket((prev) => prev.filter((l) => !(l.child === child && l.listingId === e.listingId && l.date === e.date)));
       setToast(null);
@@ -201,30 +206,30 @@ export function ParentMealsApp() {
     const doneKeys: string[] = []; const createdIds: string[] = []; let failMsg: string | null = null;
     for (const g of groups.values()) {
       try { const o = await apiPost<{ id: string }>("/api/meal-orders", { tenantId: g.tenantId, listingId: g.listingId, date: g.date, childName: g.child, items: [...g.items].map(([menuItemId, qty]) => ({ menuItemId, qty })) }); doneKeys.push(...g.keys); if (o?.id) createdIds.push(o.id); }
-      catch (err) { failMsg = err instanceof Error ? err.message : "Some meals couldn't be booked."; break; }
+      catch (err) { failMsg = err instanceof Error ? err.message : t("meals.someMealsFailed"); break; }
     }
     if (doneKeys.length) { const s = new Set(doneKeys); setBasket((prev) => prev.filter((l) => !s.has(lineKey(l)))); }
-    if (failMsg) setPayErr(`${failMsg} ${doneKeys.length ? "The rest are still in your basket." : ""}`.trim());
+    if (failMsg) setPayErr(`${failMsg} ${doneKeys.length ? t("meals.restInBasket") : ""}`.trim());
     setBusy(false);
     // Take card payment for the meals just created (real Stripe, same flow as
     // a booking). If they close without paying, the orders stay unpaid.
     if (createdIds.length) { setBasketOpen(false); setPayIds(createdIds); }
-  }, [basket]);
+  }, [basket, t]);
 
   const cancelMeal = useCallback(async (orderId: string) => {
-    if (typeof window !== "undefined" && !window.confirm("Remove this meal?")) return;
-    try { const r = await apiPost<{ requested?: boolean }>(`/api/meal-orders/${encodeURIComponent(orderId)}/cancel`, {}); setToast(r?.requested ? "Removal requested — awaiting your provider’s approval." : "Meal removed."); load(); }
-    catch (err) { setToast(err instanceof Error ? err.message : "Couldn't remove that meal."); }
-  }, [load]);
+    if (typeof window !== "undefined" && !window.confirm(t("meals.removeThisMeal"))) return;
+    try { const r = await apiPost<{ requested?: boolean }>(`/api/meal-orders/${encodeURIComponent(orderId)}/cancel`, {}); setToast(r?.requested ? t("meals.removalRequestedToast") : t("meals.mealRemoved")); load(); }
+    catch (err) { setToast(err instanceof Error ? err.message : t("meals.couldntRemove")); }
+  }, [load, t]);
   const changeMeal = useCallback(async (orderId: string, menuItemId: string) => {
     if (!menuItemId) return;
-    try { const r = await apiPost<{ changeRequest?: unknown }>(`/api/meal-orders/${encodeURIComponent(orderId)}/change`, { menuItemId }); setToast(r?.changeRequest ? "Change requested — awaiting your provider’s approval." : "Meal changed."); load(); }
-    catch (err) { setToast(err instanceof Error ? err.message : "Couldn't change that meal."); }
-  }, [load]);
+    try { const r = await apiPost<{ changeRequest?: unknown }>(`/api/meal-orders/${encodeURIComponent(orderId)}/change`, { menuItemId }); setToast(r?.changeRequest ? t("meals.changeRequestedToast") : t("meals.mealChanged")); load(); }
+    catch (err) { setToast(err instanceof Error ? err.message : t("meals.couldntChange")); }
+  }, [load, t]);
   const withdrawReq = useCallback(async (orderId: string) => {
-    try { await apiPost(`/api/meal-orders/${encodeURIComponent(orderId)}/request`, { action: "withdraw" }); setToast("Request withdrawn."); load(); }
-    catch (err) { setToast(err instanceof Error ? err.message : "Couldn't withdraw."); }
-  }, [load]);
+    try { await apiPost(`/api/meal-orders/${encodeURIComponent(orderId)}/request`, { action: "withdraw" }); setToast(t("meals.requestWithdrawn")); load(); }
+    catch (err) { setToast(err instanceof Error ? err.message : t("meals.couldntWithdraw")); }
+  }, [load, t]);
 
   const week = menuWeeks.length ? menuWeeks[Math.min(weekIdx, menuWeeks.length - 1)] : null;
   const weekPal = WEEK_PAL[(week?.n ?? 1) - 1 >= 0 ? ((week?.n ?? 1) - 1) % WEEK_PAL.length : 0];
@@ -235,22 +240,22 @@ export function ParentMealsApp() {
     <div className="text-[var(--ink)]">
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🍽️</span>Meals
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🍽️</span>{t("meals.mealsWord")}
         </div>
-        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Pick a meal for each child on the weekly planner — it drops straight into your basket. One meal per day; we flag anything that clashes with allergies or diet.</p>
+        <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{t("meals.parentHeroSub")}</p>
       </div>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
-      {ordersWarn && <div className="mb-3 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-2 text-[12px] font-semibold text-[#96631a]">Couldn’t load your existing meal orders — refresh to make sure you don’t double-book.</div>}
+      {ordersWarn && <div className="mb-3 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-2 text-[12px] font-semibold text-[#96631a]">{t("meals.ordersWarnMsg")}</div>}
       {toast && (
         <div className="mb-3 flex items-center gap-2 rounded-xl border border-[#bde5cd] bg-[#effaf3] px-3.5 py-2.5 text-[12.5px] font-semibold text-[#0e7a45]">
           <span className="flex-1">{toast}</span>
-          <button type="button" aria-label="Dismiss" onClick={() => setToast(null)} className="flex-none text-[#0e7a45]/70 hover:text-[#0e7a45]">✕</button>
+          <button type="button" aria-label={t("meals.dismiss")} onClick={() => setToast(null)} className="flex-none text-[#0e7a45]/70 hover:text-[#0e7a45]">✕</button>
         </div>
       )}
 
       {kidsWithMeals.length > 0 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {([["menu", "🍴 Menu"], ["kids", "🎒 Children’s meals"]] as [("menu" | "kids"), string][]).map(([key, label]) => {
+          {([["menu", `🍴 ${t("meals.menuNav")}`], ["kids", `🎒 ${t("meals.kidsNav")}`]] as [("menu" | "kids"), string][]).map(([key, label]) => {
             const on = view === key;
             return (
               <button key={key} type="button" onClick={() => { setView(key); setToast(null); }} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold transition"
@@ -262,7 +267,7 @@ export function ParentMealsApp() {
         </div>
       )}
 
-      {!days ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">Loading…</div>
+      {!days ? <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{t("meals.loading")}</div>
       : view === "kids" && kidsWithMeals.length > 0 ? (
         <>
           <div className="mb-3 flex flex-wrap gap-1.5">
@@ -277,10 +282,10 @@ export function ParentMealsApp() {
             })}
           </div>
           {(() => { const cov = coverage.get(activeKid); return cov && cov.gaps.length > 0 && (
-            <div className="mb-2 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-1.5 text-[11.5px] font-semibold text-[#96631a]">No meal yet on {cov.gaps.slice(0, 6).map(fmtDay).join(", ")}{cov.gaps.length > 6 ? "…" : ""} — add on the Menu planner.</div>
+            <div className="mb-2 rounded-lg border border-[#f2dcbb] bg-[#fff6e9] px-3 py-1.5 text-[11.5px] font-semibold text-[#96631a]">{t("meals.noMealYetOn", { dates: `${cov.gaps.slice(0, 6).map(fmtDay).join(", ")}${cov.gaps.length > 6 ? "…" : ""}` })}</div>
           ); })()}
           {chosenByDate.size === 0
-            ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{activeKid} hasn’t got any meals yet — add them on the Menu planner.</Card>
+            ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{t("meals.kidNoMeals", { name: activeKid })}</Card>
             : (
             <>
               <div className="mb-2 text-[12px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{activeKid}</b> — {chosenCount} meal{chosenCount === 1 ? "" : "s"}</div>
@@ -291,7 +296,7 @@ export function ParentMealsApp() {
                     <div key={w.mon} className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white">
                       <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${c1}, ${c2})` }}>
                         <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/25 text-[13px]">📅</span>
-                        <span className="text-[14px] font-extrabold">Week {w.n}</span><span className="text-[12px] font-semibold text-white/85">· from {fmtDate(w.mon)}</span>
+                        <span className="text-[14px] font-extrabold">{t("meals.weekN", { n: w.n })}</span><span className="text-[12px] font-semibold text-white/85">· {t("meals.fromDate", { date: fmtDate(w.mon) })}</span>
                       </div>
                       <div className="grid gap-2.5 p-3 sm:grid-cols-2 lg:grid-cols-3">
                         {w.days.map((iso) => (
@@ -305,7 +310,7 @@ export function ParentMealsApp() {
                                     <DietBadge diet={it.diet} />
                                     {it.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(it.price)}</span>}
                                     <Allergens list={it.allergens} />
-                                    {it.canCancel && it.orderId && <button type="button" onClick={() => cancelMeal(it.orderId!)} className="ml-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">Remove</button>}
+                                    {it.canCancel && it.orderId && <button type="button" onClick={() => cancelMeal(it.orderId!)} className="ml-auto text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">{t("meals.remove")}</button>}
                                   </div>
                                 </div>
                               ))}
@@ -321,19 +326,19 @@ export function ParentMealsApp() {
           )}
         </>
       ) : !week ? (
-        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No menus to show yet — the planner appears here for listings your provider offers meals on.</Card>
+        <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{t("meals.noMenusToShow")}</Card>
       ) : (
         <>
           {/* Basket, above the planner */}
           <div id="meal-basket" className="mb-3 overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white shadow-[0_8px_24px_-16px_rgba(29,58,143,.5)]">
             <div className="flex flex-wrap items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#3f78d8)" }}>
               <span className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[14px]">🧺</span>
-              <span className="text-[14px] font-extrabold">Meal basket</span>
+              <span className="text-[14px] font-extrabold">{t("meals.mealBasket")}</span>
               <span className="rounded-full bg-white/20 px-2 py-0.5 text-[11.5px] font-extrabold">{basket.length} meal{basket.length === 1 ? "" : "s"} · {money(basketTotal)}</span>
-              {basket.length > 0 && <button type="button" onClick={() => setBasketOpen((o) => !o)} className="flex items-center gap-1 rounded-full border border-white/40 bg-white/15 px-2.5 py-1 text-[11.5px] font-extrabold text-white transition hover:bg-white/25">{basketOpen ? "Hide meals ▴" : "See my meals ▾"}</button>}
+              {basket.length > 0 && <button type="button" onClick={() => setBasketOpen((o) => !o)} className="flex items-center gap-1 rounded-full border border-white/40 bg-white/15 px-2.5 py-1 text-[11.5px] font-extrabold text-white transition hover:bg-white/25">{basketOpen ? `${t("meals.hideMeals")} ▴` : `${t("meals.seeMeals")} ▾`}</button>}
               <div className="ml-auto flex items-center gap-2">
-                {basket.length > 0 && <button type="button" onClick={() => { setBasket([]); setPayErr(null); }} className="text-[11.5px] font-semibold text-white/70 hover:text-white">Clear</button>}
-                <button type="button" disabled={busy || !basket.length} onClick={payAll} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-[#0e7a45] transition disabled:opacity-50" style={{ background: "#fff" }}>{busy ? "Booking…" : `💳 Pay ${money(basketTotal)}`}</button>
+                {basket.length > 0 && <button type="button" onClick={() => { setBasket([]); setPayErr(null); }} className="text-[11.5px] font-semibold text-white/70 hover:text-white">{t("meals.clearBtn")}</button>}
+                <button type="button" disabled={busy || !basket.length} onClick={payAll} className="rounded-full px-3.5 py-1.5 text-[12px] font-extrabold text-[#0e7a45] transition disabled:opacity-50" style={{ background: "#fff" }}>{busy ? t("meals.booking") : `💳 ${t("meals.pay")} ${money(basketTotal)}`}</button>
               </div>
             </div>
             {payErr && <div className="border-b border-[var(--line)] bg-[var(--red-soft,#fdebec)] px-3.5 py-2 text-[11.5px] font-semibold text-[var(--red,#e21d27)]">{payErr}</div>}
@@ -346,7 +351,7 @@ export function ParentMealsApp() {
                       <div key={lineKey(l)} className="flex items-baseline gap-1.5 text-[11.5px]">
                         <span className="flex-1 truncate">{fmtDay(l.date)} · {l.name}</span>
                         <span className="tabular-nums text-[var(--ink-3)]">{money(l.price)}</span>
-                        <button type="button" aria-label={`Remove ${l.name}`} onClick={() => removeLine(lineKey(l))} className="text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
+                        <button type="button" aria-label={t("meals.removeName", { name: l.name })} onClick={() => removeLine(lineKey(l))} className="text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
                       </div>
                     ))}
                   </div>
@@ -358,8 +363,8 @@ export function ParentMealsApp() {
           {/* Diet filter */}
           {dietsPresent.length > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-1.5">
-              <span className="text-[11px] font-bold text-[var(--ink-3)]">Show:</span>
-              {([["", "All meals"], ...dietsPresent.map((d) => [d.key, `${d.icon} ${d.label} only`] as [Diet, string])] as [Diet | "", string][]).map(([k, label]) => {
+              <span className="text-[11px] font-bold text-[var(--ink-3)]">{t("meals.showLabel")}</span>
+              {([["", t("meals.allMeals")], ...dietsPresent.map((d) => [d.key, t("meals.dietOnly", { diet: `${d.icon} ${d.label}` })] as [Diet, string])] as [Diet | "", string][]).map(([k, label]) => {
                 const on = dietFilter === k;
                 return <button key={k || "all"} type="button" onClick={() => setDietFilter(k)} className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold transition" style={on ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }}>{label}</button>;
               })}
@@ -369,7 +374,7 @@ export function ParentMealsApp() {
           {/* Diet key — explains the coloured letters on the meal chips */}
           {dietsPresent.length > 0 && (
             <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10.5px] font-semibold text-[var(--ink-3)]">
-              <span className="uppercase tracking-[0.04em]">Key</span>
+              <span className="uppercase tracking-[0.04em]">{t("meals.keyLabel")}</span>
               {dietsPresent.map((d) => <span key={d.key} className="flex items-center gap-1"><DietLetter diet={d.key} /> {d.label}</span>)}
             </div>
           )}
@@ -377,27 +382,27 @@ export function ParentMealsApp() {
           {/* Weekly planner (slide show) */}
           <div className="overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-white">
             <div className="flex items-center gap-2 px-3.5 py-2.5 text-white" style={{ background: `linear-gradient(120deg, ${weekPal[0]}, ${weekPal[1]})` }}>
-              <button type="button" aria-label="Previous week" disabled={weekIdx === 0} onClick={() => setWeekIdx((i) => Math.max(0, i - 1))} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[13px] transition hover:bg-white/30 disabled:opacity-30">◀</button>
-              <div className="flex-1 text-center"><span className="text-[14px] font-extrabold">Week {week.n}</span><span className="ml-1.5 text-[12px] font-semibold text-white/85">from {fmtDate(week.mon)}</span></div>
-              <button type="button" aria-label="Next week" disabled={weekIdx >= menuWeeks.length - 1} onClick={() => setWeekIdx((i) => Math.min(menuWeeks.length - 1, i + 1))} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[13px] transition hover:bg-white/30 disabled:opacity-30">▶</button>
+              <button type="button" aria-label={t("meals.prevWeek")} disabled={weekIdx === 0} onClick={() => setWeekIdx((i) => Math.max(0, i - 1))} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[13px] transition hover:bg-white/30 disabled:opacity-30">◀</button>
+              <div className="flex-1 text-center"><span className="text-[14px] font-extrabold">{t("meals.weekN", { n: week.n })}</span><span className="ml-1.5 text-[12px] font-semibold text-white/85">{t("meals.fromDate", { date: fmtDate(week.mon) })}</span></div>
+              <button type="button" aria-label={t("meals.nextWeek")} disabled={weekIdx >= menuWeeks.length - 1} onClick={() => setWeekIdx((i) => Math.min(menuWeeks.length - 1, i + 1))} className="grid h-7 w-7 flex-none place-items-center rounded-full bg-white/20 text-[13px] transition hover:bg-white/30 disabled:opacity-30">▶</button>
             </div>
             {menuWeeks.length > 1 && (
               <div className="flex justify-center gap-1 border-b border-[var(--line)] py-1.5">
-                {menuWeeks.map((w, i) => <button key={w.mon} type="button" aria-label={`Week ${w.n}`} onClick={() => setWeekIdx(i)} className="h-1.5 rounded-full transition" style={{ width: i === weekIdx ? 18 : 6, background: i === weekIdx ? weekPal[0] : "var(--line)" }} />)}
+                {menuWeeks.map((w, i) => <button key={w.mon} type="button" aria-label={t("meals.weekN", { n: w.n })} onClick={() => setWeekIdx(i)} className="h-1.5 rounded-full transition" style={{ width: i === weekIdx ? 18 : 6, background: i === weekIdx ? weekPal[0] : "var(--line)" }} />)}
               </div>
             )}
             <div className="overflow-x-auto">
               <div style={{ minWidth: 140 + week.days.length * 160 }}>
                 {/* Header row — blue gradient */}
                 <div className="grid text-white" style={{ gridTemplateColumns: `120px repeat(${week.days.length}, minmax(148px,1fr))`, background: `linear-gradient(120deg, ${weekPal[0]}, ${weekPal[1]})` }}>
-                  <div className="sticky left-0 z-10 px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-white/90" style={{ background: weekPal[0] }}>Child</div>
+                  <div className="sticky left-0 z-10 px-3 py-2.5 text-[11px] font-extrabold uppercase tracking-[0.05em] text-white/90" style={{ background: weekPal[0] }}>{t("meals.childCol")}</div>
                   {week.days.map((iso) => {
                     const anyClose = (byDate.get(iso) ?? []).some((e) => e.closesToday);
                     const anyOpen = (byDate.get(iso) ?? []).some((e) => e.canOrder);
                     return (
                       <div key={iso} className="px-2.5 py-2.5" style={{ boxShadow: "inset 1px 0 0 rgba(255,255,255,.18)" }}>
                         <div className="text-[12.5px] font-extrabold">{fmtDay(iso)}</div>
-                        <div className="text-[9.5px] font-bold uppercase tracking-[0.03em]" style={{ color: anyClose ? "#ffe0e0" : "rgba(255,255,255,.8)" }}>{anyClose ? "closes today" : anyOpen ? "open" : "closed"}</div>
+                        <div className="text-[9.5px] font-bold uppercase tracking-[0.03em]" style={{ color: anyClose ? "#ffe0e0" : "rgba(255,255,255,.8)" }}>{anyClose ? t("meals.closesToday") : anyOpen ? t("meals.openStatus") : t("meals.closedStatus")}</div>
                       </div>
                     );
                   })}
@@ -424,25 +429,25 @@ export function ParentMealsApp() {
                           <div key={iso} className="border-l border-[var(--line)] p-2">
                             <div className="flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11.5px] font-bold text-white" style={{ background: GRN }}><span className="truncate">✓ {booked.name}</span><DietLetter diet={bookedDiet} on /></div>
                             {pendChange ? (
-                              <div className="mt-1 text-[10px] font-semibold text-[#8a5300]">↺ change to {pendChange.name} — awaiting approval <button type="button" onClick={() => withdrawReq(booked.orderId!)} className="font-bold underline">undo</button></div>
+                              <div className="mt-1 text-[10px] font-semibold text-[#8a5300]">{t("meals.changeToAwaiting", { name: pendChange.name })} <button type="button" onClick={() => withdrawReq(booked.orderId!)} className="font-bold underline">{t("meals.undo")}</button></div>
                             ) : pendCancel ? (
-                              <div className="mt-1 text-[10px] font-semibold text-[#c0392b]">removal requested — awaiting approval <button type="button" onClick={() => withdrawReq(booked.orderId!)} className="font-bold underline">undo</button></div>
+                              <div className="mt-1 text-[10px] font-semibold text-[#c0392b]">{t("meals.removalRequested")} <button type="button" onClick={() => withdrawReq(booked.orderId!)} className="font-bold underline">{t("meals.undo")}</button></div>
                             ) : booked.canCancel && booked.orderId && e.canOrder ? (
                               <div className="mt-1 flex items-center gap-1">
-                                <select aria-label={`Change ${child}'s meal`} value="" onChange={(ev) => { if (ev.target.value) changeMeal(booked.orderId!, ev.target.value); }} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-1.5 py-1 text-[10.5px] font-semibold text-[var(--ink-2)]">
-                                  <option value="">Change…</option>
+                                <select aria-label={t("meals.changeChildMeal", { child })} value="" onChange={(ev) => { if (ev.target.value) changeMeal(booked.orderId!, ev.target.value); }} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-1.5 py-1 text-[10.5px] font-semibold text-[var(--ink-2)]">
+                                  <option value="">{t("meals.changeOption")}</option>
                                   {e.menu.items.filter((it) => it.name !== booked.name && (!dietFilter || it.diet === dietFilter)).map((it) => <option key={it.id} value={it.id}>{dishOptText(it)}</option>)}
                                 </select>
-                                <button type="button" onClick={() => cancelMeal(booked.orderId!)} className="flex-none text-[10px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">remove</button>
+                                <button type="button" onClick={() => cancelMeal(booked.orderId!)} className="flex-none text-[10px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">{t("meals.removeLower")}</button>
                               </div>
-                            ) : <div className="mt-0.5 text-[10px] text-[var(--ink-3)]">booked</div>}
+                            ) : <div className="mt-0.5 text-[10px] text-[var(--ink-3)]">{t("meals.bookedStatus")}</div>}
                           </div>
                         );
                       }
                       const options = e.menu.items.filter((it) => !dietFilter || it.diet === dietFilter || line?.dishId === it.id);
                       const sel = line ? e.menu.items.find((it) => it.id === line.dishId) : undefined;
                       const clash = sel ? (allergenClash(sel.allergens, c?.allergies).length > 0 || !!dietClash(sel, c?.dietary)) : false;
-                      if (!e.canOrder && !line) return <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2.5 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">Closed</div>;
+                      if (!e.canOrder && !line) return <div key={iso} className="border-l border-[var(--line)] px-2.5 py-2.5 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">{t("meals.closedCell")}</div>;
                       return (
                         <div key={iso} className="border-l border-[var(--line)] p-2">
                           {line && sel ? (
@@ -452,24 +457,24 @@ export function ParentMealsApp() {
                                 <span>🧺</span><span className="truncate">{sel.name}</span><DietLetter diet={sel.diet} />
                                 {sel.price > 0 && <span className="ml-auto tabular-nums text-[10.5px]">{money(sel.price)}</span>}
                               </div>
-                              {clash && <div className="mt-1 text-[9.5px] font-bold text-[#c0392b]">⚠ check suitability</div>}
+                              {clash && <div className="mt-1 text-[9.5px] font-bold text-[#c0392b]">⚠ {t("meals.checkSuitability")}</div>}
                               {sel.allergens?.length ? <div className="mt-0.5"><Allergens list={sel.allergens} /></div> : null}
                               <div className="mt-1 flex items-center gap-1">
-                                <select aria-label={`Change ${child}'s meal on ${fmtDay(iso)}`} value="" onChange={(ev) => { if (ev.target.value) setCell(e, child, ev.target.value); }} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-1.5 py-1 text-[10.5px] font-semibold text-[var(--ink-2)]">
-                                  <option value="">Change…</option>
+                                <select aria-label={t("meals.changeChildMealOn", { child, day: fmtDay(iso) })} value="" onChange={(ev) => { if (ev.target.value) setCell(e, child, ev.target.value); }} className="min-w-0 flex-1 rounded-md border border-[var(--line)] bg-white px-1.5 py-1 text-[10.5px] font-semibold text-[var(--ink-2)]">
+                                  <option value="">{t("meals.changeOption")}</option>
                                   {options.filter((it) => it.id !== line.dishId).map((it) => <option key={it.id} value={it.id}>{dishOptText(it)}</option>)}
                                 </select>
-                                <button type="button" onClick={() => setCell(e, child, "")} className="flex-none text-[10px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">remove</button>
+                                <button type="button" onClick={() => setCell(e, child, "")} className="flex-none text-[10px] font-bold text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">{t("meals.removeLower")}</button>
                               </div>
                             </>
                           ) : (
-                            <select aria-label={`Meal for ${child} on ${fmtDay(iso)}`} value="" onChange={(ev) => setCell(e, child, ev.target.value)}
+                            <select aria-label={t("meals.mealForChildOn", { child, day: fmtDay(iso) })} value="" onChange={(ev) => setCell(e, child, ev.target.value)}
                               className="w-full rounded-lg border px-2 py-1.5 text-[11.5px] font-bold transition" style={{ borderColor: "var(--line)", background: "#fff", color: "var(--ink-2)" }}>
-                              <option value="">— choose —</option>
+                              <option value="">{t("meals.chooseOption")}</option>
                               {options.map((it) => {
                                 const soldOut = it.left !== undefined && it.left <= 0;
                                 const risk = allergenClash(it.allergens, c?.allergies).length > 0 || dietClash(it, c?.dietary);
-                                return <option key={it.id} value={it.id} disabled={soldOut}>{dishOptText(it)}{risk ? " ⚠" : ""}{soldOut ? " (sold out)" : ""}</option>;
+                                return <option key={it.id} value={it.id} disabled={soldOut}>{dishOptText(it)}{risk ? " ⚠" : ""}{soldOut ? ` ${t("meals.soldOutOption")}` : ""}</option>;
                               })}
                             </select>
                           )}
@@ -478,14 +483,14 @@ export function ParentMealsApp() {
                     })}
                   </div>
                 ))}
-                {weekKids.length === 0 && <div className="px-3 py-6 text-center text-[12px] text-[var(--ink-3)]">No booked children this week.</div>}
+                {weekKids.length === 0 && <div className="px-3 py-6 text-center text-[12px] text-[var(--ink-3)]">{t("meals.noBookedChildren")}</div>}
               </div>
             </div>
           </div>
 
           {basket.length > 0 && (
             <a href="#meal-basket" className="fixed inset-x-4 bottom-4 z-30 flex items-center justify-center gap-2 rounded-full py-3 text-[13px] font-extrabold text-white shadow-[0_10px_24px_-6px_rgba(14,154,90,.6)] lg:hidden" style={{ background: GRN }}>
-              💳 Pay {money(basketTotal)} · {basket.length} meal{basket.length === 1 ? "" : "s"}
+              💳 {t("meals.pay")} {money(basketTotal)} · {basket.length} meal{basket.length === 1 ? "" : "s"}
             </a>
           )}
         </>
@@ -494,8 +499,8 @@ export function ParentMealsApp() {
       {payIds && (
         <PayModal
           mealOrderIds={payIds}
-          onClose={() => { setPayIds(null); load(); setToast("Meals booked — payment not completed. You can pay your provider, or try again."); }}
-          onPaid={() => { setPayIds(null); load(); setToast("✓ Paid — your meals are booked."); }}
+          onClose={() => { setPayIds(null); load(); setToast(t("meals.payNotCompleted")); }}
+          onPaid={() => { setPayIds(null); load(); setToast(t("meals.paidToast")); }}
         />
       )}
     </div>

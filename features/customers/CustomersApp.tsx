@@ -11,6 +11,7 @@ import { uploadPlan } from "@/features/listings/planUpload";
 import { CHILD_LIMITS, ageOn } from "@/features/listings/checkout";
 import { useTenantSettings, questionsFor, dobRequired, limitFor } from "@/lib/settings";
 import { QuestionFields } from "@/components/QuestionFields";
+import { useT } from "@/lib/i18n/provider";
 
 /**
  * A child's age, worked out from their date of birth rather than stored.
@@ -162,6 +163,7 @@ function ContactPane({
   name: string;
   onBack: () => void;
 }) {
+  const t = useT();
   const digits = (phone ?? "").replace(/\D/g, "");
   // A UK mobile typed as 07… won't work on wa.me, which wants the country code.
   const intl = digits.startsWith("0") ? `44${digits.slice(1)}` : digits;
@@ -180,40 +182,40 @@ function ContactPane({
           onClick={onBack}
           className="flex items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
         >
-          ← Back
+          {t("customers.backArrow")}
         </button>
-        <b className="min-w-0 flex-1 truncate text-[13px] text-[var(--ink)]">Contact {name}</b>
+        <b className="min-w-0 flex-1 truncate text-[13px] text-[var(--ink)]">{t("customers.contactName", { name })}</b>
       </div>
 
       <div className="grid gap-1.5 sm:grid-cols-2">
         {email ? (
           <a href={`mailto:${email}`} className={item}>
-            ✉ <span className="min-w-0 flex-1 truncate">Email</span>
+            ✉ <span className="min-w-0 flex-1 truncate">{t("customers.email")}</span>
           </a>
         ) : (
-          <span className={dead}>✉ No email</span>
+          <span className={dead}>{t("customers.noEmailChannel")}</span>
         )}
         {usable ? (
           <>
             <a href={`https://wa.me/${intl}`} target="_blank" rel="noreferrer" className={item}>
-              💬 WhatsApp
+              {t("customers.whatsapp")}
             </a>
             <a href={`sms:${phone}`} className={item}>
-              📱 Text message
+              {t("customers.textMessage")}
             </a>
             <a href={`tel:${phone}`} className={item}>
-              📞 Call
+              {t("customers.call")}
             </a>
           </>
         ) : (
-          <span className={dead}>📱 No phone number</span>
+          <span className={dead}>{t("customers.noPhoneNumber")}</span>
         )}
         {email ? (
           <a href={`/freelancer/messages?compose&emails=${encodeURIComponent(email)}&body=${encodeURIComponent(`Hi ${name.split(" ")[0] || "there"},\n\n`)}`} className={item}>
-            💌 <span className="min-w-0 flex-1 truncate">Message in app</span>
+            💌 <span className="min-w-0 flex-1 truncate">{t("customers.messageInApp")}</span>
           </a>
         ) : (
-          <span className={dead}>💌 No email for in-app message</span>
+          <span className={dead}>{t("customers.noEmailInApp")}</span>
         )}
       </div>
 
@@ -256,6 +258,7 @@ const splitName = (name: string) => {
 };
 
 export function CustomersApp() {
+  const t = useT();
   // The provider's own child questions, set in Setup & features. Falls back to
   // the defaults if the fetch fails — a settings blip must not hide fields
   // that staff are relying on.
@@ -290,7 +293,7 @@ export function CustomersApp() {
         setCustomers(c);
         setError(null);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : "Failed to load customers"));
+      .catch((e) => setError(e instanceof Error ? e.message : t("customers.failedLoadCustomers")));
   }, []);
   useEffect(() => {
     refresh();
@@ -337,8 +340,8 @@ export function CustomersApp() {
       const who = noDob.map((k) => k.name.trim()).join(", ");
       setError(
         dobRule.forcedBy.length && !settings.requireDob
-          ? `Add a date of birth for ${who} — “${dobRule.forcedBy[0].label}” is only asked about certain ages, and there's no age without one.`
-          : `Add a date of birth for ${who} — their age is worked out from it, so a typed age would be wrong within a year.`,
+          ? t("customers.dobRequiredGated", { who, label: dobRule.forcedBy[0].label })
+          : t("customers.dobRequiredPlain", { who }),
       );
       return;
     }
@@ -390,9 +393,10 @@ export function CustomersApp() {
           await apiPost(`/api/customers/${encodeURIComponent(saved.id)}/invite`, {});
         } catch (e) {
           setError(
-            `Saved ${body.name}, but the sign-up link didn't send — ${
-              e instanceof Error ? e.message : "unknown error"
-            }`,
+            t("customers.savedButInviteFailed", {
+              name: body.name,
+              error: e instanceof Error ? e.message : t("customers.unknownError"),
+            }),
           );
         }
       }
@@ -427,9 +431,10 @@ export function CustomersApp() {
           });
         } catch (e) {
           setError(
-            `Saved ${body.name}, but the children's details didn't — ${
-              e instanceof Error ? e.message : "unknown error"
-            }`,
+            t("customers.savedButChildrenFailed", {
+              name: body.name,
+              error: e instanceof Error ? e.message : t("customers.unknownError"),
+            }),
           );
           setBusy(false);
           return;
@@ -438,7 +443,7 @@ export function CustomersApp() {
       setDraft(null);
       refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      setError(e instanceof Error ? e.message : t("customers.saveFailed"));
     }
     setBusy(false);
   }
@@ -446,27 +451,29 @@ export function CustomersApp() {
   /** Invite a family already on the books — the edit form no longer offers it. */
   async function sendInvite(c: Customer) {
     setError(null); setNotice(null); setInvitingId(c.id);
-    const who = c.name || c.email || "the family";
+    const who = c.name || c.email || t("customers.theFamily");
     try {
       await apiPost(`/api/customers/${encodeURIComponent(c.id)}/invite`, {});
       refresh();
-      const msg = `✓ Sign-up link ${c.invitedAt ? "re-sent" : "sent"} to ${who}.`;
+      const msg = c.invitedAt
+        ? t("customers.inviteResent", { who })
+        : t("customers.inviteSent", { who });
       setNotice(msg);
       setTimeout(() => setNotice((n) => (n === msg ? null : n)), 5000);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't send the sign-up link");
+      setError(e instanceof Error ? e.message : t("customers.couldntSendLink"));
     } finally {
       setInvitingId(null);
     }
   }
 
   async function remove(c: Customer) {
-    if (!confirm(`Remove “${c.name}”? They've never booked, so nothing else goes with them.`)) return;
+    if (!confirm(t("customers.removeConfirm", { name: c.name }))) return;
     try {
       await api(`/api/customers/${encodeURIComponent(c.id)}`, { method: "DELETE" });
       refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Delete failed");
+      setError(e instanceof Error ? e.message : t("customers.deleteFailed"));
     }
   }
 
@@ -580,25 +587,25 @@ export function CustomersApp() {
     >
       <div ref={topRef}>
         <PageHero
-          title="Leads & customers"
-          lede="Everyone who's enquired or booked with you."
+          title={t("customers.pageTitle")}
+          lede={t("customers.pageLede")}
           icon="👪"
           actions={<>
             <Button
               disabled={!customers || customers.length === 0}
-              title={customers?.length ? "Choose families, columns and a format" : "Nobody to export yet"}
+              title={customers?.length ? t("customers.exportTitleReady") : t("customers.exportTitleEmpty")}
               onClick={() => setExporting(true)}
             >
-              ⬇ Export
+              {t("customers.exportBtn")}
             </Button>
             {canWrite && (
-              <Button title="Bulk-add families from a spreadsheet + invite them" onClick={() => setImporting(true)}>
-                📥 Import
+              <Button title={t("customers.importBtnTitle")} onClick={() => setImporting(true)}>
+                {t("customers.importBtn")}
               </Button>
             )}
             {canWrite && !draft && (
               <Button variant="primary" className="!bg-white !border-white !text-[#1d3a8f]" onClick={() => { topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setDraft(emptyDraft()); }}>
-                ＋ Add family
+                {t("customers.addFamily")}
               </Button>
             )}
           </>}
@@ -630,30 +637,30 @@ export function CustomersApp() {
             </span>
             <b className="min-w-0 flex-1 truncate text-[14px]">
               {draft.id
-                ? [draft.firstName, draft.lastName].filter(Boolean).join(" ") || "This family"
-                : "Add a family"}
+                ? [draft.firstName, draft.lastName].filter(Boolean).join(" ") || t("customers.thisFamily")
+                : t("customers.addAFamily")}
             </b>
             <span className="flex-none rounded-full bg-white/20 px-2 py-[2px] text-[10px] font-extrabold uppercase tracking-[0.06em]">
-              {draft.id ? "Editing" : "New"}
+              {draft.id ? t("customers.editingBadge") : t("customers.newBadge")}
             </span>
           </div>
           <div className="p-4">
           <div className="grid gap-2.5 sm:grid-cols-4">
             <div>
-              <FieldLabel>First name</FieldLabel>
+              <FieldLabel>{t("customers.firstName")}</FieldLabel>
               <Input value={draft.firstName} onChange={(e) => setDraft({ ...draft, firstName: e.target.value })} className="w-full" />
             </div>
             <div>
-              <FieldLabel>Surname</FieldLabel>
+              <FieldLabel>{t("customers.surname")}</FieldLabel>
               <Input value={draft.lastName} onChange={(e) => setDraft({ ...draft, lastName: e.target.value })} className="w-full" />
             </div>
             <div>
-              <FieldLabel>Email</FieldLabel>
+              <FieldLabel>{t("customers.email")}</FieldLabel>
               <Input type="email" value={draft.email} onChange={(e) => setDraft({ ...draft, email: e.target.value })} className="w-full" />
             </div>
             <div>
-              <FieldLabel>Phone <span className="font-normal text-[var(--ink-3)]">(optional)</span></FieldLabel>
-              <Input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} className="w-full" placeholder="Optional — they add it themselves if blank" />
+              <FieldLabel>{t("customers.phone")} <span className="font-normal text-[var(--ink-3)]">{t("customers.optionalParen")}</span></FieldLabel>
+              <Input value={draft.phone} onChange={(e) => setDraft({ ...draft, phone: e.target.value })} className="w-full" placeholder={t("customers.phoneOptionalPlaceholder")} />
             </div>
           </div>
 
@@ -663,12 +670,12 @@ export function CustomersApp() {
               purpose. */}
           <div className="mt-2.5 max-w-[320px]">
             <FieldLabel>
-              Location{" "}
-              <span className="font-normal text-[var(--ink-3)]">— which site they asked about</span>
+              {t("customers.locationWord")}{" "}
+              <span className="font-normal text-[var(--ink-3)]">{t("customers.locationHint")}</span>
             </FieldLabel>
             {venues.length === 0 ? (
               <div className="rounded-lg border border-dashed border-[var(--line)] px-2.5 py-2 text-[11.5px] text-[var(--ink-3)]">
-                No locations set up yet — add them under Listings → Locations.
+                {t("customers.noLocationsSetup")}
               </div>
             ) : (
               <select
@@ -676,7 +683,7 @@ export function CustomersApp() {
                 onChange={(e) => setDraft({ ...draft, locationId: e.target.value })}
                 className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] text-[var(--ink)] outline-none"
               >
-                <option value="">Not said</option>
+                <option value="">{t("customers.notSaid")}</option>
                 {venues.map((v) => (
                   <option key={v.id} value={v.id}>
                     {v.name}
@@ -692,11 +699,11 @@ export function CustomersApp() {
           {draft.id && (
             <div className="mt-3">
               <div className="mb-1.5 text-[11.5px] font-extrabold">
-                Children{" "}
+                {t("customers.childrenWord")}{" "}
                 <span className="font-normal text-[var(--ink-3)]">
                   {draft.children.length === 0
-                    ? "— none yet"
-                    : `— ${draft.children.length} on this family`}
+                    ? t("customers.noneYet")
+                    : t("customers.nOnThisFamily", { n: draft.children.length })}
                 </span>
               </div>
 
@@ -722,11 +729,11 @@ export function CustomersApp() {
                       </span>
                       <span className="min-w-0">
                         <span className="block truncate text-[12.5px] font-extrabold">
-                          {k.name.trim().split(" ")[0] || "New child"}
+                          {k.name.trim().split(" ")[0] || t("customers.newChild")}
                         </span>
                         <span className="block text-[10.5px] text-[var(--ink-3)]">
-                          {ageOf({ dob: k.dob, age: k.age ? Number(k.age) : undefined }) ?? "age —"}
-                          {on ? " · editing" : ""}
+                          {ageOf({ dob: k.dob, age: k.age ? Number(k.age) : undefined }) ?? t("customers.ageDash")}
+                          {on ? t("customers.editingSuffix") : ""}
                         </span>
                       </span>
                     </button>
@@ -752,7 +759,7 @@ export function CustomersApp() {
                   }}
                   className="rounded-xl border border-dashed border-[var(--line)] px-3 py-2 text-[12px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]"
                 >
-                  ＋ Add
+                  {t("customers.addBtn")}
                 </button>
               </div>
 
@@ -776,7 +783,7 @@ export function CustomersApp() {
                     if (
                       (typed || k.name.trim()) &&
                       !confirm(
-                        `Remove ${k.name.trim() || "this child"} from the family? Anything typed about them here goes too.`,
+                        t("customers.removeChildConfirm", { name: k.name.trim() || t("customers.thisChild") }),
                       )
                     )
                       return;
@@ -787,14 +794,14 @@ export function CustomersApp() {
                     <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
                       <div className="flex items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-3 py-1.5">
                         <b className="min-w-0 flex-1 truncate text-[12px]">
-                          {k.name.trim() || "New child"}
+                          {k.name.trim() || t("customers.newChild")}
                         </b>
                         {hasBooked ? (
                           <span
                             className="text-[10.5px] text-[var(--ink-3)]"
-                            title="This child has been on a booking — their record has to stay"
+                            title={t("customers.hasBookingsChildTitle")}
                           >
-                            Has bookings
+                            {t("customers.hasBookings")}
                           </span>
                         ) : (
                           <button
@@ -802,28 +809,28 @@ export function CustomersApp() {
                             onClick={removeKid}
                             className="text-[11px] font-bold text-[var(--ink-3)] transition-colors hover:text-[var(--red,#e21d27)]"
                           >
-                            Remove child
+                            {t("customers.removeChild")}
                           </button>
                         )}
                       </div>
                       <div className="grid gap-2 p-3 sm:grid-cols-4">
                         <div className="sm:col-span-2">
-                          <FieldLabel>Full name</FieldLabel>
-                          <Input value={k.name} placeholder="First and last name" onChange={(e) => set({ name: e.target.value })} className="w-full" />
+                          <FieldLabel>{t("customers.fullName")}</FieldLabel>
+                          <Input value={k.name} placeholder={t("customers.firstLastNamePlaceholder")} onChange={(e) => set({ name: e.target.value })} className="w-full" />
                         </div>
                         <div>
                           <FieldLabel>
-                            Date of birth <span style={{ color: "var(--red,#e21d27)" }}>*</span>
+                            {t("customers.dateOfBirth")} <span style={{ color: "var(--red,#e21d27)" }}>*</span>
                           </FieldLabel>
                           <Input value={k.dob} type="date" onChange={(e) => set({ dob: e.target.value })} className="w-full" />
                         </div>
                         <div>
-                          <FieldLabel>Age</FieldLabel>
+                          <FieldLabel>{t("customers.age")}</FieldLabel>
                           {/* Worked out, not typed — see ageOf. */}
                           <div className="flex h-[34px] items-center rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 text-[12.5px] font-bold text-[var(--ink-2)]">
                             {ageOf({ dob: k.dob, age: k.age ? Number(k.age) : undefined }) ?? "—"}
                             <span className="ml-1.5 text-[10.5px] font-normal text-[var(--ink-3)]">
-                              {k.dob ? "from date of birth" : "add a date of birth"}
+                              {k.dob ? t("customers.fromDob") : t("customers.addDob")}
                             </span>
                           </div>
                         </div>
@@ -837,10 +844,10 @@ export function CustomersApp() {
                       >
                         <div className="mb-1.5 flex flex-wrap items-baseline gap-1.5">
                           <b className="text-[11.5px]" style={{ color: c2 }}>
-                            👪 The family&rsquo;s own record
+                            {t("customers.familyOwnRecord")}
                           </b>
                           <span className="text-[10.5px] text-[var(--ink-3)]">
-                            — typing here writes to their profile, not a copy
+                            {t("customers.typingWritesProfile")}
                           </span>
                         </div>
                         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
@@ -848,14 +855,14 @@ export function CustomersApp() {
                             [
                               // The wide ones get two columns: 140 characters
                               // in a quarter-width box is a keyhole.
-                              ["allergies", "Allergies", "Nuts, dairy…", 2],
-                              ["medical", "Medical", "Asthma inhaler…", 2],
-                              ["send", "SEND / additional needs", "Autism, 1:1 support…", 2],
-                              ["collectionPassword", "Collection password", "e.g. Bluebell", 1],
-                              ["likes", "Likes", "Football, drawing", 1],
-                              ["dislikes", "Dislikes", "Loud rooms", 1],
-                              ["emergencyName", "Emergency contact — name", "Aunt Priya", 1],
-                              ["emergencyPhone", "…and number", "07700 900123", 1],
+                              ["allergies", t("customers.allergies"), t("customers.allergiesPh"), 2],
+                              ["medical", t("customers.medical"), t("customers.medicalPh"), 2],
+                              ["send", t("customers.sendNeeds"), t("customers.sendPh"), 2],
+                              ["collectionPassword", t("customers.collectionPassword"), "e.g. Bluebell", 1],
+                              ["likes", t("customers.likes"), t("customers.likesPh"), 1],
+                              ["dislikes", t("customers.dislikes"), t("customers.dislikesPh"), 1],
+                              ["emergencyName", t("customers.emergencyName"), "Aunt Priya", 1],
+                              ["emergencyPhone", t("customers.andNumber"), "07700 900123", 1],
                             ] as [keyof typeof CHILD_LIMITS, string, string, number][]
                           ).map(([f, label, ph, span]) => {
                             const max = limitFor(settings, f, CHILD_LIMITS);
@@ -871,7 +878,7 @@ export function CustomersApp() {
                                       className="ml-1 font-normal"
                                       style={{ color: left <= 0 ? "var(--red,#e21d27)" : "var(--ink-3)" }}
                                     >
-                                      {left} left
+                                      {t("customers.nLeft", { n: left })}
                                     </span>
                                   )}
                                 </FieldLabel>
@@ -906,11 +913,11 @@ export function CustomersApp() {
 
                         {settings.askPhotoConsent && (
                         <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-2">
-                          <span className="text-[11px] font-bold">Photo consent</span>
+                          <span className="text-[11px] font-bold">{t("customers.photoConsent")}</span>
                           {(
                             [
-                              ["yes", "Yes"],
-                              ["no", "No"],
+                              ["yes", t("customers.yes")],
+                              ["no", t("customers.no")],
                             ] as ["yes" | "no", string][]
                           ).map(([v, l]) => (
                             <button
@@ -928,7 +935,7 @@ export function CustomersApp() {
                             </button>
                           ))}
                           <span className="text-[10.5px] text-[var(--ink-3)]">
-                            {k.photoConsent ? "Will save to their profile" : "Not answered yet"}
+                            {k.photoConsent ? t("customers.willSaveProfile") : t("customers.notAnsweredYet")}
                           </span>
                         </div>
                         )}
@@ -940,30 +947,30 @@ export function CustomersApp() {
                             "which one is true" risk. */}
                         {settings.collectSend && settings.collectSendPlan && (
                         <div className="mt-2.5 flex flex-wrap items-center gap-2 border-t border-[var(--line)] pt-2">
-                          <span className="text-[11px] font-bold">SEND plan</span>
+                          <span className="text-[11px] font-bold">{t("customers.sendPlan")}</span>
                           {k.sendPlanId ? (
                             <>
                               <button
                                 type="button"
                                 // Fetch with the operator's token — a plain link
                                 // 401s (every /api route needs a Bearer token).
-                                onClick={() => { void openFile(`/api/my/files/${k.sendPlanId}`).catch((e) => alert(e instanceof Error ? e.message : "Couldn’t open the plan.")); }}
+                                onClick={() => { void openFile(`/api/my/files/${k.sendPlanId}`).catch((e) => alert(e instanceof Error ? e.message : t("customers.couldntOpenPlan"))); }}
                                 className="max-w-[220px] truncate rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[2px] text-[11px] font-bold text-[var(--ink)] hover:border-[var(--brand)]"
                               >
-                                📎 {k.sendPlanName || "Open plan"}
+                                📎 {k.sendPlanName || t("customers.openPlan")}
                               </button>
                               <button
                                 type="button"
                                 onClick={() => set({ sendPlanId: "", sendPlanName: "" })}
                                 className="text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]"
                               >
-                                Remove
+                                {t("customers.remove")}
                               </button>
                             </>
                           ) : (
                             <>
                               <label className="cursor-pointer rounded-full border-2 px-2.5 py-[2px] text-[11px] font-bold" style={{ borderColor: c2, color: c2 }}>
-                                📎 Upload
+                                {t("customers.uploadPlan")}
                                 <input
                                   type="file"
                                   accept="application/pdf,image/*"
@@ -977,13 +984,13 @@ export function CustomersApp() {
                                       const ref = await uploadPlan(f);
                                       set({ sendPlanId: ref.id, sendPlanName: ref.name });
                                     } catch (err) {
-                                      setError(err instanceof Error ? err.message : "Upload failed");
+                                      setError(err instanceof Error ? err.message : t("customers.uploadFailed"));
                                     }
                                   }}
                                 />
                               </label>
                               <span className="text-[10.5px] text-[var(--ink-3)]">
-                                Your copy, for your staff — the parent isn&rsquo;t shown it
+                                {t("customers.yourCopyStaff")}
                               </span>
                             </>
                           )}
@@ -992,7 +999,7 @@ export function CustomersApp() {
 
                         <div className="mt-2 flex flex-wrap gap-1">
                           <span className="rounded-full border border-dashed border-[var(--line)] px-2 py-[2px] text-[10.5px] text-[var(--ink-3)]">
-                            Photo · uploaded by the parent
+                            {t("customers.photoUploadedByParent")}
                           </span>
                         </div>
                       </div>
@@ -1002,7 +1009,7 @@ export function CustomersApp() {
 
               {draft.children.length === 0 && (
                 <div className="rounded-xl border border-dashed border-[var(--line)] px-3 py-2.5 text-[11.5px] text-[var(--ink-3)]">
-                  They&rsquo;ll appear here with their first booking, or add one above.
+                  {t("customers.childrenAppearHere")}
                 </div>
               )}
 
@@ -1020,14 +1027,14 @@ export function CustomersApp() {
               no notes at all. */}
           <div className="mt-2.5">
             <FieldLabel>
-              Notes{" "}
-              <span className="font-normal text-[var(--ink-3)]">— only your team sees these, never the family</span>
+              {t("customers.notesWord")}{" "}
+              <span className="font-normal text-[var(--ink-3)]">{t("customers.notesHint")}</span>
             </FieldLabel>
             <textarea
               value={draft.notes}
               onChange={(e) => setDraft({ ...draft, notes: e.target.value })}
               rows={2}
-              placeholder="Rang about August, wants the Bedford site, dad collects on Fridays…"
+              placeholder={t("customers.notesPlaceholder")}
               className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] text-[var(--ink)] outline-none"
             />
           </div>
@@ -1044,12 +1051,10 @@ export function CustomersApp() {
             />
             <span>
               <span className="block text-[12.5px] font-bold">
-                They said yes to hearing about upcoming activities
+                {t("customers.saidYesMarketing")}
               </span>
               <span className="block text-[11px] leading-[1.45] text-[var(--ink-3)]">
-                Only tick this if they actually agreed on the call. Marketing email without
-                consent is unlawful, and this is the record of it. Booking confirmations and
-                payment links are sent either way — those aren&rsquo;t marketing.
+                {t("customers.marketingConsentNote")}
               </span>
             </span>
           </label>
@@ -1063,24 +1068,22 @@ export function CustomersApp() {
               and editing a family shouldn't offer to email them at all. */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button variant="primary" disabled={busy || !draft.firstName.trim()} onClick={() => save(false)}>
-              {busy ? "Saving…" : "Save"}
+              {busy ? t("customers.saving") : t("customers.save")}
             </Button>
             {/* On a new family this creates the account; on an existing one it
                 saves the edits first, so a corrected email address is the one
                 the link goes to. */}
             <Button
               disabled={busy || !draft.firstName.trim() || !draft.email.trim()}
-              title={draft.email.trim() ? "Save, then email them a link to set a password" : "Needs an email address"}
+              title={draft.email.trim() ? t("customers.saveAndLinkTitle") : t("customers.needsEmailTitle")}
               onClick={() => save(true)}
             >
-              ✉ Save &amp; send sign-up link
+              {t("customers.saveAndSendLink")}
             </Button>
-            <Button onClick={() => setDraft(null)}>Cancel</Button>
+            <Button onClick={() => setDraft(null)}>{t("customers.cancel")}</Button>
           </div>
           <div className="mt-1.5 text-[11px] leading-[1.45] text-[var(--ink-3)]">
-            The link lets them set a password and land in their own area, where they can see
-            every live listing and its dates. Their name and email carry over — it won&rsquo;t
-            ask again.
+            {t("customers.linkExplainerNote")}
           </div>
           </div>
         </div>
@@ -1092,10 +1095,10 @@ export function CustomersApp() {
       {customers && customers.length > 0 && (
         <CollapsibleStats id="customers">
         <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
-          <button type="button" title="Everyone — clear the filter" onClick={() => setStage("")} className={"rounded-2xl px-4 py-3 text-left transition-all hover:-translate-y-px " + (stage === "" ? "text-white shadow-[0_10px_24px_-16px_rgba(9,20,44,.8)]" : "bg-[var(--surface)]")} style={stage === "" ? { background: "#1d3a8f" } : { border: "1px solid var(--line)", borderLeft: "5px solid #1d3a8f" }}>
-            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.07em]" style={{ color: stage === "" ? "rgba(255,255,255,.9)" : "var(--ink-3)" }}>All families</div>
+          <button type="button" title={t("customers.everyoneClearFilter")} onClick={() => setStage("")} className={"rounded-2xl px-4 py-3 text-left transition-all hover:-translate-y-px " + (stage === "" ? "text-white shadow-[0_10px_24px_-16px_rgba(9,20,44,.8)]" : "bg-[var(--surface)]")} style={stage === "" ? { background: "#1d3a8f" } : { border: "1px solid var(--line)", borderLeft: "5px solid #1d3a8f" }}>
+            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.07em]" style={{ color: stage === "" ? "rgba(255,255,255,.9)" : "var(--ink-3)" }}>{t("customers.allFamilies")}</div>
             <div className="text-[24px] font-extrabold leading-tight tabular-nums">{customers.length}</div>
-            <div className="text-[10.5px] leading-[1.35]" style={{ color: stage === "" ? "rgba(255,255,255,.85)" : "var(--ink-3)" }}>Everyone on your list</div>
+            <div className="text-[10.5px] leading-[1.35]" style={{ color: stage === "" ? "rgba(255,255,255,.85)" : "var(--ink-3)" }}>{t("customers.everyoneOnList")}</div>
           </button>
           {STAGES.map((st) => {
             const n = customers.filter((c) => stageOf(c) === st.key).length;
@@ -1104,7 +1107,7 @@ export function CustomersApp() {
               <button
                 key={st.key}
                 type="button"
-                title={st.hint}
+                title={t(`customers.stageHint_${st.key}`)}
                 onClick={() => setStage(on ? "" : st.key)}
                 className={
                   "rounded-2xl px-4 py-3 text-left transition-all hover:-translate-y-px " +
@@ -1120,14 +1123,14 @@ export function CustomersApp() {
                   className="text-[10.5px] font-extrabold uppercase tracking-[0.07em]"
                   style={{ color: on ? "rgba(255,255,255,.9)" : "var(--ink-3)" }}
                 >
-                  {st.label}
+                  {t(`customers.stageLabel_${st.key}`)}
                 </div>
                 <div className="text-[24px] font-extrabold leading-tight tabular-nums">{n}</div>
                 <div
                   className="text-[10.5px] leading-[1.35]"
                   style={{ color: on ? "rgba(255,255,255,.85)" : "var(--ink-3)" }}
                 >
-                  {st.hint}
+                  {t(`customers.stageHint_${st.key}`)}
                 </div>
               </button>
             );
@@ -1145,8 +1148,8 @@ export function CustomersApp() {
               active={!!loc}
               value={loc}
               onChange={setLoc}
-              title="Filter by location"
-              options={[["", "All locations"], ...venues.map((v) => [v.id, v.name] as [string, string])]}
+              title={t("customers.filterByLocation")}
+              options={[["", t("customers.allLocations")], ...venues.map((v) => [v.id, v.name] as [string, string])]}
             />
           </Pill>
         )}
@@ -1156,7 +1159,7 @@ export function CustomersApp() {
             className="whitespace-nowrap text-[12.5px] font-semibold"
             style={{ color: day ? "#fff" : "var(--ink)" }}
           >
-            Booked on
+            {t("customers.bookedOn")}
           </span>
           <input
             type="date"
@@ -1179,13 +1182,13 @@ export function CustomersApp() {
             }}
             className="h-8 rounded-full border-2 border-[var(--brand)] px-3.5 text-[12px] font-extrabold text-[var(--brand)] transition-colors hover:bg-[var(--brand)] hover:text-white"
           >
-            Show everyone
+            {t("customers.showEveryone")}
           </button>
         )}
 
         {(stage || loc || day) && (
           <span className="text-[11.5px] text-[var(--ink-3)]">
-            {shown.length} of {customers?.length ?? 0}
+            {t("customers.nOfM", { a: shown.length, b: customers?.length ?? 0 })}
           </span>
         )}
       </div>
@@ -1195,8 +1198,8 @@ export function CustomersApp() {
       <div className="mb-3 inline-flex rounded-full border border-[var(--line)] bg-[var(--surface)] p-0.5">
         {(
           [
-            ["families", `Families${customers ? ` (${shown.length})` : ""}`],
-            ["children", `Children${customers ? ` (${kids.length})` : ""}`],
+            ["families", `${t("customers.familiesTab")}${customers ? ` (${shown.length})` : ""}`],
+            ["children", `${t("customers.childrenTab")}${customers ? ` (${kids.length})` : ""}`],
           ] as ["families" | "children", string][]
         ).map(([v, label]) => (
           <button
@@ -1211,19 +1214,18 @@ export function CustomersApp() {
         ))}
       </div>
 
-      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder="🔍  Search by name, child, email, phone or location…" className="mb-3 w-full max-w-[360px]" />
+      <Input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("customers.searchPlaceholder")} className="mb-3 w-full max-w-[360px]" />
 
       {!customers ? (
-        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
+        <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("customers.loading")}</div>
       ) : shown.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
-          {query ? "Nobody matches your search." : "Nobody here yet — people appear automatically with their first booking, or add one when someone enquires."}
+          {query ? t("customers.nobodyMatchesSearch") : t("customers.nobodyHereYet")}
         </Card>
       ) : view === "children" ? (
         kids.length === 0 ? (
           <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
-            No children on record yet — they arrive with a booking, or when a parent adds them
-            to their own account.
+            {t("customers.noChildrenOnRecord")}
           </Card>
         ) : (
           <div className="grid gap-2.5 lg:grid-cols-2">
@@ -1240,7 +1242,7 @@ export function CustomersApp() {
                   <div className="flex min-w-0 items-center gap-2">
                     <span aria-hidden className="text-[14px]">👪</span>
                     <span className="truncate text-[13px] font-extrabold">{family.name}</span>
-                    <span className="flex-none rounded-full bg-[var(--brand-soft)] px-2 py-[1px] text-[10px] font-bold text-[var(--brand-strong)]">{sibs.length} {sibs.length === 1 ? "child" : "children"}</span>
+                    <span className="flex-none rounded-full bg-[var(--brand-soft)] px-2 py-[1px] text-[10px] font-bold text-[var(--brand-strong)]">{sibs.length} {sibs.length === 1 ? t("customers.childSingular") : t("customers.childPlural")}</span>
                   </div>
                   {family.locationName && <span className="flex-none truncate text-[11px] text-[var(--ink-3)]">📍 {family.locationName}</span>}
                 </div>
@@ -1269,7 +1271,7 @@ export function CustomersApp() {
                     <div className="flex flex-wrap items-baseline gap-1.5">
                       <span className="truncate text-[14px] font-extrabold">{k.name}</span>
                       {ageOf(k) !== null && (
-                        <span className="text-[11.5px] text-[var(--ink-3)]">age {ageOf(k)}</span>
+                        <span className="text-[11.5px] text-[var(--ink-3)]">{t("customers.ageN", { n: ageOf(k) as number })}</span>
                       )}
                     </div>
                   </div>
@@ -1283,20 +1285,20 @@ export function CustomersApp() {
                         : { borderColor: st.colour, color: st.colour }
                     }
                   >
-                    {key === openKid ? "Close" : "Open"}
+                    {key === openKid ? t("customers.close") : t("customers.open")}
                   </button>
                 </div>
 
                 {key === openKid && (
                   <div className="border-t border-[var(--line)] bg-[var(--panel)] px-4 py-3 pl-5">
                     <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-4">
-                      <Row label="Date of birth" value={k.dob} />
-                      <Row label="Age" value={ageOf(k) !== null ? String(ageOf(k)) : ""} />
-                      <Row label="Family" value={k.family.name} />
-                      <Row label="Stage" value={st.label} />
-                      <Row label="Email" value={k.family.email} wide />
-                      <Row label="Phone" value={k.family.phone} />
-                      <Row label="Location" value={k.family.locationName} />
+                      <Row label={t("customers.dateOfBirth")} value={k.dob} />
+                      <Row label={t("customers.age")} value={ageOf(k) !== null ? String(ageOf(k)) : ""} />
+                      <Row label={t("customers.familyWord")} value={k.family.name} />
+                      <Row label={t("customers.stageWord")} value={t(`customers.stageLabel_${st.key}`)} />
+                      <Row label={t("customers.email")} value={k.family.email} wide />
+                      <Row label={t("customers.phone")} value={k.family.phone} />
+                      <Row label={t("customers.locationWord")} value={k.family.locationName} />
                     </div>
 
                     {(() => {
@@ -1311,7 +1313,7 @@ export function CustomersApp() {
                       if (!hasDetail) {
                         return (
                           <div className="mt-2.5 rounded-lg border border-dashed border-[var(--line)] bg-[var(--surface)] px-3 py-2">
-                            <div className="text-[11px] font-extrabold text-[var(--ink-2)]">Not filled in yet</div>
+                            <div className="text-[11px] font-extrabold text-[var(--ink-2)]">{t("customers.notFilledIn")}</div>
                             <div className="mt-0.5 text-[11px] leading-[1.5] text-[var(--ink-3)]">
                               Allergies · Medical · SEND · Collection password · Emergency contact — the
                               family hasn&rsquo;t added these to this child yet. A blank line does <b>not</b> mean a child has none.
@@ -1321,17 +1323,17 @@ export function CustomersApp() {
                       }
                       return (
                         <div className="mt-2.5 grid gap-x-4 gap-y-2.5 sm:grid-cols-4">
-                          <Row label="Allergies" value={k.allergies || "None recorded"} wide />
-                          <Row label="Medical" value={k.medical || "None recorded"} wide />
-                          {k.dietary && <Row label="Dietary" value={k.dietary} wide />}
-                          {k.send && <Row label="SEND / additional needs" value={k.send} wide />}
-                          {k.sendPlanName && <Row label="SEND plan" value={`📎 ${k.sendPlanName}`} />}
+                          <Row label={t("customers.allergies")} value={k.allergies || t("customers.noneRecorded")} wide />
+                          <Row label={t("customers.medical")} value={k.medical || t("customers.noneRecorded")} wide />
+                          {k.dietary && <Row label={t("customers.dietary")} value={k.dietary} wide />}
+                          {k.send && <Row label={t("customers.sendNeeds")} value={k.send} wide />}
+                          {k.sendPlanName && <Row label={t("customers.sendPlan")} value={`📎 ${k.sendPlanName}`} />}
                           {(k.emergencyName || k.emergencyPhone) && (
-                            <Row label="Emergency contact" value={[k.emergencyName, k.emergencyPhone].filter(Boolean).join(" · ")} wide />
+                            <Row label={t("customers.emergencyContact")} value={[k.emergencyName, k.emergencyPhone].filter(Boolean).join(" · ")} wide />
                           )}
-                          {k.collectionPassword && <Row label="Collection password" value={k.collectionPassword} />}
-                          {typeof k.photoConsent === "boolean" && <Row label="Photo consent" value={k.photoConsent ? "Allowed" : "No photos"} />}
-                          {(k.likes || k.dislikes) && <Row label="Likes / dislikes" value={[k.likes, k.dislikes].filter(Boolean).join(" · ")} wide />}
+                          {k.collectionPassword && <Row label={t("customers.collectionPassword")} value={k.collectionPassword} />}
+                          {typeof k.photoConsent === "boolean" && <Row label={t("customers.photoConsent")} value={k.photoConsent ? t("customers.allowed") : t("customers.noPhotos")} />}
+                          {(k.likes || k.dislikes) && <Row label={t("customers.likesDislikes")} value={[k.likes, k.dislikes].filter(Boolean).join(" · ")} wide />}
                         </div>
                       );
                     })()}
@@ -1375,33 +1377,33 @@ export function CustomersApp() {
                 {/* Style 7 — a thin gradient top strip carries the name + stage;
                     the body leads with the family's details. */}
                 <div className="flex items-center justify-between gap-2 px-4 py-1.5 text-white" style={{ background: "linear-gradient(120deg,#2f5fc0 0%,#5b95e8 100%)" }}>
-                  <span className="truncate text-[12.5px] font-extrabold" title={stageDef.hint}>{c.name}</span>
-                  <span className="flex-none whitespace-nowrap text-[9px] font-extrabold uppercase tracking-[0.04em] text-white/85">{stageDef.label} · {st.n} booking{st.n === 1 ? "" : "s"}</span>
+                  <span className="truncate text-[12.5px] font-extrabold" title={t(`customers.stageHint_${stageDef.key}`)}>{c.name}</span>
+                  <span className="flex-none whitespace-nowrap text-[9px] font-extrabold uppercase tracking-[0.04em] text-white/85">{t(`customers.stageLabel_${stageDef.key}`)} · {st.n} {st.n === 1 ? t("customers.bookingSingular") : t("customers.bookingPlural")}</span>
                 </div>
                 <div className="px-4 py-3 pl-5">
                   <div className="mb-1.5 truncate text-[11.5px] text-[var(--ink-3)]">
-                    {[c.email, c.phone].filter(Boolean).join(" · ") || "No contact details"}
+                    {[c.email, c.phone].filter(Boolean).join(" · ") || t("customers.noContactDetails")}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     {c.locationName && (
                       <span className="rounded-full bg-[var(--brand-soft,#eaf0fc)] px-2 py-[2px] text-[10px] font-extrabold text-[var(--brand-ink,#1d3a8f)]">📍 {c.locationName}</span>
                     )}
                     {c.marketingOptIn && (
-                      <span className="rounded-full bg-[#eaf0fc] px-2 py-[2px] text-[10px] font-extrabold text-[#1d3a8f]">✉ Marketing</span>
+                      <span className="rounded-full bg-[#eaf0fc] px-2 py-[2px] text-[10px] font-extrabold text-[#1d3a8f]">{t("customers.marketingTag")}</span>
                     )}
                     {c.joinedAt ? (
-                      <span className="rounded-full bg-[#e6f6ec] px-2 py-[2px] text-[10px] font-extrabold text-[#1a7f43]">✓ Signed up</span>
+                      <span className="rounded-full bg-[#e6f6ec] px-2 py-[2px] text-[10px] font-extrabold text-[#1a7f43]">{t("customers.signedUpTag")}</span>
                     ) : c.invitedAt ? (
-                      <span className="rounded-full bg-[#eef0f6] px-2 py-[2px] text-[10px] font-extrabold text-[#5b6478]">Invited</span>
+                      <span className="rounded-full bg-[#eef0f6] px-2 py-[2px] text-[10px] font-extrabold text-[#5b6478]">{t("customers.invited")}</span>
                     ) : null}
                     {(c.children ?? []).length === 0 ? (
-                      <span className="text-[11px] text-[var(--ink-3)]">No children on record</span>
+                      <span className="text-[11px] text-[var(--ink-3)]">{t("customers.noChildrenShort")}</span>
                     ) : (
                       (c.children ?? []).map((k) => (
                         <button
                           key={k.name}
                           type="button"
-                          title={`Open ${k.name}'s profile`}
+                          title={t("customers.openProfile", { name: k.name })}
                           onClick={() => {
                             setView("children");
                             setOpenKid(childKey(c.id, k.name));
@@ -1426,17 +1428,17 @@ export function CustomersApp() {
                     onClick={() => setContactId(c.id)}
                     className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
                   >
-                    Contact →
+                    {t("customers.contactArrow")}
                   </button>
                   {canWrite && (c.email ?? "").includes("@") && (
                     <button
                       type="button"
                       onClick={() => sendInvite(c)}
                       disabled={invitingId === c.id}
-                      title={c.invitedAt ? "Send the sign-up link again" : "Create their account and email a link to set a password"}
+                      title={c.invitedAt ? t("customers.resendLinkTitle") : t("customers.sendLinkTitle")}
                       className="rounded-full border border-[var(--brand-2,#2f6bd8)] bg-[var(--brand-soft,#eaf0fc)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--brand-ink,#1d3a8f)] disabled:opacity-50"
                     >
-                      {invitingId === c.id ? "Sending…" : c.invitedAt ? "Re-send sign-up link" : "Send sign-up link"}
+                      {invitingId === c.id ? t("customers.sending") : c.invitedAt ? t("customers.resendSignupLink") : t("customers.sendSignupLink")}
                     </button>
                   )}
                   {canWrite && (
@@ -1446,7 +1448,7 @@ export function CustomersApp() {
                         onClick={() => edit(c)}
                         className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]"
                       >
-                        View / edit
+                        {t("customers.viewEdit")}
                       </button>
                       {/* Only ever deletable before they've booked. After
                           that the record is holding their bookings' history
@@ -1458,14 +1460,14 @@ export function CustomersApp() {
                           onClick={() => remove(c)}
                           className="ml-auto rounded-full px-2.5 py-[3px] text-[11.5px] font-bold text-[var(--ink-3)] transition-colors hover:text-[var(--red,#e21d27)]"
                         >
-                          Remove
+                          {t("customers.remove")}
                         </button>
                       ) : (
                         <span
                           className="ml-auto text-[10.5px] text-[var(--ink-3)]"
-                          title="Families with bookings can't be deleted — their bookings and consent record depend on it"
+                          title={t("customers.hasBookingsFamilyTitle")}
                         >
-                          Has bookings
+                          {t("customers.hasBookings")}
                         </span>
                       )}
                     </>

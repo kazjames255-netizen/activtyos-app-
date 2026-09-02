@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import { useSettings } from "@/lib/settings";
 import { bookingDateSummary, money, payLabelFor, payTone, refundedTotal } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
@@ -31,10 +32,11 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
   selected?: boolean;
   onToggleSelect?: () => void;
 }) {
+  const t = useT();
   return (
     <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
       {selectable && (
-        <input type="checkbox" checked={!!selected} onChange={onToggleSelect} className="h-4 w-4 flex-none accent-[var(--brand)]" title="Select for batch download" />
+        <input type="checkbox" checked={!!selected} onChange={onToggleSelect} className="h-4 w-4 flex-none accent-[var(--brand)]" title={t("parent.selectForBatch")} />
       )}
       <div className="min-w-0 flex-1">
         <div className="truncate text-[13px] font-bold">{b.listing}</div>
@@ -48,17 +50,17 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
       {onPdf ? (
         <button
           onClick={onPdf}
-          title="Download receipt (PDF)"
+          title={t("parent.downloadReceiptPdf")}
           className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[var(--brand)]"
         >
-          ↓ PDF
+          {t("parent.pdfLabel")}
         </button>
       ) : (
-        <span className="w-[52px] text-right text-[10.5px] text-[var(--ink-3)]">receipt after payment</span>
+        <span className="w-[52px] text-right text-[10.5px] text-[var(--ink-3)]">{t("parent.receiptAfterPayment")}</span>
       )}
       {action && (
         <Button sm variant="primary" onClick={onPay}>
-          Pay now
+          {t("parent.payNow")}
         </Button>
       )}
     </div>
@@ -66,6 +68,7 @@ function Row({ b, action, onPay, onPdf, selectable, selected, onToggleSelect }: 
 }
 
 export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
+  const tr = useT();
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paying, setPaying] = useState<string[] | null>(null); // refs being paid
@@ -166,16 +169,16 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
   const downloadSelected = () => void downloadReceipts(paid.filter((b) => selected.has(b.ref)), ctx);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
-  if (!bookings) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading your payments…</div>;
+  if (!bookings) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{tr("parent.loadingPayments")}</div>;
 
   return (
     <div className="text-[var(--ink)]">
       {!hideHeader && (
         <div className="mb-4">
-          <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Payments</h2>
+          <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{tr("parent.paymentsHeading")}</h2>
           <p className="text-[12.5px] text-[var(--ink-3)]">
-            Everything your family owes and has paid, live from your bookings. Wallet credit lives in{" "}
-            <Link href="/custdash/wallet" className="font-bold text-[var(--brand-2,#2f6bd8)]">Wallet</Link>.
+            {tr("parent.paymentsIntro")}{" "}
+            <Link href="/custdash/wallet" className="font-bold text-[var(--brand-2,#2f6bd8)]">{tr("parent.walletTitle")}</Link>.
           </p>
         </div>
       )}
@@ -183,9 +186,9 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
       {/* Totals */}
       <div className="mb-3.5 flex flex-wrap gap-2.5">
         {[
-          { big: money(owedTotal), small: "To pay now", hot: owedTotal > 0 },
-          { big: money(paidTotal), small: "Paid to date" },
-          { big: money(refundTotal), small: "Refunded back" },
+          { big: money(owedTotal), small: tr("parent.toPayNow"), hot: owedTotal > 0 },
+          { big: money(paidTotal), small: tr("parent.paidToDate") },
+          { big: money(refundTotal), small: tr("parent.refundedBack") },
         ].map((t) => (
           <div key={t.small} className="min-w-[120px] flex-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3">
             <div className="text-[20px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)", color: t.hot ? "var(--red,#e21d27)" : "var(--brand)" }}>{t.big}</div>
@@ -197,49 +200,49 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
       {/* Filters */}
       <div className="mb-3.5 flex flex-wrap items-end gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-3">
         <label className="flex flex-col gap-1">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Child</span>
+          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.childLabel")}</span>
           <select value={childF} onChange={(e) => setChildF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
-            <option value="">All children</option>
+            <option value="">{tr("parent.allChildren")}</option>
             {childOptions.map((c) => <option key={c} value={c}>{c}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Activity</span>
+          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.activityFilterLabel")}</span>
           <select value={listingF} onChange={(e) => setListingF(e.target.value)} className="max-w-[200px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]">
-            <option value="">All activities</option>
+            <option value="">{tr("parent.allActivities")}</option>
             {listingOptions.map((l) => <option key={l} value={l}>{l}</option>)}
           </select>
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">From</span>
+          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.fromLabel")}</span>
           <input type="date" value={fromF} onChange={(e) => setFromF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
         </label>
         <label className="flex flex-col gap-1">
-          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">To</span>
+          <span className="text-[10.5px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">{tr("parent.toLabel")}</span>
           <input type="date" value={toF} onChange={(e) => setToF(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px]" />
         </label>
         {filtersOn && (
           <button onClick={() => { setChildF(""); setListingF(""); setFromF(""); setToF(""); }} className="py-1.5 text-[12px] font-bold text-[var(--ink-3)] hover:underline">
-            Clear
+            {tr("parent.clearBtn")}
           </button>
         )}
       </div>
 
       {owed.length > 0 && (
         <Card className="mb-3 p-4" style={{ borderLeftWidth: "4px", borderLeftColor: "var(--red,#e21d27)" }}>
-          <div className="mb-1.5 text-[13px] font-extrabold">Waiting on payment</div>
+          <div className="mb-1.5 text-[13px] font-extrabold">{tr("parent.waitingOnPayment")}</div>
           {owed.map((b) => <Row key={b.ref} b={b} action onPay={() => setPaying([b.ref])} />)}
         </Card>
       )}
 
       <Card className="mb-3 p-4">
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-          <div className="text-[13px] font-extrabold">Paid</div>
+          <div className="text-[13px] font-extrabold">{tr("parent.paidHeading")}</div>
           {paid.length > 0 && (
             <div className="flex items-center gap-2">
               <label className="flex cursor-pointer items-center gap-1.5 text-[11.5px] font-bold text-[var(--ink-2)]">
                 <input type="checkbox" checked={allSelected} onChange={toggleAll} className="h-4 w-4 accent-[var(--brand)]" />
-                Select all
+                {tr("parent.selectAll")}
               </label>
               <button
                 onClick={downloadSelected}
@@ -247,13 +250,13 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
                 className="rounded-full px-3.5 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
                 style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}
               >
-                ↓ Download {selectedShown.length ? `${selectedShown.length} selected` : "selected"} (PDF)
+                ↓ {tr("parent.downloadWord")} {selectedShown.length ? tr("parent.nSelected", { count: selectedShown.length }) : tr("parent.selectedWord")} (PDF)
               </button>
             </div>
           )}
         </div>
         {paid.length === 0 ? (
-          <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">{filtersOn ? "No payments match these filters." : "No payments yet."}</div>
+          <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">{filtersOn ? tr("parent.noPaymentsMatch") : tr("parent.noPaymentsYet")}</div>
         ) : (
           paid.map((b) => (
             <Row
@@ -270,7 +273,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
 
       {refunds.length > 0 && (
         <Card className="p-4">
-          <div className="mb-1.5 text-[13px] font-extrabold">Refunds</div>
+          <div className="mb-1.5 text-[13px] font-extrabold">{tr("parent.refundsHeading")}</div>
           {refunds.map((r, i) => (
             <div key={i} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 border-b border-dashed border-[var(--line)] py-2 last:border-b-0">
               <div className="min-w-0 flex-1">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Select } from "@/components/ui";
 import { fmtDate, mondayOf } from "@/features/listings/format";
@@ -22,6 +23,7 @@ type View = "daily" | "weekly" | "total";
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
 
 export function MealReport() {
+  const t = useT();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [missing, setMissing] = useState<Missing[]>([]);
   const [reqs, setReqs] = useState<MealReq[]>([]);
@@ -67,8 +69,8 @@ export function MealReport() {
   const dishChip = (dish: string, count: number) => { const c = dishCol(dish); return <span className="rounded-full px-2.5 py-1 text-[12px] font-extrabold" style={{ background: `${c}1c`, color: c }}>{dish} <span className="tabular-nums">× {count}</span></span>; };
   const emptyCard = (
     <div className="rounded-xl border border-dashed border-[var(--line)] bg-[#f7faff] p-5 text-center">
-      <div className="text-[13px] font-extrabold text-[var(--ink-2)]">No meals booked yet — 0 meals</div>
-      <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">Once families add meals at checkout, each day shows the dish totals and which children chose them.</div>
+      <div className="text-[13px] font-extrabold text-[var(--ink-2)]">{t("meals.noMealsBooked")}</div>
+      <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{t("meals.noMealsBookedSub")}</div>
     </div>
   );
 
@@ -108,7 +110,7 @@ export function MealReport() {
       return (
         <div key={w} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
           <div className="flex items-center gap-2 px-3.5 py-2" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}>
-            <span className="text-[13px] font-extrabold text-[#12306e]">Week of {fmtDate(w)}</span>{chip(`${total} meal${total === 1 ? "" : "s"}`)}
+            <span className="text-[13px] font-extrabold text-[#12306e]">{t("meals.weekOf", { date: fmtDate(w) })}</span>{chip(`${total} meal${total === 1 ? "" : "s"}`)}
           </div>
           <div className="flex flex-wrap gap-1.5 p-3">
             {[...dm.entries()].sort((a, b) => b[1] - a[1]).map(([dish, n]) => <span key={dish}>{dishChip(dish, n)}</span>)}
@@ -130,7 +132,7 @@ export function MealReport() {
           ))}
         </div>
         <div className="mt-2.5 flex items-baseline justify-between border-t border-[var(--line)] pt-2.5 text-[13px]">
-          <span className="font-extrabold text-[var(--ink)]">{grand} meals total</span>
+          <span className="font-extrabold text-[var(--ink)]">{t("meals.mealsTotal", { n: grand })}</span>
           <span className="font-extrabold tabular-nums text-[#0e9a75]">{money(spend)}</span>
         </div>
       </div>
@@ -140,24 +142,24 @@ export function MealReport() {
   return (
     <div className="mt-7 border-t border-[var(--line)] pt-4">
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="flex items-center gap-2 text-[15px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}><span className="grid h-7 w-7 place-items-center rounded-full text-[14px] text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>📋</span> Meal orders</div>
+        <div className="flex items-center gap-2 text-[15px] font-extrabold text-[#12306e]" style={{ fontFamily: "var(--ff-display)" }}><span className="grid h-7 w-7 place-items-center rounded-full text-[14px] text-white" style={{ background: "linear-gradient(135deg,#4f8bf5,#2f6bd8)" }}>📋</span> {t("meals.mealOrders")}</div>
         {grand > 0 && <span className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#3fd0c9,#0ea5a5)" }}>{grand} meal{grand === 1 ? "" : "s"} · {money(spend)}</span>}
         {listings.length > 1 && (
           <Select value={listingId} onChange={(e) => setListingId(e.target.value)} className="!py-1.5 !text-[12px]">
-            <option value="">All listings</option>
+            <option value="">{t("meals.allListings")}</option>
             {listings.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </Select>
         )}
         {allKids.length > 0 && (
           <Select value={kid} onChange={(e) => setKid(e.target.value)} className="!py-1.5 !text-[12px]">
-            <option value="">👧 All children</option>
+            <option value="">👧 {t("meals.allChildren")}</option>
             {allKids.map((k) => <option key={k} value={k}>{k}</option>)}
           </Select>
         )}
         <div className="ml-auto flex gap-1 rounded-full p-0.5" style={{ background: "var(--panel)", border: "1px solid var(--line)" }}>
           {(["daily", "weekly", "total"] as View[]).map((v) => (
             <button key={v} type="button" onClick={() => setView(v)} className="rounded-full px-3 py-1 text-[12px] font-extrabold capitalize transition"
-              style={view === v ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 10px -3px rgba(47,107,216,.6)" } : { color: "var(--ink-3)" }}>{v}</button>
+              style={view === v ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 10px -3px rgba(47,107,216,.6)" } : { color: "var(--ink-3)" }}>{({ daily: t("meals.viewDaily"), weekly: t("meals.viewWeekly"), total: t("meals.viewTotal") })[v]}</button>
           ))}
         </div>
       </div>
@@ -167,7 +169,7 @@ export function MealReport() {
         return (
           <div className="mb-3 overflow-hidden rounded-2xl border border-[#cdddf7] bg-[#f7faff]">
             <div className="flex items-center gap-2 px-3.5 py-2 text-[13px] font-extrabold text-[#1d3a8f]" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}>
-              🔔 Meal change requests <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11.5px] font-extrabold">{rq.length}</span>
+              🔔 {t("meals.mealChangeRequests")} <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11.5px] font-extrabold">{rq.length}</span>
             </div>
             <div className="flex flex-col divide-y divide-[var(--line)]">
               {rq.map((r) => (
@@ -175,11 +177,11 @@ export function MealReport() {
                   <span className="font-extrabold text-[#12306e]">{r.childName}</span>
                   <span className="text-[var(--ink-3)]">{fmtDay(r.date)}</span>
                   {r.cancelRequest
-                    ? <span className="font-semibold text-[#c0392b]">wants to cancel {r.items?.map((i) => i.name).join(", ")}</span>
-                    : <span className="font-semibold text-[#8a5300]">change {r.items?.map((i) => i.name).join(", ")} → <b>{r.changeRequest?.name}</b></span>}
+                    ? <span className="font-semibold text-[#c0392b]">{t("meals.wantsToCancel", { items: r.items?.map((i) => i.name).join(", ") ?? "" })}</span>
+                    : <span className="font-semibold text-[#8a5300]">{t("meals.changePrefix", { items: r.items?.map((i) => i.name).join(", ") ?? "" })}<b>{r.changeRequest?.name}</b></span>}
                   <div className="ml-auto flex gap-1.5">
-                    <button type="button" onClick={() => act(r.id, "approve")} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#22c07a,#0e9a5a)" }}>Approve</button>
-                    <button type="button" onClick={() => act(r.id, "decline")} className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-extrabold text-[var(--ink-2)]">Decline</button>
+                    <button type="button" onClick={() => act(r.id, "approve")} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white" style={{ background: "linear-gradient(135deg,#22c07a,#0e9a5a)" }}>{t("meals.approve")}</button>
+                    <button type="button" onClick={() => act(r.id, "decline")} className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-extrabold text-[var(--ink-2)]">{t("meals.decline")}</button>
                   </div>
                 </div>
               ))}
@@ -198,8 +200,8 @@ export function MealReport() {
         return (
           <div className="mt-4 overflow-hidden rounded-2xl border border-[#f2dcbb] bg-[#fffaf2]">
             <div className="flex items-center gap-2 px-3.5 py-2 text-[13px] font-extrabold text-[#96631a]" style={{ background: "linear-gradient(120deg,#fff3e0,#fdecd2)" }}>
-              🕐 Not yet chosen <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11.5px] font-extrabold">{miss.length}</span>
-              <span className="ml-auto text-[10.5px] font-semibold text-[#96631a]/80">booked children with no meal on a meal day</span>
+              🕐 {t("meals.notYetChosen")} <span className="rounded-full bg-white/70 px-2 py-0.5 text-[11.5px] font-extrabold">{miss.length}</span>
+              <span className="ml-auto text-[10.5px] font-semibold text-[#96631a]/80">{t("meals.notYetChosenSub")}</span>
             </div>
             <div className="flex flex-col gap-1.5 p-3">
               {[...byDate.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([date, kids]) => (

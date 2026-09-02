@@ -1,20 +1,59 @@
-import en, { type Messages } from "./en";
-import pl from "./pl";
-import ro from "./ro";
-import ur from "./ur";
-import ar from "./ar";
-import fr from "./fr";
-import es from "./es";
+import enBase, { type Messages } from "./en";
+import plBase from "./pl";
+import roBase from "./ro";
+import urBase from "./ur";
+import arBase from "./ar";
+import frBase from "./fr";
+import esBase from "./es";
 import type { LocaleCode } from "../config";
 
-type DeepPartial<T> = { [K in keyof T]?: T[K] extends object ? DeepPartial<T[K]> : T[K] };
+// Per-area catalogues authored by the i18n migration (one file per feature area,
+// each an object keyed by locale). Add an import here as each area lands.
+import common from "./areas/common";
+import dashboard from "./areas/dashboard";
+import parent from "./areas/parent";
+import customers from "./areas/customers";
+import meals from "./areas/meals";
+import setup from "./areas/setup";
+import team from "./areas/team";
 
-// Authored catalogues. Locales not yet fully authored (pa/bn/pt/cy) fall back to
-// English so the app stays usable while translations are added area-by-area.
-export const CATALOGS: Record<LocaleCode, DeepPartial<Messages>> = {
-  en, pl, ro, ur, ar, fr, es,
-  pa: en, bn: en, pt: en, cy: en,
+type Dict = Record<string, string>;
+type ByLocale = Partial<Record<LocaleCode, Dict>>;
+type Namespaces = Record<string, Dict>;
+
+// Base shell catalogues (common + header namespaces). Locales without an authored
+// base fall back to English; area namespaces still translate for all 11.
+const BASE: Record<LocaleCode, Namespaces> = {
+  en: enBase as unknown as Namespaces,
+  pl: plBase as unknown as Namespaces,
+  ro: roBase as unknown as Namespaces,
+  ur: urBase as unknown as Namespaces,
+  ar: arBase as unknown as Namespaces,
+  fr: frBase as unknown as Namespaces,
+  es: esBase as unknown as Namespaces,
+  pa: enBase as unknown as Namespaces,
+  bn: enBase as unknown as Namespaces,
+  pt: enBase as unknown as Namespaces,
+  cy: enBase as unknown as Namespaces,
 };
 
+// area namespace -> its per-locale dictionaries.
+const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team };
+
+const LOCALE_CODES: LocaleCode[] = ["en", "pl", "ro", "ur", "pa", "bn", "ar", "pt", "es", "fr", "cy"];
+
+function buildLocale(L: LocaleCode): Namespaces {
+  const base = BASE[L] ?? BASE.en;
+  const out: Namespaces = {};
+  for (const [ns, dict] of Object.entries(base)) out[ns] = { ...dict };
+  for (const [area, byLocale] of Object.entries(AREAS)) {
+    const dict = byLocale[L] ?? byLocale.en ?? {};
+    out[area] = { ...(out[area] ?? {}), ...dict };
+  }
+  return out;
+}
+
+export const CATALOGS = Object.fromEntries(LOCALE_CODES.map((L) => [L, buildLocale(L)])) as Record<LocaleCode, Namespaces>;
+
 export type { Messages };
-export { en };
+export { enBase as en };

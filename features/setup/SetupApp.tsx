@@ -7,6 +7,7 @@ import { api, get as apiGet } from "@/lib/api";
 import { NAV_GROUPS, type PortalKey } from "@/lib/nav/config";
 import { CORE_VIEWS } from "@/lib/use-customer-area";
 import { Button, Card, FieldLabel, Input, Select, inputCls } from "@/components/ui";
+import { useT } from "@/lib/i18n/provider";
 import { PrintableDoc } from "@/features/money/doc-shared";
 import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
@@ -1275,6 +1276,7 @@ function QuestionsEditor({
 // ── The screen ─────────────────────────────────────────────────────────────
 
 export function SetupApp() {
+  const t = useT();
   const { settings, questions, loading, save, error } = useSettings();
   const [tmplPreview, setTmplPreview] = useState(false);
   const [poPreview, setPoPreview] = useState(false);
@@ -1334,80 +1336,78 @@ export function SetupApp() {
 
   if (loading)
     return (
-      <OperatorPage title="Setup & features" icon="⚙️">
-        <span className="text-[var(--ink-3)]">Loading…</span>
+      <OperatorPage title={t("setup.setupAndFeatures")} icon="⚙️">
+        <span className="text-[var(--ink-3)]">{t("setup.loading")}</span>
       </OperatorPage>
     );
 
   const TABS: [Tab, string][] = [
-    ["notifications", "🔔 Notifications"],
-    ["features", "Features"],
-    ["company", "Company setup"],
-    ["seasons", "Seasons"],
-    ["branding", "Branding"],
-    ["people", "Child questions"],
-    ["staff", "Staff & workforce"],
-    ["announcements", "Announcements"],
-    ["reviews", "Reviews"],
-    ...(portal === "company" ? [["roles", "Roles & permissions"] as [Tab, string]] : []),
-    ["learning", "Learning"],
-    ["meals", "Meals"],
-    ["medication", "Medication"],
-    ["safeguarding", "Safeguarding"],
-    ["registers", "Register"],
-    ["trips", "Trips & visits"],
-    ["calendar", "Calendar"],
-    ["inventory", "Inventory"],
-    ["groups", "Age groups & rooms"],
-    ["cancel", "Cancellations & refunds"],
-    ["defaults", "New listing defaults"],
-    ["bookings", "Payments"],
-    ["money", "Money"],
-    ["vouchers", "Childcare vouchers"],
-    ["marketplace", "Marketplace"],
-    ["refer", "Refer a friend"],
-    ["memberships", "Memberships"],
+    ["notifications", `🔔 ${t("setup.tabNotifications")}`],
+    ["features", t("setup.tabFeatures")],
+    ["company", t("setup.tabCompanySetup")],
+    ["seasons", t("setup.tabSeasons")],
+    ["branding", t("setup.tabBranding")],
+    ["people", t("setup.tabChildQuestions")],
+    ["staff", t("setup.tabStaffWorkforce")],
+    ["announcements", t("setup.tabAnnouncements")],
+    ["reviews", t("setup.tabReviews")],
+    ...(portal === "company" ? [["roles", t("setup.tabRolesPermissions")] as [Tab, string]] : []),
+    ["learning", t("setup.tabLearning")],
+    ["meals", t("setup.tabMeals")],
+    ["medication", t("setup.tabMedication")],
+    ["safeguarding", t("setup.tabSafeguarding")],
+    ["registers", t("setup.tabRegister")],
+    ["trips", t("setup.tabTripsVisits")],
+    ["calendar", t("setup.tabCalendar")],
+    ["inventory", t("setup.tabInventory")],
+    ["groups", t("setup.tabAgeGroupsRooms")],
+    ["cancel", t("setup.tabCancellationsRefunds")],
+    ["defaults", t("setup.tabNewListingDefaults")],
+    ["bookings", t("setup.tabPayments")],
+    ["money", t("setup.tabMoney")],
+    ["vouchers", t("setup.tabChildcareVouchers")],
+    ["marketplace", t("setup.tabMarketplace")],
+    ["refer", t("setup.tabReferFriend")],
+    ["memberships", t("setup.tabMemberships")],
   ];
 
   return (
     <OperatorPage
-      title="Setup & features"
+      title={t("setup.setupAndFeatures")}
       icon="⚙️"
-      lede="How your account runs — set once, used everywhere"
+      lede={t("setup.setupLede")}
       actions={
         <>
           {fromView && (
             <Link href={`/${portal}/${fromView}`} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm transition hover:brightness-95">
-              <span className="text-[14px] leading-none">‹</span>Back to {backLabel}
+              <span className="text-[14px] leading-none">‹</span>{t("setup.backTo", { label: backLabel })}
             </Link>
           )}
           <span className="rounded-full bg-white/15 px-3 py-1 text-[11.5px] font-semibold text-white backdrop-blur-sm">
-            {error ? <span className="font-bold text-[#ffd5d5]">{error}</span> : savedAt ? `✓ Saved ${savedAt}` : "Changes save as you make them"}
+            {error ? <span className="font-bold text-[#ffd5d5]">{error}</span> : savedAt ? `✓ ${t("setup.savedAt", { time: savedAt })}` : t("setup.changesSaveAsYouGo")}
           </span>
         </>
       }
     >
       <HowItWorks
-        video="Where each setting shows up: a question added here appearing on the parent's checkout, the child's profile and the register."
+        video={t("setup.howItWorksVideo")}
         minutes="2 min"
       >
         <p className="mb-2">
-          Everything on this page is yours to change and applies across your whole account. There is
-          no Save button — each change is stored the moment you make it.
+          {t("setup.howItWorksP1")}
         </p>
         <p>
-          Each tab is one job. If a setting isn&apos;t here yet, it&apos;s because it&apos;s still
-          fixed in the product — tell us and it moves.
+          {t("setup.howItWorksP2")}
         </p>
       </HowItWorks>
 
       <TabStrip tabs={TABS} value={tab} onChange={setTab} accent="notifications" />
 
       {tab === "company" && (
-        <Section title="Company setup" lede="Who you are — the name and details your customers and documents show. Bank details and the invoice template live in the Money tab.">
+        <Section title={t("setup.companySetup")} lede={t("setup.companySetupLede")}>
           <div className="grid gap-2.5 sm:grid-cols-2">
-            <div><FieldLabel>Display name (what customers see)</FieldLabel><Input value={settings.providerName ?? ""} placeholder="Amir Coaching" onChange={(e) => set("providerName", e.target.value)} className="w-full" /></div>
-            <div><FieldLabel>Show your name as</FieldLabel><Select value={settings.providerNameMode ?? "business"} onChange={(e) => set("providerNameMode", e.target.value as "person" | "business")} className="w-full"><option value="business">Business name</option><option value="person">My own name</option></Select></div>
+            <div><FieldLabel>{t("setup.displayName")}</FieldLabel><Input value={settings.providerName ?? ""} placeholder="Amir Coaching" onChange={(e) => set("providerName", e.target.value)} className="w-full" /></div>
+            <div><FieldLabel>{t("setup.showYourNameAs")}</FieldLabel><Select value={settings.providerNameMode ?? "business"} onChange={(e) => set("providerNameMode", e.target.value as "person" | "business")} className="w-full"><option value="business">{t("setup.businessName")}</option><option value="person">{t("setup.myOwnName")}</option></Select></div>
             {([
               ["businessName", "Legal / business name", "Little Kickers Ltd"],
               ["email", "Contact email", "hello@yourbiz.co.uk"],
@@ -1423,71 +1423,71 @@ export function SetupApp() {
       )}
 
       {tab === "branding" && (
-        <Section title="Branding" lede="Your logo and accent colour on customer-facing pages, emails and documents.">
-          <Row label="Logo" hint="PNG, JPG, SVG, WebP, GIF, BMP or AVIF — up to 1MB. We resize it automatically. Shown on your customer pages, emails and PDFs.">
+        <Section title={t("setup.branding")} lede={t("setup.brandingLede")}>
+          <Row label={t("setup.logo")} hint={t("setup.logoHint")}>
             <div>
             <div className="flex items-center gap-2">
               {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt="logo" className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
-              <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ Upload<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…). iPhone HEIC photos: export as JPG first."); } e.target.value = ""; }} /></label>
-              {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
+              <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ {t("setup.upload")}<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…). iPhone HEIC photos: export as JPG first."); } e.target.value = ""; }} /></label>
+              {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("setup.remove")}</button>}
             </div>
-            <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">PNG, JPG, SVG, WebP, GIF, BMP or AVIF — up to 1MB, resized automatically. (iPhone HEIC: export as JPG first.)</div>
+            <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("setup.logoFormatsNote")}</div>
             </div>
           </Row>
-          <Row label="Accent colour" hint="Tints buttons and highlights on your customer-facing pages.">
+          <Row label={t("setup.accentColour")} hint={t("setup.accentColourHint")}>
             <div className="flex items-center gap-2">
               {["#2f6bd8", "#0d9488", "#16a34a", "#ea580c", "#dc2626", "#db2777", "#7c3aed"].map((c) => <button key={c} type="button" onClick={() => set("brandColor", c)} title={c} className="h-6 w-6 rounded-full" style={{ background: c, boxShadow: (settings.brandColor ?? "#2f6bd8") === c ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />)}
-              <input type="color" value={settings.brandColor ?? "#2f6bd8"} onChange={(e) => set("brandColor", e.target.value)} className="h-7 w-8 cursor-pointer rounded border border-[var(--line)]" title="Custom colour" />
+              <input type="color" value={settings.brandColor ?? "#2f6bd8"} onChange={(e) => set("brandColor", e.target.value)} className="h-7 w-8 cursor-pointer rounded border border-[var(--line)]" title={t("setup.customColour")} />
             </div>
           </Row>
         </Section>
       )}
 
       {tab === "staff" && (
-        <Section title="Staff & workforce" lede="Team policy — the checks you require. The checks are enforced by the backend (handed over).">
+        <Section title={t("setup.staffWorkforce")} lede={t("setup.staffWorkforceLede")}>
           {portal === "company" && (
             <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] px-4 py-3">
               <span className="text-[12.5px] leading-relaxed text-[#7a5a12]">
                 <b>Looking for roles &amp; who-can-see-what?</b> Name your roles and set View / Edit per area — Dashboard, Listings, Bookings, Finances and the rest — in the <b>Roles &amp; permissions</b> tab.
               </span>
-              <button type="button" onClick={() => setTab("roles")} className="ml-auto flex-none rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white hover:bg-[#16306e]">Open Roles &amp; permissions →</button>
+              <button type="button" onClick={() => setTab("roles")} className="ml-auto flex-none rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white hover:bg-[#16306e]">{t("setup.openRolesPermissions")} →</button>
             </div>
           )}
-          <Row label="Who assigns staff to groups" hint="On: only site managers & leads can assign staff to age groups / rooms. Off: anyone on the team can.">
-            <Toggle on={settings.staff?.assignByLeads ?? false} onChange={(v) => set("staff", { ...settings.staff, assignByLeads: v })} labels={["Leads only", "Anyone"]} />
+          <Row label={t("setup.whoAssignsStaff")} hint={t("setup.whoAssignsStaffHint")}>
+            <Toggle on={settings.staff?.assignByLeads ?? false} onChange={(v) => set("staff", { ...settings.staff, assignByLeads: v })} labels={[t("setup.leadsOnly"), t("setup.anyone")]} />
           </Row>
-          <Row label="Require a valid DBS" hint="A staff member can’t be rostered until a valid DBS is on file." note="Enforcement: backend">
-            <Toggle on={settings.staff?.requireDBS ?? true} onChange={(v) => set("staff", { ...settings.staff, requireDBS: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.requireDBS")} hint={t("setup.requireDBSHint")} note={t("setup.enforcementBackend")}>
+            <Toggle on={settings.staff?.requireDBS ?? true} onChange={(v) => set("staff", { ...settings.staff, requireDBS: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label="Require key certificates in date" hint="First aid, safeguarding and similar must be current." note="Enforcement: backend">
-            <Toggle on={settings.staff?.requireCompliance ?? true} onChange={(v) => set("staff", { ...settings.staff, requireCompliance: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.requireCerts")} hint={t("setup.requireCertsHint")} note={t("setup.enforcementBackend")}>
+            <Toggle on={settings.staff?.requireCompliance ?? true} onChange={(v) => set("staff", { ...settings.staff, requireCompliance: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label="Default staff : child ratio" hint="The starting target on the Ratios board (1 adult to N children).">
+          <Row label={t("setup.defaultRatio")} hint={t("setup.defaultRatioHint")}>
             <Input type="number" min={1} value={settings.staff?.defaultRatioTarget ?? 8} onChange={(e) => set("staff", { ...settings.staff, defaultRatioTarget: Number(e.target.value) || 1 })} className="w-24" />
           </Row>
-          <div className="mt-3"><FieldLabel>Note added to staff invite emails</FieldLabel><Input value={settings.staff?.inviteMessage ?? ""} placeholder="Looking forward to having you on the team!" onChange={(e) => set("staff", { ...settings.staff, inviteMessage: e.target.value })} className="w-full" /></div>
+          <div className="mt-3"><FieldLabel>{t("setup.inviteNote")}</FieldLabel><Input value={settings.staff?.inviteMessage ?? ""} placeholder={t("setup.inviteNotePlaceholder")} onChange={(e) => set("staff", { ...settings.staff, inviteMessage: e.target.value })} className="w-full" /></div>
         </Section>
       )}
 
       {tab === "announcements" && (
-        <Section title="Announcements" lede="The internal staff notice board and the dashboard alert card. Delivery (in-app bell / push) and the read-acknowledgement audit are handled by the backend (handed over).">
-          <Row label="Staff announcement board" hint="Turn the notice board and the staff-dashboard alert card on or off for your whole team.">
-            <Toggle on={settings.announcements?.enabled ?? true} onChange={(v) => set("announcements", { ...settings.announcements, enabled: v })} labels={["On", "Off"]} />
+        <Section title={t("setup.announcements")} lede={t("setup.announcementsLede")}>
+          <Row label={t("setup.staffBoard")} hint={t("setup.staffBoardHint")}>
+            <Toggle on={settings.announcements?.enabled ?? true} onChange={(v) => set("announcements", { ...settings.announcements, enabled: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
-          <Row label="Let site leads post" hint="On: managers & leads can post to their team. Off: only head office can post.">
-            <Toggle on={settings.announcements?.leadsCanPost ?? true} onChange={(v) => set("announcements", { ...settings.announcements, leadsCanPost: v })} labels={["Leads too", "HO only"]} />
+          <Row label={t("setup.letLeadsPost")} hint={t("setup.letLeadsPostHint")}>
+            <Toggle on={settings.announcements?.leadsCanPost ?? true} onChange={(v) => set("announcements", { ...settings.announcements, leadsCanPost: v })} labels={[t("setup.leadsToo"), t("setup.hoOnly")]} />
           </Row>
-          <Row label="Require staff to acknowledge" hint="Staff must confirm they’ve read each notice — you get a read / acknowledged audit." note="Audit: backend">
-            <Toggle on={settings.announcements?.requireAck ?? false} onChange={(v) => set("announcements", { ...settings.announcements, requireAck: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.requireAck")} hint={t("setup.requireAckHint")} note={t("setup.auditBackend")}>
+            <Toggle on={settings.announcements?.requireAck ?? false} onChange={(v) => set("announcements", { ...settings.announcements, requireAck: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label="Keep on the dashboard for" hint="How long a new notice keeps showing on the staff dashboard alert card.">
-            <div className="flex items-center gap-2"><Input type="number" min={1} max={14} value={settings.announcements?.dashboardDays ?? 1} onChange={(e) => set("announcements", { ...settings.announcements, dashboardDays: Math.min(14, Math.max(1, Number(e.target.value) || 1)) })} className="w-20" /><span className="text-[12.5px] text-[var(--ink-3)]">day(s)</span></div>
+          <Row label={t("setup.keepOnDashboard")} hint={t("setup.keepOnDashboardHint")}>
+            <div className="flex items-center gap-2"><Input type="number" min={1} max={14} value={settings.announcements?.dashboardDays ?? 1} onChange={(e) => set("announcements", { ...settings.announcements, dashboardDays: Math.min(14, Math.max(1, Number(e.target.value) || 1)) })} className="w-20" /><span className="text-[12.5px] text-[var(--ink-3)]">{t("setup.days")}</span></div>
           </Row>
-          <Row label="Default audience" hint="What “Who gets it” starts on when you compose a new notice.">
-            <Toggle on={(settings.announcements?.defaultAudience ?? "all") === "all"} onChange={(v) => set("announcements", { ...settings.announcements, defaultAudience: v ? "all" : "listing" })} labels={["All staff", "Per listing"]} />
+          <Row label={t("setup.defaultAudience")} hint={t("setup.defaultAudienceHint")}>
+            <Toggle on={(settings.announcements?.defaultAudience ?? "all") === "all"} onChange={(v) => set("announcements", { ...settings.announcements, defaultAudience: v ? "all" : "listing" })} labels={[t("setup.allStaff"), t("setup.perListing")]} />
           </Row>
-          <Row label="Start new notices as Important" hint="New notices begin with the red Important flag ticked — you can still turn it off per notice.">
-            <Toggle on={settings.announcements?.defaultImportant ?? false} onChange={(v) => set("announcements", { ...settings.announcements, defaultImportant: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.startImportant")} hint={t("setup.startImportantHint")}>
+            <Toggle on={settings.announcements?.defaultImportant ?? false} onChange={(v) => set("announcements", { ...settings.announcements, defaultImportant: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
         </Section>
       )}
@@ -1512,9 +1512,9 @@ export function SetupApp() {
           return { googlePlaceId: s, googleReviewUrl: "" };
         };
         return (
-        <Section title="Reviews" lede="Blend your in-house feedback with the review sites you already use. Compliance is built in — every customer is invited to review on Google, never only the happy ones.">
-          <div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">How do you want to collect reviews?</div>
-          <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">Both are fully compliant. Pick the one that suits how you like to run things — you can change it any time.</p>
+        <Section title={t("setup.reviews")} lede={t("setup.reviewsLede")}>
+          <div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">{t("setup.howCollectReviews")}</div>
+          <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">{t("setup.bothCompliant")}</p>
           <div className="mb-4 grid gap-2.5 sm:grid-cols-2">
             {([
               { k: "inhouse", icon: "🛡️", title: "In-house first", tag: "Recommended", benefits: ["Catch a problem privately and fix it before it's public", "Captures feedback from every parent, even the quiet ones", "No accounts to set up — works today", "Still invites happy parents to Google/Trustpilot afterwards"] },
@@ -1536,8 +1536,8 @@ export function SetupApp() {
             })}
           </div>
 
-          <div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">Which review sites do you use?</div>
-          <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">In-house feedback is always on. Pick the external sites you collect reviews on — we&rsquo;ll only ask for what those need.</p>
+          <div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">{t("setup.whichReviewSites")}</div>
+          <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">{t("setup.whichReviewSitesHint")}</p>
           <div className="mb-4 flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef4fd] px-3 py-1.5 text-[12.5px] font-bold text-[#1d3a8f]"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#1d3a8f" }} />In-house · always on</span>
             {([["google", "Google", "#ea4335"], ["trustpilot", "Trustpilot", "#00b67a"]] as [("google" | "trustpilot"), string, string][]).map(([k, label, col]) => (
@@ -1606,11 +1606,11 @@ export function SetupApp() {
               </div>
               <button type="button" onClick={() => writePlaces([...places, { id: "loc" + (places.length + 1) + Date.now().toString(36), label: "", placeId: "", reviewUrl: "" }])} className="mb-4 rounded-full border border-dashed border-[#c9d6f5] bg-[#f5f8ff] px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] transition hover:bg-[#eef4ff]">+ Add another location</button>
 
-              <Row label="Show my Google rating publicly" hint="Display your live Google star rating on your Browse page and blend it into your overall score.">
-                <Toggle on={rv.showGoogleRating ?? true} onChange={(v) => set("reviews", { ...rv, showGoogleRating: v })} labels={["On", "Off"]} />
+              <Row label={t("setup.showGoogleRating")} hint={t("setup.showGoogleRatingHint")}>
+                <Toggle on={rv.showGoogleRating ?? true} onChange={(v) => set("reviews", { ...rv, showGoogleRating: v })} labels={[t("setup.on"), t("setup.off")]} />
               </Row>
-              <Row label="Invite customers to review on Google" hint="After a parent leaves in-house feedback, show a 'review us on Google' button — to EVERYONE, whatever they rated (this is what keeps you compliant with Google & the FTC).">
-                <Toggle on={rv.inviteToGoogle ?? true} onChange={(v) => set("reviews", { ...rv, inviteToGoogle: v })} labels={["On", "Off"]} />
+              <Row label={t("setup.inviteToGoogle")} hint={t("setup.inviteToGoogleHint")}>
+                <Toggle on={rv.inviteToGoogle ?? true} onChange={(v) => set("reviews", { ...rv, inviteToGoogle: v })} labels={[t("setup.on"), t("setup.off")]} />
               </Row>
               <div className="mb-4 rounded-lg border border-[#cde0f7] bg-[#eef5ff] px-3.5 py-2.5 text-[11.5px] leading-relaxed text-[#1d3a8f]">
                 Want to <b>pull every Google review + reply from ActivityOS</b>? That needs a one-time <b>Connect Google Business Profile</b> from the <b>Reviews</b> page (enabled once the platform link is live). The links above already show your rating and invite reviews without it.
@@ -1642,51 +1642,51 @@ export function SetupApp() {
               <p className="mt-2 text-[10.5px] text-[#3a6a58]"><b>Got a Trustpilot Business login?</b> It&rsquo;s also under Settings → Integrations, or in your <b>businessapp.b2b.trustpilot.com</b> address bar.</p>
             </div>
 
-            <Row label="Trustpilot Business Unit ID" hint="Paste your Business Unit ID to pull your Trustpilot reviews into your blended score." note="Needs platform key">
+            <Row label={t("setup.trustpilotBUID")} hint={t("setup.trustpilotBUIDHint")} note={t("setup.needsPlatformKey")}>
               <Input value={rv.trustpilotBusinessUnitId ?? ""} placeholder="e.g. 4b2f1a9c00006400051a3c4e" onChange={(e) => set("reviews", { ...rv, trustpilotBusinessUnitId: e.target.value.trim() })} className="w-full" />
             </Row>
           </>)}
 
-          <div className="mb-1 mt-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Your website</div>
-          <Row label="Public reviews widget & rich-snippet stars" hint="Expose a public feed of your reviews for embedding on your own website, plus AggregateRating data for Google star snippets." note="Backend">
-            <Toggle on={rv.publicWidget ?? false} onChange={(v) => set("reviews", { ...rv, publicWidget: v })} labels={["On", "Off"]} />
+          <div className="mb-1 mt-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("setup.yourWebsite")}</div>
+          <Row label={t("setup.publicWidget")} hint={t("setup.publicWidgetHint")} note={t("setup.backend")}>
+            <Toggle on={rv.publicWidget ?? false} onChange={(v) => set("reviews", { ...rv, publicWidget: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
         </Section>
         );
       })()}
 
       {tab === "roles" && (
-        <Section title="Roles & permissions" lede="Define the roles in your organisation and what each can see or change. Assign a role to each person when you invite them (coming next); Owner always has full access.">
+        <Section title={t("setup.rolesPermissions")} lede={t("setup.rolesPermissionsLede")}>
           <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => set("roles", roles)} />
         </Section>
       )}
 
       {tab === "learning" && (
-        <Section title="Learning" lede="Staff training records and children’s learning.">
-          <Row label="Keep staff training records" hint="Track certificates and renewals for your team.">
-            <Toggle on={settings.learning?.trackTraining ?? true} onChange={(v) => set("learning", { ...settings.learning, trackTraining: v })} labels={["On", "Off"]} />
+        <Section title={t("setup.learning")} lede={t("setup.learningLede")}>
+          <Row label={t("setup.keepTrainingRecords")} hint={t("setup.keepTrainingRecordsHint")}>
+            <Toggle on={settings.learning?.trackTraining ?? true} onChange={(v) => set("learning", { ...settings.learning, trackTraining: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
-          <Row label="Learning observations / journeys" hint="Log observations against children’s development." note="Needs backend">
-            <Toggle on={settings.learning?.observations ?? false} onChange={(v) => set("learning", { ...settings.learning, observations: v })} labels={["On", "Off"]} />
+          <Row label={t("setup.observations")} hint={t("setup.observationsHint")} note={t("setup.needsBackend")}>
+            <Toggle on={settings.learning?.observations ?? false} onChange={(v) => set("learning", { ...settings.learning, observations: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
-          <div className="mt-3"><FieldLabel>Curriculum framework</FieldLabel><Input value={settings.learning?.framework ?? ""} placeholder="EYFS" onChange={(e) => set("learning", { ...settings.learning, framework: e.target.value })} className="w-full sm:w-64" /></div>
+          <div className="mt-3"><FieldLabel>{t("setup.curriculumFramework")}</FieldLabel><Input value={settings.learning?.framework ?? ""} placeholder="EYFS" onChange={(e) => set("learning", { ...settings.learning, framework: e.target.value })} className="w-full sm:w-64" /></div>
 
-          <div className="mt-5 mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Courses &amp; certificates</div>
+          <div className="mt-5 mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("setup.coursesCertificates")}</div>
           <div className="mb-3 grid gap-3 sm:grid-cols-2">
-            <div><FieldLabel>Default quiz pass mark (%)</FieldLabel><Input type="number" min={1} max={100} value={settings.learning?.passMark ?? 80} onChange={(e) => set("learning", { ...settings.learning, passMark: Number(e.target.value) })} className="w-full sm:w-40" /></div>
-            <div><FieldLabel>Default renewal (months, 0 = never)</FieldLabel><Input type="number" min={0} value={settings.learning?.renewMonths ?? 12} onChange={(e) => set("learning", { ...settings.learning, renewMonths: Number(e.target.value) })} className="w-full sm:w-40" /></div>
+            <div><FieldLabel>{t("setup.passMark")}</FieldLabel><Input type="number" min={1} max={100} value={settings.learning?.passMark ?? 80} onChange={(e) => set("learning", { ...settings.learning, passMark: Number(e.target.value) })} className="w-full sm:w-40" /></div>
+            <div><FieldLabel>{t("setup.defaultRenewal")}</FieldLabel><Input type="number" min={0} value={settings.learning?.renewMonths ?? 12} onChange={(e) => set("learning", { ...settings.learning, renewMonths: Number(e.target.value) })} className="w-full sm:w-40" /></div>
           </div>
-          <Row label="Issue certificates automatically" hint="Give staff a certificate the moment they pass a course.">
-            <Toggle on={settings.learning?.autoCert ?? true} onChange={(v) => set("learning", { ...settings.learning, autoCert: v })} labels={["On", "Off"]} />
+          <Row label={t("setup.issueCertsAuto")} hint={t("setup.issueCertsAutoHint")}>
+            <Toggle on={settings.learning?.autoCert ?? true} onChange={(v) => set("learning", { ...settings.learning, autoCert: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
-          <Row label="Show your logo on certificates" hint="Brand the printable/PDF certificate with your logo.">
-            <Toggle on={settings.learning?.certLogo ?? true} onChange={(v) => set("learning", { ...settings.learning, certLogo: v })} labels={["On", "Off"]} />
+          <Row label={t("setup.showLogoOnCerts")} hint={t("setup.showLogoOnCertsHint")}>
+            <Toggle on={settings.learning?.certLogo ?? true} onChange={(v) => set("learning", { ...settings.learning, certLogo: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
-          <Row label="Require staff to confirm policies" hint="Required policies must be read and confirmed, with a dated record.">
-            <Toggle on={settings.learning?.requirePolicyConfirm ?? true} onChange={(v) => set("learning", { ...settings.learning, requirePolicyConfirm: v })} labels={["On", "Off"]} />
+          <Row label={t("setup.requirePolicyConfirm")} hint={t("setup.requirePolicyConfirmHint")}>
+            <Toggle on={settings.learning?.requirePolicyConfirm ?? true} onChange={(v) => set("learning", { ...settings.learning, requirePolicyConfirm: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
-          <Row label="Staff can self-enrol on optional courses" hint="Let staff pick up optional (non-required) courses themselves.">
-            <Toggle on={settings.learning?.selfEnrol ?? false} onChange={(v) => set("learning", { ...settings.learning, selfEnrol: v })} labels={["On", "Off"]} />
+          <Row label={t("setup.selfEnrol")} hint={t("setup.selfEnrolHint")}>
+            <Toggle on={settings.learning?.selfEnrol ?? false} onChange={(v) => set("learning", { ...settings.learning, selfEnrol: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
           <div className="mt-5 mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Certificate design</div>
           <p className="mb-2.5 text-[12px] text-[var(--ink-3)]">Pick the certificate staff receive when they pass a course. It auto-fills their name, the course, the score, the completion date and — if the course renews — the expiry date.</p>
@@ -1768,42 +1768,42 @@ export function SetupApp() {
       )}
 
       {tab === "meals" && (
-        <Section title="Meals" lede="Meal ordering for parents. The menu itself is managed in the Meals area.">
-          <Row label="Parents can pre-order meals" hint="Off: hide meal ordering from parents entirely.">
-            <Toggle on={settings.meals?.ordering ?? true} onChange={(v) => set("meals", { ...settings.meals, ordering: v })} labels={["On", "Off"]} />
+        <Section title={t("setup.meals")} lede={t("setup.mealsLede")}>
+          <Row label={t("setup.preOrderMeals")} hint={t("setup.preOrderMealsHint")}>
+            <Toggle on={settings.meals?.ordering ?? true} onChange={(v) => set("meals", { ...settings.meals, ordering: v })} labels={[t("setup.on"), t("setup.off")]} />
           </Row>
-          <Row label="Show allergens on the menu" hint="Display allergen info against each meal.">
-            <Toggle on={settings.meals?.showAllergens ?? true} onChange={(v) => set("meals", { ...settings.meals, showAllergens: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.showAllergens")} hint={t("setup.showAllergensHint")}>
+            <Toggle on={settings.meals?.showAllergens ?? true} onChange={(v) => set("meals", { ...settings.meals, showAllergens: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label="Order cut-off" hint="How many hours before a session that meal ordering closes.">
+          <Row label={t("setup.orderCutoff")} hint={t("setup.orderCutoffHint")}>
             <Input type="number" min={0} value={settings.meals?.orderCutoffHours ?? 18} onChange={(e) => set("meals", { ...settings.meals, orderCutoffHours: Number(e.target.value) || 0 })} className="w-24" />
           </Row>
-          <div className="mt-3"><FieldLabel>Note shown on the meals page</FieldLabel><Input value={settings.meals?.menuNote ?? ""} placeholder="Orders close at 6pm the day before." onChange={(e) => set("meals", { ...settings.meals, menuNote: e.target.value })} className="w-full" /></div>
+          <div className="mt-3"><FieldLabel>{t("setup.mealsNote")}</FieldLabel><Input value={settings.meals?.menuNote ?? ""} placeholder={t("setup.mealsNotePlaceholder")} onChange={(e) => set("meals", { ...settings.meals, menuNote: e.target.value })} className="w-full" /></div>
         </Section>
       )}
 
       {tab === "medication" && (
         <Section
-          title="Medication"
-          lede="How medicines are recorded on the Medication page. Written parental consent is always required before a dose; these set what happens around each administration."
+          title={t("setup.medication")}
+          lede={t("setup.medicationLede")}
         >
-          <Row label="Tell the parent when a dose is given" hint="Notifies the parent in their customer area each time a dose is logged.">
-            <Toggle on={settings.medication?.informParentGiven ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentGiven: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.tellParentGiven")} hint={t("setup.tellParentGivenHint")}>
+            <Toggle on={settings.medication?.informParentGiven ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentGiven: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label="Tell the parent if a dose is missed or refused" hint="Also notify when a dose is recorded as NOT given — safeguarding good practice.">
-            <Toggle on={settings.medication?.informParentMissed ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentMissed: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.tellParentMissed")} hint={t("setup.tellParentMissedHint")}>
+            <Toggle on={settings.medication?.informParentMissed ?? true} onChange={(v) => set("medication", { ...settings.medication, informParentMissed: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label="Notify me when a parent adds a note" hint="Email + a bell here whenever a parent adds or edits a note on their child's medication.">
-            <Toggle on={settings.medication?.notifyParentNote ?? true} onChange={(v) => set("medication", { ...settings.medication, notifyParentNote: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.notifyParentNote")} hint={t("setup.notifyParentNoteHint")}>
+            <Toggle on={settings.medication?.notifyParentNote ?? true} onChange={(v) => set("medication", { ...settings.medication, notifyParentNote: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label="Notify me when a parent authorises a medication" hint="Email + a bell here when a parent adds a new medication themselves — so it's not missed.">
-            <Toggle on={settings.medication?.notifyParentAuthorise ?? true} onChange={(v) => set("medication", { ...settings.medication, notifyParentAuthorise: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.notifyParentAuthorise")} hint={t("setup.notifyParentAuthoriseHint")}>
+            <Toggle on={settings.medication?.notifyParentAuthorise ?? true} onChange={(v) => set("medication", { ...settings.medication, notifyParentAuthorise: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label="Remind staff when a dose is due" hint="If a medicine has a set time, ring a bell here when that time comes on a day it's due.">
-            <Toggle on={settings.medication?.remindWhenDue ?? true} onChange={(v) => set("medication", { ...settings.medication, remindWhenDue: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.remindDose")} hint={t("setup.remindDoseHint")}>
+            <Toggle on={settings.medication?.remindWhenDue ?? true} onChange={(v) => set("medication", { ...settings.medication, remindWhenDue: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label="Require a witness on each dose" hint="A second person must be named when recording a dose — turns off one-tap logging so every dose goes through the full form.">
-            <Toggle on={settings.medication?.requireWitness ?? false} onChange={(v) => set("medication", { ...settings.medication, requireWitness: v })} labels={["Yes", "No"]} />
+          <Row label={t("setup.requireWitness")} hint={t("setup.requireWitnessHint")}>
+            <Toggle on={settings.medication?.requireWitness ?? false} onChange={(v) => set("medication", { ...settings.medication, requireWitness: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
           {portal !== "freelancer" && (
             <Row label="Only leads can record doses" hint="Restrict recording to leads/managers rather than all staff.">
@@ -2320,7 +2320,7 @@ export function SetupApp() {
                 <FieldLabel>Logo</FieldLabel>
                 <div className="flex items-center gap-2">
                   {settings.billing?.logoUrl && <img src={settings.billing.logoUrl} alt="logo" className="h-9 max-w-[120px] rounded border border-[var(--line)] object-contain" />}
-                  <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ Upload<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…). iPhone HEIC photos: export as JPG first."); } e.target.value = ""; }} /></label>
+                  <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">⬆ {t("setup.upload")}<input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={async (e) => { const f = e.target.files?.[0]; if (!f) return; try { const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); }); const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl; const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) }); await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } }); } catch (err) { alert(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…). iPhone HEIC photos: export as JPG first."); } e.target.value = ""; }} /></label>
                   {settings.billing?.logoUrl && <button type="button" onClick={() => void save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } })} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
                 </div>
                 <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">PNG, JPG, SVG, WebP, GIF, BMP or AVIF — up to 1MB, resized automatically. (iPhone HEIC: export as JPG first.)</div>

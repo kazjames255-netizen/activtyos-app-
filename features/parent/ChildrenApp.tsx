@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
 import { uploadPlan, PLAN_MAX_BYTES } from "@/features/listings/planUpload";
@@ -101,13 +102,14 @@ function Flag({ bg, fg, children }: { bg: string; fg: string; children: React.Re
 // A compact label chip (Allergy / Medical / SEND …) that reveals its full note
 // on click — keeps long care notes from cluttering the card.
 function FlagChip({ icon, label, detail, bg, fg }: { icon?: string; label: string; detail: string; bg: string; fg: string }) {
+  const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <button
       type="button"
       onClick={() => setOpen((o) => !o)}
       aria-expanded={open}
-      title={open ? "Hide details" : "Click to see details"}
+      title={open ? t("parent.hideDetails") : t("parent.clickToSeeDetails")}
       className="inline-flex max-w-full items-center gap-1 rounded-lg px-2.5 py-[3px] text-left text-[10.5px] font-bold transition hover:brightness-95"
       style={{ background: bg, color: fg }}
     >
@@ -119,6 +121,7 @@ function FlagChip({ icon, label, detail, bg, fg }: { icon?: string; label: strin
 }
 
 function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { child?: Child; tenantId?: string; defaultCollectionPassword?: string; onDone: (changed: boolean) => void }) {
+  const t = useT();
   const editing = !!child;
   // The provider's settings + custom questions. A parent has no tenant of their
   // own, so this reads the provider's public slice (see useTenantSettings). It
@@ -200,7 +203,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
     try {
       setPhoto(await squareAvatar(file));
     } catch {
-      setError("Couldn't read that image — try another file.");
+      setError(t("parent.errReadImage"));
     }
   }
 
@@ -209,7 +212,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
     e.target.value = "";
     if (!file) return;
     if (file.size > PLAN_MAX_BYTES) {
-      setPlanError(`${file.name} is ${Math.round(file.size / 1_000_000)}MB — the limit is ${PLAN_MAX_BYTES / 1_000_000}MB.`);
+      setPlanError(t("parent.planTooBig", { name: file.name, size: Math.round(file.size / 1_000_000), limit: PLAN_MAX_BYTES / 1_000_000 }));
       return;
     }
     setPlanError(null);
@@ -219,7 +222,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       setSendPlanId(ref.id);
       setSendPlanName(ref.name);
     } catch (err) {
-      setPlanError(err instanceof Error ? err.message : "That upload didn't finish — try again.");
+      setPlanError(err instanceof Error ? err.message : t("parent.errUploadFailed"));
     } finally {
       setPlanPct(null);
     }
@@ -256,7 +259,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       }
       onDone(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Save failed");
+      setError(err instanceof Error ? err.message : t("parent.errSaveFailed"));
       setBusy(false);
     }
   }
@@ -280,8 +283,8 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
     {
       key: "about",
       emoji: "👦👧",
-      title: "About your child",
-      sub: "The basics for the register.",
+      title: t("parent.aboutChildTitle"),
+      sub: t("parent.aboutChildSub"),
       ok: canLeaveAbout,
       hint: "A name" + (needDob ? ", date of birth" : "") + (settings.collectGender ? " and boy or girl" : "") + " are needed to continue.",
       body: (
@@ -289,39 +292,39 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
           {settings.collectPhoto && (
             <div className="flex items-center gap-3">
               <button type="button" onClick={() => fileRef.current?.click()}
-                className="flex h-[56px] w-[56px] flex-none items-center justify-center overflow-hidden rounded-full border border-[var(--line)] bg-[var(--panel)] text-[22px] text-[var(--ink-2)]" aria-label="Upload photo">
+                className="flex h-[56px] w-[56px] flex-none items-center justify-center overflow-hidden rounded-full border border-[var(--line)] bg-[var(--panel)] text-[22px] text-[var(--ink-2)]" aria-label={t("parent.uploadPhoto")}>
                 {photo ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={photo} alt="" className="h-full w-full object-cover" />
                 ) : "+"}
               </button>
               <div className="min-w-0 flex-1">
-                <Button type="button" onClick={() => fileRef.current?.click()}>{photo ? "Change photo" : "Add a photo"}</Button>
-                <div className="mt-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">Optional — goes on the register so staff know who they&rsquo;re greeting and handing over.</div>
+                <Button type="button" onClick={() => fileRef.current?.click()}>{photo ? t("parent.changePhoto") : t("parent.addPhoto")}</Button>
+                <div className="mt-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">{t("parent.photoOptionalNote")}</div>
               </div>
               <input ref={fileRef} type="file" accept="image/*" onChange={pickPhoto} className="hidden" />
             </div>
           )}
           <div>
-            <FieldLabel>Full name <span className="text-[var(--red)]">*</span></FieldLabel>
-            <Input required placeholder="Child’s name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" />
+            <FieldLabel>{t("parent.fullName")} <span className="text-[var(--red)]">*</span></FieldLabel>
+            <Input required placeholder={t("parent.childNamePlaceholder")} value={name} onChange={(e) => setName(e.target.value)} className="w-full" />
           </div>
           <div>
-            <FieldLabel>Date of birth {needDob ? <span className="text-[var(--red)]">*</span> : <span className="font-normal text-[var(--ink-3)]">— optional</span>}</FieldLabel>
+            <FieldLabel>{t("parent.dateOfBirth")} {needDob ? <span className="text-[var(--red)]">*</span> : <span className="font-normal text-[var(--ink-3)]">{t("parent.optionalSuffix")}</span>}</FieldLabel>
             <Input required={needDob} type="date" value={dob} onChange={(e) => setDob(e.target.value)} className="w-full" />
           </div>
           {settings.collectGender && (
             <div>
-              <FieldLabel>Boy or girl <span className="text-[var(--red)]">*</span></FieldLabel>
+              <FieldLabel>{t("parent.boyOrGirl")} <span className="text-[var(--red)]">*</span></FieldLabel>
               <div className="grid grid-cols-2 gap-2">
-                {([["boy", "👦 Boy"], ["girl", "👧 Girl"]] as const).map(([v, l]) => (
+                {([["boy", t("parent.boyOption")], ["girl", t("parent.girlOption")]] as const).map(([v, l]) => (
                   <button key={v} type="button" onClick={() => setSex(sex === v ? "" : v)} className="rounded-xl border p-2.5 text-[12.5px] font-extrabold"
                     style={sex === v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink)" }}>
                     {l}
                   </button>
                 ))}
               </div>
-              <div className="mt-1 text-[11px] text-[var(--ink-3)]">Used on the register and to colour their name in the provider&rsquo;s list.</div>
+              <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t("parent.genderNote")}</div>
             </div>
           )}
         </>
@@ -330,15 +333,15 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
     {
       key: "health",
       emoji: "🩹",
-      title: "Health & diet",
-      sub: "Anything staff must know on day one.",
+      title: t("parent.healthDietTitle"),
+      sub: t("parent.healthDietSub"),
       ok: true,
       body: (
         <>
           {/* Two columns throughout so the whole step fits without scrolling. */}
           <div className="grid gap-3 sm:grid-cols-2">
-            <Area label="Allergies" placeholder="e.g. nuts — leave blank if none" value={allergies} onChange={setAllergies} max={limitFor(settings, "allergies", CHILD_LIMITS)} rows={2} />
-            <Area label="Medical (e.g. asthma)" value={medical} onChange={setMedical} max={limitFor(settings, "medical", CHILD_LIMITS)} rows={2} />
+            <Area label={t("parent.allergies")} placeholder={t("parent.allergiesPlaceholder")} value={allergies} onChange={setAllergies} max={limitFor(settings, "allergies", CHILD_LIMITS)} rows={2} />
+            <Area label={t("parent.medicalLabel")} value={medical} onChange={setMedical} max={limitFor(settings, "medical", CHILD_LIMITS)} rows={2} />
             {/* Dietary sits here (the provider's "Dietary" question), not on the
                 separate questions page. */}
             {dietaryQ && (
@@ -346,9 +349,9 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
             )}
             {settings.collectSend && (
               <div>
-                <div className="mb-1 text-[12px] font-bold text-[var(--ink)]">Does your child have any SEND or additional needs?</div>
+                <div className="mb-1 text-[12px] font-bold text-[var(--ink)]">{t("parent.sendQuestion")}</div>
                 <div className="flex gap-2">
-                  {([["No", false], ["Yes", true]] as const).map(([lbl, val]) => (
+                  {([[t("parent.noOption"), false], [t("parent.yesOption"), true]] as const).map(([lbl, val]) => (
                     <button
                       key={lbl}
                       type="button"
@@ -370,27 +373,27 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
           </div>
           {settings.collectSend && hasSend === true && (
             <div className="grid items-start gap-3 sm:grid-cols-2">
-              <Area label={<>Tell us about their SEND / additional needs</>} placeholder="Describe the support they need — e.g. autism, ADHD, 1:1 support, sensory needs" value={send} onChange={setSend} max={limitFor(settings, "send", CHILD_LIMITS)} rows={4} />
+              <Area label={t("parent.sendTellUs")} placeholder={t("parent.sendPlaceholder")} value={send} onChange={setSend} max={limitFor(settings, "send", CHILD_LIMITS)} rows={4} />
               {settings.collectSendPlan && (
                 <div className="rounded-lg border border-dashed border-[var(--line)] p-2.5">
-                  <div className="text-[11px] font-bold">SEND or EHCP plan <span className="font-normal text-[var(--ink-3)]">— optional</span></div>
+                  <div className="text-[11px] font-bold">{t("parent.sendPlan")} <span className="font-normal text-[var(--ink-3)]">{t("parent.optionalSuffix")}</span></div>
                   <div className="mt-0.5 text-[10.5px] leading-[1.45] text-[var(--ink-3)]">
-                    If you have one, upload it so staff can read it before day one. PDF or image, up to {PLAN_MAX_BYTES / 1_000_000}MB.
+                    {t("parent.sendPlanNote", { mb: PLAN_MAX_BYTES / 1_000_000 })}
                   </div>
                   {sendPlanId ? (
                     <div className="mt-1.5 flex items-center gap-2">
-                      <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold">📎 {sendPlanName ?? "Plan attached"}</span>
-                      <button type="button" onClick={() => { setSendPlanId(null); setSendPlanName(null); }} className="text-[11px] font-bold text-[var(--ink-3)]">Remove</button>
+                      <span className="min-w-0 flex-1 truncate text-[11.5px] font-bold">📎 {sendPlanName ?? t("parent.planAttached")}</span>
+                      <button type="button" onClick={() => { setSendPlanId(null); setSendPlanName(null); }} className="text-[11px] font-bold text-[var(--ink-3)]">{t("parent.remove")}</button>
                     </div>
                   ) : planPct !== null ? (
                     <div className="mt-2">
-                      <div className="text-[11.5px] font-bold">Uploading… {Math.round(planPct * 100)}%</div>
+                      <div className="text-[11.5px] font-bold">{t("parent.uploadingPct", { pct: Math.round(planPct * 100) })}</div>
                       <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-[var(--line)]">
                         <div className="h-full rounded-full bg-[var(--brand-2)]" style={{ width: `${planPct * 100}%` }} />
                       </div>
                     </div>
                   ) : (
-                    <Button type="button" onClick={() => planRef.current?.click()} className="mt-2">📎 Choose a file to upload</Button>
+                    <Button type="button" onClick={() => planRef.current?.click()} className="mt-2">{t("parent.chooseFile")}</Button>
                   )}
                   {!sendPlanId && (
                     <input ref={planRef} type="file" accept="application/pdf,image/*" onChange={pickPlan} className="hidden" />
@@ -406,36 +409,36 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
     {
       key: "contact",
       emoji: "💛",
-      title: "Contact & comfort",
-      sub: "Who to call, and what settles them.",
+      title: t("parent.contactComfortTitle"),
+      sub: t("parent.contactComfortSub"),
       ok: emergencyOk,
-      hint: "An emergency contact — a name and number — is required.",
+      hint: t("parent.emergencyRequiredHint"),
       body: (
         <>
           <div>
-            <FieldLabel>Emergency contact <span className="text-[var(--red)]">*</span></FieldLabel>
+            <FieldLabel>{t("parent.emergencyContact")} <span className="text-[var(--red)]">*</span></FieldLabel>
             {emergencyFromAccount && !editEmergency ? (
               // Already given with the parent's own details — confirm, don't re-ask.
               <div className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
                 <span className="min-w-0 flex-1 text-[12.5px]">
                   <b>{emergencyName}</b>{emergencyPhone ? ` · ${emergencyPhone}` : ""}
-                  <span className="ml-1 text-[11px] text-[var(--ink-3)]">— from your details</span>
+                  <span className="ml-1 text-[11px] text-[var(--ink-3)]">{t("parent.fromYourDetails")}</span>
                 </span>
-                <button type="button" onClick={() => setEditEmergency(true)} className="flex-none text-[11.5px] font-bold text-[var(--brand-ink,#1d3a8f)]">Change for this child</button>
+                <button type="button" onClick={() => setEditEmergency(true)} className="flex-none text-[11.5px] font-bold text-[var(--brand-ink,#1d3a8f)]">{t("parent.changeForThisChild")}</button>
               </div>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2">
-                  <Input placeholder="Name" value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} className="w-full" style={emergencyName.trim() ? undefined : { borderColor: "#f0b8b8" }} />
-                  <Input placeholder="Phone" inputMode="tel" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="w-full" style={emergencyPhone.trim() ? undefined : { borderColor: "#f0b8b8" }} />
+                  <Input placeholder={t("parent.namePlaceholder")} value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} className="w-full" style={emergencyName.trim() ? undefined : { borderColor: "#f0b8b8" }} />
+                  <Input placeholder={t("parent.phonePlaceholder")} inputMode="tel" value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="w-full" style={emergencyPhone.trim() ? undefined : { borderColor: "#f0b8b8" }} />
                 </div>
-                <div className="mt-1 text-[11px] text-[var(--ink-3)]">Required — who staff ring if they can&rsquo;t reach you.</div>
+                <div className="mt-1 text-[11px] text-[var(--ink-3)]">{t("parent.emergencyRequiredNote")}</div>
               </>
             )}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <Area label="Likes" placeholder="What settles them" value={likes} onChange={setLikes} max={limitFor(settings, "likes", CHILD_LIMITS)} rows={2} />
-            <Area label="Dislikes" placeholder="What to avoid" value={dislikes} onChange={setDislikes} max={limitFor(settings, "dislikes", CHILD_LIMITS)} rows={2} />
+            <Area label={t("parent.likes")} placeholder={t("parent.likesPlaceholder")} value={likes} onChange={setLikes} max={limitFor(settings, "likes", CHILD_LIMITS)} rows={2} />
+            <Area label={t("parent.dislikes")} placeholder={t("parent.dislikesPlaceholder")} value={dislikes} onChange={setDislikes} max={limitFor(settings, "dislikes", CHILD_LIMITS)} rows={2} />
           </div>
         </>
       ),
@@ -444,10 +447,10 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       ? [{
           key: "questions",
           emoji: "📝",
-          title: "A few questions",
-          sub: "Asked once by your provider.",
+          title: t("parent.fewQuestionsTitle"),
+          sub: t("parent.fewQuestionsSub"),
           ok: unansweredRequired(otherQuestions, answers).length === 0,
-          hint: "Please answer the required questions to continue.",
+          hint: t("parent.answerRequiredHint"),
           body: (
             // Operator theme (CSS vars) — no `tone`, so QuestionFields renders
             // its default variant, matching the rest of this form.
@@ -459,21 +462,21 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       ? [{
           key: "safeguarding",
           emoji: "🔒",
-          title: "Safeguarding",
-          sub: "Collection and photo permission.",
+          title: t("parent.safeguarding"),
+          sub: t("parent.safeguardingSub"),
           ok: true,
           body: (
             <>
               {settings.collectionCheck !== "off" && (
                 <div>
-                  <FieldLabel>Collection {pinMode ? "PIN" : "password"}</FieldLabel>
+                  <FieldLabel>{pinMode ? t("parent.collectionPin") : t("parent.collectionPassword")}</FieldLabel>
                   <div className="mb-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">
                     Pick {pinMode ? "a number" : "a word"} only your family knows. If <b className="text-[var(--ink-2)]">anyone other than you</b>{" "}
                     comes to collect them, staff will ask for it and won&rsquo;t hand over without it. Staff can see this {pinMode ? "PIN" : "word"}, so don&rsquo;t reuse a password from anywhere else.
                   </div>
                   <Input value={collectionPassword} onChange={(e) => setCollectionPassword(e.target.value)}
                     maxLength={CHILD_LIMITS.collectionPassword} inputMode={pinMode ? "numeric" : undefined}
-                    placeholder={pinMode ? "e.g. 4816" : "e.g. Bluebell"} className="w-full" />
+                    placeholder={pinMode ? t("parent.pinPlaceholder") : t("parent.wordPlaceholder")} className="w-full" />
                   {pinPrefilled && (
                     <div className="mt-1 text-[10.5px] font-semibold text-[var(--brand-ink,#1d3a8f)]">
                       ✓ Same {pinMode ? "PIN" : "word"} as your other children — change it if this one&rsquo;s different.
@@ -483,11 +486,11 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
               )}
               {settings.askPhotoConsent && (
                 <div>
-                  <FieldLabel>Photo permission</FieldLabel>
+                  <FieldLabel>{t("parent.photoPermission")}</FieldLabel>
                   <div className="grid grid-cols-2 gap-2">
                     {[
-                      { v: true, label: "Photos allowed", desc: "May appear in Moments & newsfeed" },
-                      { v: false, label: "No photos", desc: "Never photographed or shared" },
+                      { v: true, label: t("parent.photosAllowed"), desc: t("parent.photosAllowedDesc") },
+                      { v: false, label: t("parent.noPhotos"), desc: t("parent.noPhotosDesc") },
                     ].map((opt) => (
                       <button key={String(opt.v)} type="button" onClick={() => setPhotoConsent(opt.v)} className="rounded-xl border p-2.5 text-left"
                         style={photoConsent === opt.v ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)" } : { borderColor: "var(--line)", background: "var(--surface)" }}>
@@ -525,10 +528,10 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
       <div className="w-full max-w-[880px] overflow-hidden rounded-2xl bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
         {/* Branded header + progress — matches the welcome onboarding card. */}
         <div className="relative px-6 py-5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 70%,#5a93f0 100%)" }}>
-          <button type="button" onClick={() => onDone(false)} aria-label="Close"
+          <button type="button" onClick={() => onDone(false)} aria-label={t("parent.close")}
             className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
           <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/70">
-            {editing ? `Edit ${child!.name || "child"}` : "Add a child"} · Step {safeStep + 1} of {slides.length}
+            {editing ? t("parent.editChild", { name: child!.name || t("parent.childWord") }) : t("parent.addAChild")} · {t("parent.stepXofY", { n: safeStep + 1, total: slides.length })}
           </div>
           <h3 className="m-0 mt-0.5 text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             {slides[safeStep].emoji} {slides[safeStep].title}
@@ -539,7 +542,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
             {slides.map((s, i) => (
               <button key={s.key} type="button" onClick={() => (i < safeStep || (i === safeStep + 1 && canNext) ? setStep(i) : undefined)}
                 className="h-1.5 flex-1 rounded-full transition-colors"
-                style={{ background: i <= safeStep ? "#ffffff" : "rgba(255,255,255,.3)" }} aria-label={`Go to ${s.title}`} />
+                style={{ background: i <= safeStep ? "#ffffff" : "rgba(255,255,255,.3)" }} aria-label={t("parent.goToSlide", { title: s.title })} />
             ))}
           </div>
         </div>
@@ -567,7 +570,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
             {safeStep > 0 && (
               <button type="button" onClick={back}
                 className="rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[13px] font-bold text-[var(--ink-2)] hover:border-[var(--ink-3)]">
-                ← Back
+                {t("parent.backArrow")}
               </button>
             )}
             <div className="ml-auto flex items-center gap-2">
@@ -577,7 +580,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                 <button type="button" onClick={() => save()} disabled={busy || !canSave}
                   className="rounded-full border-2 px-4 py-2 text-[13px] font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
                   style={{ borderColor: "#2f6bd8", color: "#1d3a8f", background: "white" }}>
-                  {busy ? "Saving…" : "✓ Save changes"}
+                  {busy ? t("parent.saving") : t("parent.saveChangesCheck")}
                 </button>
               )}
               {(() => {
@@ -587,7 +590,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                   <button type="button" onClick={() => (isLast ? save() : next())} disabled={disabled}
                     className="rounded-full px-5 py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
                     style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}>
-                    {isLast ? (busy ? "Saving…" : editing ? "Save changes" : "Save child") : "Next →"}
+                    {isLast ? (busy ? t("parent.saving") : editing ? t("parent.saveChanges") : t("parent.saveChild")) : t("parent.nextArrow")}
                   </button>
                 );
               })()}
@@ -601,6 +604,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
 
 /** custdash/children — the family's child profiles (used at booking time). */
 export function ChildrenApp() {
+  const t = useT();
   const [children, setChildren] = useState<Child[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
@@ -646,31 +650,31 @@ export function ChildrenApp() {
 
   async function remove(c: Child) {
     if (hasBookings(c)) return; // guarded at the UI too — belt and braces
-    if (!confirm(`Remove ${c.name}? This can’t be undone.`)) return;
+    if (!confirm(t("parent.removeChildConfirm", { name: c.name }))) return;
     try {
       await api(`/api/my/children/${encodeURIComponent(c.id)}`, { method: "DELETE" });
       refresh();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Remove failed");
+      setError(e instanceof Error ? e.message : t("parent.errRemoveFailed"));
     }
   }
 
   if (error && !children) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!children)
-    return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
+    return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("parent.loading")}</div>;
 
   return (
     <div className="text-[var(--ink)]">
       <div className="mb-4 flex flex-wrap items-start justify-between gap-2">
         <div>
           <span className="inline-block rounded-full bg-[var(--brand-soft)] px-3 py-1 text-[11.5px] font-bold text-[var(--brand-strong)]">
-            👦👧 {children.length === 1 ? "Child" : "Children"} &amp; details
+            👦👧 {children.length === 1 ? t("parent.childAndDetails") : t("parent.childrenAndDetails")}
           </span>
           <h2 className="mt-2 text-[26px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>
-            My <span style={{ color: "var(--brand-strong)" }}>{children.length === 1 ? "child" : "children"}</span>
+            {t("parent.myWord")} <span style={{ color: "var(--brand-strong)" }}>{children.length === 1 ? t("parent.childWord2") : t("parent.childrenWord")}</span>
           </h2>
           <p className="text-[12.5px] text-[var(--ink-3)]">
-            Add each child with their medical, dietary &amp; SEND needs and an emergency contact — ready for quick booking.
+            {t("parent.childrenIntro")}
           </p>
         </div>
         <button
@@ -679,7 +683,7 @@ export function ChildrenApp() {
           className="rounded-full px-4 py-2.5 text-[13px] font-bold text-white shadow-sm"
           style={{ background: "#157347" }}
         >
-          + Add child
+          {t("parent.addChild")}
         </button>
       </div>
 
@@ -708,7 +712,7 @@ export function ChildrenApp() {
 
       {children.length === 0 ? (
         <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">
-          No children saved yet — add them once and booking gets faster.
+          {t("parent.noChildrenSaved")}
         </Card>
       ) : (
         <div className="flex flex-col gap-3">
@@ -729,33 +733,33 @@ export function ChildrenApp() {
                     <div className="min-w-0 flex-1">
                       <div className="text-[15.5px] font-extrabold leading-tight">{c.name}</div>
                       <div className="text-[11.5px] text-[var(--ink-3)]">
-                        {[c.age !== undefined ? `Age ${c.age}` : null, c.school].filter(Boolean).join(" · ") || "Tap Edit to add details"}
+                        {[c.age !== undefined ? `Age ${c.age}` : null, c.school].filter(Boolean).join(" · ") || t("parent.tapEditToAdd")}
                       </div>
                     </div>
                     <div className="flex flex-none items-center gap-3 text-[12px] font-bold">
-                      <button type="button" onClick={() => setEditing(c)} className="rounded-full px-3 py-1 text-white" style={{ background: accent }}>Edit</button>
+                      <button type="button" onClick={() => setEditing(c)} className="rounded-full px-3 py-1 text-white" style={{ background: accent }}>{t("parent.editBtn")}</button>
                       {hasBookings(c) ? (
                         <span
-                          title="This child has bookings on record, so their profile can’t be removed."
+                          title={t("parent.cantRemoveTitle")}
                           className="flex cursor-not-allowed items-center gap-1 text-[var(--ink-3)] opacity-60"
                         >
-                          🔒 Remove
+                          {t("parent.lockRemove")}
                         </span>
                       ) : (
-                        <button type="button" onClick={() => remove(c)} className="text-[var(--ink-3)] hover:text-[var(--red)]">Remove</button>
+                        <button type="button" onClick={() => remove(c)} className="text-[var(--ink-3)] hover:text-[var(--red)]">{t("parent.remove")}</button>
                       )}
                     </div>
                   </div>
                   {/* Key info pulled to the front — allergies, medical, diet, SEND. */}
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {c.allergies && <FlagChip icon="⚠" label="Allergy" detail={c.allergies} bg="rgba(245,158,11,.14)" fg="#b26a00" />}
-                    {c.medical && <FlagChip icon="🩺" label="Medical" detail={c.medical} bg="rgba(239,68,68,.14)" fg="#c0392b" />}
-                    {c.dietary && <FlagChip icon="🍽" label="Dietary" detail={c.dietary} bg="rgba(20,184,166,.14)" fg="#0f766e" />}
-                    {c.send && <FlagChip icon="🧩" label="SEND" detail={c.send} bg="rgba(122,90,248,.14)" fg="#6a4fd0" />}
+                    {c.allergies && <FlagChip icon="⚠" label={t("parent.allergyChip")} detail={c.allergies} bg="rgba(245,158,11,.14)" fg="#b26a00" />}
+                    {c.medical && <FlagChip icon="🩺" label={t("parent.medicalChip")} detail={c.medical} bg="rgba(239,68,68,.14)" fg="#c0392b" />}
+                    {c.dietary && <FlagChip icon="🍽" label={t("parent.dietaryChip")} detail={c.dietary} bg="rgba(20,184,166,.14)" fg="#0f766e" />}
+                    {c.send && <FlagChip icon="🧩" label={t("parent.sendChip")} detail={c.send} bg="rgba(122,90,248,.14)" fg="#6a4fd0" />}
                     <Flag bg={c.photoConsent ? "rgba(21,179,100,.14)" : "rgba(120,126,142,.14)"} fg={c.photoConsent ? "#1d3a8f" : "var(--ink-3)"}>
-                      {c.photoConsent ? "📷 Photos OK" : "🚫 No photos"}
+                      {c.photoConsent ? t("parent.photosOk") : t("parent.noPhotosFlag")}
                     </Flag>
-                    {clean && <Flag bg="rgba(120,126,142,.1)" fg="var(--ink-3)">No medical or dietary flags</Flag>}
+                    {clean && <Flag bg="rgba(120,126,142,.1)" fg="var(--ink-3)">{t("parent.noFlags")}</Flag>}
                   </div>
                 </div>
               </div>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useT } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 
@@ -36,27 +37,28 @@ const valueLabel = (c: Coupon) =>
   c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `${money(c.value)} off per child` : `${money(c.value)} off`;
 
 export function CouponsApp() {
+  const t = useT();
   const [coupons, setCoupons] = useState<Coupon[] | null>(null);
   const load = () =>
     apiGet<Coupon[]>("/api/my/coupons").then((r) => setCoupons(r ?? [])).catch(() => setCoupons([]));
   useEffect(() => { void load(); }, []);
   useRealtime(["discountCodes", "bookings"], load);
 
-  if (!coupons) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading your coupons…</div>;
+  if (!coupons) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("parent.loadingCoupons")}</div>;
 
   return (
     <div className="text-[var(--ink)]">
-      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Coupons &amp; discount codes</h2>
+      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("parent.couponsTitle")}</h2>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">
-        Codes you can use — they&apos;re ready and waiting at checkout, so there&apos;s nothing to copy. Just book and tap the code to apply.
+        {t("parent.couponsIntro")}
       </p>
 
       {coupons.length === 0 ? (
         <Card className="p-6 text-center">
           <div className="text-[30px]">🏷️</div>
-          <div className="mt-1 text-[14px] font-extrabold">No codes right now</div>
+          <div className="mt-1 text-[14px] font-extrabold">{t("parent.noCodesTitle")}</div>
           <p className="mx-auto mt-1 max-w-[420px] text-[12.5px] leading-[1.6] text-[var(--ink-3)]">
-            When a provider you&apos;ve booked with runs a discount — or sends you a personal code — it&apos;ll appear here, ready to use at checkout.
+            {t("parent.noCodesBody")}
           </p>
         </Card>
       ) : (
@@ -67,15 +69,15 @@ export function CouponsApp() {
                 {c.code}
               </span>
               <span className="rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[12.5px] font-extrabold text-[#1d3a8f]">{valueLabel(c)}</span>
-              {c.reserved && <span className="rounded-full bg-[#fdeefb] px-2.5 py-1 text-[11.5px] font-bold text-[#a3238e]">🎁 Just for you</span>}
+              {c.reserved && <span className="rounded-full bg-[#fdeefb] px-2.5 py-1 text-[11.5px] font-bold text-[#a3238e]">{t("parent.justForYou")}</span>}
               <div className="min-w-[160px] flex-1">
                 <div className="text-[11.5px] text-[var(--ink-3)]">
-                  {c.listingName ? `${c.listingName} only` : "All listings"}
+                  {c.listingName ? t("parent.listingOnly", { name: c.listingName }) : t("parent.allListings")}
                   {c.minSpend ? ` · min ${money(c.minSpend)}` : ""}
                   {c.expiry ? ` · until ${fmt(c.expiry)}` : " · no end date"}
                 </div>
               </div>
-              <span className="flex-none rounded-full bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--brand-strong,#16306e)]">✓ Applied at checkout</span>
+              <span className="flex-none rounded-full bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--brand-strong,#16306e)]">{t("parent.appliedAtCheckout")}</span>
             </Card>
           ))}
         </div>

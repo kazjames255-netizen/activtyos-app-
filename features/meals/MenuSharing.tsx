@@ -1,12 +1,14 @@
 "use client";
 
 import { useSettings } from "@/lib/settings";
+import { useT } from "@/lib/i18n/provider";
 import { Input, Select } from "@/components/ui";
 
 // Who sees the read-only "what's being served" menu display in the customer
 // area. Ordering is always open to booked families at checkout — this only
 // gates the informational display. Rendered inside the Meals workspace tab.
 export function MenuSharing() {
+  const t = useT();
   const { settings, save } = useSettings();
   const share = settings.meals?.menuShare ?? "booked";
   const set = (v: "booked" | "paid") => save({ settings: { ...settings, meals: { ...settings.meals, menuShare: v } } });
@@ -19,47 +21,47 @@ export function MenuSharing() {
   );
   return (
     <div>
-      <div className="text-[15px] font-extrabold text-[var(--ink)]">Menu sharing</div>
-      <p className="mb-3.5 mt-0.5 text-[12px] text-[var(--ink-3)]">Who sees the day’s menu as a “what’s being served” note in their customer area. Families can add meals at checkout either way.</p>
+      <div className="text-[15px] font-extrabold text-[var(--ink)]">{t("meals.menuSharing")}</div>
+      <p className="mb-3.5 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("meals.menuSharingDesc")}</p>
       <div className="flex flex-col gap-2.5 sm:flex-row">
-        {opt("booked", "All booked families", "Anyone booked on a day can see that day’s menu.")}
-        {opt("paid", "Only families who added a meal", "The menu note shows only once a family has bought a meal that day.")}
+        {opt("booked", t("meals.allBookedFamilies"), t("meals.allBookedFamiliesSub"))}
+        {opt("paid", t("meals.onlyPaidFamilies"), t("meals.onlyPaidFamiliesSub"))}
       </div>
 
       <div className="mt-6 border-t border-[var(--line)] pt-4">
-        <div className="text-[15px] font-extrabold text-[var(--ink)]">Default order cut-off</div>
-        <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">When parents can order each meal until, by default. Every meal plan pre-fills from this — you can override it per listing on its saved plan.</p>
+        <div className="text-[15px] font-extrabold text-[var(--ink)]">{t("meals.defaultCutoff")}</div>
+        <p className="mb-3 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("meals.defaultCutoffDesc")}</p>
         {(() => {
           const when = settings.meals?.cutoffWhen ?? "off";
           return (
             <>
               <div className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-[var(--ink-2)]">
-                <span>Ordering closes</span>
+                <span>{t("meals.orderingCloses")}</span>
                 <Select value={when} onChange={(e) => save({ settings: { ...settings, meals: { ...settings.meals, cutoffWhen: e.target.value as "off" | "same" | "prev" | "2days" } } })} className="!py-1.5 !text-[12.5px]">
-                  <option value="off">anytime — no cut-off</option>
-                  <option value="same">the same day as the meal</option>
-                  <option value="prev">the day before</option>
-                  <option value="2days">2 days before</option>
+                  <option value="off">{t("meals.cutoffOff")}</option>
+                  <option value="same">{t("meals.cutoffSameMeal")}</option>
+                  <option value="prev">{t("meals.cutoffPrev")}</option>
+                  <option value="2days">{t("meals.cutoff2days")}</option>
                 </Select>
-                {when !== "off" && <><span>at</span><Input type="time" value={settings.meals?.cutoffTime ?? "08:00"} onChange={(e) => save({ settings: { ...settings, meals: { ...settings.meals, cutoffTime: e.target.value } } })} className="!py-1.5 !text-[12.5px]" /></>}
+                {when !== "off" && <><span>{t("meals.atWord")}</span><Input type="time" value={settings.meals?.cutoffTime ?? "08:00"} onChange={(e) => save({ settings: { ...settings, meals: { ...settings.meals, cutoffTime: e.target.value } } })} className="!py-1.5 !text-[12.5px]" /></>}
               </div>
-              {when === "off" && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Not set — parents can order right up to the day of the meal (each listing can still set its own).</p>}
+              {when === "off" && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("meals.cutoffNotSet")}</p>}
             </>
           );
         })()}
       </div>
 
       <div className="mt-6 border-t border-[var(--line)] pt-4">
-        <div className="text-[15px] font-extrabold text-[var(--ink)]">Allergen disclaimer</div>
-        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">A standard note shown to parents on the menu — e.g. cross-contamination. Per-dish allergens are set on each menu.</p>
+        <div className="text-[15px] font-extrabold text-[var(--ink)]">{t("meals.allergenDisclaimer")}</div>
+        <p className="mb-2 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("meals.allergenDisclaimerDesc")}</p>
         <textarea value={settings.meals?.allergenNote ?? ""} onChange={(e) => save({ settings: { ...settings, meals: { ...settings.meals, allergenNote: e.target.value } } })}
-          rows={2} maxLength={300} placeholder="e.g. All meals are prepared in a kitchen that handles nuts, gluten and dairy — please speak to us about any allergy."
+          rows={2} maxLength={300} placeholder={t("meals.allergenPlaceholder")}
           className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] text-[var(--ink)]" />
       </div>
 
       <div className="mt-6 border-t border-[var(--line)] pt-4">
-        <div className="text-[15px] font-extrabold text-[var(--ink)]">Meal changes &amp; cancellations</div>
-        <p className="mb-2.5 mt-0.5 text-[12px] text-[var(--ink-3)]">When a family swaps or removes a meal they’ve already booked (before the cut-off).</p>
+        <div className="text-[15px] font-extrabold text-[var(--ink)]">{t("meals.mealChangesTitle")}</div>
+        <p className="mb-2.5 mt-0.5 text-[12px] text-[var(--ink-3)]">{t("meals.mealChangesDesc")}</p>
         {(() => {
           const mode = settings.meals?.changeApproval ?? "auto";
           const setMode = (v: "review" | "auto") => save({ settings: { ...settings, meals: { ...settings.meals, changeApproval: v } } });
@@ -72,8 +74,8 @@ export function MenuSharing() {
           );
           return (
             <div className="flex flex-col gap-2.5 sm:flex-row">
-              {card("auto", "Apply straight away", "Families can change or cancel a meal themselves up to the cut-off.")}
-              {card("review", "Need my approval", "Changes and cancellations come to you as a request to approve or decline first.")}
+              {card("auto", t("meals.applyStraightAway"), t("meals.applyStraightAwaySub"))}
+              {card("review", t("meals.needApproval"), t("meals.needApprovalSub"))}
             </div>
           );
         })()}

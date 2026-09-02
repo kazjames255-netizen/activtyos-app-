@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { useT } from "@/lib/i18n/provider";
 import { Button } from "@/components/ui";
 import { PageHero, TabStrip } from "@/components/OperatorPage";
 import { MyBookingsApp } from "./MyBookingsApp";
@@ -17,20 +18,21 @@ import { PaymentsApp } from "./PaymentsApp";
 type Tab = "bookings" | "timetable" | "payments";
 
 export function BookingsHubApp() {
+  const t = useT();
   const params = useSearchParams();
   const q = params.get("tab");
   const initial: Tab = q === "payments" ? "payments" : q === "timetable" ? "timetable" : "bookings";
   const [tab, setTab] = useState<Tab>(initial);
 
   const meta: Record<Tab, { label: string; lede: string }> = {
-    bookings: { label: "My bookings", lede: "Your family’s places, days and details — status updates as the provider confirms." },
-    timetable: { label: "Schedule", lede: "Your child’s sessions day by day — what, when, where and who." },
-    payments: { label: "My payments", lede: "Everything your family owes and has paid — download receipts as proof of purchase." },
+    bookings: { label: t("parent.myBookings"), lede: t("parent.bookingsLede") },
+    timetable: { label: t("parent.scheduleLabel"), lede: t("parent.timetableLede") },
+    payments: { label: t("parent.myPayments"), lede: t("parent.paymentsLede") },
   };
   const tabs: [Tab, string][] = [
-    ["bookings", "My bookings"],
-    ["timetable", "Schedule"],
-    ["payments", "My payments"],
+    ["bookings", t("parent.myBookings")],
+    ["timetable", t("parent.scheduleLabel")],
+    ["payments", t("parent.myPayments")],
   ];
 
   return (
@@ -41,7 +43,7 @@ export function BookingsHubApp() {
         icon="🎟️"
         actions={
           <Link href="/custdash/browse">
-            <Button variant="primary">+ Book an activity</Button>
+            <Button variant="primary">{t("parent.bookActivity")}</Button>
           </Link>
         }
       />

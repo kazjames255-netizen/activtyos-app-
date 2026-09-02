@@ -4,6 +4,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
+import { useT } from "@/lib/i18n/provider";
 import { NewsletterView, PostImage, type Newsletter } from "@/features/newsfeed/newsletter";
 
 // A big, flashy "newsflash" bar across the top of the parent app whenever a
@@ -26,6 +27,7 @@ const TAG: Record<string, string> = { urgent: "URGENT", event: "EVENT", celebrat
 const colourOf = (p: FlashPost) => p.colour || TPLC[p.tpl ?? "announce"] || "#1d3a8f";
 
 export function NewsflashBanner() {
+  const t = useT();
   const [posts, setPosts] = useState<FlashPost[]>([]);
   const [seen, setSeen] = useState<string[]>(() => (typeof window === "undefined" ? [] : readSeen()));
   const [shown, setShown] = useState<FlashPost | null>(null); // the post open in the popup
@@ -83,13 +85,13 @@ export function NewsflashBanner() {
                 <span className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-white/90">
                   <span className="nf-dot inline-block h-1.5 w-1.5 rounded-full bg-white" /> {tag}
                   {p.tenantName && <span className="font-bold text-white/70">· {p.tenantName}</span>}
-                  {unseen.length > 1 && <span className="rounded-full bg-white/25 px-1.5 font-extrabold">+{unseen.length - 1} more</span>}
+                  {unseen.length > 1 && <span className="rounded-full bg-white/25 px-1.5 font-extrabold">{t("parent.plusMore", { count: unseen.length - 1 })}</span>}
                 </span>
                 <span className="truncate text-[15px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{headline}</span>
               </span>
-              <span className="flex-none rounded-full bg-white px-3 py-1 text-[12px] font-extrabold" style={{ color }}>View →</span>
+              <span className="flex-none rounded-full bg-white px-3 py-1 text-[12px] font-extrabold" style={{ color }}>{t("parent.viewArrow")}</span>
             </button>
-            <button type="button" onClick={dismissOne} aria-label="Dismiss" className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-white/80 hover:bg-white/20">×</button>
+            <button type="button" onClick={dismissOne} aria-label={t("parent.dismiss")} className="absolute right-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full text-[15px] font-bold text-white/80 hover:bg-white/20">×</button>
           </div>
         );
       })()}
@@ -106,7 +108,7 @@ export function NewsflashBanner() {
               <div className="flex flex-none items-center gap-2 px-4 py-2.5 text-white" style={{ background: color }}>
                 <span className="text-[10px] font-black uppercase tracking-[0.14em]">{tag}</span>
                 {shown.tenantName && <span className="text-[11px] font-bold text-white/80">· {shown.tenantName}</span>}
-                <button type="button" onClick={() => setShown(null)} aria-label="Close" className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] font-bold text-white/85 hover:bg-white/20">×</button>
+                <button type="button" onClick={() => setShown(null)} aria-label={t("parent.close")} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] font-bold text-white/85 hover:bg-white/20">×</button>
               </div>
 
               {/* the actual post */}
@@ -129,8 +131,8 @@ export function NewsflashBanner() {
 
               {/* underneath: see other newsfeeds */}
               <div className="flex flex-none items-center justify-between gap-2 border-t border-[var(--line)] bg-[var(--surface,#fff)] px-4 py-2.5">
-                <button type="button" onClick={() => setShown(null)} className="text-[12.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">Close</button>
-                <button type="button" onClick={seeAll} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: color }}>See other newsfeeds{more > 0 ? ` (${more} more)` : ""} →</button>
+                <button type="button" onClick={() => setShown(null)} className="text-[12.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">{t("parent.closeText")}</button>
+                <button type="button" onClick={seeAll} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold text-white" style={{ background: color }}>{t("parent.seeOtherNewsfeeds")}{more > 0 ? t("parent.nMoreParen", { count: more }) : ""} →</button>
               </div>
             </div>
           </div>

@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useCustomerArea } from "@/lib/use-customer-area";
+import { useT } from "@/lib/i18n/provider";
 import { money } from "@/features/bookings/helpers";
 
 // custdash coupon ticker — a slow-scrolling bar of the discount codes a family
@@ -24,6 +25,7 @@ const valueLabel = (c: Coupon) =>
   c.type === "percent" ? `${c.value}% off` : c.type === "perAttendee" ? `${money(c.value)} off/child` : `${money(c.value)} off`;
 
 export function CouponTicker() {
+  const t = useT();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [hidden, setHidden] = useState(true); // start hidden → no flash before we know
   const [paused, setPaused] = useState(false);
@@ -75,7 +77,7 @@ export function CouponTicker() {
   // Hidden → keep a slim, always-there way to bring it back (never lost).
   if (hidden) return (
     <div className="flex h-[26px] items-center justify-end px-3" style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
-      <button type="button" onClick={reveal} className="text-[11px] font-bold" style={{ color: "#2f6bd8" }}>🏷️ Show my codes ({coupons.length}) ›</button>
+      <button type="button" onClick={reveal} className="text-[11px] font-bold" style={{ color: "#2f6bd8" }}>{t("parent.showMyCodes", { count: coupons.length })}</button>
     </div>
   );
 
@@ -92,13 +94,13 @@ export function CouponTicker() {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <span className="z-10 flex-none px-3 text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: "#2f6bd8" }}>🏷️ Your codes</span>
+      <span className="z-10 flex-none px-3 text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: "#2f6bd8" }}>{t("parent.yourCodes")}</span>
       <div className="min-w-0 flex-1 overflow-hidden">
         <div ref={trackRef} className="inline-flex items-center whitespace-nowrap [will-change:transform]">
           {items.map((c, i) => (
             <span key={`${c.id}-${i}`} className="inline-flex items-center gap-2 px-5 text-[12.5px] font-semibold">
               <span className="font-mono font-extrabold tracking-wider" style={{ color: "#16306e" }}>{c.code}</span>
-              <span style={{ color: "var(--ink-3)" }}>{valueLabel(c)} · {c.listingName ? c.listingName : "all listings"}</span>
+              <span style={{ color: "var(--ink-3)" }}>{valueLabel(c)} · {c.listingName ? c.listingName : t("parent.allListingsLower")}</span>
               {c.reserved && <span>🎁</span>}
               <span className="px-1 text-[8px]" style={{ color: "#cdddf7" }}>◆</span>
             </span>
@@ -107,8 +109,8 @@ export function CouponTicker() {
       </div>
       {/* Controls — stop it rolling, or hide the bar for good. */}
       <div className="z-10 flex flex-none items-center gap-1 px-2" style={{ color: "var(--ink-3)" }}>
-        <button type="button" onClick={togglePause} title={paused ? "Let it scroll" : "Stop scrolling"} className="rounded px-1.5 py-0.5 text-[13px] leading-none hover:opacity-70">{paused ? "▶" : "⏸"}</button>
-        <button type="button" onClick={dismiss} title="Hide this bar" className="rounded px-1.5 py-0.5 text-[15px] leading-none hover:opacity-70">×</button>
+        <button type="button" onClick={togglePause} title={paused ? t("parent.letItScroll") : t("parent.stopScrolling")} className="rounded px-1.5 py-0.5 text-[13px] leading-none hover:opacity-70">{paused ? "▶" : "⏸"}</button>
+        <button type="button" onClick={dismiss} title={t("parent.hideThisBar")} className="rounded px-1.5 py-0.5 text-[15px] leading-none hover:opacity-70">×</button>
       </div>
     </div>
   );

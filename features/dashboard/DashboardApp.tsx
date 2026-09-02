@@ -11,6 +11,7 @@ import { LIGHT_PALETTE, CollapsibleStats } from "@/components/OperatorPage";
 import { OnSiteNowCard } from "@/features/timeclock/OnSiteNowCard";
 import { Badge } from "@/components/ui";
 import { greeting } from "@/lib/greeting";
+import { useT } from "@/lib/i18n/provider";
 
 interface Dash {
   today: { date: string; booked: number; sessions: { listing: string; start: string; end: string; booked: number; capacity: number }[] };
@@ -181,8 +182,9 @@ function Donut({ segments, center, sub, size = 116 }: { segments: { label: strin
 }
 // A centred booking-lifecycle funnel — each tier's width is its share of the first tier.
 function Funnel({ stages }: { stages: { label: string; value: number; color: string }[] }) {
+  const t = useT();
   const top = Math.max(1, stages[0]?.value ?? 1);
-  if (!stages.some((s) => s.value > 0)) return <Empty>No bookings yet.</Empty>;
+  if (!stages.some((s) => s.value > 0)) return <Empty>{t("dashboard.noBookingsYet")}</Empty>;
   return (
     <div className="flex flex-col gap-2 py-1">
       {stages.map((s) => {
@@ -219,8 +221,9 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <div className="py-6 text-center text-[12px] text-[var(--ink-3)]">{children}</div>;
 }
 function Breakdown({ entries }: { entries: { label: string; value: number; sub: string; color: string; meta?: string }[] }) {
+  const t = useT();
   const max = Math.max(1, ...entries.map((e) => e.value));
-  if (!entries.length) return <Empty>Nothing yet.</Empty>;
+  if (!entries.length) return <Empty>{t("dashboard.nothingYet")}</Empty>;
   return (
     <div className="flex flex-col gap-3">
       {entries.map((e, i) => (
@@ -303,6 +306,7 @@ function TrendChart({ series, series2, fmt, color, color2 }: { series: { label: 
 }
 
 export function DashboardApp() {
+  const t = useT();
   const [d, setD] = useState<Dash | null>(null);
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [bookingsErr, setBookingsErr] = useState<string | null>(null);
@@ -455,7 +459,7 @@ export function DashboardApp() {
   const paidPct = payTotal ? Math.round((paidCount / payTotal) * 100) : 0;
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
-  if (!d) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
+  if (!d) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.loading")}</div>;
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
@@ -464,14 +468,14 @@ export function DashboardApp() {
         <div className="flex flex-wrap items-end justify-between gap-3 px-6 py-5">
           <div>
             <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>{greeting(me?.name)}</div>
-            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>📊 Dashboard</h2>
-            <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Today at a glance, plus income, bookings and where they&rsquo;re coming from.</p>
+            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>📊 {t("dashboard.dashboardTitle")}</h2>
+            <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">{t("dashboard.dashboardIntro")}</p>
             {/* Location lens — narrows every figure below to one venue. */}
             {venues.length > 0 && (
               <label className="mt-3 inline-flex items-center gap-2 rounded-xl bg-white/12 px-3 py-1.5 ring-1 ring-white/20">
-                <span className="text-[11px] font-bold uppercase tracking-wide text-white/75">📍 Location</span>
+                <span className="text-[11px] font-bold uppercase tracking-wide text-white/75">📍 {t("dashboard.location")}</span>
                 <select value={dashVenue} onChange={(e) => setDashVenue(e.target.value)} className="cursor-pointer bg-transparent text-[12.5px] font-extrabold text-white outline-none">
-                  <option value="" className="text-black">All locations</option>
+                  <option value="" className="text-black">{t("dashboard.allLocations")}</option>
                   {venues.map((v) => <option key={v.id} value={v.id} className="text-black">{v.name}</option>)}
                 </select>
               </label>
@@ -479,7 +483,7 @@ export function DashboardApp() {
           </div>
           {/* On-site-today summary, on the right of the title banner. */}
           <div className="rounded-2xl bg-white/12 px-4 py-3 text-right ring-1 ring-white/15">
-            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/75">On site today</div>
+            <div className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/75">{t("dashboard.onSiteToday")}</div>
             <div className="text-[30px] font-extrabold leading-none text-white" style={{ fontFamily: "var(--ff-display)" }}>{d.today.booked}</div>
             <div className="mt-1 text-[11.5px] font-semibold text-white/85">{d.today.sessions.length} session{d.today.sessions.length === 1 ? "" : "s"} running</div>
           </div>
@@ -487,31 +491,31 @@ export function DashboardApp() {
       </div>
 
       {/* Live operational KPIs (from /api/dashboard) */}
-      <CollapsibleStats id="dashboard-kpis" className="mt-4" label="Live KPIs">
+      <CollapsibleStats id="dashboard-kpis" className="mt-4" label={t("dashboard.liveKpis")}>
       <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="New bookings" icon="📈" value={`${a.weekly.reduce((s, v) => s + v, 0)}`} sub="in the last 5 weeks" grad={GRAD.blue}>
-          {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} caption="per week" />}
+        <Tile label={t("dashboard.newBookings")} icon="📈" value={`${a.weekly.reduce((s, v) => s + v, 0)}`} sub={t("dashboard.inLast5Weeks")} grad={GRAD.blue}>
+          {bookings && <MiniBars data={a.weekly} labels={a.weeklyLabels} caption={t("dashboard.perWeek")} />}
         </Tile>
         <Tile
-          label="Spaces left · live listings"
+          label={t("dashboard.spacesLeftLive")}
           icon="🎟️"
           value={`${Math.max(0, d.occupancy.capacity - d.occupancy.booked)}`}
-          sub={`${100 - d.occupancy.pct}% not filled · ${d.occupancy.booked}/${d.occupancy.capacity} taken on open runs`}
+          sub={t("dashboard.spacesLeftSub", { pct: 100 - d.occupancy.pct, booked: d.occupancy.booked, capacity: d.occupancy.capacity })}
           grad={GRAD.teal}
           aside={<Ring pct={d.occupancy.pct} label={`${d.occupancy.pct}%`} />}
         />
-        <Tile label="Taken this week" icon="💷" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green}>
-          {bookings && <MiniLine data={a.weeklyIncome} labels={a.weeklyLabels} caption="Collected · last 5 weeks" />}
+        <Tile label={t("dashboard.takenThisWeek")} icon="💷" value={money(d.money.takenThisWeek)} sub={`${d.bookings.newThisWeek} new booking${d.bookings.newThisWeek === 1 ? "" : "s"}`} grad={GRAD.green}>
+          {bookings && <MiniLine data={a.weeklyIncome} labels={a.weeklyLabels} caption={t("dashboard.collectedLast5Weeks")} />}
         </Tile>
         <Tile
-          label="Outstanding"
+          label={t("dashboard.outstanding")}
           icon="⏳"
           value={money(d.money.outstanding)}
           sub={
             d.money.overdueVouchers ? `${d.money.overdueVouchers} overdue voucher${d.money.overdueVouchers === 1 ? "" : "s"}`
-            : d.money.awaitingVoucher ? `${d.money.awaitingVoucher} awaiting voucher payment`
-            : d.money.outstanding > 0 ? "unpaid / invoiced — awaiting payment"
-            : "all settled"
+            : d.money.awaitingVoucher ? t("dashboard.awaitingVoucherPayment", { count: d.money.awaitingVoucher })
+            : d.money.outstanding > 0 ? t("dashboard.unpaidInvoiced")
+            : t("dashboard.allSettled")
           }
           grad={d.money.outstanding > 0 ? GRAD.pink : GRAD.green}
         />
@@ -524,23 +528,23 @@ export function DashboardApp() {
       {/* Today · Live listings · Tasks today — three across */}
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
         <Panel
-          title={`☀️ Today · ${fmtDay(d.today.date)}`}
+          title={`☀️ ${t("dashboard.today")} · ${fmtDay(d.today.date)}`}
           right={
             <span className="flex items-center gap-2">
-              {d.bookings.waitlist > 0 && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{d.bookings.waitlist} on waitlist</Badge>}
-              <button type="button" onClick={() => router.push(`/${portal}/registers`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">Registers →</button>
+              {d.bookings.waitlist > 0 && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("dashboard.onWaitlist", { count: d.bookings.waitlist })}</Badge>}
+              <button type="button" onClick={() => router.push(`/${portal}/registers`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">{t("dashboard.registers")} →</button>
             </span>
           }
         >
           {d.today.sessions.length === 0 ? (
-            <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">Nothing running today.</div>
+            <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.nothingRunningToday")}</div>
           ) : (
             <div className="flex flex-col gap-2">
               {d.today.sessions.map((s, i) => {
                 const c = actColor(s.listing);
                 const pct = s.capacity ? Math.round((s.booked / s.capacity) * 100) : 0;
                 return (
-                  <button key={i} type="button" onClick={() => router.push(`/${portal}/registers`)} title="Open registers" className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-left transition-shadow hover:shadow-sm" style={{ borderLeft: `4px solid ${c}` }}>
+                  <button key={i} type="button" onClick={() => router.push(`/${portal}/registers`)} title={t("dashboard.openRegisters")} className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-left transition-shadow hover:shadow-sm" style={{ borderLeft: `4px solid ${c}` }}>
                     <span className="rounded-lg px-2 py-1 text-[11.5px] font-extrabold tabular-nums text-white" style={{ background: c }}>{s.start}–{s.end}</span>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{s.listing}</div>
@@ -548,7 +552,7 @@ export function DashboardApp() {
                     </div>
                     <div className="text-right">
                       <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{s.booked}/{s.capacity}</div>
-                      <div className="text-[10px] font-bold text-[var(--ink-3)]">{pct}% full</div>
+                      <div className="text-[10px] font-bold text-[var(--ink-3)]">{t("dashboard.pctFull", { pct })}</div>
                     </div>
                   </button>
                 );
@@ -557,30 +561,30 @@ export function DashboardApp() {
           )}
         </Panel>
         <Panel
-          title="🎟️ Live listings · places left"
-          right={<button type="button" onClick={() => router.push(`/${portal}/listings`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">All listings →</button>}
+          title={`🎟️ ${t("dashboard.liveListingsPlaces")}`}
+          right={<button type="button" onClick={() => router.push(`/${portal}/listings`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">{t("dashboard.allListings")} →</button>}
         >
           {d.byListing.length === 0 ? (
-            <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">No open listings running.</div>
+            <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.noOpenListings")}</div>
           ) : (
             <div className="flex flex-col gap-2">
               {d.byListing.map((l, i) => {
                 const c = actColor(l.listing);
-                const t = availTone(l.spotsLeft, l.capacity);
+                const tone = availTone(l.spotsLeft, l.capacity);
                 return (
-                  <button key={i} type="button" onClick={() => router.push(`/${portal}/listings`)} title="Manage listings" className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-left transition-shadow hover:shadow-sm" style={{ borderLeft: `4px solid ${c}` }}>
+                  <button key={i} type="button" onClick={() => router.push(`/${portal}/listings`)} title={t("dashboard.manageListings")} className="flex w-full items-center gap-3 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2.5 text-left transition-shadow hover:shadow-sm" style={{ borderLeft: `4px solid ${c}` }}>
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{l.listing}</div>
                       <div className="mt-1.5 flex items-center gap-2">
                         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${l.pct}%`, background: c }} /></div>
-                        <span className="whitespace-nowrap text-[11px] font-bold text-[var(--ink-3)]">from {fmtDay(l.nextDate)}</span>
+                        <span className="whitespace-nowrap text-[11px] font-bold text-[var(--ink-3)]">{t("dashboard.fromDate", { date: fmtDay(l.nextDate) })}</span>
                       </div>
                     </div>
                     <div className="text-right">
                       <div className="text-[13px] font-extrabold tabular-nums text-[var(--ink)]">{l.booked}/{l.capacity}</div>
-                      <div className="text-[10px] font-bold text-[var(--ink-3)]">{l.pct}% full</div>
+                      <div className="text-[10px] font-bold text-[var(--ink-3)]">{t("dashboard.pctFull", { pct: l.pct })}</div>
                     </div>
-                    <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: t.bg, color: t.fg }}>{t.label}</span>
+                    <span className="whitespace-nowrap rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: tone.bg, color: tone.fg }}>{tone.label}</span>
                   </button>
                 );
               })}
@@ -588,34 +592,34 @@ export function DashboardApp() {
           )}
         </Panel>
         <Panel
-          title="✅ Tasks today"
-          right={todayTasks.length > 0 ? <Badge tone={{ bg: "#fdeede", fg: "#a85f08" }}>{todayTasks.length} due</Badge> : undefined}
+          title={`✅ ${t("dashboard.tasksToday")}`}
+          right={todayTasks.length > 0 ? <Badge tone={{ bg: "#fdeede", fg: "#a85f08" }}>{t("dashboard.due", { count: todayTasks.length })}</Badge> : undefined}
         >
           {tasks === null ? (
-            <Empty>Loading…</Empty>
+            <Empty>{t("dashboard.loading")}</Empty>
           ) : todayTasks.length === 0 ? (
             <div className="flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-[var(--line)] py-8 text-center">
               <div className="text-[20px]">🎉</div>
-              <div className="text-[12.5px] font-bold text-[var(--ink-2)]">Nothing due today</div>
-              <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">Open Task manager</button>
+              <div className="text-[12.5px] font-bold text-[var(--ink-2)]">{t("dashboard.nothingDueToday")}</div>
+              <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">{t("dashboard.openTaskManager")}</button>
             </div>
           ) : (
             <div className="flex flex-col divide-y divide-[var(--line)]">
-              {todayTasks.map((t) => {
-                const st = TASK_STATUS[t.status ?? "todo"] ?? TASK_STATUS.todo;
-                const go = () => router.push(t.link?.href ?? `/${portal}/tasks`);
+              {todayTasks.map((task) => {
+                const st = TASK_STATUS[task.status ?? "todo"] ?? TASK_STATUS.todo;
+                const go = () => router.push(task.link?.href ?? `/${portal}/tasks`);
                 return (
-                  <button key={t.id} type="button" onClick={go} className="flex flex-col gap-0.5 py-2 text-left text-[12.5px] hover:opacity-80">
+                  <button key={task.id} type="button" onClick={go} className="flex flex-col gap-0.5 py-2 text-left text-[12.5px] hover:opacity-80">
                     <span className="flex items-start gap-2.5">
                       <span className="mt-[5px] h-2 w-2 flex-none rounded-full" style={{ background: st.color }} title={st.label} />
-                      <span className="min-w-0 flex-1 font-semibold">{t.t}</span>
-                      <span className="shrink-0 whitespace-nowrap text-[11px] font-bold tabular-nums text-[var(--ink-3)]">{t.time ?? "Today"}</span>
+                      <span className="min-w-0 flex-1 font-semibold">{task.t}</span>
+                      <span className="shrink-0 whitespace-nowrap text-[11px] font-bold tabular-nums text-[var(--ink-3)]">{task.time ?? t("dashboard.today")}</span>
                     </span>
-                    {t.link?.v && <span className="truncate pl-[18px] text-[11px] text-[var(--ink-3)]">{t.link.v}</span>}
+                    {task.link?.v && <span className="truncate pl-[18px] text-[11px] text-[var(--ink-3)]">{task.link.v}</span>}
                   </button>
                 );
               })}
-              <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="pt-2 text-center text-[11px] font-bold text-[var(--brand)] hover:underline">Open Task manager →</button>
+              <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="pt-2 text-center text-[11px] font-bold text-[var(--brand)] hover:underline">{t("dashboard.openTaskManager")} →</button>
             </div>
           )}
         </Panel>
@@ -623,7 +627,7 @@ export function DashboardApp() {
 
       {/* ── Business analytics (computed from your bookings) ── */}
       <div className="mt-6 flex flex-wrap items-center justify-between gap-2">
-        <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Business analytics</div>
+        <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("dashboard.businessAnalytics")}</div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12px] font-bold">
           {[3, 6, 12].map((m) => (
             <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{m}m</button>
@@ -634,36 +638,36 @@ export function DashboardApp() {
       {!bookings ? (
         bookingsErr ? (
           <div className="mt-3 flex flex-col items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-8 text-center text-[12.5px] text-[var(--ink-3)]">
-            <span>Couldn’t load your figures — {bookingsErr}</span>
-            <button type="button" onClick={load} className="rounded-full bg-[var(--brand)] px-3 py-1 text-[11.5px] font-bold text-white">Try again</button>
+            <span>{t("dashboard.couldntLoadFigures", { error: bookingsErr })}</span>
+            <button type="button" onClick={load} className="rounded-full bg-[var(--brand)] px-3 py-1 text-[11.5px] font-bold text-white">{t("dashboard.tryAgain")}</button>
           </div>
         ) : (
-          <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-8 text-center text-[12.5px] text-[var(--ink-3)]">Loading your figures…</div>
+          <div className="mt-3 rounded-2xl border border-[var(--line)] bg-[var(--surface)] py-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.loadingFigures")}</div>
         )
       ) : (
         <>
-          <CollapsibleStats id="dashboard-money-kpis" className="mt-3" label="Figures">
+          <CollapsibleStats id="dashboard-money-kpis" className="mt-3" label={t("dashboard.figures")}>
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Income collected" icon="💰" value={money(a.kpis.collected)} sub={`last ${months}m · net of refunds`} grad={GRAD.green} />
-            <Tile label="Bookings" icon="🎫" value={`${a.kpis.bookings}`} sub={`booked in last ${months}m (excl. cancelled)`} grad={GRAD.blue} />
-            <Tile label="Families" icon="👨‍👩‍👧" value={`${a.kpis.families}`} sub={`unique customers · last ${months}m`} grad={GRAD.violet} />
-            <Tile label="Avg booking" icon="🧮" value={money(a.kpis.avg)} sub="per paid booking" grad={GRAD.amber} />
+            <Tile label={t("dashboard.incomeCollected")} icon="💰" value={money(a.kpis.collected)} sub={t("dashboard.netOfRefunds", { months })} grad={GRAD.green} />
+            <Tile label={t("dashboard.bookings")} icon="🎫" value={`${a.kpis.bookings}`} sub={t("dashboard.bookedLastMonths", { months })} grad={GRAD.blue} />
+            <Tile label={t("dashboard.families")} icon="👨‍👩‍👧" value={`${a.kpis.families}`} sub={t("dashboard.uniqueCustomers", { months })} grad={GRAD.violet} />
+            <Tile label={t("dashboard.avgBooking")} icon="🧮" value={money(a.kpis.avg)} sub={t("dashboard.perPaidBooking")} grad={GRAD.amber} />
           </div>
           </CollapsibleStats>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <Panel title="Income by month" right={<Legend items={[["Collected", GREEN]]} />}>
+            <Panel title={t("dashboard.incomeByMonth")} right={<Legend items={[[t("dashboard.collected"), GREEN]]} />}>
               <TrendChart series={a.income} fmt={money} color={GREEN} />
             </Panel>
-            <Panel title="Booked vs collected" right={<Legend items={[["Booked", LIGHTB], ["Collected", GREEN]]} />}>
+            <Panel title={t("dashboard.bookedVsCollected")} right={<Legend items={[[t("dashboard.booked"), LIGHTB], [t("dashboard.collected"), GREEN]]} />}>
               <TrendChart series={a.booked} series2={a.income} fmt={money} color={LIGHTB} color2={GREEN} />
             </Panel>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <Panel title="Revenue by season">
+            <Panel title={t("dashboard.revenueBySeason")}>
               {seasons.length === 0
-                ? <Empty>Set up your seasons in Setup to see this.</Empty>
+                ? <Empty>{t("dashboard.setupSeasons")}</Empty>
                 : <Breakdown entries={a.bySeason} />}
             </Panel>
             {(() => {
@@ -672,59 +676,59 @@ export function DashboardApp() {
               const entries = filtered.slice(0, 6).map((e, i) => ({ label: e.label, value: e.value, sub: money(e.value), color: ACT_C[i % ACT_C.length], meta: e.venue }));
               return (
                 <Panel
-                  title="Revenue by activity"
+                  title={t("dashboard.revenueByActivity")}
                   right={locs.length > 0 ? (
                     <select value={activityLoc} onChange={(e) => setActivityLoc(e.target.value)} className="max-w-[170px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[11.5px] font-bold text-[var(--ink-2)] outline-none">
-                      <option value="">📍 All locations</option>
+                      <option value="">📍 {t("dashboard.allLocations")}</option>
                       {locs.map((l) => <option key={l} value={l}>{l}</option>)}
                     </select>
                   ) : undefined}
                 >
-                  {entries.length ? <Breakdown entries={entries} /> : <Empty>No revenue at {activityLoc} yet.</Empty>}
+                  {entries.length ? <Breakdown entries={entries} /> : <Empty>{t("dashboard.noRevenueAt", { location: activityLoc })}</Empty>}
                 </Panel>
               );
             })()}
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-2">
-            <Panel title="🔻 Booking funnel" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">last {months}m</span>}>
+            <Panel title={`🔻 ${t("dashboard.bookingFunnel")}`} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("dashboard.lastMonths", { months })}</span>}>
               <Funnel stages={a.funnel} />
               <div className="mt-3 border-t border-[var(--line)] pt-2.5 text-[11.5px] text-[var(--ink-3)]">
                 {a.funnel[0].value > 0
                   ? <><b className="text-[var(--ink-2)]">{Math.round((a.funnel[2].value / a.funnel[0].value) * 100)}%</b> of bookings are paid · <b className="text-[var(--ink-2)]">{Math.round((a.funnel[1].value / a.funnel[0].value) * 100)}%</b> confirmed</>
-                  : "No bookings in this window yet."}
+                  : t("dashboard.noBookingsInWindow")}
               </div>
             </Panel>
-            <Panel title="🔁 Repeat customers" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">last {months}m</span>}>
+            <Panel title={`🔁 ${t("dashboard.repeatCustomers")}`} right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{t("dashboard.lastMonths", { months })}</span>}>
               {a.repeat.total > 0 ? (
                 <>
                   <Donut
-                    segments={[{ label: "Repeat families", value: a.repeat.repeat, color: "#e2225f" }, { label: "One booking", value: a.repeat.total - a.repeat.repeat, color: LIGHTB }]}
+                    segments={[{ label: t("dashboard.repeatFamilies"), value: a.repeat.repeat, color: "#e2225f" }, { label: t("dashboard.oneBooking"), value: a.repeat.total - a.repeat.repeat, color: LIGHTB }]}
                     center={`${a.repeat.pct}%`}
-                    sub="repeat"
+                    sub={t("dashboard.repeat")}
                   />
                   <div className="mt-3 border-t border-[var(--line)] pt-2.5 text-[11.5px] text-[var(--ink-3)]">
-                    <b className="text-[var(--ink-2)]">{a.repeat.repeat}</b> of {a.repeat.total} families have booked more than once.
+                    <b className="text-[var(--ink-2)]">{a.repeat.repeat}</b> {t("dashboard.ofFamiliesRepeat", { total: a.repeat.total })}
                   </div>
                 </>
-              ) : <Empty>No customers yet.</Empty>}
+              ) : <Empty>{t("dashboard.noCustomersYet")}</Empty>}
             </Panel>
           </div>
 
           <div className="mt-4 grid gap-4 lg:grid-cols-3">
-            <Panel title="📊 Bookings & payments" className="lg:col-span-2">
+            <Panel title={`📊 ${t("dashboard.bookingsAndPayments")}`} className="lg:col-span-2">
               <div className="grid gap-5 sm:grid-cols-2">
                 <div>
-                  <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">By status</div>
-                  {statusTotal ? <Donut segments={a.byStatus} center={`${statusTotal}`} sub="booked" /> : <Empty>Nothing yet.</Empty>}
+                  <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("dashboard.byStatus")}</div>
+                  {statusTotal ? <Donut segments={a.byStatus} center={`${statusTotal}`} sub={t("dashboard.bookedLabel")} /> : <Empty>{t("dashboard.nothingYet")}</Empty>}
                 </div>
                 <div className="sm:border-l sm:border-[var(--line)] sm:pl-5">
-                  <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">Payment mix</div>
-                  {payTotal ? <Donut segments={a.payMix} center={`${paidPct}%`} sub="paid" /> : <Empty>Nothing yet.</Empty>}
+                  <div className="mb-2.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("dashboard.paymentMix")}</div>
+                  {payTotal ? <Donut segments={a.payMix} center={`${paidPct}%`} sub={t("dashboard.paid")} /> : <Empty>{t("dashboard.nothingYet")}</Empty>}
                 </div>
               </div>
             </Panel>
-            <Panel title="🆕 Newest bookings">
+            <Panel title={`🆕 ${t("dashboard.newestBookings")}`}>
               {a.recent.length ? (
                 <div className="flex flex-col divide-y divide-[var(--line)]">
                   {a.recent.map((b) => (
@@ -733,14 +737,14 @@ export function DashboardApp() {
                       type="button"
                       onClick={() => router.push(`/${portal}/bookings?ref=${encodeURIComponent(b.ref)}`)}
                       className="-mx-1 flex items-center gap-2 rounded-lg px-1 py-2 text-left text-[12.5px] transition-colors hover:bg-[var(--panel)]"
-                      title="Open this booking"
+                      title={t("dashboard.openThisBooking")}
                     >
                       <span className="min-w-0 flex-1 truncate"><b>{b.child || b.booker}</b> <span className="text-[var(--ink-3)]">· {b.listing}</span></span>
                       <span className="whitespace-nowrap font-extrabold tabular-nums">{money(b.amount)}</span>
                     </button>
                   ))}
                 </div>
-              ) : <Empty>No bookings yet.</Empty>}
+              ) : <Empty>{t("dashboard.noBookingsYet")}</Empty>}
             </Panel>
           </div>
         </>

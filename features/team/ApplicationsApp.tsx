@@ -12,6 +12,7 @@ import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/Operator
 import { Tile, GRAD } from "@/features/money/finance-kit";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_FIELDS } from "./OnboardingApp";
+import { useT } from "@/lib/i18n/provider";
 
 type AField = { id: string; label: string; type: "text" | "textarea" | "email" | "tel" | "date" | "select" | "file" | "locations"; required: boolean; options?: string[]; mapsTo?: string };
 // the provider's sites — applicants pick one or more they can work at (demo; real
@@ -158,6 +159,7 @@ function carryOver(app: Application, form: AppForm) {
 
 export function ApplicationsPanel() {
   const { settings } = useSettings();
+  const t = useT();
   const provider = settings.providerName || settings.billing?.businessName || "Your company";
   const [tab, setTab] = useState<"received" | "forms">("received");
   const [forms, setForms] = useState<AppForm[]>([defaultForm()]);
@@ -183,7 +185,7 @@ export function ApplicationsPanel() {
   const setStatus = (id: string, patch: Partial<Application>) => saveApps(apps.map((a) => (a.id === id ? { ...a, ...patch } : a)));
   const accept = (a: Application) => { setStatus(a.id, { status: "accepted", rejectReason: undefined }); };
   const reject = (a: Application) => { setStatus(a.id, { status: "rejected", rejectReason: reason.trim() || "Not suitable at this time." }); setReason(""); };
-  const sendOnboarding = (a: Application) => { const f = formOf(a.formId); carryOver({ ...a, status: "accepted" }, f); setStatus(a.id, { status: "accepted", onboardingSent: true }); flash(`📨 Onboarding link sent to ${a.name}. Their references, address & details from the application will pre-fill — they won't be asked again.`); };
+  const sendOnboarding = (a: Application) => { const f = formOf(a.formId); carryOver({ ...a, status: "accepted" }, f); setStatus(a.id, { status: "accepted", onboardingSent: true }); flash(t("team.onboardingSentToast", { name: a.name })); };
   const newCount = apps.filter((a) => a.status === "new").length;
   const filtered = locFilter === "all" ? apps : apps.filter((a) => (a.locations ?? []).includes(locFilter));
 
@@ -191,10 +193,10 @@ export function ApplicationsPanel() {
   const detailBody = (app: Application) => { const f = formOf(app.formId); return (
     <>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div><div className="text-[16px] font-extrabold text-[var(--ink)]">{app.name}</div><div className="text-[12px] text-[var(--ink-3)]">{app.email} · applied {fmtDate(app.submittedAt)}</div></div>
+        <div><div className="text-[16px] font-extrabold text-[var(--ink)]">{app.name}</div><div className="text-[12px] text-[var(--ink-3)]">{app.email} · {t("team.appliedWord")} {fmtDate(app.submittedAt)}</div></div>
         <span className={"ml-auto rounded-full px-2.5 py-1 text-[11px] font-extrabold uppercase " + STATUS_TONE[app.status]}>{app.status}</span>
       </div>
-      {(app.locations?.length ?? 0) > 0 && <div className="mb-3 flex flex-wrap items-center gap-1.5"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">📍 Locations</span>{app.locations!.map((l) => <span key={l} className="rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[11px] font-bold text-[#1d54c4]">{l}</span>)}</div>}
+      {(app.locations?.length ?? 0) > 0 && <div className="mb-3 flex flex-wrap items-center gap-1.5"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.locationsLabel")}</span>{app.locations!.map((l) => <span key={l} className="rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[11px] font-bold text-[#1d54c4]">{l}</span>)}</div>}
       <div className="mb-3 grid gap-2 sm:grid-cols-2">
         {f.fields.map((fl) => { const v = app.answers[fl.id]; const file = app.files?.[fl.id]; if (!v && !file) return null; return (
           <div key={fl.id} className={"rounded-lg bg-[var(--panel)] px-3 py-2 " + (fl.type === "textarea" ? "sm:col-span-2" : "")}>
@@ -203,20 +205,20 @@ export function ApplicationsPanel() {
           </div>
         ); })}
       </div>
-      <div className="mb-3 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] px-3.5 py-2 text-[11.5px] leading-relaxed text-[#0f7a43]">↳ Fields marked with an arrow are also part of onboarding — when you accept &amp; send the onboarding link, they <b>carry over automatically</b> so {app.name.split(" ")[0]} won&rsquo;t be asked again.</div>
-      {app.status === "rejected" && app.rejectReason && <div className="mb-3 rounded-xl bg-[#fdecec] px-3.5 py-2 text-[12px] font-semibold text-[#c0392b]">Rejected: {app.rejectReason}</div>}
+      <div className="mb-3 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] px-3.5 py-2 text-[11.5px] leading-relaxed text-[#0f7a43]">{t("team.carryPre")}<b>{t("team.carryBold")}</b>{t("team.carryPost", { name: app.name.split(" ")[0] })}</div>
+      {app.status === "rejected" && app.rejectReason && <div className="mb-3 rounded-xl bg-[#fdecec] px-3.5 py-2 text-[12px] font-semibold text-[#c0392b]">{t("team.rejectedColon")} {app.rejectReason}</div>}
       {app.status === "accepted" ? (
         <div className="flex flex-wrap items-center gap-2">
-          <span className="rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a43]">✓ Accepted</span>
-          <Button variant="primary" onClick={() => sendOnboarding(app)}>{app.onboardingSent ? "Resend onboarding link" : "📨 Send onboarding link"}</Button>
-          <button type="button" onClick={() => setStatus(app.id, { status: "new", onboardingSent: false })} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:underline">Undo</button>
+          <span className="rounded-full bg-[#e6f4ea] px-2.5 py-1 text-[11.5px] font-extrabold text-[#0f7a43]">{t("team.acceptedBadge")}</span>
+          <Button variant="primary" onClick={() => sendOnboarding(app)}>{app.onboardingSent ? t("team.resendOnboarding") : t("team.sendOnboardingLink")}</Button>
+          <button type="button" onClick={() => setStatus(app.id, { status: "new", onboardingSent: false })} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:underline">{t("team.undo")}</button>
         </div>
       ) : (
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => accept(app)}>✓ Accept</Button><span className="text-[11.5px] text-[var(--ink-3)]">then send the onboarding link</span></div>
+          <div className="flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => accept(app)}>{t("team.acceptBtn")}</Button><span className="text-[11.5px] text-[var(--ink-3)]">{t("team.thenSendOnboarding")}</span></div>
           <div className="rounded-xl border border-[var(--line)] p-2.5">
-            <div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">Reject with a reason</div>
-            <div className="flex flex-wrap items-center gap-2"><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (kept on file)…" className="min-w-[200px] flex-1" /><Button onClick={() => reject(app)}>Reject</Button></div>
+            <div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.rejectWithReason")}</div>
+            <div className="flex flex-wrap items-center gap-2"><Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder={t("team.reasonPlaceholder")} className="min-w-[200px] flex-1" /><Button onClick={() => reject(app)}>{t("team.reject")}</Button></div>
           </div>
         </div>
       )}
@@ -227,29 +229,29 @@ export function ApplicationsPanel() {
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="inline-flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
-          {([["received", `📥 Applications${newCount ? ` (${newCount} new)` : ""}`], ["forms", "📝 Application forms"]] as const).map(([k, l]) => (
+          {([["received", `📥 ${t("team.applicationsWord")}${newCount ? ` ${t("team.newCountSuffix", { n: newCount })}` : ""}`], ["forms", t("team.applicationFormsTab")]] as const).map(([k, l]) => (
             <button key={k} type="button" onClick={() => setTab(k)} className={"rounded-full px-3.5 py-1.5 text-[12.5px] font-bold transition-colors " + (tab === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
           ))}
         </div>
-        <Button variant="primary" className="ml-auto" onClick={() => setSendOpen(true)}>📨 Send application</Button>
+        <Button variant="primary" className="ml-auto" onClick={() => setSendOpen(true)}>{t("team.sendApplication")}</Button>
       </div>
 
       {tab === "received" ? (<>
         {/* Summary tiles — triage at a glance before reading the list. */}
         <CollapsibleStats id="team-applications">
         <div className="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
-          <Tile label="Applications" icon="📥" grad={GRAD.blue} value={String(apps.length)} sub={`${newCount} new`} />
-          <Tile label="New / to review" icon="🆕" grad={newCount > 0 ? GRAD.amber : GRAD.green} value={String(newCount)} sub={newCount > 0 ? "awaiting a decision" : "all reviewed"} />
-          <Tile label="Accepted" icon="✅" grad={GRAD.green} value={String(apps.filter((a) => a.status === "accepted").length)} sub={`${apps.filter((a) => a.onboardingSent).length} onboarding sent`} />
-          <Tile label="Rejected" icon="🚫" grad={GRAD.violet} value={String(apps.filter((a) => a.status === "rejected").length)} sub="not taken forward" />
+          <Tile label={t("team.tileApplications")} icon="📥" grad={GRAD.blue} value={String(apps.length)} sub={t("team.nNew", { n: newCount })} />
+          <Tile label={t("team.newToReview")} icon="🆕" grad={newCount > 0 ? GRAD.amber : GRAD.green} value={String(newCount)} sub={newCount > 0 ? t("team.awaitingDecision") : t("team.allReviewed")} />
+          <Tile label={t("team.accepted")} icon="✅" grad={GRAD.green} value={String(apps.filter((a) => a.status === "accepted").length)} sub={t("team.onboardingSentCount", { n: apps.filter((a) => a.onboardingSent).length })} />
+          <Tile label={t("team.rejected")} icon="🚫" grad={GRAD.violet} value={String(apps.filter((a) => a.status === "rejected").length)} sub={t("team.notTakenForward")} />
         </div>
         </CollapsibleStats>
         <div className="mb-3 flex flex-wrap items-center gap-2">
-          <label className="text-[12px] font-bold text-[var(--ink-3)]">📍 Location</label>
-          <Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="max-w-[240px]"><option value="all">All locations</option>{APP_LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}</Select>
-          <span className="text-[11.5px] text-[var(--ink-3)]">{filtered.length} application{filtered.length === 1 ? "" : "s"}</span>
+          <label className="text-[12px] font-bold text-[var(--ink-3)]">{t("team.locationLabel")}</label>
+          <Select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className="max-w-[240px]"><option value="all">{t("team.allLocations")}</option>{APP_LOCATIONS.map((l) => <option key={l} value={l}>{l}</option>)}</Select>
+          <span className="text-[11.5px] text-[var(--ink-3)]">{filtered.length} {filtered.length === 1 ? t("team.applicationSingular") : t("team.applicationPlural")}</span>
           <div className="ml-auto inline-flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
-            {([["cards", "🗂 Cards"], ["table", "▤ Table"]] as const).map(([k, l]) => (
+            {([["cards", t("team.cardsView")], ["table", t("team.tableView")]] as const).map(([k, l]) => (
               <button key={k} type="button" onClick={() => setApplView(k)} className={"rounded-full px-3 py-1 text-[12px] font-bold transition-colors " + (applView === k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-3)] hover:text-[var(--ink-2)]")}>{l}</button>
             ))}
           </div>
@@ -258,7 +260,7 @@ export function ApplicationsPanel() {
         {applView === "table" ? (
           <div className="overflow-x-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
             <table className="w-full text-[13px]">
-              <thead><tr className="border-b border-[var(--line)] bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Status</th><th className="px-3 py-2.5 font-extrabold">Submitted</th><th className="px-3 py-2.5 font-extrabold">Name</th><th className="px-3 py-2.5 font-extrabold">Position</th><th className="px-3 py-2.5 font-extrabold">Location(s)</th><th className="px-3 py-2.5 font-extrabold">Docs</th><th className="px-3 py-2.5"></th></tr></thead>
+              <thead><tr className="border-b border-[var(--line)] bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{t("team.thStatus")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thSubmitted")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thName")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thPosition")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thLocations")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.thDocs")}</th><th className="px-3 py-2.5"></th></tr></thead>
               <tbody>{filtered.map((a) => (
                 <tr key={a.id} className="cursor-pointer border-t border-[var(--line-2,#eef2f8)] hover:bg-[var(--panel)]" onClick={() => setRowOpen(a.id)}>
                   <td className="px-3 py-2.5"><span className={"inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase " + STATUS_TONE[a.status]}>● {a.status}{a.onboardingSent ? " · sent" : ""}</span></td>
@@ -267,10 +269,10 @@ export function ApplicationsPanel() {
                   <td className="px-3 py-2.5 text-[var(--ink-2)]">{a.answers.position || "—"}</td>
                   <td className="px-3 py-2.5"><div className="flex flex-wrap gap-1">{(a.locations ?? []).map((l) => <span key={l} className="rounded-full bg-[#eaf1ff] px-1.5 py-0.5 text-[10px] font-bold text-[#1d54c4]">{l}</span>)}{!(a.locations ?? []).length && <span className="text-[var(--ink-3)]">—</span>}</div></td>
                   <td className="px-3 py-2.5 text-[var(--ink-3)]">{Object.keys(a.files ?? {}).length ? `📎 ${Object.keys(a.files ?? {}).length}` : "—"}</td>
-                  <td className="px-3 py-2.5 text-right"><span className="text-[12px] font-bold text-[#1d3a8f]">Open →</span></td>
+                  <td className="px-3 py-2.5 text-right"><span className="text-[12px] font-bold text-[#1d3a8f]">{t("team.openArrow")}</span></td>
                 </tr>
               ))}
-              {filtered.length === 0 && <tr><td colSpan={7} className="px-3 py-8 text-center text-[12.5px] text-[var(--ink-3)]">No applications match.</td></tr>}</tbody>
+              {filtered.length === 0 && <tr><td colSpan={7} className="px-3 py-8 text-center text-[12.5px] text-[var(--ink-3)]">{t("team.noApplicationsMatch")}</td></tr>}</tbody>
             </table>
           </div>
         ) : (
@@ -282,10 +284,10 @@ export function ApplicationsPanel() {
                   <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{a.answers.position || "—"} · applied {fmtDate(a.submittedAt)}{(a.locations?.length ?? 0) ? ` · 📍 ${a.locations!.join(", ")}` : ""}</div>
                 </button>
               ))}
-              {filtered.length === 0 && <Card className="p-4 text-center text-[12.5px] text-[var(--ink-3)]">No applications match.</Card>}
+              {filtered.length === 0 && <Card className="p-4 text-center text-[12.5px] text-[var(--ink-3)]">{t("team.noApplicationsMatch")}</Card>}
             </div>
             <div className="min-w-0 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
-              {!app ? <div className="grid h-full min-h-[200px] place-items-center text-[13px] text-[var(--ink-3)]">Select an application to review.</div> : detailBody(app)}
+              {!app ? <div className="grid h-full min-h-[200px] place-items-center text-[13px] text-[var(--ink-3)]">{t("team.selectApplicationToReview")}</div> : detailBody(app)}
             </div>
           </div>
         )}
@@ -301,16 +303,16 @@ export function ApplicationsPanel() {
       </>
       ) : (
         <div className="space-y-2">
-          <div className="flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => setEditForm({ id: "form_" + Date.now().toString(36), name: "New application form", fields: [] })}>+ New application form</Button><Button onClick={() => { if (window.confirm("Reset the standard form back to the full master template? This replaces the 'standard' form.")) saveForms([defaultForm(), ...forms.filter((x) => x.id !== "standard")]); }}>↺ Reset master template</Button><span className="text-[11.5px] text-[var(--ink-3)]">Build one or more editable forms to send to candidates.</span></div>
+          <div className="flex flex-wrap items-center gap-2"><Button variant="primary" onClick={() => setEditForm({ id: "form_" + Date.now().toString(36), name: "New application form", fields: [] })}>{t("team.newApplicationForm")}</Button><Button onClick={() => { if (window.confirm(t("team.resetMasterConfirm"))) saveForms([defaultForm(), ...forms.filter((x) => x.id !== "standard")]); }}>{t("team.resetMasterTemplate")}</Button><span className="text-[11.5px] text-[var(--ink-3)]">{t("team.buildFormsHelp")}</span></div>
           {forms.map((form) => (
             <Card key={form.id} className="flex flex-wrap items-center gap-3 p-3.5">
               <span className="grid h-10 w-10 flex-none place-items-center rounded-xl bg-[var(--panel)] text-[18px]">📝</span>
-              <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{form.name}</span>{payLabel(form) && <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">💷 {payLabel(form)}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{form.fields.length} fields · {form.fields.filter((x) => x.mapsTo).length} carry into onboarding{form.summary ? " · has job summary" : ""}</div></div>
-              <Button onClick={() => previewForm(form, provider)}>👁 Preview</Button>
-              <Button onClick={() => setSendOpen(true)}>Send</Button>
-              <Button onClick={() => setEditForm(form)}>Edit</Button>
-              <Button onClick={() => { const clone: AppForm = { id: "form_" + Date.now().toString(36), name: form.name + " (copy)", fields: form.fields.map((x) => ({ ...x })) }; saveForms([...forms, clone]); setEditForm(clone); }}>Duplicate</Button>
-              {forms.length > 1 && <button type="button" title="Delete" onClick={() => { if (window.confirm(`Delete “${form.name}”?`)) saveForms(forms.filter((x) => x.id !== form.id)); }} className="rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>}
+              <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><span className="text-[13.5px] font-extrabold text-[var(--ink)]">{form.name}</span>{payLabel(form) && <span className="rounded-full bg-[#e6f4ea] px-2 py-0.5 text-[10px] font-bold text-[#0f7a43]">💷 {payLabel(form)}</span>}</div><div className="text-[11.5px] text-[var(--ink-3)]">{t("team.fieldsCount", { n: form.fields.length })} · {t("team.carryIntoOnboardingCount", { n: form.fields.filter((x) => x.mapsTo).length })}{form.summary ? ` · ${t("team.hasJobSummary")}` : ""}</div></div>
+              <Button onClick={() => previewForm(form, provider)}>{t("team.preview")}</Button>
+              <Button onClick={() => setSendOpen(true)}>{t("team.send")}</Button>
+              <Button onClick={() => setEditForm(form)}>{t("team.edit")}</Button>
+              <Button onClick={() => { const clone: AppForm = { id: "form_" + Date.now().toString(36), name: form.name + " (copy)", fields: form.fields.map((x) => ({ ...x })) }; saveForms([...forms, clone]); setEditForm(clone); }}>{t("team.duplicate")}</Button>
+              {forms.length > 1 && <button type="button" title={t("team.deleteWord")} onClick={() => { if (window.confirm(t("team.deleteFormConfirm", { name: form.name }))) saveForms(forms.filter((x) => x.id !== form.id)); }} className="rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[13px] text-[var(--ink-3)] hover:border-[#c0392b] hover:text-[#c0392b]">🗑</button>}
             </Card>
           ))}
         </div>
@@ -325,37 +327,38 @@ export function ApplicationsPanel() {
 
 // Send an application form: share a public link, or email a specific candidate.
 function SendModal({ forms, onSent, onClose }: { forms: AppForm[]; onSent: (m: string) => void; onClose: () => void }) {
+  const t = useT();
   const [formId, setFormId] = useState(forms[0]?.id ?? "");
   const [name, setName] = useState(""); const [email, setEmail] = useState(""); const [copied, setCopied] = useState(false);
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const link = `${origin}/apply/${formId}`;
   const copy = () => { try { navigator.clipboard?.writeText(link); setCopied(true); setTimeout(() => setCopied(false), 1500); } catch { /* ignore */ } };
-  const emailIt = () => { if (!email.trim()) return; onClose(); onSent(`📨 Application invite sent to ${name.trim() || email.trim()} — when they apply it lands in Applications.`); };
+  const emailIt = () => { if (!email.trim()) return; onClose(); onSent(t("team.applicationInviteSentToast", { name: name.trim() || email.trim() })); };
   return (
     <div className="fixed inset-0 z-[141] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Send an application</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
-        <p className="mb-3 text-[12px] text-[var(--ink-3)]">Candidates fill it in and their application lands in <b>Applications</b> for you to review.</p>
+        <div className="mb-1 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.sendAnApplication")}</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
+        <p className="mb-3 text-[12px] text-[var(--ink-3)]">{t("team.sendModalHelpPre")}<b>{t("team.applicationsWord")}</b>{t("team.sendModalHelpPost")}</p>
 
-        <label className="mb-2 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Which form to send</span><Select value={formId} onChange={(e) => setFormId(e.target.value)} className="w-full">{forms.map((f) => <option key={f.id} value={f.id}>{f.name} · {f.fields.length} fields</option>)}</Select></label>
+        <label className="mb-2 block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.whichFormToSend")}</span><Select value={formId} onChange={(e) => setFormId(e.target.value)} className="w-full">{forms.map((f) => <option key={f.id} value={f.id}>{f.name} · {t("team.fieldsCount", { n: f.fields.length })}</option>)}</Select></label>
         {(() => { const sf = forms.find((x) => x.id === formId); if (!sf || (!sf.summary && !payLabel(sf))) return null; return (
-          <div className="mb-3 rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Candidates will see</div>{sf.summary && <div className="text-[12px] text-[var(--ink-2)]">{sf.summary}</div>}{payLabel(sf) && <div className="mt-0.5 text-[12px] font-bold text-[#0f7a43]">💷 {payLabel(sf)}</div>}</div>
+          <div className="mb-3 rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.candidatesWillSee")}</div>{sf.summary && <div className="text-[12px] text-[var(--ink-2)]">{sf.summary}</div>}{payLabel(sf) && <div className="mt-0.5 text-[12px] font-bold text-[#0f7a43]">💷 {payLabel(sf)}</div>}</div>
         ); })()}
 
         <div className="mb-3 rounded-xl border border-[var(--line)] p-3">
-          <div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">🔗 Share a link</div>
-          <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">Post it on a job board, your website or socials — anyone with the link can apply.</div>
-          <div className="flex items-center gap-2"><Input value={link} readOnly className="flex-1 text-[12px]" onFocus={(e) => e.currentTarget.select()} /><Button onClick={copy}>{copied ? "Copied ✓" : "Copy"}</Button></div>
+          <div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.shareALink")}</div>
+          <div className="mb-1 text-[11.5px] text-[var(--ink-3)]">{t("team.shareLinkHelp")}</div>
+          <div className="flex items-center gap-2"><Input value={link} readOnly className="flex-1 text-[12px]" onFocus={(e) => e.currentTarget.select()} /><Button onClick={copy}>{copied ? t("team.copiedCheck") : t("team.copy")}</Button></div>
         </div>
 
         <div className="rounded-xl border border-[var(--line)] p-3">
-          <div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">✉️ Or email a candidate</div>
+          <div className="mb-1 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.orEmailCandidate")}</div>
           <div className="grid gap-2">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Their name (optional)" className="w-full" />
-            <div className="flex items-center gap-2"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="flex-1" /><Button variant="primary" disabled={!email.trim()} onClick={emailIt}>Send</Button></div>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder={t("team.theirNameOptional")} className="w-full" />
+            <div className="flex items-center gap-2"><Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="their@email.com" className="flex-1" /><Button variant="primary" disabled={!email.trim()} onClick={emailIt}>{t("team.send")}</Button></div>
           </div>
         </div>
-        <p className="mt-3 text-[11px] text-[var(--ink-3)]">Demo: the link + email send are wired to the backend (Amir). The <b>/apply</b> page candidates fill in is the backend piece.</p>
+        <p className="mt-3 text-[11px] text-[var(--ink-3)]">{t("team.sendModalDemoPre")}<b>/apply</b>{t("team.sendModalDemoPost")}</p>
       </div>
     </div>
   );
@@ -364,6 +367,7 @@ function SendModal({ forms, onSent, onClose }: { forms: AppForm[]; onSent: (m: s
 const ONBOARD_TARGETS: [string, string][] = DEFAULT_FIELDS.filter((f) => ["text", "tel", "email", "date", "textarea", "select", "jobtitle", "file"].includes(f.type)).map((f) => [f.id, f.label]);
 
 function FormEditor({ form, jobTitles, provider, onSave, onClose }: { form: AppForm; jobTitles: string[]; provider: string; onSave: (f: AppForm) => void; onClose: () => void }) {
+  const t = useT();
   const [f, setF] = useState<AppForm>(form);
   const [nl, setNl] = useState("");
   const patch = (id: string, p: Partial<AField>) => setF((x) => ({ ...x, fields: x.fields.map((fl) => (fl.id === id ? { ...fl, ...p } : fl)) }));
@@ -371,21 +375,21 @@ function FormEditor({ form, jobTitles, provider, onSave, onClose }: { form: AppF
   return (
     <div className="fixed inset-0 z-[141] flex justify-center overflow-y-auto bg-black/45 p-4 pt-[4vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="flex max-h-[90vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Edit application form</h3><Button className="ml-auto" onClick={() => previewForm(f, provider)}>👁 Preview</Button><button type="button" onClick={onClose} className="text-[18px] text-[var(--ink-3)]">×</button></div></div>
+        <div className="flex-none border-b border-[var(--line)] px-5 py-3.5"><div className="flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">{t("team.editApplicationForm")}</h3><Button className="ml-auto" onClick={() => previewForm(f, provider)}>{t("team.preview")}</Button><button type="button" onClick={onClose} className="text-[18px] text-[var(--ink-3)]">×</button></div></div>
         <div className="flex-1 space-y-3 overflow-y-auto px-5 py-4">
-          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Form name</span><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="w-full" /></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.formName")}</span><Input value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} className="w-full" /></label>
           <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
-            <div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Branding</div>
-            {f.logo ? <img src={f.logo} alt="logo" className="h-9 rounded bg-white p-0.5" /> : <span className="text-[11.5px] text-[var(--ink-3)]">No logo</span>}
-            <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {f.logo ? "Replace logo" : "Upload logo"}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setF({ ...f, logo: String(r.result) }); r.readAsDataURL(file); }} /></label>
-            {f.logo && <button type="button" onClick={() => setF({ ...f, logo: undefined })} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button>}
-            <label className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-3)]">Colour<input type="color" value={f.accent ?? "#1d3a8f"} onChange={(e) => setF({ ...f, accent: e.target.value })} className="h-7 w-9 cursor-pointer rounded border border-[var(--line)] bg-transparent p-0.5" /></label>
+            <div className="text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.branding")}</div>
+            {f.logo ? <img src={f.logo} alt="logo" className="h-9 rounded bg-white p-0.5" /> : <span className="text-[11.5px] text-[var(--ink-3)]">{t("team.noLogo")}</span>}
+            <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {f.logo ? t("team.replaceLogo") : t("team.uploadLogo")}<input type="file" accept="image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setF({ ...f, logo: String(r.result) }); r.readAsDataURL(file); }} /></label>
+            {f.logo && <button type="button" onClick={() => setF({ ...f, logo: undefined })} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#c0392b]">{t("team.remove")}</button>}
+            <label className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-3)]">{t("team.colour")}<input type="color" value={f.accent ?? "#1d3a8f"} onChange={(e) => setF({ ...f, accent: e.target.value })} className="h-7 w-9 cursor-pointer rounded border border-[var(--line)] bg-transparent p-0.5" /></label>
           </div>
           <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
-            <div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Job summary &amp; pay (optional)</div>
-            <textarea value={f.summary ?? ""} onChange={(e) => setF({ ...f, summary: e.target.value })} rows={2} placeholder="Short description of the role — shown to candidates on the application." className="mb-2 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+            <div className="mb-1.5 text-[11px] font-extrabold uppercase text-[var(--ink-3)]">{t("team.jobSummaryPay")}</div>
+            <textarea value={f.summary ?? ""} onChange={(e) => setF({ ...f, summary: e.target.value })} rows={2} placeholder={t("team.roleDescPlaceholder")} className="mb-2 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
             <div className="flex flex-wrap items-center gap-2">
-              <label className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-3)]">PAY<Select value={f.payKind ?? "Not stated"} onChange={(e) => setF({ ...f, payKind: e.target.value })} className="max-w-[150px]">{PAY_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</Select></label>
+              <label className="flex items-center gap-1.5 text-[11px] font-bold text-[var(--ink-3)]">{t("team.payWord")}<Select value={f.payKind ?? "Not stated"} onChange={(e) => setF({ ...f, payKind: e.target.value })} className="max-w-[150px]">{PAY_KINDS.map((k) => <option key={k} value={k}>{k}</option>)}</Select></label>
               {f.payKind && f.payKind !== "Not stated" && <div className="flex items-center gap-1"><span className="text-[13px] font-bold text-[var(--ink-3)]">£</span><Input value={(f.payAmount ?? "").replace(/^£/, "")} onChange={(e) => setF({ ...f, payAmount: e.target.value ? "£" + e.target.value.replace(/^£/, "") : "" })} placeholder={f.payKind === "Annual salary" ? "24,000" : f.payKind === "Range" ? "12–14/hour" : "12.50"} className="w-[130px]" /></div>}
             </div>
           </div>
@@ -394,18 +398,18 @@ function FormEditor({ form, jobTitles, provider, onSave, onClose }: { form: AppF
               <div key={fl.id} className="rounded-lg border border-[var(--line)] p-2.5">
                 <div className="flex flex-wrap items-center gap-2">
                   <Input value={fl.label} onChange={(e) => patch(fl.id, { label: e.target.value })} className="min-w-[150px] flex-1" />
-                  <Select value={fl.type} onChange={(e) => patch(fl.id, { type: e.target.value as AField["type"] })} className="max-w-[130px]"><option value="text">Text</option><option value="textarea">Long text</option><option value="email">Email</option><option value="tel">Phone</option><option value="date">Date</option><option value="select">Dropdown</option><option value="file">File upload</option><option value="locations">Location multi-select</option></Select>
-                  <label className="flex items-center gap-1 text-[11px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={fl.required} onChange={(e) => patch(fl.id, { required: e.target.checked })} className="h-3.5 w-3.5 accent-[#1d3a8f]" />Req</label>
+                  <Select value={fl.type} onChange={(e) => patch(fl.id, { type: e.target.value as AField["type"] })} className="max-w-[130px]"><option value="text">{t("team.ftText")}</option><option value="textarea">{t("team.ftLongText")}</option><option value="email">{t("team.ftEmail")}</option><option value="tel">{t("team.ftPhone")}</option><option value="date">{t("team.ftDate")}</option><option value="select">{t("team.ftDropdown")}</option><option value="file">{t("team.ftFileUpload")}</option><option value="locations">{t("team.ftLocationMulti")}</option></Select>
+                  <label className="flex items-center gap-1 text-[11px] font-bold text-[var(--ink-2)]"><input type="checkbox" checked={fl.required} onChange={(e) => patch(fl.id, { required: e.target.checked })} className="h-3.5 w-3.5 accent-[#1d3a8f]" />{t("team.reqShort")}</label>
                   <button type="button" onClick={() => setF((x) => ({ ...x, fields: x.fields.filter((y) => y.id !== fl.id) }))} className="text-[13px] text-[var(--ink-3)] hover:text-[#c0392b]">🗑</button>
                 </div>
-                <div className="mt-1.5 flex items-center gap-2"><span className="text-[10.5px] font-bold text-[var(--ink-3)]">↳ Carries into onboarding field:</span><Select value={fl.mapsTo ?? ""} onChange={(e) => patch(fl.id, { mapsTo: e.target.value || undefined })} className="max-w-[240px]"><option value="">— none —</option>{ONBOARD_TARGETS.map(([id, l]) => <option key={id} value={id}>{l}</option>)}</Select></div>
+                <div className="mt-1.5 flex items-center gap-2"><span className="text-[10.5px] font-bold text-[var(--ink-3)]">{t("team.carriesIntoOnboardingField")}</span><Select value={fl.mapsTo ?? ""} onChange={(e) => patch(fl.id, { mapsTo: e.target.value || undefined })} className="max-w-[240px]"><option value="">{t("team.noneOption")}</option>{ONBOARD_TARGETS.map(([id, l]) => <option key={id} value={id}>{l}</option>)}</Select></div>
               </div>
             ))}
           </div>
-          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-[var(--line)] p-3"><Input value={nl} onChange={(e) => setNl(e.target.value)} placeholder="New field label" className="min-w-[180px] flex-1" /><Button variant="primary" onClick={add}>Add field</Button></div>
-          <p className="text-[11px] text-[var(--ink-3)]">Fields with a <b>↳ carries into onboarding</b> mapping (references, address, availability…) pre-fill the onboarding record when you accept the applicant — job titles come from Setup → Staff roles ({jobTitles.length}).</p>
+          <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-[var(--line)] p-3"><Input value={nl} onChange={(e) => setNl(e.target.value)} placeholder={t("team.newFieldLabel")} className="min-w-[180px] flex-1" /><Button variant="primary" onClick={add}>{t("team.addField")}</Button></div>
+          <p className="text-[11px] text-[var(--ink-3)]">{t("team.formEditorHelpPre")}<b>{t("team.carriesIntoOnboardingBold")}</b>{t("team.formEditorHelpPost", { n: jobTitles.length })}</p>
         </div>
-        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ml-auto" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!f.name.trim()} onClick={() => onSave(f)}>Save form</Button></div>
+        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ml-auto" onClick={onClose}>{t("team.cancel")}</Button><Button variant="primary" disabled={!f.name.trim()} onClick={() => onSave(f)}>{t("team.saveForm")}</Button></div>
       </div>
     </div>
   );

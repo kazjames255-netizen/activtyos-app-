@@ -39,6 +39,17 @@ export interface ListingSummary {
   /** Age band the listing accepts, shown on the browse card. */
   ageFrom?: number;
   ageTo?: number;
+  /** The provider will accept children outside the stated age range (as an
+   *  approval request) — surfaced in the "my children's ages" filter. */
+  allowOutOfRange?: boolean;
+  /** Resolved season name (e.g. "Summer 1", "Oct Half Term") for the season filter. */
+  season?: string | null;
+  /** Auto-applied offers to advertise (siblings / multi-day), best % for the ribbon. */
+  offers?: { label: string; percent?: number }[];
+  bestOfferPercent?: number | null;
+  /** Whether the provider accepts these childcare payment methods. */
+  acceptsTFC?: boolean;
+  acceptsVouchers?: boolean;
   /** Venue coordinates when the operator geocoded it — lets the browse compute
    *  distance without a lookup. Absent venues are geocoded from their postcode
    *  on the client instead. */
