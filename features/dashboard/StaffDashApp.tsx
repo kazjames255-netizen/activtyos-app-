@@ -9,6 +9,7 @@ import { PageHero } from "@/components/OperatorPage";
 import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDur, workedMs, type ClockRecord } from "@/features/timeclock/data";
 import { greeting } from "@/lib/greeting";
 import { useSettings } from "@/lib/settings";
+import { loadAnnouncements, loadRead, type Announcement } from "@/features/staff/announcements";
 
 // ─────────────────────────────────────────────────────────────────────────
 // staff/dash — the staff member's colourful landing page. Live tenant data:
@@ -129,6 +130,8 @@ export function StaffDashApp() {
   const [sendOpen, setSendOpen] = useState(false); // SEND slideshow modal
   const [sendIdx, setSendIdx] = useState(0); // which SEND child is showing
   const [, tick] = useState(0); // live worked-time tick
+  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
+  const [annRead, setAnnRead] = useState<string[]>([]);
   const { settings } = useSettings();
   const coworkerVis = settings.scheduling?.coworkerVisibility ?? "all";
   const today = todayIso();
@@ -143,7 +146,7 @@ export function StaffDashApp() {
     apiGet<PublishedLite[]>("/api/timetables/published").then((w) => setTimetableToday((w ?? []).some((x) => x.dayList.some((d) => d.iso === date)))).catch(() => {});
     apiGet<{ venues?: { name: string; address?: string; city?: string }[] }>("/api/library").then((l) => setVenues(l.venues ?? [])).catch(() => {});
   }, [date]);
-  useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); setClock(loadClock()); }, []);
+  useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); setClock(loadClock()); setAnnouncements(loadAnnouncements()); setAnnRead(loadRead()); }, []);
   useEffect(() => { setSessions(null); setRegs(null); refresh(); }, [refresh]);
   useEffect(() => { setShift(myShiftToday(date)); setCoworkers(coworkersToday(coworkerVis, date)); }, [date, coworkerVis]);
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 30000); return () => clearInterval(id); }, []);
@@ -206,6 +209,12 @@ export function StaffDashApp() {
     </div>
   );
 
+  const topAnn = [...announcements]
+    .sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (Number(!!b.important) - Number(!!a.important)) || b.date.localeCompare(a.date))
+    .slice(0, 3);
+  const annUnread = announcements.filter((a) => !annRead.includes(a.id)).length;
+  const annDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+
   return (
     <div className="text-[var(--ink)]">
       <PageHero
@@ -230,6 +239,38 @@ export function StaffDashApp() {
         {!isToday && <button type="button" onClick={() => setDate(today)} className="rounded-xl border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] shadow-sm transition hover:bg-[var(--panel)]">Jump to today</button>}
         <span className="text-[11.5px] text-[var(--ink-3)]">Everything below is for this date.</span>
       </div>
+
+      {/* Staff announcements — the manager's notice board, surfaced up top */}
+      {topAnn.length > 0 && (
+        <div className="mb-3 rounded-2xl border border-[#e3ebff] bg-gradient-to-br from-[#f4f8ff] to-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+          <div className="mb-2.5 flex items-center gap-2">
+            <span className="grid h-8 w-8 flex-none place-items-center rounded-xl bg-[#1d3a8f] text-[15px]">📣</span>
+            <div className="text-[13px] font-black tracking-tight text-[var(--ink)]">Staff announcements</div>
+            {annUnread > 0 && <span className="rounded-full bg-[#e21d27] px-2 py-0.5 text-[10px] font-black text-white">{annUnread} new</span>}
+            <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">View all ›</Link>
+          </div>
+          <div className="flex flex-col gap-2">
+            {topAnn.map((a) => {
+              const unread = !annRead.includes(a.id);
+              return (
+                <Link key={a.id} href="/staff/announcements" className="flex items-start gap-2.5 rounded-xl border border-[var(--line)] bg-white px-3 py-2.5 transition hover:border-[#c9d6f5] hover:shadow-sm">
+                  <span className="mt-1 h-2 w-2 flex-none rounded-full" style={{ background: a.important ? "#e21d27" : unread ? "#1d3a8f" : "var(--line)" }} />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-1.5">
+                      {a.pinned && <span className="flex-none text-[10px]">📌</span>}
+                      <span className="truncate text-[13px] font-extrabold text-[var(--ink)]">{a.title}</span>
+                      {a.important && <span className="flex-none rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#c0362c]">Important</span>}
+                      {unread && !a.important && <span className="flex-none rounded-full bg-[#eef4fd] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#1d3a8f]">New</span>}
+                    </div>
+                    <div className="mt-0.5 line-clamp-1 text-[12px] text-[var(--ink-3)]">{a.body}</div>
+                    <div className="mt-1 text-[10.5px] font-semibold text-[var(--ink-3)]">{a.author}{a.role ? ` · ${a.role}` : ""} · {annDate(a.date)}</div>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* My shift + at-a-glance & sessions */}
       <div className="mb-3 grid items-start gap-3 md:grid-cols-2">

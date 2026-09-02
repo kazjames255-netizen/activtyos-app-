@@ -46,7 +46,16 @@ export function Header({ portal }: { portal: PortalKey }) {
   }, [portal]);
   // The signed-in person's name for the top bar (falls back to email).
   const [meName, setMeName] = useState("");
-  useEffect(() => { apiGet<{ name?: string }>("/api/me").then((m) => setMeName(m?.name ?? "")).catch(() => {}); }, []);
+  useEffect(() => {
+    apiGet<{ name?: string }>("/api/me").then((m) => setMeName(m?.name ?? "")).catch(() => {});
+    // Update instantly when the user edits their name in Account settings.
+    const onMe = (e: Event) => {
+      const n = (e as CustomEvent<{ name?: string }>).detail?.name;
+      if (typeof n === "string" && n) setMeName(n);
+    };
+    window.addEventListener("aos:me-updated", onMe);
+    return () => window.removeEventListener("aos:me-updated", onMe);
+  }, []);
   const messageLabel = providers.length === 1 ? `Message ${providers[0].name}` : "Messages";
 
   // Live unread total — drives the "new" bubble on the Messages tab so a reply

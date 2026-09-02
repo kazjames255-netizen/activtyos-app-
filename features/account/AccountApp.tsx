@@ -16,6 +16,20 @@ const LIGHT_PALETTE = {
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
 } as CSSProperties;
 const looksEmail = (s: string) => /@/.test(s);
+// Turn an API error (which may be a raw zod-issues JSON array) into one plain line.
+function niceError(e: unknown): string {
+  const raw = e instanceof Error ? e.message : String(e);
+  try {
+    const arr = JSON.parse(raw) as { message?: string; path?: (string | number)[] }[];
+    if (Array.isArray(arr) && arr[0]?.message) {
+      const i = arr[0];
+      const field = Array.isArray(i.path) && i.path.length ? String(i.path[i.path.length - 1]) : "";
+      const label = field ? field.charAt(0).toUpperCase() + field.slice(1) : "";
+      return label ? `${label}: ${i.message!.charAt(0).toLowerCase()}${i.message!.slice(1)}` : i.message!;
+    }
+  } catch { /* not JSON — use as-is */ }
+  return raw;
+}
 
 // Downscale any uploaded image to a PNG/JPG under the upload cap, so a big logo
 // still fits (mirrors the Setup logo upload; handles SVGs that report 0×0).
@@ -58,10 +72,12 @@ export function AccountApp() {
   const load = useCallback(() => {
     apiGet<Profile>("/api/account").then((prof) => {
       setP(prof); setName(prof.name);
-      // A registration bug seeded some accounts' phone with the login email —
-      // don't show an email in the phone box (fall back to the onboarding phone).
+      // A registration bug seeded some accounts' phone/address/postcode with the
+      // login email — never show an email in those boxes (it also fails the
+      // 16-char postcode limit on save). Clearing + saving fixes the stored value.
       setPhone(looksEmail(prof.phone) ? "" : prof.phone);
-      setAddress(prof.address ?? ""); setPostcode(prof.postcode ?? "");
+      setAddress(looksEmail(prof.address) ? "" : (prof.address ?? ""));
+      setPostcode(looksEmail(prof.postcode) ? "" : (prof.postcode ?? ""));
       setMarketing(prof.marketingConsent);
     }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
@@ -111,13 +127,19 @@ export function AccountApp() {
         billing: { ...(settings.billing ?? {}), businessName: rf.businessName.trim(), address: rf.address.trim(), email: rf.email.trim(), phone: rf.phone.trim(), vatNumber: rf.vatNumber.trim() },
       } });
       setEditReg(false); setOk("Registration details saved.");
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); }
+    } catch (e) { setError(niceError(e)); }
   }
 
   async function saveProfile() {
     setError(null); setOk(null);
-    try { await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, address, postcode, marketingConsent: marketing }) }); setOk("Saved."); load(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); }
+    try {
+      await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, address, postcode, marketingConsent: marketing }) });
+      setOk("Saved.");
+      // Let the header (and anything else showing my name) update without a reload.
+      window.dispatchEvent(new CustomEvent("aos:me-updated", { detail: { name: name.trim() } }));
+      load();
+    }
+    catch (e) { setError(niceError(e)); }
   }
 
   async function changePassword() {
