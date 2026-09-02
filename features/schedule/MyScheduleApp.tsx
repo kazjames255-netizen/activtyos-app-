@@ -21,7 +21,8 @@ const ME_ROLE = "Lead Coach"; // demo role (per-user identity is Amir's)
 const ME_ID = slug(ME);
 const AVAIL_ID = "me-avail"; // staffId for my real assigned camp days
 const ROTA_KEY = "aos.rota.v5";
-interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; date: string; start: string; end: string; in?: string; out?: string; note?: string }
+interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; date: string; start: string; end: string; in?: string; out?: string; note?: string; rate?: number; address?: string }
+const money = (n: number) => `£${n.toFixed(2)}`;
 interface Staff { id: string; name: string }
 const ROLE_COL: Record<string, string> = { "Lead Coach": "#2f6bd8", Lifeguard: "#0f857b", Coach: "#6366f1", "Activity Assistant": "#8b5cf6", "Activity Instructor": "#b45309", "First Aider": "#c06a10" };
 const roleCol = (r: string) => ROLE_COL[r] ?? "#64748b";
@@ -80,7 +81,7 @@ export function MyScheduleApp() {
     } catch { /* ignore */ }
     setClock(loadClock());
     // My assigned camp days → shifts (times from my submitted grid, else camp hours).
-    apiGet<{ requests: { camp?: { listingName: string; location?: string; open: string; close: string; assignedDates?: string[] } | null }[]; pattern: { grid?: Record<string, { from: string; to: string }> } | null }>("/api/availability/mine")
+    apiGet<{ requests: { camp?: { listingName: string; location?: string; address?: string; payRate?: number; open: string; close: string; assignedDates?: string[] } | null }[]; pattern: { grid?: Record<string, { from: string; to: string }> } | null }>("/api/availability/mine")
       .then((r) => {
         const grid = r.pattern?.grid ?? {};
         const out: Shift[] = [];
@@ -88,7 +89,7 @@ export function MyScheduleApp() {
           const camp = req.camp; if (!camp?.assignedDates?.length) continue;
           for (const date of camp.assignedDates) {
             const g = grid[date];
-            out.push({ id: `avail-${date}`, staffId: AVAIL_ID, site: camp.location ?? "", role: "", listing: camp.listingName, date, start: g?.from ?? camp.open, end: g?.to ?? camp.close, note: camp.listingName });
+            out.push({ id: `avail-${date}`, staffId: AVAIL_ID, site: camp.location ?? "", role: "", listing: camp.listingName, date, start: g?.from ?? camp.open, end: g?.to ?? camp.close, rate: camp.payRate, address: camp.address });
           }
         }
         setAssignedShifts(out);
@@ -219,10 +220,17 @@ export function MyScheduleApp() {
                         <span className="ml-auto tabular-nums text-[12.5px] font-bold text-[var(--ink)]">{to12(s.start)}–{to12(s.end)}</span>
                       </div>
                       <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: col + "1a", color: col }}>{s.role}</span>
-                        {(s.listing || s.site) && <span className="truncate text-[11.5px] font-medium text-[var(--ink-3)]">{s.listing || s.site}</span>}
+                        {s.role && <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: col + "1a", color: col }}>{s.role}</span>}
+                        {s.listing && <span className="truncate text-[11.5px] font-bold text-[var(--ink-2)]">{s.listing}</span>}
                         <span className="ml-auto flex-none rounded-md bg-[var(--panel)] px-1.5 py-0.5 text-[11px] font-extrabold tabular-nums text-[var(--ink-2)]">{hLabel(hrsOf(s.start, s.end))}</span>
                       </div>
+                      {(s.site || s.address) && <div className="mt-1 flex items-center gap-1 text-[11.5px] text-[var(--ink-3)]"><span className="flex-none">📍</span><span className="truncate">{[s.site, s.address].filter(Boolean).join(" · ")}</span></div>}
+                      {s.rate != null && s.rate > 0 && (
+                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11.5px]">
+                          <span className="rounded-md bg-[#e7f5ec] px-1.5 py-0.5 font-extrabold tabular-nums text-[#0f7a43]">{money(s.rate)}/hr</span>
+                          <span className="text-[var(--ink-3)]">est. <b className="tabular-nums text-[var(--ink)]">{money(s.rate * hrsOf(s.start, s.end))}</b> this shift</span>
+                        </div>
+                      )}
                       {s.note && <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">📝 {s.note}</div>}
                       <div className="relative mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]">
                         <span className="absolute inset-y-0 rounded-full" style={{ left: pos.left, width: pos.width, background: col }} />

@@ -22,7 +22,7 @@ function mondayNext(): Date {
 const WEEKS = 6;
 // Real listing/venue/hours pulled from the company's Summer Holiday Camp
 // (sessions 09:00–15:00 at Loughton Leisure Centre).
-const CAMP = { listingName: "Summer Holiday Camp", location: "Loughton Leisure Centre", open: "09:00", close: "15:00", weeks: WEEKS };
+const CAMP = { listingName: "Summer Holiday Camp", location: "Loughton Leisure Centre", address: "Traps Hill, Loughton IG10 1SZ", payRate: 12.5, open: "09:00", close: "15:00", weeks: WEEKS };
 
 async function main() {
   const mon = mondayNext();

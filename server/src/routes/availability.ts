@@ -30,7 +30,9 @@ const windowSchema = z.object({
 // the camp's operating hours so the staff page can frame + bound the grid.
 const campSchema = z.object({
   listingName: z.string().trim().max(120),
-  location: z.string().trim().max(160).optional(),
+  location: z.string().trim().max(160).optional(),  // venue name
+  address: z.string().trim().max(200).optional(),   // full address incl. postcode
+  payRate: z.number().min(0).max(1000).optional(),  // £ per hour for this staffer
   open: z.string().max(8),
   close: z.string().max(8),
   weeks: z.number().int().min(1).max(26),
