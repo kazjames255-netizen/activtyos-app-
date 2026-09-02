@@ -37,12 +37,6 @@ export function Header({ portal }: { portal: PortalKey }) {
   const [lookupOpen, setLookupOpen] = useState(false);
   const canLookup = portal !== "custdash" && portal !== "platform";
 
-  // Show/hide for the quick-action chips (Bookings, Families, Contact parents…).
-  // Remembered per browser so the choice sticks across pages and reloads.
-  const [tabsOpen, setTabsOpen] = useState(true);
-  useEffect(() => { try { if (localStorage.getItem("aos.header.tabs") === "0") setTabsOpen(false); } catch { /* ignore */ } }, []);
-  const toggleTabs = () => setTabsOpen((o) => { const n = !o; try { localStorage.setItem("aos.header.tabs", n ? "1" : "0"); } catch { /* ignore */ } return n; });
-
   // Parents message their provider from the top bar rather than a sidebar tab —
   // it's an action, not a place. Named after the provider when there's just one.
   const [providers, setProviders] = useState<{ tenantId: string; name: string }[]>([]);
@@ -140,21 +134,6 @@ export function Header({ portal }: { portal: PortalKey }) {
       </h1>
 
       {tabs.length > 0 && (
-        <button
-          type="button"
-          onClick={toggleTabs}
-          title={tabsOpen ? "Hide quick actions" : "Show quick actions"}
-          aria-label={tabsOpen ? "Hide quick actions" : "Show quick actions"}
-          aria-expanded={tabsOpen}
-          className="inline-flex h-[34px] w-[34px] flex-none items-center justify-center rounded-full border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] transition-colors hover:border-[var(--ink-3)]"
-        >
-          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" strokeLinejoin="round" aria-hidden className={"transition-transform " + (tabsOpen ? "" : "rotate-180")}>
-            <path d="M15 6l-6 6 6 6" />
-          </svg>
-        </button>
-      )}
-
-      {tabs.length > 0 && tabsOpen && (
         <nav className="flex min-w-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
           {tabs.map((t) => {
             const active = view === t.view;
