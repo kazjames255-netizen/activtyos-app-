@@ -114,6 +114,9 @@ export function BrowseApp() {
   // their postcodes (for venues the operator never geocoded).
   const [myCoords, setMyCoords] = useState<LatLng | null>(null);
   const [myPostcode, setMyPostcode] = useState("");
+  // Which cards have their extra offers expanded (best offer shown by default so
+  // every card is the same height).
+  const [offersOpen, setOffersOpen] = useState<Set<string>>(new Set());
   const [radius, setRadius] = useState(0);
   const [geoBusy, setGeoBusy] = useState(false);
   const [venueGeo, setVenueGeo] = useState<Record<string, LatLng | null>>({});
@@ -529,12 +532,14 @@ export function BrowseApp() {
                     </div>
                   </div>
                 )}
-                {/* Offers (auto-applied, red) + accepted childcare payments (green). */}
+                {/* Best offer only (+N more, expandable) so every card is the same
+                    height; accepted childcare payments (green) after. */}
                 {((l.offers && l.offers.length) || l.acceptsTFC || l.acceptsVouchers) && (
                   <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {(l.offers ?? []).slice(0, 3).map((o) => (
-                      <span key={o.label} className="rounded-full bg-[#fdecea] px-2.5 py-1 text-[11px] font-extrabold text-[#b3261e]">🏷️ {o.label}</span>
-                    ))}
+                    {(() => { const offs = l.offers ?? []; const exp = offersOpen.has(l.id); const shown = exp ? offs : offs.slice(0, 1); return (<>
+                      {shown.map((o) => <span key={o.label} className="rounded-full bg-[#fdecea] px-2.5 py-1 text-[11px] font-extrabold text-[#b3261e]">🏷️ {o.label}</span>)}
+                      {offs.length > 1 && <button type="button" onClick={() => setOffersOpen((s) => { const n = new Set(s); if (n.has(l.id)) n.delete(l.id); else n.add(l.id); return n; })} className="rounded-full bg-[#eef4ff] px-2.5 py-1 text-[11px] font-extrabold text-[#1d3a8f] hover:bg-[#e3ecff]">{exp ? t("parent.showLess") : t("parent.moreOffers", { n: offs.length - 1 })}</button>}
+                    </>); })()}
                     {l.acceptsTFC && <span className="rounded-full bg-[#e9f9f2] px-2.5 py-1 text-[11px] font-extrabold text-[#0b5a3f]">✓ {t("parent.tfcAccepted")}</span>}
                     {l.acceptsVouchers && <span className="rounded-full bg-[#e9f9f2] px-2.5 py-1 text-[11px] font-extrabold text-[#0b5a3f]">✓ {t("parent.vouchersAccepted")}</span>}
                   </div>

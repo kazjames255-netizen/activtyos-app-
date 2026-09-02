@@ -26,6 +26,8 @@ const parent = {
     saveBadge: "SAVE {n}%",
     tfcAccepted: "Tax-Free Childcare",
     vouchersAccepted: "Childcare vouchers",
+    moreOffers: "+{n} more",
+    showLess: "Show less",
     hideFilters: "Filters",
     showFilters: "Filters",
     // generic
