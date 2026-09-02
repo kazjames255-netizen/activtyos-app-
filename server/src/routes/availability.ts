@@ -35,6 +35,9 @@ const campSchema = z.object({
   close: z.string().max(8),
   weeks: z.number().int().min(1).max(26),
   startDate: z.string().max(10), // Monday of week 1
+  // ISO dates the staffer has already been rostered/assigned to — locked in the
+  // availability grid (they must request time off to change one).
+  assignedDates: z.array(z.string().max(10)).max(200).optional(),
 });
 const createSchema = z.object({
   staffEmail: z.string().trim().email().max(160),
@@ -121,16 +124,32 @@ availability.put("/mine", async (req, res) => {
   const p = saveSchema.safeParse(req.body);
   if (!p.success) { res.status(400).json({ error: p.error.issues }); return; }
   const now = new Date().toISOString();
+
+  const snap = await reqs.where("tenantId", "==", auth.tenantId).get();
+  const myReqs = snap.docs.filter((d) => `${d.data().staffEmail}` === email);
+
+  // Rostered days are protected: a staffer can't drop availability for a day
+  // they've been assigned to (they must request time off). Force assigned dates
+  // back to "on" at the camp hours regardless of what the client submitted.
+  let grid = p.data.grid;
+  if (grid) {
+    const guarded = { ...grid };
+    for (const d of myReqs) {
+      const camp = d.data().camp as { open?: string; close?: string; assignedDates?: string[] } | null;
+      for (const iso of camp?.assignedDates ?? []) guarded[iso] = { on: true, from: camp!.open ?? "09:00", to: camp!.close ?? "17:00" };
+    }
+    grid = guarded;
+  }
+
   await patterns.doc(`${auth.tenantId}_${email}`).set(
     {
       tenantId: auth.tenantId, staffEmail: email, staffName: req.user?.name ?? null,
       ...(p.data.days ? { days: p.data.days } : {}),
-      ...(p.data.grid ? { grid: p.data.grid } : {}),
+      ...(grid ? { grid } : {}),
       note: p.data.note ?? "", submittedAt: now,
     },
     { merge: true },
   );
-  const snap = await reqs.where("tenantId", "==", auth.tenantId).get();
   await Promise.all(
     snap.docs
       .filter((d) => `${d.data().staffEmail}` === email && d.data().status === "pending")

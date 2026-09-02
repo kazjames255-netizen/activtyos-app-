@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { api, get as apiGet } from "@/lib/api";
 import { Button, Card, Input } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
+
+// How long before a day starts its availability locks (can't be edited last-minute).
+const LOCK_HOURS = 24;
 
 // ── My availability (staff) ────────────────────────────────────────────────
 // Two shapes, driven by what the manager asked for (real store: /api/availability):
@@ -12,7 +16,7 @@ import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 //    a week-by-week grid bounded by the camp's opening hours, with quick helpers
 //    (repeat a weekday across all weeks, duplicate a whole week) + undo.
 
-interface Camp { listingName: string; location?: string; open: string; close: string; weeks: number; startDate: string }
+interface Camp { listingName: string; location?: string; open: string; close: string; weeks: number; startDate: string; assignedDates?: string[] }
 interface ReqWindow { kind: "week" | "range" | "ongoing" | "camp"; label: string; from?: string; to?: string }
 interface AvailRequest { id: string; window: ReqWindow; camp?: Camp | null; note?: string; status: "pending" | "submitted"; createdAt: string; createdBy?: string | null; submittedAt?: string }
 interface DayAvail { on: boolean; from: string; to: string }
@@ -86,18 +90,27 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
 
   const weeks = useMemo(() => Array.from({ length: camp.weeks }, (_, w) => Array.from({ length: 7 }, (_, d) => addDaysISO(camp.startDate, w * 7 + d))), [camp.weeks, camp.startDate]);
   const allDates = useMemo(() => weeks.flat(), [weeks]);
+  const assigned = useMemo(() => new Set(camp.assignedDates ?? []), [camp.assignedDates]);
+  // A day locks LOCK_HOURS before its opening time (and once it's started/passed).
+  const lockCutoffMs = LOCK_HOURS * 3600_000;
+  const dayStartMs = (iso: string) => new Date(`${iso}T${camp.open}:00`).getTime();
+  const nowMs = Date.now();
+  const status = (iso: string): "assigned" | "locked" | "open" =>
+    assigned.has(iso) ? "assigned" : nowMs >= dayStartMs(iso) - lockCutoffMs ? "locked" : "open";
+  const editable = (iso: string) => status(iso) === "open";
   const cell = (iso: string) => grid[iso] ?? cell0();
   const snapshot = () => setHistory((h) => [...h.slice(-19), grid]);
   const undo = () => setHistory((h) => { if (!h.length) return h; setGrid(h[h.length - 1]); return h.slice(0, -1); });
-  const setCell = (iso: string, patch: Partial<DayAvail>) => setGrid((g) => ({ ...g, [iso]: { ...(g[iso] ?? cell0()), ...patch } }));
+  const setCell = (iso: string, patch: Partial<DayAvail>) => { if (!editable(iso)) return; setGrid((g) => ({ ...g, [iso]: { ...(g[iso] ?? cell0()), ...patch } })); };
   const toggle = (iso: string) => setCell(iso, { on: !cell(iso).on });
   const setFrom = (iso: string, v: string) => { const c = cell(iso); setCell(iso, { from: clampT(v, camp.open, camp.close), to: mins(v) >= mins(c.to) ? camp.close : c.to }); };
   const setTo = (iso: string, v: string) => setCell(iso, { to: clampT(v, camp.open, camp.close) });
 
-  const repeatWeekday = (iso: string) => { snapshot(); const c = { ...cell(iso) }; const wd = wdOf(iso); setGrid((g) => { const n = { ...g }; allDates.forEach((dt) => { if (wdOf(dt) === wd) n[dt] = { ...c }; }); return n; }); };
-  const copyWeekToAll = (wi: number) => { snapshot(); setGrid((g) => { const n = { ...g }; const src = weeks[wi].map((dt) => g[dt] ?? cell0()); weeks.forEach((wk) => wk.forEach((dt, di) => { n[dt] = { ...src[di] }; })); return n; }); };
-  const weekdaysAllWeeks = () => { snapshot(); setGrid(() => { const n: Record<string, DayAvail> = {}; allDates.forEach((dt) => { const wd = wdOf(dt); n[dt] = { on: wd >= 1 && wd <= 5, from: camp.open, to: camp.close }; }); return n; }); };
-  const clearAll = () => { snapshot(); setGrid({}); };
+  // Bulk helpers only touch editable days — locked/assigned days are left alone.
+  const repeatWeekday = (iso: string) => { snapshot(); const c = { ...cell(iso) }; const wd = wdOf(iso); setGrid((g) => { const n = { ...g }; allDates.forEach((dt) => { if (wdOf(dt) === wd && editable(dt)) n[dt] = { ...c }; }); return n; }); };
+  const copyWeekToAll = (wi: number) => { snapshot(); setGrid((g) => { const n = { ...g }; const src = weeks[wi].map((dt) => g[dt] ?? cell0()); weeks.forEach((wk) => wk.forEach((dt, di) => { if (editable(dt)) n[dt] = { ...src[di] }; })); return n; }); };
+  const weekdaysAllWeeks = () => { snapshot(); setGrid((g) => { const n = { ...g }; allDates.forEach((dt) => { if (!editable(dt)) return; const wd = wdOf(dt); n[dt] = { on: wd >= 1 && wd <= 5, from: camp.open, to: camp.close }; }); return n; }); };
+  const clearAll = () => { snapshot(); setGrid((g) => { const n = { ...g }; allDates.forEach((dt) => { if (editable(dt)) delete n[dt]; }); return n; }); };
 
   const selected = allDates.filter((dt) => cell(dt).on);
   const totalH = selected.reduce((n, dt) => n + hoursOf(cell(dt).from, cell(dt).to), 0);
@@ -168,13 +181,13 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
               {weeks.map((wk, wi) => (
                 <div key={wi} className="flex flex-wrap items-center gap-1.5">
                   <span className="w-[112px] flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">Week {wi + 1} <span className="font-semibold text-[var(--ink-3)]">· {dNum(wk[0])} {dMon(wk[0])}</span></span>
-                  {wk.map((dt) => (
-                    <span key={dt} className={"rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums " + (cell(dt).on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")} title={cell(dt).on ? `Available ${cell(dt).from}–${cell(dt).to}` : "Not chosen"}>{WD_SHORT[wdOf(dt)]} {dNum(dt)}</span>
-                  ))}
+                  {wk.map((dt) => { const as = assigned.has(dt); const on = cell(dt).on; return (
+                    <span key={dt} className={"rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums " + (as ? "bg-[#1d3a8f] text-white ring-2 ring-[#f5c542]" : on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")} title={as ? "Rostered — request time off to change" : on ? `Available ${cell(dt).from}–${cell(dt).to}` : "Not chosen"}>{as ? "📌 " : ""}{WD_SHORT[wdOf(dt)]} {dNum(dt)}</span>
+                  ); })}
                 </div>
               ))}
             </div>
-            <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">Filled navy = a day you&rsquo;ve chosen so far.</div>
+            <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">Navy = chosen · <span className="text-[#b8860b]">gold ring 📌</span> = rostered (request time off to change).</div>
           </div>
         )}
         {req.note && <div className="border-t border-[#e3ebff] px-4 py-2.5 text-[12px] italic text-[#7a5a12]">“{req.note}”</div>}
@@ -186,6 +199,16 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
         <button type="button" onClick={weekdaysAllWeeks} className="rounded-full bg-[#1d3a8f] px-3 py-1.5 text-[11.5px] font-bold text-white transition hover:brightness-110">Weekdays {camp.open}–{camp.close}, every week</button>
         <button type="button" onClick={clearAll} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:bg-white/70">Clear all</button>
         <button type="button" onClick={undo} disabled={!history.length} className="ml-auto rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition enabled:hover:bg-white/70 disabled:opacity-40">↩ Undo</button>
+      </div>
+
+      {/* The rules — assigned days & the edit cutoff */}
+      <div className="flex items-start gap-2.5 rounded-xl border border-[#e3ebff] bg-[#eef5ff] px-3.5 py-3 text-[12px] leading-relaxed text-[#1d3a8f]">
+        <span className="mt-px flex-none text-[15px] leading-none">🔒</span>
+        <div>
+          <b>Two things are locked:</b>
+          <div className="mt-1 text-[var(--ink-2)]">• <b className="text-[#1d3a8f]">Days you&rsquo;ve been rostered</b> (📌) can&rsquo;t be switched off here — you&rsquo;re expected to work them. To change one, <b>request time off</b> and your manager will review it.</div>
+          <div className="mt-0.5 text-[var(--ink-2)]">• A day locks <b className="text-[#1d3a8f]">{LOCK_HOURS}h before it starts</b>, so availability can&rsquo;t change at the last minute. Everything further out stays fully editable.</div>
+        </div>
       </div>
 
       {/* Weeks */}
@@ -208,6 +231,35 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
                 {wk.map((dt) => {
                   const c = cell(dt);
                   const wd = wdOf(dt);
+                  const st = status(dt);
+                  // Assigned/rostered — locked; can only request time off.
+                  if (st === "assigned") {
+                    return (
+                      <li key={dt} className="flex flex-wrap items-center gap-3 bg-[#f3f6ff] px-4 py-2.5">
+                        <span className="grid h-[22px] w-[40px] flex-none place-items-center rounded-full bg-[#1d3a8f] text-[11px] text-white">📌</span>
+                        <div className="w-[104px] flex-none">
+                          <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG[wd]}</div>
+                          <div className="text-[11px] font-semibold text-[var(--ink-3)]">{dNum(dt)} {dMon(dt)}</div>
+                        </div>
+                        <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f]">Rostered · {camp.open}–{camp.close}</span>
+                        <Link href="/staff/holiday" className="ml-auto flex-none rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#eef4fd]">Request time off →</Link>
+                      </li>
+                    );
+                  }
+                  // Locked by the cutoff (started / within the lock window).
+                  if (st === "locked") {
+                    return (
+                      <li key={dt} className="flex flex-wrap items-center gap-3 px-4 py-2.5 opacity-70">
+                        <span className="grid h-[22px] w-[40px] flex-none place-items-center rounded-full bg-[var(--line)] text-[11px] text-[var(--ink-3)]">🔒</span>
+                        <div className="w-[104px] flex-none">
+                          <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG[wd]}</div>
+                          <div className="text-[11px] font-semibold text-[var(--ink-3)]">{dNum(dt)} {dMon(dt)}</div>
+                        </div>
+                        <span className="text-[12px] font-semibold text-[var(--ink-3)]">{c.on ? `Locked · was ${c.from}–${c.to}` : "Locked — too close to the day to change"}</span>
+                      </li>
+                    );
+                  }
+                  // Editable.
                   return (
                     <li key={dt} className={"flex flex-wrap items-center gap-3 px-4 py-2.5 " + (c.on ? "bg-[#f5f8ff]" : "")}>
                       <button type="button" onClick={() => toggle(dt)} role="switch" aria-checked={c.on} className="relative h-[22px] w-[40px] flex-none rounded-full transition-colors" style={{ background: c.on ? "#2f6bd8" : "var(--line)" }}>

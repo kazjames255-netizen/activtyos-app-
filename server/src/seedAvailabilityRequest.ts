@@ -9,6 +9,7 @@ const COMPANY = "x4goY84cslX4mBV4LNtG"; // SPORTS DIRECT COMPANY (kazjames80@gma
 const STAFF_EMAIL = "kazj181@gmail.com";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
+const addDays = (d: Date, n: number) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
 function mondayNext(): Date {
   const d = new Date();
   const dow = (d.getDay() + 6) % 7; // 0 = Monday
@@ -46,7 +47,8 @@ async function main() {
       staffEmail: STAFF_EMAIL,
       staffName: "Kaz James",
       window: { kind: "camp", label, from: iso(mon), to: iso(end) },
-      camp: { ...CAMP, startDate: iso(mon) },
+      // Week 1 Mon–Wed already rostered → locked (they can only request time off).
+      camp: { ...CAMP, startDate: iso(mon), assignedDates: [iso(mon), iso(addDays(mon, 1)), iso(addDays(mon, 2))] },
       note: "You've been assigned to this camp — please add the days and hours you can work across the 6 weeks.",
       status: "pending",
       createdAt: new Date().toISOString(),
