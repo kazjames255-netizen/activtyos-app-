@@ -51,6 +51,7 @@ export function SchedulingSettingsForm() {
         <TogRow label="Send reminders" desc="Remind staff to keep their availability up to date." value={value.availabilityReminders} onChange={(v) => set("availabilityReminders", v)} />
         <TogRow label="Auto-request availability each new period" desc="When a new week or season opens, automatically ask staff who haven't submitted to confirm their availability." value={value.autoRequestAvailability} onChange={(v) => set("autoRequestAvailability", v)} />
         <SelRow label="Auto-chase unconfirmed staff" desc="Keep reminding staff who haven't submitted their availability until they do." value={value.autoRemindUnconfirmed} onChange={(v) => set("autoRemindUnconfirmed", v as SchedulingSettings["autoRemindUnconfirmed"])} opts={[["off", "Off — I'll chase manually"], ["24h", "Every 24 hours"], ["48h", "Every 48 hours"]]} />
+        <SelRow label="Lock availability before a day starts" desc="Staff can't change their availability for a day once it's within this window of starting — so nothing changes at the last minute. Everything further out stays fully editable." value={String(value.availabilityLockHours ?? 24)} onChange={(v) => set("availabilityLockHours", Number(v))} opts={[["0", "When the day starts"], ["2", "2 hours before"], ["12", "12 hours before"], ["24", "24 hours before"], ["48", "48 hours before"], ["72", "72 hours before"]]} />
       </Card>
 
       <Card className="p-5">

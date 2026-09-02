@@ -3,11 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { api, get as apiGet } from "@/lib/api";
+import { useSettings } from "@/lib/settings";
 import { Button, Card, Input } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
-
-// How long before a day starts its availability locks (can't be edited last-minute).
-const LOCK_HOURS = 24;
 
 // ── My availability (staff) ────────────────────────────────────────────────
 // Two shapes, driven by what the manager asked for (real store: /api/availability):
@@ -48,6 +46,8 @@ const blankWeekly = (): Weekly => ({ days: Object.fromEntries(DAYS.map(([k]) => 
 const loadWeekly = (): Weekly => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.days ? v : blankWeekly(); } catch { return blankWeekly(); } };
 
 export function AvailabilityApp() {
+  const { settings } = useSettings();
+  const lockHours = settings.scheduling?.availabilityLockHours ?? 24;
   const [requests, setRequests] = useState<AvailRequest[]>([]);
   const [pattern, setPattern] = useState<Pattern | null>(null);
   const refresh = () => apiGet<{ requests: AvailRequest[]; pattern: Pattern | null }>("/api/availability/mine")
@@ -67,7 +67,7 @@ export function AvailabilityApp() {
       <PageHero title="My availability" icon="⏱" lede={campReq ? "Tell your manager which days and hours you can work across this camp — they build the rota around it." : "Set your usual working week — the days and hours you can normally work. It's the starting point your manager uses when building the rota."} />
 
       {campReq ? (
-        <CampAvailability req={campReq} initialGrid={pattern?.grid ?? {}} onSubmitted={refresh} />
+        <CampAvailability req={campReq} initialGrid={pattern?.grid ?? {}} lockHours={lockHours} onSubmitted={refresh} />
       ) : (
         <StandingWeekly requests={requests} pendingReq={pendingReq} lastReq={lastReq} pattern={pattern} onSubmitted={refresh} />
       )}
@@ -80,7 +80,7 @@ export function AvailabilityApp() {
 }
 
 // ── Camp grid ───────────────────────────────────────────────────────────────
-function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest; initialGrid: Record<string, DayAvail>; onSubmitted: () => void }) {
+function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: AvailRequest; initialGrid: Record<string, DayAvail>; lockHours: number; onSubmitted: () => void }) {
   const camp = req.camp!;
   const cell0 = (): DayAvail => ({ on: false, from: camp.open, to: camp.close });
   const [grid, setGrid] = useState<Record<string, DayAvail>>(() => ({ ...initialGrid }));
@@ -94,8 +94,8 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
   const weeks = useMemo(() => Array.from({ length: camp.weeks }, (_, w) => Array.from({ length: 7 }, (_, d) => addDaysISO(camp.startDate, w * 7 + d))), [camp.weeks, camp.startDate]);
   const allDates = useMemo(() => weeks.flat(), [weeks]);
   const assigned = useMemo(() => new Set(camp.assignedDates ?? []), [camp.assignedDates]);
-  // A day locks LOCK_HOURS before its opening time (and once it's started/passed).
-  const lockCutoffMs = LOCK_HOURS * 3600_000;
+  // A day locks `lockHours` before its opening time (and once it's started/passed).
+  const lockCutoffMs = Math.max(0, lockHours) * 3600_000;
   const dayStartMs = (iso: string) => new Date(`${iso}T${camp.open}:00`).getTime();
   const nowMs = Date.now();
   const status = (iso: string): "assigned" | "locked" | "open" =>
@@ -155,7 +155,7 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
             { ic: "🗓", big: `${camp.weeks} weeks`, small: `${fmtDay(req.window.from)} – ${fmtDay(req.window.to)}`, col: "#1d3a8f", bg: "#eef4fd", expand: true },
             { ic: "🕘", big: `${camp.open}–${camp.close}`, small: "camp opening hours", col: "#0f857b", bg: "#e6f6f3" },
             { ic: "✅", big: `${selected.length}`, small: `day${selected.length === 1 ? "" : "s"} you've chosen`, col: "#0f7a43", bg: "#e7f5ec" },
-            { ic: "⏱", big: hLabel(totalH), small: "your total hours", col: "#7c3aed", bg: "#f1ecfe" },
+            { ic: "⏱", big: hLabel(totalH), small: "hours you've chosen", col: "#7c3aed", bg: "#f1ecfe" },
           ] as { ic: string; big: string; small: string; col: string; bg: string; expand?: boolean }[]).map((c) => {
             const inner = (
               <div className="relative h-full overflow-hidden rounded-2xl border p-3 shadow-sm" style={{ borderColor: c.bg, background: `linear-gradient(135deg, ${c.bg} 0%, #ffffff 68%)` }}>
@@ -210,7 +210,7 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
         <div>
           <b>Two things are locked:</b>
           <div className="mt-1 text-[var(--ink-2)]">• <b className="text-[#1d3a8f]">Days you&rsquo;ve been rostered</b> (📌) can&rsquo;t be switched off here — you&rsquo;re expected to work them. To change one, <b>request time off</b> and your manager will review it.</div>
-          <div className="mt-0.5 text-[var(--ink-2)]">• A day locks <b className="text-[#1d3a8f]">{LOCK_HOURS}h before it starts</b>, so availability can&rsquo;t change at the last minute. Everything further out stays fully editable.</div>
+          <div className="mt-0.5 text-[var(--ink-2)]">• A day locks <b className="text-[#1d3a8f]">{lockHours > 0 ? `${lockHours}h before it starts` : "once it starts"}</b>, so availability can&rsquo;t change at the last minute. Everything further out stays fully editable. <span className="text-[var(--ink-3)]">(Set by your provider.)</span></div>
         </div>
       </div>
 

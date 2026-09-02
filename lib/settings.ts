@@ -499,6 +499,9 @@ export interface SchedulingSettings {
   checkinGraceMin: 10 | 15 | 30;
   checkinAutoAlert: boolean;
   autoRequestAvailability: boolean;
+  /** How many hours before a day starts its availability locks (staff can't
+   *  change it last-minute). 0 = editable until the day itself starts. */
+  availabilityLockHours: number;
 }
 export const DEFAULT_SCHEDULING: SchedulingSettings = {
   firstDay: "mon", defaultShiftHours: 6, defaultBreakMins: 30, breakPaid: "unpaid",
@@ -508,6 +511,7 @@ export const DEFAULT_SCHEDULING: SchedulingSettings = {
   onCostPct: 12.07, openShiftCost: 0, availabilityReminders: false,
   notifyOnPublish: "email_push", autoRemindUnconfirmed: "off", shiftReminder: "off",
   checkinGraceMin: 15, checkinAutoAlert: true, autoRequestAvailability: false,
+  availabilityLockHours: 24,
 };
 
 /** Sensible starting roles a company can then tweak or add to. Levels match the
