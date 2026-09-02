@@ -49,6 +49,9 @@ export interface NotificationDoc {
   audience: "parent" | "tenant";
   /** Lowercased recipient email — set for parent-addressed notifications. */
   email?: string;
+  /** Lowercased team-member email — set when a tenant notification is aimed at
+   *  one staff member (only they see it on their bell). */
+  toEmail?: string;
   category: NotifyCategory;
   title: string;
   body: string;
@@ -309,23 +312,48 @@ export async function notificationsForParent(email: string, limit = 100) {
 
 /** A provider team's bell, newest first. Parent-addressed notifications carry
  *  the same tenantId but are the family's business, not the team's. */
-export async function notificationsForTenant(tenantId: string, limit = 100) {
+export async function notificationsForTenant(tenantId: string, limit = 100, viewerEmail?: string) {
   const snap = await col().where("tenantId", "==", tenantId).where("audience", "==", "tenant").get();
+  const ve = viewerEmail ? viewerEmail.trim().toLowerCase() : undefined;
   return snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as NotificationDoc) }))
+    // Untargeted tenant alerts go to everyone; a `toEmail` alert only to that person.
+    .filter((n) => !n.toEmail || n.toEmail === ve)
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, limit);
 }
 
+/** A tenant-audience notification aimed at ONE team member (their bell only). */
+export async function notifyTenantMember(
+  tenantId: string,
+  email: string,
+  n: { category: NotifyCategory; title: string; body: string; href?: string; ref?: string },
+): Promise<void> {
+  try {
+    await col().add({
+      tenantId,
+      audience: "tenant",
+      toEmail: email.trim().toLowerCase(),
+      category: n.category,
+      title: n.title,
+      body: n.body,
+      ...(n.href ? { href: n.href } : {}),
+      ...(n.ref ? { ref: n.ref } : {}),
+      readAt: null,
+      at: new Date().toISOString(),
+    } satisfies NotificationDoc);
+  } catch { /* best-effort */ }
+}
+
 /** Mark specific notifications read, or every one the caller can see. */
 export async function markRead(
-  scope: { email?: string; tenantId?: string },
+  scope: { email?: string; tenantId?: string; memberEmail?: string },
   ids?: string[],
 ): Promise<number> {
   const mine = scope.email
     ? await notificationsForParent(scope.email, 500)
     : scope.tenantId
-      ? await notificationsForTenant(scope.tenantId, 500)
+      ? await notificationsForTenant(scope.tenantId, 500, scope.memberEmail)
       : [];
   const targets = mine.filter((n) => !n.readAt && (!ids?.length || ids.includes(n.id)));
   if (!targets.length) return 0;

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { notifyTenantMember } from "../lib/notify";
 
 // ── Availability requests ───────────────────────────────────────────────────
 // An operator asks a specific staff member to submit their availability for a
@@ -61,6 +62,14 @@ availability.post("/requests", async (req, res) => {
     createdBy: req.user?.email ?? null,
   };
   const ref = await reqs.add(doc);
+  // In-app bell for that staff member only — a nudge to complete their availability.
+  await notifyTenantMember(auth.tenantId, doc.staffEmail, {
+    category: "calendar",
+    title: doc.camp ? `Availability needed — ${doc.camp.listingName}` : "Availability requested",
+    body: doc.camp ? `You've been assigned to ${doc.camp.listingName}. Add the days & hours you can work across the ${doc.camp.weeks} weeks.` : `Please add your availability for ${doc.window.label}.`,
+    href: "/staff/availability",
+    ref: ref.id,
+  });
   res.status(201).json({ id: ref.id, ...doc });
 });
 

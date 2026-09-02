@@ -50,7 +50,10 @@ export function AvailabilityApp() {
 
   const pendingReq = requests.find((r) => r.status === "pending") ?? null;
   const lastReq = requests[0] ?? null;
-  const campReq = pendingReq?.camp ? pendingReq : null;
+  // Show the camp grid for any camp request — pending OR already submitted — so a
+  // staffer can always see (and edit) what they sent, not fall back to the
+  // generic weekly view.
+  const campReq = requests.find((r) => r.camp && r.status === "pending") ?? requests.find((r) => r.camp) ?? null;
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
@@ -124,7 +127,12 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
             <div className="text-[10.5px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">You&rsquo;ve been assigned to</div>
             <div className="text-[15px] font-black tracking-tight text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{camp.listingName}{camp.location ? <span className="text-[var(--ink-3)]"> · {camp.location}</span> : null}</div>
           </div>
-          {req.createdBy && <span className="ml-auto text-[11px] text-[var(--ink-3)]">Requested by {req.createdBy}</span>}
+          <div className="ml-auto flex flex-col items-end gap-1">
+            {req.status === "submitted"
+              ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">✓ Submitted{req.submittedAt ? ` ${fmtDay(req.submittedAt.slice(0, 10))}` : ""}</span>
+              : <span className="rounded-full bg-[#fdf6e3] px-2.5 py-0.5 text-[11px] font-extrabold text-[#8a5a09]">Awaiting your reply</span>}
+            {req.createdBy && <span className="text-[11px] text-[var(--ink-3)]">Requested by {req.createdBy}</span>}
+          </div>
         </div>
         <div className="grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-4">
           {([
@@ -234,7 +242,7 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
 
       {/* Submit */}
       <div className="sticky bottom-3 z-10 flex flex-wrap items-center gap-3 rounded-2xl border border-[var(--line)] bg-white/95 p-3.5 shadow-[0_10px_30px_-16px_rgba(20,30,60,.5)] backdrop-blur">
-        <Button variant="primary" disabled={!selected.length || busy} onClick={submit} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{busy ? "Sending…" : "Submit to manager"}</Button>
+        <Button variant="primary" disabled={!selected.length || busy} onClick={submit} className="!bg-[#1d3a8f] !border-[#1d3a8f] !text-white">{busy ? "Sending…" : req.status === "submitted" ? "Update & resend" : "Submit to manager"}</Button>
         {saved ? <span className="text-[12.5px] font-bold text-[#0f7a43]">✓ Sent — your manager can see it now</span>
           : <span className="text-[12.5px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{selected.length}</b> day{selected.length === 1 ? "" : "s"} · <b className="text-[var(--ink)]">{hLabel(totalH)}</b> across the camp</span>}
         {!selected.length && <span className="text-[12px] text-[var(--ink-3)]">Choose at least one day — try a quick-fill above.</span>}

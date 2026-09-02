@@ -25,6 +25,8 @@ function audienceFor(req: Request) {
   return {
     isParent,
     email: isParent ? (req.user?.email ?? "").toLowerCase() : "",
+    // The team member's own email — lets a tenant read filter staff-targeted alerts.
+    memberEmail: isParent ? "" : (req.user?.email ?? "").toLowerCase(),
     tenantId: isParent ? null : auth.tenantId,
   };
 }
@@ -38,7 +40,7 @@ notifications.get("/", async (req, res) => {
       ? await notificationsForParent(who.email)
       : []
     : who.tenantId
-      ? await notificationsForTenant(who.tenantId)
+      ? await notificationsForTenant(who.tenantId, 100, who.memberEmail)
       : [];
   res.json({ notifications: items, unread: items.filter((n) => !n.readAt).length });
 });
@@ -52,7 +54,7 @@ notifications.post("/read", async (req, res) => {
   if (who.isParent && !who.email) { res.status(400).json({ error: "Account has no email address" }); return; }
   if (!who.isParent && !who.tenantId) { res.status(403).json({ error: "Your account has no tenant" }); return; }
   const marked = await markRead(
-    who.isParent ? { email: who.email } : { tenantId: who.tenantId! },
+    who.isParent ? { email: who.email } : { tenantId: who.tenantId!, memberEmail: who.memberEmail },
     parsed.data.ids,
   );
   res.json({ marked });
