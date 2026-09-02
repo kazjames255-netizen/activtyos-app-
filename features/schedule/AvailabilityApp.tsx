@@ -77,6 +77,7 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
   const [history, setHistory] = useState<Record<string, DayAvail>[]>([]);
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [datesOpen, setDatesOpen] = useState(false);
 
   useEffect(() => { setGrid((g) => (Object.keys(g).length ? g : { ...initialGrid })); }, [initialGrid]);
 
@@ -127,17 +128,47 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
         </div>
         <div className="grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-4">
           {([
-            ["🗓", `${camp.weeks} weeks`, `${fmtDay(req.window.from)} – ${fmtDay(req.window.to)}`, "#1d3a8f", "#eef4fd"],
-            ["🕘", `${camp.open}–${camp.close}`, "camp opening hours", "#0f857b", "#e6f6f3"],
-            ["✅", `${selected.length}`, `day${selected.length === 1 ? "" : "s"} chosen`, "#0f7a43", "#e7f5ec"],
-            ["⏱", hLabel(totalH), "your total", "#7c3aed", "#f1ecfe"],
-          ] as [string, string, string, string, string][]).map(([ic, big, small, col, bg]) => (
-            <div key={small} className="flex items-center gap-2.5 rounded-xl border border-[var(--line)] bg-white p-2.5">
-              <span className="grid h-8 w-8 flex-none place-items-center rounded-lg text-[15px]" style={{ background: bg }}>{ic}</span>
-              <div className="min-w-0 leading-tight"><div className="truncate text-[15px] font-black tabular-nums" style={{ color: col }}>{big}</div><div className="truncate text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{small}</div></div>
-            </div>
-          ))}
+            { ic: "🗓", big: `${camp.weeks} weeks`, small: `${fmtDay(req.window.from)} – ${fmtDay(req.window.to)}`, col: "#1d3a8f", bg: "#eef4fd", expand: true },
+            { ic: "🕘", big: `${camp.open}–${camp.close}`, small: "camp opening hours", col: "#0f857b", bg: "#e6f6f3" },
+            { ic: "✅", big: `${selected.length}`, small: `day${selected.length === 1 ? "" : "s"} you've chosen`, col: "#0f7a43", bg: "#e7f5ec" },
+            { ic: "⏱", big: hLabel(totalH), small: "your total hours", col: "#7c3aed", bg: "#f1ecfe" },
+          ] as { ic: string; big: string; small: string; col: string; bg: string; expand?: boolean }[]).map((c) => {
+            const inner = (
+              <div className="relative h-full overflow-hidden rounded-2xl border p-3 shadow-sm" style={{ borderColor: c.bg, background: `linear-gradient(135deg, ${c.bg} 0%, #ffffff 68%)` }}>
+                <div className="flex items-start gap-2.5">
+                  <span className="grid h-9 w-9 flex-none place-items-center rounded-xl text-[16px] text-white shadow-sm" style={{ background: c.col }}>{c.ic}</span>
+                  <div className="min-w-0 leading-tight">
+                    <div className="truncate text-[19px] font-black tracking-tight tabular-nums" style={{ fontFamily: "var(--ff-display)", color: c.col }}>{c.big}</div>
+                    <div className="mt-0.5 truncate text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{c.small}</div>
+                  </div>
+                  {c.expand && <span className="ml-auto flex-none text-[11px] font-black" style={{ color: c.col }}>{datesOpen ? "▾" : "▸"}</span>}
+                </div>
+                {c.expand && <div className="mt-1.5 text-[10.5px] font-extrabold" style={{ color: c.col }}>{datesOpen ? "Hide dates" : "View all dates ›"}</div>}
+                <span className="absolute inset-x-0 bottom-0 h-[3px]" style={{ background: c.col }} />
+              </div>
+            );
+            return c.expand
+              ? <button key={c.small} type="button" onClick={() => setDatesOpen((o) => !o)} aria-expanded={datesOpen} className="text-left transition hover:-translate-y-px">{inner}</button>
+              : <div key={c.small}>{inner}</div>;
+          })}
         </div>
+
+        {datesOpen && (
+          <div className="border-t border-[#e3ebff] bg-white/70 px-4 py-3">
+            <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Every date this camp runs · {allDates.length} days over {camp.weeks} weeks</div>
+            <div className="flex flex-col gap-1.5">
+              {weeks.map((wk, wi) => (
+                <div key={wi} className="flex flex-wrap items-center gap-1.5">
+                  <span className="w-[112px] flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">Week {wi + 1} <span className="font-semibold text-[var(--ink-3)]">· {dNum(wk[0])} {dMon(wk[0])}</span></span>
+                  {wk.map((dt) => (
+                    <span key={dt} className={"rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums " + (cell(dt).on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")} title={cell(dt).on ? `Available ${cell(dt).from}–${cell(dt).to}` : "Not chosen"}>{WD_SHORT[wdOf(dt)]} {dNum(dt)}</span>
+                  ))}
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">Filled navy = a day you&rsquo;ve chosen so far.</div>
+          </div>
+        )}
         {req.note && <div className="border-t border-[#e3ebff] px-4 py-2.5 text-[12px] italic text-[#7a5a12]">“{req.note}”</div>}
       </div>
 
