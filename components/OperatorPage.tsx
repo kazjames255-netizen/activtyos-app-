@@ -167,7 +167,8 @@ export function SettingsLink({ tone = "hero", className = "" }: { tone?: "hero" 
   if (!tab) return null;
   return (
     <Link
-      href={`/${portal}/setup?tab=${tab}`}
+      // `from` lets the Setup page offer a Back link to the page you came from.
+      href={`/${portal}/setup?tab=${tab}&from=${view}`}
       title="Change settings"
       aria-label="Change settings for this page"
       // Inconspicuous: a bare gear, no background. White on blue heroes; navy on

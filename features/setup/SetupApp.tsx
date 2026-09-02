@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet } from "@/lib/api";
 import { NAV_GROUPS, type PortalKey } from "@/lib/nav/config";
@@ -1279,7 +1280,21 @@ export function SetupApp() {
   const [poPreview, setPoPreview] = useState(false);
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
-  const initialTab = useSearchParams().get("tab");
+  const sp = useSearchParams();
+  const initialTab = sp.get("tab");
+  // `from` is set by the page's "Change settings" gear so we can offer a Back
+  // link; absent when Setup is reached from the sidebar (so no Back button then).
+  const fromView = (sp.get("from") || "").replace(/[^a-z0-9-]/gi, "");
+  const FROM_LABELS: Record<string, string> = {
+    "admin-registers": "Register", registers: "Register", customers: "Families", children: "Families",
+    expenses: "Money out", purchasing: "Money in", invoices: "Invoices", incidents: "Report a concern",
+    accidents: "Accidents", ratios: "Ratios & groups", meals: "Meals", medication: "Medication",
+    trips: "Trips", calendar: "Calendar", inventory: "Inventory", newsfeed: "Newsfeed", messages: "Messages",
+    email: "Emails", compliance: "Compliance", credentials: "Credentials", learning: "Learning",
+    referrals: "Refer a friend", listings: "Listings", blocks: "Blocks", bookings: "Bookings",
+    finance: "Finance", reconciliation: "Reconciliation", locations: "Locations", staff: "Team",
+  };
+  const backLabel = fromView ? (FROM_LABELS[fromView] ?? fromView.replace(/-/g, " ").replace(/^\w/, (c) => c.toUpperCase())) : "";
   const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "announcements", "roles", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
@@ -1359,9 +1374,16 @@ export function SetupApp() {
       icon="⚙️"
       lede="How your account runs — set once, used everywhere"
       actions={
-        <span className="rounded-full bg-white/15 px-3 py-1 text-[11.5px] font-semibold text-white backdrop-blur-sm">
-          {error ? <span className="font-bold text-[#ffd5d5]">{error}</span> : savedAt ? `✓ Saved ${savedAt}` : "Changes save as you make them"}
-        </span>
+        <>
+          {fromView && (
+            <Link href={`/${portal}/${fromView}`} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm transition hover:brightness-95">
+              <span className="text-[14px] leading-none">‹</span>Back to {backLabel}
+            </Link>
+          )}
+          <span className="rounded-full bg-white/15 px-3 py-1 text-[11.5px] font-semibold text-white backdrop-blur-sm">
+            {error ? <span className="font-bold text-[#ffd5d5]">{error}</span> : savedAt ? `✓ Saved ${savedAt}` : "Changes save as you make them"}
+          </span>
+        </>
       }
     >
       <HowItWorks
