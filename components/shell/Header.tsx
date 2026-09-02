@@ -15,6 +15,8 @@ import { Bell } from "./Bell";
 import { PlatformBell } from "./PlatformBell";
 import { Sidebar } from "./Sidebar";
 import { ChildLookupModal } from "@/features/registers/ChildLookupModal";
+import { LanguageSelector } from "@/components/i18n/LanguageSelector";
+import { useT } from "@/lib/i18n/provider";
 
 // Shared pill for the top-bar controls: white with a hairline border and blue
 // writing. Each control keeps a differently-coloured symbol so they don't all
@@ -29,6 +31,7 @@ export function Header({ portal }: { portal: PortalKey }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, signOutUser } = useAuth();
+  const t = useT();
   const view = pathname.split("/")[2] ?? "";
 
   // Mobile nav drawer — the same Sidebar the desktop rail shows, slid over the
@@ -61,7 +64,7 @@ export function Header({ portal }: { portal: PortalKey }) {
     window.addEventListener("aos:me-updated", onMe);
     return () => window.removeEventListener("aos:me-updated", onMe);
   }, []);
-  const messageLabel = providers.length === 1 ? `Message ${providers[0].name}` : "Messages";
+  const messageLabel = providers.length === 1 ? t("header.messageProvider", { name: providers[0].name }) : t("header.messages");
 
   // Live unread total — drives the "new" bubble on the Messages tab so a reply
   // is visible from any screen and clears once the thread is opened.
@@ -90,21 +93,21 @@ export function Header({ portal }: { portal: PortalKey }) {
     portal === "custdash"
       ? [
           ...(customerArea.messaging && !customerArea.simpleMode ? [{ view: "messages", href: "/custdash/messages", label: messageLabel, icon: MAIL, wide: true, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : messageLabel }] : []),
-          ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: "Browse activities", icon: SEARCH, wide: false, badge: 0, accent: "#7a5af8", accentLight: "#a88bff", tip: "Find & book activities" }] : []),
-          { view: "bookings", href: "/custdash/bookings", label: "My bookings", icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Your bookings" },
+          ...(customerArea.browse ? [{ view: "browse", href: "/custdash/browse", label: t("header.browse"), icon: SEARCH, wide: false, badge: 0, accent: "#7a5af8", accentLight: "#a88bff", tip: "Find & book activities" }] : []),
+          { view: "bookings", href: "/custdash/bookings", label: t("header.myBookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Your bookings" },
           // Shown only when the provider runs a membership programme (gated in
           // useCustomerArea). Given a fancy gold treatment so it stands out.
-          ...(customerArea.memberships ? [{ view: "memberships", href: "/custdash/memberships", label: "Memberships", icon: STAR, wide: false, badge: 0, fancy: true }] : []),
+          ...(customerArea.memberships ? [{ view: "memberships", href: "/custdash/memberships", label: t("header.memberships"), icon: STAR, wide: false, badge: 0, fancy: true }] : []),
         ]
       : [
           // Bookings promoted to the top bar (like the customer's My bookings),
           // out of the sidebar. Only where the portal has a bookings view.
-          ...(findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: "Bookings", icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Bookings — nothing needs attention" }] : []),
+          ...(findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: t("header.bookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Bookings — nothing needs attention" }] : []),
           // Staff get Announcements + Messages promoted to the top bar (out of the sidebar).
-          ...(portal === "staff" && findNavItem(portal, "announcements") ? [{ view: "announcements", href: `/${portal}/announcements`, label: "Announcements", icon: MEGAPHONE, wide: false, badge: 0, accent: "#c2410c", accentLight: "#f59e0b", tip: "Announcements from your provider" }] : []),
-          ...(portal === "staff" && findNavItem(portal, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: "Messages", icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : "Messages" }] : []),
+          ...(portal === "staff" && findNavItem(portal, "announcements") ? [{ view: "announcements", href: `/${portal}/announcements`, label: t("header.announcements"), icon: MEGAPHONE, wide: false, badge: 0, accent: "#c2410c", accentLight: "#f59e0b", tip: "Announcements from your provider" }] : []),
+          ...(portal === "staff" && findNavItem(portal, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: t("header.messages"), icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : "Messages" }] : []),
           // Families promoted to the top bar — quick access to the family list.
-          ...(findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: "Families", icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: "Families" }] : []),
+          ...(findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: t("header.families"), icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: "Families" }] : []),
         ];
 
   // The green "Communication" top-bar tab: a dropdown gathering the comms
@@ -112,7 +115,7 @@ export function Header({ portal }: { portal: PortalKey }) {
   const commItems: { view: string; label: string; icon: ReactNode; href: string; badge: number }[] =
     portal === "custdash" || portal === "staff" ? [] : ([
       findNavItem(portal, "newsfeed") && !featureOff(features, "newsfeed") ? { view: "newsfeed", label: "Newsfeed", icon: MEGAPHONE, href: `/${portal}/newsfeed`, badge: 0 } : null,
-      findNavItem(portal, "messages") && !featureOff(features, "messages") ? { view: "messages", label: "Messages", icon: MAIL, href: `/${portal}/messages`, badge: unread } : null,
+      findNavItem(portal, "messages") && !featureOff(features, "messages") ? { view: "messages", label: t("header.messages"), icon: MAIL, href: `/${portal}/messages`, badge: unread } : null,
       findNavItem(portal, "email") && !featureOff(features, "email") ? { view: "email", label: "Email", icon: MAIL, href: `/${portal}/email`, badge: 0 } : null,
     ] as ({ view: string; label: string; icon: ReactNode; href: string; badge: number } | null)[]).filter((x) => x !== null) as { view: string; label: string; icon: ReactNode; href: string; badge: number }[];
   const commActive = commItems.some((c) => c.view === view);
@@ -214,7 +217,7 @@ export function Header({ portal }: { portal: PortalKey }) {
           style={{ ...PILL, color: PILL_INK }}
         >
           <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" style={{ color: "#0ea5e9" }} aria-hidden>{SEARCH}</span>
-          <span className="hidden sm:inline">Find a child</span>
+          <span className="hidden sm:inline">{t("header.findChild")}</span>
         </button>
       )}
 
@@ -223,6 +226,7 @@ export function Header({ portal }: { portal: PortalKey }) {
         {/* Platform accounts have no tenant, so no bell of their own (the API
             would return an empty list anyway). HQ triages bug reports rather
             than filing them, so no bug button either. */}
+        <LanguageSelector />
         {portal !== "platform" && <BugReport />}
         {portal !== "platform" && <Bell portal={portal} />}
         {portal === "platform" && <PlatformBell />}
@@ -238,7 +242,7 @@ export function Header({ portal }: { portal: PortalKey }) {
           }}
         >
           <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" style={{ color: "#e11d48" }} aria-hidden>{EXIT}</span>
-          Sign out
+          {t("common.signOut")}
         </button>
       </div>
       {lookupOpen && <ChildLookupModal onClose={() => setLookupOpen(false)} />}

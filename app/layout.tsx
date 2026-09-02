@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Bricolage_Grotesque, Hanken_Grotesk } from "next/font/google";
 import { AuthProvider } from "@/components/auth/AuthProvider";
+import { LanguageProvider } from "@/lib/i18n/provider";
 import "./globals.css";
 
 // Self-hosted equivalents of the legacy prototype's fonts, exposed as the
@@ -29,7 +30,7 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${bricolageGrotesque.variable} ${hankenGrotesk.variable}`}>
       <body>
-        <AuthProvider>{children}</AuthProvider>
+        <AuthProvider><LanguageProvider>{children}</LanguageProvider></AuthProvider>
       </body>
     </html>
   );

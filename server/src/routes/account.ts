@@ -19,8 +19,10 @@ const putSchema = z.object({
   // it's captured once here rather than re-typed on every child profile.
   emergencyName: z.string().trim().max(120).optional(),
   emergencyPhone: z.string().trim().max(40).optional(),
+  // UI language preference (follows the user across devices).
+  locale: z.string().trim().max(8).optional(),
 });
-type UserProfile = { name?: string; phone?: string; address?: string; postcode?: string; marketingConsent?: boolean; emergencyName?: string; emergencyPhone?: string };
+type UserProfile = { name?: string; phone?: string; address?: string; postcode?: string; marketingConsent?: boolean; emergencyName?: string; emergencyPhone?: string; locale?: string };
 
 account.get("/", async (req, res) => {
   const auth = req.auth!;
@@ -37,6 +39,7 @@ account.get("/", async (req, res) => {
     marketingConsent: u.marketingConsent ?? false,
     emergencyName: u.emergencyName ?? "",
     emergencyPhone: u.emergencyPhone ?? "",
+    locale: u.locale ?? "en",
     role: auth.role,
     tenantId: auth.tenantId ?? null,
   });
