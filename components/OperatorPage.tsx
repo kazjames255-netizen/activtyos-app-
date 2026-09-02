@@ -1,6 +1,48 @@
 "use client";
 
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+
+// ─────────────────────────────────────────────────────────────────────────
+// "Change settings" deep-links. Every operator page whose behaviour is shaped
+// by a Setup tab links straight to that exact tab (never the Setup landing).
+// Keyed by the view slug in /<portal>/<view>; both slug spellings are listed
+// where portals differ (e.g. company `admin-registers` vs `registers`).
+// A view absent from this map simply shows no settings button.
+// ─────────────────────────────────────────────────────────────────────────
+const OPERATOR_PORTALS = new Set(["company", "franchise", "freelancer"]);
+const VIEW_SETTINGS: Record<string, string> = {
+  bookings: "bookings",
+  listings: "defaults",
+  blocks: "defaults",
+  staff: "staff",
+  locations: "company",
+  "admin-registers": "registers",
+  registers: "registers",
+  ratios: "groups",
+  incidents: "safeguarding",
+  accidents: "safeguarding",
+  medication: "medication",
+  meals: "meals",
+  customers: "people",
+  children: "people",
+  finance: "money",
+  reconciliation: "money",
+  expenses: "money",
+  purchasing: "money",
+  invoices: "money",
+  trips: "trips",
+  calendar: "calendar",
+  inventory: "inventory",
+  newsfeed: "announcements",
+  messages: "notifications",
+  email: "notifications",
+  compliance: "staff",
+  credentials: "staff",
+  learning: "learning",
+  referrals: "refer",
+};
 
 // ─────────────────────────────────────────────────────────────────────────
 // The light palette every operator screen sits on.
@@ -89,6 +131,7 @@ export function PageHero({
             {lede && <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">{lede}</p>}
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
+            <SettingsLink />
             {actions}
             {foldable && (
               <button
@@ -107,6 +150,42 @@ export function PageHero({
       </div>
       {foldable && open && <div className="mb-3.5">{stats}</div>}
     </>
+  );
+}
+
+/**
+ * Standalone "Change settings" deep-link for operator pages that build their own
+ * title card instead of using PageHero. Drop it into the card's actions area —
+ * it renders nothing unless the current /<portal>/<view> maps to a Setup tab.
+ * `tone="light"` suits a white/light card; the default suits a blue hero.
+ */
+export function SettingsLink({ tone = "hero", className = "" }: { tone?: "hero" | "light"; className?: string }) {
+  const parts = (usePathname() ?? "").split("/");
+  const portal = parts[1] ?? "";
+  const view = parts[2] ?? "";
+  const tab = OPERATOR_PORTALS.has(portal) && view !== "setup" && view !== "company-setup" ? VIEW_SETTINGS[view] : undefined;
+  if (!tab) return null;
+  return (
+    <Link
+      href={`/${portal}/setup?tab=${tab}`}
+      title="Change settings"
+      aria-label="Change settings for this page"
+      // Inconspicuous: a bare gear, no background. White on blue heroes; navy on
+      // light title cards so it stays visible either way.
+      className={`grid flex-none place-items-center opacity-90 transition hover:opacity-100 ${tone === "light" ? "text-[#1d3a8f]" : "text-white"} ${className}`}
+    >
+      <GearIcon />
+    </Link>
+  );
+}
+
+/** Detailed cog icon used by the "Change settings" control. Inherits `currentColor`. */
+export function GearIcon({ size = 26 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="3.1" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z" />
+    </svg>
   );
 }
 

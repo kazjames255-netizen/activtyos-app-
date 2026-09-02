@@ -7,6 +7,7 @@ import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings, needsNappies, type ChildQuestion } from "@/lib/settings";
 import { Button } from "@/components/ui";
+import { SettingsLink } from "@/components/OperatorPage";
 import { ChildCard, type ChildInfo } from "./ChildCard";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -1001,8 +1002,11 @@ export function RegistersApp() {
                     <input type="date" value={date} onChange={(e) => pickDate(e.target.value)} className="absolute inset-0 cursor-pointer opacity-0" />
                   </label>
                 </div>
-                <button type="button" onClick={() => setDlOpen(true)} className={GHOST + " ml-auto"}>⬇ Download</button>
-                <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? "Collapse header" : "Expand header"} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+                <div className="ml-auto flex flex-wrap items-center gap-2">
+                  <SettingsLink />
+                  <button type="button" onClick={() => setDlOpen(true)} className={GHOST}>⬇ Download</button>
+                  <button type="button" onClick={() => setHeroOpen((v) => !v)} aria-expanded={heroOpen} title={heroOpen ? "Collapse header" : "Expand header"} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+                </div>
               </div>
 
               {/* Collapsed: a slim one-line summary so the numbers stay visible. */}

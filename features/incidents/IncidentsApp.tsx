@@ -8,6 +8,7 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card, FieldLabel, Input } from "@/components/ui";
 import { ChildPicker, type ChildOption } from "@/components/pickers/ChildPicker";
+import { SettingsLink } from "@/components/OperatorPage";
 import { NotesThread } from "./NotesThread";
 import { INJURY_BANK, TREATMENT_BANK, treatmentsFor } from "./firstAid";
 import { BEHAVIOUR_TYPES, BEHAVIOUR_CONCERNS, BEHAVIOUR_ACTIONS } from "./behaviourBank";
@@ -405,7 +406,10 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
               </div>
               <p className="mt-1.5 max-w-[600px] text-[12.5px] leading-[1.5] text-white/85">{c.lede}</p>
             </div>
-            {!adding && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ {c.add}</button>}
+            <div className="flex flex-none flex-wrap items-center gap-2">
+              <SettingsLink />
+              {!adding && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ {c.add}</button>}
+            </div>
           </div>
           {logs && (
             <div className="mt-4 flex flex-wrap gap-2.5">

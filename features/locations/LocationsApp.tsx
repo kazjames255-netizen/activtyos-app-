@@ -6,7 +6,7 @@ import { get as apiGet, isDemoMode } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Input, Select } from "@/components/ui";
-import { LIGHT_PALETTE } from "@/components/OperatorPage";
+import { LIGHT_PALETTE, SettingsLink } from "@/components/OperatorPage";
 import { Tile, GRAD } from "@/features/money/finance-kit";
 import { LocationDetail, type Venue } from "./LocationDetail";
 
@@ -91,7 +91,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
     <div className={embedded ? "text-[var(--ink)]" : "-m-3 min-h-[calc(100vh-3.5rem)] p-3 text-[var(--ink)] sm:-m-5 sm:p-5"} style={embedded ? undefined : LIGHT_PALETTE}>
       {detailVenue ? <LocationDetail venue={detailVenue} venues={list!} onBack={() => router.push(pathname)} /> : (
       <>
-      {!embedded && <div className="mb-3"><h2 className="text-[20px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Deployment</h2></div>}
+      {!embedded && <div className="mb-3 flex items-center justify-between gap-3"><h2 className="text-[20px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>Deployment</h2><SettingsLink tone="light" /></div>}
       {/* Summary tiles — the flat page needed a top-line at a glance. */}
       <div className="mb-3 grid grid-cols-3 gap-2.5">
         <Tile label="Locations" icon="📍" grad={GRAD.teal} value={String(list?.length ?? 0)} sub="venues you run" />

@@ -6,6 +6,7 @@ import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { Badge, Button, Card } from "@/components/ui";
+import { SettingsLink } from "@/components/OperatorPage";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Inventory — the operator's kit & stock check: what they hold, where it's
@@ -104,7 +105,8 @@ export function InventoryApp() {
             <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">📦</span>Inventory</div>
             <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">Your kit & stock — what you hold, where it&rsquo;s stored, how many, and when it was last counted. Run a stock check, and carry a season&rsquo;s stock over to the next.</p>
           </div>
-          <div className="flex flex-none items-center gap-2">
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            <SettingsLink />
             <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
             <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Add item</button>
           </div>

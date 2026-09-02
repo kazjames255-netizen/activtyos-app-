@@ -432,7 +432,7 @@ export function FreelancerListingsApp() {
             <button
               type="button"
               onClick={() => startNew()}
-              className="rounded-full border border-white/25 bg-[#16306e] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110"
+              className="rounded-full bg-[#EE1F63] px-3.5 py-1.5 text-[12.5px] font-extrabold text-white shadow-sm transition hover:brightness-110"
             >
               ＋ New listing
             </button>

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, FieldLabel, Input, Select } from "@/components/ui";
+import { SettingsLink } from "@/components/OperatorPage";
 
 interface Cert { id: string; staffName: string; type: string; reference?: string; issued?: string; expiry: string; notes?: string; status: "expired" | "expiring" | "valid" }
 interface Payload { items: Cert[]; summary: { total: number; expired: number; expiring: number; valid: number } }
@@ -45,7 +46,10 @@ export function ComplianceApp() {
     <div className="text-[var(--ink)]">
       <div className="mb-1 flex items-center justify-between">
         <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Compliance</h2>
-        {canManage && !open && <Button variant="primary" onClick={() => setOpen(true)}>＋ Add a certificate</Button>}
+        <div className="flex flex-none items-center gap-2">
+          <SettingsLink tone="light" />
+          {canManage && !open && <Button variant="primary" onClick={() => setOpen(true)}>＋ Add a certificate</Button>}
+        </div>
       </div>
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Staff certifications and when they expire — DBS, first aid, safeguarding and insurance.</p>
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}

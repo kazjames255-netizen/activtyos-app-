@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { CSSProperties } from "react";
+import { SettingsLink } from "@/components/OperatorPage";
 import { IncidentsApp } from "./IncidentsApp";
 import { SafeguardingApp } from "./SafeguardingApp";
 
@@ -30,8 +31,11 @@ export function LogConcernApp() {
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Title bar */}
       <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
-        <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">⚑</span>Log a concern
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
+            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">⚑</span>Log a concern
+          </div>
+          <div className="flex flex-none flex-wrap items-center gap-2"><SettingsLink /></div>
         </div>
         <p className="mt-1.5 max-w-[620px] text-[12.5px] leading-[1.5] text-white/85">{active.sub}</p>
         <div className="mt-4 flex flex-wrap gap-1.5">

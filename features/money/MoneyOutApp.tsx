@@ -7,6 +7,7 @@ import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { ExpensesApp } from "@/features/money/ExpensesApp";
 import { PurchasingApp } from "@/features/money/PurchasingApp";
+import { SettingsLink } from "@/components/OperatorPage";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -75,7 +76,10 @@ export function MoneyOutApp() {
         </div>
         <div className="mt-1.5 flex items-start justify-between gap-3">
           <p className="max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">Everything your business spends — logged as <b>expenses</b>, each one <b>Pending</b> (owed) or <b>Paid</b>{usePO ? ", plus purchase orders" : ""}.</p>
-          <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            <SettingsLink />
+            <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex flex-none items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
+          </div>
         </div>
         {heroOpen && (<>
         <div className="mt-4 flex flex-wrap items-center gap-2.5">

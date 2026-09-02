@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { InvoicesApp } from "@/features/money/InvoicesApp";
 import { IncomeApp } from "@/features/money/IncomeApp";
+import { SettingsLink } from "@/components/OperatorPage";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -68,10 +69,13 @@ export function MoneyInApp() {
             Money in
           </div>
           {/* In/out sub-view switch, on the hero */}
-          <div className="inline-flex flex-none gap-1 rounded-2xl border border-white/70 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
-            {([["income", "💰 Income"], ["invoices", "📄 Invoices"]] as const).map(([k, label]) => (
-              <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 text-[12.5px] font-bold transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "#1d3a8f" }}>{label}</button>
-            ))}
+          <div className="flex flex-none flex-wrap items-center gap-2">
+            <SettingsLink />
+            <div className="inline-flex flex-none gap-1 rounded-2xl border border-white/70 bg-white/90 p-1 shadow-sm backdrop-blur-sm">
+              {([["income", "💰 Income"], ["invoices", "📄 Invoices"]] as const).map(([k, label]) => (
+                <button key={k} type="button" onClick={() => setTab(k)} className="rounded-xl px-4 py-2 text-[12.5px] font-bold transition-colors" style={tab === k ? { background: "#1d3a8f", color: "#fff" } : { color: "#1d3a8f" }}>{label}</button>
+              ))}
+            </div>
           </div>
         </div>
         <div className="mt-1.5 flex items-start justify-between gap-3">

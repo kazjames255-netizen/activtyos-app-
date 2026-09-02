@@ -10,6 +10,7 @@ import { GuidedTour } from "@/features/common/GuidedTour";
 import { TOUR_CONFIGS } from "@/features/common/tourConfigs";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
+import { SettingsLink } from "@/components/OperatorPage";
 import { useSurfaceTheme } from "@/lib/surfaceThemes";
 
 // Messages runs on the same light surface as the customer dashboard, whichever
@@ -421,6 +422,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
             <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{mode === "operator" ? "Message one family or a whole listing at once — replies come back as normal 1:1 conversations. Switch on Pro for templates & merge fields." : "Message your activity provider — questions, changes or anything about your bookings."}</p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
+            <SettingsLink />
             {themeControl}
             <button type="button" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
               ＋ {mode === "operator" ? "Message customers" : "New message"}
