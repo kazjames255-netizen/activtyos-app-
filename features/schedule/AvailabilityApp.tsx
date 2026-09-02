@@ -185,12 +185,12 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                 <div key={wi} className="flex flex-wrap items-center gap-1.5">
                   <span className="w-[112px] flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">Week {wi + 1} <span className="font-semibold text-[var(--ink-3)]">· {dNum(wk[0])} {dMon(wk[0])}</span></span>
                   {wk.map((dt) => { const as = assigned.has(dt); const on = cell(dt).on; return (
-                    <span key={dt} className={"rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums " + (as ? "bg-[#1d3a8f] text-white ring-2 ring-[#f5c542]" : on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")} title={as ? "Rostered — request time off to change" : on ? `Available ${cell(dt).from}–${cell(dt).to}` : "Not chosen"}>{as ? "📌 " : ""}{WD_SHORT[wdOf(dt)]} {dNum(dt)}</span>
+                    <span key={dt} className={"rounded-md px-1.5 py-0.5 text-[10.5px] font-bold tabular-nums " + (as ? "bg-[#1d3a8f] text-white ring-2 ring-[#f5c542]" : on ? "bg-[#1d3a8f] text-white" : "bg-[var(--panel)] text-[var(--ink-3)]")} title={as ? "On the rota — request time off to change" : on ? `Available ${cell(dt).from}–${cell(dt).to}` : "Not chosen"}>{as ? "📌 " : ""}{WD_SHORT[wdOf(dt)]} {dNum(dt)}</span>
                   ); })}
                 </div>
               ))}
             </div>
-            <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">Navy = chosen · <span className="text-[#b8860b]">gold ring 📌</span> = rostered (request time off to change).</div>
+            <div className="mt-2 text-[10.5px] text-[var(--ink-3)]">Navy = chosen · <span className="text-[#b8860b]">gold ring 📌</span> = on the rota (request time off to change).</div>
           </div>
         )}
         {req.note && <div className="border-t border-[#e3ebff] px-4 py-2.5 text-[12px] italic text-[#7a5a12]">“{req.note}”</div>}
@@ -209,7 +209,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
         <span className="mt-px flex-none text-[15px] leading-none">🔒</span>
         <div>
           <b>Two things are locked:</b>
-          <div className="mt-1 text-[var(--ink-2)]">• <b className="text-[#1d3a8f]">Days you&rsquo;ve been rostered</b> (📌) can&rsquo;t be switched off here — you&rsquo;re expected to work them. To change one, <b>request time off</b> and your manager will review it.</div>
+          <div className="mt-1 text-[var(--ink-2)]">• <b className="text-[#1d3a8f]">Days you&rsquo;ve been put on the rota</b> (📌) can&rsquo;t be switched off here — you&rsquo;re expected to work them. To change one, <b>request time off</b> and your manager will review it.</div>
           <div className="mt-0.5 text-[var(--ink-2)]">• A day locks <b className="text-[#1d3a8f]">{lockHours > 0 ? `${lockHours}h before it starts` : "once it starts"}</b>, so availability can&rsquo;t change at the last minute. Everything further out stays fully editable. <span className="text-[var(--ink-3)]">(Set by your provider.)</span></div>
         </div>
       </div>
@@ -244,7 +244,7 @@ function CampAvailability({ req, initialGrid, lockHours, onSubmitted }: { req: A
                           <div className="text-[13px] font-extrabold text-[var(--ink)]">{WD_LONG[wd]}</div>
                           <div className="text-[11px] font-semibold text-[var(--ink-3)]">{dNum(dt)} {dMon(dt)}</div>
                         </div>
-                        <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f]">Rostered · {camp.open}–{camp.close}</span>
+                        <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f]">On rota · {camp.open}–{camp.close}</span>
                         <Link href="/staff/holiday" className="ml-auto flex-none rounded-full border border-[var(--line)] bg-white px-3 py-1 text-[11px] font-bold text-[#1d3a8f] transition hover:bg-[#eef4fd]">Request time off →</Link>
                       </li>
                     );

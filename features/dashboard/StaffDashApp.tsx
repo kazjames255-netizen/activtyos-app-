@@ -298,7 +298,7 @@ export function StaffDashApp() {
         <div className="relative overflow-hidden rounded-2xl p-5 text-white shadow-[0_14px_34px_-16px_rgba(29,58,143,.6)]" style={{ background: "linear-gradient(125deg,#16306e 0%,#2f5bc4 55%,#3f78d8 100%)" }}>
           <div className="relative flex items-center justify-between">
             <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-white/75">🗓 My shift</div>
-            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold backdrop-blur-sm">{shift ? "Rostered" : "Day off"}</span>
+            <span className="rounded-full bg-white/20 px-2.5 py-0.5 text-[10.5px] font-extrabold backdrop-blur-sm">{shift ? "On rota" : "Day off"}</span>
           </div>
           {shift ? (<>
             <div className="relative mt-2 text-[30px] font-extrabold leading-none tracking-[-0.02em]" style={{ fontFamily: "var(--ff-display)" }}>{to12(shift.start)} – {to12(shift.end)}</div>
@@ -313,7 +313,7 @@ export function StaffDashApp() {
               </div>
             )}
           </>) : (<>
-            <div className="relative mt-2 text-[18px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{isToday ? "You’re not rostered today" : "No shift this day"}</div>
+            <div className="relative mt-2 text-[18px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{isToday ? "You’re not on the rota today" : "No shift this day"}</div>
             <div className="relative mt-1 text-[13px] text-white/75">{isToday ? "Enjoy your day off 🌿" : "You’re not on the rota for this date."}</div>
           </>)}
           {coworkers.length > 0 && (
@@ -328,7 +328,7 @@ export function StaffDashApp() {
                     <span className="ml-auto flex-none tabular-nums text-[12px] font-semibold text-white/90">{to12(c.start)}–{to12(c.end)}</span>
                   </div>
                 ))}
-                {coworkers.length > 6 && <div className="pl-8 text-[11px] text-white/70">+{coworkers.length - 6} more rostered</div>}
+                {coworkers.length > 6 && <div className="pl-8 text-[11px] text-white/70">+{coworkers.length - 6} more on the rota</div>}
               </div>
             </div>
           )}

@@ -10,6 +10,7 @@
 // logged-in person. Demo "me" = Marcus Bell; in production this is scoped
 // server-side (per-user identity + deployment = Amir).
 import { useEffect, useMemo, useState } from "react";
+import { get as apiGet } from "@/lib/api";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
@@ -18,6 +19,7 @@ import { type ClockRecord, loadClock, slug, clockIn, clockOut, startBreak, endBr
 const ME = "Marcus Bell";
 const ME_ROLE = "Lead Coach"; // demo role (per-user identity is Amir's)
 const ME_ID = slug(ME);
+const AVAIL_ID = "me-avail"; // staffId for my real assigned camp days
 const ROTA_KEY = "aos.rota.v5";
 interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; date: string; start: string; end: string; in?: string; out?: string; note?: string }
 interface Staff { id: string; name: string }
@@ -61,6 +63,9 @@ export function MyScheduleApp() {
   const [clock, setClock] = useState<Record<string, ClockRecord> | null>(null);
   const [, tick] = useState(0);
   const [weekOff, setWeekOff] = useState(0); // Who's-on week stepper
+  // Real shifts assigned to ME from the availability store (backend), turned into
+  // schedule entries so they show alongside the demo rota.
+  const [assignedShifts, setAssignedShifts] = useState<Shift[]>([]);
 
   useEffect(() => {
     try {
@@ -74,12 +79,29 @@ export function MyScheduleApp() {
       setAllShifts(all.filter((sh) => !!sh.staffId));
     } catch { /* ignore */ }
     setClock(loadClock());
+    // My assigned camp days → shifts (times from my submitted grid, else camp hours).
+    apiGet<{ requests: { camp?: { listingName: string; location?: string; open: string; close: string; assignedDates?: string[] } | null }[]; pattern: { grid?: Record<string, { from: string; to: string }> } | null }>("/api/availability/mine")
+      .then((r) => {
+        const grid = r.pattern?.grid ?? {};
+        const out: Shift[] = [];
+        for (const req of r.requests || []) {
+          const camp = req.camp; if (!camp?.assignedDates?.length) continue;
+          for (const date of camp.assignedDates) {
+            const g = grid[date];
+            out.push({ id: `avail-${date}`, staffId: AVAIL_ID, site: camp.location ?? "", role: "", listing: camp.listingName, date, start: g?.from ?? camp.open, end: g?.to ?? camp.close, note: camp.listingName });
+          }
+        }
+        setAssignedShifts(out);
+      })
+      .catch(() => {});
   }, []);
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
 
   const today = todayISO();
-  const upcoming = useMemo(() => shifts.filter((s) => s.date >= today).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start)), [shifts, today]);
-  const past = useMemo(() => shifts.filter((s) => s.date < today).sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start)), [shifts, today]);
+  // Everything that is "mine" — the demo rota plus my real assigned camp days.
+  const mine = useMemo(() => [...shifts, ...assignedShifts], [shifts, assignedShifts]);
+  const upcoming = useMemo(() => mine.filter((s) => s.date >= today).sort((a, b) => (a.date + a.start).localeCompare(b.date + b.start)), [mine, today]);
+  const past = useMemo(() => mine.filter((s) => s.date < today).sort((a, b) => (b.date + b.start).localeCompare(a.date + a.start)), [mine, today]);
 
   // group upcoming by week (Mon-start)
   const weeks = useMemo(() => {
@@ -92,18 +114,19 @@ export function MyScheduleApp() {
 
   // ── Who's on: gating + scope ──────────────────────────────────────────────
   const vis = settings.scheduling?.coworkerVisibility ?? "all";
-  const iAmLead = /lead|manager|owner/i.test(ME_ROLE) || shifts.some((s) => /lead|manager|owner/i.test(s.role || ""));
+  const iAmLead = /lead|manager|owner/i.test(ME_ROLE) || mine.some((s) => /lead|manager|owner/i.test(s.role || ""));
   const teamVisible = vis !== "none" && (vis !== "leads" || iAmLead);
-  const myListings = useMemo(() => new Set(shifts.map((s) => s.listing || s.site).filter(Boolean)), [shifts]);
+  const myListings = useMemo(() => new Set(mine.map((s) => s.listing || s.site).filter(Boolean)), [mine]);
   const inScope = (s: Shift) => vis === "team" ? myListings.has(s.listing || s.site) : true; // all/leads → everyone
   useEffect(() => { if (tab === "team" && !teamVisible) setTab("upcoming"); }, [tab, teamVisible]);
 
   const weekStart = addDaysISO(mondayISO(new Date()), weekOff * 7);
   const weekDays = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(weekStart, i)), [weekStart]);
+  const teamAll = useMemo(() => [...allShifts, ...assignedShifts], [allShifts, assignedShifts]);
   const teamByDay = useMemo(() => weekDays.map((d) => ({
     date: d,
-    rows: allShifts.filter((s) => s.date === d && inScope(s)).sort((a, b) => a.start.localeCompare(b.start)),
-  })), [weekDays, allShifts, vis, myListings]); // eslint-disable-line react-hooks/exhaustive-deps
+    rows: teamAll.filter((s) => s.date === d && inScope(s)).sort((a, b) => a.start.localeCompare(b.start)),
+  })), [weekDays, teamAll, vis, myListings]); // eslint-disable-line react-hooks/exhaustive-deps
   const weekLabel = `${dt(weekStart).toLocaleDateString("en-GB", { day: "numeric", month: "short" })} – ${dt(addDaysISO(weekStart, 6)).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`;
   const teamCount = teamByDay.reduce((a, d) => a + d.rows.length, 0);
   const weekStats = useMemo(() => {
@@ -134,12 +157,12 @@ export function MyScheduleApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <PageHero title="My schedule" icon="🗓" lede="Your rostered shifts and clock in/out, all in one place. Check your times, then clock in when you arrive." />
+      <PageHero title="My schedule" icon="🗓" lede="Your rota shifts and clock in/out, all in one place. Check your times, then clock in when you arrive." />
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         {([
           ["📅", "Next shift", nextShift ? dayLabel(nextShift.date) : "—", nextShift ? `${to12(nextShift.start)}–${to12(nextShift.end)} · ${nextShift.role}` : "nothing booked", "#1d3a8f", "#eef4fd"],
-          ["⏱", "This week", hLabel(thisWeekHrs), "rostered hours", "#0f857b", "#e6f6f3"],
+          ["⏱", "This week", hLabel(thisWeekHrs), "rota hours", "#0f857b", "#e6f6f3"],
           ["🗓", "Upcoming shifts", String(upcoming.length), "on your rota", "#7c3aed", "#f1ecfe"],
         ] as [string, string, string, string, string, string][]).map(([ic, label, value, sub, col, bg]) => (
           <div key={label} className="flex items-center gap-3 rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
@@ -325,21 +348,21 @@ export function MyScheduleApp() {
                     <span className={"text-[11px] font-bold " + (isToday ? "text-white/90" : "text-[var(--ink-3)]")}>{rows.length === 0 ? "No one on" : `${rows.length} on`}</span>
                   </div>
                   {rows.length === 0 ? (
-                    <div className="px-4 py-4 text-center text-[12px] text-[var(--ink-3)]">Nobody rostered.</div>
+                    <div className="px-4 py-4 text-center text-[12px] text-[var(--ink-3)]">Nobody on the rota.</div>
                   ) : (
                     <ul className="divide-y divide-[var(--line)]">
                       {rows.map((s) => {
-                        const mine = s.staffId === myId;
-                        const name = mine ? "You" : (staffById[s.staffId!] ?? "Staff");
+                        const isMe = s.staffId === myId || s.staffId === AVAIL_ID;
+                        const name = isMe ? "You" : (staffById[s.staffId!] ?? "Staff");
                         const col = roleCol(s.role);
                         const pos = barPos(s.start, s.end);
                         return (
-                          <li key={s.id} className={"flex items-center gap-3 px-3.5 py-2.5 " + (mine ? "bg-[#f5f8ff]" : "")}>
-                            <span className="grid h-9 w-9 flex-none place-items-center rounded-full text-[12px] font-black" style={{ background: col + "1f", color: col }}>{mine ? initials(ME) : initials(staffById[s.staffId!] ?? "St")}</span>
+                          <li key={s.id} className={"flex items-center gap-3 px-3.5 py-2.5 " + (isMe ? "bg-[#f5f8ff]" : "")}>
+                            <span className="grid h-9 w-9 flex-none place-items-center rounded-full text-[12px] font-black" style={{ background: col + "1f", color: col }}>{isMe ? initials(ME) : initials(staffById[s.staffId!] ?? "St")}</span>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <span className="truncate text-[13px] font-extrabold text-[var(--ink)]">{name}</span>
-                                {mine && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">You</span>}
+                                {isMe && <span className="rounded-full bg-[#1d3a8f] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-white">You</span>}
                                 <span className="ml-auto tabular-nums text-[12px] font-bold text-[var(--ink-2)]">{to12(s.start)}–{to12(s.end)}</span>
                               </div>
                               <div className="mt-1 flex items-center gap-2">
@@ -360,7 +383,7 @@ export function MyScheduleApp() {
               );
             })}
           </div>
-          <p className="text-[11.5px] text-[var(--ink-3)]">{vis === "team" ? "You can see everyone rostered on the listings you work on." : vis === "leads" ? "As a lead you can see the whole team's rota." : "Your provider shows the whole team's rota."} The bar shows each shift across a 7am–7pm day. Times are the published rota.</p>
+          <p className="text-[11.5px] text-[var(--ink-3)]">{vis === "team" ? "You can see everyone on the rota for the listings you work on." : vis === "leads" ? "As a lead you can see the whole team's rota." : "Your provider shows the whole team's rota."} The bar shows each shift across a 7am–7pm day. Times are the published rota.</p>
         </div>
       )}
 
