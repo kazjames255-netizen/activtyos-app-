@@ -1,9 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { api, get as apiGet } from "@/lib/api";
 import { Button, Card, Input } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
+
+// A request from the manager to submit availability for a window (or ongoing).
+interface ReqWindow { kind: "week" | "range" | "ongoing"; label: string; from?: string; to?: string }
+interface AvailRequest { id: string; window: ReqWindow; note?: string; status: "pending" | "submitted"; createdAt: string; createdBy?: string | null; submittedAt?: string }
+interface Pattern { days?: Record<string, { on: boolean; from: string; to: string }>; note?: string; submittedAt?: string }
+const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "");
+const windowText = (w: ReqWindow) => w.kind === "ongoing" ? "your usual weekly pattern (no fixed dates)" : w.from && w.to ? `${fmtDay(w.from)} – ${fmtDay(w.to)}` : w.label;
 
 // ── My availability (staff, Phase 1) ───────────────────────────────────────
 // Per the Build Manual: "Set available days/times; submit to manager." The
@@ -29,19 +36,33 @@ const load = (): Availability => { try { const v = JSON.parse(localStorage.getIt
 export function AvailabilityApp() {
   const [a, setA] = useState<Availability>(blank);
   const [saved, setSaved] = useState(false);
+  const [requests, setRequests] = useState<AvailRequest[]>([]);
 
-  useEffect(() => { setA(load()); }, []);
+  const refreshRequests = () => apiGet<{ requests: AvailRequest[]; pattern: Pattern | null }>("/api/availability/mine")
+    .then((r) => {
+      setRequests(r.requests || []);
+      if (r.pattern?.days) setA((prev) => ({ ...prev, days: { ...prev.days, ...(r.pattern!.days as Record<DayKey, DayAvail>) }, note: r.pattern!.note ?? prev.note, submittedAt: r.pattern!.submittedAt ?? prev.submittedAt }));
+    })
+    .catch(() => {});
+
+  useEffect(() => { setA(load()); void refreshRequests(); }, []);
   const persist = (next: Availability) => { setA(next); try { localStorage.setItem(KEY, JSON.stringify(next)); } catch { /* ignore */ } };
 
   const setDay = (k: DayKey, patch: Partial<DayAvail>) => persist({ ...a, days: { ...a.days, [k]: { ...a.days[k], ...patch } }, submittedAt: null });
   const setNote = (note: string) => persist({ ...a, note, submittedAt: null });
 
+  // The most recent request still awaiting a response drives the page's framing.
+  const pendingReq = requests.find((r) => r.status === "pending") ?? null;
+  const lastReq = requests[0] ?? null;
+
   const anyOn = DAYS.some(([k]) => a.days[k].on);
   const submit = () => {
     const next = { ...a, submittedAt: new Date().toISOString() };
     persist(next); setSaved(true); setTimeout(() => setSaved(false), 2500);
-    // Best-effort — the backend store + manager notification land later.
-    void api("/api/availability", { method: "POST", body: JSON.stringify(next) }).catch(() => {});
+    // Real store: saves the pattern and marks any pending request submitted.
+    void api("/api/availability/mine", { method: "PUT", body: JSON.stringify({ days: a.days, note: a.note }) })
+      .then(() => refreshRequests())
+      .catch(() => {});
   };
 
   const submittedLabel = a.submittedAt
@@ -52,13 +73,29 @@ export function AvailabilityApp() {
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="My availability" icon="⏱" lede="Set your usual working week — the days and hours you can normally work. It's the starting point your manager uses when building the rota." />
 
-      <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#cde0f7] bg-[#eef5ff] p-3.5 text-[12.5px] leading-relaxed text-[#1d3a8f]">
-        <span className="mt-px flex-none text-[16px] leading-none">🔁</span>
-        <div>
-          <b>This is your standard weekly availability</b> — a repeating pattern, not a specific week. You&rsquo;re not being asked to fill in particular dates: it applies from today and stays in place until you change it.
-          <div className="mt-1.5 text-[var(--ink-2)]">As the rota for upcoming weeks is published, <b className="text-[#1d3a8f]">you&rsquo;ll be notified here</b> — and you can update your hours or flag a one-off change then.</div>
+      {pendingReq ? (
+        <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] p-3.5 text-[12.5px] leading-relaxed text-[#7a5a12]">
+          <span className="mt-px flex-none text-[16px] leading-none">📩</span>
+          <div>
+            <b>Your manager has asked for your availability</b> for <b className="text-[#7a5a12]">{pendingReq.window.label}</b>{pendingReq.window.kind !== "ongoing" && pendingReq.window.from ? <> · <span className="tabular-nums">{windowText(pendingReq.window)}</span></> : ""}.
+            {pendingReq.note ? <div className="mt-1 italic text-[#8a6a2a]">“{pendingReq.note}”</div> : null}
+            <div className="mt-1.5 text-[#8a6a2a]">Set the days &amp; times you can work below, then <b>Submit to manager</b>. {pendingReq.createdBy ? `Requested by ${pendingReq.createdBy}.` : ""}</div>
+          </div>
         </div>
-      </div>
+      ) : lastReq && lastReq.status === "submitted" ? (
+        <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#bfe6cf] bg-[#f2fbf5] p-3.5 text-[12.5px] leading-relaxed text-[#0f7a43]">
+          <span className="mt-px flex-none text-[16px] leading-none">✅</span>
+          <div><b>Availability submitted</b> for {lastReq.window.label}{lastReq.submittedAt ? ` on ${fmtDay(lastReq.submittedAt.slice(0, 10))}` : ""}. You can update it any time — your manager will see the latest.</div>
+        </div>
+      ) : (
+        <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#cde0f7] bg-[#eef5ff] p-3.5 text-[12.5px] leading-relaxed text-[#1d3a8f]">
+          <span className="mt-px flex-none text-[16px] leading-none">🔁</span>
+          <div>
+            <b>This is your standard weekly availability</b> — a repeating pattern, not a specific week. You&rsquo;re not being asked to fill in particular dates: it applies from today and stays in place until you change it.
+            <div className="mt-1.5 text-[var(--ink-2)]">When your manager needs it for a specific week, <b className="text-[#1d3a8f]">a request will appear here</b> and you can submit for those dates.</div>
+          </div>
+        </div>
+      )}
 
       <Card className="p-4">
         <div className="flex flex-col divide-y divide-[var(--line-2,#eef2f8)]">
