@@ -74,6 +74,30 @@ function runDatesByMonth(l: ListingSummary): { count: number; months: { label: s
   return { count: dates.length, months: [...map.entries()].map(([label, days]) => ({ label, days })) };
 }
 
+// Friendly time like "9am" / "9:30am" from "HH:MM".
+function fmtTime(hhmm?: string): string | null {
+  const m = /^(\d{1,2}):(\d{2})/.exec(hhmm ?? "");
+  if (!m) return null;
+  let h = Number(m[1]); const min = Number(m[2]);
+  const ap = h < 12 ? "am" : "pm";
+  h = h % 12 || 12;
+  return min ? `${h}:${String(min).padStart(2, "0")}${ap}` : `${h}${ap}`;
+}
+// Distinct daily time slots across the sessions, longest first (the "3 largest").
+function timeSlots(l: ListingSummary): string[] {
+  const dur = new Map<string, number>();
+  (l.blocks ?? []).forEach((b) => (b.sessions ?? []).forEach((s) => {
+    const a = fmtTime(s.start); const z = fmtTime(s.end);
+    if (!a || !z) return;
+    const key = `${a} – ${z}`;
+    if (!dur.has(key)) {
+      const p = (t: string) => { const m = /^(\d{1,2}):(\d{2})/.exec(t); return m ? Number(m[1]) * 60 + Number(m[2]) : 0; };
+      dur.set(key, p(s.end) - p(s.start));
+    }
+  }));
+  return [...dur.entries()].sort((a, b) => b[1] - a[1]).map(([k]) => k);
+}
+
 type LatLng = { lat: number; lng: number };
 // Radius options in miles; 0 = any distance.
 const RADII = [0, 1, 3, 5, 10, 25];
@@ -133,7 +157,27 @@ export function BrowseApp() {
   const [myPostcode, setMyPostcode] = useState("");
   // Which cards have their extra offers expanded (best offer shown by default so
   // every card is the same height).
-  const [offersOpen, setOffersOpen] = useState<Set<string>>(new Set());
+  // Which chip groups are expanded, keyed `${listingId}:${group}` — so each card
+  // shows a fixed count by default (uniform height) with a "+N more" per group.
+  const [openChips, setOpenChips] = useState<Set<string>>(new Set());
+  const chipOpen = (id: string, g: string) => openChips.has(`${id}:${g}`);
+  const toggleChip = (id: string, g: string) => setOpenChips((s) => { const n = new Set(s); const k = `${id}:${g}`; if (n.has(k)) n.delete(k); else n.add(k); return n; });
+  // One colour-coded chip group: shows up to `max`, then a matching "+N more".
+  const chipGroup = (id: string, g: string, labels: string[], max: number, chipCls: string) => {
+    if (!labels.length) return null;
+    const open = chipOpen(id, g);
+    const shown = open ? labels : labels.slice(0, max);
+    return (
+      <div className="flex flex-wrap gap-1.5">
+        {shown.map((lab, i) => <span key={i} className={`whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-extrabold ${chipCls}`}>{lab}</span>)}
+        {labels.length > max && (
+          <button type="button" onClick={() => toggleChip(id, g)} className={`rounded-full px-2.5 py-1 text-[11px] font-extrabold transition-[filter] hover:brightness-95 ${chipCls}`}>
+            {open ? t("parent.showLess") : t("parent.moreOffers", { n: labels.length - max })}
+          </button>
+        )}
+      </div>
+    );
+  };
   const [radius, setRadius] = useState(0);
   const [geoBusy, setGeoBusy] = useState(false);
   const [venueGeo, setVenueGeo] = useState<Record<string, LatLng | null>>({});
@@ -574,18 +618,21 @@ export function BrowseApp() {
                     <span className="truncate"><span className="font-semibold text-[var(--ink)]">{l.location}</span>{l.address ? <span className="text-[var(--ink-3)]"> · {l.address}</span> : null}</span>
                   </div>
                 )}
-                {/* Best offer only (+N more, expandable) so every card is the same
-                    height; accepted childcare payments (green) after. */}
-                {((l.offers && l.offers.length) || l.acceptsTFC || l.acceptsVouchers) && (
-                  <div className="mt-2.5 flex flex-wrap gap-1.5">
-                    {(() => { const offs = l.offers ?? []; const exp = offersOpen.has(l.id); const shown = exp ? offs : offs.slice(0, 1); return (<>
-                      {shown.map((o) => <span key={o.label} className="rounded-full bg-[#fdecea] px-2.5 py-1 text-[11px] font-extrabold text-[#b3261e]">🏷️ {o.label}</span>)}
-                      {offs.length > 1 && <button type="button" onClick={() => setOffersOpen((s) => { const n = new Set(s); if (n.has(l.id)) n.delete(l.id); else n.add(l.id); return n; })} className="rounded-full bg-[#eef4ff] px-2.5 py-1 text-[11px] font-extrabold text-[#1d3a8f] hover:bg-[#e3ecff]">{exp ? t("parent.showLess") : t("parent.moreOffers", { n: offs.length - 1 })}</button>}
-                    </>); })()}
-                    {l.acceptsTFC && <span className="rounded-full bg-[#e9f9f2] px-2.5 py-1 text-[11px] font-extrabold text-[#0b5a3f]">✓ {t("parent.tfcAccepted")}</span>}
-                    {l.acceptsVouchers && <span className="rounded-full bg-[#e9f9f2] px-2.5 py-1 text-[11px] font-extrabold text-[#0b5a3f]">✓ {t("parent.vouchersAccepted")}</span>}
-                  </div>
-                )}
+                {/* Three colour-coded groups, each fixed-count + a matching "+N more"
+                    so cards stay the same height: offers · time slots · payments. */}
+                {(() => {
+                  const offers = (l.offers ?? []).map((o) => `🏷️ ${o.label}`);
+                  const slots = timeSlots(l).map((s) => `🕘 ${s}`);
+                  const pays = [l.acceptsTFC ? `✓ ${t("parent.tfcAccepted")}` : "", l.acceptsVouchers ? `✓ ${t("parent.vouchersAccepted")}` : ""].filter(Boolean);
+                  if (!offers.length && !slots.length && !pays.length) return null;
+                  return (
+                    <div className="mt-2.5 flex flex-col gap-1.5">
+                      {chipGroup(l.id, "offers", offers, 1, "bg-[#fdecea] text-[#b3261e]")}
+                      {chipGroup(l.id, "slots", slots, 3, "bg-[#eef4ff] text-[#1d3a8f]")}
+                      {chipGroup(l.id, "pays", pays, 1, "bg-[#e9f9f2] text-[#0b5a3f]")}
+                    </div>
+                  );
+                })()}
                 <button type="button" onClick={() => router.push(`/book/${l.id}`)} className="mt-3 w-full rounded-lg bg-[var(--brand-2,#2f6bd8)] py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90">
                   {t("parent.moreDetails")}
                 </button>
