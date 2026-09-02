@@ -31,7 +31,6 @@ export function Header({ portal }: { portal: PortalKey }) {
   const router = useRouter();
   const { user, signOutUser } = useAuth();
   const view = pathname.split("/")[2] ?? "";
-  const current = findNavItem(portal, view);
 
   // Mobile nav drawer — the same Sidebar the desktop rail shows, slid over the
   // content. Navigating (pathname change) closes it.
@@ -135,10 +134,6 @@ export function Header({ portal }: { portal: PortalKey }) {
           <div className="flex-1 bg-black/50" onClick={() => setMenuOpen(false)} aria-hidden />
         </div>
       )}
-
-      <h1 className="m-0 min-w-0 flex-none truncate text-[15px] font-extrabold text-[var(--ink)] max-sm:flex-1">
-        {current?.label ?? view}
-      </h1>
 
       {tabs.length > 0 && (
         <nav className="flex min-w-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
