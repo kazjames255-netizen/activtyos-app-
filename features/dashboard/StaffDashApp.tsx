@@ -244,35 +244,50 @@ export function StaffDashApp() {
         <span className="text-[11.5px] text-[var(--ink-3)]">Everything below is for this date.</span>
       </div>
 
-      {/* Staff announcements — newest unread from the last 24h, one at a time; open to read, mark read to dismiss */}
+      {/* Staff announcements — newest unread from the last 24h. Slim one-liner on
+          landing; click to expand the full message + actions. */}
       {curAnn && (
-        <div className="mb-3 overflow-hidden rounded-2xl border border-[#e3ebff] bg-gradient-to-br from-[#f4f8ff] to-white shadow-[0_1px_3px_rgba(20,30,60,.06)]">
-          <div className="flex items-center gap-2 px-4 pt-3.5">
-            <span className="grid h-8 w-8 flex-none place-items-center rounded-xl bg-[#1d3a8f] text-[15px]">📣</span>
-            <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Staff announcement</div>
-            {recentUnread.length > 1 && <span className="rounded-full bg-[#e21d27] px-2 py-0.5 text-[10px] font-black text-white">{recentUnread.length} new</span>}
-            <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">View all ›</Link>
-          </div>
-          <div className="px-4 pb-3.5 pt-2.5">
-            <div className="flex items-start gap-2.5">
-              <span className="mt-1.5 h-2 w-2 flex-none rounded-full" style={{ background: curAnn.important ? "#e21d27" : "#1d3a8f" }} />
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {curAnn.pinned && <span className="flex-none text-[10px]">📌</span>}
-                  <span className="text-[15px] font-bold tracking-[-0.01em] text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{curAnn.title}</span>
-                  {curAnn.important && <span className="flex-none rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#c0362c]">Important</span>}
+        annOpen ? (
+          <div className="mb-3 overflow-hidden rounded-2xl border border-[#e3ebff] bg-gradient-to-br from-[#f4f8ff] to-white shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+            <div className="flex items-center gap-2 px-4 pt-3.5">
+              <span className="grid h-8 w-8 flex-none place-items-center rounded-xl bg-[#1d3a8f] text-[15px]">📣</span>
+              <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Staff announcement</div>
+              {recentUnread.length > 1 && <span className="rounded-full bg-[#e21d27] px-2 py-0.5 text-[10px] font-black text-white">{recentUnread.length} new</span>}
+              <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">View all ›</Link>
+            </div>
+            <div className="px-4 pb-3.5 pt-2.5">
+              <div className="flex items-start gap-2.5">
+                <span className="mt-1.5 h-2 w-2 flex-none rounded-full" style={{ background: curAnn.important ? "#e21d27" : "#1d3a8f" }} />
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {curAnn.pinned && <span className="flex-none text-[10px]">📌</span>}
+                    <span className="text-[15px] font-bold tracking-[-0.01em] text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{curAnn.title}</span>
+                    {curAnn.important && <span className="flex-none rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#c0362c]">Important</span>}
+                  </div>
+                  <div className="mt-1 whitespace-pre-line text-[12.5px] leading-relaxed text-[var(--ink-2)]">{curAnn.body}</div>
+                  <div className="mt-1.5 text-[10.5px] font-semibold text-[var(--ink-3)]">{curAnn.author}{curAnn.role ? ` · ${curAnn.role}` : ""} · {annDate(curAnn.date)}</div>
                 </div>
-                <div className={"mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)] " + (annOpen ? "" : "line-clamp-1")}>{curAnn.body}</div>
-                <div className="mt-1.5 text-[10.5px] font-semibold text-[var(--ink-3)]">{curAnn.author}{curAnn.role ? ` · ${curAnn.role}` : ""} · {annDate(curAnn.date)}</div>
+              </div>
+              <div className="mt-3 flex items-center gap-2">
+                <button type="button" onClick={() => setAnnOpen(false)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white transition hover:brightness-110">Close</button>
+                <button type="button" onClick={() => markAnnRead(curAnn.id)} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">✓ Mark as read</button>
+                <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">View all announcements ›</Link>
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-2">
-              <button type="button" onClick={() => setAnnOpen((o) => !o)} className="rounded-full bg-[#1d3a8f] px-3.5 py-1.5 text-[12px] font-extrabold text-white transition hover:brightness-110">{annOpen ? "Close" : "Open"}</button>
-              <button type="button" onClick={() => markAnnRead(curAnn.id)} className="rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">✓ Mark as read</button>
-              {annOpen && <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">View all announcements ›</Link>}
-            </div>
           </div>
-        </div>
+        ) : (
+          <button type="button" onClick={() => setAnnOpen(true)} className="mb-3 flex w-full items-center gap-2.5 rounded-2xl border border-[#e3ebff] bg-gradient-to-br from-[#f4f8ff] to-white px-3.5 py-2.5 text-left shadow-[0_1px_3px_rgba(20,30,60,.06)] transition hover:border-[#c9d6f5]">
+            <span className="grid h-7 w-7 flex-none place-items-center rounded-lg bg-[#1d3a8f] text-[13px]">📣</span>
+            <span className="h-2 w-2 flex-none rounded-full" style={{ background: curAnn.important ? "#e21d27" : "#1d3a8f" }} />
+            <span className="flex-none text-[13px] font-bold tracking-[-0.01em] text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{curAnn.title}</span>
+            <span className="hidden min-w-0 truncate text-[12px] text-[var(--ink-3)] sm:inline">— {curAnn.body}</span>
+            <span className="ml-auto flex flex-none items-center gap-2">
+              <span className="hidden text-[11px] font-semibold text-[var(--ink-3)] md:inline">{curAnn.author}</span>
+              {recentUnread.length > 1 && <span className="rounded-full bg-[#e21d27] px-1.5 py-0.5 text-[9px] font-black text-white">{recentUnread.length}</span>}
+              <span className="text-[11.5px] font-bold text-[#1d3a8f]">Open ›</span>
+            </span>
+          </button>
+        )
       )}
 
       {/* My shift + at-a-glance & sessions */}
