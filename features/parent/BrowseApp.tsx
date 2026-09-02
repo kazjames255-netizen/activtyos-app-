@@ -500,10 +500,18 @@ export function BrowseApp() {
                 ) : (
                   <div className="flex w-full items-center justify-center text-[26px] text-white/85" style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,#1d3a8f,#2f6bd8 70%,#5b8af0)" }}>🎪</div>
                 )}
-                {opensLater && (
-                  <span className="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-bold text-[#9a3412]">
-                    {t("parent.opensDate", { date: new Date(l.opensAt!).toLocaleString("en-GB", { day: "numeric", month: "short" }) })}
-                  </span>
+                {/* Distance + opens-later, stacked top-left over the image. */}
+                {(dist != null || opensLater) && (
+                  <div className="absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
+                    {dist != null && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-extrabold text-[#1d3a8f] shadow-sm">🧭 {dist < 10 ? dist.toFixed(1) : Math.round(dist)} {t("parent.miAway")}</span>
+                    )}
+                    {opensLater && (
+                      <span className="rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-bold text-[#9a3412] shadow-sm">
+                        {t("parent.opensDate", { date: new Date(l.opensAt!).toLocaleString("en-GB", { day: "numeric", month: "short" }) })}
+                      </span>
+                    )}
+                  </div>
                 )}
                 {/* Best auto-offer as a corner ribbon (clipped by overflow-hidden). */}
                 {l.bestOfferPercent ? (
@@ -525,19 +533,10 @@ export function BrowseApp() {
                 </div>
               </button>
               <div className="p-4">
-                {(l.location || dist != null) && (
-                  <div className="flex flex-col gap-1.5 text-[12px] text-[var(--ink-2)]">
-                    {l.location && (
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <span aria-hidden>📍</span>
-                        <span className="truncate"><span className="font-semibold text-[var(--ink)]">{l.location}</span>{l.address ? <span className="text-[var(--ink-3)]"> · {l.address}</span> : null}</span>
-                      </div>
-                    )}
-                    {dist != null && (
-                      <div className="flex flex-wrap gap-x-4 gap-y-1">
-                        <span className="flex items-center gap-1.5 font-semibold text-[#1d3a8f]"><span aria-hidden>🧭</span>{dist < 10 ? dist.toFixed(1) : Math.round(dist)} {t("parent.miAway")}</span>
-                      </div>
-                    )}
+                {l.location && (
+                  <div className="flex min-w-0 items-center gap-1.5 text-[12px] text-[var(--ink-2)]">
+                    <span aria-hidden>📍</span>
+                    <span className="truncate"><span className="font-semibold text-[var(--ink)]">{l.location}</span>{l.address ? <span className="text-[var(--ink-3)]"> · {l.address}</span> : null}</span>
                   </div>
                 )}
                 {/* Best offer only (+N more, expandable) so every card is the same
