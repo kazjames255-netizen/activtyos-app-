@@ -774,6 +774,7 @@ export interface TenantSettings {
   /** Reviews hub — blend in-house feedback with external platforms. Connectors
    *  activate when credentials are present; no review gating (offered to all). */
   reviews?: {
+    sources?: ("google" | "trustpilot")[]; // which external platforms this provider uses
     googlePlaceId?: string;      // Places API display + "review us on Google" link (P1)
     googleReviewUrl?: string;    // override the writereview link if they have a custom one
     showGoogleRating?: boolean;  // show the live Google rating on Browse/feedback (default true)

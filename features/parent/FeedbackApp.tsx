@@ -66,11 +66,14 @@ export function FeedbackApp() {
         <Card className="p-6 text-center">
           <div className="text-[34px]">🎉</div>
           <div className="mt-1 text-[16px] font-extrabold text-[var(--ink)]">Thank you!</div>
-          <p className="mx-auto mt-1 max-w-[420px] text-[13px] text-[var(--ink-3)]">Your feedback has been sent to <b className="text-[var(--ink-2)]">{providerName}</b>. It really helps them.</p>
+          <p className="mx-auto mt-1 max-w-[440px] text-[13px] text-[var(--ink-3)]">That&rsquo;s everything — your feedback is in with <b className="text-[var(--ink-2)]">{providerName}</b> and it really helps them.</p>
           {googleUrl && (
-            <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-4 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13.5px] font-extrabold text-[#1d3a8f] shadow-sm ring-1 ring-[#dbe3f4] transition hover:bg-[#f6f9ff]"><span style={{ color: "#ea4335" }}>★</span> Also leave a Google review ↗</a>
+            <div className="mx-auto mt-4 max-w-[440px] rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
+              <div className="text-[12px] font-semibold text-[var(--ink-2)]">Optional — got another 20 seconds? A public <b>Google</b> review helps a small provider most. (You&rsquo;re done either way.)</div>
+              <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-extrabold text-[#1d3a8f] shadow-sm ring-1 ring-[#dbe3f4] transition hover:bg-[#f6f9ff]"><span style={{ color: "#ea4335" }}>★</span> Add a Google review ↗</a>
+            </div>
           )}
-          <div><button type="button" onClick={() => setSent(false)} className="mt-3 rounded-full bg-[#1d3a8f] px-4 py-2 text-[12.5px] font-extrabold text-white">Leave more feedback</button></div>
+          <div><button type="button" onClick={() => setSent(false)} className="mt-3 rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)]">Leave more feedback</button></div>
         </Card>
       ) : (
         <Card className="p-4 sm:p-5">

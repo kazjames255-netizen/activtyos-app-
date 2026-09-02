@@ -1492,28 +1492,55 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "reviews" && (
-        <Section title="Reviews" lede="Blend your in-house feedback with Google & Trustpilot. Compliance is built in — every customer is invited to review on Google, never only the happy ones.">
-          <Row label="Google review link or Place ID" hint="Paste your Google 'Get more reviews' link, or your Place ID. Powers the live Google rating on your Browse page and the one-tap 'review us on Google' button after feedback. No API setup needed.">
-            <Input value={settings.reviews?.googleReviewUrl || settings.reviews?.googlePlaceId || ""} placeholder="https://g.page/r/… or ChIJ…" onChange={(e) => { const v = e.target.value.trim(); const isUrl = /^https?:\/\//.test(v); set("reviews", { ...settings.reviews, googleReviewUrl: isUrl ? v : "", googlePlaceId: isUrl ? (settings.reviews?.googlePlaceId ?? "") : v }); }} className="w-full" />
-          </Row>
-          <Row label="Show my Google rating publicly" hint="Display your live Google star rating on your Browse page and blend it into your overall score.">
-            <Toggle on={settings.reviews?.showGoogleRating ?? true} onChange={(v) => set("reviews", { ...settings.reviews, showGoogleRating: v })} labels={["On", "Off"]} />
-          </Row>
-          <Row label="Invite customers to review on Google" hint="After a parent leaves in-house feedback, show a 'review us on Google' button — to EVERYONE, whatever they rated (this is what keeps you compliant with Google & the FTC).">
-            <Toggle on={settings.reviews?.inviteToGoogle ?? true} onChange={(v) => set("reviews", { ...settings.reviews, inviteToGoogle: v })} labels={["On", "Off"]} />
-          </Row>
-          <Row label="Trustpilot Business Unit ID" hint="If you use Trustpilot, paste your Business Unit ID to pull those reviews into your score." note="Needs platform key">
-            <Input value={settings.reviews?.trustpilotBusinessUnitId ?? ""} placeholder="e.g. 4b… " onChange={(e) => set("reviews", { ...settings.reviews, trustpilotBusinessUnitId: e.target.value.trim() })} className="w-full" />
-          </Row>
-          <Row label="Public reviews widget & rich-snippet stars" hint="Expose a public feed of your reviews for embedding on your own website, plus AggregateRating data for Google star snippets." note="Backend">
-            <Toggle on={settings.reviews?.publicWidget ?? false} onChange={(v) => set("reviews", { ...settings.reviews, publicWidget: v })} labels={["On", "Off"]} />
-          </Row>
-          <div className="mt-2 rounded-lg border border-[#cde0f7] bg-[#eef5ff] px-3.5 py-3 text-[12px] leading-relaxed text-[#1d3a8f]">
-            <b>Full Google sync &amp; replies</b> (pull every Google review + reply from ActivityOS) needs a one-time platform connection to Google Business Profile — <b>Connect</b> from the <b>Reviews</b> page once it&rsquo;s enabled. Until then, the link above already shows your rating and invites reviews.
+      {tab === "reviews" && (() => {
+        const rv = settings.reviews ?? {};
+        // Default the selection from any config already present.
+        const selected = rv.sources ?? ([...(rv.googlePlaceId || rv.googleReviewUrl ? ["google"] : []), ...(rv.trustpilotBusinessUnitId ? ["trustpilot"] : [])] as ("google" | "trustpilot")[]);
+        const has = (s: "google" | "trustpilot") => selected.includes(s);
+        const toggleSrc = (s: "google" | "trustpilot") => set("reviews", { ...rv, sources: has(s) ? selected.filter((x) => x !== s) : [...selected, s] });
+        return (
+        <Section title="Reviews" lede="Blend your in-house feedback with the review sites you already use. Compliance is built in — every customer is invited to review on Google, never only the happy ones.">
+          <div className="mb-1 text-[12.5px] font-extrabold text-[var(--ink)]">Which review sites do you use?</div>
+          <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">In-house feedback is always on. Pick the external sites you collect reviews on — we&rsquo;ll only ask for what those need.</p>
+          <div className="mb-4 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef4fd] px-3 py-1.5 text-[12.5px] font-bold text-[#1d3a8f]"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#1d3a8f" }} />In-house · always on</span>
+            {([["google", "Google", "#ea4335"], ["trustpilot", "Trustpilot", "#00b67a"]] as [("google" | "trustpilot"), string, string][]).map(([k, label, col]) => (
+              <button key={k} type="button" onClick={() => toggleSrc(k)} className={"inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition " + (has(k) ? "border-transparent text-white" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]")} style={has(k) ? { background: col } : undefined}>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: has(k) ? "#fff" : col }} />{has(k) ? `✓ ${label}` : label}
+              </button>
+            ))}
           </div>
+
+          {has("google") && (<>
+            <div className="mb-1 mt-1 text-[11px] font-extrabold uppercase tracking-wide text-[#ea4335]">Google</div>
+            <Row label="Google review link or Place ID" hint="Paste your Google 'Get more reviews' link, or your Place ID. Powers the live Google rating on your Browse page and the one-tap 'review us on Google' button after feedback. No API setup needed.">
+              <Input value={rv.googleReviewUrl || rv.googlePlaceId || ""} placeholder="https://g.page/r/… or ChIJ…" onChange={(e) => { const v = e.target.value.trim(); const isUrl = /^https?:\/\//.test(v); set("reviews", { ...rv, googleReviewUrl: isUrl ? v : "", googlePlaceId: isUrl ? (rv.googlePlaceId ?? "") : v }); }} className="w-full" />
+            </Row>
+            <Row label="Show my Google rating publicly" hint="Display your live Google star rating on your Browse page and blend it into your overall score.">
+              <Toggle on={rv.showGoogleRating ?? true} onChange={(v) => set("reviews", { ...rv, showGoogleRating: v })} labels={["On", "Off"]} />
+            </Row>
+            <Row label="Invite customers to review on Google" hint="After a parent leaves in-house feedback, show a 'review us on Google' button — to EVERYONE, whatever they rated (this is what keeps you compliant with Google & the FTC).">
+              <Toggle on={rv.inviteToGoogle ?? true} onChange={(v) => set("reviews", { ...rv, inviteToGoogle: v })} labels={["On", "Off"]} />
+            </Row>
+            <div className="mb-4 rounded-lg border border-[#cde0f7] bg-[#eef5ff] px-3.5 py-2.5 text-[11.5px] leading-relaxed text-[#1d3a8f]">
+              Want to <b>pull every Google review + reply from ActivityOS</b>? That needs a one-time <b>Connect Google Business Profile</b> from the <b>Reviews</b> page (enabled once the platform link is live). The link above already shows your rating and invites reviews without it.
+            </div>
+          </>)}
+
+          {has("trustpilot") && (<>
+            <div className="mb-1 mt-1 text-[11px] font-extrabold uppercase tracking-wide text-[#00b67a]">Trustpilot</div>
+            <Row label="Trustpilot Business Unit ID" hint="Paste your Business Unit ID to pull your Trustpilot reviews into your blended score." note="Needs platform key">
+              <Input value={rv.trustpilotBusinessUnitId ?? ""} placeholder="e.g. 4b… " onChange={(e) => set("reviews", { ...rv, trustpilotBusinessUnitId: e.target.value.trim() })} className="w-full" />
+            </Row>
+          </>)}
+
+          <div className="mb-1 mt-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Your website</div>
+          <Row label="Public reviews widget & rich-snippet stars" hint="Expose a public feed of your reviews for embedding on your own website, plus AggregateRating data for Google star snippets." note="Backend">
+            <Toggle on={rv.publicWidget ?? false} onChange={(v) => set("reviews", { ...rv, publicWidget: v })} labels={["On", "Off"]} />
+          </Row>
         </Section>
-      )}
+        );
+      })()}
 
       {tab === "roles" && (
         <Section title="Roles & permissions" lede="Define the roles in your organisation and what each can see or change. Assign a role to each person when you invite them (coming next); Owner always has full access.">
