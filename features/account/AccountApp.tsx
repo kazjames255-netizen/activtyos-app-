@@ -280,7 +280,11 @@ export function AccountApp() {
             </div>
           )}
           <label className="mt-2.5 flex items-center gap-2 text-[12.5px]"><input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />Email me occasional news and offers</label>
-          <div className="mt-3"><Button variant="primary" onClick={saveProfile}>Save profile</Button></div>
+          <div className="mt-3 flex flex-wrap items-center gap-3">
+            <Button variant="primary" onClick={saveProfile}>Save profile</Button>
+            {ok && <span className="text-[12.5px] font-bold text-[#1d7a43]">✓ {ok}</span>}
+            {error && <span className="text-[12.5px] font-bold text-[var(--red)]">{error}</span>}
+          </div>
         </Card>
 
         <Card className="mb-3 p-4">
@@ -305,7 +309,104 @@ export function AccountApp() {
           <div className="text-[12.5px] text-[var(--ink-3)]">Signed in as {p.email}</div>
           <Button variant="danger" onClick={() => signOutUser()}>Sign out</Button>
         </Card>
+
+        {p.role === "parent" && <CloseAccount />}
       </div>
     </div>
+  );
+}
+
+// Parent self-service soft close. Gated on outstanding payments (server re-checks
+// too), cancels active memberships, warns about wallet credit, and explains the
+// 30-day reactivation window. Enforcement (login disable + reactivation) is Amir's.
+function CloseAccount() {
+  const { signOutUser } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [checks, setChecks] = useState<null | { outstanding: number; toPayCount: number; wallet: number; memberships: { tenantId: string; name: string; tierName: string }[] }>(null);
+  const [ack, setAck] = useState(false);
+  const [reason, setReason] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+  const [done, setDone] = useState(false);
+
+  async function loadChecks() {
+    setOpen(true); setErr(null);
+    try {
+      const [bookings, providers, walletRes] = await Promise.all([
+        apiGet<{ status?: string; pay?: string; amount?: number }[]>("/api/my/bookings").catch(() => []),
+        apiGet<{ tenantId: string; name: string }[]>("/api/my/providers").catch(() => []),
+        apiGet<{ balances?: { balance: number }[] }>("/api/my/wallet").catch(() => ({ balances: [] as { balance: number }[] })),
+      ]);
+      const live = (bookings ?? []).filter((b) => b.status !== "Cancelled" && b.status !== "Declined");
+      const unpaid = live.filter((b) => b.pay !== "Paid" && (b.amount ?? 0) > 0);
+      const outstanding = unpaid.reduce((n, b) => n + (b.amount ?? 0), 0);
+      const wallet = (walletRes?.balances ?? []).reduce((n, w) => n + (w.balance || 0), 0);
+      const memberships: { tenantId: string; name: string; tierName: string }[] = [];
+      for (const pr of providers ?? []) {
+        try {
+          const m = await apiGet<{ mine?: { status?: string; tierName?: string } }>(`/api/my/memberships?tenantId=${encodeURIComponent(pr.tenantId)}`);
+          if (m?.mine?.status === "active") memberships.push({ tenantId: pr.tenantId, name: pr.name, tierName: m.mine.tierName ?? "Member" });
+        } catch { /* ignore a provider that has no membership programme */ }
+      }
+      setChecks({ outstanding: Math.round(outstanding * 100) / 100, toPayCount: unpaid.length, wallet: Math.round(wallet * 100) / 100, memberships });
+    } catch { setErr("Couldn’t load your account details — try again."); }
+  }
+
+  async function confirmClose() {
+    if (!checks || checks.outstanding > 0 || !ack || busy) return;
+    setBusy(true); setErr(null);
+    try {
+      for (const m of checks.memberships) {
+        try { await api("/api/my/memberships/cancel", { method: "POST", body: JSON.stringify({ tenantId: m.tenantId }) }); } catch { /* keep going */ }
+      }
+      await api("/api/account/deactivate", { method: "POST", body: JSON.stringify({ reason: reason.trim() || undefined }) });
+      setDone(true);
+      setTimeout(async () => { await signOutUser(); window.location.href = "/login"; }, 2600);
+    } catch (e) {
+      setErr(niceError(e));
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Card className="mb-3 border border-[#f0cfc9] p-4">
+      <div className="text-[13.5px] font-extrabold text-[#b3261e]">Close my account</div>
+      <p className="mt-1 text-[12px] leading-[1.5] text-[var(--ink-3)]">Closing disables your login and stops all emails. Your provider keeps the records they’re legally required to (safeguarding &amp; payment history). You can reopen it by signing back in within <b>30 days</b>.</p>
+
+      {!open ? (
+        <button type="button" onClick={loadChecks} className="mt-3 rounded-full border border-[#e2b6ae] px-4 py-2 text-[12.5px] font-bold text-[#b3261e] transition hover:bg-[#fdf3f1]">Close my account…</button>
+      ) : done ? (
+        <div className="mt-3 rounded-lg border border-[#f0cfc9] bg-[#fdf3f1] p-3 text-[13px] font-bold text-[#b3261e]">Your account is closed. Signing you out… sign back in within 30 days to reopen it.</div>
+      ) : !checks ? (
+        <div className="mt-3 text-[12px] text-[var(--ink-3)]">Checking your account…</div>
+      ) : (
+        <div className="mt-3 flex flex-col gap-2.5">
+          {checks.outstanding > 0 ? (
+            <div className="rounded-lg border border-[#f0cfc9] bg-[#fdf3f1] p-3 text-[12px] leading-[1.5] text-[#7a2a22]"><b>You have £{checks.outstanding.toFixed(2)} still to pay</b> across {checks.toPayCount} booking{checks.toPayCount === 1 ? "" : "s"}. Please settle up first. <a href="/custdash/bookings" className="font-bold underline">Go to My bookings →</a></div>
+          ) : (
+            <div className="rounded-lg border border-[#cfe9df] bg-[#e9f9f2] p-2.5 text-[12px] font-semibold text-[#0b5a3f]">✓ No outstanding payments.</div>
+          )}
+          {checks.memberships.length > 0 && (
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px] leading-[1.5] text-[var(--ink-2)]">These membership{checks.memberships.length > 1 ? "s" : ""} will be <b>cancelled</b> when you close: {checks.memberships.map((m) => `${m.tierName} (${m.name})`).join(", ")}.</div>
+          )}
+          {checks.wallet > 0 && (
+            <div className="rounded-lg border border-[#f6d78a] bg-[#fff8e6] p-2.5 text-[12px] leading-[1.5] text-[#7a5a00]">⚠ You have <b>£{checks.wallet.toFixed(2)}</b> of wallet credit. It can’t be refunded once you close — spend it first, or ask your provider.</div>
+          )}
+          <div>
+            <FieldLabel>Why are you leaving? <span className="font-normal normal-case text-[var(--ink-3)]">— optional</span></FieldLabel>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full" placeholder="Helps your provider improve" />
+          </div>
+          <label className="flex items-start gap-2 text-[12px] leading-[1.5] text-[var(--ink-2)]">
+            <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-0.5 flex-none" disabled={checks.outstanding > 0} />
+            I understand my login will be disabled and any memberships cancelled — and that I can reopen my account by signing in within 30 days.
+          </label>
+          {err && <div className="text-[12px] font-bold text-[var(--red)]">{err}</div>}
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => { setOpen(false); setChecks(null); setAck(false); setReason(""); }} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">Keep my account</button>
+            <button type="button" onClick={confirmClose} disabled={checks.outstanding > 0 || !ack || busy} className="rounded-full bg-[#b3261e] px-4 py-2 text-[12.5px] font-extrabold text-white transition enabled:hover:brightness-110 disabled:opacity-40">{busy ? "Closing…" : "Close my account"}</button>
+          </div>
+        </div>
+      )}
+    </Card>
   );
 }
