@@ -1536,9 +1536,24 @@ export function SetupApp() {
 
           {has("google") && (<>
             <div className="mb-1 mt-1 text-[11px] font-extrabold uppercase tracking-wide text-[#ea4335]">Google</div>
-            <Row label="Google review link or Place ID" hint="Paste your Google 'Get more reviews' link, or your Place ID. Powers the live Google rating on your Browse page and the one-tap 'review us on Google' button after feedback. No API setup needed.">
-              <Input value={rv.googleReviewUrl || rv.googlePlaceId || ""} placeholder="https://g.page/r/… or ChIJ…" onChange={(e) => { const v = e.target.value.trim(); const isUrl = /^https?:\/\//.test(v); set("reviews", { ...rv, googleReviewUrl: isUrl ? v : "", googlePlaceId: isUrl ? (rv.googlePlaceId ?? "") : v }); }} className="w-full" />
+            {/* Dead-simple: find your camp → copy the ID → paste it. */}
+            <div className="mb-3 rounded-xl border border-[#f6d3cd] bg-[#fdf3f1] p-3.5">
+              <div className="mb-1.5 flex flex-wrap items-center gap-2.5">
+                <span className="text-[12.5px] font-extrabold text-[#b3261e]">Get your camp&rsquo;s Google ID — takes 30 seconds</span>
+                {!(rv.googlePlaceId || rv.googleReviewUrl) && <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener noreferrer" className="rounded-full bg-[#ea4335] px-3.5 py-1.5 text-[12px] font-extrabold text-white shadow-sm transition hover:brightness-110">🔎 Find my camp on Google →</a>}
+              </div>
+              <ol className="ml-4 list-decimal space-y-0.5 text-[12px] leading-relaxed text-[#7a2a22]">
+                <li>Click <b>Find my camp on Google</b> above — a map opens in a new tab.</li>
+                <li>Type your <b>camp&rsquo;s name</b> in the map&rsquo;s search box and pick it from the list.</li>
+                <li>A little box pops up showing the <b>Place ID</b> — it starts with <b>ChIJ</b>. Copy it.</li>
+                <li>Paste it into the box below and hit save. Done — your parents now get a one-tap Google review link.</li>
+              </ol>
+              <p className="mt-1.5 text-[11px] text-[#9a5148]">Got several camps? Each site has its own ID — use the one you want reviews for.</p>
+            </div>
+            <Row label="Paste your Place ID (or Google review link) here" hint="It starts with ChIJ… (or paste a g.page/r/… link). This powers the live Google rating on your Browse page and the one-tap 'review us on Google' button after feedback.">
+              <Input value={rv.googleReviewUrl || rv.googlePlaceId || ""} placeholder="ChIJ…  (or https://g.page/r/…)" onChange={(e) => { const v = e.target.value.trim(); const isUrl = /^https?:\/\//.test(v); set("reviews", { ...rv, googleReviewUrl: isUrl ? v : "", googlePlaceId: isUrl ? (rv.googlePlaceId ?? "") : v }); }} className="w-full" />
             </Row>
+            {(rv.googlePlaceId || rv.googleReviewUrl) && <div className="mb-3 -mt-1 flex items-center gap-2 text-[11.5px] font-bold text-[#0f7a43]">✓ Google connected — parents will be sent to your review page. <a href="https://developers.google.com/maps/documentation/places/web-service/place-id" target="_blank" rel="noopener noreferrer" className="font-bold text-[#1d3a8f] hover:underline">Change ID</a></div>}
             <Row label="Show my Google rating publicly" hint="Display your live Google star rating on your Browse page and blend it into your overall score.">
               <Toggle on={rv.showGoogleRating ?? true} onChange={(v) => set("reviews", { ...rv, showGoogleRating: v })} labels={["On", "Off"]} />
             </Row>
