@@ -3072,7 +3072,9 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
         )}
       </div>
       <div className="p-4">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
+        {/* Single column: pass picker/dates, then the basket below. A 2-col grid
+            here overlaps when the widget sits in a narrow sidebar. */}
+        <div className="flex flex-col gap-4">
         <div className="min-w-0">
         {b.passes.length === 0 ? <div className="text-[13px] text-[#8f9bb0]">Pick a block in Tickets &amp; pricing to enable booking.</div> : (
           <>
@@ -3171,7 +3173,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
           </>
         )}
         </div>
-        <div className="mt-5 border-t pt-4 lg:mt-0 lg:self-start lg:border-t-0 lg:border-l lg:pl-5 lg:pt-0" style={{ borderColor: LINEs }}>
+        <div className="mt-1 border-t pt-4" style={{ borderColor: LINEs }}>
           <div className="mb-2 flex items-center justify-between"><span className="text-[13px] font-black italic uppercase text-white">Your basket</span><span className="px-2 py-[2px] text-[10px] font-black" style={{ background: CELL, color: LIME }}>{b.basket.length}</span></div>
           {b.basket.length === 0 ? <div className="text-[12.5px] text-[#6a7488]">Nothing added yet — pick a pass and dates.</div> :
             <div className="flex flex-col gap-1.5">{b.basket.map((x) => <div key={x.id} className="flex items-start justify-between gap-2 text-[12px] text-[#c3ccdb]"><span className="min-w-0"><b className="block text-white">{x.name}</b><span className="block text-[11px] leading-snug" style={{ color: MUTs }}>{b.datesPretty(x.dates)}</span>{x.timing ? <span className="block text-[11px] font-bold" style={{ color: LIME }}>🕘 {x.timing}</span> : null}</span><span className="flex items-baseline gap-2"><b className="text-white">{money(x.price)}</b><button type="button" onClick={() => b.removeItem(x.id)} className="text-[#5c6678] hover:text-[#ff5d5d]">✕</button></span></div>)}</div>}
