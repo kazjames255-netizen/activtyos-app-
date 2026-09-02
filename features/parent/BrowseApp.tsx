@@ -514,10 +514,16 @@ export function BrowseApp() {
                 <div className="absolute inset-x-0 bottom-0 px-3.5 py-2.5 text-left" style={{ background: "rgba(23,35,90,.62)" }}>
                   <div className="truncate text-[15px] font-extrabold text-white">{l.title || l.name}</div>
                   <div className="truncate text-[11.5px] text-[#cdddf7]">{l.tenantName} · {t("parent.fromWord")} {money(from)} <span className="opacity-90">/ {priceBasis(l)}</span></div>
+                  {(agesLabel(l) || dateRange(l)) && (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {agesLabel(l) && <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm">🎂 {agesLabel(l)}</span>}
+                      {dateRange(l) && <span className="inline-flex items-center gap-1 rounded-full bg-[#c9f24a] px-2.5 py-1 text-[12px] font-extrabold text-[#2a3400] shadow-sm">📅 {dateRange(l)}</span>}
+                    </div>
+                  )}
                 </div>
               </button>
               <div className="p-4">
-                {(l.location || agesLabel(l) || dateRange(l) || dist != null) && (
+                {(l.location || dist != null) && (
                   <div className="flex flex-col gap-1.5 text-[12px] text-[var(--ink-2)]">
                     {l.location && (
                       <div className="flex min-w-0 items-center gap-1.5">
@@ -525,11 +531,11 @@ export function BrowseApp() {
                         <span className="truncate"><span className="font-semibold text-[var(--ink)]">{l.location}</span>{l.address ? <span className="text-[var(--ink-3)]"> · {l.address}</span> : null}</span>
                       </div>
                     )}
-                    <div className="flex flex-wrap gap-x-4 gap-y-1">
-                      {dist != null && <span className="flex items-center gap-1.5 font-semibold text-[#1d3a8f]"><span aria-hidden>🧭</span>{dist < 10 ? dist.toFixed(1) : Math.round(dist)} {t("parent.miAway")}</span>}
-                      {agesLabel(l) && <span className="flex items-center gap-1.5"><span aria-hidden>🎂</span>{agesLabel(l)}</span>}
-                      {dateRange(l) && <span className="flex items-center gap-1.5"><span aria-hidden>📅</span>{dateRange(l)}</span>}
-                    </div>
+                    {dist != null && (
+                      <div className="flex flex-wrap gap-x-4 gap-y-1">
+                        <span className="flex items-center gap-1.5 font-semibold text-[#1d3a8f]"><span aria-hidden>🧭</span>{dist < 10 ? dist.toFixed(1) : Math.round(dist)} {t("parent.miAway")}</span>
+                      </div>
+                    )}
                   </div>
                 )}
                 {/* Best offer only (+N more, expandable) so every card is the same
