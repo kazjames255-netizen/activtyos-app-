@@ -210,9 +210,12 @@ export function StaffDashApp() {
     </div>
   );
 
-  // Only the last 24 hours (by date), unread, newest/most-important first, one at a time.
-  const sinceIso = addDaysIso(today, -1);
-  const recentUnread = [...announcements]
+  // Retention + on/off come from Setup → Announcements. Show unread notices from
+  // the last N days, newest/most-important first, one at a time.
+  const annCfg = settings.announcements;
+  const annEnabled = annCfg?.enabled ?? true;
+  const sinceIso = addDaysIso(today, -Math.max(1, annCfg?.dashboardDays ?? 1));
+  const recentUnread = !annEnabled ? [] : [...announcements]
     .filter((a) => a.date >= sinceIso && !annRead.includes(a.id))
     .sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (Number(!!b.important) - Number(!!a.important)) || b.date.localeCompare(a.date));
   const curAnn = recentUnread[0] ?? null;

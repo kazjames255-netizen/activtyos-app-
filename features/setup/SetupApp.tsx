@@ -83,7 +83,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 //    a page of forty toggles is a page of forty chances to lose work.
 // ─────────────────────────────────────────────────────────────────────────
 
-type Tab = "features" | "company" | "branding" | "people" | "staff" | "roles" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
+type Tab = "features" | "company" | "branding" | "people" | "staff" | "announcements" | "roles" | "learning" | "meals" | "medication" | "safeguarding" | "registers" | "trips" | "calendar" | "inventory" | "groups" | "cancel" | "defaults" | "bookings" | "seasons" | "vouchers" | "marketplace" | "refer" | "memberships" | "notifications" | "money";
 
 // A self-contained toggle for the "email me on a new message" preference. It
 // lives on the tenant doc (via /api/messages/settings), not the library-settings
@@ -1280,7 +1280,7 @@ export function SetupApp() {
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const initialTab = useSearchParams().get("tab");
-  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "roles", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
+  const VALID_TABS: Tab[] = ["features", "company", "branding", "people", "staff", "announcements", "roles", "learning", "meals", "medication", "safeguarding", "registers", "trips", "calendar", "inventory", "groups", "cancel", "defaults", "bookings", "seasons", "vouchers", "marketplace", "refer", "memberships", "notifications", "money"];
   const [tab, setTab] = useState<Tab>(() => (initialTab && (VALID_TABS as string[]).includes(initialTab) ? (initialTab as Tab) : "features"));
   const [listings, setListings] = useState<{ id: string; title: string }[]>([]);
   const [savedAt, setSavedAt] = useState<string | null>(null);
@@ -1332,6 +1332,7 @@ export function SetupApp() {
     ["branding", "Branding"],
     ["people", "Child questions"],
     ["staff", "Staff & workforce"],
+    ["announcements", "Announcements"],
     ...(portal === "company" ? [["roles", "Roles & permissions"] as [Tab, string]] : []),
     ["learning", "Learning"],
     ["meals", "Meals"],
@@ -1442,6 +1443,29 @@ export function SetupApp() {
             <Input type="number" min={1} value={settings.staff?.defaultRatioTarget ?? 8} onChange={(e) => set("staff", { ...settings.staff, defaultRatioTarget: Number(e.target.value) || 1 })} className="w-24" />
           </Row>
           <div className="mt-3"><FieldLabel>Note added to staff invite emails</FieldLabel><Input value={settings.staff?.inviteMessage ?? ""} placeholder="Looking forward to having you on the team!" onChange={(e) => set("staff", { ...settings.staff, inviteMessage: e.target.value })} className="w-full" /></div>
+        </Section>
+      )}
+
+      {tab === "announcements" && (
+        <Section title="Announcements" lede="The internal staff notice board and the dashboard alert card. Delivery (in-app bell / push) and the read-acknowledgement audit are handled by the backend (handed over).">
+          <Row label="Staff announcement board" hint="Turn the notice board and the staff-dashboard alert card on or off for your whole team.">
+            <Toggle on={settings.announcements?.enabled ?? true} onChange={(v) => set("announcements", { ...settings.announcements, enabled: v })} labels={["On", "Off"]} />
+          </Row>
+          <Row label="Let site leads post" hint="On: managers & leads can post to their team. Off: only head office can post.">
+            <Toggle on={settings.announcements?.leadsCanPost ?? true} onChange={(v) => set("announcements", { ...settings.announcements, leadsCanPost: v })} labels={["Leads too", "HO only"]} />
+          </Row>
+          <Row label="Require staff to acknowledge" hint="Staff must confirm they’ve read each notice — you get a read / acknowledged audit." note="Audit: backend">
+            <Toggle on={settings.announcements?.requireAck ?? false} onChange={(v) => set("announcements", { ...settings.announcements, requireAck: v })} labels={["Yes", "No"]} />
+          </Row>
+          <Row label="Keep on the dashboard for" hint="How long a new notice keeps showing on the staff dashboard alert card.">
+            <div className="flex items-center gap-2"><Input type="number" min={1} max={14} value={settings.announcements?.dashboardDays ?? 1} onChange={(e) => set("announcements", { ...settings.announcements, dashboardDays: Math.min(14, Math.max(1, Number(e.target.value) || 1)) })} className="w-20" /><span className="text-[12.5px] text-[var(--ink-3)]">day(s)</span></div>
+          </Row>
+          <Row label="Default audience" hint="What “Who gets it” starts on when you compose a new notice.">
+            <Toggle on={(settings.announcements?.defaultAudience ?? "all") === "all"} onChange={(v) => set("announcements", { ...settings.announcements, defaultAudience: v ? "all" : "listing" })} labels={["All staff", "Per listing"]} />
+          </Row>
+          <Row label="Start new notices as Important" hint="New notices begin with the red Important flag ticked — you can still turn it off per notice.">
+            <Toggle on={settings.announcements?.defaultImportant ?? false} onChange={(v) => set("announcements", { ...settings.announcements, defaultImportant: v })} labels={["Yes", "No"]} />
+          </Row>
         </Section>
       )}
 

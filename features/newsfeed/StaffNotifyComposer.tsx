@@ -6,12 +6,18 @@
 // in production, their bell). Demo-wired to the shared announcements store; real
 // per-site delivery + push is Amir's.
 import { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui";
+import { useSettings } from "@/lib/settings";
 import { addAnnouncement, loadAnnouncements, type Announcement } from "@/features/staff/announcements";
 
 const BLUE = "#1d3a8f";
 
 export function StaffNotifyComposer({ listings, authorName }: { listings: { id: string; title: string }[]; authorName?: string }) {
+  const { settings } = useSettings();
+  const annCfg = settings.announcements;
+  const portal = usePathname()?.split("/")[1] || "freelancer";
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [scope, setScope] = useState("all"); // "all" | listing title
@@ -21,6 +27,11 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
   const [flash, setFlash] = useState<string | null>(null);
 
   useEffect(() => { setSent(loadAnnouncements()); }, []);
+  // Apply the composer defaults from Setup → Announcements on load.
+  useEffect(() => {
+    if (annCfg?.defaultImportant) setImportant(true);
+    if (annCfg?.defaultAudience === "listing" && listings[0]) setScope(listings[0].title);
+  }, [annCfg?.defaultImportant, annCfg?.defaultAudience, listings]);
 
   const audienceLabel = scope === "all" ? "All staff" : `Staff at ${scope}`;
   const canSend = title.trim().length > 1 && body.trim().length > 1;
@@ -41,11 +52,12 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
       {/* Composer */}
       <div className="rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-4 shadow-sm">
         <div className="mb-3 flex items-center gap-2">
-          <span className="grid h-8 w-8 place-items-center rounded-lg text-[16px] text-white" style={{ background: BLUE }}>🧑‍🏫</span>
-          <div>
+          <span className="grid h-8 w-8 flex-none place-items-center rounded-lg text-[16px] text-white" style={{ background: BLUE }}>🧑‍🏫</span>
+          <div className="min-w-0">
             <div className="text-[14px] font-extrabold text-[var(--ink)]">Notify your staff</div>
             <div className="text-[11.5px] text-[var(--ink-3)]">Goes to their Announcements board and in-app bell — not to families.</div>
           </div>
+          <Link href={`/${portal}/setup?tab=announcements`} title="Announcement settings" className="ml-auto flex flex-none items-center gap-1 rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:border-[#c9d6f5] hover:text-[#1d3a8f]">⚙ Settings</Link>
         </div>
 
         <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Who gets it</label>

@@ -662,6 +662,18 @@ export interface TenantSettings {
     inviteMessage?: string;       // a note added to staff invite emails
   };
 
+  /** Staff announcements — the internal notice board (distinct from the parent
+   *  newsfeed). Front-end preferences; server-side delivery (bell/push), site/role
+   *  scoping and acknowledgement audit are backend — see docs/settings-areas-handoff.md. */
+  announcements?: {
+    enabled?: boolean;            // the staff announcement board + dashboard card are on
+    leadsCanPost?: boolean;       // site leads/managers can post (not just head office)
+    requireAck?: boolean;         // staff must confirm they've read (acknowledgement audit)
+    dashboardDays?: number;       // how many days a notice stays on the dashboard card (1–14)
+    defaultAudience?: "all" | "listing"; // default "Who gets it" in the composer
+    defaultImportant?: boolean;   // new notices start flagged Important
+  };
+
   /** Learning & development. */
   learning?: {
     trackTraining?: boolean;      // keep staff training / certificate records
@@ -1135,6 +1147,7 @@ export const DEFAULT_SETTINGS: TenantSettings = {
   autoEmails: { bookings: true, payments: true, paymentDue: true, paymentDueTiming: 24, sessionReminder: true, sessionTiming: 48, waitlist: true, dayOf: true, lateCollection: true, announcements: false, reviewRequests: true },
   brandColor: "#2f6bd8",
   staff: { assignByLeads: false, requireDBS: true, requireCompliance: true, defaultRatioTarget: 8, inviteMessage: "" },
+  announcements: { enabled: true, leadsCanPost: true, requireAck: false, dashboardDays: 1, defaultAudience: "all", defaultImportant: false },
   learning: { trackTraining: true, observations: false, framework: "EYFS", passMark: 80, renewMonths: 12, autoCert: true, certLogo: true, requirePolicyConfirm: true, selfEnrol: false, certTemplate: "gold", certSignatory: "", certSignatoryRole: "Training Manager", certShowScore: true, certShowQr: true },
   meals: { ordering: true, showAllergens: true, orderCutoffHours: 18, menuNote: "", allergenNote: "", menuShare: "booked", cutoffWhen: "off", cutoffTime: "08:00", changeApproval: "auto" },
   medication: { informParentGiven: true, informParentMissed: true, notifyParentNote: true, notifyParentAuthorise: true, remindWhenDue: true, requireWitness: false, leadsOnly: false },
@@ -1245,6 +1258,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     emailPrefs: { ...DEFAULT_SETTINGS.emailPrefs, ...(s.emailPrefs ?? {}) },
     social: { ...DEFAULT_SETTINGS.social, ...(s.social ?? {}) },
     staff: { ...DEFAULT_SETTINGS.staff, ...(s.staff ?? {}) },
+    announcements: { ...DEFAULT_SETTINGS.announcements, ...(s.announcements ?? {}) },
     learning: { ...DEFAULT_SETTINGS.learning, ...(s.learning ?? {}) },
     meals: { ...DEFAULT_SETTINGS.meals, ...(s.meals ?? {}) },
     medication: { ...DEFAULT_SETTINGS.medication, ...(s.medication ?? {}) },

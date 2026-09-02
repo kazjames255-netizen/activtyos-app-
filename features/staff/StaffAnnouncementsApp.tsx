@@ -8,6 +8,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { useSettings } from "@/lib/settings";
 import { addAnnouncement, loadAnnouncements, loadRead, saveRead, type Announcement } from "./announcements";
 
 // Demo identity (per-user identity is Amir's) — a Lead, so the composer shows.
@@ -16,6 +17,8 @@ const ME_ROLE = "Camp Lead";
 const isLeadish = /lead|manager|owner/i.test(ME_ROLE);
 
 export function StaffAnnouncementsApp() {
+  const { settings } = useSettings();
+  const canPost = isLeadish && (settings.announcements?.leadsCanPost ?? true);
   const [posts, setPosts] = useState<Announcement[]>([]);
   const [read, setRead] = useState<string[]>([]);
   const [composing, setComposing] = useState(false);
@@ -47,7 +50,7 @@ export function StaffAnnouncementsApp() {
       <PageHero title="Announcements" icon="📣" lede="Notices from head office and your manager. Keep an eye here for the things you need to know." actions={unread > 0 ? <button type="button" onClick={markAll} className="rounded-full bg-white/20 px-3 py-1.5 text-[12.5px] font-bold text-white">Mark all read</button> : undefined} />
 
       {/* Lead / manager composer */}
-      {isLeadish && (
+      {canPost && (
         <Card className="mb-3 p-4">
           {!composing ? (
             <div className="flex items-center justify-between gap-3">
