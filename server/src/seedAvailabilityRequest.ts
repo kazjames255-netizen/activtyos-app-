@@ -53,6 +53,7 @@ async function main() {
       status: "pending",
       createdAt: new Date().toISOString(),
       createdBy: "kazjames80@gmail.co.uk",
+      createdByName: "SPORTS DIRECT COMPANY",
     },
     { merge: true },
   );

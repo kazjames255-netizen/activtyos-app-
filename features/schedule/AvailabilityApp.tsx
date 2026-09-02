@@ -18,11 +18,14 @@ const LOCK_HOURS = 24;
 
 interface Camp { listingName: string; location?: string; open: string; close: string; weeks: number; startDate: string; assignedDates?: string[] }
 interface ReqWindow { kind: "week" | "range" | "ongoing" | "camp"; label: string; from?: string; to?: string }
-interface AvailRequest { id: string; window: ReqWindow; camp?: Camp | null; note?: string; status: "pending" | "submitted"; createdAt: string; createdBy?: string | null; submittedAt?: string }
+interface AvailRequest { id: string; window: ReqWindow; camp?: Camp | null; note?: string; status: "pending" | "submitted"; createdAt: string; createdBy?: string | null; createdByName?: string | null; submittedAt?: string }
 interface DayAvail { on: boolean; from: string; to: string }
 interface Pattern { days?: Record<string, DayAvail>; grid?: Record<string, DayAvail>; note?: string; submittedAt?: string }
 
 const fmtDay = (iso?: string) => (iso ? new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" }) : "");
+// Full date + time for "submitted / last edited" stamps.
+const fmtStamp = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const requesterOf = (r: { createdByName?: string | null; createdBy?: string | null }) => r.createdByName || r.createdBy || "your manager";
 const dNum = (iso: string) => new Date(`${iso}T00:00:00`).getDate();
 const dMon = (iso: string) => new Date(`${iso}T00:00:00`).toLocaleDateString("en-GB", { month: "short" });
 const wdOf = (iso: string) => new Date(`${iso}T00:00:00`).getDay(); // 0 Sun … 6 Sat
@@ -142,9 +145,9 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
           </div>
           <div className="ml-auto flex flex-col items-end gap-1">
             {req.status === "submitted"
-              ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]">✓ Submitted{req.submittedAt ? ` ${fmtDay(req.submittedAt.slice(0, 10))}` : ""}</span>
+              ? <span className="rounded-full bg-[#e7f5ec] px-2.5 py-0.5 text-[11px] font-extrabold text-[#0f7a43]" title={req.submittedAt ? `Last edited ${fmtStamp(req.submittedAt)}` : undefined}>✓ Submitted{req.submittedAt ? ` · ${fmtStamp(req.submittedAt)}` : ""}</span>
               : <span className="rounded-full bg-[#fdf6e3] px-2.5 py-0.5 text-[11px] font-extrabold text-[#8a5a09]">Awaiting your reply</span>}
-            {req.createdBy && <span className="text-[11px] text-[var(--ink-3)]">Requested by {req.createdBy}</span>}
+            <span className="text-[11px] text-[var(--ink-3)]">Requested by {requesterOf(req)}</span>
           </div>
         </div>
         <div className="grid grid-cols-2 gap-2.5 p-3 sm:grid-cols-4">
@@ -298,7 +301,7 @@ function CampAvailability({ req, initialGrid, onSubmitted }: { req: AvailRequest
         {saved ? <span className="text-[12.5px] font-bold text-[#0f7a43]">✓ Sent — your manager can see it now</span>
           : <span className="text-[12.5px] text-[var(--ink-3)]"><b className="text-[var(--ink)]">{selected.length}</b> day{selected.length === 1 ? "" : "s"} · <b className="text-[var(--ink)]">{hLabel(totalH)}</b> across the camp</span>}
         {!selected.length && <span className="text-[12px] text-[var(--ink-3)]">Choose at least one day — try a quick-fill above.</span>}
-        {req.status === "submitted" && <span className="ml-auto text-[11.5px] font-semibold text-[#0f7a43]">Already submitted — you can update &amp; resend.</span>}
+        {req.status === "submitted" && req.submittedAt && <span className="ml-auto text-[11.5px] font-semibold text-[#0f7a43]">Last submitted {fmtStamp(req.submittedAt)} — edit &amp; resend any time.</span>}
       </div>
     </div>
   );
@@ -318,19 +321,19 @@ function StandingWeekly({ pendingReq, lastReq, pattern, onSubmitted }: { request
     persist({ ...a, submittedAt: new Date().toISOString() }); setSaved(true); setTimeout(() => setSaved(false), 2500);
     void api("/api/availability/mine", { method: "PUT", body: JSON.stringify({ days: a.days, note: a.note }) }).then(() => onSubmitted()).catch(() => {});
   };
-  const submittedLabel = a.submittedAt ? `Submitted ${new Date(a.submittedAt).toLocaleDateString("en-GB", { day: "numeric", month: "short" })}` : "Not submitted yet";
+  const submittedLabel = a.submittedAt ? `Submitted ${fmtStamp(a.submittedAt)}` : "Not submitted yet";
 
   return (
     <>
       {pendingReq ? (
         <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] p-3.5 text-[12.5px] leading-relaxed text-[#7a5a12]">
           <span className="mt-px flex-none text-[16px] leading-none">📩</span>
-          <div><b>Your manager has asked for your availability</b> for <b>{pendingReq.window.label}</b>. Set the days &amp; times you can work below, then <b>Submit to manager</b>.{pendingReq.createdBy ? ` Requested by ${pendingReq.createdBy}.` : ""}</div>
+          <div><b>Your manager has asked for your availability</b> for <b>{pendingReq.window.label}</b>. Set the days &amp; times you can work below, then <b>Submit to manager</b>. Requested by {requesterOf(pendingReq)}.</div>
         </div>
       ) : lastReq && lastReq.status === "submitted" ? (
         <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#bfe6cf] bg-[#f2fbf5] p-3.5 text-[12.5px] leading-relaxed text-[#0f7a43]">
           <span className="mt-px flex-none text-[16px] leading-none">✅</span>
-          <div><b>Availability submitted</b> for {lastReq.window.label}. You can update it any time — your manager will see the latest.</div>
+          <div><b>Availability submitted</b> for {lastReq.window.label}{lastReq.submittedAt ? ` · ${fmtStamp(lastReq.submittedAt)}` : ""}. You can update it any time — your manager will see the latest.</div>
         </div>
       ) : (
         <div className="mb-3 flex items-start gap-2.5 rounded-xl border border-[#cde0f7] bg-[#eef5ff] p-3.5 text-[12.5px] leading-relaxed text-[#1d3a8f]">

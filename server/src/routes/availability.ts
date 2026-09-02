@@ -53,6 +53,7 @@ availability.post("/requests", async (req, res) => {
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const p = createSchema.safeParse(req.body);
   if (!p.success) { res.status(400).json({ error: p.error.issues }); return; }
+  const tenantName = (await db.collection("tenants").doc(auth.tenantId).get()).data()?.name as string | undefined;
   const doc = {
     tenantId: auth.tenantId,
     staffEmail: lc(p.data.staffEmail),
@@ -63,6 +64,8 @@ availability.post("/requests", async (req, res) => {
     status: "pending" as const,
     createdAt: new Date().toISOString(),
     createdBy: req.user?.email ?? null,
+    // Show a name, not an email — the manager's name, else the provider's name.
+    createdByName: req.user?.name ?? tenantName ?? null,
   };
   const ref = await reqs.add(doc);
   // In-app bell for that staff member only — a nudge to complete their availability.
