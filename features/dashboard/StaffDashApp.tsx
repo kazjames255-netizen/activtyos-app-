@@ -249,7 +249,7 @@ export function StaffDashApp() {
         <div className="mb-3 overflow-hidden rounded-2xl border border-[#e3ebff] bg-gradient-to-br from-[#f4f8ff] to-white shadow-[0_1px_3px_rgba(20,30,60,.06)]">
           <div className="flex items-center gap-2 px-4 pt-3.5">
             <span className="grid h-8 w-8 flex-none place-items-center rounded-xl bg-[#1d3a8f] text-[15px]">📣</span>
-            <div className="text-[13px] font-black tracking-tight text-[var(--ink)]">Staff announcement</div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">Staff announcement</div>
             {recentUnread.length > 1 && <span className="rounded-full bg-[#e21d27] px-2 py-0.5 text-[10px] font-black text-white">{recentUnread.length} new</span>}
             <Link href="/staff/announcements" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">View all ›</Link>
           </div>
@@ -259,8 +259,8 @@ export function StaffDashApp() {
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-1.5">
                   {curAnn.pinned && <span className="flex-none text-[10px]">📌</span>}
-                  <span className="text-[14px] font-black text-[var(--ink)]">{curAnn.title}</span>
-                  {curAnn.important && <span className="flex-none rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-[#c0362c]">Important</span>}
+                  <span className="text-[15px] font-bold tracking-[-0.01em] text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>{curAnn.title}</span>
+                  {curAnn.important && <span className="flex-none rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide text-[#c0362c]">Important</span>}
                 </div>
                 <div className={"mt-1 text-[12.5px] leading-relaxed text-[var(--ink-2)] " + (annOpen ? "" : "line-clamp-1")}>{curAnn.body}</div>
                 <div className="mt-1.5 text-[10.5px] font-semibold text-[var(--ink-3)]">{curAnn.author}{curAnn.role ? ` · ${curAnn.role}` : ""} · {annDate(curAnn.date)}</div>
