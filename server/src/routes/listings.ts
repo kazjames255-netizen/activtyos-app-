@@ -315,22 +315,17 @@ listings.get("/", async (req, res) => {
     payMethodsByTenant.set(tenantIds[i], settings.payMethods ?? []);
   });
 
-  // Auto-applied discounts (siblings / multi-day) are the ones safe to advertise
-  // on a card — they need no code. Batch per tenant, then match to each listing.
-  type AutoD = { kind?: string; from?: number; mode?: string; value?: number; listingIds?: string[] | null; active?: boolean };
-  const autoSnaps = await Promise.all(tenantIds.map((id) => db.collection("autoDiscounts").where("tenantId", "==", id).get()));
-  const autoByTenant = new Map<string, AutoD[]>();
-  autoSnaps.forEach((snap, i) => autoByTenant.set(tenantIds[i], snap.docs.map((d) => d.data() as AutoD)));
-  const offerLabel = (a: AutoD): { label: string; percent?: number } => {
-    const pct = a.mode === "pct";
-    const amt = `£${a.value}`;
-    if (a.kind === "person") return { label: pct ? `Siblings ${a.value}% off` : `${amt} off per sibling`, percent: pct ? a.value : undefined };
-    return { label: pct ? `${a.value}% off ${a.from}+ days` : `${amt} off ${a.from}+ days`, percent: pct ? a.value : undefined };
+  // Advertisable discounts live on the listing itself (`discounts` = the rules the
+  // provider set in the Discounts step — siblings, multi-day, early bird). These
+  // apply automatically, so they're safe to show. We do NOT advertise discount
+  // CODES (entered at checkout; some are personal/referral codes).
+  type Rule = { name?: string; method?: string; value?: number; moreThan?: number; kind?: string; enabled?: boolean; beforeDate?: string };
+  const ruleOffer = (r: Rule): { label: string; percent?: number } => {
+    const pct = r.method === "percent";
+    const amt = r.method === "subtract" ? `£${r.value} off` : pct ? `${r.value}% off` : `£${r.value} each`;
+    const label = r.name && r.name.trim() ? r.name.trim() : amt;
+    return { label, percent: pct ? r.value : undefined };
   };
-
-  // NOTE: we deliberately do NOT advertise discount CODES on the card — codes are
-  // entered at checkout, some are personal/referral codes, and dumping them here
-  // leaks them + clutters. Only auto-discounts (above) are shown.
 
   // A listing only reaches the marketplace while it still has a run that hasn't
   // finished. Past-only listings (every block ended) have nothing to book, so
@@ -357,10 +352,10 @@ listings.get("/", async (req, res) => {
       // rather than showing a blank card.
       const title = ((l.title as string) ?? (l.name as string) ?? "").trim();
       const season = l.seasonId ? (seasonNames.get(l.tenantId as string)?.get(l.seasonId as string) ?? null) : null;
-      // Advertisable auto-discounts (siblings / multi-day) for this listing, best
-      // % first so the top chip always matches the "SAVE %" ribbon.
-      const autos = (autoByTenant.get(l.tenantId as string) ?? []).filter((a) => a.active !== false && (!a.listingIds || a.listingIds.length === 0 || a.listingIds.includes(l.id as string)));
-      const offers = autos.map(offerLabel).sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0));
+      // Advertisable discounts on this listing, best % first so the top chip
+      // always matches the "SAVE %" ribbon.
+      const rules = ((l.discounts as Rule[] | undefined) ?? []).filter((r) => r.enabled !== false);
+      const offers = rules.map(ruleOffer).sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0));
       const bestOfferPercent = offers.reduce((m, o) => (o.percent && o.percent > m ? o.percent : m), 0) || null;
       const pm = payMethodsByTenant.get(l.tenantId as string) ?? [];
       const acceptsTFC = pm.includes("Tax-Free Childcare");
