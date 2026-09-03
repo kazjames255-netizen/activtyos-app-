@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseChildIds } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { notify, parentEmailForChild } from "../lib/notify";
 
@@ -177,7 +178,14 @@ incidents.get("/", async (req, res) => {
   if (isKind(req.query.kind)) q = q.where("kind", "==", req.query.kind);
   if (typeof req.query.childId === "string") q = q.where("childId", "==", req.query.childId);
   const snap = await q.get();
-  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; time?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; time?: string; childId?: string })[];
+  // A franchise sees safeguarding records only for ITS OWN children (any child
+  // booked on its listings) — showing every record for those children whoever
+  // logged it. Head office sees the whole tenant.
+  if (req.auth!.role === "franchise" && req.auth!.franchiseId) {
+    const kids = await franchiseChildIds(tenantId, req.auth!.franchiseId);
+    list = list.filter((x) => typeof x.childId === "string" && kids.has(x.childId));
+  }
   const from = typeof req.query.from === "string" ? req.query.from : null;
   const to = typeof req.query.to === "string" ? req.query.to : null;
   if (from) list = list.filter((x) => String(x.date) >= from);

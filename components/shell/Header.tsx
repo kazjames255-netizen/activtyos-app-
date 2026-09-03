@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { findNavItem, type PortalKey } from "@/lib/nav/config";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import { useUnreadMessages } from "@/lib/use-unread";
 import { useBookingFlags } from "@/lib/use-booking-flags";
 import { useCustomerArea, useOperatorFeatures, featureOff } from "@/lib/use-customer-area";
@@ -13,6 +14,8 @@ import { Button } from "@/components/ui";
 import { PortalSwitcher } from "./PortalSwitcher";
 import { Bell } from "./Bell";
 import { PlatformBell } from "./PlatformBell";
+import { HoScopeSwitcher, useHoScope } from "@/components/franchise/HoScope";
+import { FranchiseScopeList } from "@/features/franchise/FranchiseScopeList";
 import { Sidebar } from "./Sidebar";
 import { ChildLookupModal } from "@/features/registers/ChildLookupModal";
 import { LanguageSelector } from "@/components/i18n/LanguageSelector";
@@ -44,6 +47,18 @@ export function Header({ portal }: { portal: PortalKey }) {
   // "Find a child" — operator-wide safeguarding lookup (opens the child card).
   const [lookupOpen, setLookupOpen] = useState(false);
   const canLookup = portal !== "custdash" && portal !== "platform";
+  // Head-office combined view: a "Families" quick-action that (like Find-a-child)
+  // picks a franchise first, then opens that franchise's Families list.
+  const [famOpen, setFamOpen] = useState(false);
+  // In the HO combined view Find-a-child + Families live in the SIDEBAR, but the
+  // modals are rendered here — the sidebar buttons open them via window events.
+  useEffect(() => {
+    const openLookup = () => setLookupOpen(true);
+    const openFam = () => setFamOpen(true);
+    window.addEventListener("aos:find-child", openLookup);
+    window.addEventListener("aos:ho-families", openFam);
+    return () => { window.removeEventListener("aos:find-child", openLookup); window.removeEventListener("aos:ho-families", openFam); };
+  }, []);
 
   // Parents message their provider from the top bar rather than a sidebar tab —
   // it's an action, not a place. Named after the provider when there's just one.
@@ -54,8 +69,19 @@ export function Header({ portal }: { portal: PortalKey }) {
   }, [portal]);
   // The signed-in person's name for the top bar (falls back to email).
   const [meName, setMeName] = useState("");
+  // Whether this account is a head office (has franchises). Combined with the
+  // HO scope, tells us we're in the "all franchises" oversight view.
+  const [hasFranchises, setHasFranchises] = useState(() => !!peekMe()?.hasFranchises);
+  const hoScope = useHoScope();
+  // The head-office COMBINED view (all franchises, scope === null) is a slim
+  // oversight bar — the Bookings/Families operational tabs make no sense there
+  // (no single combined list) so we drop them. But once the head office drills
+  // INTO a franchise or its own locations (scope set), it's running that
+  // operation, so the full company tabs (Bookings, Families) come back — just
+  // like a normal company. Non-HO operators always keep them.
+  const hoCombined = portal === "company" && hasFranchises && !hoScope;
   useEffect(() => {
-    apiGet<{ name?: string }>("/api/me").then((m) => setMeName(m?.name ?? "")).catch(() => {});
+    getMe().then((m) => { setMeName(m?.name ?? ""); setHasFranchises(!!m?.hasFranchises); }).catch(() => {});
     // Update instantly when the user edits their name in Account settings.
     const onMe = (e: Event) => {
       const n = (e as CustomEvent<{ name?: string }>).detail?.name;
@@ -101,13 +127,15 @@ export function Header({ portal }: { portal: PortalKey }) {
         ]
       : [
           // Bookings promoted to the top bar (like the customer's My bookings),
-          // out of the sidebar. Only where the portal has a bookings view.
-          ...(findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: t("header.bookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Bookings — nothing needs attention" }] : []),
+          // out of the sidebar. Only where the portal has a bookings view — and
+          // not in the head-office combined view (no single combined list).
+          ...(!hoCombined && findNavItem(portal, "bookings") ? [{ view: "bookings", href: `/${portal}/bookings`, label: t("header.bookings"), icon: CALENDAR, wide: false, badge: bookingFlags.count, accent: "#0ea5a5", accentLight: "#3fd0c9", tip: bookingFlags.tip || "Bookings — nothing needs attention" }] : []),
           // Staff get Announcements + Messages promoted to the top bar (out of the sidebar).
           ...(portal === "staff" && findNavItem(portal, "announcements") ? [{ view: "announcements", href: `/${portal}/announcements`, label: t("header.announcements"), icon: MEGAPHONE, wide: false, badge: 0, accent: "#c2410c", accentLight: "#f59e0b", tip: "Announcements from your provider" }] : []),
           ...(portal === "staff" && findNavItem(portal, "messages") ? [{ view: "messages", href: `/${portal}/messages`, label: t("header.messages"), icon: MAIL, wide: false, badge: unread, accent: "#2f6bd8", accentLight: "#5b9bff", tip: unread ? `${unread} unread message${unread === 1 ? "" : "s"}` : "Messages" }] : []),
           // Families promoted to the top bar — quick access to the family list.
-          ...(findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: t("header.families"), icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: "Families" }] : []),
+          // Hidden in the head-office combined view (families are per-franchise).
+          ...(!hoCombined && findNavItem(portal, "customers") ? [{ view: "customers", href: `/${portal}/customers`, label: t("header.families"), icon: PEOPLE, wide: false, badge: 0, accent: "#c026d3", accentLight: "#e879f9", tip: "Families" }] : []),
         ];
 
   // The green "Communication" top-bar tab: a dropdown gathering the comms
@@ -137,7 +165,11 @@ export function Header({ portal }: { portal: PortalKey }) {
         </div>
       )}
 
-      {tabs.length > 0 && (
+      {/* Head-office network picker sits on the top row (its own space on the
+          left), so the account controls stay up here alongside it. */}
+      <HoScopeSwitcher portal={portal} />
+
+      {(tabs.length > 0 || commItems.length > 0) && (
         <nav className="flex min-w-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
           {tabs.map((t) => {
             const active = view === t.view;
@@ -155,12 +187,14 @@ export function Header({ portal }: { portal: PortalKey }) {
                 key={t.view}
                 href={t.href}
                 title={t.tip || t.label}
-                className="relative inline-flex min-w-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold no-underline transition-all duration-150 hover:-translate-y-px hover:brightness-105"
+                // shrink-0 so a crowded bar never squeezes the pill to an
+                // unreadable icon+sliver — the label always shows from sm up.
+                className="relative inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold no-underline transition-all duration-150 hover:-translate-y-px hover:brightness-105"
                 style={t.fancy ? fancyStyle : colourStyle}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
                 {/* Icon-only on phones; the label returns from sm up. */}
-                <span className={`hidden truncate sm:inline ${t.wide ? "max-w-[180px]" : ""}`}>{t.label}</span>
+                <span className={`hidden whitespace-nowrap sm:inline ${t.wide ? "max-w-[180px] truncate" : ""}`}>{t.label}</span>
                 {t.badge > 0 && (
                   <span
                     className="ml-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none"
@@ -172,7 +206,9 @@ export function Header({ portal }: { portal: PortalKey }) {
               </Link>
             );
           })}
-          {commItems.length > 0 && (
+          {/* Head office runs comms centrally — they live in the sidebar as a
+              "Communication" group, so the top-bar dropdown is hidden for HO. */}
+          {!hoCombined && commItems.length > 0 && (
             <div className="relative" ref={commRef}>
               <button
                 type="button"
@@ -208,7 +244,9 @@ export function Header({ portal }: { portal: PortalKey }) {
         </nav>
       )}
 
-      {canLookup && (
+      {/* Find a child — top bar for normal operators. In the HO combined view it
+          (and Families) live in the sidebar instead; opened via a window event. */}
+      {canLookup && !hoCombined && (
         <button
           type="button"
           onClick={() => setLookupOpen(true)}
@@ -246,6 +284,27 @@ export function Header({ portal }: { portal: PortalKey }) {
         </button>
       </div>
       {lookupOpen && <ChildLookupModal onClose={() => setLookupOpen(false)} />}
+      {/* Families: pick a franchise → drill into it and open its Families list. */}
+      {famOpen && (
+        <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 p-4 pt-[6vh]" onClick={() => setFamOpen(false)}>
+          <div className="w-full max-w-[520px] overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <div className="op-hero flex items-center justify-between px-5 py-4 text-white" style={{ background: "var(--hero-grad)" }}>
+              <div className="text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>👪 {t("header.families")}</div>
+              <button type="button" onClick={() => setFamOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
+            </div>
+            <div className="p-4">
+              <div className="mb-2.5 text-[12.5px] font-bold text-[var(--ink-2)]">Choose a franchise to open its families:</div>
+              <FranchiseScopeList noun="families" hideAll onPick={(scope, label) => {
+                setFamOpen(false);
+                // Stay in the head-office view (don't change the global scope /
+                // portal) — just open that franchise's families as a replicated,
+                // scoped page inside HO via a ?franchiseId= param.
+                router.push(`/${portal}/customers?franchiseId=${encodeURIComponent(scope)}&fr=${encodeURIComponent(label)}`);
+              }} />
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 }

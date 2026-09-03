@@ -253,7 +253,12 @@ listings.get("/", async (req, res) => {
       return;
     }
     const snap = await col.where("tenantId", "==", auth.tenantId).get();
-    const list = await withBlocks(snap.docs.map((d) => ({ id: d.id, data: d.data() })));
+    // A franchise manages only its OWN listings; the head office sees all (with
+    // each listing's franchiseId so it can show an owner column / assign).
+    const docs = auth.role === "franchise"
+      ? snap.docs.filter((d) => (d.data() as { franchiseId?: string | null }).franchiseId === auth.franchiseId)
+      : snap.docs;
+    const list = await withBlocks(docs.map((d) => ({ id: d.id, data: d.data() })));
     list.sort((a, b) => ((a.name as string) < (b.name as string) ? -1 : 1));
     res.json(list);
     return;
@@ -526,6 +531,10 @@ listings.post("/", async (req, res) => {
     categoryNames: await categoryNamesFor(auth.tenantId, data.categoryIds),
     tenantId: auth.tenantId,
     tenantName: tenant.exists ? tenant.data()!.name : "Unknown provider",
+    // Franchise ownership: a listing created by a franchise belongs to that
+    // franchise, so every booking on it (whoever makes it) is attributed to
+    // them (split-fees, territory). HO/company/freelancer listings = null.
+    franchiseId: auth.role === "franchise" ? auth.franchiseId : null,
   };
   const ref = await col.add(doc);
   await syncListingBlocks(ref.id, auth.tenantId, runRecipeOf(doc));
@@ -539,6 +548,9 @@ async function ownListing(req: Request, id: string) {
   const snap = await col.doc(id).get();
   if (!snap.exists) return { status: 404 as const };
   if (snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  // A franchise may only edit/delete listings IT owns — never the head office's
+  // or a sibling franchise's.
+  if (auth.role === "franchise" && (snap.data()!.franchiseId ?? null) !== auth.franchiseId) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -564,6 +576,12 @@ listings.put("/:id", async (req, res) => {
     }
   }
   const patch: Record<string, unknown> = { ...data };
+  // Head office (company) / platform can ASSIGN or reassign a listing to a
+  // franchise (or back to "own" with null). A franchise can never change ownership.
+  if ((req.auth!.role === "company" || req.auth!.role === "platform") && "franchiseId" in (req.body as Record<string, unknown>)) {
+    const fid = (req.body as { franchiseId?: string | null }).franchiseId;
+    patch.franchiseId = typeof fid === "string" && fid.trim() ? fid.trim() : null;
+  }
   if (data.title ?? data.name) {
     patch.name = data.title ?? data.name;
     patch.title = data.title ?? data.name;

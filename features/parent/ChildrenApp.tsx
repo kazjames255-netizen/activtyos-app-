@@ -66,7 +66,7 @@ function Avatar({ child, size = 44, accent }: { child: Pick<Child, "name" | "pho
 }
 
 // A rotating set of friendly accents so a list of children isn't a wall of grey.
-const ACCENTS = ["#2f6bd8", "#0f9488", "#7a5af8", "#e0692a", "#d6336c", "#0ea5e9"];
+const ACCENTS = ["var(--brand-2)", "#0f9488", "#7a5af8", "#e0692a", "#d6336c", "#0ea5e9"];
 
 // A bigger, capped free-text box with a live character count.
 function Area({
@@ -361,7 +361,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                       }}
                       className="flex-1 rounded-lg border-2 px-3 py-2 text-[12.5px] font-bold transition-colors"
                       style={hasSend === val
-                        ? { borderColor: "var(--brand-2)", background: "var(--brand-soft,#eaf0fc)", color: "var(--brand-ink,#1d3a8f)" }
+                        ? { borderColor: "var(--brand-2)", background: "var(--brand-soft,#eaf0fc)", color: "var(--brand-ink,var(--brand))" }
                         : { borderColor: "var(--line)", color: "var(--ink-2)" }}
                     >
                       {lbl}
@@ -424,7 +424,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                   <b>{emergencyName}</b>{emergencyPhone ? ` · ${emergencyPhone}` : ""}
                   <span className="ml-1 text-[11px] text-[var(--ink-3)]">{t("parent.fromYourDetails")}</span>
                 </span>
-                <button type="button" onClick={() => setEditEmergency(true)} className="flex-none text-[11.5px] font-bold text-[var(--brand-ink,#1d3a8f)]">{t("parent.changeForThisChild")}</button>
+                <button type="button" onClick={() => setEditEmergency(true)} className="flex-none text-[11.5px] font-bold text-[var(--brand-ink,var(--brand))]">{t("parent.changeForThisChild")}</button>
               </div>
             ) : (
               <>
@@ -478,7 +478,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                     maxLength={CHILD_LIMITS.collectionPassword} inputMode={pinMode ? "numeric" : undefined}
                     placeholder={pinMode ? t("parent.pinPlaceholder") : t("parent.wordPlaceholder")} className="w-full" />
                   {pinPrefilled && (
-                    <div className="mt-1 text-[10.5px] font-semibold text-[var(--brand-ink,#1d3a8f)]">
+                    <div className="mt-1 text-[10.5px] font-semibold text-[var(--brand-ink,var(--brand))]">
                       ✓ Same {pinMode ? "PIN" : "word"} as your other children — change it if this one&rsquo;s different.
                     </div>
                   )}
@@ -527,7 +527,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
     >
       <div className="w-full max-w-[880px] overflow-hidden rounded-2xl bg-[var(--surface)] text-[var(--ink)] shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
         {/* Branded header + progress — matches the welcome onboarding card. */}
-        <div className="relative px-6 py-5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 70%,#5a93f0 100%)" }}>
+        <div className="relative px-6 py-5 text-white" style={{ background: "linear-gradient(120deg,var(--brand-strong) 0%,var(--brand-2) 70%,#5a93f0 100%)" }}>
           <button type="button" onClick={() => onDone(false)} aria-label={t("parent.close")}
             className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
           <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-white/70">
@@ -579,7 +579,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
               {editing && safeStep < last && (
                 <button type="button" onClick={() => save()} disabled={busy || !canSave}
                   className="rounded-full border-2 px-4 py-2 text-[13px] font-extrabold transition-colors disabled:cursor-not-allowed disabled:opacity-50"
-                  style={{ borderColor: "#2f6bd8", color: "#1d3a8f", background: "white" }}>
+                  style={{ borderColor: "var(--brand-2)", color: "var(--brand)", background: "white" }}>
                   {busy ? t("parent.saving") : t("parent.saveChangesCheck")}
                 </button>
               )}
@@ -589,7 +589,7 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
                 return (
                   <button type="button" onClick={() => (isLast ? save() : next())} disabled={disabled}
                     className="rounded-full px-5 py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:cursor-not-allowed disabled:opacity-50"
-                    style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}>
+                    style={{ background: "linear-gradient(180deg,#4f8bf5,var(--brand-2))", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}>
                     {isLast ? (busy ? t("parent.saving") : editing ? t("parent.saveChanges") : t("parent.saveChild")) : t("parent.nextArrow")}
                   </button>
                 );
@@ -756,7 +756,7 @@ export function ChildrenApp() {
                     {c.medical && <FlagChip icon="🩺" label={t("parent.medicalChip")} detail={c.medical} bg="rgba(239,68,68,.14)" fg="#c0392b" />}
                     {c.dietary && <FlagChip icon="🍽" label={t("parent.dietaryChip")} detail={c.dietary} bg="rgba(20,184,166,.14)" fg="#0f766e" />}
                     {c.send && <FlagChip icon="🧩" label={t("parent.sendChip")} detail={c.send} bg="rgba(122,90,248,.14)" fg="#6a4fd0" />}
-                    <Flag bg={c.photoConsent ? "rgba(21,179,100,.14)" : "rgba(120,126,142,.14)"} fg={c.photoConsent ? "#1d3a8f" : "var(--ink-3)"}>
+                    <Flag bg={c.photoConsent ? "rgba(21,179,100,.14)" : "rgba(120,126,142,.14)"} fg={c.photoConsent ? "var(--brand)" : "var(--ink-3)"}>
                       {c.photoConsent ? t("parent.photosOk") : t("parent.noPhotosFlag")}
                     </Flag>
                     {clean && <Flag bg="rgba(120,126,142,.1)" fg="var(--ink-3)">{t("parent.noFlags")}</Flag>}

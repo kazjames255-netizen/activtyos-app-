@@ -57,12 +57,39 @@ const postSchema = z.object({
   publishAt: z.string().trim().max(40).optional(),      // when status==="scheduled"
   folder: z.string().trim().max(80).optional(),         // library folder a newsletter is filed in
   ref: z.string().trim().max(120).optional(),           // operator-only "save as" name, for searching the library
+  // Franchise targeting (head office): null/absent = ALL parents across the
+  // network; a franchiseId = only that franchise's parents. A franchise's own
+  // posts are auto-scoped to itself server-side.
+  franchiseId: z.string().trim().max(60).nullable().optional(),
 });
 const partialSchema = postSchema.partial();
 
 async function tenantName(tenantId: string) {
   const t = await db.collection("tenants").doc(tenantId).get();
-  return (t.exists && (t.data()!.name as string)) || "Your activity provider";
+  const lib = await db.collection("libraries").doc(tenantId).get();
+  const biz = (lib.data()?.settings as { billing?: { businessName?: string } } | undefined)?.billing?.businessName;
+  return biz || (t.exists && (t.data()!.name as string)) || "Your activity provider";
+}
+
+// A franchise's head-office-granted display name (for attribution/target labels).
+async function franchiseNameOf(tenantId: string, franchiseId: string): Promise<string> {
+  const snap = await db.collection("users").where("tenantId", "==", tenantId).where("role", "==", "franchise").where("franchiseId", "==", franchiseId).limit(1).get();
+  const u = snap.docs[0]?.data() as { franchiseName?: string; name?: string } | undefined;
+  return u?.franchiseName || u?.name || "a franchise";
+}
+
+// The franchiseIds a parent belongs to (bookings stamped with franchiseId, else
+// resolved from the listing owner) — so they see franchise-targeted posts.
+async function parentFranchiseIds(email: string): Promise<Set<string>> {
+  const snap = await db.collection("bookings").where("email", "==", email).get();
+  const set = new Set<string>();
+  const listingIds = new Set<string>();
+  for (const d of snap.docs) { const b = d.data() as { franchiseId?: string; listingId?: string }; if (b.franchiseId) set.add(b.franchiseId); else if (b.listingId) listingIds.add(b.listingId); }
+  if (listingIds.size) {
+    const docs = await db.getAll(...[...listingIds].map((id) => db.collection("listings").doc(id)));
+    for (const l of docs) { const f = l.exists ? (l.data() as { franchiseId?: string }).franchiseId : undefined; if (f) set.add(f); }
+  }
+  return set;
 }
 
 // The distinct tenants a parent has any booking with — the providers whose
@@ -89,8 +116,12 @@ posts.get("/", async (req, res) => {
     const tenantIds = await parentTenantIds(email);
     if (!tenantIds.length) { res.json([]); return; }
     const snap = await col.where("tenantId", "in", tenantIds).get();
-    const list = (snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; pinned?: boolean; status?: string })[])
-      .filter((p) => (p.status ?? "published") === "published");
+    // A parent sees a post if it's network-wide (no franchiseId) OR targeted to
+    // a franchise they belong to.
+    const franSet = await parentFranchiseIds(email);
+    const list = (snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; pinned?: boolean; status?: string; franchiseId?: string | null })[])
+      .filter((p) => (p.status ?? "published") === "published")
+      .filter((p) => !p.franchiseId || franSet.has(p.franchiseId));
     list.sort(feedSort);
     res.json(list);
     return;
@@ -98,7 +129,13 @@ posts.get("/", async (req, res) => {
   const tenantId = auth.role === "platform" ? (typeof req.query.tenantId === "string" ? req.query.tenantId : null) : auth.tenantId;
   if (!tenantId) { res.status(403).json({ error: "Requires a tenant account" }); return; }
   const snap = await col.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; pinned?: boolean })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; pinned?: boolean; franchiseId?: string | null })[];
+  // A franchise (or a staff member scoped to a franchise) sees network posts
+  // from head office + its own franchise's posts; a head office / freelancer
+  // sees everything in the tenant.
+  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) {
+    list = list.filter((p) => !p.franchiseId || p.franchiseId === auth.franchiseId);
+  }
   list.sort(feedSort);
   res.json(list);
 });
@@ -109,15 +146,39 @@ posts.post("/", async (req, res) => {
   const parsed = postSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const d = parsed.data;
+  const brand = await tenantName(auth.tenantId);
+  // Who's posting + who it targets:
+  //  · a FRANCHISE posts only to its own parents, signed with its own name.
+  //  · a HEAD OFFICE (company) picks: all-network (franchiseId null) or one
+  //    franchise; either way it's signed "Head office".
+  //  · anyone else posts to their own families under their brand.
+  let targetFr: string | null = null;
+  let authorLabel = brand;
+  let authorScope: "network" | "franchise" | "own" = "own";
+  let targetName: string | null = null;
+  if (auth.role === "franchise" && auth.franchiseId) {
+    targetFr = auth.franchiseId;
+    authorLabel = await franchiseNameOf(auth.tenantId, auth.franchiseId);
+    authorScope = "franchise";
+  } else if (auth.role === "company") {
+    targetFr = d.franchiseId ?? null;
+    authorLabel = "Head office";
+    authorScope = targetFr ? "franchise" : "network";
+    if (targetFr) targetName = await franchiseNameOf(auth.tenantId, targetFr);
+  }
   const doc = {
     tpl: "announce", priority: "normal", pinned: false, ackRequired: false, react: true, status: "published", audience: "all", cta: null,
     ...d,
+    franchiseId: targetFr,                 // TARGET (null = all network)
+    authorLabel,                           // who sent it ("Head office" / franchise / brand)
+    authorScope,                           // network | franchise | own
+    targetName,                            // the franchise name when franchise-targeted
     // Events carry an RSVP tally; everything else doesn't.
     rsvp: d.tpl === "event" ? { yes: 0, no: 0, maybe: 0 } : null,
     seen: 0,
     reactions: 0,
     tenantId: auth.tenantId,
-    tenantName: await tenantName(auth.tenantId),
+    tenantName: brand,
     postedBy: req.user?.email ?? "unknown",
     postedByName: req.user?.name ?? req.user?.email ?? "Staff",
     createdAt: new Date().toISOString(),

@@ -594,6 +594,7 @@ my.post("/bookings", async (req, res) => {
   const listing = listingSnap.data() as {
     name: string;
     tenantId: string;
+    franchiseId?: string | null;
     tenantName?: string;
     passes: { name: string; price: number; days?: number }[];
     blockId?: string | null; // block bundle (timings live there)
@@ -682,17 +683,27 @@ my.post("/bookings", async (req, res) => {
   // childId (when the checkout sends one) is authoritative; name is the
   // fallback for typed-in children.
   const accountUid = familyUid; // parent = caller's uid, onBehalfOf = family's
-  const childById = new Map<string, { id: string; name: string; age?: number; dob?: string }>();
-  const childByName = new Map<string, { id: string; name: string; age?: number; dob?: string }>();
+  type ChildRec = { id: string; name: string; age?: number; dob?: string; answers?: Record<string, string> };
+  const childById = new Map<string, ChildRec>();
+  const childByName = new Map<string, ChildRec>();
   if (accountUid) {
     const kids = await childrenCol.where("parentUid", "==", accountUid).get();
     for (const d of kids.docs) {
-      const k = d.data() as { name: string; age?: number; dob?: string };
-      const rec = { id: d.id, name: k.name, age: k.age, dob: k.dob };
+      const k = d.data() as { name: string; age?: number; dob?: string; answers?: Record<string, string> };
+      const rec: ChildRec = { id: d.id, name: k.name, age: k.age, dob: k.dob, answers: k.answers };
       childById.set(d.id, rec);
       childByName.set((k.name ?? "").trim().toLowerCase(), rec);
     }
   }
+  // Provider "child questions" flagged hold-if-No (safeguarding — e.g. toilet
+  // training): a child whose stored answer to one of these is "No" has their
+  // place set to "Approval needed" even on an auto-confirm listing (see the
+  // status line below). Ids only; a lookup failure must never block a booking.
+  let reviewNoQ: string[] = [];
+  try {
+    const cq = ((await db.collection("libraries").doc(listing.tenantId).get()).data()?.childQuestions ?? []) as { id: string; reviewIfNo?: boolean; hidden?: boolean }[];
+    reviewNoQ = cq.filter((q) => !q.hidden && q.reviewIfNo).map((q) => q.id);
+  } catch { /* skip the hold rather than fail the booking */ }
   // The parent's per-child payment reference (voucher/TFC), keyed by name.
   const refByChild = new Map(input.items.filter((i) => i.paymentRef).map((i) => [i.child.trim().toLowerCase(), i.paymentRef!]));
   const resolveChild = (i: { child: string; childId?: string; age?: number }) => {
@@ -702,6 +713,7 @@ my.post("/bookings", async (req, res) => {
       childId: rec?.id,
       name: rec?.name ?? i.child,
       age: i.age ?? rec?.age ?? ageFromDob(rec?.dob) ?? 0,
+      answers: rec?.answers,
     };
   };
 
@@ -1172,6 +1184,10 @@ my.post("/bookings", async (req, res) => {
             ...(fromWallet ? { walletApplied: fromWallet } : {}),
             ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
             tenantId: listing.tenantId,
+            // Attribute the booking to whichever franchise OWNS the listing, so a
+            // parent booking on a franchise's listing shows in that franchise's
+            // Bookings/Calendar/Reconciliation — matching split-fees' attribution.
+            ...(listing.franchiseId ? { franchiseId: listing.franchiseId } : {}),
             // Stamped here because the whole app assumes it is: the operator
             // Bookings list drops any booking without one as soon as a season
             // filter is on, and the Email composer's listing audience matches
@@ -1194,7 +1210,7 @@ my.post("/bookings", async (req, res) => {
             // Out-of-range child on an allow-out-of-range listing → request a
             // place (Approval needed), overriding an otherwise auto-confirm. An
             // operator booking on-behalf is itself the approval, so it stands.
-            status: placed ? (!onBehalf && listing.allowOutOfRange && outOfRange(rc.age) ? "Approval needed" : placedStatus) : "Waitlisted",
+            status: placed ? (!onBehalf && ((listing.allowOutOfRange && outOfRange(rc.age)) || (reviewNoQ.length > 0 && !!rc.answers && reviewNoQ.some((qid) => (rc.answers![qid] ?? "").trim().toLowerCase() === "no"))) ? "Approval needed" : placedStatus) : "Waitlisted",
             // Judged on what's left to pay, not the method: a HAF/free £0 place
             // — or one fully covered by store credit — is Funded, never Unpaid.
             // A voucher booking waits on the scheme's money, not the parent — a

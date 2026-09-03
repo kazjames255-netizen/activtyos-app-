@@ -69,7 +69,8 @@ const empty = (): Store => ({ staff: [], shifts: [], sites: [] });
 // Ignore a `demo`-flagged rota — the clock feature seeds a minimal one (staff
 // without rate/role) under this key so its "scheduled shift" display has data;
 // that shape isn't a real schedule and would crash here. Fall back to empty().
-const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); return v && v.shifts && !v.demo ? v : empty(); } catch { return empty(); } };
+const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); if (!v || !v.shifts || v.demo) return empty(); // Stored staff may pre-date the `rate` field (or arrive partial) — normalise so downstream `st.rate.toFixed()`/pay maths never hit `undefined`.
+    return { ...v, staff: (v.staff ?? []).map((s: Staff) => ({ ...s, rate: typeof s.rate === "number" && isFinite(s.rate) ? s.rate : 0 })) }; } catch { return empty(); } };
 
 // Approved holiday/absence pulled from the Holiday planner (aos.holiday.absences.v1)
 // → a Set of `${nameLower}|${date}` so a person on leave can't be rostered.
@@ -597,7 +598,7 @@ export function ScheduleApp() {
                       ? <span title={t("schedule.confirmedAvailability")} className="flex-none inline-flex items-center gap-0.5 rounded-full bg-[#e2f4ea] px-1.5 py-[1px] text-[10px] font-extrabold text-[#0f7a43]">🔔 ✓</span>
                       : <button type="button" onClick={(e) => { e.stopPropagation(); remind(st.id); }} title={st.reminders ? t("schedule.sentReminderAgain", { count: st.reminders }) : t("schedule.sendAvailReminder")} className="flex-none inline-flex items-center gap-0.5 rounded-full bg-[#fdebec] px-1.5 py-[1px] text-[10px] font-extrabold text-[#c0392b] hover:bg-[#f9d7da]">🔔{st.reminders ? ` ${st.reminders}` : ""}</button>}</div>
                     <div className="text-[9px] font-bold uppercase tracking-wide text-[var(--ink-3)]"><span className={st.avail === "confirmed" ? "text-[#0f7a43]" : st.requested ? "text-[#b45309]" : "text-[#c0392b]"}>{st.avail === "confirmed" ? t("schedule.confirmed") : st.requested ? (st.requestedScope === "all" ? t("schedule.requestedAllWks") : t("schedule.requested")) : t("schedule.notSubmitted")}</span></div>
-                    <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{hLabel(hrs)} · £{st.rate.toFixed(2)}/hr</div>
+                    <div className="mt-0.5 text-[11px] text-[var(--ink-2)]">{hLabel(hrs)} · £{(st.rate ?? 0).toFixed(2)}/hr</div>
                     {(() => { const a = availHrs(st.id); const p = Math.round(pctUsed(st.id)); const tone = a === 0 ? "var(--ink-3)" : p >= 90 ? "#c0392b" : p >= 60 ? "#b45309" : "#0f7a43"; return (
                       <div className="mt-0.5 flex items-center gap-1.5"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[var(--line)]"><div className="h-full rounded-full" style={{ width: `${Math.min(100, p)}%`, background: tone }} /></div><span className="text-[9.5px] font-extrabold tabular-nums" style={{ color: tone }}>{a === 0 ? "—" : `${p}%`}</span></div>
                     ); })()}
@@ -859,7 +860,7 @@ export function ScheduleApp() {
                     <button key={st.id} type="button" disabled={blocked} onClick={() => toggleAssign(st.id)}
                       className={"flex items-center gap-3 py-2.5 text-left transition-colors " + (on ? "bg-[#eef4fd]" : "enabled:hover:bg-[var(--panel)]") + (blocked ? " opacity-45" : "")}>
                       <span className="flex h-10 w-10 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[12px] font-extrabold text-[var(--ink-2)]">{initials(st.name)}</span>
-                      <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{st.name}</div><div className="text-[12px] font-semibold" style={{ color: blocked ? (leave ? "#b45309" : "var(--ink-3)") : av.ok ? "#0f7a43" : "var(--ink-3)" }}>{sub} · £{st.rate.toFixed(2)}/hr</div></div>
+                      <div className="min-w-0 flex-1"><div className="truncate text-[14px] font-extrabold text-[var(--ink)]">{st.name}</div><div className="text-[12px] font-semibold" style={{ color: blocked ? (leave ? "#b45309" : "var(--ink-3)") : av.ok ? "#0f7a43" : "var(--ink-3)" }}>{sub} · £{(st.rate ?? 0).toFixed(2)}/hr</div></div>
                       {on && <span className="text-[16px] font-extrabold text-[#1d3a8f]">✓</span>}
                     </button>
                   ); })}
@@ -888,7 +889,7 @@ export function ScheduleApp() {
         <div style={{ position: "fixed", top: hover.top, left: hover.left, zIndex: 200 }} className="pointer-events-none w-[330px] overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-2xl">
           <div className="flex items-center gap-3 px-4 py-3.5 text-white" style={{ background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
             <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-white/20 text-[14px] font-extrabold">{initials(st.name)}</span>
-            <div><div className="text-[15px] font-extrabold">{st.name}</div><div className="text-[12px] text-white/85">{st.avail === "confirmed" ? t("schedule.availableNof7", { n: daysOn }) : t("schedule.availabilityNotSubmitted")} · £{st.rate.toFixed(2)}/hr</div></div>
+            <div><div className="text-[15px] font-extrabold">{st.name}</div><div className="text-[12px] text-white/85">{st.avail === "confirmed" ? t("schedule.availableNof7", { n: daysOn }) : t("schedule.availabilityNotSubmitted")} · £{(st.rate ?? 0).toFixed(2)}/hr</div></div>
           </div>
           <div className="px-4 py-3">
             <div className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("schedule.weeklyAvailability")}</div>
@@ -928,7 +929,7 @@ export function ScheduleApp() {
               {/* dark header */}
               <div className="flex items-center gap-3 px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#2f6bd8)" }}>
                 <span className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-white/20 text-[14px] font-extrabold">{initials(st.name)}</span>
-                <div><div className="text-[16px] font-extrabold">{st.name}</div><div className="text-[12px] text-white/85">{t("schedule.availableNof7", { n: daysOn })} · £{st.rate.toFixed(2)}/hr</div></div>
+                <div><div className="text-[16px] font-extrabold">{st.name}</div><div className="text-[12px] text-white/85">{t("schedule.availableNof7", { n: daysOn })} · £{(st.rate ?? 0).toFixed(2)}/hr</div></div>
                 <button type="button" onClick={() => setAvailEdit(null)} className="ml-auto text-[20px] text-white/80 hover:text-white">×</button>
               </div>
               <div className="px-5 py-4">

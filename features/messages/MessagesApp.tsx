@@ -10,6 +10,7 @@ import { useRealtime } from "@/lib/realtime";
 import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
 import { useSurfaceTheme } from "@/lib/surfaceThemes";
+import { useHoScope, HO_OWN } from "@/components/franchise/HoScope";
 
 // Messages runs on the same light surface as the customer dashboard, whichever
 // portal it's in — so the operator inbox reads like the parent one instead of
@@ -37,6 +38,7 @@ interface Thread {
   lastAt?: string;
   operatorUnread?: number;
   parentUnread?: number;
+  franchiseId?: string | null; // HO only: which network this family belongs to (null = head-office direct)
 }
 interface Folder { id: string; name: string }
 interface BroadcastRec { id: string; body: string; subject?: string; sentAt?: string; recipientCount?: number; recipients?: { email: string; name: string }[] }
@@ -126,11 +128,21 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [providerName, setProviderName] = useState("");
   // Gmail-style bright background theme for the Messages surface (its own pick).
-  const { theme, control: themeControl } = useSurfaceTheme("aos.msgTheme");
+  const { theme } = useSurfaceTheme("aos.msgTheme");
   const loadTemplates = () => apiGet<Template[]>("/api/messages/templates").then(setTemplates).catch(() => {});
   const endRef = useRef<HTMLDivElement>(null);
   const mine = mode === "operator" ? "operator" : "parent";
   const portalSeg = usePathname().split("/")[1] || "freelancer";
+  // Head office: filter the whole inbox by network (franchise). Threads arrive
+  // tagged with the franchise their family belongs to (see messages route).
+  const hoScope = useHoScope();
+  const [franchises, setFranchises] = useState<{ franchiseId: string; name: string; area: string | null }[]>([]);
+  useEffect(() => { if (portalSeg === "company") apiGet<{ franchiseId: string; name: string; area: string | null }[]>("/api/franchises").then(setFranchises).catch(() => {}); }, [portalSeg]);
+  const isHo = portalSeg === "company" && franchises.length > 0;
+  // "all" = every network · HO_OWN = head-office direct (no franchise) · franchiseId
+  const [netFilter, setNetFilter] = useState<string>("all");
+  // Follow the global HO scope switcher when it's set to a specific franchise.
+  useEffect(() => { if (hoScope) setNetFilter(hoScope); }, [hoScope]);
 
   const loadThreads = useCallback(() => {
     apiGet<Thread[]>("/api/messages/threads").then((t) => { setThreads(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -304,7 +316,11 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   };
   const inFolder = (t: Thread) => (activeFolder === "all" ? true : t.folderId === activeFolder);
   const folderCount = (id: string) => allThreads.filter((t) => t.folderId === id).length;
+  // Head-office network filter: "all" = every franchise, HO_OWN = head-office
+  // direct (family with no franchise), otherwise a specific franchiseId.
+  const inNetwork = (t: Thread) => !isHo || netFilter === "all" || (netFilter === HO_OWN ? !t.franchiseId : t.franchiseId === netFilter);
   const shownThreads = allThreads.filter((t) => {
+    if (!inNetwork(t)) return false;
     if (!inFolder(t)) return false;
     if (statusFilter === "unread" && unread(t) === 0) return false;
     if (statusFilter === "reply" && !needsReply(t)) return false;
@@ -410,7 +426,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       }}
     >
       {/* Money-in style hero */}
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: theme.hero }}>
+      <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: theme.hero }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
@@ -422,7 +438,6 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           <div className="flex flex-none flex-wrap items-center gap-2">
             {mode === "operator" && <TourLauncher view="messages" compact />}
             <SettingsLink />
-            {portalSeg !== "staff" && themeControl}
             <button type="button" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
               ＋ {mode === "operator" ? "Message customers" : "New message"}
             </button>
@@ -472,6 +487,27 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                       );
                     })}
                     <button type="button" onClick={createFolder} className="rounded-full border border-dashed border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ Folder</button>
+                  </div>
+                )}
+                {isHo && (
+                  <div className="mb-1.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5">
+                    <div className="mb-1 px-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Filter by network</div>
+                    <div className="flex flex-wrap gap-1">
+                      {[
+                        { id: "all", label: "🌐 All networks", n: allThreads.length },
+                        { id: HO_OWN, label: "🏛 Head office direct", n: allThreads.filter((t) => !t.franchiseId).length },
+                        ...franchises.map((f) => ({ id: f.franchiseId, label: f.name, n: allThreads.filter((t) => t.franchiseId === f.franchiseId).length })),
+                      ].map((opt) => {
+                        const on = netFilter === opt.id;
+                        return (
+                          <button key={opt.id} type="button" onClick={() => setNetFilter(opt.id)}
+                            className="rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors"
+                            style={on ? { borderColor: "var(--brand)", background: "var(--brand)", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-3)" }}>
+                            {opt.label} {opt.n}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 )}
                 <Input

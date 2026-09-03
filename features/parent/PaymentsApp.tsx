@@ -178,7 +178,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
           <h2 className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{tr("parent.paymentsHeading")}</h2>
           <p className="text-[12.5px] text-[var(--ink-3)]">
             {tr("parent.paymentsIntro")}{" "}
-            <Link href="/custdash/wallet" className="font-bold text-[var(--brand-2,#2f6bd8)]">{tr("parent.walletTitle")}</Link>.
+            <Link href="/custdash/wallet" className="font-bold text-[var(--brand-2,var(--brand-2))]">{tr("parent.walletTitle")}</Link>.
           </p>
         </div>
       )}
@@ -248,7 +248,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
                 onClick={downloadSelected}
                 disabled={!selectedShown.length}
                 className="rounded-full px-3.5 py-1.5 text-[12px] font-bold text-white disabled:opacity-50"
-                style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}
+                style={{ background: "linear-gradient(180deg,#4f8bf5,var(--brand-2))" }}
               >
                 ↓ {tr("parent.downloadWord")} {selectedShown.length ? tr("parent.nSelected", { count: selectedShown.length }) : tr("parent.selectedWord")} (PDF)
               </button>
@@ -280,7 +280,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
                 <div className="truncate text-[12.5px] font-bold">{r.label}</div>
                 <div className="text-[11.5px] text-[var(--ink-3)]">{r.listing} · Ref {r.ref} · {r.on}</div>
               </div>
-              <span className="text-[13px] font-extrabold text-[#3f78d8]">+{money(r.amount || 0)}</span>
+              <span className="text-[13px] font-extrabold text-[var(--brand-2)]">+{money(r.amount || 0)}</span>
             </div>
           ))}
         </Card>

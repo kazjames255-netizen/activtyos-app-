@@ -6,6 +6,7 @@ import { sendMail } from "../lib/mailer";
 import { tenantSender } from "../lib/sender";
 import { renderMoneyDoc } from "../lib/moneyDoc";
 import { platformFallback, stripe, toPence } from "../lib/stripe";
+import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 
 const WEB_URL = process.env.PUBLIC_WEB_URL || process.env.APP_URL || "http://localhost:3000";
@@ -71,14 +72,18 @@ function scope(req: Request, res: import("express").Response): string | null {
 }
 
 invoices.get("/", async (req, res) => {
+  const auth = req.auth!;
   const tenantId = scope(req, res);
   if (!tenantId) return;
   const snap = await col.where("tenantId", "==", tenantId).get();
   const today = new Date().toISOString().slice(0, 10);
   const thisYear = today.slice(0, 4);
-  const list = snap.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { date?: string; dueDate?: string; amount?: number; status?: string })
+  let list = snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { date?: string; dueDate?: string; amount?: number; status?: string; franchiseId?: string | null })
     .map((p) => ({ ...p, overdue: OWED.has(p.status ?? "") && !!p.dueDate && (p.dueDate as string) < today }));
+  // Franchise sees only its own invoices; head office sees the whole tenant.
+  if (auth.role === "franchise") list = list.filter((p) => (p.franchiseId ?? null) === auth.franchiseId);
+  list = applyHoNetFilter(list, auth.role, req.query.franchiseId); // head-office network scope
   list.sort((a, b) => (`${b.date ?? ""}` < `${a.date ?? ""}` ? -1 : 1));
   const outstanding = round2(list.filter((p) => OWED.has(p.status ?? "")).reduce((s, p) => s + (p.amount ?? 0), 0));
   const collected = round2(list.filter((p) => p.status === "paid" && (p.date ?? "").slice(0, 4) === thisYear).reduce((s, p) => s + (p.amount ?? 0), 0));
@@ -90,7 +95,7 @@ invoices.post("/", async (req, res) => {
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = invoiceSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { ...parsed.data, amount: grandTotal(parsed.data.lineItems, parsed.data.amount, parsed.data.taxRate), payToken: randomUUID(), tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
+  const doc = { ...parsed.data, amount: grandTotal(parsed.data.lineItems, parsed.data.amount, parsed.data.taxRate), payToken: randomUUID(), tenantId: auth.tenantId, franchiseId: auth.role === "franchise" ? auth.franchiseId : null, createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -100,6 +105,7 @@ async function own(req: Request, id: string) {
   if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (auth.role === "franchise" && (snap.data()!.franchiseId ?? null) !== auth.franchiseId) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 

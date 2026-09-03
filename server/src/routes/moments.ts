@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseChildIds } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
@@ -150,7 +151,12 @@ moments.get("/", async (req, res) => {
   let q = col.where("tenantId", "==", tenantId) as FirebaseFirestore.Query;
   if (typeof req.query.childId === "string") q = q.where("childIds", "array-contains", req.query.childId);
   const snap = await q.get();
-  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; createdAt?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; createdAt?: string; childIds?: string[] })[];
+  // A franchise sees moments (child photos) only for ITS OWN children.
+  if (auth.role === "franchise" && auth.franchiseId) {
+    const kids = await franchiseChildIds(tenantId, auth.franchiseId);
+    list = list.filter((m) => (m.childIds ?? []).some((cid) => kids.has(cid)));
+  }
   if (typeof req.query.date === "string") list = list.filter((x) => x.date === req.query.date);
   list.sort((a, b) => (`${b.createdAt}` < `${a.createdAt}` ? -1 : 1));
   res.json(list);

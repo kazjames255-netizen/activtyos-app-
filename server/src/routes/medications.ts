@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseChildIds } from "../lib/franchiseScope";
 import { notify, parentEmailForChild } from "../lib/notify";
 import type { Role } from "../middleware/role";
 
@@ -123,7 +124,12 @@ medications.get("/", async (req, res) => {
   let q = medsCol.where("tenantId", "==", tenantId) as FirebaseFirestore.Query;
   if (typeof req.query.childId === "string") q = q.where("childId", "==", req.query.childId);
   const snap = await q.get();
-  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; archived?: boolean; name?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; archived?: boolean; name?: string; childId?: string })[];
+  // A franchise sees medications only for ITS OWN children (booked on its listings).
+  if (auth.role === "franchise" && auth.franchiseId) {
+    const kids = await franchiseChildIds(tenantId, auth.franchiseId);
+    list = list.filter((m) => typeof m.childId === "string" && kids.has(m.childId));
+  }
   if (req.query.includeArchived !== "1") list = list.filter((m) => !m.archived);
   list.sort((a, b) => ((a.childName as string) < (b.childName as string) ? -1 : 1));
   res.json(list);

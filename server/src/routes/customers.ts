@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { auth, db } from "../firebase";
 import { canWrite, operatorScope } from "../middleware/role";
+import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope";
 import { emailSignUpInvite } from "../lib/emails";
 
 // Customers & families — the tenant's parent records. Mostly SELF-FILLING:
@@ -93,9 +94,30 @@ customers.get("/", async (req, res) => {
     q = q.where("tenantId", "==", scope.tenantId);
   }
   const snap = await q.get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as Array<
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as Array<
     Record<string, unknown> & { id: string; name?: string; email?: string; children?: Array<{ name?: string }> }
   >;
+  // A franchise sees only ITS OWN families (anyone booked on its listings); head
+  // office sees the whole tenant.
+  if (scope.role === "franchise" && scope.franchiseId && scope.tenantId) {
+    const fam = await franchiseFamilyEmails(scope.tenantId, scope.franchiseId);
+    list = list.filter((c) => !!c.email && fam.has(c.email.toLowerCase()));
+  }
+  // Head office can open ONE franchise's (or its own) families without leaving
+  // the HO view — a ?franchiseId= narrows the list. "__ho__" = head-office-direct
+  // families (booked on no franchise's listings); a franchiseId = that franchise.
+  if (scope.role === "company" && scope.tenantId) {
+    const fq = typeof req.query.franchiseId === "string" ? req.query.franchiseId.trim() : "";
+    if (fq && fq !== "__all__") {
+      if (fq === "__ho__") {
+        const map = await familyFranchiseMap(scope.tenantId);
+        list = list.filter((c) => !!c.email && !map.has(c.email.toLowerCase()));
+      } else {
+        const fam = await franchiseFamilyEmails(scope.tenantId, fq);
+        list = list.filter((c) => !!c.email && fam.has(c.email.toLowerCase()));
+      }
+    }
+  }
 
   // Merge in children a PARENT added to their OWN account: those live in the
   // `children` collection (keyed by parentUid), not on the customer doc, so

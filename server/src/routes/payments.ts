@@ -61,6 +61,12 @@ payments.post("/connect", async (req, res) => {
     res.status(403).json({ error: "Requires an operator account with a tenant" });
     return;
   }
+  // A franchise shares its head office's tenant Stripe account — it must NOT be
+  // able to create/onboard/open it. Only the head office (company) owns payouts.
+  if (auth.role === "franchise") {
+    res.status(403).json({ error: "Your head office manages the payout (Stripe) account." });
+    return;
+  }
   const tenantRef = tenantsCol.doc(auth.tenantId);
   const tenant = await tenantRef.get();
   if (!tenant.exists) {
@@ -122,6 +128,11 @@ payments.post("/dashboard", async (req, res) => {
   const auth = req.auth!;
   if (!canWrite(auth.role) || !auth.tenantId) {
     res.status(403).json({ error: "Requires an operator account with a tenant" });
+    return;
+  }
+  // Head office owns the Stripe account; a franchise can't open its dashboard.
+  if (auth.role === "franchise") {
+    res.status(403).json({ error: "Your head office manages the payout (Stripe) account." });
     return;
   }
   const tenant = await tenantsCol.doc(auth.tenantId).get();
@@ -195,7 +206,13 @@ payments.get("/", async (req, res) => {
     q = q.where("tenantId", "==", scope.tenantId);
   }
   const snap = await q.get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // A franchise sees only payments for ITS OWN bookings (on its listings).
+  if (scope.role === "franchise" && scope.franchiseId && scope.tenantId) {
+    const bk = await db.collection("bookings").where("tenantId", "==", scope.tenantId).where("franchiseId", "==", scope.franchiseId).get();
+    const refs = new Set(bk.docs.map((d) => (d.data() as { ref?: string }).ref).filter(Boolean) as string[]);
+    list = list.filter((p) => ((p as { refs?: string[] }).refs ?? []).some((r) => refs.has(r)));
+  }
   list.sort((a, b) => (((a as { createdAt?: string }).createdAt ?? "") < ((b as { createdAt?: string }).createdAt ?? "") ? 1 : -1));
   res.json(list);
 });

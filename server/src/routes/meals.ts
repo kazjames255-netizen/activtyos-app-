@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { franchiseListingIds } from "../lib/franchiseScope";
 import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 
@@ -96,8 +97,13 @@ meals.get("/", async (req, res) => {
   const menu: MenuMeal[] = menuSnap.exists ? (menuSnap.data()!.meals ?? []) : [];
   const menuAllergens = new Set<string>(menu.flatMap((m) => m.allergens ?? []));
 
+  // A franchise only sees its OWN children's dietary board — narrow to its listings.
+  const franchiseListings = auth.role === "franchise" && auth.franchiseId
+    ? await franchiseListingIds(tenantId, auth.franchiseId)
+    : null;
   const todays = blocksSnap.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
+    .filter(({ block }) => !franchiseListings || franchiseListings.has(block.listingId))
     .map(({ id, block }) => ({ id, block, session: block.sessions.find((s) => s.date === date) }))
     .filter((x): x is typeof x & { session: NonNullable<(typeof x)["session"]> } => !!x.session);
 

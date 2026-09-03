@@ -550,6 +550,64 @@ export const DEFAULT_ROLES: StaffRole[] = [
   },
 ];
 
+/** The permission areas shown in a HEAD OFFICE's Roles & permissions matrix —
+ *  one per thing in the HO sidebar/top-bar, with head-office wording (not the
+ *  operator's per-site areas). Keys reuse the shared cap keys so enforcement is
+ *  the same everywhere; only the labels/grouping are HO-specific. Mirror the HO
+ *  sidebar (components/shell/Sidebar HO_COMBINED_KEEP) so the two never drift. */
+export const HO_ROLE_AREAS: { key: string; label: string; group: string; sensitive?: boolean }[] = [
+  { key: "dashboard", label: "Dashboard", group: "Overview" },
+  { key: "tasks", label: "Task manager", group: "Run the day" },
+  { key: "franchise", label: "Franchises, territories & feature control", group: "Franchises" },
+  { key: "finances", label: "Finance & analytics, split fees & subscription", group: "Money", sensitive: true },
+  { key: "moneyops", label: "Money in / out, invoices & purchase orders", group: "Money", sensitive: true },
+  { key: "marketing", label: "Reviews & referrals", group: "Marketing" },
+  { key: "messaging", label: "Newsfeed & messages", group: "Communication" },
+  { key: "email", label: "Email", group: "Communication" },
+  { key: "support", label: "Message ActivityOS (support)", group: "Communication" },
+  { key: "staff", label: "Head-office staff & invites", group: "Team" },
+  { key: "incidents", label: "Safeguarding oversight (incidents & accidents)", group: "Oversight", sensitive: true },
+  { key: "medication", label: "Medication oversight", group: "Oversight", sensitive: true },
+  { key: "registers", label: "Attendance registers", group: "Oversight" },
+  { key: "settings", label: "Setup & features", group: "Admin" },
+];
+
+/** Head-office role templates — the positions a franchisor's central team is
+ *  actually made of (director, ops, marketing, admin), not the on-site coach /
+ *  lead roles. Shown as the starting roles in the HO "Roles & permissions" tab
+ *  when a head office hasn't defined its own yet. Caps cover HO_ROLE_AREAS. */
+export const HO_DEFAULT_ROLES: StaffRole[] = [
+  { id: "director", name: "CEO", builtin: true, owner: true, scope: "all", caps: capsAt("edit") },
+  {
+    id: "ops-manager", name: "Manager", builtin: true, scope: "all",
+    caps: {
+      ...capsAt("none"),
+      dashboard: "edit", tasks: "edit", franchise: "edit",
+      finances: "edit", moneyops: "edit", marketing: "edit",
+      messaging: "edit", email: "edit", support: "edit", staff: "edit", settings: "edit",
+      incidents: "view", medication: "view", registers: "view",
+    },
+  },
+  {
+    id: "marketing", name: "Marketing", builtin: true, scope: "all",
+    caps: {
+      ...capsAt("none"),
+      dashboard: "view", tasks: "edit",
+      marketing: "edit", messaging: "edit", email: "edit", support: "view",
+    },
+  },
+  {
+    id: "admin", name: "Admin", builtin: true, scope: "all",
+    caps: {
+      ...capsAt("none"),
+      dashboard: "view", tasks: "edit", franchise: "view",
+      finances: "edit", moneyops: "edit", marketing: "view",
+      messaging: "edit", email: "edit", support: "edit", staff: "edit", settings: "view",
+      incidents: "view", medication: "view", registers: "view",
+    },
+  },
+];
+
 export interface TenantSettings {
   // ── Public identity ──
   /**

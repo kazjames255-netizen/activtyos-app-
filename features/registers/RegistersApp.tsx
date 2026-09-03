@@ -28,7 +28,7 @@ const BLUE = "#1d3a8f", GREEN = "#0f9d58", RED = "#e11d48", AMBER = "#d97706";
 // Selected/unselected styling for the filter + toggle chips. Module-level so the
 // dialogs can use it too, not just the main component.
 const sel = (o: boolean) => ({ borderColor: o ? BLUE : "var(--line)", background: o ? "#eef4fd" : "var(--surface)", color: o ? BLUE : "var(--ink-2)" });
-const HERO = "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)";
+const HERO = "var(--hero-grad)";
 // ── Aurora header ───────────────────────────────────────────────────────────
 // Soft light on deep navy instead of a hard gradient, with the day's headline
 // figure set large and everything else quiet around it.

@@ -44,10 +44,20 @@ dashboard.get("/", async (req, res) => {
   // one venue. Blocks/bookings carry listingId; payments only carry booking
   // refs, so we intersect them with the venue's booking refs further down.
   const venueId = typeof req.query.venueId === "string" && req.query.venueId ? req.query.venueId : null;
-  const venueListingIds = venueId
-    ? new Set(listingsSnap.docs.filter((d) => (d.data() as { venueId?: string | null }).venueId === venueId).map((d) => d.id))
+  // Optional franchise lens: ?franchiseId= narrows every figure to the listings
+  // OWNED by that franchise (head office "view as franchise X"). Combined with
+  // the venue lens as an intersection of allowed listing ids.
+  const franchiseId = typeof req.query.franchiseId === "string" && req.query.franchiseId ? req.query.franchiseId : null;
+  // "__ho__" = the head office's OWN direct listings (no franchise owner).
+  const ownOnly = franchiseId === "__ho__";
+  const allowedIds: Set<string> | null = (venueId || franchiseId)
+    ? new Set(listingsSnap.docs.filter((d) => {
+        const l = d.data() as { venueId?: string | null; franchiseId?: string | null };
+        const franchiseOk = !franchiseId || (ownOnly ? !l.franchiseId : l.franchiseId === franchiseId);
+        return (!venueId || l.venueId === venueId) && franchiseOk;
+      }).map((d) => d.id))
     : null;
-  const inVenue = (listingId?: string | null) => !venueListingIds || (listingId != null && venueListingIds.has(listingId));
+  const inVenue = (listingId?: string | null) => !allowedIds || (listingId != null && allowedIds.has(listingId));
 
   // ── Sessions across the tenant's open blocks (real dates + per-date counts) ──
   type Sess = { date: string; start: string; end: string; capacity: number; booked: number; spotsLeft: number; listing: string; open: boolean };
@@ -90,7 +100,7 @@ dashboard.get("/", async (req, res) => {
   }).filter((b) => inVenue(b.listingId));
   // Payments only reference bookings by ref — a payment counts for the venue if
   // one of its refs belongs to a booking at that venue.
-  const venueRefs = venueId ? new Set(bookings.map((b) => b.ref)) : null;
+  const venueRefs = (venueId || franchiseId) ? new Set(bookings.map((b) => b.ref)) : null;
   const live = bookings.filter((b) => b.status !== "Cancelled" && b.status !== "Declined");
   const waitlist = bookings.filter((b) => b.status === "Waitlisted").length;
   const newThisWeek = bookings.filter((b) => (b.createdAt ?? "") >= weekAgo).length;
@@ -121,7 +131,7 @@ dashboard.get("/", async (req, res) => {
     occupancy: { booked: openBooked, capacity: openCapacity, pct: openCapacity ? Math.round((openBooked / openCapacity) * 100) : 0 },
     money: { takenThisWeek, outstanding, overdueVouchers, awaitingVoucher },
     counts: {
-      listings: venueListingIds ? venueListingIds.size : listingsSnap.size,
+      listings: allowedIds ? allowedIds.size : listingsSnap.size,
       activeBlocks: blocksSnap.docs.filter((d) => { const b = d.data() as BlockDoc; return b.open && inVenue(b.listingId); }).length,
     },
   });

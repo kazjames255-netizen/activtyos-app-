@@ -12,6 +12,8 @@ import { NewsflashBanner } from "@/features/parent/NewsflashBanner";
 import { ParentWelcome } from "@/features/parent/ParentWelcome";
 import { StaffWelcome } from "@/features/staff/StaffWelcome";
 import { StaffReminderBanner } from "@/features/staff/StaffReminderBanner";
+import { HoThemeSync } from "@/components/franchise/HoScope";
+import { ParentBrandTheme } from "@/components/shell/ParentBrandTheme";
 
 // The customer dashboard runs the same light palette the operator screens sit
 // on (see components/OperatorPage LIGHT_PALETTE), so the parent portal matches
@@ -53,7 +55,10 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
                 the customer app — instead of the near-black operator surface. */}
             <div style={light ? undefined : LIGHT_PALETTE}>
               <Header portal={portalKey} />
+              {portalKey === "company" && <HoThemeSync />}
             </div>
+            {/* Paint the provider's brand accent over the parent portal + checkout. */}
+            {portalKey === "custdash" && <ParentBrandTheme />}
             {/* First-login welcome popup (add-your-children), parent only, once. */}
             {portalKey === "custdash" && <ParentWelcome />}
             {/* First-login onboarding launcher for staff. */}

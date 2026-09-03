@@ -18,6 +18,10 @@ import { ParentAccidentsApp } from "@/features/incidents/ParentAccidentsApp";
 import { RatiosApp } from "@/features/ratios/RatiosApp";
 import { ReconciliationApp } from "@/features/reconciliation/ReconciliationApp";
 import { DashboardApp } from "@/features/dashboard/DashboardApp";
+import { CompanyDashboardSwitch } from "@/features/franchise/CompanyDashboardSwitch";
+import { CompanyStaffSwitch } from "@/features/franchise/CompanyStaffSwitch";
+import { CompanyFinanceSwitch } from "@/features/franchise/CompanyFinanceSwitch";
+import { FranchiseInvitesApp } from "@/features/franchise/FranchiseInvitesApp";
 import { StaffDashApp } from "@/features/dashboard/StaffDashApp";
 import { StaffCertsApp } from "@/features/learning/StaffCertsApp";
 import { PaymentsApp as ParentPaymentsApp } from "@/features/parent/PaymentsApp";
@@ -43,6 +47,12 @@ import { MoneyOutApp } from "@/features/money/MoneyOutApp";
 import { MoneyInApp } from "@/features/money/MoneyInApp";
 import { SubscriptionApp } from "@/features/money/SubscriptionApp";
 import { SplitFeesApp } from "@/features/money/SplitFeesApp";
+import { FranchiseTerritoriesApp } from "@/features/franchise/FranchiseTerritoriesApp";
+import { FranchiseOverviewApp } from "@/features/franchise/FranchiseOverviewApp";
+import { FranchiseFeaturesApp } from "@/features/franchise/FranchiseFeaturesApp";
+import { CompanyIncidents, CompanyAccidents, CompanyMedication } from "@/features/franchise/OversightSwitch";
+import { FranchiseRoyaltiesApp } from "@/features/franchise/FranchiseRoyaltiesApp";
+import { PaymentsApp } from "@/features/payments/PaymentsApp";
 import { NewsfeedApp } from "@/features/newsfeed/NewsfeedApp";
 import { ParentNewsfeedApp } from "@/features/newsfeed/ParentNewsfeedApp";
 import { MessagesApp } from "@/features/messages/MessagesApp";
@@ -104,22 +114,24 @@ import { AiAssistant } from "@/features/ai/AiApp";
  */
 export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentType>>> = {
   company: {
-    dashboard: DashboardApp,
+    dashboard: CompanyDashboardSwitch,
     setup: SetupApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,
     blocks: BlocksApp,
     timetable: TimetableApp,
-    staff: TeamApp,
+    staff: CompanyStaffSwitch,
     "admin-registers": RegistersApp,
     ratios: RatiosApp,
-    incidents: () => <LogConcernApp />,
-    accidents: () => <IncidentsApp kind="accident" />,
-    medication: MedicationApp,
+    // In the HO combined view these become read-only network oversight; drilled
+    // into a franchise (or a plain company) they render the normal operator page.
+    incidents: CompanyIncidents,
+    accidents: CompanyAccidents,
+    medication: CompanyMedication,
     meals: MealsApp,
     moments: MomentsApp,
     customers: CustomersApp,
-    finance: FinanceAnalyticsApp,
+    finance: CompanyFinanceSwitch,
     reconciliation: ReconciliationApp,
     tasks: TasksApp,
     trips: TripsApp,
@@ -135,6 +147,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     purchasing: MoneyInApp,
     invoices: MoneyInApp,
     subscription: SubscriptionApp,
+    getpaid: PaymentsApp,
     documents: DocumentsApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
@@ -142,6 +155,10 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     referrals: ReferralsApp,
     reviews: ReviewsApp,
     splitfees: SplitFeesApp,
+    territories: FranchiseTerritoriesApp,
+    "franchise-overview": FranchiseOverviewApp,
+    "franchise-features": FranchiseFeaturesApp,
+    "franchise-invites": FranchiseInvitesApp,
     email: EmailApp,
     account: AccountApp,
     privacy: PrivacyApp,
@@ -162,6 +179,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
   },
   franchise: {
     dash: DashboardApp,
+    royalties: FranchiseRoyaltiesApp,
     setup: SetupApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,
@@ -194,6 +212,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     purchasing: MoneyInApp,
     invoices: MoneyInApp,
     subscription: SubscriptionApp,
+    getpaid: PaymentsApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
     "marketing-strategies": MarketingStrategiesApp,
@@ -242,6 +261,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     purchasing: MoneyInApp,
     invoices: MoneyInApp,
     subscription: SubscriptionApp,
+    getpaid: PaymentsApp,
     compliance: ComplianceApp,
     marketing: MarketingApp,
     "marketing-strategies": MarketingStrategiesApp,

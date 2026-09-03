@@ -65,10 +65,10 @@ export function CouponsApp() {
         <div className="flex flex-col gap-2.5">
           {coupons.map((c) => (
             <Card key={c.id} className="flex flex-wrap items-center gap-3 p-4">
-              <span className="rounded-lg border border-dashed border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 font-mono text-[15px] font-extrabold tracking-wider text-[var(--brand-strong,#16306e)]">
+              <span className="rounded-lg border border-dashed border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 font-mono text-[15px] font-extrabold tracking-wider text-[var(--brand-strong,var(--brand-strong))]">
                 {c.code}
               </span>
-              <span className="rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[12.5px] font-extrabold text-[#1d3a8f]">{valueLabel(c)}</span>
+              <span className="rounded-full bg-[#eaf0fc] px-2.5 py-1 text-[12.5px] font-extrabold text-[var(--brand)]">{valueLabel(c)}</span>
               {c.reserved && <span className="rounded-full bg-[#fdeefb] px-2.5 py-1 text-[11.5px] font-bold text-[#a3238e]">{t("parent.justForYou")}</span>}
               <div className="min-w-[160px] flex-1">
                 <div className="text-[11.5px] text-[var(--ink-3)]">
@@ -77,7 +77,7 @@ export function CouponsApp() {
                   {c.expiry ? ` · until ${fmt(c.expiry)}` : " · no end date"}
                 </div>
               </div>
-              <span className="flex-none rounded-full bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--brand-strong,#16306e)]">{t("parent.appliedAtCheckout")}</span>
+              <span className="flex-none rounded-full bg-[var(--brand-soft,#eaf0fc)] px-3 py-1.5 text-[11.5px] font-bold text-[var(--brand-strong,var(--brand-strong))]">{t("parent.appliedAtCheckout")}</span>
             </Card>
           ))}
         </div>

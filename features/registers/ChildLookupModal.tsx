@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n/provider";
+import { useHoScope } from "@/components/franchise/HoScope";
+import { FranchiseScopeList } from "@/features/franchise/FranchiseScopeList";
 import { ChildCard, type ChildInfo } from "./ChildCard";
 
 interface LookupRow { childId: string; name: string; dob: string; parentName: string; parentEmail: string; parentPhone: string; ref: string; postcode: string; town?: string; photo?: string }
@@ -33,12 +35,36 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
   const [openInfo, setOpenInfo] = useState<{ info: ChildInfo; name: string; email: string; phone: string } | null>(null);
   const [loadingCard, setLoadingCard] = useState(false);
 
+  // Head office (combined view) chooses a franchise FIRST, then searches that
+  // franchise's children. `scope` undefined = franchise not chosen yet;
+  // a franchiseId / "__ho__" (HO direct) / "__all__" (whole network) once picked.
+  const hoScope = useHoScope();
+  const [franchises, setFranchises] = useState<{ franchiseId: string; name: string; area: string | null }[] | null>(null);
+  const [scope, setScope] = useState<string | undefined>(undefined);
+  const isHoCombined = portal === "company" && hoScope === null && (franchises?.length ?? 0) > 0;
+  const needsPicker = isHoCombined && scope === undefined;
+
+  // Discover whether this is a head office with franchises (company-only route).
   useEffect(() => {
     let alive = true;
-    apiGet<LookupRow[]>("/api/children/lookup").then((r) => { if (alive) setRows(r); }).catch((e) => { if (alive) setErr(e instanceof Error ? e.message : t("registers.couldntLoadChildren")); });
+    if (portal !== "company") { setFranchises([]); return; }
+    apiGet<{ franchiseId: string; name: string; area: string | null }[]>("/api/franchises").then((r) => { if (alive) setFranchises(r); }).catch(() => { if (alive) setFranchises([]); });
     return () => { alive = false; };
-  }, []);
+  }, [portal]);
 
+  // Load children once we know the scope (or immediately for non-HO).
+  useEffect(() => {
+    if (franchises === null) return;           // wait until we know if HO
+    if (needsPicker) return;                    // waiting for a franchise pick
+    let alive = true;
+    setRows(null); setErr(null);
+    const qs = scope && scope !== "__all__" ? `?franchiseId=${encodeURIComponent(scope)}` : "";
+    apiGet<LookupRow[]>(`/api/children/lookup${qs}`).then((r) => { if (alive) setRows(r); }).catch((e) => { if (alive) setErr(e instanceof Error ? e.message : t("registers.couldntLoadChildren")); });
+    return () => { alive = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [franchises, needsPicker, scope]);
+
+  const scopeLabel = scope === "__all__" ? "All franchises" : scope === "__ho__" ? "Head office" : (franchises?.find((f) => f.franchiseId === scope)?.name ?? "");
   const term = q.trim().toLowerCase();
   const shown = (rows ?? []).filter((r) => !term || r.name.toLowerCase().includes(term) || r.parentName.toLowerCase().includes(term) || r.postcode.toLowerCase().includes(term));
 
@@ -153,11 +179,19 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
           </div>
         ) : (
           <div className="overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl">
-            <div className="flex items-center justify-between px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
-              <div className="text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>🔎 {t("registers.findAChild")}</div>
+            <div className="op-hero flex items-center justify-between px-5 py-4 text-white" style={{ background: "var(--hero-grad)" }}>
+              <div className="text-[17px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>🔎 {t("registers.findAChild")}{isHoCombined && scope !== undefined ? <span className="ml-2 text-[12px] font-bold text-white/75">· {scopeLabel}</span> : null}</div>
               <button type="button" onClick={onClose} className="flex h-7 w-7 items-center justify-center rounded-full bg-white/20 text-[15px] font-bold leading-none hover:bg-white/30">×</button>
             </div>
+            {needsPicker ? (
+              /* Head office: pick a franchise (or its own locations / whole network) first. */
+              <div className="p-4">
+                <div className="mb-2.5 text-[12.5px] font-bold text-[var(--ink-2)]">Choose a franchise to search its children:</div>
+                <FranchiseScopeList noun="children" onPick={(s) => setScope(s)} />
+              </div>
+            ) : (
             <div className="p-4">
+              {isHoCombined && <button type="button" onClick={() => { setScope(undefined); setQ(""); }} className="mb-2 text-[11.5px] font-bold text-[#2f6bd8] hover:underline">‹ Change franchise ({scopeLabel})</button>}
               <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("registers.searchByChildParent")} className="mb-2 w-full rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
               {err && <div className="mb-2 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
               <div className="max-h-[52vh] overflow-y-auto">
@@ -181,6 +215,7 @@ export function ChildLookupModal({ onClose }: { onClose: () => void }) {
                       ))}</ul>}
               </div>
             </div>
+            )}
           </div>
         )}
       </div>

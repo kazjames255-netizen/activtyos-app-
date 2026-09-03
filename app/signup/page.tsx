@@ -7,18 +7,21 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { post as apiPost, get as apiGet, api } from "@/lib/api";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
+import { TerritoryMapClient, type TerritoryArea } from "@/features/franchise/TerritoryMapClient";
 import { AUTH_LIGHT, AosMark } from "@/components/auth/AuthBrand";
 
 type AccountType = "parent" | "freelancer" | "company" | "franchise";
 
 // Parents don't self-sign-up — a provider sends them a booking link — so only
-// the three operator tiers are offered here, matching the pricing page.
-// Franchise is a Company-type tenant on the Franchise plan (backend role
-// "company"; the chosen tier drives the subscription plan).
+// the operator tiers are offered here, matching the pricing page.
+// A "Franchise Head Office" (franchisor) is its own tier — a company-role tenant
+// on the FRANCHISE plan (different fees) with the franchisor tools (oversee &
+// bill franchisees). It is NOT the same as a plain Company. Individual
+// FRANCHISEES never self-sign-up: their Head Office sends them an invite link.
 const ACCOUNT_TYPES: { value: AccountType; label: string; desc: string; icon: string; home: string }[] = [
   { value: "freelancer", label: "Freelancer", desc: "For solo coaches & instructors — your own branding.", icon: "⭐", home: "/freelancer/bookings" },
   { value: "company", label: "Company", desc: "For established companies — priced by your team size.", icon: "🏛️", home: "/company/bookings" },
-  { value: "franchise", label: "Franchise", desc: "For franchises & multi-venue groups — branded per franchisee.", icon: "🌐", home: "/company/bookings" },
+  { value: "franchise", label: "Franchise Head Office", desc: "Run a franchise network — oversee, brand & bill your franchisees.", icon: "🌐", home: "/company/bookings" },
 ];
 
 const INVITE_HOME: Record<string, string> = { franchise: "/franchise/bookings", staff: "/staff/dash" };
@@ -43,7 +46,7 @@ const HEARD_OPTIONS: { label: string; icon: string }[] = [
   { label: "Somewhere else", icon: "✨" },
 ];
 
-interface InvitePreview { role: "franchise" | "staff"; tenantName: string }
+interface InvitePreview { role: "franchise" | "staff"; tenantName: string; franchiseName?: string | null; franchiseArea?: string | null }
 
 // Per-step copy shown in the gradient hero.
 type StepId = "type" | "you" | "business" | "identity" | "hear" | "login" | "payments";
@@ -103,6 +106,10 @@ function SignupForm() {
 
   const [invite, setInvite] = useState<InvitePreview | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
+  // Franchise invites: HO may have granted a business name + territory; the joiner confirms/completes them here.
+  const [frName, setFrName] = useState("");
+  const [frArea, setFrArea] = useState("");
+  const [frTerritory, setFrTerritory] = useState<TerritoryArea[]>([]);
 
   const [accountType, setAccountType] = useState<AccountType>(planParam === "company" ? "company" : planParam === "franchise" ? "franchise" : "freelancer");
   const [step, setStep] = useState(0);
@@ -134,7 +141,9 @@ function SignupForm() {
     fetch(`${base}/api/invites/${encodeURIComponent(inviteToken)}`)
       .then(async (r) => {
         if (!r.ok) throw new Error((await r.json()).error || "Invalid invite");
-        setInvite(await r.json());
+        const data: InvitePreview = await r.json();
+        setInvite(data);
+        if (data.role === "franchise") { setFrName(data.franchiseName || ""); setFrArea(data.franchiseArea || ""); }
       })
       .catch((e) => setInviteError(e instanceof Error ? e.message : "Invalid invite"));
   }, [inviteToken]);
@@ -321,7 +330,7 @@ function SignupForm() {
     return (
       <Card className="w-full max-w-[460px] overflow-hidden p-0">
         <Hero emoji="🎉" eyebrow="You're invited" title={invite ? `Join ${invite.tenantName}` : "Join your team"}
-          lede={invite ? `You've been invited as ${invite.role === "franchise" ? "a franchise" : "staff"}.` : "Loading your invite…"} />
+          lede={invite ? (invite.role === "franchise" ? `You've been invited to run ${[invite.franchiseName, invite.franchiseArea && `${invite.franchiseArea} franchise`].filter(Boolean).join(" · ") || "a franchise"}.` : "You've been invited as staff.") : "Loading your invite…"} />
         <form
           onSubmit={async (e) => {
             e.preventDefault(); setError(null);
@@ -331,7 +340,12 @@ function SignupForm() {
             try {
               const cred = await createUserWithEmailAndPassword(firebaseAuth, email.trim(), password);
               if (name.trim()) await updateProfile(cred.user, { displayName: name.trim() });
-              const joined = await apiPost<{ role: string }>(`/api/invites/${encodeURIComponent(inviteToken)}/accept`, {});
+              const joined = await apiPost<{ role: string }>(`/api/invites/${encodeURIComponent(inviteToken)}/accept`,
+                invite?.role === "franchise" ? {
+                  franchiseName: frName.trim() || undefined,
+                  franchiseArea: frArea.trim() || undefined,
+                  ...(frTerritory.length ? { franchiseTerritory: { areas: frTerritory.map((a) => ({ ...a, rings: a.rings.map(([lat, lng]) => ({ lat, lng })) })), status: "proposed" } } : {}),
+                } : {});
               router.replace(INVITE_HOME[joined.role] ?? "/");
             } catch (err) {
               const code = (err as { code?: string }).code || "";
@@ -341,6 +355,22 @@ function SignupForm() {
           }}
           className="flex flex-col gap-3.5 px-7 py-6"
         >
+          {invite?.role === "franchise" && (
+            <div className="rounded-xl border-2 border-[#e6d8f6] bg-[#faf6ff] p-3.5">
+              <div className="text-[12px] font-extrabold text-[#7a3aa8]">🌐 Your franchise</div>
+              <p className="mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">Confirm your franchise business name and the area you cover — set by your head office, edit if needed.</p>
+              <div className="mt-2.5 flex flex-col gap-2.5">
+                <div><FieldLabel htmlFor="iv-frname">Franchise business name</FieldLabel><Input id="iv-frname" value={frName} onChange={(e) => setFrName(e.target.value)} placeholder="e.g. APF Activity Camps" className="w-full" /></div>
+                <div><FieldLabel htmlFor="iv-frarea">Area / territory</FieldLabel><Input id="iv-frarea" value={frArea} onChange={(e) => setFrArea(e.target.value)} placeholder="e.g. London" className="w-full" /></div>
+              </div>
+              {(frName.trim() || frArea.trim()) && <div className="mt-2.5 rounded-lg bg-white px-3 py-2 text-center text-[12px] font-extrabold uppercase tracking-wide text-[#7a3aa8] ring-1 ring-[#e6d8f6]">{frName.trim() || "Your brand"} · {frArea.trim() || "Area"} Franchise</div>}
+              <div className="mt-3 border-t border-[#e6d8f6] pt-3">
+                <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#7a3aa8]">🗺 Your territory <span className="font-bold normal-case text-[var(--ink-3)]">— optional</span></div>
+                <p className="mb-2 mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">Draw the area(s) where you'll run services — your head office reviews & agrees it. You can skip this and set it later.</p>
+                <TerritoryMapClient value={frTerritory} onChange={setFrTerritory} editable focus={frArea || "London"} height={280} />
+              </div>
+            </div>
+          )}
           <div><FieldLabel htmlFor="iv-name">Your name</FieldLabel><Input id="iv-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" /></div>
           <div><FieldLabel htmlFor="iv-email">Email</FieldLabel><Input id="iv-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
           <div><FieldLabel htmlFor="iv-pw">Password</FieldLabel><Input id="iv-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full" /></div>
@@ -361,6 +391,7 @@ function SignupForm() {
 
       <div className="px-7 pb-2 pt-6">
         {current === "type" && (
+          <>
           <div className="grid gap-3 sm:grid-cols-3">
             {ACCOUNT_TYPES.map((t) => {
               const on = accountType === t.value;
@@ -375,6 +406,10 @@ function SignupForm() {
               );
             })}
           </div>
+          <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-4 py-3 text-[12px] leading-snug text-[var(--ink-2)]">
+            <span className="mr-1">🏬</span><b>Running a single franchise branch?</b> You don't sign up here — your <b>Head Office</b> sends you an invite link that sets up your franchise (with your area) for you.
+          </div>
+          </>
         )}
 
         {current === "you" && (

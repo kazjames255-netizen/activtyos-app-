@@ -92,6 +92,9 @@
   --side-ct-ink: #3a2c00;
   --side-who: rgba(255, 255, 255, 0.08);
   --side-head: var(--brand-2);
+  /* House hero band (navy → card-blue). Overridden to RED for the head-office
+     "all franchises" combined view (see :root[data-ho-office="1"] below). */
+  --hero-grad: linear-gradient(120deg, #16306e 0%, #274ba3 58%, #3f78d8 100%);
   --mk-grad: conic-gradient(from 210deg, #f5b81f, #e21d27, #5b8af0, #f5b81f);
   --cta: #15b364;
   --cta-ink: #ffffff;
@@ -245,4 +248,25 @@ h4 {
 *::-webkit-scrollbar-thumb:hover {
   background: var(--ink-3);
   background-clip: padding-box;
+}
+
+/* ── Head-office "all franchises" combined view ──────────────────────────────
+   The whole chrome turns RED so it's unmistakable you're at the oversight level
+   (across every franchise), not operating inside one. Stamped on <html> by the
+   HoThemeSync client component when a company account is scoped to all. */
+:root[data-ho-office="1"], html[data-ho-office="1"] {
+  --side-bg: linear-gradient(165deg, #0b0b0d 0%, #1b1c20 55%, #2c2e34 100%);
+  --side-aink: #17181c;
+  --side-ct-bg: #f5b81f;
+  --side-ring: color-mix(in srgb, #ffffff 40%, transparent);
+  --hero-grad: linear-gradient(120deg, #0b0b0d 0%, #212227 55%, #33353c 100%);
+}
+
+/* Head-office combined view: force EVERY operator title card to the black
+   gradient — even pages that pass their own heroBackground / user-picked
+   surface theme (Email, Messages). !important beats the inline style; the dot
+   grid is kept. Only applies under the HO flag, so franchise drill-in and every
+   other portal keep their normal blue/themed heroes. */
+html[data-ho-office="1"] .op-hero {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.10) 1px, transparent 1.6px), var(--hero-grad) !important;
 }

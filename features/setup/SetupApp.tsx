@@ -11,6 +11,8 @@ import { useT } from "@/lib/i18n/provider";
 import { PrintableDoc } from "@/features/money/doc-shared";
 import { HowItWorks } from "@/components/HowItWorks";
 import { OperatorPage, TabStrip } from "@/components/OperatorPage";
+import { useHoScope } from "@/components/franchise/HoScope";
+import { peekMe } from "@/components/auth/PortalGuard";
 import { RolesPermissions } from "./RolesPermissions";
 import {
   useSettings,
@@ -20,6 +22,8 @@ import {
   answerKey,
   dobRequired,
   DEFAULT_QUESTION_LENGTH,
+  HO_DEFAULT_ROLES,
+  HO_ROLE_AREAS,
   type ChildQuestion,
   type QuestionType,
   type TenantSettings,
@@ -1281,6 +1285,12 @@ export function SetupApp() {
   const [tmplPreview, setTmplPreview] = useState(false);
   const [poPreview, setPoPreview] = useState(false);
   const portal = ((usePathname().split("/")[1] || "freelancer")) as PortalKey;
+  // Head office viewing the whole network ("all franchises") only configures the
+  // network-level settings — the day-to-day operational tabs (registers, meals,
+  // medication, listings…) belong to each franchise and to head office's OWN
+  // locations, so they only appear once you drill into a specific scope.
+  const hoScope = useHoScope();
+  const hoCombined = portal === "company" && !!peekMe()?.hasFranchises && !hoScope;
   // Deep link support: /setup?tab=refer opens that tab (e.g. from Referrals).
   const sp = useSearchParams();
   const initialTab = sp.get("tab");
@@ -1341,7 +1351,7 @@ export function SetupApp() {
       </OperatorPage>
     );
 
-  const TABS: [Tab, string][] = [
+  const ALL_TABS: [Tab, string][] = [
     ["notifications", `🔔 ${t("setup.tabNotifications")}`],
     ["features", t("setup.tabFeatures")],
     ["company", t("setup.tabCompanySetup")],
@@ -1370,6 +1380,15 @@ export function SetupApp() {
     ["refer", t("setup.tabReferFriend")],
     ["memberships", t("setup.tabMemberships")],
   ];
+  // In the head-office "all franchises" view keep only the handful of settings
+  // that head office actually owns — company identity, branding, its own staff &
+  // roles, and money. Everything else (operational, per-site, or per-franchise)
+  // is hidden until a scope is picked.
+  const HO_COMBINED_KEEP: Tab[] = ["company", "branding", "roles", "money"];
+  const TABS: [Tab, string][] = hoCombined ? ALL_TABS.filter(([k]) => HO_COMBINED_KEEP.includes(k)) : ALL_TABS;
+  // If a deep-link (or a leftover selection) lands on a tab that's hidden in this
+  // view, fall back to the first visible one so the page never renders blank.
+  const activeTab: Tab = TABS.some(([k]) => k === tab) ? tab : (TABS[0]?.[0] ?? "features");
 
   return (
     <OperatorPage
@@ -1401,9 +1420,9 @@ export function SetupApp() {
         </p>
       </HowItWorks>
 
-      <TabStrip tabs={TABS} value={tab} onChange={setTab} accent="notifications" />
+      <TabStrip tabs={TABS} value={activeTab} onChange={setTab} accent="notifications" />
 
-      {tab === "company" && (
+      {activeTab === "company" && (
         <Section title={t("setup.companySetup")} lede={t("setup.companySetupLede")}>
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div><FieldLabel>{t("setup.displayName")}</FieldLabel><Input value={settings.providerName ?? ""} placeholder="Amir Coaching" onChange={(e) => set("providerName", e.target.value)} className="w-full" /></div>
@@ -1422,7 +1441,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "branding" && (
+      {activeTab === "branding" && (
         <Section title={t("setup.branding")} lede={t("setup.brandingLede")}>
           <Row label={t("setup.logo")} hint={t("setup.logoHint")}>
             <div>
@@ -1435,15 +1454,23 @@ export function SetupApp() {
             </div>
           </Row>
           <Row label={t("setup.accentColour")} hint={t("setup.accentColourHint")}>
-            <div className="flex items-center gap-2">
-              {["#2f6bd8", "#0d9488", "#16a34a", "#ea580c", "#dc2626", "#db2777", "#7c3aed"].map((c) => <button key={c} type="button" onClick={() => set("brandColor", c)} title={c} className="h-6 w-6 rounded-full" style={{ background: c, boxShadow: (settings.brandColor ?? "#2f6bd8") === c ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />)}
-              <input type="color" value={settings.brandColor ?? "#2f6bd8"} onChange={(e) => set("brandColor", e.target.value)} className="h-7 w-8 cursor-pointer rounded border border-[var(--line)]" title={t("setup.customColour")} />
+            <div className="flex max-w-[420px] flex-wrap items-center gap-2">
+              {[
+                "#2f6bd8", "#1d4ed8", "#4f46e5", "#6d28d9", "#7c3aed", "#9333ea",
+                "#0ea5e9", "#0891b2", "#0d9488", "#0f766e", "#059669", "#16a34a",
+                "#65a30d", "#ca8a04", "#d97706", "#ea580c", "#dc2626", "#e11d48",
+                "#db2777", "#be123c", "#475569", "#1e293b",
+              ].map((c) => <button key={c} type="button" onClick={() => set("brandColor", c)} title={c} className="h-6 w-6 rounded-full transition-transform hover:scale-110" style={{ background: c, boxShadow: (settings.brandColor ?? "#2f6bd8").toLowerCase() === c ? "0 0 0 2px #fff, 0 0 0 4px #111" : "inset 0 0 0 1px rgba(0,0,0,.08)" }} />)}
+              <label className="flex cursor-pointer items-center gap-1.5 rounded-full border border-[var(--line)] px-2 py-1 text-[11px] font-bold text-[var(--ink-3)]">
+                <input type="color" value={settings.brandColor ?? "#2f6bd8"} onChange={(e) => set("brandColor", e.target.value)} className="h-5 w-6 cursor-pointer rounded border-0 bg-transparent p-0" title={t("setup.customColour")} />
+                {t("setup.customColour")}
+              </label>
             </div>
           </Row>
         </Section>
       )}
 
-      {tab === "staff" && (
+      {activeTab === "staff" && (
         <Section title={t("setup.staffWorkforce")} lede={t("setup.staffWorkforceLede")}>
           {portal === "company" && (
             <div className="mb-3 flex flex-wrap items-center gap-3 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] px-4 py-3">
@@ -1469,7 +1496,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "announcements" && (
+      {activeTab === "announcements" && (
         <Section title={t("setup.announcements")} lede={t("setup.announcementsLede")}>
           <Row label={t("setup.staffBoard")} hint={t("setup.staffBoardHint")}>
             <Toggle on={settings.announcements?.enabled ?? true} onChange={(v) => set("announcements", { ...settings.announcements, enabled: v })} labels={[t("setup.on"), t("setup.off")]} />
@@ -1492,7 +1519,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "reviews" && (() => {
+      {activeTab === "reviews" && (() => {
         const rv = settings.reviews ?? {};
         // Default the selection from any config already present.
         const selected = rv.sources ?? ([...(rv.googlePlaceId || rv.googleReviewUrl ? ["google"] : []), ...(rv.trustpilotBusinessUnitId ? ["trustpilot"] : [])] as ("google" | "trustpilot")[]);
@@ -1655,13 +1682,13 @@ export function SetupApp() {
         );
       })()}
 
-      {tab === "roles" && (
+      {activeTab === "roles" && (
         <Section title={t("setup.rolesPermissions")} lede={t("setup.rolesPermissionsLede")}>
-          <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => set("roles", roles)} />
+          <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => set("roles", roles)} areas={hoCombined ? HO_ROLE_AREAS : undefined} defaultRoles={hoCombined ? HO_DEFAULT_ROLES : undefined} />
         </Section>
       )}
 
-      {tab === "learning" && (
+      {activeTab === "learning" && (
         <Section title={t("setup.learning")} lede={t("setup.learningLede")}>
           <Row label={t("setup.keepTrainingRecords")} hint={t("setup.keepTrainingRecordsHint")}>
             <Toggle on={settings.learning?.trackTraining ?? true} onChange={(v) => set("learning", { ...settings.learning, trackTraining: v })} labels={[t("setup.on"), t("setup.off")]} />
@@ -1767,7 +1794,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "meals" && (
+      {activeTab === "meals" && (
         <Section title={t("setup.meals")} lede={t("setup.mealsLede")}>
           <Row label={t("setup.preOrderMeals")} hint={t("setup.preOrderMealsHint")}>
             <Toggle on={settings.meals?.ordering ?? true} onChange={(v) => set("meals", { ...settings.meals, ordering: v })} labels={[t("setup.on"), t("setup.off")]} />
@@ -1782,7 +1809,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "medication" && (
+      {activeTab === "medication" && (
         <Section
           title={t("setup.medication")}
           lede={t("setup.medicationLede")}
@@ -1813,7 +1840,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "safeguarding" && (
+      {activeTab === "safeguarding" && (
         <Section
           title="Safeguarding"
           lede="Accidents and incidents. How parents are kept informed when something is logged for their child."
@@ -1908,7 +1935,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "registers" && (
+      {activeTab === "registers" && (
         <Section title="Register" lede="How the daily attendance register behaves — sign-in/out timestamps and which details show when you tap a child.">
           <Row label="Show sign-in / collection times" hint="On: each ✓ In and ✓ Collected shows the time it was tapped. Off: just the tick.">
             <Toggle on={settings.registers?.timestamps ?? true} onChange={(v) => set("registers", { ...settings.registers, timestamps: v })} labels={["On", "Off"]} />
@@ -1933,7 +1960,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "trips" && (
+      {activeTab === "trips" && (
         <Section title="Trips & visits" lede="Off-site trips — how parents are kept informed and the safety guardrails.">
           <Row label="Ask parents to consent when their child is on a trip" hint="Email + a bell in their area with the trip details (destination, times, transport), and a consent request — reminded until they give it.">
             <Toggle on={settings.trips?.notifyParent ?? true} onChange={(v) => set("trips", { ...settings.trips, notifyParent: v })} labels={["Yes", "No"]} />
@@ -1954,7 +1981,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "calendar" && (
+      {activeTab === "calendar" && (
         <Section title="Calendar" lede="Event reminders and how your calendar behaves. Event categories & colours are managed on the Calendar itself.">
           <Row label="Remind before an event starts" hint="Sends an email + an in-app bell to the staff on an event before it begins, so nothing gets missed.">
             <Toggle on={settings.calendar?.reminderOn ?? true} onChange={(v) => set("calendar", { ...settings.calendar, reminderOn: v })} labels={["On", "Off"]} />
@@ -1966,7 +1993,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "inventory" && (
+      {activeTab === "inventory" && (
         <Section title="Inventory" lede="How stock checks and reorders behave. Categories, storage locations and seasons are managed on the Inventory page itself.">
           <Row label="When a reorder is logged to Expenses, mark it as" hint="Placing an order on the Inventory page creates a matching expense. Choose whether it lands already Paid, or Owed (pending) so you can pay it later.">
             <Toggle on={(settings.inventory?.orderExpenseStatus ?? "paid") === "paid"} onChange={(v) => set("inventory", { ...settings.inventory, orderExpenseStatus: v ? "paid" : "pending" })} labels={["Paid", "Owed"]} />
@@ -1980,7 +2007,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "people" && (
+      {activeTab === "people" && (
         <>
           <Section
             title="What you collect about every child"
@@ -2102,7 +2129,7 @@ export function SetupApp() {
         </>
       )}
 
-      {tab === "cancel" && (
+      {activeTab === "cancel" && (
         <>
           <Section
             title="Cancellation & refunds"
@@ -2224,7 +2251,7 @@ export function SetupApp() {
         </>
       )}
 
-      {tab === "defaults" && (
+      {activeTab === "defaults" && (
         <>
           <Section title="Defaults for a new listing" lede="What a new listing starts with. You can still change any of it per listing.">
             <Row label="Capacity" hint="A tutoring provider's default is 8; a holiday camp's is 60.">
@@ -2260,7 +2287,7 @@ export function SetupApp() {
         </>
       )}
 
-      {tab === "marketplace" && (
+      {activeTab === "marketplace" && (
         <Section
           title="ActivityOS marketplace"
           lede="Your own storefront link always shows your public activities. Switching this on also lists them in the shared ActivityOS marketplace, where families browsing the app can discover you — not just the ones who already have your link."
@@ -2271,7 +2298,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "money" && (
+      {activeTab === "money" && (
         <Section
           title="Money — what you track"
           lede="Your Money section splits into money going OUT (Expenses + supplier Bills/POs) and money coming IN (customer Invoices with pay-links). Show one side or both, and choose whether you raise formal purchase orders."
@@ -2376,7 +2403,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "features" && (() => {
+      {activeTab === "features" && (() => {
         const fe = settings.features;
         const setFe = (view: string, v: boolean) => set("features", { ...fe, [view]: v });
         const ca = settings.customerArea;
@@ -2455,7 +2482,7 @@ export function SetupApp() {
         );
       })()}
 
-      {tab === "refer" && (() => {
+      {activeTab === "refer" && (() => {
         const r = settings.referral;
         const setR = (patch: Partial<typeof r>) => set("referral", { ...r, ...patch });
         const num = (v: string) => Math.max(0, Math.round(Number(v) || 0));
@@ -2496,7 +2523,7 @@ export function SetupApp() {
         );
       })()}
 
-      {tab === "memberships" && (() => {
+      {activeTab === "memberships" && (() => {
         const m = settings.memberships;
         const setM = (patch: Partial<typeof m>) => set("memberships", { ...m, ...patch });
         const num = (v: string) => Math.max(0, Math.round(Number(v) || 0));
@@ -2562,9 +2589,9 @@ export function SetupApp() {
         );
       })()}
 
-      {tab === "notifications" && <NotificationsTab />}
+      {activeTab === "notifications" && <NotificationsTab />}
 
-      {tab === "seasons" && (
+      {activeTab === "seasons" && (
         <Section
           title="Seasons"
           lede="Your trading periods — just names (Autumn 1, Summer Holidays, Full year…). Each listing picks its season when you build it, and Bookings, Audiences and takings group by it. No dates, so different holiday dates across towns don’t matter."
@@ -2573,7 +2600,7 @@ export function SetupApp() {
         </Section>
       )}
 
-      {tab === "bookings" && (
+      {activeTab === "bookings" && (
         <>
           <Section
             title="How parents pay"
@@ -2590,7 +2617,7 @@ export function SetupApp() {
         </>
       )}
 
-      {tab === "vouchers" && (
+      {activeTab === "vouchers" && (
         <>
           <Section
             title="Childcare vouchers"
@@ -2646,7 +2673,7 @@ export function SetupApp() {
         </>
       )}
 
-      {tab === "groups" && (
+      {activeTab === "groups" && (
         <>
           <Section
             title="Age groups & rooms"

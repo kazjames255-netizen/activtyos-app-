@@ -11,16 +11,29 @@ export const children = Router();
 
 const CARD_ROLES = new Set(["company", "franchise", "freelancer", "staff", "platform"]);
 
-/** childId → the parent contact + a representative booking ref, for this tenant. */
-async function bookedChildren(tenantId: string) {
+/** childId → the parent contact + a representative booking ref, for this tenant.
+ *  Optional franchise filter: a franchiseId, or "__ho__" for head-office-direct
+ *  (bookings on listings with no franchiseId). A booking belongs to whichever
+ *  franchise owns its listing (matching the rest of the attribution model). */
+async function bookedChildren(tenantId: string, franchiseId?: string | null) {
   const map = new Map<string, { parentName: string; email: string; phone: string; ref: string }>();
-  const blocks = await db.collection("blocks").where("tenantId", "==", tenantId).get();
+  const [blocks, listingsSnap] = await Promise.all([
+    db.collection("blocks").where("tenantId", "==", tenantId).get(),
+    franchiseId ? db.collection("listings").where("tenantId", "==", tenantId).get() : Promise.resolve(null),
+  ]);
   if (blocks.empty) return map;
+  const listingFr = new Map<string, string | null>();
+  if (listingsSnap) for (const d of listingsSnap.docs) listingFr.set(d.id, (d.data() as { franchiseId?: string }).franchiseId ?? null);
   const snaps = await Promise.all(blocks.docs.map((d) => db.collection("bookings").where("blockId", "==", d.id).get()));
   for (const s of snaps)
     for (const d of s.docs) {
-      const b = fromDoc(d.data() as BookingDoc);
+      const raw = d.data() as BookingDoc & { franchiseId?: string; listingId?: string };
+      const b = fromDoc(raw);
       if (!countsTowardCapacity(b.status) || b.status === "Offered") continue;
+      if (franchiseId) {
+        const fid = raw.franchiseId ?? (raw.listingId ? (listingFr.get(raw.listingId) ?? null) : null);
+        if (franchiseId === "__ho__" ? fid != null : fid !== franchiseId) continue;
+      }
       const kids = b.kids?.length ? b.kids : [{ childId: b.childId }];
       for (const k of kids) {
         if (k.childId && !map.has(k.childId)) map.set(k.childId, { parentName: b.booker ?? "", email: b.email ?? "", phone: b.phone ?? "", ref: b.ref });
@@ -46,11 +59,15 @@ async function placesFor(docs: FirebaseFirestore.DocumentSnapshot[]) {
 children.get("/lookup", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !CARD_ROLES.has(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
-  const idx = await bookedChildren(auth.tenantId);
+  // Head office can scope the search to one franchise (or its own direct
+  // locations) via ?franchiseId=. Company-only; ignored for other roles.
+  const franchiseId = auth.role === "company" && typeof req.query.franchiseId === "string" && req.query.franchiseId ? req.query.franchiseId : null;
+  const idx = await bookedChildren(auth.tenantId, franchiseId);
   // Also include children a family added to their OWN account (not just booked),
   // so Find-a-child covers everyone on the operator's list. Matched customer
-  // (email) → account (uid) → their children.
-  try {
+  // (email) → account (uid) → their children. (Skipped when scoped to a
+  // franchise — an account-only child can't be attributed to one.)
+  if (!franchiseId) try {
     const custs = await db.collection("customers").where("tenantId", "==", auth.tenantId).get();
     await Promise.all(custs.docs.map(async (cd) => {
       const cust = cd.data() as { name?: string; email?: string; phone?: string };

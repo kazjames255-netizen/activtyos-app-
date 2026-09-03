@@ -21,8 +21,25 @@ const putSchema = z.object({
   emergencyPhone: z.string().trim().max(40).optional(),
   // UI language preference (follows the user across devices).
   locale: z.string().trim().max(8).optional(),
+  // Franchise only — the franchise's own business name + territory (e.g. "London").
+  franchiseName: z.string().trim().max(120).optional(),
+  franchiseArea: z.string().trim().max(120).optional(),
+  // Franchise territory map — one or more drawn areas + an agreed/draft status.
+  // Points are {lat,lng} OBJECTS, not [lat,lng] tuples: Firestore forbids nested
+  // arrays, so a polygon ring can't be an array-of-arrays.
+  franchiseTerritory: z.object({
+    areas: z.array(z.object({
+      id: z.string().max(40),
+      name: z.string().max(80),
+      color: z.string().max(16),
+      rings: z.array(z.object({ lat: z.number(), lng: z.number() })).max(4000),
+    })).max(50),
+    // draft = franchise still drawing · proposed = submitted, awaiting HO · agreed = HO approved.
+    status: z.enum(["draft", "proposed", "agreed"]).optional(),
+  }).optional(),
 });
-type UserProfile = { name?: string; phone?: string; address?: string; postcode?: string; marketingConsent?: boolean; emergencyName?: string; emergencyPhone?: string; locale?: string };
+type Territory = { areas: { id: string; name: string; color: string; rings: { lat: number; lng: number }[] }[]; status?: "draft" | "proposed" | "agreed" };
+type UserProfile = { name?: string; phone?: string; address?: string; postcode?: string; marketingConsent?: boolean; emergencyName?: string; emergencyPhone?: string; locale?: string; franchiseName?: string; franchiseArea?: string; franchiseTerritory?: Territory };
 
 account.get("/", async (req, res) => {
   const auth = req.auth!;
@@ -40,17 +57,28 @@ account.get("/", async (req, res) => {
     emergencyName: u.emergencyName ?? "",
     emergencyPhone: u.emergencyPhone ?? "",
     locale: u.locale ?? "en",
+    franchiseName: u.franchiseName ?? "",
+    franchiseArea: u.franchiseArea ?? "",
+    franchiseTerritory: u.franchiseTerritory ?? null,
     role: auth.role,
     tenantId: auth.tenantId ?? null,
   });
 });
 
 account.put("/", async (req, res) => {
+  const auth = req.auth!;
   const uid = req.user?.uid;
   if (!uid) { res.status(400).json({ error: "No account" }); return; }
   const parsed = putSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  await db.collection("users").doc(uid).set({ ...parsed.data, profileUpdatedAt: new Date().toISOString() }, { merge: true });
+  const data = parsed.data;
+  // Territory agreement is HEAD-OFFICE-ONLY: a franchise can draw/propose its
+  // border but can never mark it "agreed" itself. Coerce their status to
+  // proposed (has areas) or draft (none) regardless of what the client sent.
+  if (auth.role === "franchise" && data.franchiseTerritory) {
+    data.franchiseTerritory.status = data.franchiseTerritory.areas.length ? "proposed" : "draft";
+  }
+  await db.collection("users").doc(uid).set({ ...data, profileUpdatedAt: new Date().toISOString() }, { merge: true });
   const doc = await db.collection("users").doc(uid).get();
   const u = doc.data()! as UserProfile;
   res.json({ name: u.name ?? "", phone: u.phone ?? "", address: u.address ?? "", postcode: u.postcode ?? "", marketingConsent: u.marketingConsent ?? false });

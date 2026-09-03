@@ -104,7 +104,7 @@ export function WalletApp() {
       ) : (
         <>
           {/* Total across providers, up top. */}
-          <div className="mb-4 rounded-2xl px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f,#2f6bd8)" }}>
+          <div className="mb-4 rounded-2xl px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,var(--brand),var(--brand-2))" }}>
             <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-[#cdddf7]">{tr("parent.creditToSpend")}</div>
             <div className="text-[30px] font-extrabold leading-tight">{money(total)}</div>
             <div className="text-[11.5px] text-[#cdddf7]">
@@ -129,7 +129,7 @@ export function WalletApp() {
                     )}
                   </div>
                   <div className="text-right">
-                    <div className="text-[16px] font-extrabold text-[#1d3a8f]">{money(b.balance)}</div>
+                    <div className="text-[16px] font-extrabold text-[var(--brand)]">{money(b.balance)}</div>
                     <div className="text-[10.5px] text-[var(--ink-3)]">{tr("parent.toSpend")}</div>
                   </div>
                 </div>

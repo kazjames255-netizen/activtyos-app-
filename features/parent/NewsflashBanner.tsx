@@ -22,9 +22,9 @@ interface FlashPost {
 const LS = "aos.newsflash.seen.v1";
 const readSeen = (): string[] => { try { return JSON.parse(localStorage.getItem(LS) || "[]"); } catch { return []; } };
 const writeSeen = (ids: string[]) => { try { localStorage.setItem(LS, JSON.stringify(ids.slice(-500))); } catch { /* private mode */ } };
-const TPLC: Record<string, string> = { announce: "#2596df", event: "#7c5cff", reminder: "#f59e0b", urgent: "#ef4444", celebrate: "#e22295", booking: "#15b364", newsletter: "#1d3a8f" };
+const TPLC: Record<string, string> = { announce: "#2596df", event: "#7c5cff", reminder: "#f59e0b", urgent: "#ef4444", celebrate: "#e22295", booking: "#15b364", newsletter: "var(--brand)" };
 const TAG: Record<string, string> = { urgent: "URGENT", event: "EVENT", celebrate: "GOOD NEWS", booking: "DON’T MISS", reminder: "REMINDER", newsletter: "NEWSLETTER", announce: "NEWS" };
-const colourOf = (p: FlashPost) => p.colour || TPLC[p.tpl ?? "announce"] || "#1d3a8f";
+const colourOf = (p: FlashPost) => p.colour || TPLC[p.tpl ?? "announce"] || "var(--brand)";
 
 export function NewsflashBanner() {
   const t = useT();

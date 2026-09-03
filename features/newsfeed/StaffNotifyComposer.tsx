@@ -9,6 +9,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui";
+import { get as apiGet } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
 import { addAnnouncement, loadAnnouncements, type Announcement } from "@/features/staff/announcements";
 
@@ -25,6 +26,13 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
   const [pinned, setPinned] = useState(false);
   const [sent, setSent] = useState<Announcement[]>([]);
   const [flash, setFlash] = useState<string | null>(null);
+  // Head-office targeting: aim a staff notice at everyone in the network or a
+  // single franchise's team. Only shown when this company has franchises.
+  const [franchises, setFranchises] = useState<{ franchiseId: string; name: string; area: string | null }[]>([]);
+  const [frTarget, setFrTarget] = useState(""); // "" = all franchises across the network
+  useEffect(() => { if (portal === "company") apiGet<{ franchiseId: string; name: string; area: string | null }[]>("/api/franchises").then(setFranchises).catch(() => {}); }, [portal]);
+  const isHo = franchises.length > 0;
+  const frName = frTarget ? (franchises.find((f) => f.franchiseId === frTarget)?.name ?? "this franchise") : "";
 
   useEffect(() => { setSent(loadAnnouncements()); }, []);
   // Apply the composer defaults from Setup → Announcements on load.
@@ -33,14 +41,15 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
     if (annCfg?.defaultAudience === "listing" && listings[0]) setScope(listings[0].title);
   }, [annCfg?.defaultImportant, annCfg?.defaultAudience, listings]);
 
-  const audienceLabel = scope === "all" ? "All staff" : `Staff at ${scope}`;
+  const baseAudience = scope === "all" ? "All staff" : `Staff at ${scope}`;
+  const audienceLabel = isHo ? (frTarget ? `${frName} · ${baseAudience.toLowerCase()}` : `All franchises across the network · ${baseAudience.toLowerCase()}`) : baseAudience;
   const canSend = title.trim().length > 1 && body.trim().length > 1;
 
   const send = () => {
     if (!canSend) return;
     const next = addAnnouncement({ author: authorName?.trim() || "Head Office", role: "Manager", title: title.trim(), body: body.trim(), audienceLabel, important, pinned });
     setSent(next);
-    setTitle(""); setBody(""); setImportant(false); setPinned(false); setScope("all");
+    setTitle(""); setBody(""); setImportant(false); setPinned(false); setScope("all"); setFrTarget("");
     setFlash(`Sent to ${audienceLabel.toLowerCase()} — it’s on their Announcements board now.`);
     setTimeout(() => setFlash(null), 4000);
   };
@@ -59,6 +68,16 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
           </div>
           <Link href={`/${portal}/setup?tab=announcements`} title="Announcement settings" className="ml-auto flex flex-none items-center gap-1 rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] transition hover:border-[#c9d6f5] hover:text-[#1d3a8f]">⚙ Settings</Link>
         </div>
+
+        {isHo && (
+          <>
+            <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Send across your network to</label>
+            <select value={frTarget} onChange={(e) => setFrTarget(e.target.value)} className="mb-3 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] text-[var(--ink)]">
+              <option value="">🌐 All franchises across the network</option>
+              {franchises.map((f) => <option key={f.franchiseId} value={f.franchiseId}>{f.name}{f.area ? ` · ${f.area}` : ""}</option>)}
+            </select>
+          </>
+        )}
 
         <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Who gets it</label>
         <select value={scope} onChange={(e) => setScope(e.target.value)} className="mb-3 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13px] text-[var(--ink)]">

@@ -307,13 +307,24 @@ bookings.post("/", async (req, res) => {
             ? daysHaveSpace(block, Object.fromEntries(block.sessions.map((s) => [s.date, seats]))).fits
             : block.bookedCount + seats <= block.capacity));
       const nextBid: number = tenantSnap.data()!.nextBid ?? 10312;
+      // Attribute the booking to whichever franchise OWNS the listing (consistent
+      // with split-fees + parent checkout), not the operator's own role — so an HO
+      // phone-booking on a franchise's listing still counts to that franchise, and
+      // a franchise can't pull an HO listing's booking into its own revenue.
+      let listingFranchiseId: string | null = null;
+      if (block?.listingId) {
+        const lsnap = await tx.get(db.collection("listings").doc(block.listingId));
+        listingFranchiseId = lsnap.exists ? ((lsnap.data() as { franchiseId?: string | null }).franchiseId ?? null) : null;
+      } else if (scope.role === "franchise") {
+        listingFranchiseId = scope.franchiseId; // no block (dates-label) — attribute to the creating franchise
+      }
       const b: Booking = {
         ...buildBooking(
           { ...input, dates: block ? block.name : input.dates! },
           nextBid,
         ),
         tenantId,
-        ...(scope.role === "franchise" ? { franchiseId: scope.franchiseId! } : {}),
+        ...(listingFranchiseId ? { franchiseId: listingFranchiseId } : {}),
         ...(block
           ? {
               blockId: input.blockId!,

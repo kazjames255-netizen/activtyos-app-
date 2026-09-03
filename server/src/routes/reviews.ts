@@ -14,7 +14,55 @@ import type { Role } from "../middleware/role";
 export const reviews = Router();
 const canManage = (r: Role) => r === "company" || r === "franchise" || r === "freelancer";
 
-interface NormReview { source: "inhouse" | "google" | "trustpilot"; rating: number; author: string; text: string; postedAt: string; url?: string; listing?: string | null; verified: boolean; reply?: { text: string; at: string } | null; id?: string }
+interface NormReview { source: "inhouse" | "google" | "trustpilot"; rating: number; author: string; text: string; postedAt: string; url?: string; listing?: string | null; verified: boolean; reply?: { text: string; at: string } | null; id?: string; franchiseId?: string | null; demo?: boolean }
+
+// The head office's franchises (accepted invites → users with role:"franchise").
+async function franchisesOf(tenantId: string): Promise<{ franchiseId: string; name: string; area: string | null }[]> {
+  const snap = await db.collection("users").where("tenantId", "==", tenantId).where("role", "==", "franchise").get();
+  const by = new Map<string, { franchiseId: string; name: string; area: string | null }>();
+  for (const d of snap.docs) {
+    const u = d.data();
+    const fid = (u.franchiseId as string) || d.id;
+    if (!by.has(fid)) by.set(fid, { franchiseId: fid, name: (u.franchiseName as string) || "Franchise", area: (u.franchiseArea as string) ?? null });
+  }
+  return [...by.values()];
+}
+
+// listing NAME → owning franchiseId (null = head-office own), so an in-house
+// review (which stores the listing name) can be attributed to a franchise —
+// the same listing-ownership rule split-fees/bookings use.
+async function listingOwnerByName(tenantId: string): Promise<Map<string, string | null>> {
+  const snap = await db.collection("listings").where("tenantId", "==", tenantId).get();
+  const m = new Map<string, string | null>();
+  for (const d of snap.docs) { const l = d.data(); if (l.name) m.set(String(l.name), (l.franchiseId as string) ?? null); }
+  return m;
+}
+
+// Deterministic demo feedback for a head office whose real inbox is still empty
+// — so the Reviews page and the per-franchise breakdown have something to show.
+// Spread across the head office's own listings + each franchise. Marked demo so
+// the UI can label them and hide the (non-persistable) reply box.
+const DEMO_TEXT: { rating: number; author: string; text: string; listing: string }[] = [
+  { rating: 5, author: "Sarah M.", text: "Brilliant football camp — my son came home buzzing every day. Coaches were so encouraging.", listing: "After-School Football Club" },
+  { rating: 5, author: "Priya K.", text: "Fantastic holiday club, well organised and the staff genuinely care. Booking was easy too.", listing: "Summer Holiday Camp" },
+  { rating: 4, author: "James T.", text: "Really good value and my daughter loved swimming. Only wish there were more time slots.", listing: "Learn to Swim" },
+  { rating: 5, author: "Aisha R.", text: "The team went above and beyond for my son's birthday party. Highly recommend!", listing: "Birthday Party Package" },
+  { rating: 4, author: "Dan W.", text: "Great coaching and communication. Registers and pick-up were smooth and safe.", listing: "After-School Football Club" },
+  { rating: 3, author: "Megan L.", text: "Good sessions overall, though drop-off was a bit chaotic on the first day.", listing: "Summer camp Loughton Manor" },
+  { rating: 5, author: "Oliver H.", text: "Couldn't fault it — friendly staff, clear updates and my kids can't wait to go back.", listing: "Summer Holiday Camp" },
+  { rating: 5, author: "Nadia S.", text: "Superb. The app made everything simple and the activities kept my daughter engaged all week.", listing: "Learn to Swim" },
+];
+function demoReviews(ownListings: string[], franchises: { franchiseId: string; name: string }[], ownerByName: Map<string, string | null>): NormReview[] {
+  // Base date walks backwards deterministically (no Date.now churn in output).
+  const base = Date.UTC(2026, 7, 20); // 20 Aug 2026
+  return DEMO_TEXT.map((d, i) => {
+    // Attribute to the franchise that owns the named listing; else round-robin
+    // across franchises so the breakdown is populated even without listing data.
+    let fid = ownerByName.get(d.listing);
+    if (fid === undefined) fid = franchises.length ? franchises[i % franchises.length].franchiseId : null;
+    return { source: "inhouse" as const, rating: d.rating, author: d.author, text: d.text, postedAt: new Date(base - i * 86_400_000 * 3).toISOString(), listing: d.listing, verified: true, reply: null, id: `demo-${i}`, franchiseId: fid, demo: true };
+  });
+}
 
 async function tenantReviewCfg(tenantId: string) {
   const lib = await db.collection("libraries").doc(tenantId).get();
@@ -72,9 +120,38 @@ function blend(parts: { avg: number | null; count: number }[]) {
   return { rating: Math.round(rating * 10) / 10, count };
 }
 
-async function buildSummary(tenantId: string) {
+// Bucket in-house reviews by owning franchise → a head-office breakdown.
+// null bucket = head-office own / unattributed. Each row carries avg + count.
+function byFranchiseBreakdown(inhouse: NormReview[], franchises: { franchiseId: string; name: string; area: string | null }[]) {
+  const acc = new Map<string, { sum: number; count: number }>();
+  for (const r of inhouse) {
+    const key = r.franchiseId ?? "__ho__";
+    const a = acc.get(key) ?? { sum: 0, count: 0 };
+    a.sum += r.rating; a.count += 1; acc.set(key, a);
+  }
+  const row = (id: string, name: string, area: string | null) => {
+    const a = acc.get(id);
+    return { franchiseId: id === "__ho__" ? null : id, name, area, rating: a && a.count ? Math.round((a.sum / a.count) * 10) / 10 : null, count: a?.count ?? 0 };
+  };
+  return [row("__ho__", "Head office (own listings)", null), ...franchises.map((f) => row(f.franchiseId, f.name, f.area))];
+}
+
+async function buildSummary(tenantId: string, opts?: { isHeadOffice?: boolean }) {
   const cfg = await tenantReviewCfg(tenantId);
-  const inhouse = await inhouseReviews(tenantId);
+  let inhouse = await inhouseReviews(tenantId);
+  // A head office with an empty inbox gets deterministic demo feedback so the
+  // page + per-franchise breakdown aren't blank. Dropped automatically once real
+  // reviews arrive (>= 3), so it never masks genuine data.
+  const franchises = opts?.isHeadOffice ? await franchisesOf(tenantId) : [];
+  if (opts?.isHeadOffice) {
+    const ownerByName = await listingOwnerByName(tenantId);
+    // Attribute any REAL in-house reviews to a franchise via their listing name.
+    inhouse = inhouse.map((r) => ({ ...r, franchiseId: r.listing ? (ownerByName.get(r.listing) ?? null) : null }));
+    if (inhouse.length < 3) {
+      const ownListings = [...ownerByName.entries()].filter(([, fid]) => fid == null).map(([n]) => n);
+      inhouse = [...inhouse, ...demoReviews(ownListings, franchises, ownerByName)];
+    }
+  }
   const inAvg = inhouse.length ? inhouse.reduce((n, r) => n + r.rating, 0) / inhouse.length : null;
   const primaryPlaceId = cfg.googlePlaces?.find((p) => p.placeId)?.placeId || cfg.googlePlaceId;
   const google = cfg.showGoogleRating !== false ? await googleLive(primaryPlaceId) : null;
@@ -90,15 +167,18 @@ async function buildSummary(tenantId: string) {
     trustpilot: trustpilot ? { rating: trustpilot.rating, count: trustpilot.count } : null,
   };
   const items = [...inhouse, ...(google?.reviews ?? []), ...(trustpilot?.reviews ?? [])].sort((a, b) => (a.postedAt < b.postedAt ? 1 : -1));
-  return { summary, bySource, items, cfg };
+  const byFranchise = opts?.isHeadOffice ? byFranchiseBreakdown(inhouse, franchises) : null;
+  return { summary, bySource, items, cfg, byFranchise };
 }
 
 // operator → the whole hub
 reviews.get("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
-  const { summary, bySource, items } = await buildSummary(auth.tenantId);
-  res.json({ summary, bySource, items, googleConnectConfigured: !!process.env.GOOGLE_BP_CLIENT_ID, trustpilotConfigured: !!process.env.TRUSTPILOT_API_KEY });
+  // A head office (company) gets the per-franchise breakdown + demo fallback.
+  const isHeadOffice = auth.role === "company";
+  const { summary, bySource, items, byFranchise } = await buildSummary(auth.tenantId, { isHeadOffice });
+  res.json({ summary, bySource, items, byFranchise, googleConnectConfigured: !!process.env.GOOGLE_BP_CLIENT_ID, trustpilotConfigured: !!process.env.TRUSTPILOT_API_KEY });
 });
 
 // operator → reply to an in-house review

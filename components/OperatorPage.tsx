@@ -119,11 +119,11 @@ export function PageHero({
   return (
     <>
       <div
-        className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]"
+        className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]"
         style={{
           // A white 18px dot grid layered over the gradient — matches the sidebar
           // and register header so every title card reads as the same surface.
-          backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${background ?? "linear-gradient(120deg,#16306e 0%,#3f78d8 100%)"}`,
+          backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${background ?? "var(--hero-grad)"}`,
           backgroundSize: "18px 18px, cover, cover, cover, cover",
           backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat",
         }}

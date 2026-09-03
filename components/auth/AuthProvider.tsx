@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useRef, useState, type ReactNode 
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
+import { clearMeCache } from "@/components/auth/PortalGuard";
 
 interface AuthState {
   user: User | null;
@@ -23,10 +24,17 @@ export const useAuth = () => useContext(AuthContext);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  // Track the signed-in uid so we only drop the cached /api/me when the account
+  // actually CHANGES (login as someone else / sign-out) — not on the initial
+  // session restore, which would race the guard's first fetch.
+  const prevUid = useRef<string | null | undefined>(undefined);
 
   useEffect(
     () =>
       onAuthStateChanged(firebaseAuth, (u) => {
+        const uid = u?.uid ?? null;
+        if (prevUid.current !== undefined && prevUid.current !== uid) clearMeCache();
+        prevUid.current = uid;
         setUser(u);
         setLoading(false);
       }),

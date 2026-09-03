@@ -9,6 +9,7 @@ import { Button } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
 import { StaffNotifyComposer } from "./StaffNotifyComposer";
+import { useHoScope, HO_OWN } from "@/components/franchise/HoScope";
 import { NewsletterBuilder, NewsletterView, PostImage, NL_PALETTES, downscaleImage, newMeta, newsletterToText, newsletterToHtml, type Newsletter, type NlMeta } from "./newsletter";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -35,6 +36,10 @@ interface Post {
   date?: string; time?: string; location?: string; cta?: Cta | null; publishAt?: string;
   rsvp?: Rsvp | null; seen?: number; reactions?: number; newsletter?: Newsletter | null; folder?: string; ref?: string;
   postedByName?: string; createdAt?: string; editedAt?: string;
+  // Head-office / franchise targeting (set by the server). franchiseId = TARGET
+  // (null = the whole network); authorLabel = who sent it; targetName = the
+  // franchise's name when a single franchise was targeted.
+  franchiseId?: string | null; authorLabel?: string; authorScope?: "network" | "franchise" | "own"; targetName?: string | null;
 }
 
 const TPL: Record<Tpl, { label: string; color: string; hint: string }> = {
@@ -114,13 +119,14 @@ type CtaKind = "none" | "listing" | "url";
 interface Draft {
   editId: string; tpl: Tpl; title: string; body: string; colour: string; image: string; imageAspect: string; imageX: number; imageY: number; imageZoom: number; folder: string; ref: string;
   audScope: "all" | "listing"; audIds: string[];
+  frTarget: string; // HO only: "" = all franchises across the network, else a franchiseId
   date: string; time: string; location: string;
   pinned: boolean; priority: "normal" | "urgent"; ackRequired: boolean; react: boolean;
   ctaKind: CtaKind; ctaLabel: string; ctaTarget: string; ctaListingId: string; ctaUrl: string;
   when: "now" | "later" | "draft"; publishAt: string;
 }
 const draftFor = (tpl: Tpl, listings: { id: string; title: string }[]): Draft => ({
-  editId: "", tpl, title: "", body: "", colour: "", image: "", imageAspect: "full", imageX: 0, imageY: 0, imageZoom: 1, folder: "", ref: "", audScope: "all", audIds: [],
+  editId: "", tpl, title: "", body: "", colour: "", image: "", imageAspect: "full", imageX: 0, imageY: 0, imageZoom: 1, folder: "", ref: "", audScope: "all", audIds: [], frTarget: "",
   date: "", time: "", location: "",
   pinned: tpl === "urgent" || tpl === "reminder",
   priority: tpl === "urgent" ? "urgent" : "normal",
@@ -149,6 +155,14 @@ export function NewsfeedApp() {
   const [audience, setAudience] = useState<"parents" | "staff">("parents"); // Newsfeed = parents; Staff = internal notices
   const router = useRouter();
   const portal = usePathname()?.split("/")[1] || "freelancer";
+  // Head-office targeting: a company that has franchises, viewing the combined
+  // "all franchises" scope, can aim each post at the whole network or one
+  // franchise. When drilled into a single franchise the target pre-selects it.
+  const hoScope = useHoScope();
+  const [franchises, setFranchises] = useState<{ franchiseId: string; name: string; area: string | null }[]>([]);
+  useEffect(() => { if (portal === "company") apiGet<{ franchiseId: string; name: string; area: string | null }[]>("/api/franchises").then(setFranchises).catch(() => {}); }, [portal]);
+  const isHo = portal === "company" && franchises.length > 0;
+  const scopedFr = hoScope && hoScope !== HO_OWN ? hoScope : "";
 
   const refresh = useCallback(() => {
     apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
@@ -206,6 +220,7 @@ export function NewsfeedApp() {
       priority: d.priority, pinned: d.pinned, ackRequired: d.ackRequired, react: d.react,
       status,
       audience: d.audScope, audIds: d.audScope === "listing" ? d.audIds : undefined, audLabel,
+      ...(isHo ? { franchiseId: d.frTarget || null } : {}),
       folder: d.folder.trim() || undefined,
       ref: d.ref.trim() || undefined,
       ...(d.tpl === "event" ? { date: d.date, time: d.time, location: d.location } : {}),
@@ -261,6 +276,7 @@ export function NewsfeedApp() {
       tpl: "newsletter", title, body, newsletter: nl,
       status,
       audience: meta.audScope, audIds: meta.audScope === "listing" ? meta.audIds : undefined, audLabel,
+      ...(isHo ? { franchiseId: scopedFr || null } : {}),
       pinned: meta.pinned, ackRequired: meta.ackRequired, react: meta.react, priority: meta.priority,
       folder: meta.folder.trim() || undefined,
       ...(scheduled ? { publishAt: meta.publishAt } : {}),
@@ -279,6 +295,7 @@ export function NewsfeedApp() {
   const draftFromPost = (p: Post): Draft => ({
     editId: p.id, tpl: p.tpl ?? "announce", title: p.title ?? "", body: p.body, colour: p.colour ?? "", image: p.photoUrl ?? "", imageAspect: p.imageAspect ?? "full", imageX: p.imageX ?? 0, imageY: p.imageY ?? 0, imageZoom: p.imageZoom ?? 1, folder: p.folder ?? "", ref: p.ref ?? "",
     audScope: p.audience === "listing" ? "listing" : "all", audIds: p.audIds ?? (p.audId ? [p.audId] : []),
+    frTarget: p.franchiseId ?? "",
     date: p.date ?? "", time: p.time ?? "", location: p.location ?? "",
     pinned: !!p.pinned, priority: p.priority ?? "normal", ackRequired: !!p.ackRequired, react: p.react !== false,
     ctaKind: p.cta?.url ? "url" : p.cta?.target ? "listing" : "none", ctaLabel: p.cta?.label ?? "", ctaTarget: p.cta?.target ?? "", ctaListingId: p.cta?.listingId ?? "", ctaUrl: p.cta?.url ?? "", when: "now", publishAt: "",
@@ -321,7 +338,7 @@ export function NewsfeedApp() {
   if (audience === "staff") {
     return (
       <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
-        <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
+        <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
           <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Notifications</div>
           <p className="mt-1 max-w-[640px] text-[12.5px] text-white/85">Send updates to families or to your own team. Staff notices land on every team member’s Announcements board — never seen by parents.</p>
         </div>
@@ -336,7 +353,7 @@ export function NewsfeedApp() {
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
 
       {/* Hero */}
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
+      <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${HERO}`, backgroundSize: "18px 18px, cover, cover, cover, cover", backgroundRepeat: "repeat, no-repeat, no-repeat, no-repeat, no-repeat" }}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Newsfeed</div>
           <div className="flex flex-none flex-wrap items-center gap-2"><TourLauncher view="newsfeed" compact /><SettingsLink /></div>
@@ -359,7 +376,7 @@ export function NewsfeedApp() {
           </div>
           <div className="grid gap-2 sm:grid-cols-3 lg:grid-cols-6">
             {TPL_ORDER.map((k) => (
-              <button key={k} type="button" onClick={() => setDraft(draftFor(k, listings))} className="flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition hover:-translate-y-0.5 hover:shadow-md" style={{ borderColor: `${TPL[k].color}44`, background: `${TPL[k].color}0c` }}>
+              <button key={k} type="button" onClick={() => setDraft({ ...draftFor(k, listings), frTarget: scopedFr })} className="flex flex-col items-start gap-0.5 rounded-xl border p-2.5 text-left transition hover:-translate-y-0.5 hover:shadow-md" style={{ borderColor: `${TPL[k].color}44`, background: `${TPL[k].color}0c` }}>
                 <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: TPL[k].color, color: "#fff" }}>{TPL[k].label}</span>
                 <span className="text-[10.5px] text-[var(--ink-3)]">{TPL[k].hint}</span>
               </button>
@@ -406,7 +423,7 @@ export function NewsfeedApp() {
         </div>
       )}
 
-      {draft && <Composer draft={draft} setDraft={setDraft} listings={listings} folders={folders} onClose={() => setDraft(null)} onPublish={publish} />}
+      {draft && <Composer draft={draft} setDraft={setDraft} listings={listings} folders={folders} franchises={isHo ? franchises : []} onClose={() => setDraft(null)} onPublish={publish} />}
       {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialCompany={nlCompany} initialMeta={nlOpen.meta} listings={listings} coupons={coupons} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta, channel) => saveNewsletter(nl, meta, channel, nlOpen.editId)} />}
       {pending && <PostCountdown label={pending.label} onSend={() => { const run = pending.run; setPending(null); run(); }} onCancel={() => setPending(null)} />}
     </div>
@@ -453,6 +470,13 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
     : p.status === "archived"
     ? <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-3)]">🗄 Was shared to {audience} · {when(p.createdAt)}</span>
     : <span className="rounded-full bg-[#e7f6ee] px-2 py-0.5 text-[10px] font-extrabold text-[#0f8a4a]">✅ Shared to {audience} · {when(p.createdAt)}</span>;
+  // Who sent it + where it landed across the network (HO / franchise posts only).
+  const frBadge = (p.authorScope === "network" || p.authorScope === "franchise") ? (
+    <span className="rounded-full bg-[#eef2ff] px-2 py-0.5 text-[10px] font-extrabold text-[#3730a3]">
+      📣 {p.authorLabel || "Head office"}
+      {p.authorScope === "network" ? " → All franchises across the network" : p.targetName ? ` → ${p.targetName}` : ""}
+    </span>
+  ) : null;
   const manageBar = canManage && (
     <span className="ml-auto flex flex-wrap items-center gap-1.5">
       <button type="button" onClick={onPin} className="rounded-md border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{p.pinned ? "Unpin" : "Pin"}</button>
@@ -469,6 +493,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
           <span className="rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: `${tpl.color}18`, color: tpl.color }}>Newsletter</span>
           {p.folder && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 text-[10px] font-bold text-[var(--ink-2)]">📁 {p.folder}</span>}
           {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">Pinned</span>}
+          {frBadge}
           {sharedLine}
         </div>
         {p.title && <div className="px-3.5 pt-2 text-[15px] font-extrabold text-[var(--ink)]" style={{ fontFamily: "var(--ff-display)" }}>🔖 {p.title}</div>}
@@ -502,6 +527,7 @@ function PostCard({ p, canManage, folders = [], onMove, onEdit, onDuplicate, onP
           {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">Pinned</span>}
           {p.priority === "urgent" && <span className="rounded-full bg-[#fde2e4] px-2 py-0.5 text-[10.5px] font-extrabold text-[#c02636]">Urgent</span>}
           {p.ackRequired && <span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-extrabold text-[#1d3a8f]">Acknowledge</span>}
+          {frBadge}
           <span className="ml-auto">{sharedLine}</span>
         </div>
         {p.title && <div className="text-[19px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</div>}
@@ -558,7 +584,7 @@ function PostPreview({ d }: { d: Draft }) {
   );
 }
 
-function Composer({ draft, setDraft, listings, folders = [], onClose, onPublish }: { draft: Draft; setDraft: (d: Draft) => void; listings: { id: string; title: string }[]; folders?: string[]; onClose: () => void; onPublish: (d: Draft, channel: "page" | "email" | "both" | "download") => void }) {
+function Composer({ draft, setDraft, listings, folders = [], franchises = [], onClose, onPublish }: { draft: Draft; setDraft: (d: Draft) => void; listings: { id: string; title: string }[]; folders?: string[]; franchises?: { franchiseId: string; name: string; area: string | null }[]; onClose: () => void; onPublish: (d: Draft, channel: "page" | "email" | "both" | "download") => void }) {
   const tpl = TPL[draft.tpl];
   const set = (f: Partial<Draft>) => setDraft({ ...draft, ...f });
   const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]";
@@ -699,6 +725,16 @@ function Composer({ draft, setDraft, listings, folders = [], onClose, onPublish 
                     : <input value={draft.ctaUrl} onChange={(e) => set({ ctaUrl: e.target.value })} placeholder="https://…" className={inputCls} />}
                 </div>
               )}
+            </div>
+          ))}
+
+          {franchises.length > 0 && field("Send to (across your network)", (
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <button type="button" onClick={() => set({ frTarget: "" })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.frTarget === "" ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>🌐 All franchises across the network</button>
+                {franchises.map((f) => <button key={f.franchiseId} type="button" onClick={() => set({ frTarget: f.franchiseId })} className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={draft.frTarget === f.franchiseId ? { borderColor: BLUE, background: "#eef4fd", color: BLUE } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{f.name}{f.area ? ` · ${f.area}` : ""}</button>)}
+              </div>
+              <span className="block text-[10.5px] text-[var(--ink-3)]">{draft.frTarget === "" ? "Reaches every family (and staff) with a booking anywhere in the network." : `Only ${franchises.find((f) => f.franchiseId === draft.frTarget)?.name ?? "this franchise"}’s families and staff will see it. Posted as “Head office”.`}</span>
             </div>
           ))}
 

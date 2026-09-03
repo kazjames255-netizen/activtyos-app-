@@ -1938,7 +1938,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
                       <div key={d.id} className="mt-1 flex flex-wrap items-baseline gap-x-2">
                         <span className="text-[11px]" style={{ color: tk.muted }}>{d.label}</span>
                         {isLink
-                          ? <a href={href} target="_blank" rel="noreferrer" className="text-[14px] font-extrabold underline" style={{ color: "#2f6bd8" }}>{d.value} ↗</a>
+                          ? <a href={href} target="_blank" rel="noreferrer" className="text-[14px] font-extrabold underline" style={{ color: "var(--brand-2)" }}>{d.value} ↗</a>
                           : <span className="text-[14.5px] font-extrabold" style={{ color: tk.ink }}>{d.value}</span>}
                       </div>
                     );

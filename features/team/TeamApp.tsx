@@ -2,10 +2,13 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { get as apiGet, post as apiPost, api } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
-import { DEFAULT_ROLES } from "@/lib/settings";
+import { DEFAULT_ROLES, HO_DEFAULT_ROLES } from "@/lib/settings";
+import { useHoScope } from "@/components/franchise/HoScope";
+import { peekMe } from "@/components/auth/PortalGuard";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { LocationsApp } from "@/features/locations/LocationsApp";
@@ -77,7 +80,14 @@ export function TeamApp() {
   const { settings, save } = useSettings();
   const t = useT();
   const [tab, setTab] = useState<"team" | "locations" | "onboarding" | "applications" | "appraisals">("team");
-  const roles = (settings.roles?.length ? settings.roles : DEFAULT_ROLES).filter((r) => !r.owner || true); // include all
+  // Head office (all-franchises view) invites its own central team — so the role
+  // picker offers the head-office roles (Director / Ops / Marketing / Admin), not
+  // the on-site coach/lead roles.
+  const hoScope = useHoScope();
+  const hoPortal = usePathname()?.split("/")[1] || "";
+  const isHoCombined = hoPortal === "company" && !!peekMe()?.hasFranchises && !hoScope;
+  const roleFallback = isHoCombined ? HO_DEFAULT_ROLES : DEFAULT_ROLES;
+  const roles = (settings.roles?.length ? settings.roles : roleFallback).filter((r) => !r.owner || true); // include all
   const [me, setMe] = useState<Me | null>(null);
   const [invites, setInvites] = useState<Invite[] | null>(null);
   const [listings, setListings] = useState<Listing[]>([]);
@@ -106,6 +116,10 @@ export function TeamApp() {
   const [allList, setAllList] = useState(true);
   const [list, setList] = useState<string[]>([]);
   const resetAssign = () => { setNotRostered(false); setAllLoc(true); setLoc([]); setAllList(true); setList([]); };
+
+  // Keep the selected invite role valid for the current role set (head-office
+  // roles differ from the on-site ones, so "coach" won't exist there).
+  useEffect(() => { if (roles.length && !roles.some((r) => r.id === roleId)) setRoleId(roles.find((r) => !r.owner)?.id ?? roles[0].id); }, [roles, roleId]);
 
   const refresh = useCallback(() => {
     apiGet<Invite[]>("/api/invites").then(setInvites).catch((e) => setError(e instanceof Error ? e.message : t("team.failedLoadTeam")));

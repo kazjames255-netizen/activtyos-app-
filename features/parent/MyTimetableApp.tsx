@@ -9,12 +9,12 @@ import type { Booking } from "@/features/bookings/types";
 // Boy → blue, Girl → pink, unknown → grey (matches the bookings pills).
 function genderTone(sex?: string): { bg: string; fg: string; on: string } {
   const s = (sex ?? "").toLowerCase();
-  if (s.startsWith("b") || s === "male" || s === "m") return { bg: "#eaf0fc", fg: "#1d3a8f", on: "#1d3a8f" };
+  if (s.startsWith("b") || s === "male" || s === "m") return { bg: "#eaf0fc", fg: "var(--brand)", on: "var(--brand)" };
   if (s.startsWith("g") || s === "female" || s === "f") return { bg: "#fdeaf3", fg: "#b0186a", on: "#c81e77" };
   return { bg: "var(--panel)", fg: "var(--ink-2)", on: "var(--ink-2)" };
 }
 // A colour per activity so the timetable reads at a glance.
-const PALETTE = ["#2f6bd8", "#0e9f6e", "#e2225f", "#7a5af8", "#e88f1f", "#0ea5a0", "#c81e77", "#16a34a"];
+const PALETTE = ["var(--brand-2)", "#0e9f6e", "#e2225f", "#7a5af8", "#e88f1f", "#0ea5a0", "#c81e77", "#16a34a"];
 
 const parseISO = (iso: string) => { const [y, m, d] = iso.split("-").map(Number); return new Date(y, (m || 1) - 1, d || 1); };
 const fmtLongDay = (iso: string) => parseISO(iso).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
@@ -104,7 +104,7 @@ export function MyTimetableApp() {
       {childNames.length > 1 && (
         <div className="mb-3.5 flex flex-wrap gap-1.5">
           <button type="button" onClick={() => setChildF("")} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
-            style={!childF ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+            style={!childF ? { borderColor: "var(--brand)", background: "var(--brand)", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
             {t("parent.allChildren")}
           </button>
           {childNames.map((name) => {
@@ -138,7 +138,7 @@ export function MyTimetableApp() {
                 </div>
                 <div className="grid gap-2.5 sm:grid-cols-2 xl:grid-cols-3">
                   {[...sessions].sort((a, b) => timesFor(a).localeCompare(timesFor(b))).map((s, i) => {
-                    const col = listingColour[s.listing] || "#2f6bd8";
+                    const col = listingColour[s.listing] || "var(--brand-2)";
                     const tone = genderTone(kidsSex[s.child]);
                     const staff = staffFor(s);
                     const venue = venueFor(s);

@@ -28,7 +28,7 @@ const MAX_RECIPIENTS = 2000;
 //     blocks, for everyone.
 // Transactional mail (audience "one" — confirmations, payment links) ignores
 // all of this. Returns a predicate; email is lowercased by the caller/inside.
-async function marketBlock(tenantId: string): Promise<(email: string) => boolean> {
+async function marketBlock(tenantId: string, scope?: string | null): Promise<(email: string) => boolean> {
   const [sup, cust, bk] = await Promise.all([
     suppressCol.where("tenantId", "==", tenantId).get(),
     db.collection("customers").where("tenantId", "==", tenantId).get(),
@@ -39,11 +39,13 @@ async function marketBlock(tenantId: string): Promise<(email: string) => boolean
   const optIn = new Map<string, boolean>();
   for (const d of cust.docs) { const c = d.data() as { email?: string; marketingOptIn?: boolean }; if (c.email && typeof c.marketingOptIn === "boolean") optIn.set(c.email.toLowerCase(), c.marketingOptIn); }
   // "Booked" = holds or held a real place. Waitlisted / Offered is not a sale,
-  // so those still need explicit opt-in.
+  // so those still need explicit opt-in. Only bookings IN the active network
+  // scope count, so a family booked only with another franchise isn't treated
+  // as this scope's soft-opt-in.
   const booked = new Set<string>();
   for (const d of bk.docs) {
-    const b = d.data() as { email?: string; status?: string };
-    if (!b.email) continue;
+    const b = d.data() as { email?: string; status?: string; franchiseId?: string | null };
+    if (!b.email || !inScope(b, scope)) continue;
     if (b.status === "Cancelled" || b.status === "Declined" || b.status === "Waitlisted" || b.status === "Offered") continue;
     booked.add(b.email.toLowerCase());
   }
@@ -82,29 +84,55 @@ function opScope(req: Request, res: Response): string | null {
   return auth.tenantId;
 }
 
+// Head-office network scope for email reads/sends. Only a company (HO) account
+// narrows the network via ?franchiseId=. Returns:
+//   undefined → no scoping (whole network — the default, and every non-HO operator)
+//   null      → head-office OWN locations only (bookings with no franchiseId)
+//   string    → that one franchise
+// A franchise account is always locked to its own franchiseId, whatever it asks for.
+function netScope(req: Request): string | null | undefined {
+  const auth = req.auth!;
+  if (auth.role === "franchise" && auth.franchiseId) return auth.franchiseId;
+  if (auth.role === "company") {
+    const q = typeof req.query.franchiseId === "string" ? req.query.franchiseId.trim() : "";
+    if (q === "__ho__") return null;
+    if (q) return q;
+  }
+  return undefined;
+}
+const inScope = (b: { franchiseId?: string | null }, scope: string | null | undefined): boolean =>
+  scope === undefined ? true : scope === null ? !b.franchiseId : b.franchiseId === scope;
+
 // The distinct families (booker name + email) for a tenant — everyone who's
 // booked and isn't cancelled/declined. This is the "all families" audience.
-async function familyRecipients(tenantId: string): Promise<{ email: string; name: string }[]> {
+async function familyRecipients(tenantId: string, scope?: string | null): Promise<{ email: string; name: string }[]> {
   const snap = await db.collection("bookings").where("tenantId", "==", tenantId).get();
   const map = new Map<string, string>(); // email → booker name
   for (const d of snap.docs) {
-    const b = d.data() as { email?: string; booker?: string; status?: string };
-    if (!b.email || b.status === "Cancelled" || b.status === "Declined") continue;
+    const b = d.data() as { email?: string; booker?: string; status?: string; franchiseId?: string | null };
+    if (!b.email || b.status === "Cancelled" || b.status === "Declined" || !inScope(b, scope)) continue;
     const e = b.email.toLowerCase();
     if (!map.has(e)) map.set(e, (b.booker || "").trim() || e);
   }
   return [...map.entries()].map(([email, name]) => ({ email, name }));
 }
-const familyEmails = async (tenantId: string) => (await familyRecipients(tenantId)).map((r) => r.email);
+const familyEmails = async (tenantId: string, scope?: string | null) => (await familyRecipients(tenantId, scope)).map((r) => r.email);
 
 /** The recipient set a validated send/schedule input resolves to: the chosen
  *  base audience plus any Cc/Bcc addresses, deduped and lowercased. */
-async function resolveRecipients(tenantId: string, input: z.infer<typeof sendSchema>): Promise<string[]> {
-  const base = input.audience === "one"
+async function resolveRecipients(tenantId: string, input: z.infer<typeof sendSchema>, scope?: string | null): Promise<string[]> {
+  let base = input.audience === "one"
     ? [input.to!.toLowerCase(), ...(input.recipients?.map((e) => e.toLowerCase()) ?? [])]
     : input.recipients?.length
       ? [...new Set(input.recipients.map((e) => e.toLowerCase()))]
-      : await familyEmails(tenantId);
+      : await familyEmails(tenantId, scope);
+  // Safety net: when head office has narrowed to a network (a franchise, or its
+  // own locations), an explicitly-supplied blast list is kept WITHIN that
+  // network — a family from another franchise can't be swept in by accident.
+  if (input.audience !== "one" && input.recipients?.length && scope !== undefined) {
+    const allowed = new Set(await familyEmails(tenantId, scope));
+    base = base.filter((e) => allowed.has(e));
+  }
   // Cc/Bcc are added to the recipient set (sends go out individually, so there
   // are no shared Cc/Bcc headers — real header-level Cc/Bcc is a mailer
   // enhancement).
@@ -112,7 +140,7 @@ async function resolveRecipients(tenantId: string, input: z.infer<typeof sendSch
   // Marketing sends (a blast — anything that isn't a single "one" email) drop
   // anyone who unsubscribed or turned marketing consent off. PECR compliance.
   if (input.audience === "one") return set;
-  const blocked = await marketBlock(tenantId);
+  const blocked = await marketBlock(tenantId, scope);
   return set.filter((e) => !blocked(e));
 }
 
@@ -122,6 +150,7 @@ async function resolveRecipients(tenantId: string, input: z.infer<typeof sendSch
 emails.get("/audiences", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
+  const scope = netScope(req);
   const today = new Date().toISOString().slice(0, 10);
   const [bookings, customers] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
@@ -130,11 +159,11 @@ emails.get("/audiences", async (req, res) => {
 
   // Per family: do they hold anything current/upcoming, anything at all, a
   // waitlist place? A booking with no days field runs every session — treat
-  // it as current.
+  // it as current. Only bookings in the active network scope count.
   const families = new Map<string, { active: boolean; past: boolean; waitlisted: boolean }>();
   for (const d of bookings.docs) {
-    const b = d.data() as { email?: string; status?: string; days?: string[] };
-    if (!b.email?.includes("@")) continue;
+    const b = d.data() as { email?: string; status?: string; days?: string[]; franchiseId?: string | null };
+    if (!b.email?.includes("@") || !inScope(b, scope)) continue;
     const e = b.email.toLowerCase();
     const f = families.get(e) ?? { active: false, past: false, waitlisted: false };
     if (b.status === "Waitlisted" || b.status === "Offered") f.waitlisted = true;
@@ -169,7 +198,10 @@ emails.get("/audiences", async (req, res) => {
   const waitlisted = emailsOf((f) => f.waitlisted);
   // On the customer list (an enquiry, a phone-in, an operator add) but never
   // actually booked.
-  const enquiries = [...new Set(customers.docs
+  // Enquiries live on the customer list with no booking, so they can't be
+  // attributed to a network. In a scoped (own-locations / single-franchise)
+  // view we omit them rather than guess.
+  const enquiries = scope !== undefined ? [] : [...new Set(customers.docs
     .map((d) => ((d.data() as { email?: string }).email ?? "").toLowerCase())
     .filter((e) => e.includes("@") && !families.has(e)))];
 
@@ -207,7 +239,7 @@ emails.get("/audiences", async (req, res) => {
 emails.get("/recipients", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
-  const list = await familyRecipients(tenantId);
+  const list = await familyRecipients(tenantId, netScope(req));
   res.json({ count: list.length, families: list, sample: list.slice(0, 20).map((r) => r.email) });
 });
 
@@ -269,7 +301,7 @@ emails.post("/send", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const input = parsed.data;
 
-  const recipients = await resolveRecipients(auth.tenantId, input);
+  const recipients = await resolveRecipients(auth.tenantId, input, netScope(req));
   if (recipients.length === 0) { res.status(400).json({ error: input.audience === "one" ? "Add at least one recipient address." : "No families to email yet — nobody matches this audience." }); return; }
   if (recipients.length > MAX_RECIPIENTS) { res.status(400).json({ error: `Too many recipients (${recipients.length}) — max ${MAX_RECIPIENTS}` }); return; }
 
@@ -311,7 +343,7 @@ emails.post("/schedule", async (req, res) => {
   const sendAt = input.sendAt.slice(0, 16);
   if (sendAt <= nowStamp()) { res.status(400).json({ error: "Pick a time in the future — or just press Send" }); return; }
 
-  const recipients = await resolveRecipients(auth.tenantId, input);
+  const recipients = await resolveRecipients(auth.tenantId, input, netScope(req));
   if (recipients.length === 0) { res.status(400).json({ error: input.audience === "one" ? "Add at least one recipient address." : "No families to email yet — nobody matches this audience." }); return; }
   if (recipients.length > MAX_RECIPIENTS) { res.status(400).json({ error: `Too many recipients (${recipients.length}) — max ${MAX_RECIPIENTS}` }); return; }
 

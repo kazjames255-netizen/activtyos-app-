@@ -17,7 +17,7 @@ import { Badge, Button, Card, DefRow, SectionHead } from "@/components/ui";
 // registers gender chips and the old schedule's per-child pills.
 function genderTone(sex?: string): { bg: string; fg: string; on: string } {
   const s = (sex ?? "").toLowerCase();
-  if (s.startsWith("b") || s === "male" || s === "m") return { bg: "#eaf0fc", fg: "#1d3a8f", on: "#1d3a8f" };
+  if (s.startsWith("b") || s === "male" || s === "m") return { bg: "#eaf0fc", fg: "var(--brand)", on: "var(--brand)" };
   if (s.startsWith("g") || s === "female" || s === "f") return { bg: "#fdeaf3", fg: "#b0186a", on: "#c81e77" };
   return { bg: "var(--panel)", fg: "var(--ink-2)", on: "var(--ink-2)" };
 }
@@ -93,7 +93,7 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
             <button key={i} type="button" disabled={!free} onClick={() => onPick(s)}
               className="flex h-8 items-center justify-center rounded-md text-[12px] font-bold transition-transform enabled:hover:-translate-y-px"
               title={free ? t("parent.availablePick") : isTaken ? t("parent.alreadyPicked") : t("parent.notRunningFull")}
-              style={sel ? { background: "#1d3a8f", color: "#fff", boxShadow: "0 2px 6px -1px rgba(29,58,143,.5)" }
+              style={sel ? { background: "var(--brand)", color: "#fff", boxShadow: "0 2px 6px -1px rgba(29,58,143,.5)" }
                 : free ? { background: "#e7f6ee", color: "#0f7a43" }
                 : isTaken ? { background: "#fdebec", color: "#c0392b" }
                 : { color: "var(--ink-3)", opacity: 0.35 }}>{d}</button>
@@ -102,7 +102,7 @@ function AvailabilityCalendar({ available, taken, value, onPick }: { available: 
       </div>
       <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-[var(--ink-3)]">
         <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#e7f6ee" }} /> {t("parent.availableWord")}</span>
-        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#1d3a8f" }} /> {t("parent.chosenWord")}</span>
+        <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "var(--brand)" }} /> {t("parent.chosenWord")}</span>
         <span className="flex items-center gap-1"><span className="inline-block h-2.5 w-2.5 rounded" style={{ background: "#fdebec" }} /> {t("parent.takenWord")}</span>
       </div>
     </div>
@@ -318,7 +318,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                           <label key={s.key} className="flex items-center justify-between gap-2 rounded-md border px-2.5 py-1.5 text-[12.5px]"
                             style={on ? { borderColor: "var(--brand-2)", background: "var(--panel)" } : { borderColor: "var(--line)" }}>
                             <span className="flex items-center gap-2"><input type="checkbox" checked={on} onChange={() => togglePick(s.key)} /><b>{fmtIso(s.date)}</b></span>
-                            <span className="text-[11px] font-semibold" style={{ color: r > 0 ? "#1d3a8f" : "var(--ink-3)" }}>{money(perSlotPaid)}{r === 0 ? " · no cash refund (too close)" : perSlotPaid - r > 0.005 ? ` · ${money(r)} if refunded` : ""}</span>
+                            <span className="text-[11px] font-semibold" style={{ color: r > 0 ? "var(--brand)" : "var(--ink-3)" }}>{money(perSlotPaid)}{r === 0 ? " · no cash refund (too close)" : perSlotPaid - r > 0.005 ? ` · ${money(r)} if refunded` : ""}</span>
                           </label>
                         );
                       })}
@@ -363,7 +363,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
                             <div key={s.key}>
                               <div className="mb-1 text-[12px] font-semibold">
                                 {multiKid && <span className="text-[var(--ink-3)]">{s.childName}: </span>}
-                                Move <b>{fmtIso(s.date)}</b>{chosen ? <> → <b className="text-[#1d3a8f]">{fmtIso(chosen)}</b></> : <span className="text-[var(--ink-3)]"> → choose below</span>}
+                                Move <b>{fmtIso(s.date)}</b>{chosen ? <> → <b className="text-[var(--brand)]">{fmtIso(chosen)}</b></> : <span className="text-[var(--ink-3)]"> → choose below</span>}
                               </div>
                               <AvailabilityCalendar available={moveDates} taken={taken} value={chosen} onPick={(iso) => setMoveTo((m) => ({ ...m, [s.key]: iso }))} />
                             </div>
@@ -386,9 +386,9 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       {!partialMode && advice && (
         <div className="mb-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12px]">
           {advice.percent >= 100 ? (
-            <div className="font-extrabold text-[#1d3a8f]">✓ You&rsquo;re entitled to a full refund of {money(advice.amount)}.</div>
+            <div className="font-extrabold text-[var(--brand)]">✓ You&rsquo;re entitled to a full refund of {money(advice.amount)}.</div>
           ) : advice.amount > 0 ? (
-            <div className="font-extrabold text-[#1d3a8f]">✓ You&rsquo;re entitled to a {advice.percent}% refund — {money(advice.amount)}.</div>
+            <div className="font-extrabold text-[var(--brand)]">✓ You&rsquo;re entitled to a {advice.percent}% refund — {money(advice.amount)}.</div>
           ) : (
             <div className="font-extrabold text-[#c0392b]">✗ No refund is due — this is inside the provider&rsquo;s no-refund window.</div>
           )}
@@ -399,7 +399,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
             </div>
           )}
           {advice.amount === 0 && cfg?.noRefundCredit && (
-            <div className="mt-1 text-[11px] font-semibold text-[#1d3a8f]">👛 This provider still gives you a full-value credit note to spend on a future booking.</div>
+            <div className="mt-1 text-[11px] font-semibold text-[var(--brand)]">👛 This provider still gives you a full-value credit note to spend on a future booking.</div>
           )}
         </div>
       )}
@@ -998,7 +998,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <span>
             <b className="text-[var(--ink)]">Cancelled</b>{b.cancel?.on ? ` · requested ${b.cancel.on}` : ""}
             {refundIssued ? (
-              <> — <b className="text-[#1d3a8f]">{money(refundAmt || b.amount)} refunded{isVoucher ? " via voucher" : " to your original payment"}</b>.</>
+              <> — <b className="text-[var(--brand)]">{money(refundAmt || b.amount)} refunded{isVoucher ? " via voucher" : " to your original payment"}</b>.</>
             ) : refundOwed && refundAmt > 0 ? (
               <> — a <b>{money(refundAmt)} refund</b> is due; your provider is processing it{isVoucher ? " back through your voucher scheme" : ""}.</>
             ) : (
@@ -1098,7 +1098,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
                   <span>
                     <span className="mr-1">🍽</span><b>{m.name}</b>
                     <span className="text-[var(--ink-3)]"> · {new Date(`${m.date}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })}{m.child ? ` · ${m.child}` : ""}</span>
-                    {m.later && <span className="ml-1 rounded bg-[#eef4fd] px-1 py-[0.5px] text-[9.5px] font-bold uppercase tracking-[0.03em] text-[#2f6bd8]">{t("parent.addedLater")}</span>}
+                    {m.later && <span className="ml-1 rounded bg-[#eef4fd] px-1 py-[0.5px] text-[9.5px] font-bold uppercase tracking-[0.03em] text-[var(--brand-2)]">{t("parent.addedLater")}</span>}
                   </span>
                   {m.price > 0 && <span className="tabular-nums text-[var(--ink-2)]">{money(m.price)}</span>}
                 </div>
@@ -1110,14 +1110,14 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <DefRow label={t("parent.totalLabel")} value={money(b.amount)} />
           {/* Voucher payment received — the provider reconciled the money. */}
           {!cancelled && isVoucher && b.pay === "Paid" && (
-            <div className="mt-2 rounded-lg border border-[#bfe6cd] bg-[#eaf0fc] px-3 py-2.5 text-[12.5px] font-semibold text-[#1d3a8f]">
+            <div className="mt-2 rounded-lg border border-[#bfe6cd] bg-[#eaf0fc] px-3 py-2.5 text-[12.5px] font-semibold text-[var(--brand)]">
               ✓ Voucher payment received{vScheme ? ` via ${vScheme.name}` : ""} — your booking is paid in full.
             </div>
           )}
           {/* Still awaiting the voucher money — how to pay it. */}
           {!cancelled && b.pay === "Awaiting voucher payment" && vScheme && filledDetails(vScheme).length > 0 && (
             <div className="mt-2 rounded-lg border border-[var(--brand-line,#cdddf7)] bg-[var(--brand-soft,#eaf0fc)] p-3">
-              <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--brand-ink,#1d3a8f)]">Pay by {vScheme.name}</div>
+              <div className="text-[11px] font-extrabold uppercase tracking-[0.05em] text-[var(--brand-ink,var(--brand))]">Pay by {vScheme.name}</div>
               <div className="mt-0.5 text-[11.5px] leading-[1.5] text-[var(--ink-2)]">
                 Send <b>{money(b.amount)}</b> through {vScheme.name} using the details below — there&rsquo;s no card payment here. Your place is confirmed; it shows as <b>paid</b> once your provider receives the money.
               </div>
@@ -1373,7 +1373,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                   type="button"
                   onClick={() => setWaitOpen((v) => !v)}
                   className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left text-white"
-                  style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}
+                  style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,var(--brand-strong) 0%,var(--brand-2) 100%)" }}
                 >
                   <span className="flex items-center gap-2">
                     <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full bg-white/20 text-[14px]">⏳</span>
@@ -1400,7 +1400,7 @@ export function MyBookingsApp({ hideHeader = false }: { hideHeader?: boolean } =
                 {childOptions.length > 1 && (
                   <div className="mb-3 flex flex-wrap gap-1.5">
                     <button type="button" onClick={() => setChildF("")} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-colors"
-                      style={!childF ? { borderColor: "#1d3a8f", background: "#1d3a8f", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
+                      style={!childF ? { borderColor: "var(--brand)", background: "var(--brand)", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
                       {tr("parent.allChildren")}
                     </button>
                     {childOptions.map((name) => {

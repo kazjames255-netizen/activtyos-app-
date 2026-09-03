@@ -121,44 +121,16 @@ async function seed() {
   }
 
   // ── Expenses (money-out) — categories over the last 120 days ──────────
-  const EXP: [string, number, number][] = [ // [category, min, max]
-    ["Venue hire", 80, 240], ["Staff wages", 300, 1200], ["Equipment", 25, 300], ["Insurance", 40, 180],
-    ["Marketing", 20, 250], ["DBS checks", 38, 132], ["Utilities", 30, 160], ["Travel", 10, 90], ["Training", 45, 300],
-  ];
-  const SUPPLIERS = ["Leisure Centre Ltd", "SportsKit Direct", "Zurich Insurance", "Meta Ads", "GOV.UK DBS", "British Gas", "Amazon Business", "First Aid Training Co"];
-  for (let i = 0; i < 44; i++) {
-    const [cat, min, max] = pick(r, EXP);
-    const off = -Math.floor(r() * 120);
-    const pending = r() < 0.18;
-    await put(db.collection("expenses").doc(ns(`exp${i}`)), {
-      tenantId: TID, date: dayFrom(off), category: cat, amount: round2(min + r() * (max - min)),
-      supplier: pick(r, SUPPLIERS), notes: "", status: pending ? "pending" : "paid",
-      ...(pending ? { dueDate: dayFrom(off + 20) } : { paidAt: stampFrom(off, r) }),
-      createdBy: "kazjames80@gmail.co.uk", createdByName: "Kaz James", createdAt: stampFrom(off, r),
-    });
-  }
-  // A recurring weekly venue-hire series (materialised rows sharing a seriesId).
-  const sid = ns("venue-series");
-  for (let w = 0; w < 14; w++) await put(db.collection("expenses").doc(ns(`exps${w}`)), {
-    tenantId: TID, date: dayFrom(-98 + w * 7), category: "Venue hire", amount: 120, supplier: "Leisure Centre Ltd", notes: "Weekly hall hire",
-    status: "paid", paidAt: stampFrom(-98 + w * 7, r), repeat: "weekly", repeatUntil: dayFrom(-98 + 13 * 7), seriesId: sid,
-    createdBy: "kazjames80@gmail.co.uk", createdByName: "Kaz James", createdAt: stampFrom(-98, r),
-  });
-
-  // ── Other income (money-in beyond bookings) ───────────────────────────
-  const INC: [string, number, number][] = [["Grant funding", 250, 2000], ["Merchandise", 8, 120], ["Sponsorship", 100, 600], ["Deposit", 20, 100], ["Late fee", 5, 25]];
-  const SRC = ["Sport England", "Local Council", "Kit sales", "Nike Community", "Parent deposit"];
-  for (let i = 0; i < 24; i++) {
-    const [cat, min, max] = pick(r, INC);
-    const off = -Math.floor(r() * 110);
-    await put(db.collection("income").doc(ns(`inc${i}`)), {
-      tenantId: TID, date: dayFrom(off), category: cat, amount: round2(min + r() * (max - min)),
-      source: pick(r, SRC), notes: "", createdBy: "kazjames80@gmail.co.uk", createdByName: "Kaz James", createdAt: stampFrom(off, r),
-    });
-  }
+  // ── Expenses & other income — intentionally NOT seeded ────────────────
+  // These were previously written at tenant level with no franchiseId, so under
+  // the franchise model they counted as HEAD OFFICE's own books and made the HO
+  // Money view look pre-filled. Head office should start with a clean money slate
+  // (it logs its own central costs/income), so we seed none. The wipe below still
+  // clears any left over from an earlier seed. Bookings still drive the network
+  // revenue + royalty figures.
 
   await flush();
-  console.log(`✅ ${TID} (${tName}) seeded: ${families.length} families · ${N} bookings · 4 listings · 58 expenses · 24 income.`);
+  console.log(`✅ ${TID} (${tName}) seeded: ${families.length} families · ${N} bookings · 4 listings · 0 expenses · 0 income (HO money starts blank).`);
 }
 
 async function clean() {

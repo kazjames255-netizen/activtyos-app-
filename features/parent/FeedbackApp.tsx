@@ -62,7 +62,7 @@ export function FeedbackApp() {
 
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
-      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)", backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
+      <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), linear-gradient(120deg,var(--brand-strong) 0%,var(--brand-2) 100%)", backgroundSize: "18px 18px, cover", backgroundRepeat: "repeat, no-repeat" }}>
         <h2 className="m-0 flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}><span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px]">⭐</span>{t("parent.leaveFeedback")}</h2>
         <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{t("parent.feedbackIntro")}</p>
       </div>
@@ -77,19 +77,19 @@ export function FeedbackApp() {
               <div className="text-[13px] font-semibold text-[var(--ink-2)]">{captureMode === "external" ? "One more step — pop your review on " : "Optional — got 20 seconds? A quick review on "}<b>Google</b> helps other families. Which location did you visit?</div>
               <div className="mt-2.5 flex flex-wrap justify-center gap-2">
                 {googlePlaces.map((pl) => (
-                  <a key={pl.label + pl.url} href={pl.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-[#1d3a8f] px-4 py-2.5 text-[13px] font-extrabold text-white shadow-sm transition hover:brightness-110"><span style={{ color: "#ffd35c" }}>★</span> {pl.label || t("parent.reviewOnGoogle")} ↗</a>
+                  <a key={pl.label + pl.url} href={pl.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-full bg-[var(--brand)] px-4 py-2.5 text-[13px] font-extrabold text-white shadow-sm transition hover:brightness-110"><span style={{ color: "#ffd35c" }}>★</span> {pl.label || t("parent.reviewOnGoogle")} ↗</a>
                 ))}
               </div>
             </div>
           ) : googleUrl && (captureMode === "external" ? (
             <div className="mx-auto mt-4 max-w-[440px]">
               <div className="text-[13px] font-semibold text-[var(--ink-2)]">One more step — please pop your review on <b>Google</b> so other families can see it too:</div>
-              <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center gap-2 rounded-full bg-[#1d3a8f] px-6 py-3 text-[14px] font-extrabold text-white shadow-sm transition hover:brightness-110"><span style={{ color: "#ffd35c" }}>★</span> {t("parent.leaveGoogleReview")} ↗</a>
+              <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center gap-2 rounded-full bg-[var(--brand)] px-6 py-3 text-[14px] font-extrabold text-white shadow-sm transition hover:brightness-110"><span style={{ color: "#ffd35c" }}>★</span> {t("parent.leaveGoogleReview")} ↗</a>
             </div>
           ) : (
             <div className="mx-auto mt-4 max-w-[440px] rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3.5">
               <div className="text-[12px] font-semibold text-[var(--ink-2)]">Optional — got another 20 seconds? A public <b>Google</b> review helps a small provider most. (You&rsquo;re done either way.)</div>
-              <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-extrabold text-[#1d3a8f] shadow-sm ring-1 ring-[#dbe3f4] transition hover:bg-[#f6f9ff]"><span style={{ color: "#ea4335" }}>★</span> {t("parent.addGoogleReview")} ↗</a>
+              <a href={googleUrl} target="_blank" rel="noopener noreferrer" className="mt-2.5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-[13px] font-extrabold text-[var(--brand)] shadow-sm ring-1 ring-[#dbe3f4] transition hover:bg-[#f6f9ff]"><span style={{ color: "#ea4335" }}>★</span> {t("parent.addGoogleReview")} ↗</a>
             </div>
           ))}
           <div><button type="button" onClick={() => setSent(false)} className="mt-3 rounded-full border border-[var(--line)] bg-white px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)]">{t("parent.leaveMoreFeedback")}</button></div>
@@ -114,11 +114,11 @@ export function FeedbackApp() {
           <input value={listing} onChange={(e) => setListing(e.target.value)} placeholder={t("parent.activityPlaceholder")} className="mb-4 w-full rounded-lg border border-[var(--line)] bg-white px-3 py-2 text-[13.5px] text-[var(--ink)]" />
 
           <label className="mb-1 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("parent.yourComments")} <span className="font-normal normal-case">{t("parent.optionalSuffix")}</span></label>
-          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} placeholder={t("parent.commentsPlaceholder")} className="w-full rounded-lg border border-[var(--line)] bg-white p-2.5 text-[13.5px] leading-[1.55] text-[var(--ink)] outline-none focus:border-[var(--brand,#2f6bd8)]" />
+          <textarea value={comment} onChange={(e) => setComment(e.target.value)} rows={4} placeholder={t("parent.commentsPlaceholder")} className="w-full rounded-lg border border-[var(--line)] bg-white p-2.5 text-[13.5px] leading-[1.55] text-[var(--ink)] outline-none focus:border-[var(--brand,var(--brand-2))]" />
 
           {error && <div className="mt-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] font-semibold text-[#c0362c]">{error}</div>}
           <div className="mt-4 flex flex-wrap items-center gap-3">
-            <button type="button" disabled={!valid || busy} onClick={submit} className="rounded-full bg-[#1d3a8f] px-5 py-2.5 text-[13.5px] font-extrabold text-white shadow-sm transition enabled:hover:brightness-110 disabled:opacity-45">{busy ? t("parent.sending") : t("parent.sendFeedback")}</button>
+            <button type="button" disabled={!valid || busy} onClick={submit} className="rounded-full bg-[var(--brand)] px-5 py-2.5 text-[13.5px] font-extrabold text-white shadow-sm transition enabled:hover:brightness-110 disabled:opacity-45">{busy ? t("parent.sending") : t("parent.sendFeedback")}</button>
             {!tenantId && <span className="text-[12px] text-[var(--ink-3)]">{t("parent.chooseProviderFirst")}</span>}
             {tenantId && rating < 1 && <span className="text-[12px] text-[var(--ink-3)]">{t("parent.tapStarToRate")}</span>}
           </div>

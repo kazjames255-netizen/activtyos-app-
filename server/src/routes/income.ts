@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { applyHoNetFilter } from "../lib/franchiseScope";
 
 // Income (Money) — money the provider takes IN that isn't an invoice: cash on
 // the door, a grant, ad-hoc takings. Paid invoices are folded in on the client
@@ -45,10 +46,14 @@ function scope(req: Request, res: import("express").Response): string | null {
 }
 
 income.get("/", async (req, res) => {
+  const auth = req.auth!;
   const tenantId = scope(req, res);
   if (!tenantId) return;
   const snap = await col.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { date?: string; amount?: number; category?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { date?: string; amount?: number; category?: string; franchiseId?: string | null })[];
+  // Franchise sees only its own income; head office sees the whole tenant.
+  if (auth.role === "franchise") list = list.filter((e) => (e.franchiseId ?? null) === auth.franchiseId);
+  list = applyHoNetFilter(list, auth.role, req.query.franchiseId); // head-office network scope
   list.sort((a, b) => (`${b.date ?? ""}` < `${a.date ?? ""}` ? -1 : 1));
   const byCategory: Record<string, number> = {};
   for (const e of list) byCategory[e.category ?? "Other"] = round2((byCategory[e.category ?? "Other"] ?? 0) + (e.amount ?? 0));
@@ -61,7 +66,7 @@ income.post("/", async (req, res) => {
   const parsed = incomeSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const { repeat, repeatUntil, seriesId: _ignore, ...rest } = parsed.data;
-  const meta = { tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Operator", createdAt: new Date().toISOString() };
+  const meta = { tenantId: auth.tenantId, franchiseId: auth.role === "franchise" ? auth.franchiseId : null, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Operator", createdAt: new Date().toISOString() };
   const base = { ...rest, amount: round2(rest.amount), ...meta };
 
   // Recurring: fan out one row per occurrence, all sharing a fresh seriesId.
@@ -102,6 +107,7 @@ async function own(req: Request, id: string) {
   if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (auth.role === "franchise" && (snap.data()!.franchiseId ?? null) !== auth.franchiseId) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 

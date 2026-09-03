@@ -8,6 +8,7 @@ import { money, collectedNet } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { useSettings } from "@/lib/settings";
 import { LIGHT_PALETTE, CollapsibleStats } from "@/components/OperatorPage";
+import { useHoScope, HO_OWN } from "@/components/franchise/HoScope";
 import { OnSiteNowCard } from "@/features/timeclock/OnSiteNowCard";
 import { Badge } from "@/components/ui";
 import { greeting } from "@/lib/greeting";
@@ -32,7 +33,7 @@ const TASK_STATUS: Record<string, { label: string; color: string }> = {
 };
 
 // ── shared bits (visual system lifted from the HQ provider-analytics page) ──
-const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(120,170,255,.5) 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)";
+const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(255,255,255,.20) 0%, transparent 55%), var(--hero-grad)";
 const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GREEN = "#0f7a43";
 const ACT_C = ["#3f78d8", "#0f7a43", "#e2225f", "#7c3aed", "#e88f1f", "#0ea5a0", "#c81e77", "#1d3a8f"];
 const STATUS_C: Record<string, string> = { Confirmed: "#1749a8", "Approval needed": "#a85f08", Waitlisted: "#0b8446", Offered: "#0b8446", Cancelled: "#c53030", Declined: "#c53030" };
@@ -319,6 +320,8 @@ export function DashboardApp() {
   // listingId → venue name (for the 📍 line) and → venueId (for filtering).
   const [listingVenue, setListingVenue] = useState<Record<string, string>>({});
   const [listingVenueId, setListingVenueId] = useState<Record<string, string>>({});
+  // listingId → franchiseId, for the head-office "view as franchise" scope.
+  const [listingFranchise, setListingFranchise] = useState<Record<string, string>>({});
   // The venues that actually have listings — options for the location lens.
   const [venues, setVenues] = useState<{ id: string; name: string }[]>([]);
   // The whole-dashboard location lens ("" = all locations). Drives both the
@@ -333,10 +336,14 @@ export function DashboardApp() {
   useEffect(() => { apiGet<{ name?: string }>("/api/me").then(setMe).catch(() => {}); }, []);
   const router = useRouter();
   const portal = (usePathname() ?? "/").split("/")[1] || "app";
+  const scope = useHoScope(); // head-office "view as franchise" — null = whole business
 
   const load = useCallback(() => {
-    // The location lens narrows the server figures too (blocks/bookings/payments).
-    apiGet<Dash>(`/api/dashboard${dashVenue ? `?venueId=${encodeURIComponent(dashVenue)}` : ""}`).then((x) => { setD(x); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    // The location lens + the head-office franchise scope both narrow the server figures.
+    const qs = new URLSearchParams();
+    if (dashVenue) qs.set("venueId", dashVenue);
+    if (scope) qs.set("franchiseId", scope);
+    apiGet<Dash>(`/api/dashboard${qs.toString() ? `?${qs}` : ""}`).then((x) => { setD(x); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     // On failure keep bookings null but record the error, so the analytics
     // section shows a retry instead of "Loading your figures…" forever.
     apiGet<Booking[]>("/api/bookings").then((b) => { setBookings(b); setBookingsErr(null); }).catch((e) => setBookingsErr(e instanceof Error ? e.message : "Couldn’t load your figures"));
@@ -344,18 +351,19 @@ export function DashboardApp() {
     // Listings carry the season + venue for each activity; the library names the
     // venues. Together they give the season grouping and the location line/lens.
     Promise.all([
-      apiGet<{ id: string; seasonId?: string | null; venueId?: string | null }[]>("/api/listings?mine=1"),
+      apiGet<{ id: string; seasonId?: string | null; venueId?: string | null; franchiseId?: string | null }[]>("/api/listings?mine=1"),
       apiGet<{ venues?: { id: string; name: string }[] } | null>("/api/library").catch(() => null),
     ]).then(([ls, lib]) => {
       const list = ls ?? [];
       setListingSeason(Object.fromEntries(list.filter((l) => l.id && l.seasonId).map((l) => [l.id, l.seasonId as string])));
+      setListingFranchise(Object.fromEntries(list.filter((l) => l.id && l.franchiseId).map((l) => [l.id, l.franchiseId as string])));
       const venueName = new Map((lib?.venues ?? []).map((v) => [v.id, v.name]));
       setListingVenue(Object.fromEntries(list.flatMap((l) => { const n = l.venueId ? venueName.get(l.venueId) : undefined; return l.id && n ? [[l.id, n] as [string, string]] : []; })));
       setListingVenueId(Object.fromEntries(list.filter((l) => l.id && l.venueId).map((l) => [l.id, l.venueId as string])));
       const used = new Set(list.map((l) => l.venueId).filter(Boolean));
       setVenues((lib?.venues ?? []).filter((v) => used.has(v.id)));
     }).catch(() => {});
-  }, [dashVenue]);
+  }, [dashVenue, scope]);
   useEffect(load, [load]);
   useRealtime(["bookings", "blocks", "listings", "payments", "tasks"], load);
 
@@ -370,7 +378,7 @@ export function DashboardApp() {
 
   // Everything analytical, computed from the tenant's own bookings.
   const a = useMemo(() => {
-    const list = (bookings ?? []).filter((b) => b.status !== "Declined" && (!dashVenue || listingVenueId[b.listingId ?? ""] === dashVenue));
+    const list = (bookings ?? []).filter((b) => b.status !== "Declined" && (!dashVenue || listingVenueId[b.listingId ?? ""] === dashVenue) && (!scope || (scope === HO_OWN ? !listingFranchise[b.listingId ?? ""] : listingFranchise[b.listingId ?? ""] === scope)));
     const now = new Date(nowMs);
     const keys: string[] = [];
     for (let i = months - 1; i >= 0; i--) keys.push(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
@@ -450,7 +458,7 @@ export function DashboardApp() {
       funnel, repeat,
       recent,
     };
-  }, [bookings, months, nowMs, listingSeason, listingVenue, listingVenueId, dashVenue, seasons]);
+  }, [bookings, months, nowMs, listingSeason, listingVenue, listingVenueId, dashVenue, seasons, scope, listingFranchise]);
 
   // Doughnut centres: total booked, and paid share of all bookings.
   const statusTotal = a.byStatus.reduce((s, x) => s + x.value, 0);

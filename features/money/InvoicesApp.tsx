@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
+import { useHoScope } from "@/components/franchise/HoScope";
+import { withHoMoney } from "@/lib/ho-net";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
@@ -113,9 +115,10 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
     return (n ? list.filter((c) => `${c.name} ${c.email ?? ""} ${(c.children ?? []).map((k) => k.name ?? "").join(" ")}`.toLowerCase().includes(n)) : list).slice(0, 25);
   }, [custs, cq]);
 
+  const hoScope = useHoScope(); // head office: read only this network's own money
   const refresh = useCallback(() => {
-    apiGet<Payload>("/api/invoices").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-  }, []);
+    apiGet<Payload>(withHoMoney("/api/invoices")).then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+  }, [hoScope]);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["invoices"], refresh);
 

@@ -5,6 +5,29 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { NAV_GROUPS, type NavIcon, type NavItem, type PortalKey } from "@/lib/nav/config";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { getMe, peekMe } from "@/components/auth/PortalGuard";
+import { useHoScope } from "@/components/franchise/HoScope";
+
+// In the head-office "Whole business (all)" view, only aggregate/oversight views
+// make sense. Two kinds survive: things the HO MANAGES centrally, and read-only
+// OVERSIGHT views (safeguarding, attendance, staff compliance) that the HO must
+// monitor network-wide with a per-franchise breakdown. The pure per-site
+// operational rest (listing editing, schedule, meals menu, per-site money, etc.)
+// is hidden until the HO drills into ONE franchise via the scope switcher.
+const HO_COMBINED_KEEP = new Set<string>([
+  "dashboard", "dash", "splitfees", "territories", "ho-framework",
+  "tasks", "email", "messages", "activityos", "newsfeed",
+  "reviews", "ai", "subscription", "getpaid",
+  // Head office's money is ONE simplified Finance page (P&L + royalty income +
+  // breakdown by franchise) — see HoFinanceApp. The per-site ledgers stay
+  // reachable by direct link from it, not as separate sidebar items.
+  "finance",
+  // Head office invites + manages its OWN central team (Director/Ops/Marketing/Admin)
+  "staff",
+  "setup", "account", "support", "auth", "franchise-invites", "franchise-overview", "franchise-features",
+  // Read-only oversight across all franchises (safeguarding + attendance)
+  "incidents", "accidents", "medication", "registers",
+]);
 import { get as apiGet } from "@/lib/api";
 import { useUnreadMessages, useCouponCount } from "@/lib/use-unread";
 import { useCustomerArea, useOperatorFeatures, useMoneyShow, MONEY_OUTGOING_VIEWS, MONEY_INCOMING_VIEWS, SIMPLE_ALLOWED, CORE_VIEWS, featureOff, type CustomerArea } from "@/lib/use-customer-area";
@@ -202,11 +225,20 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   // that moves to the footer. For an operator that's their tenant (business)
   // name; for a parent (no tenant) it's the provider they're linked to.
   const [brand, setBrand] = useState<string | null>(null);
+  // Franchise identity — head-office-granted business name + territory, badged under the brand.
+  const [fr, setFr] = useState<{ name: string | null; area: string | null } | null>(null);
+  // Head office only sees franchisor tools once it has ≥1 franchise. Start hidden to avoid a flash.
+  const [hasFranchises, setHasFranchises] = useState(() => peekMe()?.role === "company" && !!peekMe()?.hasFranchises);
+  // The HO scope switcher — null = "Whole business (all)" (slim oversight nav).
+  const hoScope = useHoScope();
   useEffect(() => {
-    apiGet<Me>("/api/me")
+    getMe()
       .then((m) => {
+        if (m.role === "company") setHasFranchises(!!m.hasFranchises);
+        if (m.role === "franchise") setFr({ name: m.franchiseName ?? null, area: m.franchiseArea ?? null });
         if (m.tenantName) {
-          setBrand(m.tenantName);
+          // A named franchise brands with its own business name; else the tenant (head office) name.
+          setBrand((m.role === "franchise" && m.franchiseName) || m.tenantName);
           return;
         }
         // Parent side: brand with their provider (Phase 1 is single-provider) —
@@ -278,6 +310,53 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   } else {
     for (const v of groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v))) caHidden.add(v);
     for (const v of moneyHidden) caHidden.add(v);
+    // Franchisor-only tools stay hidden until a head office actually has a franchise.
+    if (portal === "company" && !hasFranchises) { caHidden.add("splitfees"); caHidden.add("territories"); }
+    // Head office "Whole business (all)" view = slim oversight nav. Operational
+    // views only appear once the HO drills into ONE franchise (or its own
+    // locations) via the scope switcher. Only applies to a company WITH franchises.
+    if (portal === "company" && hasFranchises && !hoScope) {
+      for (const v of groups.flatMap((g) => g.items.map((i) => i.view))) {
+        if (!HO_COMBINED_KEEP.has(v)) caHidden.add(v);
+      }
+    }
+  }
+
+  const hoCombined = portal === "company" && hasFranchises && !hoScope;
+
+  // Head office gets a bespoke, concise sidebar — clear group names, no lonely
+  // single-item groups, in a franchisor-sensible order. Built from the company
+  // nav items (reusing their icons/hrefs/badges) but regrouped and relabelled.
+  // Some of these views are `hidden:true` in the base company nav (comms +
+  // safeguarding oversight); we surface them here.
+  const HO_LABEL: Record<string, string> = { incidents: "Incidents", accidents: "Accidents", medication: "Medication", staff: "Head office staff" };
+  const HO_SECTIONS: { label: string | null; views: string[] }[] = [
+    { label: null, views: ["dashboard"] },
+    { label: "Overview", views: ["tasks", "ai"] },
+    { label: "Franchises", views: ["franchise-overview", "franchise-features", "franchise-invites", "territories"] },
+    { label: "Money", views: ["finance", "splitfees", "subscription", "getpaid"] },
+    { label: "Communication", views: ["newsfeed", "messages", "email", "activityos"] },
+    { label: "People & reviews", views: ["staff", "reviews"] },
+    { label: "Safeguarding oversight", views: ["incidents", "accidents", "medication", "registers"] },
+    { label: "Settings", views: ["setup"] },
+  ];
+
+  let displayGroups = groups;
+  if (hoCombined) {
+    const byView = new Map(groups.flatMap((g) => g.items).map((i) => [i.view, i]));
+    // Curated views are always shown (never suppressed by feature/money gating).
+    for (const s of HO_SECTIONS) for (const v of s.views) caHidden.delete(v);
+    const built = HO_SECTIONS.map((s) => ({
+      label: s.label,
+      pinned: s.views.includes("dashboard"),
+      footer: false,
+      items: s.views
+        .map((v) => byView.get(v))
+        .filter((it): it is NavItem => !!it)
+        .map((it) => ({ ...it, hidden: false, ...(HO_LABEL[it.view] ? { label: HO_LABEL[it.view] } : {}) })),
+    })).filter((g) => g.items.length > 0);
+    const footer = groups.find((g) => g.footer);
+    displayGroups = footer ? [...built, footer] : built;
   }
 
   // A parent with more than one child sees plural nav labels (see pluralLabel).
@@ -304,14 +383,25 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
         {collapsed ? (
           <span className="grid h-8 w-8 place-items-center rounded-md text-[15px] font-extrabold" style={{ background: "rgba(255,255,255,0.12)", color: "var(--side-ink)" }}>{brandName.slice(0, 1)}</span>
         ) : (
-          <span
-            className={`block min-w-0 flex-1 break-words font-extrabold leading-[1.08] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden ${
-              brandName.length > 30 ? "text-[12px]" : brandName.length > 24 ? "text-[13px]" : brandName.length > 18 ? "text-[14.5px]" : "text-[17px]"
-            }`}
-            title={brandName}
-            style={{ fontFamily: "var(--ff-display)", color: "var(--side-ink)" }}
-          >
-            {brandName}
+          <span className="block min-w-0 flex-1">
+            <span
+              className={`block break-words font-extrabold leading-[1.08] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2] overflow-hidden ${
+                brandName.length > 30 ? "text-[12px]" : brandName.length > 24 ? "text-[13px]" : brandName.length > 18 ? "text-[14.5px]" : "text-[17px]"
+              }`}
+              title={brandName}
+              style={{ fontFamily: "var(--ff-display)", color: "var(--side-ink)" }}
+            >
+              {brandName}
+            </span>
+            {fr && (fr.area || fr.name) && (
+              <span
+                className="mt-1 inline-flex max-w-full items-center gap-1 truncate rounded-full px-2 py-[2px] text-[10px] font-extrabold uppercase tracking-wide"
+                style={{ background: "rgba(245,184,31,0.18)", color: "#f5b81f" }}
+                title={`${fr.area ? `${fr.area} ` : ""}franchise`}
+              >
+                🌐 {fr.area ? `${fr.area} franchise` : "Franchise"}
+              </span>
+            )}
           </span>
         )}
         {!collapsed && (
@@ -338,7 +428,36 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
         </button>
       )}
 
-      {groups.map((group) => {
+      {/* Head office: Dashboard sits at the very top, above the quick actions. */}
+      {hoCombined && (() => {
+        const pinned = displayGroups.find((g) => g.pinned);
+        return pinned ? <div className="mb-1"><GroupItems items={pinned.items} portal={portal} pathname={pathname} multiChild={multiChild} unread={unread} coupons={coupons} caHidden={caHidden} faded={faded} collapsed={collapsed} /></div> : null;
+      })()}
+
+      {/* Head office: Find a child + Families live here (not the top bar). They
+          open the same franchise-first modals, triggered via a window event the
+          Header listens for. */}
+      {hoCombined && (
+        <div className={`mb-2 flex flex-col gap-1 ${collapsed ? "items-center px-2" : "px-3"}`}>
+          {([["🔍", "Find a child", "aos:find-child"], ["👪", "Families", "aos:ho-families"]] as const).map(([icon, label, ev]) => (
+            <button
+              key={ev}
+              type="button"
+              onClick={() => window.dispatchEvent(new Event(ev))}
+              title={label}
+              className={`flex items-center gap-2.5 rounded-lg text-left text-[13px] font-bold transition-colors hover:bg-[var(--side-hover)] ${collapsed ? "h-9 w-9 justify-center" : "px-2.5 py-2"}`}
+              style={{ color: "var(--side-ink)" }}
+            >
+              <span className="flex-none text-[15px] leading-none" aria-hidden>{icon}</span>
+              {!collapsed && <span>{label}</span>}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {displayGroups.map((group) => {
+        // HO renders its pinned Dashboard above the quick actions already.
+        if (hoCombined && group.pinned) return null;
         // A group whose every item is promoted elsewhere (hidden) or switched
         // off by the provider shows no header.
         if (group.items.every((i) => i.hidden || caHidden.has(i.view))) return null;

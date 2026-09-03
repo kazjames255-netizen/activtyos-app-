@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { post } from "@/lib/api";
+import { useHoScope } from "@/components/franchise/HoScope";
+import { peekMe } from "@/components/auth/PortalGuard";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
 import { RobotAvatar, type RobotState } from "./RobotAvatar";
 import { useMic, useTts } from "./voice";
@@ -18,7 +20,7 @@ import { useMic, useTts } from "./voice";
 // ─────────────────────────────────────────────────────────────────────────
 
 interface Msg { role: "user" | "assistant"; content: string }
-type Kind = "operator" | "staff" | "parent" | "platform";
+type Kind = "operator" | "staff" | "parent" | "platform" | "headoffice";
 interface Chat { id: string; title: string; at: number; pinned?: boolean; msgs: Msg[] }
 
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -46,6 +48,12 @@ const STARTERS: Record<Kind, { label: string; icon: string; qs: string[] }[]> = 
   platform: [
     { label: "Overview", icon: "📊", qs: ["How many providers are on the platform?", "How are bookings split by status?", "Who joined recently?"] },
   ],
+  headoffice: [
+    { label: "Network", icon: "🌐", qs: ["How's the whole network performing this month?", "Which franchise is doing best?", "Which franchises need my attention?", "How many families across all franchises?"] },
+    { label: "Money & royalties", icon: "💷", qs: ["What's my total royalty income this month?", "How is network revenue trending?", "Which franchise brings in the most revenue?", "What are head office's biggest costs?"] },
+    { label: "Franchises", icon: "🏬", qs: ["Which franchises are live?", "Any territories awaiting approval?", "Which franchise has the most bookings?", "How is franchise onboarding going?"] },
+    { label: "Oversight", icon: "🛡️", qs: ["Any open safeguarding concerns across the network?", "Any incidents this week across franchises?", "Which franchises have overdue compliance?"] },
+  ],
 };
 
 const BRIEF_PROMPT = "Give me a short briefing of what needs my attention today — the most important two or three things only, in a friendly sentence or two.";
@@ -63,7 +71,24 @@ const INTENTS: { re: RegExp; icon: string; label: string; view: string }[] = [
   { re: /\b(listing|spaces?|capacity|filling|places left)\b/i, icon: "🗂️", label: "Listings", view: "listings" },
 ];
 
+// Head office jumps to its own network screens, not the per-site operator ones.
+const HO_INTENTS: { re: RegExp; icon: string; label: string; view: string }[] = [
+  { re: /\b(royalty|royalties|split ?fees?|fees?)\b/i, icon: "％", label: "Split fees", view: "splitfees" },
+  { re: /\b(franchise|network|territory|territories|onboard|performing|best|worst|attention)\b/i, icon: "🏬", label: "Franchises", view: "franchise-overview" },
+  { re: /\b(revenue|income|finance|profit|expense|cost|takings?)\b/i, icon: "£", label: "Finance", view: "finance" },
+  { re: /\b(feature|turn on|turn off|module|switch)\b/i, icon: "🎛️", label: "Feature control", view: "franchise-features" },
+  { re: /\b(safeguard|incident|accident|medication|compliance|dbs)\b/i, icon: "🛡️", label: "Safeguarding", view: "incidents" },
+];
+
 function actionsFor(text: string, kind: Kind, portal: string) {
+  if (kind === "headoffice") {
+    const out: { icon: string; label: string; href: string }[] = [];
+    for (const it of HO_INTENTS) {
+      if (it.re.test(text) && !out.some((o) => o.label === it.label)) out.push({ icon: it.icon, label: it.label, href: `/${portal}/${it.view}` });
+      if (out.length >= 3) break;
+    }
+    return out;
+  }
   if (kind !== "operator" && kind !== "staff") return [];
   const out: { icon: string; label: string; href: string }[] = [];
   for (const it of INTENTS) {
@@ -156,10 +181,15 @@ const GREETING: Record<Kind, string> = {
   staff: "Hi — I'm your ActivityOS co-pilot. Ask me who's in, what's running, or what's still to do.",
   parent: "Hi — I'm your ActivityOS assistant. Ask me about your bookings, what's coming up, or anything you owe.",
   platform: "Hi — I'm your ActivityOS co-pilot. Ask me about providers, bookings and platform activity.",
+  headoffice: "Hi — I'm your head-office co-pilot. Ask me how the network's performing, how each franchise is doing, or about royalties, revenue and oversight across all your franchises.",
 };
 
-export function AiAssistant({ kind }: { kind: Kind }) {
+export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
   const portal = (usePathname().split("/")[1] || "freelancer");
+  // A head office viewing its whole network gets the head-office co-pilot (network
+  // + franchise + royalty questions), not the per-site operator one.
+  const hoScope = useHoScope();
+  const kind: Kind = kindProp === "operator" && portal === "company" && !hoScope && !!peekMe()?.hasFranchises ? "headoffice" : kindProp;
   const tts = useTts();
   const [msgs, setMsgs] = useState<Msg[]>([]);
   const [draft, setDraft] = useState("");
@@ -212,7 +242,7 @@ export function AiAssistant({ kind }: { kind: Kind }) {
     setError(null); setDraft(""); tts.cancel();
     // If they're asking me to DO something (task / calendar), open a confirm
     // card instead of answering read-only.
-    const act = (kind === "operator" || kind === "staff") ? detectAction(q) : null;
+    const act = (kind === "operator" || kind === "staff" || kind === "headoffice") ? detectAction(q) : null;
     if (act) {
       const h = [...msgs, { role: "user" as const, content: q }].slice(-20);
       setMsgs(h); persist(h); setPendingAction(act); setActError(null);
@@ -308,7 +338,7 @@ export function AiAssistant({ kind }: { kind: Kind }) {
       <div className="grid gap-3 lg:grid-cols-[290px_1fr]">
         {/* Persona + history */}
         <div className="flex flex-col gap-3">
-          <div className="rounded-2xl p-4 text-center text-white shadow-[0_14px_36px_-16px_rgba(20,40,90,.7)]" style={{ background: "radial-gradient(120% 100% at 50% -10%, #24427f 0%, #0e1c3c 78%)" }}>
+          <div className="op-hero rounded-2xl p-4 text-center text-white shadow-[0_14px_36px_-16px_rgba(20,40,90,.7)]" style={{ background: "radial-gradient(120% 100% at 50% -10%, #24427f 0%, #0e1c3c 78%)" }}>
             <RobotAvatar state={robotState} size={132} className="mx-auto" />
             <div className="mt-1.5 text-[13.5px] font-extrabold">{status}</div>
             <div className="mt-3 flex flex-wrap justify-center gap-1.5">
@@ -342,8 +372,8 @@ export function AiAssistant({ kind }: { kind: Kind }) {
               <div className="mx-auto max-w-[560px] pt-4">
                 <div className="rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-4 text-center">
                   <p className="text-[13.5px] font-semibold text-[var(--ink)]">{GREETING[kind]}</p>
-                  {(kind === "operator" || kind === "staff") && (
-                    <button type="button" onClick={() => void send(BRIEF_PROMPT)} className="mt-3 rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>☀️ Brief me on today</button>
+                  {(kind === "operator" || kind === "staff" || kind === "headoffice") && (
+                    <button type="button" onClick={() => void send(BRIEF_PROMPT)} className="mt-3 rounded-full px-4 py-2 text-[13px] font-extrabold text-white shadow-sm" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>{kind === "headoffice" ? "☀️ Brief me on the network" : "☀️ Brief me on today"}</button>
                   )}
                 </div>
                 <div className="mt-4 space-y-3">

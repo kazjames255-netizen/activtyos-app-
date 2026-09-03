@@ -46,6 +46,56 @@ tasks.get("/", async (req, res) => {
   res.json(list);
 });
 
+// GET /api/tasks/assignees — who a task can be assigned to. For a head office
+// (company with franchises) this comes back GROUPED BY FRANCHISE: each franchise
+// (+ a "Head office" group for the HO's own team) with its people, so the UI can
+// make the operator pick a franchise first, then a person. Non-HO operators get
+// a single flat group (their own team).
+tasks.get("/assignees", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  const [usersSnap, tasksSnap] = await Promise.all([
+    db.collection("users").where("tenantId", "==", auth.tenantId).get(),
+    col.where("tenantId", "==", auth.tenantId).get(),
+  ]);
+  const nameOf = (u: Record<string, unknown>) => ((u.name as string) || ((u.email as string) || "").split("@")[0] || "").trim();
+  // Franchises in this tenant, keyed by franchiseId, with a display name.
+  const franchises = new Map<string, { franchiseId: string; name: string }>();
+  for (const d of usersSnap.docs) {
+    const u = d.data();
+    if (u.role === "franchise") {
+      const fid = (u.franchiseId as string) || d.id;
+      if (!franchises.has(fid)) franchises.set(fid, { franchiseId: fid, name: (u.franchiseName as string) || "Franchise" });
+    }
+  }
+  // People buckets: one per franchiseId + "__ho__" for the head office's own team.
+  const buckets = new Map<string, Set<string>>();
+  const add = (key: string, name: string) => { if (!name) return; if (!buckets.has(key)) buckets.set(key, new Set()); buckets.get(key)!.add(name); };
+  for (const d of usersSnap.docs) {
+    const u = d.data();
+    if (u.role === "parent" || u.role === "platform") continue;      // never assign to a parent
+    const nm = nameOf(u);
+    const fid = (u.franchiseId as string) || null;
+    add(fid && franchises.has(fid) ? fid : "__ho__", nm);
+  }
+  // Fold in any names already used on existing tasks (free-typed), into HO-own so
+  // they never disappear from the picker.
+  for (const d of tasksSnap.docs) { const w = String(d.data().who ?? "").trim(); if (w) add("__ho__", w); }
+
+  const isHeadOffice = auth.role === "company" && franchises.size > 0;
+  if (!isHeadOffice) {
+    // Flat team = everyone we found (any bucket), sorted & de-duped.
+    const flat = [...new Set([...buckets.values()].flatMap((s) => [...s]))].sort();
+    res.json({ headOffice: false, groups: [{ franchiseId: null, name: "Team", people: flat }] });
+    return;
+  }
+  const groups = [
+    { franchiseId: null as string | null, name: "Head office", people: [...(buckets.get("__ho__") ?? [])].sort() },
+    ...[...franchises.values()].map((f) => ({ franchiseId: f.franchiseId, name: f.name, people: [...(buckets.get(f.franchiseId) ?? [])].sort() })),
+  ];
+  res.json({ headOffice: true, groups });
+});
+
 tasks.post("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }

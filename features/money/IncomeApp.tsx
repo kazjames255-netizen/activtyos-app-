@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
+import { useHoScope } from "@/components/franchise/HoScope";
+import { withHoNet } from "@/lib/ho-net";
 import { useRealtime } from "@/lib/realtime";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
@@ -118,11 +120,12 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [to, setTo] = useState("");
   const [sort, setSort] = useState<Sort>("date");
 
+  const hoScope = useHoScope(); // head office: read only this network's own money
   const refresh = useCallback(() => {
-    apiGet<Payload>("/api/income").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-    apiGet<InvPayload>("/api/invoices").then((p) => setInvoices(p.items ?? [])).catch(() => {});
-    apiGet<Booking[]>("/api/bookings").then((b) => setBookings(Array.isArray(b) ? b : [])).catch(() => {});
-  }, []);
+    apiGet<Payload>(withHoNet("/api/income")).then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<InvPayload>(withHoNet("/api/invoices")).then((p) => setInvoices(p.items ?? [])).catch(() => {});
+    apiGet<Booking[]>(withHoNet("/api/bookings")).then((b) => setBookings(Array.isArray(b) ? b : [])).catch(() => {});
+  }, [hoScope]);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["income", "invoices", "bookings"], refresh);
 

@@ -72,7 +72,7 @@ export function ReferApp() {
       <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">{t("parent.referSubtitle")}</p>
 
       {/* Hero */}
-      <div className="overflow-hidden rounded-2xl p-6 text-white shadow-[0_12px_34px_-14px_rgba(29,58,143,.6)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#2f6bd8 55%,#7c4dd6 100%)" }}>
+      <div className="overflow-hidden rounded-2xl p-6 text-white shadow-[0_12px_34px_-14px_rgba(29,58,143,.6)]" style={{ background: "linear-gradient(120deg,var(--brand) 0%,var(--brand-2) 55%,#7c4dd6 100%)" }}>
         <div className="text-[26px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{t("parent.referGiveGet", { give: fmt(r.friendOff), get: fmt(r.referrerReward) })}</div>
         <p className="mt-1.5 max-w-[520px] text-[13px] leading-[1.5] text-white/85">
           Share your link. Your friend gets <b>{fmt(r.friendOff)} off</b> their first booking with {r.provider}
@@ -84,7 +84,7 @@ export function ReferApp() {
           <button type="button" onClick={() => copy("code", r.code!)} title={t("parent.copyCode")} className="rounded-xl border border-dashed border-white/45 bg-white/15 px-4 py-2 font-mono text-[17px] font-extrabold tracking-[0.15em] backdrop-blur-sm transition-colors hover:bg-white/25">
             {r.code}
           </button>
-          <button type="button" onClick={share} className="rounded-full bg-white px-5 py-2.5 text-[13px] font-extrabold text-[#1d3a8f] shadow-sm transition-transform hover:-translate-y-px">{t("parent.shareYourLinkBtn")}</button>
+          <button type="button" onClick={share} className="rounded-full bg-white px-5 py-2.5 text-[13px] font-extrabold text-[var(--brand)] shadow-sm transition-transform hover:-translate-y-px">{t("parent.shareYourLinkBtn")}</button>
           <button type="button" onClick={() => copy("link", r.link!)} className="rounded-full bg-white/15 px-4 py-2.5 text-[12.5px] font-bold text-white backdrop-blur-sm transition-colors hover:bg-white/25">{copied === "link" ? t("parent.linkCopied") : t("parent.copyLink")}</button>
           {copied === "code" && <span className="text-[12px] font-bold text-white/90">{t("parent.codeCopied")}</span>}
         </div>
@@ -98,7 +98,7 @@ export function ReferApp() {
         </Card>
         <Card className="flex items-center gap-3 p-4">
           <div className="flex h-11 w-11 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[20px]">🎉</div>
-          <div><div className="text-[22px] font-extrabold leading-none text-[#1d3a8f]">{isPct ? (r.booked ?? 0) : money(r.earned)}</div><div className="text-[11.5px] text-[var(--ink-3)]">{isPct ? t("parent.rewardCodesEarned") : t("parent.earnedInRewards")}</div></div>
+          <div><div className="text-[22px] font-extrabold leading-none text-[var(--brand)]">{isPct ? (r.booked ?? 0) : money(r.earned)}</div><div className="text-[11.5px] text-[var(--ink-3)]">{isPct ? t("parent.rewardCodesEarned") : t("parent.earnedInRewards")}</div></div>
         </Card>
       </div>
 
@@ -112,14 +112,14 @@ export function ReferApp() {
             { n: "3", t: t("parent.referStep3Title"), d: t("parent.referStep3Desc", { reward: fmt(r.referrerReward) }) },
           ].map((s) => (
             <div key={s.n} className="flex gap-2.5">
-              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[var(--brand-2,#2f6bd8)] text-[12px] font-extrabold text-white">{s.n}</div>
+              <div className="flex h-6 w-6 flex-none items-center justify-center rounded-full bg-[var(--brand-2,var(--brand-2))] text-[12px] font-extrabold text-white">{s.n}</div>
               <div><div className="text-[12.5px] font-bold">{s.t}</div><div className="text-[11.5px] leading-[1.4] text-[var(--ink-3)]">{s.d}</div></div>
             </div>
           ))}
         </div>
         <p className="mt-3 text-[11px] leading-[1.5] text-[var(--ink-3)]">{t("parent.referTerms", { reward: fmt(r.referrerReward) })}</p>
         {isPct && r.capToFriendSpend && (
-          <p className="mt-2 rounded-lg bg-[var(--brand-soft,#eaf0fc)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--brand-strong,#16306e)]">
+          <p className="mt-2 rounded-lg bg-[var(--brand-soft,#eaf0fc)] px-3 py-2 text-[11.5px] leading-[1.5] text-[var(--brand-strong,var(--brand-strong))]">
             {t("parent.referCap", { reward: fmt(r.referrerReward) })}
           </p>
         )}

@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { useHoScope, getHoScopeId, HO_OWN } from "@/components/franchise/HoScope";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { type Season } from "@/lib/seasons";
@@ -33,6 +34,15 @@ const AUTO_EMAILS: { key: AutoKey; title: string; sub: string; desc: string; cor
   { key: "announcements", title: "New camp announcements", sub: "Email your past & opted-in customers when new camps open", desc: "A one-off email to your OWN past and opted-in customers announcing new camps or dates. This is re-marketing to people who have already booked with you — ActivityOS has no public marketplace or ‘followers’." },
   { key: "reviewRequests", title: "Review requests", sub: "Asks a parent to leave a review after their final session", desc: "Sent once, after the parent’s LAST booked session (not after every booking). The link takes them straight to the review screen." },
 ];
+
+// Head-office network scope → a ?franchiseId= query the email API reads. A set
+// scope (a franchise, or HO_OWN = own locations) narrows every read + send; the
+// "all franchises" scope is null → no param → the whole network (Model A).
+function withNet(url: string): string {
+  const s = getHoScopeId();
+  if (!s) return url;
+  return `${url}${url.includes("?") ? "&" : "?"}franchiseId=${encodeURIComponent(s)}`;
+}
 
 function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
@@ -1158,16 +1168,17 @@ function useCampaignData() {
   const [venueName, setVenueName] = useState<Record<string, string>>({}); // venueId → name
   const [templates, setTemplates] = useState<EmailTemplate[]>([]);
   const [segments, setSegments] = useState<Audience[] | null>(null);
+  const hoScope = useHoScope(); // re-read segments when head office switches network
   useEffect(() => { apiGet<Booking[]>("/api/bookings").then(setRawBookings).catch(() => {}); }, []);
   // Live CRM segments, membership computed server-side at request time. The
   // "seg-" prefix keeps them in the composer's Segments optgroup. (The server's
   // "enquiries" segment — customer list, never booked — complements the
   // marked-from-inbox enquiry boards below; both are real, different sources.)
   useEffect(() => {
-    apiGet<{ id: string; name: string; desc: string; count: number; emails: string[]; people?: { email: string; name?: string }[] }[]>("/api/emails/audiences")
+    apiGet<{ id: string; name: string; desc: string; count: number; emails: string[]; people?: { email: string; name?: string }[] }[]>(withNet("/api/emails/audiences"))
       .then((s) => setSegments(s.filter((x) => x.id !== "all").map((x) => ({ ...x, id: `seg-${x.id}` }))))
       .catch(() => {});
-  }, []);
+  }, [hoScope]);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string; runFrom?: string; runTo?: string; seasonId?: string | null }[]>("/api/listings?mine=1").then((l) => setRawListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId, runFrom: x.runFrom, runTo: x.runTo, seasonId: x.seasonId })))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ venues?: { id: string; name?: string; city?: string }[] } | null>("/api/library").then((lib) => setVenueName(Object.fromEntries((lib?.venues ?? []).map((v) => [v.id, v.name || v.city || "Venue"])))).catch(() => {}); }, []);
   useEffect(() => { apiGet<EmailTemplate[]>("/api/messages/templates").then(setTemplates).catch(() => setTemplates([])); }, []);
@@ -1216,11 +1227,11 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
     // links to the server record for live status + open tracking. Errors
     // propagate to the modal so the reason is shown right where you clicked.
     if (action === "sent") {
-      const r = await apiPost<{ id: string }>("/api/emails/send", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails });
+      const r = await apiPost<{ id: string }>(withNet("/api/emails/send"), { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails });
       row.emailId = r.id;
       onSent();
     } else if (action === "scheduled") {
-      const r = await apiPost<{ id: string }>("/api/emails/schedule", { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails, sendAt: c.scheduledAt });
+      const r = await apiPost<{ id: string }>(withNet("/api/emails/schedule"), { subject: c.subject || c.name, body: c.body || c.template?.body || c.subject || c.name, html: c.html, recipients: c.audience.emails, sendAt: c.scheduledAt });
       row.schedId = r.id;
     }
     setCampaigns((xs) => [row, ...xs]); load();
@@ -1793,6 +1804,14 @@ export function EmailApp() {
   // Deep-link from the Register: ?to=parent@email opens addressed to one parent.
   const searchParams = useSearchParams();
   const presetTo = searchParams.get("to") ?? "";
+  // Head-office network scope — which network's families this Email surface is
+  // acting on. Drives the "Sending within" banner and re-reads when it changes.
+  const emailPortalSeg = usePathname()?.split("/")[1] || "freelancer";
+  const hoScope = useHoScope();
+  const [hoFranchises, setHoFranchises] = useState<{ franchiseId: string; name: string; area: string | null }[]>([]);
+  useEffect(() => { if (emailPortalSeg === "company") apiGet<{ franchiseId: string; name: string; area: string | null }[]>("/api/franchises").then(setHoFranchises).catch(() => {}); }, [emailPortalSeg]);
+  const isHo = emailPortalSeg === "company" && hoFranchises.length > 0;
+  const scopeLabel = hoScope === HO_OWN ? "Head office — own locations only" : hoScope ? (hoFranchises.find((f) => f.franchiseId === hoScope)?.name ?? "this franchise") : "the whole network — every franchise";
   // Gmail-style bright background theme for the Email surface (its own saved pick).
   const { theme, control: themeControl } = useSurfaceTheme("aos.emailTheme");
   // Hand-off from the Newsletter builder ("Email to parents") — a ready-to-send
@@ -1913,7 +1932,7 @@ export function EmailApp() {
   useEffect(() => { refresh(); }, [refresh]);
   // Consume the newsletter hand-off once so it doesn't re-fill on a later visit.
   useEffect(() => { try { localStorage.removeItem("aos.email.draft.v1"); } catch { /* private mode */ } }, []);
-  const loadRecipients = useCallback(() => { apiGet<{ count: number; families?: { email: string; name: string }[] }>("/api/emails/recipients").then((r) => { setReach(r.count); setFamilies(r.families ?? []); }).catch(() => {}); }, []);
+  const loadRecipients = useCallback(() => { apiGet<{ count: number; families?: { email: string; name: string }[] }>(withNet("/api/emails/recipients")).then((r) => { setReach(r.count); setFamilies(r.families ?? []); }).catch(() => {}); }, [hoScope]);
   useEffect(() => { loadRecipients(); }, [loadRecipients]);
   useEffect(() => { apiGet<LiveMoment[]>("/api/moments").then(setMoments).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; venueId?: string }[]>("/api/listings?mine=1").then((l) => setComposeListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", venueId: x.venueId })))).catch(() => {}); }, []);
@@ -2044,7 +2063,7 @@ export function EmailApp() {
   const dispatchSend = useCallback(async (payload: Record<string, unknown>, hadAttachments: boolean) => {
     setSending(true); setError(null); setOk(null);
     try {
-      const r = await apiPost<{ recipientCount: number }>("/api/emails/send", payload);
+      const r = await apiPost<{ recipientCount: number }>(withNet("/api/emails/send"), payload);
       setOk(`Sent to ${r.recipientCount} recipient${r.recipientCount === 1 ? "" : "s"}.${hadAttachments ? " (Attachments send once file-attach is wired on the backend.)" : ""}`);
       setSubject(""); setBody(""); setTo(""); setCc([]); setBcc([]); setCcInput(""); setBccInput(""); setExtraTo([]); setAttachments([]); setReplyTo(null); refresh();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
@@ -2096,7 +2115,7 @@ export function EmailApp() {
     if (!schedAt || new Date(schedAt) <= new Date()) { setError("Pick a future date & time to schedule."); return; }
     setSending(true); setError(null); setOk(null);
     try {
-      await apiPost("/api/emails/schedule", {
+      await apiPost(withNet("/api/emails/schedule"), {
         subject, body: bodyText + (selectedSig ? `\n\n${htmlToText(selectedSig.html)}` : ""),
         html: (docHtml && mode === "embed" ? docHtml : body) + (selectedSig ? `<br><br>${selectedSig.html}` : ""),
         audience: manualSend ? "one" : "all", ...(manualSend && finalRecipients[0] ? { to: finalRecipients[0] } : {}),
@@ -2113,6 +2132,14 @@ export function EmailApp() {
   return (
     <OperatorPage title="Email" icon="✉️" lede="Your inbox, campaigns and the emails ActivityOS sends for you — all in one place." actions={themeControl} background={theme.page} heroBackground={theme.hero}>
       <TabStrip<Tab> tabs={[["inbox", "Inbox"], ["compose", "Compose"], ["campaigns", "Campaigns"], ["audiences", "Audiences"], ["templates", "Templates"], ["automatic", "Automatic emails"], ["analytics", "Analytics"], ["settings", "Settings"]]} value={tab} onChange={setTab} />
+      {isHo && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border px-3 py-2 text-[12.5px]" style={hoScope === HO_OWN ? { borderColor: "#f0c98a", background: "#fdf6ea", color: "#8a6d1a" } : hoScope ? { borderColor: "#b9d0f7", background: "#eef4fd", color: "#1d3a8f" } : { borderColor: "#c7bdf2", background: "#f2effc", color: "#4a2fb0" }}>
+          <span className="text-[14px]">📡</span>
+          <span>Sending within <b>{scopeLabel}</b>.</span>
+          <span className="opacity-80">{hoScope === HO_OWN ? "Only your own directly-run families — no franchise customers." : hoScope ? "Only this franchise's families." : "Every family across all franchises will be in reach."}</span>
+          <span className="ml-auto opacity-70">Change with the Head office selector in the top bar.</span>
+        </div>
+      )}
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
       {undoEnq && (

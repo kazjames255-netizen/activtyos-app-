@@ -43,6 +43,13 @@ const KEYS = [
 
 const MAX_BYTES = 400_000; // well under Firestore's 1MB doc limit
 
+// A franchise manages its OWN settings library, separate from the head office,
+// so its Setup never clobbers the HO's (or a sibling's). Its doc is keyed per
+// franchise; every other role uses the tenant doc.
+function libDocId(auth: { role: string; tenantId: string | null; franchiseId: string | null }): string {
+  return auth.role === "franchise" && auth.franchiseId ? `${auth.tenantId}__fr__${auth.franchiseId}` : auth.tenantId!;
+}
+
 // GET /api/library — any member of the tenant (staff included).
 library.get("/", async (req, res) => {
   const auth = req.auth!;
@@ -50,7 +57,17 @@ library.get("/", async (req, res) => {
     res.status(403).json({ error: "Requires an account with a tenant" });
     return;
   }
-  const snap = await db.collection("libraries").doc(auth.tenantId).get();
+  const docId = libDocId(auth);
+  let snap = await db.collection("libraries").doc(docId).get();
+  // Seed a franchise's library from the head office's the first time it's read,
+  // so a new franchise starts fully configured and then diverges on its own.
+  if (!snap.exists && auth.role === "franchise" && auth.franchiseId) {
+    const ho = await db.collection("libraries").doc(auth.tenantId).get();
+    if (ho.exists) {
+      await db.collection("libraries").doc(docId).set({ ...ho.data(), tenantId: auth.tenantId, franchiseId: auth.franchiseId });
+      snap = await db.collection("libraries").doc(docId).get();
+    }
+  }
   res.json(snap.exists ? snap.data() : null);
 });
 
@@ -77,9 +94,10 @@ library.put("/", async (req, res) => {
   // Read-modify-write rather than .set(..., {merge:true}): merge descends into
   // nested maps, so removing an emoji from `emojis` would never propagate. A
   // key that is present here still replaces its stored value wholesale.
-  const ref = db.collection("libraries").doc(auth.tenantId);
+  // A franchise writes its OWN library doc — never the head office's shared one.
+  const ref = db.collection("libraries").doc(libDocId(auth));
   const existing = (await ref.get()).data() ?? {};
-  const doc: Record<string, unknown> = { ...existing, tenantId: auth.tenantId };
+  const doc: Record<string, unknown> = { ...existing, tenantId: auth.tenantId, ...(auth.role === "franchise" && auth.franchiseId ? { franchiseId: auth.franchiseId } : {}) };
   for (const k of KEYS) if (k in body) doc[k] = body[k];
   const size = JSON.stringify(doc).length;
   if (size > MAX_BYTES) {

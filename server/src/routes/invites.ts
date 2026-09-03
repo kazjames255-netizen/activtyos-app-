@@ -25,6 +25,10 @@ const createSchema = z.object({
   // Optional — when given, the invite is emailed to this address as well as
   // returned as a link.
   email: z.string().trim().email().max(160).optional(),
+  // Franchise invites carry the granted business name + territory (e.g. "London"),
+  // set by the head office. Stored on the invite, copied to the user on accept.
+  franchiseName: z.string().trim().max(120).optional(),
+  franchiseArea: z.string().trim().max(120).optional(),
 });
 
 invites.post("/", async (req, res) => {
@@ -62,6 +66,13 @@ invites.post("/", async (req, res) => {
     createdAt: new Date().toISOString(),
     usedBy: null,
     sentTo,
+    // Which network a STAFF invite belongs to — a franchise's own staff carry its
+    // franchiseId; a head-office invite is null. Lets head office separate its own
+    // team from franchise staff (and link the franchises' staff records).
+    franchiseId: auth.role === "franchise" ? auth.franchiseId : null,
+    ...(invitedRole === "franchise"
+      ? { franchiseName: parsed.data.franchiseName ?? null, franchiseArea: parsed.data.franchiseArea ?? null }
+      : {}),
   });
   if (sentTo) {
     const [tenant, lib] = await Promise.all([
@@ -116,11 +127,28 @@ invitePreview.get("/:token", async (req, res) => {
   res.json({
     role: d.role,
     tenantName: tenant.exists ? tenant.data()!.name : "Unknown provider",
+    ...(d.role === "franchise" ? { franchiseName: d.franchiseName ?? null, franchiseArea: d.franchiseArea ?? null } : {}),
   });
+});
+
+const acceptSchema = z.object({
+  // A joining franchise may confirm/complete the business name + area the head office granted.
+  franchiseName: z.string().trim().max(120).optional(),
+  franchiseArea: z.string().trim().max(120).optional(),
+  // Optional proposed territory drawn at registration (points are {lat,lng} objects — Firestore forbids nested arrays).
+  franchiseTerritory: z.object({
+    areas: z.array(z.object({
+      id: z.string().max(40), name: z.string().max(80), color: z.string().max(16),
+      rings: z.array(z.object({ lat: z.number(), lng: z.number() })).max(4000),
+    })).max(50),
+    status: z.enum(["draft", "proposed", "agreed"]).optional(),
+  }).optional(),
 });
 
 invites.post("/:token/accept", async (req, res) => {
   const user = req.user!;
+  const body = acceptSchema.safeParse(req.body ?? {});
+  const override = body.success ? body.data : {};
   const inviteRef = col.doc(req.params.token);
   const userRef = db.collection("users").doc(user.uid);
 
@@ -139,7 +167,18 @@ invites.post("/:token/accept", async (req, res) => {
         chosen: true,
         tenantId: invite.tenantId,
         // A franchise account IS its own franchise scope within the tenant.
-        ...(invite.role === "franchise" ? { franchiseId: user.uid } : {}),
+        // Carry the head-office-granted business name + territory onto the record.
+        ...(invite.role === "franchise"
+          ? (() => {
+              const fName = override.franchiseName || invite.franchiseName || null;
+              const fArea = override.franchiseArea || invite.franchiseArea || null;
+              // Territory is head-office-agreed: a joining franchise can only PROPOSE it, never mark it agreed.
+              const terr = override.franchiseTerritory
+                ? { areas: override.franchiseTerritory.areas, status: override.franchiseTerritory.areas.length ? "proposed" : "draft" }
+                : null;
+              return { franchiseId: user.uid, franchiseName: fName, franchiseArea: fArea, ...(fName ? { name: fName } : {}), ...(terr ? { franchiseTerritory: terr } : {}) };
+            })()
+          : {}),
       });
       tx.update(inviteRef, { usedBy: user.uid, usedAt: new Date().toISOString() });
       return { role: invite.role, tenantId: invite.tenantId };

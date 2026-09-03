@@ -1,6 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost, openFile } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
@@ -259,6 +261,12 @@ const splitName = (name: string) => {
 
 export function CustomersApp() {
   const t = useT();
+  // Head office can open ONE franchise's families without leaving the HO view —
+  // a ?franchiseId= param scopes the list (and ?fr= carries the name for the
+  // banner). Empty = the caller's own full list.
+  const sp = useSearchParams();
+  const frScope = sp.get("franchiseId") ?? "";
+  const frName = sp.get("fr") ?? "";
   // The provider's own child questions, set in Setup & features. Falls back to
   // the defaults if the fetch fails — a settings blip must not hide fields
   // that staff are relying on.
@@ -288,13 +296,13 @@ export function CustomersApp() {
   const [stats, setStats] = useState<Record<string, { n: number; days: string[]; kids: string[] }>>({});
 
   const refresh = useCallback(() => {
-    apiGet<Customer[]>("/api/customers")
+    apiGet<Customer[]>(frScope ? `/api/customers?franchiseId=${encodeURIComponent(frScope)}` : "/api/customers")
       .then((c) => {
         setCustomers(c);
         setError(null);
       })
       .catch((e) => setError(e instanceof Error ? e.message : t("customers.failedLoadCustomers")));
-  }, []);
+  }, [frScope]);
   useEffect(() => {
     refresh();
     apiGet<{ role: string }>("/api/me")
@@ -586,6 +594,13 @@ export function CustomersApp() {
       }
     >
       <div ref={topRef}>
+        {frScope && (
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#c4b5fd] bg-[#f5f3ff] px-3 py-2 text-[12.5px] text-[#4a2fb0]">
+            <span className="text-[14px]">👁</span>
+            <span>Viewing <b>{frName || "this franchise"}</b>’s families — a head-office view of just their families.</span>
+            <Link href="/company/dashboard" className="ml-auto rounded-full bg-[#4f46e5] px-3 py-1 text-[11.5px] font-extrabold text-white no-underline transition hover:brightness-110">← Head office</Link>
+          </div>
+        )}
         <PageHero
           title={t("customers.pageTitle")}
           lede={t("customers.pageLede")}
@@ -1095,7 +1110,7 @@ export function CustomersApp() {
       {customers && customers.length > 0 && (
         <CollapsibleStats id="customers">
         <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
-          <button type="button" title={t("customers.everyoneClearFilter")} onClick={() => setStage("")} className={"rounded-2xl px-4 py-3 text-left transition-all hover:-translate-y-px " + (stage === "" ? "text-white shadow-[0_10px_24px_-16px_rgba(9,20,44,.8)]" : "bg-[var(--surface)]")} style={stage === "" ? { background: "#1d3a8f" } : { border: "1px solid var(--line)", borderLeft: "5px solid #1d3a8f" }}>
+          <button type="button" title={t("customers.everyoneClearFilter")} onClick={() => setStage("")} className={"rounded-2xl px-4 py-3 text-left transition-all hover:-translate-y-px " + (stage === "" ? "text-white shadow-[0_10px_24px_-16px_rgba(9,20,44,.8)]" : "bg-[var(--surface)]")} style={stage === "" ? { background: "var(--hero-grad)" } : { border: "1px solid var(--line)", borderLeft: "5px solid var(--brand)" }}>
             <div className="text-[10.5px] font-extrabold uppercase tracking-[0.07em]" style={{ color: stage === "" ? "rgba(255,255,255,.9)" : "var(--ink-3)" }}>{t("customers.allFamilies")}</div>
             <div className="text-[24px] font-extrabold leading-tight tabular-nums">{customers.length}</div>
             <div className="text-[10.5px] leading-[1.35]" style={{ color: stage === "" ? "rgba(255,255,255,.85)" : "var(--ink-3)" }}>{t("customers.everyoneOnList")}</div>
@@ -1376,7 +1391,7 @@ export function CustomersApp() {
                     spine and the stage pill already carry. */}
                 {/* Style 7 — a thin gradient top strip carries the name + stage;
                     the body leads with the family's details. */}
-                <div className="flex items-center justify-between gap-2 px-4 py-1.5 text-white" style={{ background: "linear-gradient(120deg,#2f5fc0 0%,#5b95e8 100%)" }}>
+                <div className="op-hero flex items-center justify-between gap-2 px-4 py-1.5 text-white" style={{ background: "linear-gradient(120deg,#2f5fc0 0%,#5b95e8 100%)" }}>
                   <span className="truncate text-[12.5px] font-extrabold" title={t(`customers.stageHint_${stageDef.key}`)}>{c.name}</span>
                   <span className="flex-none whitespace-nowrap text-[9px] font-extrabold uppercase tracking-[0.04em] text-white/85">{t(`customers.stageLabel_${stageDef.key}`)} · {st.n} {st.n === 1 ? t("customers.bookingSingular") : t("customers.bookingPlural")}</span>
                 </div>

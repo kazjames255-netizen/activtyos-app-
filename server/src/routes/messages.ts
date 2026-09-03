@@ -4,6 +4,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { emailNewMessage } from "../lib/emails";
+import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope";
 import { webUrl } from "../lib/stripe";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -78,6 +79,19 @@ messages.get("/threads", async (req, res) => {
   // but those threads stay hidden from the OPERATOR inbox until a family actually
   // replies (avoids N duplicate rows per bulk send). Parents always see theirs.
   if (auth.role !== "parent") list = list.filter((t) => t.operatorHidden !== true);
+  // A franchise only sees conversations with ITS OWN families (booked on its
+  // listings), not the whole company's. Head office sees the whole tenant.
+  if (auth.role === "franchise" && auth.franchiseId && auth.tenantId) {
+    const fam = await franchiseFamilyEmails(auth.tenantId, auth.franchiseId);
+    list = list.filter((t) => fam.has(String((t as { parentEmail?: string }).parentEmail ?? "").toLowerCase()));
+  }
+  // Head office sees the whole tenant — tag each thread with the franchise its
+  // family belongs to, so the inbox can be filtered by network. null = a family
+  // that only has head-office (own-location) bookings.
+  if (auth.role === "company" && auth.tenantId) {
+    const map = await familyFranchiseMap(auth.tenantId);
+    list = list.map((t) => ({ ...t, franchiseId: map.get(String((t as { parentEmail?: string }).parentEmail ?? "").toLowerCase()) ?? null }));
+  }
   list.sort((a, b) => (`${b.lastAt ?? ""}` < `${a.lastAt ?? ""}` ? -1 : 1));
   res.json(list);
 });
@@ -90,7 +104,12 @@ messages.get("/threads/:id", async (req, res) => {
   if (!snap.exists) { res.status(404).json({ error: "Conversation not found" }); return; }
   const t = snap.data() as { tenantId: string; parentEmail: string };
   const email = req.user?.email?.toLowerCase();
-  const mine = auth.role === "parent" ? t.parentEmail === email : isOperator(auth.role) && t.tenantId === auth.tenantId;
+  let mine = auth.role === "parent" ? t.parentEmail === email : isOperator(auth.role) && t.tenantId === auth.tenantId;
+  // A franchise can only open a conversation with one of its own families.
+  if (mine && auth.role === "franchise" && auth.franchiseId && auth.tenantId) {
+    const fam = await franchiseFamilyEmails(auth.tenantId, auth.franchiseId);
+    mine = fam.has(String(t.parentEmail ?? "").toLowerCase());
+  }
   if (!mine) { res.status(404).json({ error: "Conversation not found" }); return; }
   const msgs = await msgsCol.where("threadId", "==", req.params.id).get();
   const list = msgs.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
@@ -441,6 +460,12 @@ messages.post("/broadcast", async (req, res) => {
   }
   // Drop any families the operator un-ticked.
   for (const e of parsed.data.excludeEmails) recipients.delete(e.toLowerCase());
+  // A franchise can only broadcast to ITS OWN families (booked on its listings) —
+  // never company-wide. Head office reaches the whole tenant.
+  if (req.auth!.role === "franchise" && req.auth!.franchiseId) {
+    const fam = await franchiseFamilyEmails(tenantId, req.auth!.franchiseId);
+    for (const e of [...recipients.keys()]) if (!fam.has(e)) recipients.delete(e);
+  }
   if (recipients.size === 0) { res.status(400).json({ error: "No matching families to message" }); return; }
   const now = new Date().toISOString();
   const senderName = req.user?.name ?? "Provider";
@@ -603,7 +628,10 @@ messages.delete("/templates/:id", async (req, res) => {
 // A separate conversation from customer messages. HQ (platform portal) reading
 // and replying is still to build (handoff §BB.2); this is the operator side.
 const supportCol = db.collection("supportMessages");
-const supportTopics = ["general", "billing", "bug", "feature", "onboarding", "compliance"] as const;
+// Operator topics + the customer-side app-problem topics (error/account/other).
+// The customer picker offers these, so the server must accept them or every
+// "A page broke" / "Login issue" / "Other" report 400s.
+const supportTopics = ["general", "billing", "bug", "feature", "onboarding", "compliance", "error", "account", "other"] as const;
 const supportSchema = z.object({
   body: z.string().trim().min(1).max(4_000),
   topic: z.enum(supportTopics).optional(),

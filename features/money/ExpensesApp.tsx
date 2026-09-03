@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { api, get as apiGet, post as apiPost, put as apiPut, del } from "@/lib/api";
+import { useHoScope } from "@/components/franchise/HoScope";
+import { withHoNet } from "@/lib/ho-net";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
@@ -122,10 +124,11 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   const [rFrom, setRFrom] = useState("");
   const [rTo, setRTo] = useState("");
 
+  const hoScope = useHoScope(); // head office: read only this network's own money
   const refresh = useCallback(() => {
-    apiGet<Payload>("/api/expenses").then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Payload>(withHoNet("/api/expenses")).then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     apiGet<Supplier[]>("/api/suppliers").then((s) => setSuppliers(Array.isArray(s) ? s : [])).catch(() => {});
-  }, []);
+  }, [hoScope]);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<Sub>("/api/subscription").then(setSub).catch(() => {}); }, []);
   useRealtime(["expenses", "suppliers"], refresh);

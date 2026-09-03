@@ -216,10 +216,13 @@ discounts.delete("/auto/:id", async (req, res) => {
 
 // GET /api/discounts — the tenant's codes (operators).
 discounts.get("/", async (req, res) => {
+  const auth = req.auth!;
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const snap = await col.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; franchiseId?: string | null })[];
+  // A franchise manages only its own discount codes; head office sees all.
+  if (auth.role === "franchise") list = list.filter((c) => (c.franchiseId ?? null) === auth.franchiseId);
   list.sort((a, b) => (`${b.createdAt ?? ""}` < `${a.createdAt ?? ""}` ? -1 : 1));
   res.json(list);
 });
@@ -234,7 +237,7 @@ discounts.post("/", async (req, res) => {
   if (!dupe.empty) { res.status(409).json({ error: "You already have a code with that name" }); return; }
   // Reserve for a group → snapshot its members onto the code.
   const grp = parsed.data.assignedGroupId ? await resolveGroup(auth.tenantId, parsed.data.assignedGroupId) : null;
-  const doc = { ...parsed.data, code, tenantId: auth.tenantId, usedCount: 0, createdAt: new Date().toISOString(),
+  const doc = { ...parsed.data, code, tenantId: auth.tenantId, franchiseId: auth.role === "franchise" ? auth.franchiseId : null, usedCount: 0, createdAt: new Date().toISOString(),
     ...(grp ? { assignedEmails: grp.emails, assignedGroupName: grp.name } : {}) };
   const ref = await col.add(doc);
   const valueTxt = valueTxtOf(parsed.data.type, parsed.data.value);
@@ -249,6 +252,7 @@ async function own(req: Request, id: string) {
   if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (auth.role === "franchise" && (snap.data()!.franchiseId ?? null) !== auth.franchiseId) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 

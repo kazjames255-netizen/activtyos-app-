@@ -14,7 +14,9 @@ import { clearSubscriptionCache } from "../middleware/subscription";
 // tenant and reports it; actually charging for it is a later milestone. Kept
 // deliberately small and honest about that.
 export const subscription = Router();
-const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
+// The ActivityOS platform subscription is a TENANT-level concern owned by the head
+// office (company) — a franchise must not view or change it.
+const canManage = (role: Role) => role === "company" || role === "freelancer";
 
 // Mirrors the public pricing page (activityos.uk/pricing). A flat monthly fee
 // per tier; annual billing bills 10 months (i.e. saves 2). Company is priced by
@@ -46,17 +48,18 @@ export const DEFAULT_PLANS = [
     ],
   },
   {
-    id: "franchise", name: "Franchise", price: 86, cadence: "month",
-    blurb: "For franchises & multi-venue groups — branded per franchisee.",
-    features: ["Everything in Company, plus:", "Multi-venue & franchise scoping", "White-label per franchisee", "Split fees & royalty collection", "Network-wide reporting", "Priority onboarding & support"],
-    // Priced off a Company band, then +75% of that band per extra franchisee
-    // location. `locations` (accepted franchisee invites) is metered by Amir.
-    bands: [
-      { id: "starter", label: "Starter · up to 10 staff / site", price: 49, staffMax: 10 },
-      { id: "growth", label: "Growth · 11–30 staff / site", price: 69, staffMax: 30 },
-      { id: "scale", label: "Scale · 31–75 staff / site", price: 89, staffMax: 75 },
+    id: "franchise", name: "Franchise", price: 99, cadence: "month",
+    blurb: "For franchisors & multi-brand groups — one HQ console, billed by how many franchisees you have.",
+    features: ["Everything in Company, plus:", "Head-office command centre & network reporting", "White-label per franchisee", "Territory mapping & agreements", "Split fees & royalty collection", "Per-franchise scoping & settings", "Priority onboarding & support"],
+    // A flat head-office base, plus a per-franchise fee that gets cheaper as the
+    // network grows (graduated: first 5 at £39, next 10 at £31, the rest £25).
+    // `franchises` (accepted franchisee invites) is the metered quantity — Amir.
+    perFranchise: 39,
+    franchiseTiers: [
+      { upTo: 5, price: 39 },
+      { upTo: 15, price: 31 },
+      { upTo: null, price: 25 },
     ],
-    perLocationPct: 75,
   },
 ] as const;
 
@@ -78,6 +81,9 @@ const planSchema = z.object({
   features: z.array(z.string().max(160)).max(24),
   bands: z.array(bandSchema).max(8).optional(),
   perLocationPct: z.number().nonnegative().optional(),
+  // Franchise plan: flat per-franchise fee + graduated volume tiers.
+  perFranchise: z.number().nonnegative().optional(),
+  franchiseTiers: z.array(z.object({ upTo: z.number().int().positive().nullable(), price: z.number().nonnegative() })).max(8).optional(),
 });
 const pricingSchema = z.object({ plans: z.array(planSchema).min(1).max(12) });
 
@@ -121,6 +127,52 @@ function tenantScope(req: import("express").Request, res: import("express").Resp
   return auth.tenantId;
 }
 
+// How many franchisees a head office actually has signed up under it — the
+// billable unit of the Franchise plan. Counts users with role:"franchise" in
+// the tenant (an accepted invite creates one). Used to meter the plan and to
+// SHOW the head office its network size + resulting charge on the page.
+async function franchiseSeatCount(tenantId: string): Promise<number> {
+  const snap = await db.collection("users").where("tenantId", "==", tenantId).where("role", "==", "franchise").get();
+  // One franchisee may have multiple user logins on the same franchiseId — bill
+  // per distinct franchise, not per login.
+  const ids = new Set<string>();
+  for (const d of snap.docs) ids.add((d.data().franchiseId as string) || d.id);
+  return ids.size;
+}
+
+// Listings the head office runs DIRECTLY (no franchiseId) — its own operation.
+// These are INCLUDED in the base fee (never billed as a franchise), so the page
+// can reassure the operator their own locations don't add to the bill.
+async function ownLocationCount(tenantId: string): Promise<number> {
+  const snap = await db.collection("listings").where("tenantId", "==", tenantId).get();
+  return snap.docs.filter((d) => !(d.data() as { franchiseId?: string }).franchiseId).length;
+}
+
+type FrTier = { upTo: number | null; price: number };
+// The all-in monthly for the Franchise plan: a flat head-office base + a
+// per-franchise fee applied on GRADUATED tiers (the first 5 franchises cost
+// more each than the next 10, etc.), so a big network pays less per franchise.
+// This is the number a head office should see — not the bare "from £X" base.
+function franchiseBilling(plans: PlanRec[], count: number) {
+  const p = plans.find((x) => x.id === "franchise");
+  const base = (p?.price as number | undefined) ?? 0;
+  const tiers = (p?.franchiseTiers as FrTier[] | undefined) ?? [{ upTo: null, price: (p?.perFranchise as number | undefined) ?? 0 }];
+  let prevCap = 0, perTotal = 0;
+  const lines: { count: number; price: number }[] = [];
+  for (const t of tiers) {
+    const cap = t.upTo == null ? count : Math.min(count, t.upTo);
+    const inTier = Math.max(0, cap - prevCap);
+    if (inTier > 0) { perTotal += inTier * t.price; lines.push({ count: inTier, price: t.price }); }
+    prevCap = t.upTo ?? count;
+    if (t.upTo != null && count <= t.upTo) break;
+  }
+  perTotal = Math.round(perTotal * 100) / 100;
+  const total = Math.round((base + perTotal) * 100) / 100;
+  // The rate the NEXT franchise added would cost (for a "grows to" hint).
+  const nextTier = tiers.find((t) => t.upTo == null || count < t.upTo) ?? tiers[tiers.length - 1];
+  return { count, base, perTotal, total, lines, tiers, nextRate: nextTier?.price ?? 0 };
+}
+
 // GET /api/subscription — the tenant's current plan + the catalogue.
 subscription.get("/", async (req, res) => {
   const tenantId = tenantScope(req, res);
@@ -134,6 +186,12 @@ subscription.get("/", async (req, res) => {
   const planId = sub?.plan ?? (t.data()?.type === "company" ? "company" : "freelancer");
   const plans = await getPlans();
   const lim = limitsFor(plans, planId, sub?.band);
+  // A head office (company tenant) is billed by network size — surface the live
+  // franchise count + the metered total so the Subscription page can show it.
+  const isCompany = req.auth!.role === "company" || (req.auth!.role === "platform" && t.data()?.type === "company");
+  const franchiseCount = isCompany ? await franchiseSeatCount(tenantId) : null;
+  const ownLocations = franchiseCount != null ? await ownLocationCount(tenantId) : 0;
+  const franchise = franchiseCount != null ? { ...franchiseBilling(plans, franchiseCount), ownLocations } : null;
   res.json({
     current: {
       plan: planId, status, band: sub?.band ?? null, cadence: (sub?.cadence as string) ?? "month",
@@ -146,6 +204,9 @@ subscription.get("/", async (req, res) => {
     },
     plans,
     trialDays: TRIAL_DAYS,
+    // The head office's network + the live per-franchise bill (null for non-HO).
+    franchiseCount,
+    franchise,
     // Stripe Billing is live when the key is configured; without it (bare dev
     // checkout) starting a trial records intent only.
     billingConfigured: !!stripe,

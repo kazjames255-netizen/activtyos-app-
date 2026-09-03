@@ -21,10 +21,11 @@ const LEVELS: { v: CapLevel; label: string; fg: string; bg: string; ring: string
 const GROUP_ICON: Record<string, string> = {
   "Overview": "📊", "Sell & take bookings": "🎟", "Run the day": "📆", "Safeguarding": "🛡",
   "Team & learning": "👥", "Money": "💷", "Growth": "📣", "Communication": "✉️", "Admin": "⚙️",
+  // Head-office groups (see HO_ROLE_AREAS)
+  "Franchises": "🏬", "Marketing": "📣", "Team": "👥", "Oversight": "🛡",
 };
 
 const uid = () => `role-${Math.random().toString(36).slice(2, 9)}`;
-const GROUPS = ROLE_CAPS.reduce<string[]>((acc, c) => (acc.includes(c.group) ? acc : [...acc, c.group]), []);
 
 function LevelPicker({ value, disabled, onChange }: { value: CapLevel; disabled?: boolean; onChange: (v: CapLevel) => void }) {
   const t = useT();
@@ -52,10 +53,15 @@ function LevelPicker({ value, disabled, onChange }: { value: CapLevel; disabled?
   );
 }
 
-export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onChange: (roles: StaffRole[]) => void }) {
+export function RolesPermissions({ roles, onChange, areas, defaultRoles }: { roles: StaffRole[]; onChange: (roles: StaffRole[]) => void; areas?: { key: string; label: string; group: string; sensitive?: boolean; scoped?: boolean; note?: string }[]; defaultRoles?: StaffRole[] }) {
   const t = useT();
-  const list = roles.length ? roles : DEFAULT_ROLES;
+  const list = roles.length ? roles : (defaultRoles ?? DEFAULT_ROLES);
   const [newName, setNewName] = useState("");
+  // Head office manages its own network-level areas (its sidebar + tabs), so it
+  // passes a bespoke `areas` list with head-office wording; everyone else gets
+  // the full operator matrix.
+  const caps = areas ?? ROLE_CAPS;
+  const groups = caps.reduce<string[]>((acc, c) => (acc.includes(c.group) ? acc : [...acc, c.group]), []);
 
   const setCap = (roleId: string, cap: string, level: CapLevel) =>
     onChange(list.map((r) => (r.id === roleId ? { ...r, caps: { ...r.caps, [cap]: level } } : r)));
@@ -138,7 +144,7 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
             </tr>
           </thead>
           <tbody>
-            {GROUPS.map((group) => (
+            {groups.map((group) => (
               <Fragment key={group}>
                 <tr>
                   <td colSpan={1 + list.length} className="sticky left-0 border-t border-[var(--line)] bg-gradient-to-r from-[#eef3fb] to-transparent px-4 py-1.5">
@@ -147,7 +153,7 @@ export function RolesPermissions({ roles, onChange }: { roles: StaffRole[]; onCh
                     </span>
                   </td>
                 </tr>
-                {ROLE_CAPS.filter((c) => c.group === group).map((cap) => (
+                {caps.filter((c) => c.group === group).map((cap) => (
                   <tr key={cap.key} className="group border-t border-[var(--line-2,#eef2f8)] transition-colors hover:bg-[color-mix(in_srgb,var(--brand)_4%,transparent)]">
                     <td className="sticky left-0 z-10 min-w-[240px] bg-[var(--surface)] px-4 py-2.5 shadow-[6px_0_10px_-8px_rgba(20,35,90,.18)] group-hover:bg-[color-mix(in_srgb,var(--brand)_4%,var(--surface))]">
                       <div className="text-[13px] font-semibold text-[var(--ink)]">

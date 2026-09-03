@@ -59,7 +59,7 @@ export function MembershipTierCard({ tier, footer, highlight }: {
         <span className="text-[12.5px] text-[var(--ink-3)]">{tr("parent.perMonth")}</span>
       </div>
       <div className="mt-3 rounded-xl bg-gradient-to-br from-[#eef4ff] to-[#e4ecff] px-3.5 py-3">
-        <div className="text-[15.5px] font-extrabold leading-tight text-[#1d3a8f]">{bn.emoji} {bn.headline}</div>
+        <div className="text-[15.5px] font-extrabold leading-tight text-[var(--brand)]">{bn.emoji} {bn.headline}</div>
         <div className="mt-1 text-[11.5px] leading-snug text-[#516099]">{bn.sub}</div>
       </div>
       {perks.length > 0 && (

@@ -386,12 +386,12 @@ export function BrowseApp() {
   const activeFilters = [q.trim(), catFilter, locFilter, seasonF, childAge.trim(), maxPrice.trim(), availOnly, myKidsOnly, duration, whenF, onDate, radius > 0 && !!myCoords];
   const activeCount = activeFilters.filter(Boolean).length;
   const filtersActive = activeCount > 0;
-  const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--ink-2)] shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)] outline-none transition-colors hover:border-[#1d3a8f] focus:border-[#1d3a8f]";
+  const pill = "rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2 text-[12.5px] font-semibold text-[var(--ink-2)] shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)] outline-none transition-colors hover:border-[var(--brand)] focus:border-[var(--brand)]";
 
   if (!visible.length) {
     return (
       <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
-        <div className="relative mb-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
+        <div className="relative mb-4 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,var(--brand) 0%,var(--brand-2) 100%)" }}>
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">🔎</span>{t("parent.browseActivitiesTitle")}
           </div>
@@ -404,11 +404,11 @@ export function BrowseApp() {
   }
 
   return (
-    <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
+    <div className="relative -m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Title card — the whole filter bar folds inside it (open/close), like the
           company Registers card. Choice remembered per browser. */}
       <div className="mb-4 overflow-hidden rounded-2xl shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]">
-        <div className="relative p-5 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
+        <div className="relative p-5 text-white" style={{ background: "linear-gradient(120deg,var(--brand) 0%,var(--brand-2) 100%)" }}>
           <button type="button" onClick={() => setFiltersOpen((v) => !v)} aria-expanded={filtersOpen}
             className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1.5 text-[12px] font-bold text-white transition hover:bg-white/25">
             🔧 {filtersOpen ? t("parent.hideFilters") : t("parent.showFilters")}{!filtersOpen && filtersActive ? ` · ${activeCount}` : ""}
@@ -431,7 +431,7 @@ export function BrowseApp() {
           <div className="relative min-w-[190px] flex-1">
             <span aria-hidden className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[12px] text-[var(--ink-3)]">🔍</span>
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("parent.searchNameVenue")}
-              className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-3.5 text-[12.5px] shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)] outline-none transition-colors focus:border-[#1d3a8f]" />
+              className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-3.5 text-[12.5px] shadow-[0_2px_8px_-4px_rgba(29,58,143,.25)] outline-none transition-colors focus:border-[var(--brand)]" />
           </div>
           {allCats.length > 0 && (
             <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={pill} aria-label={t("parent.filterByCategory")}>
@@ -477,8 +477,8 @@ export function BrowseApp() {
               type="button"
               onClick={() => setMyKidsOnly((v) => !v)}
               title={t("parent.myKidsAgesHint")}
-              className={"rounded-full px-3.5 py-2 text-[12.5px] font-bold transition-colors " + (myKidsOnly ? "text-white" : "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[#1d3a8f]")}
-              style={myKidsOnly ? { background: "#1d3a8f" } : undefined}
+              className={"rounded-full px-3.5 py-2 text-[12.5px] font-bold transition-colors " + (myKidsOnly ? "text-white" : "border border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:border-[var(--brand)]")}
+              style={myKidsOnly ? { background: "var(--brand)" } : undefined}
             >
               {myKidsOnly ? "✓ " : "👧 "}{t("parent.myKidsAges")}
             </button>
@@ -525,7 +525,7 @@ export function BrowseApp() {
           </span>
           {filtersActive && (
             <button type="button" onClick={() => { setQ(""); setCatFilter(""); setLocFilter(""); setSeasonF(""); setRadius(0); setChildAge(""); setMaxPrice(""); setAvailOnly(false); setMyKidsOnly(false); setDuration(""); setWhenF(""); setOnDate(""); }}
-              className="text-[12px] font-bold text-[var(--brand-2,#2f6bd8)]">{t("parent.clearAll")}</button>
+              className="text-[12px] font-bold text-[var(--brand-2,var(--brand-2))]">{t("parent.clearAll")}</button>
           )}
         </div>
       )}
@@ -533,7 +533,7 @@ export function BrowseApp() {
       {/* When filtering by the family's ages, explain that out-of-range-friendly
           listings are included too (allowOutOfRange — accepted as a request). */}
       {myKidsOnly && kidAges.length > 0 && (
-        <div className="mt-1 rounded-xl border border-[#cfe0f7] bg-[#eef5ff] px-3.5 py-2.5 text-[12px] leading-[1.5] text-[#1d3a8f]">
+        <div className="mt-1 rounded-xl border border-[#cfe0f7] bg-[#eef5ff] px-3.5 py-2.5 text-[12px] leading-[1.5] text-[var(--brand)]">
           👧 {t("parent.myKidsAgesNote")}
         </div>
       )}
@@ -546,6 +546,7 @@ export function BrowseApp() {
           {filtersActive ? t("parent.noActivitiesMatch") : t("parent.noActivitiesRightNow")}
         </Card>
       )}
+      <div>
       <div className="grid gap-3.5 lg:grid-cols-2">
         {shown.map((l) => {
           const from = l.passes.length ? Math.min(...l.passes.map((p) => p.price)) : 0;
@@ -561,13 +562,13 @@ export function BrowseApp() {
                 {hero ? (
                   <CroppedImage im={hero} className="w-full" style={{ aspectRatio: "16 / 9" }} />
                 ) : (
-                  <div className="flex w-full items-center justify-center text-[26px] text-white/85" style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,#1d3a8f,#2f6bd8 70%,#5b8af0)" }}>🎪</div>
+                  <div className="flex w-full items-center justify-center text-[26px] text-white/85" style={{ aspectRatio: "16 / 9", background: "linear-gradient(135deg,var(--brand),var(--brand-2) 70%,#5b8af0)" }}>🎪</div>
                 )}
                 {/* Distance + opens-later, stacked top-left over the image. */}
                 {(dist != null || opensLater) && (
                   <div className="absolute left-2.5 top-2.5 flex flex-col items-start gap-1.5">
                     {dist != null && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-extrabold text-[#1d3a8f] shadow-sm">🧭 {dist < 10 ? dist.toFixed(1) : Math.round(dist)} {t("parent.miAway")}</span>
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-extrabold text-[var(--brand)] shadow-sm">🧭 {dist < 10 ? dist.toFixed(1) : Math.round(dist)} {t("parent.miAway")}</span>
                     )}
                     {opensLater && (
                       <span className="rounded-full bg-white/95 px-2.5 py-[4px] text-[11px] font-bold text-[#9a3412] shadow-sm">
@@ -589,18 +590,18 @@ export function BrowseApp() {
                   </div>
                   {(agesLabel(l) || dateRange(l)) && (
                     <div className="flex flex-none flex-col items-end gap-1">
-                      {agesLabel(l) && <span className="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-[#1d3a8f] shadow-sm">{agesLabel(l)}</span>}
+                      {agesLabel(l) && <span className="whitespace-nowrap rounded-full bg-white px-2 py-0.5 text-[11px] font-extrabold text-[var(--brand)] shadow-sm">{agesLabel(l)}</span>}
                       {dateRange(l) && (() => { const rd = runDatesByMonth(l); return (
                         <span className="group/date relative whitespace-nowrap rounded-full bg-[#c9f24a] px-2 py-0.5 text-[11px] font-extrabold text-[#2a3400] shadow-sm">
                           📅 {dateRange(l)}
                           {rd.count > 0 && (
                             <span className="pointer-events-none absolute bottom-full right-0 z-40 mb-2 hidden w-[230px] max-w-[80vw] rounded-xl bg-white p-3 text-left text-[var(--ink)] shadow-[0_16px_40px_-8px_rgba(15,23,42,.5)] ring-1 ring-black/5 group-hover/date:block">
-                              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-[#1d3a8f]">{t("parent.datesItRuns", { n: rd.count })}</span>
+                              <span className="mb-1.5 block text-[10px] font-black uppercase tracking-wide text-[var(--brand)]">{t("parent.datesItRuns", { n: rd.count })}</span>
                               {rd.months.map((m) => (
                                 <span key={m.label} className="mb-1.5 block last:mb-0">
                                   <span className="block text-[11px] font-bold">{m.label}</span>
                                   <span className="mt-1 flex flex-wrap gap-1">
-                                    {m.days.map((d, i) => <span key={i} className="inline-flex h-[19px] min-w-[19px] items-center justify-center rounded-md bg-[#eef4ff] px-1 text-[10px] font-bold text-[#1d3a8f]">{d}</span>)}
+                                    {m.days.map((d, i) => <span key={i} className="inline-flex h-[19px] min-w-[19px] items-center justify-center rounded-md bg-[#eef4ff] px-1 text-[10px] font-bold text-[var(--brand)]">{d}</span>)}
                                   </span>
                                 </span>
                               ))}
@@ -630,16 +631,16 @@ export function BrowseApp() {
                   return (
                     <div className="mt-2.5 flex flex-col gap-1.5">
                       {chipGroup(l.id, "offers", offers, 1, "bg-[#fdecea] text-[#b3261e]")}
-                      {chipGroup(l.id, "slots", slots, 3, "bg-[#eef4ff] text-[#1d3a8f]")}
+                      {chipGroup(l.id, "slots", slots, 3, "bg-[#eef4ff] text-[var(--brand)]")}
                       {chipGroup(l.id, "pays", pays, 1, "bg-[#e9f9f2] text-[#0b5a3f]")}
                     </div>
                   );
                 })()}
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <button type="button" onClick={() => router.push(`/book/${l.id}`)} className="rounded-lg border border-[var(--brand-2,#2f6bd8)] py-2.5 text-[13px] font-bold text-[var(--brand-2,#2f6bd8)] transition-colors hover:bg-[#eef4ff]">
+                  <button type="button" onClick={() => router.push(`/book/${l.id}`)} className="rounded-lg border border-[var(--brand-2,var(--brand-2))] py-2.5 text-[13px] font-bold text-[var(--brand-2,var(--brand-2))] transition-colors hover:bg-[#eef4ff]">
                     {t("parent.moreInfo")}
                   </button>
-                  <button type="button" onClick={() => setQuickBook(l.id)} className="rounded-lg bg-[var(--brand-2,#2f6bd8)] py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90">
+                  <button type="button" onClick={() => setQuickBook(l.id)} className="rounded-lg bg-[var(--brand-2,var(--brand-2))] py-2.5 text-[13px] font-bold text-white transition-opacity hover:opacity-90">
                     {t("parent.quickBook")}
                   </button>
                 </div>
@@ -649,6 +650,7 @@ export function BrowseApp() {
         })}
       </div>
       {quickBook && <QuickBookModal id={quickBook} onClose={() => setQuickBook(null)} />}
+      </div>
     </div>
   );
 }

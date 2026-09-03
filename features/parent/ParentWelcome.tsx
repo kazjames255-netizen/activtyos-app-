@@ -135,7 +135,7 @@ export function ParentWelcome() {
     >
       <div className="max-h-[94vh] w-full max-w-[680px] overflow-y-auto rounded-2xl bg-white shadow-[0_24px_60px_-12px_rgba(20,30,60,.55)]">
         {/* Branded header band */}
-        <div className="relative px-6 py-5 text-white" style={{ background: "linear-gradient(120deg,#16306e 0%,#3f78d8 70%,#5a93f0 100%)" }}>
+        <div className="relative px-6 py-5 text-white" style={{ background: "linear-gradient(120deg,var(--brand-strong) 0%,var(--brand-2) 70%,#5a93f0 100%)" }}>
           <button
             type="button"
             onClick={markSeen}
@@ -232,7 +232,7 @@ export function ParentWelcome() {
               onClick={saveDetails}
               disabled={saving}
               className="mt-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px disabled:opacity-60"
-              style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
+              style={{ background: "linear-gradient(180deg,#4f8bf5,var(--brand-2))", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
             >
               {saving ? t("parent.saving") : t("parent.continueArrow")}
             </button>
@@ -243,7 +243,7 @@ export function ParentWelcome() {
             <div className="px-6 pt-5">
               <div className="rounded-xl border border-[var(--line,#ece6f1)] bg-[#f7faff] p-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#2f6bd8] text-[15px] font-extrabold text-white">1</span>
+                  <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[var(--brand-2)] text-[15px] font-extrabold text-white">1</span>
                   <div className="min-w-0">
                     <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">{t("parent.addYourChildren")}</div>
                     <div className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
@@ -255,14 +255,14 @@ export function ParentWelcome() {
                   type="button"
                   onClick={() => go("/custdash/children?add=1")}
                   className="mt-3 w-full rounded-full py-2.5 text-[14px] font-extrabold text-white transition-transform hover:-translate-y-px"
-                  style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
+                  style={{ background: "linear-gradient(180deg,#4f8bf5,var(--brand-2))", boxShadow: "0 4px 14px -3px rgba(47,107,216,.6)" }}
                 >
                   {t("parent.addMyChildren")}
                 </button>
               </div>
 
               <div className="mt-3 flex items-start gap-3 px-1">
-                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[15px] font-extrabold text-[#2f6bd8]">2</span>
+                <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-[#eaf0fc] text-[15px] font-extrabold text-[var(--brand-2)]">2</span>
                 <div className="min-w-0">
                   <div className="text-[14.5px] font-extrabold text-[var(--ink,#171534)]">{t("parent.thenFindWhatsOn")}</div>
                   <div className="mt-0.5 text-[12.5px] leading-[1.5] text-[var(--ink-3,#8a86a3)]">
@@ -279,7 +279,7 @@ export function ParentWelcome() {
               <button
                 type="button"
                 onClick={() => go("/custdash/browse")}
-                className="rounded-full border border-[var(--line,#ece6f1)] bg-white px-4 py-2 text-[13px] font-bold text-[#1d3a8f] hover:border-[#2f6bd8]"
+                className="rounded-full border border-[var(--line,#ece6f1)] bg-white px-4 py-2 text-[13px] font-bold text-[var(--brand)] hover:border-[var(--brand-2)]"
               >
                 {t("parent.browseActivities")}
               </button>

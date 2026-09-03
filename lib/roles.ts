@@ -2,6 +2,8 @@ import { get as apiGet } from "./api";
 
 export interface Me {
   email: string | null;
+  /** The signed-in person's display name (users doc), returned by /api/me. */
+  name?: string;
   role: "platform" | "company" | "franchise" | "freelancer" | "staff" | "parent";
   tenantId: string | null;
   tenantName: string | null;
@@ -12,6 +14,11 @@ export interface Me {
   /** Has the parent seen the first-login welcome popup? */
   welcomed?: boolean;
   franchiseId: string | null;
+  /** Franchise only: head-office-granted business name + territory (e.g. "London"). */
+  franchiseName?: string | null;
+  franchiseArea?: string | null;
+  /** Company (head office) only: whether it has ≥1 franchise — gates franchisor tools. */
+  hasFranchises?: boolean;
 }
 
 // Each role's home — where a fresh sign-in lands.

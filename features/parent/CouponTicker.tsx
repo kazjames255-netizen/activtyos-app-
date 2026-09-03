@@ -77,7 +77,7 @@ export function CouponTicker() {
   // Hidden → keep a slim, always-there way to bring it back (never lost).
   if (hidden) return (
     <div className="flex h-[26px] items-center justify-end px-3" style={{ background: "var(--bg)", borderBottom: "1px solid var(--line)" }}>
-      <button type="button" onClick={reveal} className="text-[11px] font-bold" style={{ color: "#2f6bd8" }}>{t("parent.showMyCodes", { count: coupons.length })}</button>
+      <button type="button" onClick={reveal} className="text-[11px] font-bold" style={{ color: "var(--brand-2)" }}>{t("parent.showMyCodes", { count: coupons.length })}</button>
     </div>
   );
 
@@ -94,12 +94,12 @@ export function CouponTicker() {
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => setHovered(false)}
     >
-      <span className="z-10 flex-none px-3 text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: "#2f6bd8" }}>{t("parent.yourCodes")}</span>
+      <span className="z-10 flex-none px-3 text-[11px] font-extrabold uppercase tracking-[0.06em]" style={{ color: "var(--brand-2)" }}>{t("parent.yourCodes")}</span>
       <div className="min-w-0 flex-1 overflow-hidden">
         <div ref={trackRef} className="inline-flex items-center whitespace-nowrap [will-change:transform]">
           {items.map((c, i) => (
             <span key={`${c.id}-${i}`} className="inline-flex items-center gap-2 px-5 text-[12.5px] font-semibold">
-              <span className="font-mono font-extrabold tracking-wider" style={{ color: "#16306e" }}>{c.code}</span>
+              <span className="font-mono font-extrabold tracking-wider" style={{ color: "var(--brand-strong)" }}>{c.code}</span>
               <span style={{ color: "var(--ink-3)" }}>{valueLabel(c)} · {c.listingName ? c.listingName : t("parent.allListingsLower")}</span>
               {c.reserved && <span>🎁</span>}
               <span className="px-1 text-[8px]" style={{ color: "#cdddf7" }}>◆</span>

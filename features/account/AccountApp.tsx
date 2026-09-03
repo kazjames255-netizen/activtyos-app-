@@ -5,11 +5,18 @@ import type { CSSProperties } from "react";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
+import { clearMeCache } from "@/components/auth/PortalGuard";
+import { TerritoryMapClient, type TerritoryArea } from "@/features/franchise/TerritoryMapClient";
 import { get as apiGet, api } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 
-interface Profile { email: string | null; name: string; phone: string; address: string; postcode: string; marketingConsent: boolean; role: string; emergencyName?: string; emergencyPhone?: string }
+// Wire/storage shape — points are {lat,lng} OBJECTS (Firestore forbids nested arrays).
+interface WireArea { id: string; name: string; color: string; rings: { lat: number; lng: number }[] }
+interface WireTerritory { areas: WireArea[]; status?: "draft" | "agreed" }
+const toMapAreas = (t?: WireTerritory | null): TerritoryArea[] => (t?.areas ?? []).map((a) => ({ ...a, rings: a.rings.map((p) => [p.lat, p.lng] as [number, number]) }));
+const toWireAreas = (areas: TerritoryArea[]): WireArea[] => areas.map((a) => ({ ...a, rings: a.rings.map(([lat, lng]) => ({ lat, lng })) }));
+interface Profile { email: string | null; name: string; phone: string; address: string; postcode: string; marketingConsent: boolean; role: string; emergencyName?: string; emergencyPhone?: string; franchiseName?: string; franchiseArea?: string; franchiseTerritory?: WireTerritory | null }
 const roleLabel: Record<string, string> = { parent: "Parent", staff: "Staff", company: "Company / head office", franchise: "Franchise", freelancer: "Freelancer", platform: "Platform" };
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -69,6 +76,13 @@ export function AccountApp() {
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const [pwMsg, setPwMsg] = useState<{ err?: string; ok?: string }>({});
   const [showPw, setShowPw] = useState(false);
+  // Franchise identity (business name + territory) — editable by the franchise here.
+  const [frName, setFrName] = useState("");
+  const [frArea, setFrArea] = useState("");
+  const [frOk, setFrOk] = useState<string | null>(null);
+  const [territory, setTerritory] = useState<TerritoryArea[]>([]);
+  // Agreement is head-office-controlled — the franchise can only propose, never self-agree.
+  const [terrStatus, setTerrStatus] = useState<"draft" | "proposed" | "agreed">("draft");
   // The registration card is editable right here (not only in Setup).
   const [editReg, setEditReg] = useState(false);
   const [rf, setRf] = useState({ businessName: "", providerName: "", activityKinds: "", address: "", postcode: "", email: "", phone: "", vatNumber: "" });
@@ -85,6 +99,10 @@ export function AccountApp() {
       setMarketing(prof.marketingConsent);
       setEmergencyName(prof.emergencyName ?? "");
       setEmergencyPhone(prof.emergencyPhone ?? "");
+      setFrName(prof.franchiseName ?? "");
+      setFrArea(prof.franchiseArea ?? "");
+      setTerritory(toMapAreas(prof.franchiseTerritory));
+      setTerrStatus(prof.franchiseTerritory?.status ?? "draft");
     }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(() => { load(); }, [load]);
@@ -133,6 +151,20 @@ export function AccountApp() {
         billing: { ...(settings.billing ?? {}), businessName: rf.businessName.trim(), address: rf.address.trim(), email: rf.email.trim(), phone: rf.phone.trim(), vatNumber: rf.vatNumber.trim() },
       } });
       setEditReg(false); setOk("Registration details saved.");
+    } catch (e) { setError(niceError(e)); }
+  }
+
+  async function saveFranchise() {
+    setError(null); setFrOk(null);
+    try {
+      await api("/api/account", { method: "PUT", body: JSON.stringify({
+        franchiseName: frName.trim(), franchiseArea: frArea.trim(),
+        // Status is head-office-controlled; the server coerces a franchise's value anyway.
+        franchiseTerritory: { areas: toWireAreas(territory), status: territory.length ? "proposed" : "draft" },
+      }) });
+      setFrOk(territory.length ? "Saved — sent to your head office to agree." : "Saved.");
+      setTerrStatus(territory.length ? "proposed" : "draft");
+      clearMeCache(); // so the sidebar banner picks up the new name/area on next navigation
     } catch (e) { setError(niceError(e)); }
   }
 
@@ -198,7 +230,7 @@ export function AccountApp() {
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       <div className="mx-auto max-w-[720px]">
         {/* Hero — matches the other portal pages (blue → white). */}
-        <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
+        <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "var(--hero-grad)" }}>
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">👤</span>
             My account
@@ -208,6 +240,36 @@ export function AccountApp() {
 
         {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
         {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
+
+        {p.role === "franchise" && (
+          <Card className="mb-3 border-2 border-[#e6d8f6] p-4" style={{ background: "#faf6ff" }}>
+            <div className="flex items-center gap-2 text-[13.5px] font-extrabold text-[#7a3aa8]">🌐 Your franchise</div>
+            <p className="mb-3 mt-0.5 text-[11.5px] leading-snug text-[var(--ink-3)]">Your franchise business name and the area/territory you cover — shown across your portal as “{(frName.trim() || "Your brand")} · {(frArea.trim() || "Area")} franchise”.</p>
+            <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
+              <div><FieldLabel>Franchise business name</FieldLabel><Input value={frName} onChange={(e) => setFrName(e.target.value)} className="w-full" placeholder="e.g. APF Activity Camps" /></div>
+              <div><FieldLabel>Area / territory</FieldLabel><Input value={frArea} onChange={(e) => setFrArea(e.target.value)} className="w-full" placeholder="e.g. London" /></div>
+            </div>
+
+            {/* Territory map — the franchise PROPOSES a border; the head office agrees it (HO-only). Optional. */}
+            <div className="mt-4 border-t border-[#e6d8f6] pt-3.5">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="text-[12.5px] font-extrabold text-[#7a3aa8]">🗺 Your territory on the map <span className="font-bold text-[var(--ink-3)]">— optional</span></div>
+                {territory.length === 0
+                  ? <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Not set</span>
+                  : terrStatus === "agreed"
+                    ? <span className="rounded-full bg-[#e2f4ea] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#0f7a43]">✓ Agreed by head office</span>
+                    : <span className="rounded-full bg-[#fdf0e3] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#b45309]">Awaiting head office agreement</span>}
+              </div>
+              <p className="mb-2.5 mt-0.5 text-[11.5px] leading-snug text-[var(--ink-3)]">Optional, but your head office encourages it: draw the border(s) where you run your services so the patch is clear. Add more than one area if you cover several. <b>Your head office reviews and agrees it</b> — you can propose and adjust, they sign it off. Leave it blank and you can still create listings anywhere.</p>
+              <TerritoryMapClient value={territory} onChange={setTerritory} editable focus={frArea || "London"} height={360} />
+            </div>
+
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <Button variant="primary" onClick={saveFranchise}>Save franchise</Button>
+              {frOk && <span className="text-[12.5px] font-bold text-[#1d7a43]">✓ {frOk}</span>}
+            </div>
+          </Card>
+        )}
 
         {isOperator && (
           <Card className="mb-3 p-4">

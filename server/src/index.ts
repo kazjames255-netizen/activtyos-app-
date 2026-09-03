@@ -35,6 +35,8 @@ import { reconciliation } from "./routes/reconciliation";
 import { dashboard } from "./routes/dashboard";
 import { discounts } from "./routes/discounts";
 import { splitfees } from "./routes/splitfees";
+import { hoOverview } from "./routes/hoOverview";
+import { franchises } from "./routes/franchises";
 import { account } from "./routes/account";
 import { privacy } from "./routes/privacy";
 import { emails, emailsInbound, emailsOpen, emailsResendInbound, emailsUnsub } from "./routes/emails";
@@ -75,11 +77,17 @@ const app = express();
 
 app.use(
   cors({
-    // 3001 included because Next falls back to it when 3000 is taken.
-    origin: process.env.CORS_ORIGIN?.split(",") ?? [
-      "http://localhost:3000",
-      "http://localhost:3001",
-    ],
+    // Allow any localhost / 127.0.0.1 / *.localhost origin on any port. Sessions
+    // are stored per-origin, so testing several accounts at once means opening
+    // each on its own origin (localhost:3000, 127.0.0.1:3000, company.localhost:3000…).
+    // CORS_ORIGIN still lists explicit extra origins for production.
+    origin: (origin, cb) => {
+      const allow =
+        !origin ||
+        /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\]|[a-z0-9-]+\.localhost)(:\d+)?$/i.test(origin) ||
+        (process.env.CORS_ORIGIN?.split(",") ?? ["http://localhost:3000", "http://localhost:3001"]).includes(origin);
+      cb(null, allow);
+    },
   }),
 );
 // Stripe Billing webhook — must see the RAW body for signature verification,
@@ -170,6 +178,8 @@ app.use("/api/availability", availability);
 app.use("/api/dashboard", dashboard);
 app.use("/api/discounts", discounts);
 app.use("/api/splitfees", splitfees);
+app.use("/api/franchises", franchises);
+app.use("/api/ho", hoOverview);
 app.use("/api/account", account);
 app.use("/api/privacy", privacy);
 app.use("/api/emails", emails);

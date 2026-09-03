@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
+import { franchiseListingIds } from "../lib/franchiseScope";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Registers — the staff portal's core tool ("run the day on the ground").
@@ -77,10 +78,18 @@ registers.get("/", async (req, res) => {
   }
   const date = typeof req.query.date === "string" && req.query.date ? req.query.date : todayIso();
 
+  // A franchise only registers its OWN children — narrow the day's sessions to
+  // blocks whose listing the franchise owns. Head office sees the whole tenant.
+  // (Cross-franchise child-safeguarding isolation.)
+  let franchiseListings: Set<string> | null = null;
+  if (auth.role === "franchise" && auth.franchiseId) {
+    franchiseListings = await franchiseListingIds(tenantId, auth.franchiseId);
+  }
   // The day's sessions: tenant blocks with a session on that date.
   const blocksSnap = await db.collection("blocks").where("tenantId", "==", tenantId).get();
   const todays = blocksSnap.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
+    .filter(({ block }) => !franchiseListings || franchiseListings.has(block.listingId))
     .map(({ id, block }) => ({ id, block, session: block.sessions.find((s) => s.date === date) }))
     .filter((x): x is typeof x & { session: NonNullable<(typeof x)["session"]> } => !!x.session);
 

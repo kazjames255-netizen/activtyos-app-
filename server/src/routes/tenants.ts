@@ -25,15 +25,24 @@ me.get("/", async (req, res) => {
   const auth = req.auth!;
   let tenantName: string | null = null;
   let logoUrl: string | null = null;
+  let brandColor: string | null = null;
+  let tenantPlan: string | null = null;
   if (auth.tenantId) {
     const [t, lib] = await Promise.all([
       db.collection("tenants").doc(auth.tenantId).get(),
       db.collection("libraries").doc(auth.tenantId).get(),
     ]);
-    tenantName = t.exists ? t.data()!.name : null;
+    // Prefer the business name the operator set in Onboarding/Setup (settings.billing.businessName)
+    // over the tenant doc's name, so editing it updates the portal brand immediately.
+    const libSettings = (lib.data()?.settings as { billing?: { businessName?: string }; providerName?: string } | undefined);
+    tenantName = (libSettings?.billing?.businessName || (t.exists ? t.data()!.name : null)) ?? null;
+    tenantPlan = ((t.data()?.subscription as { plan?: string } | undefined)?.plan) ?? null;
     // The operator's own logo, so their portal chrome (sidebar) wears their
     // brand — not just their customer emails/pages.
     logoUrl = ((lib.data()?.settings as { billing?: { logoUrl?: string } } | undefined)?.billing?.logoUrl) || null;
+    // The provider's chosen accent colour, so their customer-facing surfaces
+    // (parent portal + checkout) can wear their brand — see lib/brand-theme.ts.
+    brandColor = ((lib.data()?.settings as { brandColor?: string } | undefined)?.brandColor) || null;
   }
   // The parent's postcode, captured at signup, so the browse can locate them.
   const userSnap = await db.collection("users").doc(req.user!.uid).get();
@@ -42,6 +51,21 @@ me.get("/", async (req, res) => {
   const name = ((userSnap.data()?.name as string | undefined) || req.user!.name || "").trim();
   // Whether the parent has seen the first-login welcome popup (add-your-kids).
   const welcomed = !!(userSnap.data()?.welcomedAt);
+  // A franchise's head-office-granted business name + territory (e.g. "London"),
+  // so its portal can badge "BRAND · LONDON FRANCHISE".
+  const franchiseName = (userSnap.data()?.franchiseName as string | undefined) ?? null;
+  const franchiseArea = (userSnap.data()?.franchiseArea as string | undefined) ?? null;
+  // A head office sees franchisor tools (Split fees, Franchises) when it's on
+  // the Franchise plan (that's its whole purpose) OR already has ≥1 franchise.
+  // A plain company with neither gets them hidden (empty & confusing).
+  let hasFranchises = false;
+  if (auth.role === "company" && auth.tenantId) {
+    if (tenantPlan === "franchise") hasFranchises = true;
+    else {
+      const fr = await db.collection("users").where("tenantId", "==", auth.tenantId).where("role", "==", "franchise").limit(1).get();
+      hasFranchises = !fr.empty;
+    }
+  }
   res.json({
     email: req.user!.email ?? null,
     name,
@@ -49,9 +73,13 @@ me.get("/", async (req, res) => {
     tenantId: auth.tenantId,
     tenantName,
     logoUrl,
+    brandColor,
     postcode,
     welcomed,
     franchiseId: auth.franchiseId,
+    franchiseName,
+    franchiseArea,
+    hasFranchises,
   });
 
   // A parent hitting /api/me IS in the platform — mark any customer record a

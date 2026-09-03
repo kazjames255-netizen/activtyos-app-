@@ -31,7 +31,7 @@ export function StaffReminderBanner() {
     if (comp.total > 0 && comp.done < comp.total) next.push({ label: `Finish your compliance details (${comp.done}/${comp.total})`, view: "onboarding", gating: true });
     // no-rush items
     const courses = outstandingCourses();
-    if (courses > 0) next.push({ label: `${courses} course${courses > 1 ? "s" : ""} to complete`, view: "training", gating: false });
+    if (courses > 0) next.push({ label: `${courses} course${courses > 1 ? "s" : ""} to complete`, view: "certificates", gating: false });
     const docs = outstandingDocs();
     if (docs > 0) next.push({ label: `${docs} document${docs > 1 ? "s" : ""} to read`, view: "documents", gating: false });
     setParts(next);

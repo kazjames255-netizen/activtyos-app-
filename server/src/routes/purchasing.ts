@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { sendMail } from "../lib/mailer";
 import { tenantSender } from "../lib/sender";
 import { renderMoneyDoc } from "../lib/moneyDoc";
+import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 
 // Purchasing (Money) — purchase orders & supplier invoices: what's on order,
@@ -79,13 +80,17 @@ function scope(req: Request, res: import("express").Response): string | null {
 }
 
 purchasing.get("/", async (req, res) => {
+  const auth = req.auth!;
   const tenantId = scope(req, res);
   if (!tenantId) return;
   const snap = await col.where("tenantId", "==", tenantId).get();
   const today = new Date().toISOString().slice(0, 10);
-  const list = snap.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { date?: string; dueDate?: string; amount?: number; status?: string })
+  let list = snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { date?: string; dueDate?: string; amount?: number; status?: string; franchiseId?: string | null })
     .map((p) => ({ ...p, overdue: OUTSTANDING.has(p.status ?? "") && !!p.dueDate && (p.dueDate as string) < today }));
+  // Franchise sees only its own purchase orders; head office sees the whole tenant.
+  if (auth.role === "franchise") list = list.filter((p) => (p.franchiseId ?? null) === auth.franchiseId);
+  list = applyHoNetFilter(list, auth.role, req.query.franchiseId); // head-office network scope
   list.sort((a, b) => (`${b.date ?? ""}` < `${a.date ?? ""}` ? -1 : 1));
   const outstanding = round2(list.filter((p) => OUTSTANDING.has(p.status ?? "")).reduce((s, p) => s + (p.amount ?? 0), 0));
   res.json({ items: list, summary: { count: list.length, outstanding, overdue: list.filter((p) => p.overdue).length } });
@@ -97,7 +102,7 @@ purchasing.post("/", async (req, res) => {
   const parsed = poSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const { repeat, repeatUntil, seriesId: _ignore, ...rest } = parsed.data;
-  const meta = { tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
+  const meta = { tenantId: auth.tenantId, franchiseId: auth.role === "franchise" ? auth.franchiseId : null, createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
   const base = { ...rest, amount: totalOf(rest.lineItems, rest.amount), ...meta };
 
   if (repeat && repeatUntil && repeatUntil > rest.date) {
@@ -138,6 +143,7 @@ async function own(req: Request, id: string) {
   if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (auth.role === "franchise" && (snap.data()!.franchiseId ?? null) !== auth.franchiseId) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 

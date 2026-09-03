@@ -137,6 +137,10 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       pinned: false,
       footer: false,
       items: [
+        { view: "franchise-overview", legacyView: "franchise-overview", label: "Franchises", highlight: true, icon: { type: "glyph", value: "🏬" }, badge: null },
+        { view: "franchise-features", legacyView: "franchise-features", label: "Feature control", highlight: true, icon: { type: "glyph", value: "🎛️" }, badge: null },
+        { view: "franchise-invites", legacyView: "franchise-invites", label: "Invite franchises", highlight: true, icon: { type: "glyph", value: "🤝" }, badge: null },
+        { view: "territories", legacyView: "territories", label: "Territories map", highlight: true, icon: { type: "glyph", value: "🗺" }, badge: null },
         { view: "ho-framework", legacyView: "ho-framework", label: "Milestones", hidden: true, highlight: true, icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><rect x=\"5\" y=\"3.5\" width=\"14\" height=\"17\" rx=\"2\"></rect><path d=\"M9 3.5V6h6V3.5M8.5 11l1.6 1.6L13 9.5M8.5 16l1.6 1.6L13 14.5\"></path></svg>" }, badge: null },
       ],
     },
@@ -155,6 +159,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "setup", legacyView: "admin-setup", label: "Setup & features", icon: { type: "glyph", value: "◐" }, badge: null },
         { view: "account", legacyView: "account", label: "Onboarding info", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3\"></path></svg>" }, badge: null },
+        { view: "getpaid", legacyView: "getpaid", label: "Get paid", icon: { type: "glyph", value: "💳" }, badge: null },
         { view: "subscription", legacyView: "subscription", label: "Subscription", icon: { type: "glyph", value: "◈" }, badge: null },
         { view: "support", legacyView: "support", label: "Support", icon: { type: "glyph", value: "💬" }, badge: null },
       ],
@@ -221,7 +226,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "payroll", legacyView: "franchise-payroll", label: "Payroll", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"2.5\" y=\"6\" width=\"19\" height=\"12\" rx=\"2\"></rect><circle cx=\"12\" cy=\"12\" r=\"2.4\"></circle><path d=\"M6 9.2v5.6M18 9.2v5.6\"></path></svg>" }, badge: null },
         { view: "holiday", legacyView: "franchise-holiday", label: "Leave & absence", icon: { type: "glyph", value: "🏖" }, badge: null },
         { view: "timesheets", legacyView: "franchise-timesheets", label: "Clock in/out & timesheets", icon: { type: "glyph", value: "⏱" }, badge: null },
-        { view: "compliance", legacyView: "franchise-compliance", label: "Learning Centre1", icon: { type: "glyph", value: "◎" }, badge: null },
+        { view: "compliance", legacyView: "franchise-compliance", label: "Learning Centre", icon: { type: "glyph", value: "◎" }, badge: null },
       ],
     },
     {
@@ -245,7 +250,8 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "purchasing", legacyView: "franchise-purchasing", label: "Money in", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><path d=\"M4.5 6.5h15l-1.2 8.5a2 2 0 0 1-2 1.7H7.7a2 2 0 0 1-2-1.7z\"></path><path d=\"M4.5 6.5 3.4 3.4H1.8M9 20.2h.01M15.5 20.2h.01\"></path></svg>" }, badge: null },
         { view: "invoices", legacyView: "franchise-invoices", label: "Invoices", hidden: true, icon: null, badge: null },
         { view: "reconciliation", legacyView: "franchise-reconciliation", label: "Reconciliation", icon: { type: "glyph", value: "⇄" }, badge: null },
-        { view: "subscription", legacyView: "franchise-subscription", label: "Subscription", icon: { type: "glyph", value: "◈" }, badge: null },
+        { view: "royalties", legacyView: "franchise-royalties", label: "Royalties", icon: { type: "glyph", value: "£" }, badge: null },
+        { view: "milestones", legacyView: "franchise-milestones", label: "Milestones", icon: { type: "glyph", value: "🎯" }, badge: null },
         { view: "ai", legacyView: "franchise-ai", label: "AI assistant", icon: { type: "glyph", value: "✦" }, badge: null },
       ],
     },
@@ -257,7 +263,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "setup", legacyView: "franchise-setup", label: "Setup & features", icon: { type: "glyph", value: "◐" }, badge: null },
         { view: "account", legacyView: "franchise-account", label: "Onboarding info", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3\"></path></svg>" }, badge: null },
         { view: "support", legacyView: "franchise-support", label: "Support", icon: { type: "glyph", value: "💬" }, badge: null },
-        { view: "privacy", legacyView: "franchise-privacy", label: "Data & privacy", icon: { type: "glyph", value: "🛡" }, badge: null },
       ],
     },
     {
@@ -380,6 +385,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "setup", legacyView: "freelancer-setup", label: "Setup & features", icon: { type: "glyph", value: "◐" }, badge: null },
         { view: "account", legacyView: "freelancer-account", label: "Onboarding info", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><circle cx=\"12\" cy=\"12\" r=\"3\"></circle><path d=\"M12 2.5v3M12 18.5v3M21.5 12h-3M5.5 12h-3M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1M18.7 18.7l-2.1-2.1M7.4 7.4L5.3 5.3\"></path></svg>" }, badge: null },
+        { view: "getpaid", legacyView: "freelancer-getpaid", label: "Get paid", icon: { type: "glyph", value: "💳" }, badge: null },
         { view: "subscription", legacyView: "freelancer-subscription", label: "Subscription", icon: { type: "glyph", value: "◈" }, badge: null },
         { view: "support", legacyView: "freelancer-support", label: "Support", icon: { type: "glyph", value: "💬" }, badge: null },
       ],
