@@ -23,7 +23,7 @@ export interface Block {
   date?: string; time?: string; location?: string;
 }
 export interface Company { name: string; phone: string; email: string; address: string; logo?: string }
-export interface Newsletter { layout: string; palette: string; company: Company; blocks: Block[] }
+export interface Newsletter { layout: string; palette: string; company: Company; blocks: Block[]; brand?: string }
 
 // Publishing metadata for a newsletter — how it's named, filed and sent. Kept
 // alongside the Newsletter design so the builder owns the whole flow.
@@ -44,7 +44,12 @@ const NL_COLOURS: [string, string, string][] = [ // [id, name, hex]
 ];
 const mkC = (id: string, name: string, hex: string): Palette => ({ id, name, bg: `${hex}10`, surface: "#ffffff", accent: hex, accent2: hex, ink: "#1b2130", muted: "#5f6672", onAccent: "#ffffff", band: `${hex}1a` });
 export const NL_PALETTES: Palette[] = NL_COLOURS.map(([id, name, hex]) => mkC(id, name, hex));
-export const paletteOf = (id: string) => NL_PALETTES.find((p) => p.id === id) ?? NL_PALETTES[0];
+// The provider's own brand colour (Setup → Branding) as a palette, so emails &
+// newsletters default to their brand — see BRAND_PALETTE_ID.
+export const BRAND_PALETTE_ID = "__brand__";
+export const brandPalette = (hex: string): Palette => mkC(BRAND_PALETTE_ID, "Your brand", hex);
+export const paletteOf = (id: string, brandHex?: string) =>
+  (id === BRAND_PALETTE_ID && brandHex ? brandPalette(brandHex) : NL_PALETTES.find((p) => p.id === id) ?? NL_PALETTES[0]);
 
 // ── 10 layouts: each seeds a block list. Company details flow from the top-level
 // `company`, so they only get typed once.
@@ -64,8 +69,8 @@ export const LAYOUTS: Layout[] = [
 ];
 export const layoutOf = (id: string) => LAYOUTS.find((l) => l.id === id) ?? LAYOUTS[0];
 
-export const newNewsletter = (layoutId: string, company: Partial<Company> = {}): Newsletter => ({
-  layout: layoutId, palette: NL_PALETTES[0].id,
+export const newNewsletter = (layoutId: string, company: Partial<Company> = {}, brandColor?: string): Newsletter => ({
+  layout: layoutId, palette: brandColor ? BRAND_PALETTE_ID : NL_PALETTES[0].id, ...(brandColor ? { brand: brandColor } : {}),
   company: { name: company.name ?? "", phone: company.phone ?? "", email: company.email ?? "", address: company.address ?? "", logo: company.logo },
   blocks: layoutOf(layoutId).blocks(),
 });
@@ -143,7 +148,7 @@ export function newsletterToText(nl: Newsletter): string {
 // Designed HTML of the newsletter (inline styles) — for the print-to-PDF window
 // and, later, the HTML email. Mirrors BlockView.
 export function newsletterToHtml(nl: Newsletter): string {
-  const p = paletteOf(nl.palette);
+  const p = paletteOf(nl.palette, nl.brand);
   const c = nl.company;
   const e = (s?: string) => fill(s, c).replace(/[&<>]/g, (ch) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[ch] as string));
   const blocks = nl.blocks.map((b) => {
@@ -178,7 +183,7 @@ export function printNewsletter(nl: Newsletter) {
 // ── Renderer — draws the newsletter from blocks + palette. Used in preview and
 // both feeds.
 export function NewsletterView({ data, scale }: { data: Newsletter; scale?: number }) {
-  const p = paletteOf(data.palette);
+  const p = paletteOf(data.palette, data.brand);
   const c = data.company;
   const wrap: CSSProperties = { background: p.bg, padding: 14, borderRadius: 16 };
   const surface: CSSProperties = { background: p.surface, borderRadius: 12, overflow: "hidden", maxWidth: 600, margin: "0 auto", boxShadow: "0 8px 26px -14px rgba(0,0,0,.28)" };
@@ -266,15 +271,15 @@ function BlockView({ b, p, c }: { b: Block; p: Palette; c: Company }) {
 
 // ── Builder — layout gallery, palette swatches, company details, per-block
 // editors, live preview. Calls onSave with the finished Newsletter.
-export function NewsletterBuilder({ initial, initialCompany, initialMeta, listings = [], coupons = [], folders = [], onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; initialMeta?: NlMeta; listings?: { id: string; title: string }[]; coupons?: { code: string; desc: string }[]; folders?: string[]; onCancel: () => void; onSave: (n: Newsletter, meta: NlMeta, channel: "page" | "email" | "both") => void }) {
-  const [nl, setNl] = useState<Newsletter>(initial ?? newNewsletter("classic", initialCompany));
+export function NewsletterBuilder({ initial, initialCompany, initialMeta, brandColor, listings = [], coupons = [], folders = [], onCancel, onSave }: { initial?: Newsletter; initialCompany?: Partial<Company>; initialMeta?: NlMeta; brandColor?: string; listings?: { id: string; title: string }[]; coupons?: { code: string; desc: string }[]; folders?: string[]; onCancel: () => void; onSave: (n: Newsletter, meta: NlMeta, channel: "page" | "email" | "both") => void }) {
+  const [nl, setNl] = useState<Newsletter>(initial ?? newNewsletter("classic", initialCompany, brandColor));
   const [meta, setMeta] = useState<NlMeta>(initialMeta ?? newMeta());
   const setM = (f: Partial<NlMeta>) => setMeta((m) => ({ ...m, ...f }));
   const [busy, setBusy] = useState(false);
   const [aiBrief, setAiBrief] = useState("");
   const [aiBusy, setAiBusy] = useState(false);
   const [aiErr, setAiErr] = useState("");
-  const p = paletteOf(nl.palette);
+  const p = paletteOf(nl.palette, nl.brand);
   const setBlock = (i: number, f: Partial<Block>) => setNl((n) => ({ ...n, blocks: n.blocks.map((b, j) => (j === i ? { ...b, ...f } : b)) }));
   // Duplicate a content box (insert a copy right after it) so operators can add
   // extra headings / paragraphs / images without picking a whole new layout.
@@ -288,7 +293,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
   const bUp = () => { bDrag.current = null; };
   const bZoom = (i: number, z: number) => setBlock(i, { iz: z, ix: bClampS(nl.blocks[i].ix ?? 0, z), iy: bClampS(nl.blocks[i].iy ?? 0, z) });
   const setCompany = (f: Partial<Company>) => setNl((n) => ({ ...n, company: { ...n.company, ...f } }));
-  const pickLayout = (id: string) => setNl((n) => ({ ...newNewsletter(id, n.company), palette: n.palette }));
+  const pickLayout = (id: string) => setNl((n) => ({ ...newNewsletter(id, n.company, n.brand), palette: n.palette, ...(n.brand ? { brand: n.brand } : {}) }));
 
   // One-click: describe the newsletter, and the AI fills every text section.
   async function writeAll() {
@@ -353,6 +358,7 @@ export function NewsletterBuilder({ initial, initialCompany, initialMeta, listin
             <div>
               <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Colour</div>
               <div className="flex flex-wrap items-center gap-1.5">
+                {nl.brand && <button type="button" title="Your brand colour" onClick={() => setNl((n) => ({ ...n, palette: BRAND_PALETTE_ID }))} className="relative h-7 w-7 rounded-full ring-1 ring-black/10" style={{ background: nl.brand, boxShadow: nl.palette === BRAND_PALETTE_ID ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />}
                 {NL_PALETTES.map((pl) => <button key={pl.id} type="button" title={pl.name} onClick={() => setNl((n) => ({ ...n, palette: pl.id }))} className="h-7 w-7 rounded-full" style={{ background: pl.accent, boxShadow: nl.palette === pl.id ? "0 0 0 2px #fff, 0 0 0 4px #111" : "none" }} />)}
               </div>
             </div>

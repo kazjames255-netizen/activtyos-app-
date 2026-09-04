@@ -251,7 +251,7 @@ export function AiAssistant({ kind: kindProp }: { kind: Kind }) {
     const history = [...msgs, { role: "user" as const, content: q }].slice(-20);
     setMsgs(history); persist(history); setBusy(true);
     try {
-      const res = await post<{ reply?: string; action?: ProposedAction }>("/api/ai/chat", { messages: history, portal });
+      const res = await post<{ reply?: string; action?: ProposedAction }>("/api/ai/chat", { messages: history, portal, ...(hoScope ? { franchiseId: hoScope } : {}) });
       const reply = res.reply ?? res.action?.summary ?? "";
       const full = [...history, { role: "assistant" as const, content: reply }];
       setMsgs(full); persist(full);

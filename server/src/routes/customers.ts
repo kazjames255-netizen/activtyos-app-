@@ -98,8 +98,12 @@ customers.get("/", async (req, res) => {
     Record<string, unknown> & { id: string; name?: string; email?: string; children?: Array<{ name?: string }> }
   >;
   // A franchise sees only ITS OWN families (anyone booked on its listings); head
-  // office sees the whole tenant.
+  // office sees the whole tenant. `scopeFid` records the active network scope so
+  // we can also pull in booking-only families below: "" = no scope (whole tenant,
+  // don't add), "__ho__" = head-office-direct, else a franchiseId.
+  let scopeFid = "";
   if (scope.role === "franchise" && scope.franchiseId && scope.tenantId) {
+    scopeFid = scope.franchiseId;
     const fam = await franchiseFamilyEmails(scope.tenantId, scope.franchiseId);
     list = list.filter((c) => !!c.email && fam.has(c.email.toLowerCase()));
   }
@@ -109,6 +113,7 @@ customers.get("/", async (req, res) => {
   if (scope.role === "company" && scope.tenantId) {
     const fq = typeof req.query.franchiseId === "string" ? req.query.franchiseId.trim() : "";
     if (fq && fq !== "__all__") {
+      scopeFid = fq;
       if (fq === "__ho__") {
         const map = await familyFranchiseMap(scope.tenantId);
         list = list.filter((c) => !!c.email && !map.has(c.email.toLowerCase()));
@@ -116,6 +121,31 @@ customers.get("/", async (req, res) => {
         const fam = await franchiseFamilyEmails(scope.tenantId, fq);
         list = list.filter((c) => !!c.email && fam.has(c.email.toLowerCase()));
       }
+    }
+  }
+
+  // Surface booking-only families: a franchise's (or the drilled-in HO view's)
+  // families may exist only as BOOKINGS, never saved as a customer record — so
+  // without this the scoped Families list looks empty. Add a lightweight entry
+  // for each in-scope booking email that isn't already a customer.
+  if (scopeFid && scope.tenantId) {
+    const bkSnap = await db.collection("bookings").where("tenantId", "==", scope.tenantId).get();
+    const have = new Set(list.map((c) => (c.email ?? "").toLowerCase()).filter(Boolean));
+    const derived = new Map<string, { name: string; children: Set<string>; createdAt?: string }>();
+    for (const d of bkSnap.docs) {
+      const b = d.data() as { status?: string; email?: string; booker?: string; child?: string; franchiseId?: string | null; createdAt?: string };
+      if (b.status === "Cancelled" || b.status === "Declined" || !b.email) continue;
+      const inScope = scopeFid === "__ho__" ? !b.franchiseId : (b.franchiseId ?? null) === scopeFid;
+      if (!inScope) continue;
+      const e = b.email.toLowerCase();
+      if (!e.includes("@") || have.has(e)) continue;
+      const rec = derived.get(e) ?? { name: (b.booker || "").trim() || b.email, children: new Set<string>(), createdAt: b.createdAt };
+      if (b.child) rec.children.add(b.child);
+      if (b.createdAt && (!rec.createdAt || b.createdAt < rec.createdAt)) rec.createdAt = b.createdAt;
+      derived.set(e, rec);
+    }
+    for (const [email, rec] of derived) {
+      list.push({ id: `bk:${email}`, name: rec.name, email, children: [...rec.children].map((n) => ({ name: n })), createdAt: rec.createdAt, bookingOnly: true } as (typeof list)[number]);
     }
   }
 

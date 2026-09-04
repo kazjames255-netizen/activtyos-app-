@@ -424,7 +424,7 @@ export function NewsfeedApp() {
       )}
 
       {draft && <Composer draft={draft} setDraft={setDraft} listings={listings} folders={folders} franchises={isHo ? franchises : []} onClose={() => setDraft(null)} onPublish={publish} />}
-      {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialCompany={nlCompany} initialMeta={nlOpen.meta} listings={listings} coupons={coupons} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta, channel) => saveNewsletter(nl, meta, channel, nlOpen.editId)} />}
+      {nlOpen && <NewsletterBuilder initial={nlOpen.initial} initialCompany={nlCompany} initialMeta={nlOpen.meta} brandColor={settings.brandColor} listings={listings} coupons={coupons} folders={folders} onCancel={() => setNlOpen(null)} onSave={(nl, meta, channel) => saveNewsletter(nl, meta, channel, nlOpen.editId)} />}
       {pending && <PostCountdown label={pending.label} onSend={() => { const run = pending.run; setPending(null); run(); }} onCancel={() => setPending(null)} />}
     </div>
   );

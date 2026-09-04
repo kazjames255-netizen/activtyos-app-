@@ -24,7 +24,17 @@ const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
 // How-to knowledge base — where each job is done in the app, so the assistant
 // can give clear step-by-step guidance for "how do I…" questions.
-const HOWTO: Record<"operator" | "staff" | "parent" | "platform", string> = {
+const HOWTO: Record<"operator" | "staff" | "parent" | "platform" | "headoffice", string> = {
+  headoffice: [
+    "See how the whole network is doing: the Dashboard (franchise-comparison command centre) — revenue & bookings by franchise, a league table and an attention list.",
+    "Royalty income / split fees: Money → Split fees — the royalty each franchise owes, filterable by date range. The rate/basis is set per network.",
+    "Head office's own money: Money → Finance — your OWN money in/out, invoices (bill a franchise their fees), and a breakdown by franchise. Your central books are separate from the franchises'.",
+    "Manage franchises: Franchises (performance + territory), Feature control (turn modules on/off per franchise or for all), Invite franchises, Territories map.",
+    "Oversight across franchises: the Safeguarding group (Incidents, Accidents, Medication) — read-only network oversight — and Attendance registers.",
+    "Message families/staff across the network: Communication (Newsfeed, Messages, Email) — post to the whole network or one franchise.",
+    "Your central team: Head office staff — invite CEO/Manager/Marketing/Admin roles and manage onboarding & appraisals.",
+    "Drill into one franchise: use the network picker at the top ('Head office — all franchises') to view as a single franchise or your own locations.",
+  ].join("\n• "),
   operator: [
     "Take a register: Registers → choose the date and session at the top → tap a child to mark them In, Absent or Collected. Use “Roll call” for a quick head-count, “Message all attending” to text every parent at once, and tap a child's name to open their full care card (allergies, medical, SEND, collection password).",
     "Add a new activity/listing: Blocks & listings → Listings tab → “+ New listing” → work through the wizard (details & photos, when it runs, tickets & pricing) → Publish. It then appears on the parents' Browse page.",
@@ -117,6 +127,10 @@ const chatSchema = z.object({
   // The portal segment the user is in (company/freelancer/franchise/staff/
   // custdash/platform) — so deep links use the right URL prefix + slugs.
   portal: z.enum(["company", "freelancer", "franchise", "staff", "custdash", "platform"]).optional(),
+  // Head office only: the network scope it's viewing. Absent/null = the whole
+  // network (→ head-office snapshot); a franchiseId = drilled into one franchise
+  // (→ the normal operator snapshot).
+  franchiseId: z.string().max(60).optional(),
 });
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
@@ -470,6 +484,78 @@ async function platformSnapshot() {
   };
 }
 
+// ── Head-office snapshot — the FRANCHISOR's network view: per-franchise
+// performance, royalty income, head office's own direct money. Used when a
+// company that has franchises asks the co-pilot in the combined view. ──
+async function hasFranchises(tenantId: string): Promise<boolean> {
+  const s = await db.collection("users").where("tenantId", "==", tenantId).where("role", "==", "franchise").limit(1).get();
+  return !s.empty;
+}
+async function headOfficeSnapshot(tenantId: string) {
+  const [bookingsSnap, frSnap, tenantDoc, expSnap, incSnap] = await Promise.all([
+    db.collection("bookings").where("tenantId", "==", tenantId).get(),
+    db.collection("users").where("tenantId", "==", tenantId).where("role", "==", "franchise").get(),
+    db.collection("tenants").doc(tenantId).get(),
+    db.collection("expenses").where("tenantId", "==", tenantId).get(),
+    db.collection("income").where("tenantId", "==", tenantId).get(),
+  ]);
+  const sf = ((tenantDoc.exists && (tenantDoc.data()!.splitFees as { basis: "revenue" | "perBooking"; rate?: number; perBookingFee?: number })) || null) ?? { basis: "revenue" as const, rate: 10, perBookingFee: 0 };
+  const feeOf = (revenue: number, bookings: number) => sf.basis === "perBooking" ? round2(bookings * (sf.perBookingFee ?? 0)) : round2(revenue * ((sf.rate ?? 0) / 100));
+
+  const frInfo = new Map<string, { name: string; area: string | null; territory: string }>();
+  for (const d of frSnap.docs) {
+    const u = d.data() as { franchiseId?: string; franchiseName?: string; name?: string; franchiseArea?: string; franchiseTerritory?: { status?: string } };
+    const fid = u.franchiseId || d.id;
+    if (!frInfo.has(fid)) frInfo.set(fid, { name: u.franchiseName || u.name || "Franchise", area: u.franchiseArea ?? null, territory: u.franchiseTerritory?.status || "none" });
+  }
+
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  interface Agg { revenue: number; revenueMonth: number; collected: number; bookings: number; families: Set<string>; children: Set<string> }
+  const mk = (): Agg => ({ revenue: 0, revenueMonth: 0, collected: 0, bookings: 0, families: new Set(), children: new Set() });
+  const byFr = new Map<string, Agg>();
+  const own = mk();
+  for (const d of bookingsSnap.docs) {
+    const b = d.data() as { status?: string; amount?: number; amountPaid?: number; pay?: string; franchiseId?: string | null; email?: string; child?: string; date?: string; createdAt?: string };
+    if (b.status === "Cancelled" || b.status === "Declined") continue;
+    const amount = b.amount ?? 0;
+    const paid = b.amountPaid ?? (b.pay === "Paid" ? amount : 0);
+    const fid = b.franchiseId || null;
+    let agg = own;
+    if (fid) { agg = byFr.get(fid) ?? mk(); byFr.set(fid, agg); }
+    agg.revenue = round2(agg.revenue + amount); agg.collected = round2(agg.collected + paid); agg.bookings += 1;
+    if ((b.date || b.createdAt || "").slice(0, 7) === thisMonth) agg.revenueMonth = round2(agg.revenueMonth + amount);
+    if (b.email) agg.families.add(b.email.toLowerCase());
+    if (b.child) agg.children.add(b.child);
+  }
+  const byFranchise = [...byFr.entries()].map(([fid, a]) => ({ name: frInfo.get(fid)?.name ?? "Franchise", area: frInfo.get(fid)?.area ?? null, territory: frInfo.get(fid)?.territory ?? "none", revenueGBP: a.revenue, revenueThisMonthGBP: a.revenueMonth, collectedGBP: a.collected, bookings: a.bookings, families: a.families.size, children: a.children.size, royaltyGBP: feeOf(a.revenue, a.bookings) }));
+  for (const [fid, info] of frInfo) if (!byFr.has(fid)) byFranchise.push({ name: info.name, area: info.area, territory: info.territory, revenueGBP: 0, revenueThisMonthGBP: 0, collectedGBP: 0, bookings: 0, families: 0, children: 0, royaltyGBP: 0 });
+  byFranchise.sort((x, y) => y.revenueGBP - x.revenueGBP);
+
+  const royaltyTotal = round2(byFranchise.reduce((s, f) => s + f.royaltyGBP, 0));
+  const ownExp = round2(expSnap.docs.map((d) => d.data() as { amount?: number; franchiseId?: string | null }).filter((e) => !e.franchiseId).reduce((s, e) => s + (e.amount ?? 0), 0));
+  const ownInc = round2(incSnap.docs.map((d) => d.data() as { amount?: number; franchiseId?: string | null }).filter((e) => !e.franchiseId).reduce((s, e) => s + (e.amount ?? 0), 0));
+
+  return {
+    network: {
+      franchiseCount: frInfo.size,
+      liveFranchises: byFranchise.filter((f) => f.bookings > 0).length,
+      totalRevenueGBP: round2(byFranchise.reduce((s, f) => s + f.revenueGBP, 0) + own.revenue),
+      thisMonthRevenueGBP: round2(byFranchise.reduce((s, f) => s + f.revenueThisMonthGBP, 0) + own.revenueMonth),
+      totalBookings: byFranchise.reduce((s, f) => s + f.bookings, 0) + own.bookings,
+      totalFamilies: byFranchise.reduce((s, f) => s + f.families, 0) + own.families.size,
+    },
+    royaltyBasis: sf.basis === "perBooking" ? `£${sf.perBookingFee ?? 0} per booking` : `${sf.rate ?? 0}% of revenue`,
+    royaltyIncomeGBP: royaltyTotal,
+    byFranchise: byFranchise.slice(0, 30),
+    headOfficeDirect: { revenueGBP: own.revenue, bookings: own.bookings, families: own.families.size, children: own.children.size },
+    headOfficeOwnMoney: { ownIncomeGBP: ownInc, ownExpensesGBP: ownExp, netGBP: round2(ownInc + royaltyTotal - ownExp) },
+    attention: {
+      territoriesAwaitingApproval: byFranchise.filter((f) => ["pending", "awaiting", "requested"].includes(f.territory)).map((f) => f.name),
+      franchisesWithNoBookings: byFranchise.filter((f) => f.bookings === 0).map((f) => f.name),
+    },
+  };
+}
+
 ai.post("/chat", async (req, res) => {
   if (!process.env.GROQ_API_KEY) {
     res.status(503).json({ error: "The AI assistant isn't configured on this server (GROQ_API_KEY is missing)." });
@@ -495,6 +581,12 @@ ai.post("/chat", async (req, res) => {
     snapshot = await platformSnapshot();
     howtoKey = "platform";
     who = "the ActivityOS platform super-admin. The data is platform-wide aggregates across every provider.";
+  } else if (auth.role === "company" && !parsed.data.franchiseId && auth.tenantId && await hasFranchises(auth.tenantId)) {
+    // A head office viewing the whole network (no single-franchise scope) gets the
+    // franchisor snapshot: per-franchise performance, royalties, its own money.
+    snapshot = await headOfficeSnapshot(auth.tenantId);
+    howtoKey = "headoffice";
+    who = "the HEAD OFFICE of a franchise network (the franchisor). The data is a NETWORK view: each franchise's revenue, bookings, families and the royalty they owe you; head office's own directly-run locations; and head office's own central money (its income, expenses and net). Answer at the network level — compare franchises, surface who's performing and who needs attention, and talk about royalty income, not per-child operational detail. Its areas include: Dashboard (command centre), Franchises, Split fees, Finance, Feature control, Territories, Communication, Head office staff, and read-only Safeguarding oversight.";
   } else {
     const scope = operatorScope(req, res);
     if (!scope || !scope.tenantId) return; // operatorScope has already responded
