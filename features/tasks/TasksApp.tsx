@@ -148,14 +148,16 @@ export function TasksApp() {
   // find it. Re-runs on navigation, so clicking a second bell item while
   // already on this page works too.
   const sp = useSearchParams();
+  const navRouter = useRouter();
+  const navPath = usePathname();
   const deepTask = sp.get("task");
   useEffect(() => { if (deepTask) setOpenId(deepTask); }, [deepTask]);
   // Closing clears ?task= too, so a refresh doesn't reopen what you just shut,
   // and the back button doesn't feel broken.
   const closeTask = useCallback(() => {
     setOpenId(null);
-    if (deepTask) router.replace(pathname, { scroll: false });
-  }, [deepTask, router, pathname]);
+    if (deepTask && navPath) navRouter.replace(navPath, { scroll: false });
+  }, [deepTask, navRouter, navPath]);
   const [creating, setCreating] = useState(false);
   const [flash, setFlash] = useState(false);
   const [qa, setQa] = useState("");
