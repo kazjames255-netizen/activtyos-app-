@@ -398,17 +398,20 @@ export function TasksApp() {
       {/* Quick add */}
       {!onMilestones && <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
-          {/* The reminders control lives IN the quick-add field rather than as
-              another button competing with it in the row. */}
+          {/* The Quick add action sits INSIDE the field it submits, so the row
+              isn't a line of buttons with no obvious relationship to the input. */}
           <div className="flex min-w-[240px] flex-1 items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] pr-1 focus-within:border-[#1d3a8f]">
             <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[13px] outline-none" />
-            <button type="button" onClick={() => setRemOpen(true)} title="Task reminders"
-              className="shrink-0 rounded-md px-2 py-1 text-[12.5px] font-bold text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[var(--ink-2)]">
-              🔔
+            <button type="button" onClick={addQuick} disabled={!qa.trim()}
+              className="shrink-0 rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white transition disabled:opacity-35">
+              Quick add
             </button>
           </div>
           <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>Deadline</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
-          <Button onClick={addQuick}>Quick add</Button>
+          <button type="button" onClick={() => setRemOpen(true)} title="Task reminders"
+            className="shrink-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
+            🔔 Reminders
+          </button>
           <button type="button" onClick={() => setCreating(true)} className="rounded-lg bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:-translate-y-px">+ New task</button>
         </div>
         {preview && (
