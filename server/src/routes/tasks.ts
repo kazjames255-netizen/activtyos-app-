@@ -33,7 +33,7 @@ const PLATFORM_BUCKET = "__platform__";
 const bucketOf = (auth: { role: string; tenantId: string | null }) =>
   auth.role === "platform" ? PLATFORM_BUCKET : auth.tenantId;
 
-const linkSchema = z.object({ k: z.enum(["child", "parent", "camp", "book", "comp", "venue", "list", "gen"]), v: z.string().max(160), href: z.string().max(400).optional() }).nullable();
+const linkSchema = z.object({ k: z.enum(["child", "parent", "camp", "book", "comp", "venue", "list", "gen", "sales"]), v: z.string().max(160), href: z.string().max(400).optional() }).nullable();
 const subSchema = z.object({ t: z.string().max(200), done: z.boolean() });
 const commentSchema = z.object({ who: z.string().max(80), body: z.string().max(2_000), when: z.string().max(40) });
 const attSchema = z.object({ name: z.string().max(200) });

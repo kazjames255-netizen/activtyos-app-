@@ -26,7 +26,7 @@ const BLUE = "#1d3a8f";
 
 type Prio = "urgent" | "high" | "med" | "low";
 type Status = "backlog" | "todo" | "prog" | "done";
-type LinkKind = "child" | "parent" | "camp" | "book" | "comp" | "venue" | "list" | "gen";
+type LinkKind = "child" | "parent" | "camp" | "book" | "comp" | "venue" | "list" | "gen" | "sales";
 interface TaskLink { k: LinkKind; v: string; href?: string }
 interface Sub { t: string; done: boolean }
 interface Comment { who: string; body: string; when: string }
@@ -62,10 +62,14 @@ const LINK: Record<LinkKind, { label: string; bg: string; fg: string; icon: stri
   book: { label: "Booking", bg: "#efeaff", fg: "#5b3fd8", icon: "🎫" }, list: { label: "Listing", bg: "#e6f0ff", fg: "#2f5fd8", icon: "📋" },
   venue: { label: "Location", bg: "#e5f6ec", fg: "#0f8a4a", icon: "📍" }, comp: { label: "Compliance", bg: "#fde2e4", fg: "#c02636", icon: "🛡️" },
   camp: { label: "Camp", bg: "#e6f4fd", fg: "#1f78ab", icon: "⛺" }, gen: { label: "Category", bg: "#f1f2f6", fg: "#5b6478", icon: "🏷️" },
+  sales: { label: "Sales", bg: "#fff4e5", fg: "#a5600a", icon: "💼" },
 };
 // The types the picker offers (old camp/comp still render on legacy tasks).
 const LINK_TYPES: LinkKind[] = ["child", "parent", "book", "list", "venue", "gen"];
-export interface LinkOpts { portal: string; bookOpts: { ref: string; v: string; sub?: string }[]; childOpts: { name: string; ref: string; sub?: string }[]; parentOpts: { name: string; ref: string; sub?: string }[]; listings: { id: string; title: string; location?: string }[]; locations: string[]; cats: string[] }
+// HQ has no children or bookings — it has a sales pipeline. Its picker offers
+// leads instead, and those tasks surface back on the Sales board.
+const LINK_TYPES_PLATFORM: LinkKind[] = ["sales", "gen"];
+export interface LinkOpts { portal: string; salesOpts?: { id: string; v: string; sub?: string }[]; bookOpts: { ref: string; v: string; sub?: string }[]; childOpts: { name: string; ref: string; sub?: string }[]; parentOpts: { name: string; ref: string; sub?: string }[]; listings: { id: string; title: string; location?: string }[]; locations: string[]; cats: string[] }
 
 // A link chip — deep-links straight to the record when it has an href, and shows
 // a ↗ so it's obviously a link ("go to booking", not just a label).
@@ -138,6 +142,7 @@ export function TasksApp() {
   const [me, setMe] = useState("");
   const [myEmail, setMyEmail] = useState("");
   const [roster, setRoster] = useState<{ name: string; email: string }[]>([]);
+  const [salesOpts, setSalesOpts] = useState<{ id: string; v: string; sub?: string }[]>([]);
   const [meDerived, setMeDerived] = useState(false);
   const [remOpen, setRemOpen] = useState(false);
   const { settings, save } = useSettings();
@@ -212,6 +217,17 @@ export function TasksApp() {
   }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; location?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", location: x.location })))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ ref: string; booker?: string; email?: string; phone?: string; postcode?: string; child?: string; kids?: { name: string; age?: number }[]; listing?: string; pass?: string; dates?: string }[]>("/api/bookings").then((b) => setBookings(b)).catch(() => {}); }, []);
+  // HQ only: the sales pipeline, so a task can hang off a real lead.
+  useEffect(() => {
+    if (portal !== "platform") return;
+    apiGet<{ id: string; business?: string; contactName?: string; name?: string; stage?: string; owner?: string }[]>("/api/platform/leads")
+      .then((ls) => setSalesOpts(ls.map((l) => ({
+        id: l.id,
+        v: l.business || l.contactName || l.name || "Untitled lead",
+        sub: [l.stage, l.owner].filter(Boolean).join(" · "),
+      }))))
+      .catch(() => {});
+  }, [portal]);
   useRealtime(["tasks"], refresh);
 
   // Real records to link a task to — each carries a deep-link so the chip jumps
@@ -273,7 +289,7 @@ export function TasksApp() {
   }, [all, roster, me, myEmail]);
   const cats = useMemo(() => [...new Set(all.map((t) => t.cat).filter((c): c is string => !!c && c.trim() !== ""))].sort(), [all]);
   const locations = useMemo(() => [...new Set(listings.map((l) => l.location).filter((v): v is string => !!v))].sort(), [listings]);
-  const linkOpts: LinkOpts = { portal, bookOpts, childOpts, parentOpts, listings, locations, cats };
+  const linkOpts: LinkOpts = { portal, bookOpts, childOpts, parentOpts, listings, locations, cats, salesOpts };
 
   async function create(fields: Partial<Task>, toCal = false) {
     try { const created = await apiPost<Task>("/api/tasks", { status: "todo", prio: "med", ...fields }); if (toCal && created?.due) await syncToCalendar(created); refresh(); }
@@ -791,14 +807,16 @@ function SearchSelect({ value, placeholder, options, onPick, inputCls }: { value
 
 function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | null | undefined; onChange: (l: TaskLink | null) => void; opts: LinkOpts; inputCls: string }) {
   const k = link?.k ?? "";
-  const { portal, bookOpts, childOpts, parentOpts, listings, locations, cats } = opts;
+  const { portal, bookOpts, childOpts, parentOpts, listings, locations, cats, salesOpts = [] } = opts;
+  // HQ has no children or bookings to link to — it has a pipeline.
+  const types = portal === "platform" ? LINK_TYPES_PLATFORM : LINK_TYPES;
   const bookingHref = (ref: string) => `/${portal}/bookings?ref=${encodeURIComponent(ref)}`;
   const setK = (nk: string) => onChange(nk ? { k: nk as LinkKind, v: "" } : null);
   return (
     <div className="space-y-1.5">
-      <select value={LINK_TYPES.includes(k as LinkKind) ? k : (k || "")} onChange={(e) => setK(e.target.value)} className={inputCls}>
+      <select value={types.includes(k as LinkKind) ? k : (k || "")} onChange={(e) => setK(e.target.value)} className={inputCls}>
         <option value="">— not linked —</option>
-        {LINK_TYPES.map((kk) => <option key={kk} value={kk}>{LINK[kk].label}</option>)}
+        {types.map((kk) => <option key={kk} value={kk}>{LINK[kk].label}</option>)}
       </select>
 
       {k === "book" && (bookOpts.length
@@ -820,6 +838,11 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
       {k === "venue" && (locations.length
         ? <SearchSelect value={link?.v ?? ""} placeholder="Find a location" options={locations.map((v) => ({ v }))} onPick={(v) => onChange(v ? { k: "venue", v } : null)} inputCls={inputCls} />
         : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "venue", v: e.target.value })} placeholder="Location or address" className={inputCls} />)}
+
+      {k === "sales" && (salesOpts.length
+        ? <SearchSelect value={link?.v ?? ""} placeholder="Find a lead" options={salesOpts.map((o) => ({ v: o.v, sub: o.sub }))}
+            onPick={(v) => { const o = salesOpts.find((x) => x.v === v); onChange(o ? { k: "sales", v: o.v, href: `/platform/sales?lead=${encodeURIComponent(o.id)}` } : null); }} inputCls={inputCls} />
+        : <input value={link?.v ?? ""} onChange={(e) => onChange({ k: "sales", v: e.target.value })} placeholder="Lead or company name" className={inputCls} />)}
 
       {k === "gen" && <><input list="task-cats" value={link?.v ?? ""} onChange={(e) => onChange({ k: "gen", v: e.target.value })} placeholder="Category — type a new one or pick" className={inputCls} /><datalist id="task-cats">{cats.map((c) => <option key={c} value={c} />)}</datalist></>}
     </div>

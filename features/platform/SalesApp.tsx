@@ -13,6 +13,12 @@ import { useRealtime } from "@/lib/realtime";
 type Stage = "new" | "contacted" | "demo" | "trial" | "won" | "lost";
 type Source = "cold_call" | "email" | "social" | "referral" | "event" | "inbound";
 interface Activity { id: string; type: "call" | "email" | "social" | "demo" | "note"; note: string; outcome?: string; at: string; by: string }
+interface SalesTask {
+  id: string; t: string; due?: string | null; time?: string | null; who?: string;
+  prio?: "urgent" | "high" | "med" | "low"; status?: string; archived?: boolean;
+  link?: { k: string; v: string; href?: string } | null;
+}
+
 interface Lead {
   id: string; business: string; contactName: string; email: string; phone: string; location: string;
   source: Source; owner: string; plan: "freelancer" | "company" | "franchise"; estMrr: number;
@@ -95,6 +101,15 @@ export function SalesApp() {
   const [tab, setTab] = useState<"pipeline" | "dashboard">("pipeline");
   const [detail, setDetail] = useState<Lead | null>(null);
   const [adding, setAdding] = useState(false);
+  // Tasks the HQ board has linked to a lead. They're ordinary tasks — this is
+  // the same list, filtered — so ticking one off here or there is the same act.
+  const [salesTasks, setSalesTasks] = useState<SalesTask[]>([]);
+  const loadTasks = useCallback(() => {
+    get<SalesTask[]>("/api/tasks")
+      .then((ts) => setSalesTasks(ts.filter((t) => t.link?.k === "sales" && !t.archived)))
+      .catch(() => {});
+  }, []);
+  useEffect(() => { loadTasks(); }, [loadTasks]);
   const [importing, setImporting] = useState(false);
   const [query, setQuery] = useState("");
   const [drag, setDrag] = useState<string | null>(null);
@@ -134,6 +149,14 @@ export function SalesApp() {
     try { await post("/api/platform/leads/bulk", rows); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Import failed"); }
   };
+
+  const PRIO_DOT: Record<string, string> = { urgent: "#ef4444", high: "#f59e0b", med: "#3b82f6", low: "#8a93a6" };
+  const today = new Date().toISOString().slice(0, 10);
+  const tasksByLead = salesTasks.reduce<Record<string, SalesTask[]>>((acc, t) => {
+    const k = t.link?.v ?? "—";
+    (acc[k] ??= []).push(t);
+    return acc;
+  }, {});
 
   return (
     <div className="text-[var(--ink)]">
@@ -185,6 +208,42 @@ export function SalesApp() {
           onSave={(l, acts) => { void upsert(l, acts); setDetail(null); setAdding(false); }}
           onDelete={detail ? () => void remove(detail.id) : undefined}
         />
+      )}
+      {tab === "pipeline" && salesTasks.length > 0 && (
+        <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h3 className="text-[16px] font-extrabold">💼 Sales tasks</h3>
+              <p className="mt-0.5 text-[12.5px] text-[var(--ink-2)]">
+                From your task board, linked to a lead. {salesTasks.filter((t) => t.due && t.due < today && t.status !== "done").length} overdue.
+              </p>
+            </div>
+            <a href="/platform/tasks" className="rounded-full border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">Open task board →</a>
+          </div>
+          <div className="mt-4 space-y-4">
+            {Object.entries(tasksByLead).sort(([a], [b]) => a.localeCompare(b)).map(([lead, ts]) => (
+              <div key={lead}>
+                <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{lead}</div>
+                <ul className="overflow-hidden rounded-xl border border-[var(--line)]">
+                  {[...ts].sort((a, b) => `${a.due ?? "9999"}`.localeCompare(`${b.due ?? "9999"}`)).map((t, i) => {
+                    const overdue = !!t.due && t.due < today && t.status !== "done";
+                    return (
+                      <li key={t.id} className={`flex items-center gap-3 px-3 py-2.5 ${i > 0 ? "border-t border-[var(--line)]" : ""}`}>
+                        <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO_DOT[t.prio ?? "med"] }} />
+                        <a href={`/platform/tasks?task=${t.id}`} className={`min-w-0 flex-1 truncate text-[13.5px] font-semibold hover:underline ${t.status === "done" ? "text-[var(--ink-3)] line-through" : ""}`}>{t.t}</a>
+                        {t.who && <span className="hidden shrink-0 text-[11.5px] text-[var(--ink-3)] sm:inline">{t.who}</span>}
+                        <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-extrabold"
+                          style={overdue ? { background: "#fdeaee", color: "#b3123c" } : { background: "var(--panel)", color: "var(--ink-3)" }}>
+                          {t.due ? (overdue ? `Overdue · ${t.due}` : t.due) : "No date"}{t.time ? ` · ${t.time}` : ""}
+                        </span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            ))}
+          </div>
+        </section>
       )}
       {importing && <ImportModal existing={leads} onClose={() => setImporting(false)} onImport={(next) => void doImport(next)} />}
     </div>
