@@ -126,6 +126,7 @@ export function TasksApp() {
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState("");
   const [me, setMe] = useState("");
+  const [roster, setRoster] = useState<string[]>([]);
   const [tab, setTab] = useState<"mine" | "team" | "board" | "cal" | "archive" | "milestones">("mine");
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -162,6 +163,14 @@ export function TasksApp() {
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string; name?: string; email?: string }>("/api/me").then((m) => { setRole(m.role); setMe(m.name || m.email || ""); }).catch(() => {}); }, []);
+  // The real team, from the tenant's own directory. Without this the assignee
+  // list was derived ONLY from names already used on existing tasks, so a fresh
+  // board offered nobody at all — not even yourself.
+  useEffect(() => {
+    apiGet<{ groups: { people: string[] }[] }>("/api/tasks/assignees")
+      .then((r) => setRoster((r.groups ?? []).flatMap((g) => g.people ?? [])))
+      .catch(() => {});
+  }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; location?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", location: x.location })))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ ref: string; booker?: string; email?: string; phone?: string; postcode?: string; child?: string; kids?: { name: string; age?: number }[]; listing?: string; pass?: string; dates?: string }[]>("/api/bookings").then((b) => setBookings(b)).catch(() => {}); }, []);
   useRealtime(["tasks"], refresh);
@@ -199,7 +208,16 @@ export function TasksApp() {
   const archived = useMemo(() => everything.filter((t) => t.archived), [everything]);
   // For a freelancer every task is "mine"; otherwise match on assignee.
   const mineOf = (t: Task) => noAssignee || (t.who || "").trim().toLowerCase() === me.trim().toLowerCase();
-  const team = useMemo(() => [...new Set(all.map((t) => t.who).filter((w): w is string => !!w && w.trim() !== ""))].sort(), [all]);
+  // You are ALWAYS assignable, in every portal. Then the tenant's directory,
+  // then any name free-typed onto an existing task so nothing disappears from
+  // the picker. "Me" first — alphabetical order buries you under the Bs.
+  const team = useMemo(() => {
+    const used = all.map((t) => t.who).filter((w): w is string => !!w && w.trim() !== "");
+    const others = [...new Set([...roster, ...used])]
+      .filter((w) => w.trim() !== "" && w.trim().toLowerCase() !== me.trim().toLowerCase())
+      .sort();
+    return me.trim() ? [me, ...others] : others;
+  }, [all, roster, me]);
   const cats = useMemo(() => [...new Set(all.map((t) => t.cat).filter((c): c is string => !!c && c.trim() !== ""))].sort(), [all]);
   const locations = useMemo(() => [...new Set(listings.map((l) => l.location).filter((v): v is string => !!v))].sort(), [listings]);
   const linkOpts: LinkOpts = { portal, bookOpts, childOpts, parentOpts, listings, locations, cats };
@@ -384,7 +402,7 @@ export function TasksApp() {
       </>)}
 
       {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">✓ Task logged</div>}
-      {creating && <CreateModal noAssignee={noAssignee} team={team} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f, toCal); setCreating(false); setQa(""); }} />}
+      {creating && <CreateModal noAssignee={noAssignee} team={team} me={me} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f, toCal); setCreating(false); setQa(""); }} />}
       {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onSyncCal={() => syncToCalendar(openTask)} onUnsyncCal={() => unsyncFromCalendar(openTask)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)} />}
     </div>
   );
@@ -662,7 +680,7 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
 }
 
 // ── Create-task modal ───────────────────────────────────────────────────────
-export function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onCreate }: { noAssignee: boolean; team: string[]; opts: LinkOpts; initialTitle?: string; onClose: () => void; onCreate: (f: Partial<Task>, toCal: boolean) => void }) {
+export function CreateModal({ noAssignee, team, me, opts, initialTitle, onClose, onCreate }: { noAssignee: boolean; team: string[]; me: string; opts: LinkOpts; initialTitle?: string; onClose: () => void; onCreate: (f: Partial<Task>, toCal: boolean) => void }) {
   const [t, setT] = useState(initialTitle ?? "");
   const [who, setWho] = useState("");
   const [prio, setPrio] = useState<Prio>("med");
@@ -689,7 +707,18 @@ export function CreateModal({ noAssignee, team, opts, initialTitle, onClose, onC
             {fieldRow("Due / deadline", <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={inputCls} />)}
             {fieldRow("Time (optional)", <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} />)}
             {fieldRow("Priority", <select value={prio} onChange={(e) => setPrio(e.target.value as Prio)} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}
-            {!noAssignee && fieldRow("Assignee", <><input list="team-list-c" value={who} onChange={(e) => setWho(e.target.value)} placeholder="Unassigned" className={inputCls} /><datalist id="team-list-c">{team.map((w) => <option key={w} value={w} />)}</datalist></>)}
+            {!noAssignee && fieldRow("Assignee", (
+              <div className="flex items-center gap-2">
+                <input list="team-list-c" value={who} onChange={(e) => setWho(e.target.value)} placeholder="Unassigned" className={inputCls} />
+                <datalist id="team-list-c">{team.map((w) => <option key={w} value={w} />)}</datalist>
+                {me && who.trim().toLowerCase() !== me.trim().toLowerCase() && (
+                  <button type="button" onClick={() => setWho(me)}
+                    className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[var(--panel)]">
+                    Me
+                  </button>
+                )}
+              </div>
+            ))}
             {fieldRow("Status", <select value={status} onChange={(e) => setStatus(e.target.value as Status)} className={inputCls}>{COLS.map((c) => <option key={c.k} value={c.k}>{c.label}</option>)}</select>)}
           </div>
           {fieldRow("Linked to", <LinkedPicker link={link} onChange={setLink} opts={opts} inputCls={inputCls} />)}
@@ -767,7 +796,20 @@ function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal,
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-2">
-          {!noAssignee && field("Assignee", <><input list="team-list" value={task.who ?? ""} onChange={(e) => onPatch({ who: e.target.value })} placeholder="Unassigned" className={inputCls} /><datalist id="team-list">{team.map((w) => <option key={w} value={w} />)}</datalist></>)}
+          {!noAssignee && field("Assignee", (
+            <div className="flex items-center gap-2">
+              <input list="team-list" value={task.who ?? ""} onChange={(e) => onPatch({ who: e.target.value })} placeholder="Unassigned" className={inputCls} />
+              <datalist id="team-list">{team.map((w) => <option key={w} value={w} />)}</datalist>
+              {/* A datalist only opens once you type, so there was no visible way
+                  to put a task on yourself. This is the one-tap version. */}
+              {me && (task.who ?? "").trim().toLowerCase() !== me.trim().toLowerCase() && (
+                <button type="button" onClick={() => onPatch({ who: me })}
+                  className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[var(--panel)]">
+                  Me
+                </button>
+              )}
+            </div>
+          ))}
           {field("Due date", <input type="date" value={task.due ?? ""} onChange={(e) => onPatch({ due: e.target.value || null })} className={inputCls} />)}
           {field("Time", <input type="time" value={task.time ?? ""} onChange={(e) => onPatch({ time: e.target.value || null })} className={inputCls} />)}
           {field("Priority", <select value={task.prio ?? "med"} onChange={(e) => onPatch({ prio: e.target.value as Prio })} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}

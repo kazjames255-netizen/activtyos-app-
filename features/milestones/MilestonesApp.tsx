@@ -499,7 +499,7 @@ function Slide({ phase: p, prog, cur, n, editable, canEdit, me, filter, onEditAc
       <div className="flex gap-1">{Array.from({ length: n }).map((_, i) => <button key={i} type="button" onClick={() => onJump(i)} className="h-2 rounded-full transition-all" style={{ width: i === cur ? 18 : 8, background: i === cur ? tone : "var(--line)" }} />)}</div>
       <Button variant="primary" onClick={onNext} disabled={cur === n - 1}>Next →</Button>
     </div>
-    {addFor && <CreateModal noAssignee={false} team={STAFF} opts={TASK_LINKOPTS} onClose={() => setAddFor(null)} onCreate={(f) => { onAddTask(addFor, { title: (f.t || "New task").trim(), assignee: f.who, due: f.due || undefined, status: toActStatus(f.status), priority: (f.prio as ActPrio) || "med" }); setAddFor(null); }} />}
+    {addFor && <CreateModal noAssignee={false} me={me} team={STAFF} opts={TASK_LINKOPTS} onClose={() => setAddFor(null)} onCreate={(f) => { onAddTask(addFor, { title: (f.t || "New task").trim(), assignee: f.who, due: f.due || undefined, status: toActStatus(f.status), priority: (f.prio as ActPrio) || "med" }); setAddFor(null); }} />}
   </>);
 }
 
@@ -542,6 +542,10 @@ function PhaseEditor({ phase, phases, onChange, onMove, onDelete, onClose }: { p
 }
 
 function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPush, onDelete, onClose }: { phase: MPhase; step: MStep; state?: StepState; onMeta?: (patch: Partial<MStep>) => void; onSchedule?: (patch: Partial<StepState>) => void; onActState?: (actId: string, patch: Partial<ActState>) => void; onPush?: (a: MAction) => void; onDelete?: () => void; onClose: () => void }) {
+  // The signed-in user, so "Me" works in the task modal opened from here.
+  const [me, setMe] = useState("");
+  useEffect(() => { apiGet<{ name?: string }>("/api/me").then((m) => setMe(m?.name || "")).catch(() => {}); }, []);
+
   const tone = WHEN_TONE[phase.when];
   const start = state?.start || ""; const end = state?.end || ""; const pct = state?.pct ?? 0;
   const links = step.links || []; const actions = step.actions || [];
@@ -557,7 +561,7 @@ function ActionEditor({ phase, step, state, onMeta, onSchedule, onActState, onPu
     setAddOpen(false);
   };
   return (<>
-    {addOpen && <CreateModal noAssignee={false} team={STAFF} opts={TASK_LINKOPTS} onClose={() => setAddOpen(false)} onCreate={(f) => createTask(f)} />}
+    {addOpen && <CreateModal noAssignee={false} me={me} team={STAFF} opts={TASK_LINKOPTS} onClose={() => setAddOpen(false)} onCreate={(f) => createTask(f)} />}
     <div className="fixed inset-0 z-[145] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[8vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-lg rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-2 flex items-center gap-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase text-white" style={{ background: grad(phase.when) }}>{phase.title}</span><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
