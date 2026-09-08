@@ -105,6 +105,23 @@ memberships.post("/join", async (req, res) => {
   const tier = tiers.find((t) => t.id === tierId && t.enabled);
   if (!enabled || !tier) { res.status(400).json({ error: "That membership isn’t available" }); return; }
 
+  // You may only join a provider you actually deal with. tenantId arrives in the
+  // REQUEST BODY, and tenant ids are not secret — they appear in booking URLs
+  // and in the public provider directory (routes/providers.ts) — so without this
+  // check any signed-in parent could POST any provider's id and have
+  // deliverMembershipBenefit() credit a wallet on that provider's books, or mint
+  // a standing discount code, at a setting they have never booked with.
+  const [asCustomer, asBooker] = await Promise.all([
+    db.collection("customers").where("tenantId", "==", tenantId).where("email", "==", email.toLowerCase()).limit(1).get(),
+    db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", email.toLowerCase()).limit(1).get(),
+  ]);
+  if (asCustomer.empty && asBooker.empty) {
+    // Deliberately the same wording as an unavailable membership: a stranger
+    // probing ids learns nothing about which providers exist or use the feature.
+    res.status(400).json({ error: "That membership isn’t available" });
+    return;
+  }
+
   // A family holds ONE membership per provider — switching tiers replaces the
   // old one. If the previous tier was a % perk, deactivate its standing code so
   // two memberships' discounts can't stack. (Credit already paid out on a prior
