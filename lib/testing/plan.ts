@@ -133,6 +133,10 @@ export const PLAN: Day[] = [
       { id: "d6s6", where: "Checkout", action: "Fill the capacity-2 listing, then try to book a third place", expect: "Blocked and offered the waitlist" },
       { id: "d6s7", where: "Checkout", action: "Join the waitlist, then cancel one confirmed place as the operator", expect: "The waitlisted family is offered the freed place" },
       { id: "d6s8", where: "Parent → My bookings", action: "Check everything you just booked is listed", expect: "All bookings, correct dates, correct child, correct status" },
+      { id: "d6s9", where: "Operator portal → Bookings", action: "Find the booking you just made as a parent", expect: "It is there, with the right child, dates and amount — within seconds, no refresh trick" },
+      { id: "d6s10", where: "Operator → Dashboard", action: "Check today\u2019s figures after that booking", expect: "Bookings count and revenue moved by exactly what you booked" },
+      { id: "d6s11", where: "Operator → Registers", action: "Open the register for the session you booked", expect: "The child you booked is on it" },
+      { id: "d6s12", where: "Operator → Families", action: "Find the parent account you booked with", expect: "The family exists with the child attached and the booking listed" },
     ],
   },
   {
@@ -148,6 +152,8 @@ export const PLAN: Day[] = [
       { id: "d7s6", where: "Parent → Coupons", action: "Check any codes you hold appear", expect: "Listed with their terms" },
       { id: "d7s7", where: "Parent → Memberships", action: "Cancel the membership", expect: "Cancelled, and unused wallet credit is still yours" },
       { id: "d7s8", where: "Parent portal", action: "Try to join a DIFFERENT provider's membership (one you've never booked with)", expect: "Refused — you should not be able to hold credit with a provider you have no relationship with", regression: true, needsBackend: true },
+      { id: "d7s9", where: "Operator → Setup → Customer area", action: "Switch OFF a customer-area feature (e.g. Wallet)", expect: "It disappears from the PARENT portal — check in the parent tab" },
+      { id: "d7s10", where: "Operator → Setup → Customer area", action: "Switch it back on", expect: "It returns for the parent" },
     ],
   },
   {
@@ -195,6 +201,9 @@ export const PLAN: Day[] = [
       { id: "d10s7", where: "Registers", action: "Mark a child absent", expect: "Recorded as Absent; the count updates" },
       { id: "d10s8", where: "Registers", action: "Run a roll call", expect: "Headcount matches signed-in children and the check is recorded" },
       { id: "d10s9", where: "Header → Find a child", action: "Search for a child by name", expect: "Found, and their card opens with the full record" },
+      { id: "d10s10", where: "Parent portal", action: "After signing the child in, check the parent\u2019s view", expect: "The parent can see their child was marked present" },
+      { id: "d10s11", where: "Operator → Dashboard", action: "Check the on-site-now card", expect: "Reflects who you just signed in" },
+      { id: "d10s12", where: "Setup → Registers", action: "Change a register setting (e.g. which fields show on the child card)", expect: "The register changes to match — settings must bite where they claim to" },
     ],
   },
   {
@@ -222,6 +231,8 @@ export const PLAN: Day[] = [
       { id: "d12s5", where: "Parent portal", action: "Withdraw consent", expect: "Withdrawal is timestamped and further doses are refused" },
       { id: "d12s6", where: "Medication", action: "Set an expiry date in the past", expect: "Flagged as expired" },
       { id: "d12s7", where: "Registers", action: "Check the child's register row", expect: "Medication is visible to the staff running that session" },
+      { id: "d12s8", where: "Operator → Medication", action: "Immediately after the parent authorises, check the operator view", expect: "Consent shows without the operator reloading or being told" },
+      { id: "d12s9", where: "Setup → Safeguarding", action: "Toggle the medication parent-notification setting, then add a medication", expect: "The parent is or isn\u2019t notified exactly as the toggle says" },
     ],
   },
   {
@@ -237,6 +248,9 @@ export const PLAN: Day[] = [
       { id: "d13s6", where: "Parent portal", action: "As the parent, acknowledge the accident", expect: "Acknowledgement recorded and visible to the operator" },
       { id: "d13s7", where: "Setup → Safeguarding", action: "Turn ON 'require acknowledgement', log another accident, then leave it", expect: "The parent is chased until they acknowledge" },
       { id: "d13s8", where: "Concerns list", action: "Check every record carries who logged it and when", expect: "Timestamped and attributed, every one" },
+      { id: "d13s9", where: "DSL\u2019s inbox and the in-app bell", action: "After logging a concern, check both", expect: "The alert actually arrived — an alert nobody receives is not an alert", regression: true },
+      { id: "d13s10", where: "Operator → concern record", action: "After the parent acknowledges an accident, check the operator side", expect: "The acknowledgement is visible against the record" },
+      { id: "d13s11", where: "Setup → Safeguarding", action: "Turn OFF parent notification for incidents, log one, then check", expect: "The parent is NOT notified — the setting is respected in both directions" },
     ],
   },
   {
@@ -268,6 +282,9 @@ export const PLAN: Day[] = [
       { id: "d15s7", where: "Compliance", action: "Set a certificate to expire in 10 days", expect: "Warns ahead of expiry" },
       { id: "d15s8", where: "Team", action: "Click Deactivate on an active staff member", expect: "You are told plainly that this does NOT yet revoke their sign-in", regression: true },
       { id: "d15s9", where: "Sign in as that 'deactivated' staff member", action: "Attempt to sign in", expect: "Note what actually happens — this is a known gap and Amir's to close", needsBackend: true },
+      { id: "d15s10", where: "Operator → Team", action: "After the staff member accepts their invite, check the team list", expect: "They appear as activated, with the role you invited them as" },
+      { id: "d15s11", where: "HQ → Providers & billing", action: "Check that provider\u2019s staff count", expect: "It went up by one — the platform sees what the provider did" },
+      { id: "d15s12", where: "Setup → require compliance", action: "Turn the setting OFF, then retry rostering the uncleared person", expect: "Now allowed — proving the block came from the setting, not chance" },
     ],
   },
   {
@@ -283,6 +300,8 @@ export const PLAN: Day[] = [
       { id: "d16s6", where: "Leave & absence", action: "Approve it as the operator", expect: "Shows on the rota as unavailable, and cover is flagged" },
       { id: "d16s7", where: "Timesheets", action: "Check the week's timesheet", expect: "Matches what was clocked, to the minute" },
       { id: "d16s8", where: "Clock in/out", action: "Clock in late deliberately with auto-deduct on", expect: "Deduction applied per the rule you set" },
+      { id: "d16s9", where: "Staff portal", action: "After the operator publishes the rota, check the staff view", expect: "The shifts are there, and only that person\u2019s own" },
+      { id: "d16s10", where: "Operator → Timesheets", action: "After the staff member clocks out, check the operator side", expect: "Hours appear against them without anyone re-entering anything" },
     ],
   },
   {
@@ -342,6 +361,9 @@ export const PLAN: Day[] = [
       { id: "d20s6", where: "Moments", action: "Upload photos to a session", expect: "Only parents of children in that session can see them" },
       { id: "d20s7", where: "Child record", action: "Turn photo consent OFF for one child, then upload again", expect: "That child is excluded, and staff are warned before uploading" },
       { id: "d20s8", where: "Parent portal", action: "Switch the app language to Polish, then Urdu", expect: "The interface translates; nothing falls back to raw keys" },
+      { id: "d20s9", where: "Parent portal", action: "Immediately after posting a newsfeed item, check the parent view", expect: "It is there — and check the notification bell too" },
+      { id: "d20s10", where: "Operator → Messages", action: "After the parent replies, check the operator side", expect: "The reply is in the same thread, not a new one" },
+      { id: "d20s11", where: "Setup → Communication", action: "Change a notification setting, then trigger that notification", expect: "Behaviour changes to match the setting" },
     ],
   },
   {
@@ -357,6 +379,7 @@ export const PLAN: Day[] = [
       { id: "d21s6", where: "Parent → account", action: "Open 'Close my account'", expect: "It correctly warns about any active membership", regression: true },
       { id: "d21s7", where: "Parent portal", action: "Add a second parent/carer to the same children", expect: "They see the same bookings and can book" },
       { id: "d21s8", where: "Parent portal on a phone", action: "Repeat the three things you do most", expect: "All comfortable one-handed" },
+      { id: "d21s9", where: "Operator portal", action: "After the parent updates a medical detail, check the operator side", expect: "Updated on the register AND on the family record — same value in both places" },
     ],
   },
   {

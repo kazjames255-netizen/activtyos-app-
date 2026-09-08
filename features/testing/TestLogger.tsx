@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { PLAN } from "@/lib/testing/plan";
-import { loadRun, saveResult, type Run, type Verdict, type Owner } from "@/lib/testing/store";
+import { loadRun, saveResult, type Run, type Verdict } from "@/lib/testing/store";
 
 /**
  * The floating test logger.
@@ -35,7 +35,6 @@ export function TestLogger() {
   const [open, setOpen] = useState(false);
   const [failing, setFailing] = useState(false);
   const [actual, setActual] = useState("");
-  const [owner, setOwner] = useState<Owner>("unsure");
 
   useEffect(() => {
     const syncOn = () => setOn(testLoggerOn());
@@ -59,8 +58,9 @@ export function TestLogger() {
   const log = (v: Verdict) => {
     if (!next) return;
     if (v !== "pass" && !failing) { setFailing(true); setOpen(true); return; }
-    saveResult({ stepId: next.id, verdict: v, owner: v === "pass" ? "unsure" : owner, actual, at: new Date().toISOString() });
-    setActual(""); setFailing(false); setOwner("unsure");
+    // Owner is derived from the step, never asked — see lib/testing/store.ts.
+    saveResult({ stepId: next.id, verdict: v, owner: next.needsBackend ? "amir" : "triage", actual, at: new Date().toISOString() });
+    setActual(""); setFailing(false);
   };
 
   return (
@@ -86,12 +86,8 @@ export function TestLogger() {
                   <textarea value={actual} onChange={(e) => setActual(e.target.value)} rows={2} autoFocus
                     placeholder="What actually happened?"
                     className="mt-2 w-full rounded-[10px] border border-[var(--line)] p-2 text-[13px]" />
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {([["amir", "Amir"], ["frontend", "Front-end"], ["unsure", "Not sure"]] as [Owner, string][]).map(([o, l]) => (
-                      <button key={o} type="button" onClick={() => setOwner(o)}
-                        className="rounded-full border px-2.5 py-1 text-[11.5px] font-bold"
-                        style={owner === o ? { borderColor: "#2f6bd8", background: "rgba(47,107,216,.12)", color: "#2f6bd8" } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{l}</button>
-                    ))}
+                  <div className="mt-1.5 text-[11.5px] text-[var(--ink-3)]">
+                    Routes to <b>{next.needsBackend ? "Amir" : "triage"}</b> automatically.
                   </div>
                 </>
               )}

@@ -31,13 +31,16 @@ function StepRow({ day, step, result, onSave, onClear }: {
   onClear: () => void;
 }) {
   const [open, setOpen] = useState(false);
-  const [owner, setOwner] = useState<Owner>(step.needsBackend ? "amir" : "unsure");
   const [actual, setActual] = useState(result?.actual ?? "");
   const [notes, setNotes] = useState(result?.notes ?? "");
   const [pending, setPending] = useState<Verdict | null>(null);
 
+  // Derived, not asked: a step flagged as backend-only can only fail in the
+  // backend; everything else goes to triage rather than making you guess.
+  const owner: Owner = step.needsBackend ? "amir" : "triage";
+
   const commit = (v: Verdict) => {
-    if (v === "pass") { onSave("pass", "unsure", "", ""); setOpen(false); return; }
+    if (v === "pass") { onSave("pass", owner, "", ""); setOpen(false); return; }
     setPending(v); setOpen(true);          // a fail needs detail before it's useful
   };
 
@@ -81,17 +84,8 @@ function StepRow({ day, step, result, onSave, onClear }: {
           <label className="mt-2 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Notes (optional)</label>
           <input value={notes} onChange={(e) => setNotes(e.target.value)}
             className="mt-1 w-full rounded-[10px] border border-[var(--line)] bg-white p-2 text-[13px]" />
-          <label className="mt-2 block text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Whose job is this?</label>
-          <div className="mt-1 flex flex-wrap gap-1.5">
-            {([["amir", "Amir — backend"], ["frontend", "Front-end"], ["unsure", "Not sure yet"]] as [Owner, string][]).map(([o, label]) => (
-              <button key={o} type="button" onClick={() => setOwner(o)}
-                className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
-                style={owner === o
-                  ? { borderColor: "#2f6bd8", background: "rgba(47,107,216,.12)", color: "#2f6bd8" }
-                  : { borderColor: "var(--line)", background: "#fff", color: "var(--ink-2)" }}>
-                {label}
-              </button>
-            ))}
+          <div className="mt-2 rounded-[10px] bg-white px-3 py-2 text-[12px] text-[var(--ink-2)]">
+            Routing to <b>{owner === "amir" ? "Amir (backend)" : "triage"}</b> — you don&rsquo;t have to decide.
           </div>
           <div className="mt-3 flex gap-2">
             <button type="button" onClick={() => { onSave(pending, owner, actual, notes); setOpen(false); setPending(null); }}
@@ -201,12 +195,12 @@ export function TestingApp() {
           <Chip bg="#fdeaee" fg="#b3123c">{p.fail} fail</Chip>
           <Chip bg="#fdf1dc" fg="#a5760a">{p.blocked} blocked</Chip>
           <Chip bg="rgba(255,255,255,.16)" fg="#fff">{p.openForAmir} open for Amir</Chip>
-          <Chip bg="rgba(255,255,255,.16)" fg="#fff">{p.openForFrontend} front-end</Chip>
+          <Chip bg="rgba(255,255,255,.16)" fg="#fff">{p.openForTriage} to triage</Chip>
         </div>
       </header>
 
       <nav className="mt-5 flex flex-wrap gap-2">
-        {([["plan", "The 25 days"], ["amir", `For Amir (${p.openForAmir})`], ["frontend", `Front-end (${p.openForFrontend})`], ["export", "Export"]] as const).map(([k, label]) => (
+        {([["plan", "The 25 days"], ["amir", `For Amir (${p.openForAmir})`], ["frontend", `To triage (${p.openForTriage})`], ["export", "Export"]] as const).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setTab(k)}
             className="rounded-full px-4 py-2 text-[13px] font-extrabold"
             style={tab === k ? { background: "#16306e", color: "#fff" } : { background: "var(--panel)", color: "var(--ink-2)" }}>
@@ -266,9 +260,9 @@ export function TestingApp() {
 
       {tab === "frontend" && (
         <section className="mt-6">
-          <HandoverPanel run={run} owner="frontend"
-            title="Front-end findings"
-            lede="Hand this list over in a session and it gets fixed in a batch. Nothing reaches anyone automatically." />
+          <HandoverPanel run={run} owner="triage"
+            title="To triage"
+            lede="Everything that isn't obviously backend. Hand this list over and it gets sorted into front-end fixes and backend work for Amir — you don't have to know which." />
         </section>
       )}
 

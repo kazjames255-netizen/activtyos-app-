@@ -15,8 +15,14 @@ import { PLAN, type Step } from "./plan";
 const KEY = "aos.testing.run.v1";
 
 export type Verdict = "pass" | "fail" | "blocked";
-/** Who has to act on a failure. Chosen by you at the moment you log it. */
-export type Owner = "amir" | "frontend" | "unsure";
+/**
+ * Who has to act on a failure — DERIVED, never chosen by the tester.
+ * Deciding whether a symptom is a backend or a front-end fault means reading
+ * the code, so asking the person testing to guess just produces bad routing.
+ * Steps that can only fail in the backend are pre-tagged in the plan; anything
+ * else lands in "triage" and gets sorted when the list is handed over.
+ */
+export type Owner = "amir" | "triage";
 
 export interface Result {
   stepId: string;
@@ -63,7 +69,7 @@ export const stepById = (id: string) => ALL_STEPS.find((s) => s.step.id === id);
 
 export interface Progress {
   done: number; total: number; pass: number; fail: number; blocked: number;
-  openForAmir: number; openForFrontend: number;
+  openForAmir: number; openForTriage: number;
 }
 
 export function progressOf(run: Run): Progress {
@@ -76,14 +82,14 @@ export function progressOf(run: Run): Progress {
     fail: rs.filter((r) => r.verdict === "fail").length,
     blocked: rs.filter((r) => r.verdict === "blocked").length,
     openForAmir: open.filter((r) => r.owner === "amir").length,
-    openForFrontend: open.filter((r) => r.owner === "frontend").length,
+    openForTriage: open.filter((r) => r.owner !== "amir").length,
   };
 }
 
 /** The open items for one owner, newest first — this is what gets handed over. */
 export function openFor(run: Run, owner: Owner) {
   return Object.values(run)
-    .filter((r) => r.verdict !== "pass" && !r.resolved && r.owner === owner)
+    .filter((r) => r.verdict !== "pass" && !r.resolved && (owner === "amir" ? r.owner === "amir" : r.owner !== "amir"))
     .sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 
@@ -93,7 +99,7 @@ export function openFor(run: Run, owner: Owner) {
  */
 export function buildHandover(run: Run, owner: Owner): string {
   const items = openFor(run, owner);
-  const who = owner === "amir" ? "Amir (backend)" : owner === "frontend" ? "Front-end" : "Unassigned";
+  const who = owner === "amir" ? "Amir (backend)" : "Needs triage";
   const head = [
     `# Test findings — ${who}`,
     ``,
@@ -126,7 +132,7 @@ export function buildFullReport(run: Run): string {
     `# 25-day test run`,
     ``,
     `${p.done} of ${p.total} steps logged · ${p.pass} pass · ${p.fail} fail · ${p.blocked} blocked`,
-    `Open: ${p.openForAmir} for Amir, ${p.openForFrontend} front-end`,
+    `Open: ${p.openForAmir} for Amir, ${p.openForTriage} to triage`,
     ``,
   ];
   for (const d of PLAN) {
