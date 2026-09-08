@@ -1,0 +1,588 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Wigglekit — run your activities, not your admin</title><link rel="stylesheet" href="/nametbc.css?v=1788699115"></head><body><div class="wrap"><header class="nav"><div class="shell nav-in"><a class="brand" href="/nametbc.html"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span><span>Wiggle<span class="os">kit</span></span></a><nav class="nav-links"><a class="navtab navactive" href="/nametbc.html">Home</a><div class="navdrop navmega"><button class="navdrop-btn" type="button" aria-haspopup="true">Platform <span class="caret">&#9662;</span></button><div class="navmega-menu"><div class="navmega-intro"><div class="nm-title">Platform</div><p>Everything you run — bookings, staff, finance, safeguarding and comms — in one login.</p><a class="nm-all" href="/nametbc.html#platform" style="display:block">See the full platform →</a><a class="nm-all" href="/tour.html" style="display:block;margin-top:7px">▶ Watch a 2-min tour</a></div><div class="navmega-grid"><a href="/platform-bookings.html"><span class="nm-ic">🛒</span><div><b>Bookings &amp; storefront</b><span>Branded page, checkout &amp; waitlists</span></div></a><a href="/platform-comms.html"><span class="nm-ic">💬</span><div><b>Comms &amp; parent app</b><span>Message centre, email &amp; your app</span></div></a><a href="/platform-staff.html"><span class="nm-ic">🧑‍🏫</span><div><b>Staff &amp; payroll</b><span>Rota, timesheets, payroll &amp; training</span></div></a><a href="/platform-finance.html"><span class="nm-ic">💳</span><div><b>Finance &amp; payouts</b><span>0% commission, reconciled for you</span></div></a><a href="/platform-safeguarding.html"><span class="nm-ic">🛡️</span><div><b>On-the-day &amp; safeguarding</b><span>Registers, ratios &amp; incidents</span></div></a><a href="/franchises.html"><span class="nm-ic">🏢</span><div><b>Franchise &amp; network</b><span>HQ command centre &amp; royalties</span></div></a></div></div></div><div class="navdrop"><button class="navdrop-btn" type="button" aria-haspopup="true">Built for <span class="caret">&#9662;</span></button><div class="navdrop-menu"><a href="/freelancers.html">Freelancers<span>Solo coaches, tutors &amp; instructors</span></a><a href="/companies.html">Companies<span>Multi-staff camps, clubs &amp; multi-site</span></a><a href="/franchises.html">Franchises<span>Head office &amp; branded network</span></a></div></div><a class="navtab" href="/pricing.html">Pricing</a><a class="navtab" href="/security.html">Security</a></nav><div class="nav-cta"><a class="signin" href="/login">Sign in</a><a class="btn btn-primary btn-sm" href="/signup">Get started</a></div></div></header>
+
+  <!-- HERO -->
+  <section class="hero dark" id="top">
+    <canvas id="aurora" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none"></canvas>
+
+    <div class="shell hero-grid">
+      <div>
+        <span class="eyebrow">The unfair advantage for camps, clubs &amp; coaches</span>
+        <h1 class="head">Fill your sessions.<br>Lose the admin.<br><em>Keep every penny.</em></h1>
+        <p class="sub">The operating system for activity providers &mdash; bookings, staff, finance, comms and safeguarding in one place, with <b>AI that clears the admin for you</b>. Every payment lands in <b>your own account</b>. One flat fee &mdash; <b>never a cut of your bookings</b>.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary" href="/signup">Get started &rarr;</a>
+          <a class="btn btn-ghost" href="#platform">See the platform</a>
+        </div>
+        <div class="trust"><span>&#9989; <b>Free to start</b></span><span>&middot;</span><span>&#127468;&#127463; <b>Built for the UK</b></span><span>&middot;</span><span>&#128274; <b>Safeguarding built in</b></span></div>
+        <div class="chips">
+          <span class="chip">&#127957;&#65039; Holiday camps</span><span class="chip">&#9917; Sports coaching</span><span class="chip">&#127917; After-school clubs</span><span class="chip">&#129496; Weekly classes</span><span class="chip"><b>+</b> Franchises</span>
+        </div>
+      </div>
+      <div class="dash" aria-hidden="true">
+        <div class="dash-cards">
+          <div class="dc green"><div class="ic">&#128176; Income collected</div><div class="n">&pound;4,315</div><div class="s">last 6m &middot; net of refunds</div></div>
+          <div class="dc blue"><div class="ic">&#127915; Bookings</div><div class="n">62</div><div class="s">last 6m &middot; excl. cancelled</div></div>
+          <div class="dc purple"><div class="ic">&#128106; Families</div><div class="n">42</div><div class="s">unique customers &middot; 6m</div></div>
+          <div class="dc gold"><div class="ic">&#128202; Avg booking</div><div class="n">&pound;69.60</div><div class="s">per paid booking</div></div>
+        </div>
+        <div class="dash-card">
+          <div class="ch"><h5>Income by month</h5><span class="lg">Collected</span></div>
+          <svg viewBox="0 0 300 118" style="width:100%;height:auto" preserveAspectRatio="none" role="img" aria-label="Income by month">
+            <defs><linearGradient id="inc" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#8FA9FB" stop-opacity="0.14"/><stop offset="100%" stop-color="#8FA9FB" stop-opacity="0.02"/></linearGradient></defs>
+            <path d="M18,75 L72,89 L126,70 L180,42 L234,16 L288,90 L288,90 L18,90 Z" fill="url(#inc)"/>
+            <path d="M18,75 L72,89 L126,70 L180,42 L234,16 L288,90" fill="none" stroke="#8FA9FB" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"/>
+            <g fill="#8FA9FB"><circle cx="18" cy="75" r="3"/><circle cx="72" cy="89" r="3"/><circle cx="126" cy="70" r="3"/><circle cx="180" cy="42" r="3"/><circle cx="234" cy="16" r="5" fill="#FF3D7F" stroke="#111A3A" stroke-width="2"/><circle cx="288" cy="90" r="3"/></g>
+            <g font-size="8" font-weight="800" fill="#D6DCF2" text-anchor="middle"><text x="18" y="68">&pound;417</text><text x="126" y="63">&pound;535</text><text x="180" y="35">&pound;1,313</text><text x="234" y="9">&pound;2,018</text></g>
+            <g font-size="9" font-weight="700" fill="#8B97BC" text-anchor="middle"><text x="18" y="112">Apr</text><text x="72" y="112">May</text><text x="126" y="112">Jun</text><text x="180" y="112">Jul</text><text x="234" y="112">Aug</text><text x="288" y="112">Sep</text></g>
+          </svg>
+        </div>
+        <div class="dash-card">
+          <div class="ch"><h5>Revenue by activity</h5></div>
+          <div class="rev-row"><div class="rev-top"><span class="rk" style="background:#8FA9FB;color:#0A0F26">1</span><span class="nm">Summer Multi-Activity Camp</span><span class="amt">&pound;1,645</span></div><div class="rev-bar"><i style="width:100%;background:#8FA9FB"></i></div></div>
+          <div class="rev-row"><div class="rev-top"><span class="rk" style="background:#34D3C1;color:#0A0F26">2</span><span class="nm">After-School Football Club</span><span class="amt">&pound;990</span></div><div class="rev-bar"><i style="width:60%;background:#34D3C1"></i></div></div>
+          <div class="rev-row"><div class="rev-top"><span class="rk" style="background:#F5B94A;color:#0A0F26">3</span><span class="nm">Holiday Art Club</span><span class="amt">&pound;948</span></div><div class="rev-bar"><i style="width:58%;background:#F5B94A"></i></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROOF STRIP -->
+  <section style="padding:8px 0 60px">
+    <div class="shell"><div class="proof"><div class="proof-in">
+      <div class="pf"><div class="n"><span>0%</span></div><div class="l">Commission on every booking — a busy month never costs more</div></div>
+      <div class="pf"><div class="n">100%</div><div class="l">Your brand — a booking page on your own domain</div></div>
+      <div class="pf"><div class="n">25+</div><div class="l">Separate tools replaced by one login</div></div>
+      <div class="pf"><div class="n">£<span>→</span></div><div class="l">Every payment straight to your own bank account</div></div>
+    </div></div></div>
+  </section>
+
+  
+
+
+
+<!-- WHO -->
+  <section class="band" id="who" style="padding-top:0">
+    <div class="shell">
+      <div class="sec-head"><span class="eyebrow">One platform, your way</span><h2>Whatever you run, it fits around it.</h2></div>
+      <div class="personas">
+        <div class="psplit "><div class="pvis"><div class="ppanel"><div class="ppmock"><div class="mini"><div class="mbar"><span class="md"></span><span class="md g"></span><span class="md g"></span><b>Wigglekit</b><span class="mlive">&#9679; live</span></div><div class="mrow"><span class="mic">&#128197;</span><div class="mtx"><b>New booking</b><small>Ballet &middot; Sat 10:00</small></div><span class="mpay up">&#163;128</span></div><div class="mrow"><span class="mic">&#129534;</span><div class="mtx"><b>Payment received</b><small>Tennis camp &middot; 6 wks</small></div><span class="mpay up">&#163;90</span></div><div class="mmeta">14 booked this week</div></div></div><figure class="ppphoto"><img loading="lazy" src="/images/freelancer-1.jpg" alt="A freelancer coach using Wigglekit" onerror="this.removeAttribute('src')"></figure><span class="ppseam"></span></div></div><div class="ptxt"><div class="k">Freelancer</div><h3>Look like a big operation</h3><p>A polished booking page on your own domain, parents who self-serve, registers on your phone &mdash; without hiring an admin team.</p><div class="tagr">Solo coaches &middot; set up in an afternoon</div><a class="plink" href="/freelancers.html">See freelancer features &rarr;</a></div></div>
+        <div class="psplit rev"><div class="pvis"><div class="ppanel"><div class="ppmock"><div class="mini"><div class="mbar"><span class="md"></span><span class="md g"></span><span class="md g"></span><b>Wigglekit</b><span class="mlive">&#9679; live</span></div><div class="mstat"><small>Revenue this week</small><b class="mbig">&#163;12,480</b></div><div class="mbars"><i style="height:48%"></i><i style="height:66%"></i><i style="height:42%"></i><i style="height:84%"></i><i style="height:70%"></i><i style="height:92%"></i></div><div class="mkpis"><span><b>312</b> bookings</span><span><b>6</b> sites</span></div></div></div><figure class="ppphoto"><img loading="lazy" src="/images/company-1.jpg" alt="A multi-site activity company using Wigglekit" onerror="this.removeAttribute('src')"></figure><span class="ppseam"></span></div></div><div class="ptxt"><div class="k">Company</div><h3>Keep every penny you earn</h3><p>Payments land in your own account next day. A flat fee, never a percentage &mdash; a busy month never costs more.</p><div class="tagr">Multi-site teams &middot; your Stripe</div><a class="plink" href="/companies.html">See company features &rarr;</a></div></div>
+        <div class="psplit "><div class="pvis"><div class="ppanel"><div class="ppmock"><div class="mini"><div class="mbar"><span class="md"></span><span class="md g"></span><span class="md g"></span><b>Wigglekit</b><span class="mlive">&#9679; live</span></div><div class="mrow"><span class="mic">&#129354;</span><div class="mtx"><b>Leeds &middot; Karate</b><small>Mon&ndash;Sat</small></div><span class="mpay">&#163;8,240</span></div><div class="mrow"><span class="mic">&#127934;</span><div class="mtx"><b>Bristol &middot; Tennis</b><small>2 sites</small></div><span class="mpay">&#163;6,110</span></div><div class="mfoot"><small>Head office royalties</small><b>&#163;1,933</b></div></div></div><figure class="ppphoto"><img loading="lazy" src="/images/company-3.jpg" alt="A franchise network running on Wigglekit" onerror="this.removeAttribute('src')"></figure><span class="ppseam"></span></div></div><div class="ptxt"><div class="k">Franchise</div><h3>Run the network from one screen</h3><p>Franchisees run their patch in their own brand; head office sees rollup reporting, royalties and every site at a glance.</p><div class="tagr">Networks &amp; head office</div><a class="plink" href="/franchises.html">See franchise features &rarr;</a></div></div>
+        </div>
+    </div>
+  </section>
+
+  <!-- FEATURE ORBIT -->
+  <section class="band" id="orbit" style="padding-bottom:34px">
+    <div class="shell">
+      <div class="sec-head center"><span class="eyebrow">One platform &middot; every portal</span><h2>Everything, orbiting one login.</h2><p>Bookings, staff, finance, safeguarding and comms &mdash; every job an activity business does, spinning around a single Wigglekit core.</p></div>
+      <div class="orbit-stage">
+        <div class="orbit-hub"><span class="halo"></span><span class="mark laptop"><svg viewBox="0 0 340 220" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Wigglekit command-centre dashboard on a laptop"><defs><linearGradient id="lscr" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1030"/><stop offset="1" stop-color="#0c1533"/></linearGradient><linearGradient id="lblue" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#3f6bd8"/><stop offset="1" stop-color="#6b9bff"/></linearGradient><linearGradient id="lpink" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#FF5C8A"/><stop offset="1" stop-color="#FF3D7F"/></linearGradient><linearGradient id="larea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6b9bff" stop-opacity=".5"/><stop offset="1" stop-color="#6b9bff" stop-opacity="0"/></linearGradient><radialGradient id="lglow" cx="0.5" cy="0.34" r="0.6"><stop offset="0" stop-color="#FF3D7F" stop-opacity=".22"/><stop offset="1" stop-color="#FF3D7F" stop-opacity="0"/></radialGradient></defs><path d="M14 184 L326 184 L340 208 L0 208 Z" fill="#141d43" stroke="#28356a" stroke-width="1.4"/><rect x="150" y="184" width="40" height="5" rx="2.5" fill="#28356a"/><rect x="24" y="6" width="292" height="180" rx="14" fill="url(#lscr)" stroke="#2a3566" stroke-width="1.6"/><rect x="24" y="6" width="292" height="180" rx="14" fill="url(#lglow)"/><rect x="32" y="14" width="276" height="164" rx="9" fill="#0a0f2b" stroke="#20294f"/><circle cx="46" cy="30" r="3" fill="#FF3D7F"/><circle cx="56" cy="30" r="3" fill="#2c375f"/><circle cx="66" cy="30" r="3" fill="#2c375f"/><text x="80" y="34" font-family="'Helvetica Neue','Segoe UI',system-ui,Arial,sans-serif" font-size="11" font-weight="800" fill="#EAF0FF">Wiggle<tspan fill="#FF6F91">kit</tspan></text><rect x="256" y="22" width="44" height="16" rx="8" fill="rgba(52,211,193,.16)"/><text x="278" y="33.5" text-anchor="middle" font-family="'Helvetica Neue','Segoe UI',system-ui,Arial,sans-serif" font-size="8" font-weight="800" fill="#34d3c1">&#9679; live</text><rect x="40" y="48" width="84" height="40" rx="8" fill="#111a3a" stroke="#232f57"/><text x="51" y="64" font-family="'Helvetica Neue','Segoe UI',system-ui,Arial,sans-serif" font-size="7" font-weight="800" letter-spacing="0.6" fill="#8B97BC">REVENUE</text><text x="51" y="80" font-family="'Helvetica Neue','Segoe UI',system-ui,Arial,sans-serif" font-size="15" font-weight="800" fill="#EAF0FF">&#163;12.4k</text><rect x="132" y="48" width="84" height="40" rx="8" fill="#111a3a" stroke="#232f57"/><text x="143" y="64" font-family="'Helvetica Neue','Segoe UI',system-ui,Arial,sans-serif" font-size="7" font-weight="800" letter-spacing="0.6" fill="#8B97BC">BOOKINGS</text><text x="143" y="80" font-family="'Helvetica Neue','Segoe UI',system-ui,Arial,sans-serif" font-size="15" font-weight="800" fill="#EAF0FF">312</text><rect x="224" y="48" width="84" height="40" rx="8" fill="#111a3a" stroke="#232f57"/><text x="235" y="64" font-family="'Helvetica Neue','Segoe UI',system-ui,Arial,sans-serif" font-size="7" font-weight="800" letter-spacing="0.6" fill="#8B97BC">SITES</text><text x="235" y="80" font-family="'Helvetica Neue','Segoe UI',system-ui,Arial,sans-serif" font-size="15" font-weight="800" fill="#EAF0FF">6</text><path d="M112 60 l4 -5 l4 5 z" fill="#34d3c1"/><path d="M204 60 l4 -5 l4 5 z" fill="#34d3c1"/><rect x="40" y="98" width="268" height="72" rx="10" fill="#0e1734" stroke="#232f57"/><text x="52" y="114" font-family="'Helvetica Neue','Segoe UI',system-ui,Arial,sans-serif" font-size="7.5" font-weight="800" letter-spacing="0.5" fill="#8B97BC">REVENUE &#183; 30 DAYS</text><g stroke="#1b2547" stroke-width="1"><line x1="52" y1="128" x2="296" y2="128"/><line x1="52" y1="144" x2="296" y2="144"/><line x1="52" y1="158" x2="296" y2="158"/></g><path d="M52 154 L92 148 L132 150 L172 136 L212 128 L252 118 L296 114 L296 160 L52 160 Z" fill="url(#larea)"/><path d="M52 154 L92 148 L132 150 L172 136 L212 128 L252 118 L296 114" fill="none" stroke="url(#lblue)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M52 160 L92 157 L132 156 L172 154 L212 155 L252 151 L296 152" fill="none" stroke="url(#lpink)" stroke-width="1.8" stroke-linecap="round" stroke-opacity=".85"/><circle cx="296" cy="114" r="5" fill="#6b9bff" opacity=".4"/><circle cx="296" cy="114" r="2.6" fill="#cfe0ff"/></svg></span><b>Wigglekit</b><em>one login</em></div>
+        <div class="orbit-ring" id="orbitRing"><div class="ochip pink"><span class="e">🛒</span>Booking storefront</div><div class="ochip "><span class="e">🗓️</span>Rota &amp; timesheets</div><div class="ochip "><span class="e">✅</span>Registers &amp; ratios</div><div class="ochip "><span class="e">🧾</span>Payroll &amp; payslips</div><div class="ochip "><span class="e">💬</span>Message centre</div><div class="ochip "><span class="e">🤖</span>AI writes your emails</div><div class="ochip "><span class="e">📲</span>Branded parent app</div><div class="ochip "><span class="e">🛡️</span>Safeguarding</div><div class="ochip pink"><span class="e">💷</span>0% commission</div><div class="ochip "><span class="e">🎓</span>Staff training</div><div class="ochip "><span class="e">🍽️</span>Meals &amp; allergens</div><div class="ochip "><span class="e">🎟️</span>Passes &amp; add-ons</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3D MARQUEE: tools replaced -->
+  <div class="mq" aria-hidden="true">
+    <div class="mq-fixed"><span class="e">✨</span>One login replaces</div>
+    <div class="mq-view"><div class="mq-track"><div class="mq-chip"><span class="e">🛒</span><s>Bookwhen</s></div><div class="mq-chip"><span class="e">✉️</span><s>Mailchimp</s></div><div class="mq-chip"><span class="e">🧑‍🏫</span><s>BrightHR</s></div><div class="mq-chip"><span class="e">💷</span><s>Sage Payroll</s></div><div class="mq-chip"><span class="e">🎓</span><s>iHasco</s></div><div class="mq-chip"><span class="e">📅</span><s>Calendly</s></div><div class="mq-chip"><span class="e">💬</span><s>Class Manager</s></div><div class="mq-chip"><span class="e">🗂️</span><s>Xero</s></div><div class="mq-chip"><span class="e">📣</span><s>Later</s></div><div class="mq-chip"><span class="e">🛡️</span><s>Famly</s></div><div class="mq-chip"><span class="e">⏱️</span><s>Deputy</s></div><div class="mq-chip"><span class="e">🎟️</span><s>Eventbrite</s></div><div class="mq-chip"><span class="e">🛒</span><s>Bookwhen</s></div><div class="mq-chip"><span class="e">✉️</span><s>Mailchimp</s></div><div class="mq-chip"><span class="e">🧑‍🏫</span><s>BrightHR</s></div><div class="mq-chip"><span class="e">💷</span><s>Sage Payroll</s></div><div class="mq-chip"><span class="e">🎓</span><s>iHasco</s></div><div class="mq-chip"><span class="e">📅</span><s>Calendly</s></div><div class="mq-chip"><span class="e">💬</span><s>Class Manager</s></div><div class="mq-chip"><span class="e">🗂️</span><s>Xero</s></div><div class="mq-chip"><span class="e">📣</span><s>Later</s></div><div class="mq-chip"><span class="e">🛡️</span><s>Famly</s></div><div class="mq-chip"><span class="e">⏱️</span><s>Deputy</s></div><div class="mq-chip"><span class="e">🎟️</span><s>Eventbrite</s></div></div></div>
+  </div>
+
+  <!-- PLATFORM -->
+  <section class="band" id="platform">
+    <div class="shell">
+      <div class="sec-head">
+        <span class="eyebrow">One platform · every portal</span>
+        <h2>One login instead of 25 separate tools.</h2>
+        <p>Most providers cobble together a booking system, an email tool, payroll, an HR app, a training platform and more — and pay for every one. Here it's all built into a single login.</p>
+      </div>
+      <div class="fgrid">
+        <article class="fcard"><div class="fic">🛒</div><h3>Bookings &amp; storefront</h3><p>Sell sessions from a booking page on your own domain — parents book &amp; pay in two minutes.</p><details class="facc"><summary>View features</summary><ul class="flist"><li>Branded booking page &amp; storefront<span class="tip"><b>🌐 Your own domain</b>A polished booking page on your own domain and colours — parents book without leaving your brand.</span></li><li>Passes, blocks, dates &amp; add-ons<span class="tip"><b>🎟️ Sell it your way</b>Single sessions, whole weeks, discounted blocks or subscriptions — plus paid extras like early drop-off.</span></li><li>Real basket &amp; card checkout<span class="tip"><b>🛒 One checkout</b>Parents add several children and dates to one basket and pay by card in a couple of taps.</span></li><li>Waitlists &amp; automatic reminders<span class="tip"><b>⏳ Never lose a place</b>Sold-out sessions form a waitlist and the next family is offered a freed spot automatically.</span></li><li>Discount codes &amp; coupons<span class="tip"><b>🏷️ Your own offers</b>Percentage or fixed-amount codes, limited per family, stacking the way you choose.</span></li><li>Tax-Free Childcare &amp; funding accepted<span class="tip"><b>💷 Funding at checkout</b>Parents pay with Tax-Free Childcare and other funding — reconciled back to the booking.</span></li></ul></details></article>
+        <article class="fcard"><div class="fic">💬</div><h3>Comms &amp; parent app</h3><p>Every message in one place — a family, a session or your whole list — plus a parent app they'll actually open.</p><details class="facc"><summary>View features</summary><ul class="flist"><li><b>Message centre</b> — 1:1 &amp; group chat<span class="tip"><b>💬 One inbox</b>Message a single family or a whole session — replies land in one thread, not scattered texts.</span></li><li>Email campaigns<span class="tip"><b>📣 Reach the right families</b>Branded email to a chosen audience: booked families, a listing, or your whole list.</span></li><li>AI writes your messages<span class="tip"><b>🤖 Draft in seconds</b>Say what you want to send and the AI writes the email, post or reminder in your tone.</span></li><li>Your own branded parent app<span class="tip"><b>📲 Your brand on their phone</b>Your logo and colours, installed to the home screen — bookings, wallet and updates in one place.</span></li><li>Newsfeed, moments &amp; receipts<span class="tip"><b>📸 Keep parents in the loop</b>Share photos, day updates and a newsfeed; receipts go out automatically after every payment.</span></li><li>Discounts, coupons &amp; referrals<span class="tip"><b>🎁 Grow by word of mouth</b>Reward loyalty and referrals — codes and credit apply themselves at checkout.</span></li></ul></details></article>
+        <article class="fcard"><div class="fic">🧑‍🏫</div><h3>Staff &amp; payroll</h3><p>Hire safely, rota fairly and pay accurately — HMRC-ready, with training built in.</p><details class="facc"><summary>View features</summary><ul class="flist"><li>Rota, availability &amp; clock in/out<span class="tip"><b>🗓️ Plan &amp; track shifts</b>Build the week's rota, staff set availability, and everyone clocks in and out from their phone.</span></li><li>Timesheets straight into payroll<span class="tip"><b>⏱️ No spreadsheets</b>Clocked hours become timesheets you approve, then flow straight into the pay run.</span></li><li>PAYE payroll &amp; branded payslips<span class="tip"><b>💷 Pay accurately</b>Monthly pay with estimated PAYE, NI and pension, and payslips in your brand.</span></li><li>Holiday, absence &amp; appraisals<span class="tip"><b>🌴 Look after your team</b>Approve time off with UK entitlement worked out, track absence, and run staff appraisals.</span></li><li>Safer-recruitment onboarding &amp; DBS<span class="tip"><b>🛡️ Hire safely</b>Onboard to UK safer-recruitment standards and track DBS checks and expiry.</span></li><li><b>Training centre</b> — CPD courses &amp; certificates<span class="tip"><b>🎓 Train &amp; certify</b>Assign CPD courses like safeguarding and first aid, track completion and issue certificates.</span></li><li>Roles &amp; permissions<span class="tip"><b>🔑 Right access per person</b>The office sees money, coaches see only their sessions — you decide who sees what.</span></li></ul></details></article>
+        <article class="fcard"><div class="fic">💳</div><h3>Finance &amp; payouts</h3><p>Every payment straight to your own bank at 0% commission — reconciled for you, not chased.</p><details class="facc"><summary>View features</summary><ul class="flist"><li>Invoices, purchase orders &amp; expenses<span class="tip"><b>🧾 Books in order</b>Raise invoices and POs, log expenses and receipts, all categorised for your accounts.</span></li><li>Payouts, revenue &amp; profit<span class="tip"><b>📈 Know your numbers</b>See what's come in, what's owed and your profit — updated as bookings and costs land.</span></li><li>Payments auto-reconciled<span class="tip"><b>🔗 Matched for you</b>Card, funding and bank payments are matched to the right booking automatically.</span></li><li>Refunds computed &amp; recorded<span class="tip"><b>↩️ Fair &amp; recorded</b>Cancellations calculate the refund to your policy and log it against the booking.</span></li><li>Franchise split-fees &amp; royalties<span class="tip"><b>💰 Network money, sorted</b>Split fees and royalties worked out to the penny across every site.</span></li><li>Syncs to Sage / Xero / QuickBooks<span class="tip"><b>🔄 Plays nicely</b>Push your figures to the big accounting tools so your accountant has what they need.</span></li></ul></details></article>
+        <article class="fcard"><div class="fic">🛡️</div><h3>On-the-day &amp; safeguarding</h3><p>Registers, ratios and safeguarding — all on your phone, as the day happens.</p><details class="facc"><summary>View features</summary><ul class="flist"><li>Live registers &amp; ratio checks<span class="tip"><b>✅ Sign in, stay legal</b>Sign children in and out on your phone; ratios update live and warn before you breach.</span></li><li>Allergy, medical &amp; SEND flags<span class="tip"><b>⚠️ Nothing missed</b>Every allergy, medical need and SEND note shows on the register and the child's card.</span></li><li>Trips — risk assessment &amp; consent<span class="tip"><b>🚌 Off-site, covered</b>Risk assessment, parent consent per child, and a headcount out and back.</span></li><li>Meals, allergens &amp; caterer reports<span class="tip"><b>🍽️ Feed them safely</b>Plan menus, match allergens to each child, and send caterer-ready order reports.</span></li><li>Incidents, accidents &amp; medication logs<span class="tip"><b>🩹 On the record</b>Record incidents, accidents and every dose given (MAR), with the parent notified.</span></li><li>DBS &amp; certificate tracking<span class="tip"><b>📇 Stay compliant</b>Keep DBS checks and staff certificates in one place with expiry reminders.</span></li></ul></details></article>
+        <article class="fcard"><div class="fic">🏢</div><h3>Franchise &amp; network</h3><p>One venue or a national network — head office sees everything, each site runs itself in its own brand.</p><details class="facc"><summary>View features</summary><ul class="flist"><li>Live overview across every site<span class="tip"><b>🗺️ See it all</b>One console: bookings, revenue and what needs attention at every site.</span></li><li>Per-franchisee branding<span class="tip"><b>🎨 Their brand, your oversight</b>Each franchisee runs in their own name and colours while head office keeps oversight.</span></li><li>Reporting, league tables &amp; rollup<span class="tip"><b>📊 Compare &amp; roll up</b>League tables and network roll-up bring every site into one view.</span></li><li>Territories &amp; control<span class="tip"><b>📍 Own the map</b>Draw territories, approve each patch and prevent overlap.</span></li><li>Royalties &amp; split-fees<span class="tip"><b>💰 Paid automatically</b>Royalties and split fees calculated for you; each site settles to its own account.</span></li><li>Memberships, packages &amp; feature control<span class="tip"><b>🎛️ Standardise in a click</b>Standardise memberships and switch features on/off per site or network-wide.</span></li></ul></details></article>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT YOU'LL SAVE (summary) -->
+  <section class="band" id="save" style="padding-top:0">
+    <div class="shell">
+      <div class="save-banner">
+        <p>Providers usually stitch together a booking system, an email tool, payroll, HR, training and more — <b>£300+ a month</b> in separate subscriptions. Here it's one login from <b class="big">£29/mo</b>, saving roughly <b class="big">£4,000 a year</b> — with 0% commission and money straight to your own bank.</p>
+        <a class="btn btn-primary" href="/pricing.html" style="flex:none">See what you'd save →</a>
+      </div>
+    </div>
+  </section>
+
+  
+  <!-- LIVE SAVINGS CALCULATOR -->
+  <section class="band" id="calc" style="padding-top:0">
+    <div class="shell">
+      <div class="sec-head center"><span class="eyebrow">Your numbers</span><h2>See what you keep.</h2><p>Most platforms skim a slice of every booking. Wigglekit is one flat fee &mdash; drag the sliders and watch the difference add up.</p></div>
+      <div class="calc">
+        <div class="calc-controls">
+          <label>Children booked per week <b><span id="cKids">120</span></b><input id="rKids" type="range" min="10" max="600" step="5" value="120"></label>
+          <label>Average price per child <b>&pound;<span id="cPrice">28</span></b><input id="rPrice" type="range" min="5" max="120" step="1" value="28"></label>
+        </div>
+        <div class="calc-out">
+          <div class="calc-big"><span class="cur">&pound;</span><span id="cSave" class="num">0</span><span class="per">kept a year</span></div>
+          <div class="calc-rows">
+            <div><span>Booked through Wigglekit</span><b>&pound;<span id="cRev">0</span>/yr</b></div>
+            <div class="bad"><span>A 5% commission platform would take</span><b>&minus;&pound;<span id="cComm">0</span>/yr</b></div>
+            <div class="good"><span>Wigglekit flat fee</span><b>&minus;&pound;<span id="cFee">0</span>/yr</b></div>
+          </div>
+          <a class="btn btn-primary" href="/signup">Start free &rarr;</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW IT WORKS -->
+  <section class="band" id="how" style="padding-top:0">
+    <div class="shell">
+      <div class="sec-head center"><span class="eyebrow">How it works</span><h2>Live in an afternoon.</h2><p>No developers, no migration project. Build your storefront, add your sessions, and take your first booking the same day.</p></div>
+      <div class="steps">
+        <div class="rail"><span class="rail-fill" id="railFill"></span></div>
+        <div class="step"><div class="dot">1</div><div class="step-c"><h3>Create your branded storefront</h3><p>Add your logo, colours and domain. Your booking page goes live in minutes &mdash; on your brand, never ours.</p></div></div>
+        <div class="step"><div class="dot">2</div><div class="step-c"><h3>Add your sessions &amp; prices</h3><p>Camps, classes, blocks, passes and add-ons. Set capacity, ratios and the questions you need at checkout.</p></div></div>
+        <div class="step"><div class="dot">3</div><div class="step-c"><h3>Parents book &amp; pay</h3><p>They book in two taps and pay by card or Tax-Free Childcare &mdash; every penny lands straight in your own bank.</p></div></div>
+        <div class="step"><div class="dot">4</div><div class="step-c"><h3>Run the day, sorted</h3><p>Registers, ratios, staff, comms and payouts &mdash; reconciled for you. You just turn up and run great sessions.</p></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEY FEATURES CAROUSEL -->
+  <section class="band" id="features">
+    <div class="shell"><div class="sec-head center"><span class="eyebrow">Key features</span><h2>Everything you run, one platform.</h2><p>From the morning register to payroll and parent bookings — the day-to-day of an activity business, joined up.</p></div><div class="carousel" id="featCar"><button class="carr prev" aria-label="Previous feature">&lsaquo;</button><button class="carr next" aria-label="Next feature">&rsaquo;</button><div class="ctrack"><div class="slide"><div class="slide-in"><div><span class="chip">On-the-day register</span><h3 style="margin-top:12px">Take the register in seconds</h3><p class="sc">Head-counts, ratio maths and allergy flags &mdash; with a locked collection so the right adult takes each child home.</p><ul><li>Live head-count as children arrive &amp; leave</li><li>Ratio checked against your setting</li><li>Allergy &amp; medical flags on the register</li><li>Locked collection &mdash; verified every time</li></ul><a class="btn btn-primary btn-sm" href="/signup" style="margin-top:18px">Start free &rarr;</a></div><div><div class="pf pf-app"><div class="pf-bar"><span class="mk"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span><div><div class="t">Register · Half-term Camp</div></div><div class="per"><span class="on">On site</span></div></div><div class="pf-body"><div class="pf-kpis" style="grid-template-columns:repeat(3,1fr)"><div class="pf-k"><div class="n">22</div><div class="l">On site</div></div><div class="pf-k"><div class="n">26</div><div class="l">Expected</div></div><div class="pf-k"><div class="n">1:8 ✓</div><div class="l">Ratio</div></div></div><div style="margin-top:6px"><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style="width:22px;height:22px;border-radius:7px;background:#2f6bd8;color:#fff;font-size:9px;font-weight:800;display:grid;place-items:center;flex:none">MD</span>Mia Doyle<span style="margin-left:auto;background:#fdeaea;color:#c0392b;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">🥜 Nut allergy</span></div><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style="width:22px;height:22px;border-radius:7px;background:#FF3D7F;color:#fff;font-size:9px;font-weight:800;display:grid;place-items:center;flex:none">NK</span>Noah Kelly<span style="margin-left:auto;background:#fff4e6;color:#a5670a;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">🚽 Toilet-training</span></div><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style="width:22px;height:22px;border-radius:7px;background:#8e44ad;color:#fff;font-size:9px;font-weight:800;display:grid;place-items:center;flex:none">SR</span>Sofia Rossi<span style="margin-left:auto;background:#eef2fb;color:#3f5bb3;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">🔒 Collected · PIN ✓</span></div></div></div></div></div></div></div><div class="slide"><div class="slide-in"><div><span class="chip">Branded parent app</span><h3 style="margin-top:12px">Your brand, on every parent&rsquo;s phone</h3><p class="sc">Parents book, pay and top up their wallet in an app that carries your name and colours &mdash; and you get far fewer messages.</p><ul><li>Book &amp; pay in a couple of taps</li><li>Wallet credit for quick re-bookings</li><li>Moments &mdash; photos &amp; day updates</li><li>Refer-a-friend rewards built in</li></ul><a class="btn btn-primary btn-sm" href="/signup" style="margin-top:18px">Start free &rarr;</a></div><div><div class="pf pf-app"><div class="pf-bar"><span class="mk"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span><div><div class="t">Kick Off · App</div></div><div class="per"><span class="on">Your brand</span></div></div><div class="pf-body"><div class="pf-kpis" style="grid-template-columns:repeat(3,1fr)"><div class="pf-k"><div class="n">£45</div><div class="l">Wallet</div></div><div class="pf-k"><div class="n">3</div><div class="l">Upcoming</div></div><div class="pf-k"><div class="n">£10</div><div class="l">Referral</div></div></div><div style="margin-top:6px"><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#3a1626;display:grid;place-items:center;flex:none'>✅</span>Summer Camp · Wk 1<span style="margin-left:auto;background:#3a1626;color:#ff6f91;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">Paid · TFC</span></div><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#fdeef4;display:grid;place-items:center;flex:none'>📣</span>Sports day photos<span style="margin-left:auto;background:#fdeef4;color:#c2185b;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">New</span></div><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#fff7e6;display:grid;place-items:center;flex:none'>🎁</span>Refer a friend · £10</div></div></div></div></div></div></div><div class="slide"><div class="slide-in"><div><span class="chip">Bookings &amp; storefront</span><h3 style="margin-top:12px">A booking page on your own domain</h3><p class="sc">Sell sessions, passes and add-ons from a storefront that&rsquo;s yours &mdash; and let parents pay with Tax-Free Childcare at checkout.</p><ul><li>Storefront on your own domain</li><li>Passes, blocks &amp; add-ons</li><li>Waitlists when you sell out</li><li>Tax-Free Childcare accepted at checkout</li></ul><a class="btn btn-primary btn-sm" href="/signup" style="margin-top:18px">Start free &rarr;</a></div><div><div class="pf pf-app"><div class="pf-bar"><span class="mk"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span><div><div class="t">book.yourclub.co.uk</div></div><div class="per"><span class="on">Storefront</span></div></div><div class="pf-body"><div class="pf-kpis" style="grid-template-columns:repeat(3,1fr)"><div class="pf-k"><div class="n">18</div><div class="l">Sold</div></div><div class="pf-k"><div class="n">4</div><div class="l">Waitlist</div></div><div class="pf-k"><div class="n">£1.2k</div><div class="l">Today</div></div></div><div style="margin-top:6px"><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#eaf1fd;display:grid;place-items:center;flex:none'>🎟️</span>Summer Multi-Sports<span style="margin-left:auto;background:#eaf1fd;color:#1d3a8f;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">6 left</span></div><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#eaf1fd;display:grid;place-items:center;flex:none'>➕</span>Early drop-off · +£4</div><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#3a1626;display:grid;place-items:center;flex:none'>💳</span>Checkout · TFC<span style="margin-left:auto;background:#3a1626;color:#ff6f91;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">Accepted</span></div></div></div></div></div></div></div><div class="slide"><div class="slide-in"><div><span class="chip">Marketing &amp; growth</span><h3 style="margin-top:12px">See what an empty seat is worth</h3><p class="sc">Spot the sessions with room to fill and market straight to the families most likely to book &mdash; from one screen.</p><ul><li>What quiet dates are worth at your price</li><li>Campaigns to live-listing audiences</li><li>Referrals that credit automatically</li><li>Discounts &amp; coupons</li></ul><a class="btn btn-primary btn-sm" href="/signup" style="margin-top:18px">Start free &rarr;</a></div><div><div class="pf pf-app"><div class="pf-bar"><span class="mk"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span><div><div class="t">Growth · This week</div></div><div class="per"><span class="on">2 to fill</span></div></div><div class="pf-body"><div class="pf-kpis" style="grid-template-columns:repeat(3,1fr)"><div class="pf-k"><div class="n">48%</div><div class="l">Ballet Thu</div></div><div class="pf-k"><div class="n">£420</div><div class="l">Seats free</div></div><div class="pf-k"><div class="n">34</div><div class="l">Lapsed</div></div></div><div style="margin-top:6px"><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#eaf1fd;display:grid;place-items:center;flex:none'>📣</span>Campaign to 34 families<span style="margin-left:auto;background:#eaf1fd;color:#1d3a8f;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">Draft</span></div><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#3a1626;display:grid;place-items:center;flex:none'>🎁</span>3 referrals joined<span style="margin-left:auto;background:#3a1626;color:#ff6f91;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">+£30</span></div></div></div></div></div></div></div><div class="slide"><div class="slide-in"><div><span class="chip">Staff &amp; payroll</span><h3 style="margin-top:12px">Your team, sorted</h3><p class="sc">Rota, timesheets and HMRC-ready payroll &mdash; plus DBS-tracked onboarding and CPD training built in.</p><ul><li>Rota &amp; availability per site</li><li>Timesheets straight to payroll</li><li>Holiday &amp; PAYE payslips</li><li>Safer-recruitment onboarding &amp; DBS</li></ul><a class="btn btn-primary btn-sm" href="/signup" style="margin-top:18px">Start free &rarr;</a></div><div><div class="pf pf-app"><div class="pf-bar"><span class="mk"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span><div><div class="t">Team · September</div></div><div class="per"><span class="on">4 on shift</span></div></div><div class="pf-body"><div class="pf-kpis" style="grid-template-columns:repeat(3,1fr)"><div class="pf-k"><div class="n">4</div><div class="l">On shift</div></div><div class="pf-k"><div class="n">£3.1k</div><div class="l">Pay run</div></div><div class="pf-k"><div class="n">0</div><div class="l">DBS due</div></div></div><div style="margin-top:6px"><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#2f6bd8;color:#fff;font-size:9px;font-weight:800;display:grid;place-items:center;flex:none'>AM</span>Amir · Lead coach<span style="margin-left:auto;background:#3a1626;color:#ff6f91;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">Cleared</span></div><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#FF3D7F;color:#fff;font-size:9px;font-weight:800;display:grid;place-items:center;flex:none'>JP</span>Jess · Assistant<span style="margin-left:auto;background:#eef2fb;color:#3f5bb3;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">38h</span></div></div></div></div></div></div></div><div class="slide"><div class="slide-in"><div><span class="chip">Meals &amp; allergens</span><h3 style="margin-top:12px">Plan meals, cover every allergen</h3><p class="sc">Build a menu per listing, see allergen coverage at a glance, and let parents pre-order &mdash; nothing slips through.</p><ul><li>Menu per listing &amp; day</li><li>Allergen coverage flagged</li><li>Parents pre-order &amp; pay</li><li>Caterer-ready reports</li></ul><a class="btn btn-primary btn-sm" href="/signup" style="margin-top:18px">Start free &rarr;</a></div><div><div class="pf pf-app"><div class="pf-bar"><span class="mk"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span><div><div class="t">Meals · Week 1</div></div><div class="per"><span class="on">All covered</span></div></div><div class="pf-body"><div class="pf-kpis" style="grid-template-columns:repeat(3,1fr)"><div class="pf-k"><div class="n">5</div><div class="l">Days</div></div><div class="pf-k"><div class="n">2</div><div class="l">Menus</div></div><div class="pf-k"><div class="n">✓</div><div class="l">Allergens</div></div></div><div style="margin-top:6px"><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#fff7e6;display:grid;place-items:center;flex:none'>🍽️</span>Mon · Pasta &amp; salad<span style="margin-left:auto;background:#3a1626;color:#ff6f91;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">Veg ✓</span></div><div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid #1E2A50;font-size:12px;font-weight:600;color:#c9d2ea"><span style='width:22px;height:22px;border-radius:7px;background:#fdeaea;display:grid;place-items:center;flex:none'>⚠️</span>2 nut allergies flagged<span style="margin-left:auto;background:#3a1626;color:#ff6f91;border-radius:999px;padding:2px 8px;font-size:10px;font-weight:800">Covered</span></div></div></div></div></div></div></div></div><div class="cdots"><button class="cdot on" aria-label="Go to slide 1"></button><button class="cdot" aria-label="Go to slide 2"></button><button class="cdot" aria-label="Go to slide 3"></button><button class="cdot" aria-label="Go to slide 4"></button><button class="cdot" aria-label="Go to slide 5"></button><button class="cdot" aria-label="Go to slide 6"></button></div></div></div><script>(function(){var c=document.getElementById("featCar");if(!c)return;var t=c.querySelector(".ctrack"),sl=t.children,dots=c.querySelectorAll(".cdot"),i=0,tm;function go(n){i=(n+sl.length)%sl.length;t.scrollTo({left:sl[i].offsetLeft,behavior:"smooth"});dots.forEach(function(d,j){d.classList.toggle("on",j===i)});}function nx(){go(i+1);}function st(){tm=setInterval(nx,4800);}function sp(){clearInterval(tm);}c.querySelector(".next").onclick=function(){sp();go(i+1);st();};c.querySelector(".prev").onclick=function(){sp();go(i-1);st();};dots.forEach(function(d,j){d.onclick=function(){sp();go(j);st();};});c.addEventListener("mouseenter",sp);c.addEventListener("mouseleave",st);t.addEventListener("scroll",function(){var x=Math.round(t.scrollLeft/t.clientWidth);if(x!==i){i=x;dots.forEach(function(d,j){d.classList.toggle("on",j===i)});}});st();})();</script></section>
+
+  <!-- PORTAL-FAITHFUL MONEY / FINANCE -->
+  <section class="band gband" id="money" style="padding-top:0">
+    <div class="shell">
+      <div class="sec-head center">
+        <span class="eyebrow">Your money — not a middleman's</span>
+        <h2>Every payment lands in your own account.</h2>
+        <p>The finance hub, exactly as it looks inside the platform. 0% commission, payouts to your own Stripe, funding reconciled — you keep every penny beyond the card fee.</p>
+      </div>
+
+      <div class="pf pf-app">
+        <div class="pf-bar">
+          <span class="mk"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span>
+          <div><div class="t">Finance &amp; analytics</div><div class="s">September · Sunrise Activity Camps</div></div>
+          <div class="per">
+            <span class="on">Overview</span><span>Revenue</span><span>Payouts</span><span>Debts</span><span>Families</span>
+          </div>
+        </div>
+        <div class="pf-body">
+          <div class="pf-kpis">
+            <div class="pf-k"><div class="n b">£8,240</div><div class="l">Taken · Sep</div><div class="tr up">▲ 14%</div></div>
+            <div class="pf-k"><div class="n" style="color:#FF3D7F">92%</div><div class="l">Collected</div><div class="tr up">▲ 3%</div></div>
+            <div class="pf-k"><div class="n">£2,240</div><div class="l">Outstanding</div><div class="tr down">▼ 4%</div></div>
+            <div class="pf-k"><div class="n">£1,120</div><div class="l">Tax-Free Childcare</div><div class="tr" style="color:#8B97BC">reconciled</div></div>
+            <div class="pf-k"><div class="n">£180</div><div class="l">Refunds</div><div class="tr" style="color:#8B97BC">2 this month</div></div>
+            <div class="pf-k"><div class="n p">£6,010</div><div class="l">Next payout</div><div class="tr" style="color:#FF3D7F">Fri 12 Sep</div></div>
+          </div>
+
+          <div class="pf-grid">
+            <!-- Revenue vs collected, weekly grouped bars -->
+            <div class="pf-card">
+              <div class="pf-head">
+                <h4>Revenue vs collected <span>· last 6 weeks</span></h4>
+                <div class="pf-leg" style="margin:0"><span><i style="background:#2f6bd8"></i>Invoiced</span><span><i style="background:#FF3D7F"></i>Collected</span></div>
+              </div>
+              <div class="pf-bars" style="gap:14px;height:158px">
+                <div class="pf-col"><span class="tot">£1.2k</span><div style="display:flex;gap:3px;align-items:flex-end"><i style="width:11px;height:60px;background:#2f6bd8;border-radius:4px 4px 0 0"></i><i style="width:11px;height:52px;background:#FF3D7F;border-radius:4px 4px 0 0"></i></div></div>
+                <div class="pf-col"><span class="tot">£1.4k</span><div style="display:flex;gap:3px;align-items:flex-end"><i style="width:11px;height:70px;background:#2f6bd8;border-radius:4px 4px 0 0"></i><i style="width:11px;height:66px;background:#FF3D7F;border-radius:4px 4px 0 0"></i></div></div>
+                <div class="pf-col"><span class="tot">£1.5k</span><div style="display:flex;gap:3px;align-items:flex-end"><i style="width:11px;height:78px;background:#2f6bd8;border-radius:4px 4px 0 0"></i><i style="width:11px;height:70px;background:#FF3D7F;border-radius:4px 4px 0 0"></i></div></div>
+                <div class="pf-col"><span class="tot">£1.9k</span><div style="display:flex;gap:3px;align-items:flex-end"><i style="width:11px;height:100px;background:#2f6bd8;border-radius:4px 4px 0 0"></i><i style="width:11px;height:96px;background:#FF3D7F;border-radius:4px 4px 0 0"></i></div></div>
+                <div class="pf-col"><span class="tot">£2.2k</span><div style="display:flex;gap:3px;align-items:flex-end"><i style="width:11px;height:118px;background:#2f6bd8;border-radius:4px 4px 0 0"></i><i style="width:11px;height:104px;background:#FF3D7F;border-radius:4px 4px 0 0"></i></div></div>
+                <div class="pf-col"><span class="tot">£1.1k</span><div style="display:flex;gap:3px;align-items:flex-end"><i style="width:11px;height:56px;background:#2f6bd8;border-radius:4px 4px 0 0"></i><i style="width:11px;height:44px;background:#FF3D7F;border-radius:4px 4px 0 0"></i></div></div>
+              </div>
+              <div class="pf-xl"><span>W1</span><span>W2</span><span>W3</span><span>W4</span><span>W5</span><span>W6</span></div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:12px">
+              <!-- Next payout card -->
+              <div class="pf-card" style="border-color:#5a2a40;background:linear-gradient(160deg,#fff,#1b1017)">
+                <div style="display:flex;align-items:center;gap:9px">
+                  <span style="width:30px;height:30px;border-radius:9px;background:#FF3D7F;color:#fff;display:grid;place-items:center;font-weight:800">£</span>
+                  <div style="flex:1"><div style="font-size:13px;font-weight:800;color:#EAF0FF">Next payout to you</div><div style="font-size:11px;color:#8B97BC">Fri 12 Sep · Barclays ••4471</div></div>
+                  <div style="font-size:18px;font-weight:800;color:#FF3D7F;font-variant-numeric:tabular-nums">£6,010</div>
+                </div>
+                <div style="margin-top:8px;font-size:11px;font-weight:700;color:#ff6f91">✓ Direct to your account · 0% commission</div>
+              </div>
+              <!-- Outstanding / debts -->
+              <div class="pf-card">
+                <h4 style="margin-bottom:2px">Outstanding <span>· £2,240 across 9 families</span></h4>
+                <div class="pf-attn">
+                  <div class="r"><span class="d" style="background:#c0392b"></span>Doyle family · £312 <span class="go">Chase</span></div>
+                  <div class="r"><span class="d" style="background:#f5b81f"></span>Okafor family · £168 <span class="go">Remind</span></div>
+                  <div class="r"><span class="d" style="background:#f5b81f"></span>Patel family · £144 <span class="go">Remind</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <p class="pf-cap"><b>No platform holds your cash</b> — it settles straight to your own bank via Stripe Connect.</p>
+    </div>
+  </section>
+
+  
+
+  
+
+  <!-- TAX-FREE CHILDCARE (major feature) -->
+  <section class="band gband" id="tfc" style="padding-top:0">
+    <div class="shell">
+      <div style="display:grid;gap:36px;align-items:center" class="tfc-grid">
+        <div>
+          <span class="eyebrow">Tax-Free Childcare, built in</span>
+          <h2 style="font-size:clamp(26px,3.4vw,38px);font-weight:800;margin-top:12px">Take Tax-Free Childcare — without the chaos.</h2>
+          <p style="color:var(--ink-2);font-size:16.5px;margin-top:12px;max-width:52ch">Around <b style="color:var(--ink)">545,000 UK families</b> pay with Tax-Free Childcare. Accept it right at checkout, reconcile every payment against the right booking and child, and stop chasing “have you paid?” — no separate spreadsheet, no logging into the HMRC portal for every transaction.</p>
+          <ul style="list-style:none;padding:0;margin:18px 0 0;display:flex;flex-direction:column;gap:9px">
+            <li style="display:flex;gap:9px;font-size:14px;font-weight:600;color:var(--ink-2)"><span style="color:var(--brand);font-weight:900">✓</span>Parents pay with their TFC code at checkout</li>
+            <li style="display:flex;gap:9px;font-size:14px;font-weight:600;color:var(--ink-2)"><span style="color:var(--brand);font-weight:900">✓</span>Every payment matched &amp; reconciled to the booking</li>
+            <li style="display:flex;gap:9px;font-size:14px;font-weight:600;color:var(--ink-2)"><span style="color:var(--brand);font-weight:900">✓</span>Paid, pending &amp; outstanding across your families, at a glance</li>
+            <li style="display:flex;gap:9px;font-size:14px;font-weight:600;color:var(--ink-2)"><span style="color:var(--brand);font-weight:900">✓</span>No more manual balance-checking between systems</li>
+          </ul>
+          <div style="margin-top:16px"><span class="chip" style="background:var(--indigo-soft);border-color:transparent;color:var(--indigo)">⚡ Direct HMRC verification — rolling out</span></div>
+        </div>
+        <div class="pf pf-app" style="max-width:100%;width:100%">
+          <div class="pf-bar"><span class="mk"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span><div><div class="t">Checkout · Summer Camp Wk 1</div><div class="s">Mia Doyle · £160.00</div></div></div>
+          <div class="pf-body" style="display:flex;flex-direction:column;gap:10px">
+            <div style="border:2px solid var(--indigo);border-radius:13px;padding:12px;background:var(--indigo-soft)">
+              <div style="display:flex;align-items:center;gap:8px"><span style="width:26px;height:26px;border-radius:8px;background:var(--indigo);color:#fff;display:grid;place-items:center;font-weight:800;font-size:12px">TFC</span><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:#EAF0FF">Tax-Free Childcare</div><div style="font-size:11px;color:#8B97BC">Government scheme · 20% top-up</div></div><span style="font-size:11px;font-weight:800;color:var(--indigo)">Selected</span></div>
+              <div style="margin-top:9px;display:flex;gap:8px;align-items:center"><div style="flex:1;border:1px solid var(--line);border-radius:9px;padding:7px 10px;font-size:12px;font-weight:700;color:#EAF0FF;background:#0C1130">Ref: MDOYLE-4471</div><div style="font-size:12px;font-weight:800;color:#ff6f91">Balance £340</div></div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:center;border:1px solid #1E2A50;border-radius:12px;padding:10px"><span style="width:26px;height:26px;border-radius:8px;background:#16244c;display:grid;place-items:center">✅</span><div style="flex:1"><div style="font-size:12.5px;font-weight:800;color:#EAF0FF">Payment reconciled</div><div style="font-size:11px;color:#8B97BC">£160 matched to Mia Doyle · Week 1</div></div><span style="font-size:10px;font-weight:800;color:#ff6f91;background:#3a1626;border-radius:999px;padding:3px 8px">Paid</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:12px;color:#8B97BC;padding:0 2px"><span>No HMRC portal login needed</span><span style="font-weight:800;color:#EAF0FF">Booking confirmed</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- COMPARE -->
+  <section class="band" id="compare">
+    <div class="shell">
+      <div class="sec-head">
+        <span class="eyebrow">Why providers switch</span>
+        <h2>Built for you — not for a booking middleman.</h2>
+        <p>Most platforms hold your money, take a cut and put their brand between you and your parents. This does the opposite.</p>
+      </div>
+      <div class="cmp">
+        <table class="compare">
+          <thead><tr><th>What matters</th><th class="us">Wigglekit</th><th>Typical booking platform</th></tr></thead>
+          <tbody>
+            <tr><td class="f">Money to your own account</td><td class="us"><span class="yes">✓</span> Next day, your Stripe</td><td class="them">Held &amp; paid out later</td></tr>
+            <tr><td class="f">Commission on bookings</td><td class="us"><span class="yes">0%</span> — flat fee</td><td class="them">1–3%+ per booking</td></tr>
+            <tr><td class="f">Your own branding &amp; domain</td><td class="us"><span class="yes">✓</span> 100% yours</td><td class="them">Their brand, sometimes</td></tr>
+            <tr><td class="f">An AI team built in</td><td class="us"><span class="yes">✓</span> 8 assistants</td><td class="them"><span class="no">✗</span> None</td></tr>
+            <tr><td class="f">Staff, payroll &amp; safeguarding</td><td class="us"><span class="yes">✓</span> Included</td><td class="them"><span class="no">✗</span> Rarely</td></tr>
+            <tr><td class="f">Franchise &amp; head office</td><td class="us"><span class="yes">✓</span> From day one</td><td class="them"><span class="no">✗</span> No</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+
+
+
+  <!-- TESTIMONIALS -->
+  <section class="band" style="padding-top:0">
+    <div class="shell">
+      <div class="sec-head center"><span class="eyebrow">Loved by providers</span><h2>Run by real camps and clubs.</h2></div>
+      <p class="tsub"><b>★★★★★</b> &nbsp;From the camps, clubs and coaches already running on Wigglekit.</p>
+      <div class="tgrid">
+        <div class="quote"><div class="stars">★★★★★</div><p>“We run the whole summer from one screen now — bookings, registers, payroll and parent updates. It paid for itself in the first week.”</p><div class="who"><span class="av">AP</span><div><div class="nm">APF Activity Camps</div><div class="rl">Holiday camps · Milton Keynes</div></div></div></div>
+        <div class="quote"><div class="stars">★★★★★</div><p>“A flat fee means growth never costs us more. Every extra place we fill stays with us, so we can reach more young people.”</p><div class="who"><span class="av">KK</span><div><div class="nm">Keeping Kids Off The Street</div><div class="rl">Youth programmes</div></div></div></div>
+        <div class="quote"><div class="stars">★★★★★</div><p>“Parents book and pay in seconds on our own branded page, and the AI Front Desk answers the calls we used to miss.”</p><div class="who"><span class="av">CZ</span><div><div class="nm">Combat Zone MK</div><div class="rl">Martial arts &amp; fitness</div></div></div></div>
+        <div class="quote"><div class="stars">★★★★★</div><p>“Registers, ratios and safeguarding are all on my phone on the day. It's the first system that actually feels built for coaches.”</p><div class="who"><span class="av">KO</span><div><div class="nm">Kick-Off Sports</div><div class="rl">Grassroots football</div></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RESOURCES -->
+  <section class="band" id="resources" style="padding-top:0">
+    <div class="shell">
+      <div class="sec-head center"><span class="eyebrow">Help &amp; resources</span><h2>Everything you need to get going.</h2><p>Guides, real-world playbooks and a community of providers &mdash; so you&rsquo;re never stuck.</p></div>
+      <div class="rescards">
+        <a class="rescard" href="#"><span class="ic">📘</span><h3>Setup guides</h3><p>Step-by-step help to launch your storefront and take your first booking.</p><span class="soon">Coming soon</span></a>
+        <a class="rescard" href="#"><span class="ic">✍️</span><h3>The blog</h3><p>Playbooks on filling sessions, pricing and running safer camps.</p><span class="soon">Coming soon</span></a>
+        <a class="rescard" href="#"><span class="ic">👥</span><h3>Provider community</h3><p>Swap tips with other camps, clubs and coaches like you.</p><span class="soon">Coming soon</span></a>
+        <a class="rescard" href="/security.html"><span class="ic">🛡️</span><h3>Trust &amp; security</h3><p>How we protect your families&rsquo; data &mdash; UK GDPR, safeguarding, Stripe.</p><span class="soon" style="background:rgba(52,211,193,.16);color:#34d3c1;border-color:rgba(52,211,193,.4)">Live</span></a>
+      </div>
+    </div>
+  </section>
+
+<!-- TRUSTED BY (logo slots) -->
+  <section class="band" id="trusted" style="padding:56px 0">
+    <div class="shell">
+      <p class="trusted-lead">Trusted by camps, clubs, coaches &amp; childcare providers across the UK</p>
+      <div class="logo-marquee"><div class="logo-track" id="logoTrack"><div class="logo-slot filled"><img src="/images/logos/apf.png" alt="APF Activity Camps"></div>
+        <div class="logo-slot filled"><img src="/images/logos/kickoff.png" alt="Kick-Off Sports"></div>
+        <div class="logo-slot filled"><img src="/images/logos/kkots.png" alt="Keeping Kids Off The Streets"></div><div class="logo-slot filled dark"><img src="/images/logos/combatzone.png" alt="Combat Zone MK"></div></div></div><script>(function(){var t=document.getElementById("logoTrack");if(t)t.innerHTML+=t.innerHTML;})();</script>
+    </div>
+  </section>
+
+  <!-- FINAL -->
+  <section class="band" style="padding-top:0">
+    <div class="shell">
+      <div class="final">
+        <span class="eyebrow">Ready to look amazing?</span>
+        <h2>Run the day. Not the spreadsheets.</h2>
+        <p>Import your activities and take your first booking this week — on your own brand, money straight to your account.</p>
+        <div style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap">
+          <a class="btn btn-light" href="/signup" style="font-size:16px;padding:15px 28px">Get started →</a>
+          <a class="btn btn-ghost" href="/demo" style="font-size:16px;padding:15px 28px;border-color:rgba(255,255,255,.3);color:#fff">Talk to us</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="shell">
+      <div class="foot-grid">
+        <div>
+          <a class="brand" href="#top"><span class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff"/></svg></span><span>Wiggle<span class="os">kit</span></span></a>
+          <p>The operating system for camps, clubs, sports, wraparound &amp; childcare providers. Your brand, your bank account, zero booking commission.</p>
+        </div>
+        <div class="foot-col"><h4>Pages</h4><a href="/nametbc.html">Home</a><a href="/nametbc.html#platform">Platform</a><a href="/freelancers.html">Freelancers</a><a href="/companies.html">Companies</a><a href="/franchises.html">Franchises</a><a href="/pricing.html">Pricing</a><a href="/security.html">Security</a><a href="/tour.html">Product tour</a></div>
+        <div class="foot-col"><h4>Get in touch</h4><a href="/pricing.html">Pricing</a><a href="/demo">Book a demo</a><a href="/terms.html">Terms of Service</a><a href="/privacy.html">Privacy &amp; Data Protection</a><a href="/dpa.html">Data Processing Agreement</a><a href="/demo">Contact us</a></div>
+      </div>
+      <div class="foot-bot">
+        <span class="note">Wigglekit — your brand, your bank account, zero booking commission.</span>
+        <small>© 2026 · All rights reserved.</small>
+      </div>
+    </div>
+  </footer>
+  <!-- Wigglekit FX2: hero 3D parallax float field -->
+  <script>
+  (function(){
+    var scene=document.querySelector('.scene3d');if(!scene)return;
+    var hero=scene.parentElement;
+    var floats=[].slice.call(scene.querySelectorAll('.float3d')).map(function(el){return {el:el,d:parseFloat(el.getAttribute('data-depth'))||.5};});
+    var mx=0,my=0,tmx=0,tmy=0,sc=window.scrollY||0,raf=null;
+    window.addEventListener('pointermove',function(e){var r=hero.getBoundingClientRect();tmx=(e.clientX-r.left)/r.width-.5;tmy=(e.clientY-r.top)/r.height-.5;},{passive:true});
+    window.addEventListener('scroll',function(){sc=window.scrollY||0;},{passive:true});
+    function loop(){
+      mx+=(tmx-mx)*.06;my+=(tmy-my)*.06;
+      for(var i=0;i<floats.length;i++){var f=floats[i],d=f.d;
+        var tx=mx*80*d, ty=my*52*d - sc*0.14*d, tz=(d-0.5)*280, s=0.72+d*0.6;
+        f.el.style.transform='translate3d('+tx.toFixed(1)+'px,'+ty.toFixed(1)+'px,'+tz.toFixed(0)+'px) scale('+s.toFixed(3)+')';
+      }
+      raf=requestAnimationFrame(loop);
+    }
+    raf=requestAnimationFrame(loop);
+    if('IntersectionObserver' in window){new IntersectionObserver(function(es){if(es[0].isIntersecting){if(!raf)raf=requestAnimationFrame(loop);}else if(raf){cancelAnimationFrame(raf);raf=null;}},{threshold:0}).observe(hero);}
+  })();
+  </script>
+  <!-- Wigglekit feature orbit -->
+  <script>
+  (function(){
+    var ring=document.getElementById('orbitRing');if(!ring)return;
+    var chips=[].slice.call(ring.querySelectorAll('.ochip')),n=chips.length,stage=ring.parentElement;
+    var cx,cy,RX,RY;
+    function size(){var r=stage.getBoundingClientRect();cx=r.width/2;cy=r.height/2;RX=Math.min(r.width*0.40,330);RY=Math.min(r.height*0.34,150);}
+    size();window.addEventListener('resize',size,{passive:true});
+    var mx=0,my=0,tmx=0,tmy=0,speed=0.00015,start=null,raf=null;
+    stage.addEventListener('pointermove',function(e){var r=stage.getBoundingClientRect();tmx=(e.clientX-r.left)/r.width-.5;tmy=(e.clientY-r.top)/r.height-.5;},{passive:true});
+    stage.addEventListener('pointerleave',function(){tmx=0;tmy=0;});
+    function frame(t){
+      if(start===null)start=t;var el=t-start;
+      mx+=(tmx-mx)*.05;my+=(tmy-my)*.05;
+      for(var i=0;i<n;i++){
+        var a=(i/n)*Math.PI*2+el*speed,dx=Math.cos(a),dy=Math.sin(a),depth=(dy+1)/2;
+        var x=cx+dx*RX+mx*46*(0.4+depth),y=cy+dy*RY+my*26*(0.4+depth),sc=0.60+depth*0.55;
+        var c=chips[i];
+        c.style.transform='translate(-50%,-50%) translate('+x.toFixed(1)+'px,'+y.toFixed(1)+'px) scale('+sc.toFixed(3)+')';
+        c.style.zIndex=Math.round(depth*30);
+        c.style.opacity=(0.4+depth*0.6).toFixed(2);
+        c.style.filter=depth<0.38?'blur(1.3px)':'none';
+      }
+      raf=requestAnimationFrame(frame);
+    }
+    raf=requestAnimationFrame(frame);
+    if('IntersectionObserver' in window){new IntersectionObserver(function(es){if(es[0].isIntersecting){if(!raf)raf=requestAnimationFrame(frame);}else if(raf){cancelAnimationFrame(raf);raf=null;start=null;}},{threshold:0}).observe(stage);}
+  })();
+  </script>
+  <!-- Wigglekit FX: reveal, 3D tilt, magnetic buttons, count-up, savings calculator, how-it-works stepper -->
+  <script>
+  (function(){
+    var RM=false; /* brand motion: reveals/tilt/counters always run */
+    var FINE=window.matchMedia&&window.matchMedia('(pointer:fine)').matches;
+    var qa=function(s,r){return [].slice.call((r||document).querySelectorAll(s));};
+
+    // easing count-up helper (shared)
+    function animNum(el,to,fmt){var dur=1100,s=null;function f(t){s=s||t;var p=Math.min((t-s)/dur,1);var v=Math.floor((1-Math.pow(1-p,3))*to);el.textContent=fmt(v);if(p<1)requestAnimationFrame(f);}requestAnimationFrame(f);}
+
+    // ---- scroll reveal ----
+    var rev=qa('[data-reveal]');
+    ['.band .sec-head','.fcard','.save-banner','#calc .calc','.final','#how .steps'].forEach(function(sel){
+      qa(sel).forEach(function(el){ if(!el.hasAttribute('data-reveal')){el.setAttribute('data-reveal','');rev.push(el);} });
+    });
+    qa('.fgrid').forEach(function(g){[].slice.call(g.children).forEach(function(c,i){c.classList.add('d'+((i%5)+1));});});
+    if(RM||!('IntersectionObserver' in window)){ rev.forEach(function(el){el.classList.add('in');}); }
+    else{
+      var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.12,rootMargin:'0px 0px -7% 0px'});
+      rev.forEach(function(el){io.observe(el);});
+    }
+
+    // ---- 3D tilt cards ----
+    if(!RM&&FINE){
+      qa('.fcard').forEach(function(card){
+        var g=document.createElement('div');g.className='glare';card.appendChild(g);
+        card.addEventListener('pointermove',function(e){
+          var r=card.getBoundingClientRect();var px=(e.clientX-r.left)/r.width,py=(e.clientY-r.top)/r.height;
+          card.classList.add('tilting');
+          card.style.transform='rotateX('+((py-.5)*-7)+'deg) rotateY('+((px-.5)*9)+'deg) translateY(-4px)';
+          card.style.setProperty('--gx',(px*100)+'%');card.style.setProperty('--gy',(py*100)+'%');
+        });
+        card.addEventListener('pointerleave',function(){card.classList.remove('tilting');card.style.transform='';});
+      });
+    }
+
+    // ---- magnetic primary buttons ----
+    if(!RM&&FINE){
+      qa('.btn-primary').forEach(function(b){
+        b.addEventListener('pointermove',function(e){var r=b.getBoundingClientRect();b.style.transform='translate('+((e.clientX-r.left-r.width/2)*.18)+'px,'+((e.clientY-r.top-r.height/2)*.30)+'px)';});
+        b.addEventListener('pointerleave',function(){b.style.transform='';});
+      });
+    }
+
+    // ---- count-up proof stats ----
+    function watchCount(el,to,fmt){if(RM||!('IntersectionObserver' in window)){el.textContent=fmt(to);return;}var o=new IntersectionObserver(function(es){if(es[0].isIntersecting){animNum(el,to,fmt);o.disconnect();}},{threshold:.6});o.observe(el);}
+    qa('.proof .n').forEach(function(n){var m=(n.textContent||'').match(/^([0-9]+)([^0-9]*)$/);if(m){var suf=m[2]||'';watchCount(n,parseInt(m[1],10),function(v){return v+suf;});}});
+
+    // ---- live savings calculator ----
+    (function(){
+      var rk=document.getElementById('rKids'),rp=document.getElementById('rPrice');if(!rk||!rp)return;
+      var FEE=49*12;
+      function money(v){return v.toLocaleString('en-GB');}
+      function setP(r){r.style.setProperty('--p',((r.value-r.min)/(r.max-r.min)*100)+'%');}
+      function calc(anim){
+        var kids=+rk.value,price=+rp.value,rev=kids*price*52,comm=Math.round(rev*0.05),saved=Math.max(0,comm-FEE);
+        document.getElementById('cKids').textContent=kids;
+        document.getElementById('cPrice').textContent=price;
+        document.getElementById('cRev').textContent=money(rev);
+        document.getElementById('cComm').textContent=money(comm);
+        document.getElementById('cFee').textContent=money(FEE);
+        var el=document.getElementById('cSave');
+        if(anim&&!RM){animNum(el,saved,money);}else{el.textContent=money(saved);}
+        setP(rk);setP(rp);
+      }
+      rk.addEventListener('input',function(){calc(false);});
+      rp.addEventListener('input',function(){calc(false);});
+      calc(false);
+      if('IntersectionObserver' in window){var seen=false;var o=new IntersectionObserver(function(es){if(es[0].isIntersecting&&!seen){seen=true;calc(true);o.disconnect();}},{threshold:.4});o.observe(document.getElementById('calc'));}
+    })();
+
+    // ---- how-it-works stepper ----
+    (function(){
+      var steps=qa('#how .step'),fill=document.getElementById('railFill'),sec=document.getElementById('how');if(!steps.length)return;
+      if('IntersectionObserver' in window){
+        var so=new IntersectionObserver(function(es){es.forEach(function(e){e.target.classList.toggle('on',e.isIntersecting&&e.intersectionRatio>=.55);});},{threshold:[.55]});
+        steps.forEach(function(s){so.observe(s);});
+      } else steps.forEach(function(s){s.classList.add('on');});
+      function onScroll(){if(!fill)return;var r=sec.getBoundingClientRect(),vh=window.innerHeight,p=(vh*.62-r.top)/(r.height*.72);fill.style.height=Math.max(0,Math.min(1,p))*100+'%';}
+      window.addEventListener('scroll',onScroll,{passive:true});window.addEventListener('resize',onScroll,{passive:true});onScroll();
+    })();
+  })();
+  </script>
+  <!-- Hero aurora: self-contained WebGL plasma (navy->pink), cursor-reactive, perf-guarded -->
+  <script>
+  (function(){
+    var c=document.getElementById('aurora'); if(!c) return;
+    var gl=c.getContext('webgl')||c.getContext('experimental-webgl');
+    var reduce=false; /* brand motion: hero aurora always animates */
+    if(!gl){ c.style.display='none'; return; } // graceful fallback to the CSS ::before glow
+    var vs='attribute vec2 p;void main(){gl_Position=vec4(p,0.,1.);}';
+    var fs=[
+    'precision highp float;',
+    'uniform vec2 u_res;uniform float u_time;uniform vec2 u_mouse;',
+    'float hash(vec2 p){p=fract(p*vec2(123.34,456.21));p+=dot(p,p+45.32);return fract(p.x*p.y);}',
+    'float noise(vec2 p){vec2 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);',
+    ' float a=hash(i),b=hash(i+vec2(1,0)),cc=hash(i+vec2(0,1)),d=hash(i+vec2(1,1));',
+    ' return mix(mix(a,b,f.x),mix(cc,d,f.x),f.y);}',
+    'float fbm(vec2 p){float v=0.,a=.5;for(int i=0;i<5;i++){v+=a*noise(p);p*=2.02;a*=.5;}return v;}',
+    'void main(){',
+    ' vec2 uv=gl_FragCoord.xy/u_res.xy;vec2 p=uv;p.x*=u_res.x/u_res.y;',
+    ' float t=u_time*0.05;',
+    ' vec2 q=vec2(fbm(p+vec2(0.,t)),fbm(p+vec2(5.2,-t)));',
+    ' float n=fbm(p+q*1.6+vec2(t,-t));',
+    ' vec3 navy=vec3(0.031,0.043,0.118),indigo=vec3(0.247,0.42,0.847),pink=vec3(1.0,0.239,0.498);',
+    ' vec3 au=navy;',
+    ' au=mix(au,indigo,smoothstep(0.35,0.9,n)*0.5);',
+    ' au=mix(au,pink,smoothstep(0.5,0.95,n*q.x)*0.5);',
+    ' float edge=smoothstep(0.12,0.95,length(uv-vec2(0.4,0.5)));',
+    ' vec3 col=navy+(au-navy)*mix(0.45,1.0,edge);',
+    ' vec2 m=u_mouse;m.x*=u_res.x/u_res.y;',
+    ' col+=pink*0.16*exp(-distance(p,m)*3.2);',
+    ' gl_FragColor=vec4(col,1.0);',
+    '}'].join('\n');
+    function sh(t,s){var o=gl.createShader(t);gl.shaderSource(o,s);gl.compileShader(o);return o;}
+    var prog=gl.createProgram();
+    gl.attachShader(prog,sh(gl.VERTEX_SHADER,vs));
+    gl.attachShader(prog,sh(gl.FRAGMENT_SHADER,fs));
+    gl.linkProgram(prog);gl.useProgram(prog);
+    var buf=gl.createBuffer();gl.bindBuffer(gl.ARRAY_BUFFER,buf);
+    gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,3,-1,-1,3]),gl.STATIC_DRAW);
+    var loc=gl.getAttribLocation(prog,'p');gl.enableVertexAttribArray(loc);
+    gl.vertexAttribPointer(loc,2,gl.FLOAT,false,0,0);
+    var uRes=gl.getUniformLocation(prog,'u_res'),uTime=gl.getUniformLocation(prog,'u_time'),uMouse=gl.getUniformLocation(prog,'u_mouse');
+    var mouse=[0.5,0.55],target=[0.5,0.55];
+    function resize(){
+      var dpr=Math.min(window.devicePixelRatio||1, window.innerWidth<760?1:1.5);
+      var w=c.clientWidth*dpr,h=c.clientHeight*dpr;
+      if(c.width!==w||c.height!==h){c.width=w;c.height=h;gl.viewport(0,0,w,h);}
+    }
+    c.parentElement.addEventListener('pointermove',function(e){
+      var r=c.getBoundingClientRect();
+      target[0]=(e.clientX-r.left)/r.width; target[1]=1.-(e.clientY-r.top)/r.height;
+    });
+    var running=true,raf;
+    function frame(ms){
+      if(!running) return;
+      resize();
+      mouse[0]+=(target[0]-mouse[0])*0.06; mouse[1]+=(target[1]-mouse[1])*0.06;
+      gl.uniform2f(uRes,c.width,c.height);
+      gl.uniform1f(uTime,ms*0.001);
+      gl.uniform2f(uMouse,mouse[0],mouse[1]);
+      gl.drawArrays(gl.TRIANGLES,0,3);
+      raf=requestAnimationFrame(frame);
+    }
+    function start(){ if(!running){running=true;raf=requestAnimationFrame(frame);} }
+    function stop(){ running=false; if(raf) cancelAnimationFrame(raf); }
+    if(reduce){ resize(); gl.uniform2f(uRes,c.width,c.height); gl.uniform1f(uTime,3.0); gl.uniform2f(uMouse,0.5,0.55); gl.drawArrays(gl.TRIANGLES,0,3); }
+    else {
+      raf=requestAnimationFrame(frame);
+      document.addEventListener('visibilitychange',function(){document.hidden?stop():start();});
+      if('IntersectionObserver' in window){
+        new IntersectionObserver(function(es){es[0].isIntersecting?start():stop();},{threshold:0}).observe(c.parentElement);
+      }
+    }
+  })();
+  </script>
+  <!-- live auto-reload: refreshes this page whenever I deploy a change -->
+  <div id="liveflag" style="position:fixed;left:12px;bottom:12px;z-index:999;background:#100e26;color:#fff;font:700 11px system-ui;padding:6px 11px;border-radius:999px;opacity:.72">🟢 Live · auto-updates as changes ship</div>
+  <script>
+  (function(){
+    var cur=null;
+    async function tick(){
+      try{
+        var r=await fetch('/nametbc.version?t='+Date.now(),{cache:'no-store'});
+        if(r.ok){var v=(await r.text()).trim();
+          if(cur===null){cur=v;}
+          else if(v!==cur){document.getElementById('liveflag').textContent='🔄 Updating…';location.replace(location.pathname+'?t='+Date.now());return;}}
+      }catch(e){}
+      setTimeout(tick,1200);
+    }
+    tick();
+  })();
+  </script></div></body></html>

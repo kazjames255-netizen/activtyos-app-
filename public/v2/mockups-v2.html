@@ -1,0 +1,384 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Mockup options — Wigglekit</title>
+<link rel="stylesheet" href="/v2/nametbc.css?v=par1">
+<style>
+  .mk-page{padding:30px 0 70px;background:var(--bg)}
+  .mk-head{max-width:1180px;margin:0 auto 24px;padding:0 22px}
+  .mk-head h1{font-size:29px;font-weight:800;color:var(--ink);margin:0 0 6px}
+  .mk-head p{color:var(--ink-2);font-size:14px;margin:0;max-width:74ch}
+  .mk-list{max-width:1180px;margin:0 auto;padding:0 22px;display:grid;gap:20px}
+  .mk-cap{display:flex;align-items:baseline;gap:9px;margin:0 0 8px}
+  .mk-cap b{font-size:14px;color:var(--ink)}
+  .mk-cap span{font-size:12px;color:var(--ink-3)}
+  .mk-cap i{margin-left:auto;font-style:normal;font-size:10.5px;font-weight:800;color:var(--brand);
+    background:var(--brand-soft);border-radius:999px;padding:3px 9px}
+
+  /* stages sit ON a ground — no containing card */
+  .st{position:relative;border-radius:18px;overflow:hidden;padding:22px}
+  .st.dark{background-image:var(--dots),linear-gradient(120deg,#1d3a8f 0%,#274ba3 45%,#3f78d8 100%);
+    background-size:18px 18px,cover;background-repeat:repeat,no-repeat}
+  .st.light{background:var(--bg);border:1px solid var(--line)}
+  .st.deep{background-image:var(--dots),linear-gradient(150deg,#16306e,#23479f 60%,#2f6bd8);
+    background-size:18px 18px,cover;background-repeat:repeat,no-repeat}
+  .st-in{position:relative;height:300px}
+  .st-in.tall{height:360px}
+  .st-in.short{height:230px}
+
+  /* viewBox is 0..100 in both axes with aspect ratio off, so path coordinates
+     are literally the same percentages the cards are positioned with */
+  .wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:1}
+  .st.dark .wires path,.st.deep .wires path{stroke:rgba(255,255,255,.5)}
+  .st.light .wires path{stroke:#9fb6e0}
+
+  .sc{position:absolute;z-index:3;background:#fff;border-radius:12px;padding:8px 10px;
+    display:flex;align-items:flex-start;gap:7px;width:172px;
+    box-shadow:0 20px 44px -20px rgba(9,20,54,.5)}
+  .sc.wide{width:206px}
+  .sc small{display:block;font-size:8px;color:var(--ink-3);line-height:1.3}
+  .sc b{display:block;font-size:10.5px;color:var(--ink);line-height:1.25;margin-top:1px}
+  .sc .tag{display:block;margin-top:4px;padding-top:4px;border-top:1px solid var(--line);
+    font-size:7.5px;font-weight:800;color:var(--brand)}
+  .sc .tag.g{color:#0b6b4f}
+  .sc .n{width:15px;height:15px;border-radius:50%;flex:none;display:grid;place-items:center;
+    font-size:8px;font-weight:800;background:var(--brand);color:#fff;margin-top:1px}
+  .sc .amt{margin-left:auto;font-size:11px;font-weight:800;color:#0b6b4f;align-self:center}
+  .sc.gold .n{background:var(--gold);color:#241a00}
+  .sc.violet .n{background:#5a3fd0}
+
+  .pill{position:absolute;left:50%;bottom:0;transform:translateX(-50%);z-index:6;
+    border-radius:999px;padding:5px 13px;font-size:9px;white-space:nowrap}
+  .st.dark .pill,.st.deep .pill{background:rgba(255,255,255,.12);color:#fff;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.28)}
+  .st.light .pill{background:var(--brand);color:#fff}
+  .pill b{color:var(--gold)}
+
+  /* .phone-pop ships with left:-26px;bottom:-30px for the freelancers hero —
+     reset all four so the inline placement on each mockup is what applies */
+  .wrap .ph{position:absolute;left:auto;right:auto;top:auto;bottom:auto;
+    z-index:4;overflow:hidden;display:flex;flex-direction:column;
+    border-radius:20px;padding:4px;width:150px !important;height:262px !important;min-height:0 !important}
+  .wrap .ph.sm{width:118px !important;height:206px !important;border-radius:17px}
+  .wrap .ph.lg{width:168px !important;height:296px !important}
+  .wrap .ph .pp-body{flex:1;min-height:0;overflow:hidden;padding:7px;display:flex;flex-direction:column}
+  .wrap .ph .pp-bar{padding:5px 8px;font-size:9px}
+  .wrap .ph .pp-status{padding:4px 8px 2px;font-size:7px;border-radius:16px 16px 0 0}
+  .wrap .ph .pp-status::after{width:28px;height:6px;top:3px}
+  .wrap .ph .pp-tabbar{padding:4px 7px 3px}
+  .wrap .ph .pp-tabbar i{font-size:6.5px}
+  .wrap .ph .pp-homewrap{border-radius:0 0 16px 16px;padding:3px 0 4px}
+  .wrap .ph .pp-home{width:44px;height:3px}
+
+  .lap{position:absolute;z-index:2}
+  .lap-scr{background:#0d1430;border-radius:11px;padding:5px 5px 6px;
+    box-shadow:0 26px 54px -22px rgba(9,20,54,.6)}
+  .lap-in{background:#fff;border-radius:6px;overflow:hidden;aspect-ratio:16/10}
+  .lap-base{height:8px;width:110%;margin-left:-5%;border-radius:0 0 8px 8px;
+    background:linear-gradient(180deg,#cdddf7,#8fa9d8)}
+
+  .brow{position:absolute;z-index:2;background:#fff;border-radius:11px;overflow:hidden;
+    box-shadow:0 26px 54px -22px rgba(9,20,54,.5)}
+  .brow-bar{display:flex;align-items:center;gap:4px;padding:6px 9px;background:var(--panel);border-bottom:1px solid var(--line)}
+  .brow-bar i{width:6px;height:6px;border-radius:50%;background:#cdddf7;display:block}
+  .brow-bar i:first-child{background:var(--gold)}
+  .brow-url{margin-left:6px;flex:1;background:#fff;border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-size:7.5px;color:var(--ink-3)}
+
+  .tabd{position:absolute;z-index:2;background:#0d1430;border-radius:14px;padding:6px;
+    box-shadow:0 24px 48px -22px rgba(9,20,54,.55)}
+  .tabd-in{background:#fff;border-radius:9px;overflow:hidden;aspect-ratio:4/3}
+
+  /* mini app furniture */
+  .ma{display:grid;grid-template-columns:52px 1fr;height:100%}
+  .ma-side{background-image:var(--dots),linear-gradient(165deg,#16306e,#3f78d8);
+    background-size:12px 12px,cover;background-repeat:repeat,no-repeat;padding:7px 5px}
+  .ma-side b{display:block;font-size:6.5px;color:#fff;margin-bottom:6px}
+  .ma-side i{display:block;font-style:normal;font-size:5.5px;color:rgba(255,255,255,.75);padding:3px 4px;border-radius:3px;margin-bottom:1px}
+  .ma-side i.on{background:#fff;color:var(--brand);font-weight:800}
+  .ma-main{padding:7px;background:var(--bg);min-width:0;display:flex;flex-direction:column;gap:5px}
+  .ma-hero{background-image:var(--dots),linear-gradient(120deg,#1d3a8f,#3f78d8);
+    background-size:12px 12px,cover;background-repeat:repeat,no-repeat;
+    border-radius:5px;padding:6px 8px;color:#fff;display:flex;align-items:center;flex:none}
+  .ma-hero b{font-size:8px;color:#fff}
+  .ma-hero span{margin-left:auto;font-size:5.5px;background:var(--gold);color:#241a00;border-radius:999px;padding:2px 6px;font-weight:800}
+  .ma-k{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;flex:none}
+  .ma-k div{background:#fff;border:1px solid var(--line);border-radius:4px;padding:4px 5px}
+  .ma-k span{display:block;font-size:4.5px;color:var(--ink-3);font-weight:800;text-transform:uppercase;letter-spacing:.04em}
+  .ma-k b{font-size:9px;color:var(--ink)}
+  .ma-rows{background:#fff;border:1px solid var(--line);border-radius:5px;padding:5px 6px;flex:1;min-height:0}
+  .ma-row{display:flex;gap:5px;align-items:center;padding:3px 0;border-top:1px solid var(--line);font-size:6px;color:var(--ink-2)}
+  .ma-row:first-child{border-top:0}
+  .ma-row b{color:var(--ink);font-size:6.5px}
+  .ma-row em{font-style:normal;color:var(--ink-3)}
+  .ma-row span{margin-left:auto;font-weight:800;color:var(--brand)}
+  .ma-row span.ok{color:#0b6b4f}
+  .ma-row span.warn{color:#8a5a00}
+  .ma-chart{background:#fff;border:1px solid var(--line);border-radius:5px;padding:6px;flex:none}
+  .ma-chart svg{width:100%;height:34px;display:block}
+  .ma-foot{display:flex;font-size:5.5px;color:var(--ink-3);flex:none}
+  .ma-foot b{margin-left:auto;color:var(--brand);font-size:5.5px}
+
+  .ph-hero{background:var(--brand);color:#fff;border-radius:9px;padding:8px 6px;text-align:center;margin-bottom:5px;flex:none}
+  .ph-hero b{display:block;font-size:9px;color:#fff}
+  .ph-hero small{font-size:7px;color:rgba(255,255,255,.8)}
+  .ph-row{display:flex;align-items:center;gap:6px;background:var(--bg);border:1px solid var(--line);
+    border-radius:8px;padding:5px 7px;margin-bottom:4px;flex:none}
+  .ph-row b{display:block;font-size:8.5px;color:var(--ink)}
+  .ph-row small{display:block;font-size:6.5px;color:var(--ink-3)}
+  .ph-row span{margin-left:auto;font-size:9px;font-weight:800;color:var(--brand)}
+  .ph-row span.ok{color:#0b6b4f}
+  .ph-note{font-size:6.5px;color:var(--ink-3);text-align:center;margin-bottom:4px}
+  .ph-cta{margin-top:auto;text-align:center;border-radius:999px;padding:6px 0;
+    background:var(--cta);color:var(--cta-ink);font-size:9px;font-weight:800;flex:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+<div class="mk-page">
+  <div class="mk-head">
+    <h1>Mockup options</h1>
+    <p>Ten embedded treatments. Each sits straight on its ground with no containing card, connectors linking the steps into the device, and a line under every card saying what the operator <em>gets</em>. Different devices, sizes and grounds &mdash; tell me the numbers you want and where they go.</p>
+  </div>
+
+  <div class="mk-list">
+
+  <!-- 1 -->
+  <div id="s1" style="scroll-margin-top:14px"><div class="mk-cap"><b>1 · Phone + 3 steps</b><span>the freelancer story</span><i>Phone · dark</i></div>
+  <div class="st dark"><div class="st-in">
+    <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M20,20 C30,20 34,36 44,42" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M82,50 C74,50 66,46 56,45" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M18,77 C28,77 36,68 44,62" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>
+    <div class="sc wide" style="left:2%;top:6%"><span class="n">1</span><div><small>A parent books &mdash; while you coach</small><b>Ava T. &middot; Summer camp</b><span class="tag">You didn&rsquo;t touch a thing</span></div><span class="amt">&pound;28</span></div>
+    <div class="phone-pop ph" style="left:50%;top:50%;transform:translate(-50%,-50%)">
+      <div class="pp-status"><b>9:41</b><i class="pp-sig"></i></div><div class="pp-bar"><span class="pp-dot"></span><b>Your brand</b></div>
+      <div class="pp-body"><div class="ph-hero"><b>Summer Football Camp</b><small>Riverside &middot; Mon&ndash;Fri</small></div>
+        <div class="ph-row"><div><b>Full week</b><small>9:00&ndash;15:30 &middot; ages 4&ndash;11</small></div><span>&pound;28</span></div>
+        <div class="ph-row"><div><b>Single day</b><small>Wed 6 Aug</small></div><span>&pound;32</span></div>
+        <div class="ph-row"><div><b>Sibling</b><small>10% off automatically</small></div><span class="ok">&minus;&pound;9</span></div>
+        <div class="ph-note">6 places left</div>
+        <div class="ph-cta">Book &amp; pay</div></div>
+      <div class="pp-tabbar"><i class="on">Home</i><i>Bookings</i><i>More</i></div><div class="pp-homewrap"><div class="pp-home"></div></div></div>
+    <div class="sc" style="right:2%;top:38%"><span class="n">2</span><div><small>Paid straight to your bank</small><b>&pound;128 &middot; Stripe</b><span class="tag g">0% commission &mdash; all yours</span></div></div>
+    <div class="sc" style="left:2%;bottom:8%"><span class="n">3</span><div><small>The admin did itself</small><b>14 booked this week</b><span class="tag">Registers &amp; receipts sent</span></div></div>
+    <div class="pill"><b>One afternoon to set up.</b> Then it runs while you coach.</div>
+  </div></div></div>
+
+  <!-- 2 -->
+  <div id="s2" style="scroll-margin-top:14px"><div class="mk-cap"><b>2 · Laptop + 2 steps</b><span>operator dashboard</span><i>Laptop · light</i></div>
+  <div class="st light"><div class="st-in">
+    <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M18,22 C26,22 32,34 39,40" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M82,74 C74,74 66,64 61,58" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>
+    <div class="lap" style="width:440px;left:50%;top:50%;transform:translate(-50%,-50%)"><div class="lap-scr"><div class="lap-in">
+      <div class="ma"><div class="ma-side"><b>Riverside</b><i class="on">Dashboard</i><i>Bookings</i><i>Registers</i><i>Money</i><i>Team</i><i>Learning</i></div>
+        <div class="ma-main"><div class="ma-hero"><b>Dashboard</b><span>Live</span></div>
+          <div class="ma-k"><div><span>Income</span><b>&pound;4.3k</b></div><div><span>Bookings</span><b>62</b></div><div><span>Families</span><b>42</b></div></div>
+          <div class="ma-chart"><svg viewBox="0 0 120 30" preserveAspectRatio="none"><path d="M4,24 26,17 48,9 70,15 92,7 114,12 114,29 4,29Z" fill="rgba(47,107,216,.12)"/><polyline points="4,24 26,17 48,9 70,15 92,7 114,12" fill="none" stroke="#2f6bd8" stroke-width="2"/></svg></div>
+          <div class="ma-rows">
+            <div class="ma-row"><b>Summer camp &middot; wk 1</b><em>Mon&ndash;Fri</em><span>41/50</span></div>
+            <div class="ma-row"><b>After-school club</b><em>Daily</em><span>28/30</span></div>
+            <div class="ma-row"><b>Art club</b><em>Thursdays</em><span>22/30</span></div>
+            <div class="ma-row"><b>Tennis</b><em>Saturdays</em><span class="warn">18/24</span></div>
+          </div>
+          <div class="ma-foot"><span>4 live listings</span><b>2 unpaid &middot; chased</b></div></div></div>
+    </div><div class="lap-base"></div></div></div>
+    <div class="sc" style="left:2%;top:8%"><span class="n">1</span><div><small>Everything in one login</small><b>No more five tabs</b><span class="tag">Bookings, money, staff</span></div></div>
+    <div class="sc" style="right:2%;bottom:14%"><span class="n">2</span><div><small>You always know</small><b>&pound;4,315 collected</b><span class="tag g">Paid to your own bank</span></div></div>
+    <div class="pill"><b>One screen.</b> Everything you run.</div>
+  </div></div></div>
+
+  <!-- 3 -->
+  <div id="s3" style="scroll-margin-top:14px"><div class="mk-cap"><b>3 · Laptop + phone</b><span>you and the parent</span><i>Both · deep</i></div>
+  <div class="st deep"><div class="st-in tall">
+    <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M48,52 C58,52 62,44 70,43" fill="none" stroke-width="1.8" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>
+    <div class="lap" style="width:452px;left:5%;top:47%;transform:translateY(-50%)"><div class="lap-scr"><div class="lap-in">
+      <div class="ma"><div class="ma-side"><b>You</b><i class="on">Bookings</i><i>Registers</i><i>Money</i><i>Team</i><i>Messages</i></div>
+        <div class="ma-main"><div class="ma-hero"><b>Bookings</b><span>Sept</span></div>
+          <div class="ma-k"><div><span>Booked</span><b>62</b></div><div><span>Waitlist</span><b>7</b></div><div><span>Filled</span><b>84%</b></div></div>
+          <div class="ma-rows">
+            <div class="ma-row"><b>Football camp</b><em>Mon&ndash;Fri &middot; Riverside</em><span>41/50</span></div>
+            <div class="ma-row"><b>Art club</b><em>Thu &middot; Oakfield</em><span>22/30</span></div>
+            <div class="ma-row"><b>Tennis</b><em>Sat &middot; Riverside</em><span>18/24</span></div>
+            <div class="ma-row"><b>Holiday multi-sport</b><em>Oct half-term</em><span class="ok">New</span></div>
+            <div class="ma-row"><b>Toddler kickers</b><em>Wed &middot; Oakfield</em><span>12/16</span></div>
+          </div>
+          <div class="ma-foot"><span>Auto-confirmed &middot; receipts sent</span><b>&rarr; Registers</b></div></div></div>
+    </div><div class="lap-base"></div></div></div>
+    <div class="phone-pop ph lg" style="right:7%;top:50%;transform:translateY(-50%)">
+      <div class="pp-status"><b>9:41</b><i class="pp-sig"></i></div><div class="pp-bar"><span class="pp-dot"></span><b>Parent</b></div>
+      <div class="pp-body"><div class="ph-hero"><b>Booked &#10003;</b><small>Summer camp &middot; week 1</small></div>
+        <div class="ph-row"><div><b>Mia &amp; Noah</b><small>Mon&ndash;Fri &middot; 9:00&ndash;15:30</small></div><span>&pound;96</span></div>
+        <div class="ph-row"><div><b>Paid by card</b><small>Receipt emailed</small></div><span class="ok">&#10003;</span></div>
+        <div class="ph-row"><div><b>What to bring</b><small>Kit, water, sun cream</small></div></div>
+        <div class="ph-row"><div><b>Add another week</b><small>3 places left</small></div><span>&pound;48</span></div>
+        <div class="ph-cta">View booking</div></div>
+      <div class="pp-tabbar"><i class="on">Home</i><i>Bookings</i><i>More</i></div><div class="pp-homewrap"><div class="pp-home"></div></div></div>
+    <div class="pill"><b>They book themselves.</b> You turn up and coach.</div>
+  </div></div></div>
+
+  <!-- 4 -->
+  <div id="s4" style="scroll-margin-top:14px"><div class="mk-cap"><b>4 · Big phone + rail</b><span>steps stacked beside</span><i>Phone · light</i></div>
+  <div class="st light"><div class="st-in tall">
+    <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M20,13 C30,13 34,32 44,42" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M20,50 C30,50 36,50 44,50" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M20,88 C30,88 36,68 44,58" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>
+    <div class="sc" style="left:3%;top:5%"><span class="n">1</span><div><small>Your own page</small><b>yourclub.co.uk</b><span class="tag">Not a marketplace</span></div></div>
+    <div class="sc violet" style="left:3%;top:37%"><span class="n">2</span><div><small>Parents self-serve</small><b>Book, pay, cancel</b><span class="tag">No texts at 9pm</span></div></div>
+    <div class="sc gold" style="left:3%;bottom:6%"><span class="n">3</span><div><small>Money moves</small><b>Straight to you</b><span class="tag g">Zero commission</span></div></div>
+    <div class="phone-pop ph lg" style="left:47%;top:50%;transform:translateY(-50%)">
+      <div class="pp-status"><b>9:41</b><i class="pp-sig"></i></div><div class="pp-bar"><span class="pp-dot"></span><b>Your brand</b></div>
+      <div class="pp-body"><div class="ph-hero"><b>Autumn term</b><small>8 weeks &middot; Tuesdays</small></div>
+        <div class="ph-row"><div><b>Whole term</b><small>Save 10% &middot; best value</small></div><span>&pound;96</span></div>
+        <div class="ph-row"><div><b>Pay weekly</b><small>Cancel any time</small></div><span>&pound;12</span></div>
+        <div class="ph-row"><div><b>Drop-in</b><small>Subject to space</small></div><span>&pound;14</span></div>
+        <div class="ph-row"><div><b>Wallet credit</b><small>Applied at checkout</small></div><span class="ok">&minus;&pound;10</span></div>
+        <div class="ph-cta">Book &amp; pay</div></div>
+      <div class="pp-tabbar"><i class="on">Home</i><i>Bookings</i><i>More</i></div><div class="pp-homewrap"><div class="pp-home"></div></div></div>
+    <div class="pill"><b>Priced your way.</b> Term, weekly or drop-in.</div>
+  </div></div></div>
+
+  <!-- 5 -->
+  <div id="s5" style="scroll-margin-top:14px"><div class="mk-cap"><b>5 · Browser + phone</b><span>storefront to pocket</span><i>Both · dark</i></div>
+  <div class="st dark"><div class="st-in">
+    <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M46,52 C58,52 64,48 74,46" fill="none" stroke-width="1.8" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>
+    <div class="brow" style="width:430px;left:3%;top:50%;transform:translateY(-50%)">
+      <div class="brow-bar"><i></i><i></i><i></i><span class="brow-url">yourclub.co.uk/book</span></div>
+      <div class="ma-main" style="height:216px"><div class="ma-hero"><b>Book a session</b><span>Live</span></div>
+        <div class="ma-rows">
+          <div class="ma-row"><b>Summer camp &middot; wk 1</b><em>Mon&ndash;Fri &middot; ages 4&ndash;11</em><span>&pound;28</span></div>
+          <div class="ma-row"><b>After-school club</b><em>Daily &middot; 15:30&ndash;18:00</em><span>&pound;12</span></div>
+          <div class="ma-row"><b>Holiday art</b><em>Thu &middot; ages 6&ndash;11</em><span>&pound;18</span></div>
+          <div class="ma-row"><b>Toddler kickers</b><em>Wed &middot; ages 2&ndash;4</em><span>&pound;9</span></div>
+          <div class="ma-row"><b>Saturday tennis</b><em>Sat &middot; all ages</em><span>&pound;15</span></div>
+        </div>
+        <div class="ma-foot"><span>Your branding &middot; your domain</span><b>Card, wallet or TFC</b></div></div></div>
+    <div class="phone-pop ph sm" style="right:11%;top:50%;transform:translateY(-50%) rotate(3deg)">
+      <div class="pp-status"><b>9:41</b><i class="pp-sig"></i></div><div class="pp-bar"><span class="pp-dot"></span><b>Confirmed</b></div>
+      <div class="pp-body"><div class="ph-hero"><b>&pound;96 paid</b><small>Receipt sent</small></div>
+        <div class="ph-row"><div><b>Summer camp</b><small>Mon&ndash;Fri</small></div></div>
+        <div class="ph-row"><div><b>Added to calendar</b><small>5 dates</small></div><span class="ok">&#10003;</span></div></div>
+      <div class="pp-homewrap"><div class="pp-home"></div></div></div>
+    <div class="sc" style="right:2%;top:5%"><span class="n">1</span><div><small>Same page, any device</small><b>Mobile-first checkout</b><span class="tag">Most parents book on a phone</span></div></div>
+    <div class="pill"><b>Your domain.</b> Your brand. Your customer.</div>
+  </div></div></div>
+
+  <!-- 6 -->
+  <div id="s6" style="scroll-margin-top:14px"><div class="mk-cap"><b>6 · Tablet register</b><span>on the day</span><i>Tablet · light</i></div>
+  <div class="st light"><div class="st-in short">
+    <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M19,22 C28,22 32,36 39,44" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M81,78 C72,78 66,64 61,56" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>
+    <div class="tabd" style="width:290px;left:50%;top:50%;transform:translate(-50%,-50%)"><div class="tabd-in">
+      <div class="ma-main" style="height:100%"><div class="ma-hero"><b>Register &middot; Riverside</b><span>Live</span></div>
+        <div class="ma-k"><div><span>In</span><b>41</b></div><div><span>Expected</span><b>50</b></div><div><span>Ratio</span><b>1:8</b></div></div>
+        <div class="ma-rows">
+          <div class="ma-row"><b>Mia D.</b><em>08:56</em><span class="ok">In</span></div>
+          <div class="ma-row"><b>Noah B.</b><em>09:02</em><span class="ok">In</span></div>
+          <div class="ma-row"><b>Amara C.</b><em>no message</em><span class="warn">Chase</span></div>
+          <div class="ma-row"><b>Leo W.</b><em>collected 15:30</em><span>Out</span></div>
+        </div></div></div></div>
+    <div class="sc" style="left:2%;top:6%"><span class="n">1</span><div><small>Tap to sign in</small><b>41 of 50 on site</b><span class="tag">Ratio 1:8 &#10003;</span></div></div>
+    <div class="sc gold" style="right:2%;bottom:8%"><span class="n">2</span><div><small>Allergies &amp; SEND</small><b>Flagged on the child</b><span class="tag">Nothing missed</span></div></div>
+    <div class="pill"><b>No clipboard.</b> No paperwork after.</div>
+  </div></div></div>
+
+  <!-- 7 -->
+  <div id="s7" style="scroll-margin-top:14px"><div class="mk-cap"><b>7 · Wide laptop + chips</b><span>money view</span><i>Laptop · deep</i></div>
+  <div class="st deep"><div class="st-in">
+    <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M18,24 C24,24 27,34 31,42" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M82,36 C78,36 74,42 69,46" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M78,82 C74,82 72,70 69,60" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>
+    <div class="lap" style="width:440px;left:50%;top:46%;transform:translate(-50%,-50%)"><div class="lap-scr"><div class="lap-in">
+      <div class="ma"><div class="ma-side"><b>Money</b><i class="on">Money in</i><i>Money out</i><i>Invoices</i><i>Payouts</i><i>Debts</i></div>
+        <div class="ma-main"><div class="ma-hero"><b>Money in</b><span>September</span></div>
+          <div class="ma-chart"><svg viewBox="0 0 120 30" preserveAspectRatio="none"><path d="M4,24 26,16 48,19 70,9 92,12 114,5 114,29 4,29Z" fill="rgba(47,107,216,.14)"/><polyline points="4,24 26,16 48,19 70,9 92,12 114,5" fill="none" stroke="#2f6bd8" stroke-width="2"/></svg></div>
+          <div class="ma-rows">
+            <div class="ma-row"><b>Card payments</b><em>48 transactions</em><span>&pound;2,940</span></div>
+            <div class="ma-row"><b>Tax-Free Childcare</b><em>HMRC &middot; 9 refs</em><span>&pound;1,106</span></div>
+            <div class="ma-row"><b>Wallet top-ups</b><em>12 families</em><span>&pound;269</span></div>
+            <div class="ma-row"><b>Outstanding</b><em>2 invoices</em><span class="warn">&pound;186</span></div>
+          </div>
+          <div class="ma-foot"><span>Reconciled automatically</span><b>&pound;4,315 total</b></div></div></div>
+    </div><div class="lap-base"></div></div></div>
+    <div class="sc" style="left:1%;top:10%"><span class="n">1</span><div><small>Collected</small><b>&pound;4,315</b><span class="tag">This month</span></div></div>
+    <div class="sc gold" style="right:1%;top:24%"><span class="n">2</span><div><small>Next payout</small><b>&pound;1,980</b><span class="tag">Friday, to your bank</span></div></div>
+    <div class="sc violet" style="right:6%;bottom:8%"><span class="n">3</span><div><small>Chased for you</small><b>2 unpaid</b><span class="tag">Reminders already sent</span></div></div>
+    <div class="pill"><b>Every penny tracked.</b> None of it ours.</div>
+  </div></div></div>
+
+  <!-- 8 -->
+  <div id="s8" style="scroll-margin-top:14px"><div class="mk-cap"><b>8 · Three phones</b><span>parent · you · staff</span><i>Phone · dark</i></div>
+  <div class="st dark"><div class="st-in">
+    <div class="phone-pop ph sm" style="left:12%;top:50%;transform:translateY(-50%) rotate(-5deg)">
+      <div class="pp-status"><b>9:41</b><i class="pp-sig"></i></div><div class="pp-bar"><span class="pp-dot"></span><b>Parent</b></div>
+      <div class="pp-body"><div class="ph-hero"><b>Messages</b><small>Coach Amir</small></div>
+        <div class="ph-row"><div><b>Pickup 3:30</b><small>Side gate as usual</small></div></div>
+        <div class="ph-row"><div><b>Nan collecting</b><small>Added to list</small></div><span class="ok">&#10003;</span></div>
+        <div class="ph-row"><div><b>Photos added</b><small>12 from sports day</small></div></div></div>
+      <div class="pp-homewrap"><div class="pp-home"></div></div></div>
+    <div class="phone-pop ph" style="left:50%;top:50%;transform:translate(-50%,-50%);z-index:5">
+      <div class="pp-status"><b>9:41</b><i class="pp-sig"></i></div><div class="pp-bar"><span class="pp-dot"></span><b>You</b></div>
+      <div class="pp-body"><div class="ph-hero"><b>Today</b><small>41 on site &middot; Riverside</small></div>
+        <div class="ph-row"><div><b>Ratio 1:8</b><small>Met across all groups</small></div><span class="ok">&#10003;</span></div>
+        <div class="ph-row"><div><b>2 to chase</b><small>Not arrived</small></div><span>&rarr;</span></div>
+        <div class="ph-row"><div><b>1 medication</b><small>Due 15:00</small></div><span>&rarr;</span></div>
+        <div class="ph-row"><div><b>Takings today</b><small>6 bookings</small></div><span>&pound;168</span></div></div>
+      <div class="pp-tabbar"><i class="on">Home</i><i>Register</i><i>More</i></div><div class="pp-homewrap"><div class="pp-home"></div></div></div>
+    <div class="phone-pop ph sm" style="right:12%;top:50%;transform:translateY(-50%) rotate(5deg)">
+      <div class="pp-status"><b>9:41</b><i class="pp-sig"></i></div><div class="pp-bar"><span class="pp-dot"></span><b>Staff</b></div>
+      <div class="pp-body"><div class="ph-hero"><b>Clocked in</b><small>08:56 &middot; Riverside</small></div>
+        <div class="ph-row"><div><b>Shift 9&ndash;3</b><small>Lead coach</small></div></div>
+        <div class="ph-row"><div><b>My register</b><small>Squirrels &middot; 12</small></div><span>&rarr;</span></div>
+        <div class="ph-row"><div><b>Hours this week</b><small>To timesheet</small></div><span>23.0</span></div></div>
+      <div class="pp-homewrap"><div class="pp-home"></div></div></div>
+    <div class="pill"><b>Everyone on the same page.</b> Literally.</div>
+  </div></div></div>
+
+  <!-- 9 -->
+  <div id="s9" style="scroll-margin-top:14px"><div class="mk-cap"><b>9 · Three devices</b><span>the whole operation</span><i>All · light</i></div>
+  <div class="st light"><div class="st-in tall">
+    <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M27,80 C34,80 38,62 43,52" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M57,52 C64,62 68,78 74,84" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>
+    <div class="lap" style="width:420px;left:50%;top:37%;transform:translate(-50%,-50%)"><div class="lap-scr"><div class="lap-in">
+      <div class="ma"><div class="ma-side"><b>Portal</b><i class="on">Dashboard</i><i>Bookings</i><i>Registers</i><i>Money</i></div>
+        <div class="ma-main"><div class="ma-hero"><b>Dashboard</b><span>Live</span></div>
+          <div class="ma-k"><div><span>On site</span><b>41</b></div><div><span>Bookings</span><b>62</b></div><div><span>Income</span><b>&pound;4.3k</b></div></div>
+          <div class="ma-rows">
+            <div class="ma-row"><b>Summer camp</b><em>Riverside</em><span>41/50</span></div>
+            <div class="ma-row"><b>After-school</b><em>Oakfield</em><span>28/30</span></div>
+            <div class="ma-row"><b>Art club</b><em>Riverside</em><span>22/30</span></div>
+            <div class="ma-row"><b>Tennis</b><em>Riverside</em><span>18/24</span></div>
+            <div class="ma-row"><b>Toddler kickers</b><em>Oakfield</em><span>12/16</span></div>
+          </div>
+          <div class="ma-foot"><span>2 sites &middot; 5 listings</span><b>&pound;1,980 payout Friday</b></div></div></div>
+    </div><div class="lap-base"></div></div></div>
+    <div class="tabd" style="width:210px;left:9%;bottom:4%;transform:rotate(-4deg)"><div class="tabd-in">
+      <div class="ma-main" style="height:100%"><div class="ma-hero"><b>Register</b><span>Live</span></div>
+        <div class="ma-rows">
+          <div class="ma-row"><b>Mia D.</b><span class="ok">In</span></div>
+          <div class="ma-row"><b>Noah B.</b><span class="ok">In</span></div>
+          <div class="ma-row"><b>Amara C.</b><span class="warn">Chase</span></div>
+          <div class="ma-row"><b>Leo W.</b><span class="ok">In</span></div>
+          <div class="ma-row"><b>Ava T.</b><span class="ok">In</span></div>
+          <div class="ma-row"><b>Sam K.</b><span>Out</span></div>
+        </div>
+        <div class="ma-foot"><span>41 of 50 on site</span><b>Ratio 1:8 &#10003;</b></div></div></div></div>
+    <div class="phone-pop ph sm" style="right:9%;bottom:3%;transform:rotate(4deg)">
+      <div class="pp-status"><b>9:41</b><i class="pp-sig"></i></div><div class="pp-bar"><span class="pp-dot"></span><b>Parent</b></div>
+      <div class="pp-body"><div class="ph-hero"><b>Booked &#10003;</b><small>Summer camp</small></div>
+        <div class="ph-row"><div><b>2 children</b><small>Mon&ndash;Fri</small></div><span>&pound;96</span></div>
+        <div class="ph-row"><div><b>Paid</b><small>Receipt sent</small></div><span class="ok">&#10003;</span></div></div>
+      <div class="pp-homewrap"><div class="pp-home"></div></div></div>
+    <div class="pill"><b>Desk, hall and pocket.</b> One system.</div>
+  </div></div></div>
+
+  <!-- 10 -->
+  <div id="s10" style="scroll-margin-top:14px"><div class="mk-cap"><b>10 · Compact strip</b><span>small hero / inline band</span><i>Phone · deep</i></div>
+  <div class="st deep"><div class="st-in short">
+    <svg class="wires" viewBox="0 0 100 100" preserveAspectRatio="none"><path d="M20,50 C30,50 36,50 45,50" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/><path d="M55,50 C64,50 70,50 80,50" fill="none" stroke-width="1.6" stroke-dasharray="5 5" vector-effect="non-scaling-stroke"/></svg>
+    <div class="sc" style="left:2%;top:50%;transform:translateY(-50%)"><span class="n">1</span><div><small>They book</small><b>Ava T. &middot; &pound;28</b><span class="tag">Two taps, no phone call</span></div></div>
+    <div class="phone-pop ph sm" style="left:50%;top:50%;transform:translate(-50%,-50%)">
+      <div class="pp-status"><b>9:41</b><i class="pp-sig"></i></div><div class="pp-bar"><span class="pp-dot"></span><b>Your brand</b></div>
+      <div class="pp-body"><div class="ph-hero"><b>Summer camp</b><small>6 places left</small></div>
+        <div class="ph-row"><div><b>Full week</b><small>Mon&ndash;Fri</small></div><span>&pound;28</span></div>
+        <div class="ph-cta">Book &amp; pay</div></div>
+      <div class="pp-homewrap"><div class="pp-home"></div></div></div>
+    <div class="sc gold" style="right:2%;top:50%;transform:translateY(-50%)"><span class="n">2</span><div><small>You get paid</small><b>&pound;28 &middot; Stripe</b><span class="tag g">0% cut &mdash; straight to you</span></div></div>
+  </div></div></div>
+
+  </div>
+</div>
+</div>
+</body>
+</html>

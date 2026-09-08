@@ -1,0 +1,20 @@
+/* ===== Wigglekit LITE FX — secondary pages only (~40% of the home page) =====
+   Distinct, gentler signature: cursor-follow glow + soft scroll-reveal + card hover-lift.
+   No WebGL aurora, no 3D orbit, no floating feature swarm (those stay unique to the home page). */
+
+.litefx .wrap{position:relative;z-index:1}
+
+/* cursor-follow glow (sits behind all content) */
+.litespot{position:fixed;top:0;left:0;width:560px;height:560px;border-radius:50%;pointer-events:none;z-index:0;opacity:0;transition:opacity .5s ease;
+  background:radial-gradient(circle,rgba(255,61,127,.16),rgba(63,107,216,.07) 42%,transparent 66%)}
+
+/* soft scroll-reveal (gentle rise — much lighter than the home page's 3D fly-in) */
+[data-lr]{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .65s cubic-bezier(.2,.7,.2,1)}
+[data-lr].in{opacity:1;transform:none}
+[data-lr].l1{transition-delay:.06s}
+[data-lr].l2{transition-delay:.12s}
+[data-lr].l3{transition-delay:.18s}
+
+/* gentle card hover-lift + accent (no tilt / no continuous motion) */
+.litefx .fcard,.litefx .savecard,.litefx .pcard,.litefx .save-banner,.litefx .wk-img{transition:transform .25s cubic-bezier(.2,.7,.2,1),box-shadow .25s,border-color .25s}
+.litefx .fcard:hover,.litefx .savecard:hover,.litefx .pcard:hover,.litefx .wk-img:hover{transform:translateY(-6px);box-shadow:0 28px 54px -26px rgba(0,0,0,.78);border-color:rgba(255,61,127,.42)}
