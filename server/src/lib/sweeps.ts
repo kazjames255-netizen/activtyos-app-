@@ -1,6 +1,6 @@
 import { db } from "../firebase";
 import { fireOnce, sweep, toMinutes, ukNow } from "./scheduler";
-import { notify, parentEmailForChild } from "./notify";
+import { notify, parentEmailForChild, channelFor, notifyTenantMember} from "./notify";
 import { expireOffers } from "./waitlist";
 import { stripe } from "./stripe";
 import { syncFromStripe, updateMeteredQuantities } from "./billing";
@@ -668,7 +668,69 @@ async function subscriptionSync(): Promise<void> {
 }
 
 /** Called once from index.ts at startup. Safe on every instance. */
+
+// ── Task reminders ──────────────────────────────────────────────────────────
+// A task carries a due date and, optionally, a time — and until now nothing
+// ever mentioned either again. Reminds BOTH the assignee and whoever created
+// it: the person doing it needs the nudge, the person who asked needs to know
+// it's slipping.
+//
+// Two moments, each fired at most once per task per day by fireOnce:
+//   · due today  — at the task's time if it has one, else from 08:00 UK
+//   · overdue    — the morning after the due date passes, once
+async function taskReminders() {
+  const { date, minutes: now } = ukNow();
+  const snap = await db.collection("tasks").where("status", "in", ["backlog", "todo", "prog"]).get();
+
+  for (const d of snap.docs) {
+    const t = d.data() as {
+      tenantId?: string; t?: string; due?: string | null; time?: string | null;
+      who?: string; whoEmail?: string; createdBy?: string; archived?: boolean;
+    };
+    if (!t.tenantId || t.archived || !t.due) continue;
+
+    const overdue = t.due < date;
+    const dueToday = t.due === date;
+    if (!overdue && !dueToday) continue;
+
+    // Due today with a time: hold until that time. Without one, from 08:00.
+    if (dueToday) {
+      const at = toMinutes(t.time ?? "") ?? 8 * 60;
+      if (now < at) continue;
+    } else if (now < 8 * 60) {
+      continue;                       // overdue chases go out in the morning
+    }
+
+    const key = overdue ? "task-overdue" : "task-due";
+    const ch = await channelFor(t.tenantId, key);
+    if (!ch.send) continue;
+
+    // Both the assignee and the creator, de-duplicated when they're the same
+    // person — which they usually are.
+    const to = [...new Set([t.whoEmail, t.createdBy].map((e) => (e ?? "").trim().toLowerCase()).filter(Boolean))];
+    if (!to.length) continue;
+
+    const title = overdue
+      ? `Overdue: ${t.t ?? "A task"}`
+      : `Due today: ${t.t ?? "A task"}`;
+    const body = overdue
+      ? `This was due ${t.due} and is still open.`
+      : `Due today${t.time ? ` at ${t.time}` : ""}${t.who ? ` · ${t.who}` : ""}.`;
+
+    for (const email of to) {
+      await fireOnce(`task_${overdue ? "over" : "due"}_${d.id}_${date}_${email}`, { tenantId: t.tenantId }, () =>
+        notifyTenantMember(t.tenantId!, email, {
+          category: "task", title, body, href: "/tasks", key, sendEmail: ch.email,
+        }),
+      );
+    }
+  }
+}
+
+
 export function startSweeps(): void {
+  // Every 5 minutes is plenty — the windows are hours wide, not minutes.
+  sweep("task-reminders", 5 * 60_000, taskReminders);
   sweep("calendar-reminders", 60_000, calendarReminders);
   sweep("medication-due", 60_000, medicationDue);
   sweep("ack-chase", 30 * 60_000, acknowledgementChase);

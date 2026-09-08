@@ -385,6 +385,8 @@ export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string
   { key: "incident-reply", group: "Care & safeguarding", label: "Parent replied on an incident thread" },
   { key: "med-consent", group: "Care & safeguarding", label: "Parent authorised a medication" },
   { key: "med-note", group: "Care & safeguarding", label: "Parent left a note on a medication" },
+  { key: "task-due", group: "Daily reminders", label: "A task of yours is due today" },
+  { key: "task-overdue", group: "Daily reminders", label: "A task of yours is overdue" },
   { key: "calendar-reminder", group: "Daily reminders", label: "Calendar event reminders" },
   { key: "med-due", group: "Daily reminders", label: "Medication due (5 min before)", defaultOff: true },
   { key: "safeguarding-due", group: "Daily reminders", label: "Safeguarding action due" },
@@ -395,16 +397,35 @@ export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string
 /** Notification keys that are OFF unless a provider explicitly switches them on
  *  (the rest are on unless switched off). Mirrored in server/src/lib/notify.ts.
  *  Derived from PROVIDER_NOTIFICATIONS so the two never drift. */
+/** Safety-critical alerts. Not locked — a provider may switch them off — but the
+ *  UI warns first, because "a child hasn't been collected" is not a preference
+ *  in the way "new booking" is. */
+export const NOTIFICATIONS_SAFETY = new Set([
+  "med-due", "register-collect", "register-missing", "safeguarding-due", "trip-consent", "incident-ack",
+]);
+
 export const NOTIFICATIONS_DEFAULT_OFF = new Set(
   PROVIDER_NOTIFICATIONS.filter((n) => n.defaultOff).map((n) => n.key),
 );
 
 /** Is a notification key on, given the provider's saved prefs? Absent = the
  *  key's default (off for defaultOff keys, on otherwise). */
-export function notificationOn(prefs: Record<string, boolean> | undefined, key: string, defaultOff?: boolean): boolean {
+export function notificationOn(prefs: Record<string, boolean | "bell"> | undefined, key: string, defaultOff?: boolean): boolean {
   const v = prefs?.[key];
   if (v === undefined) return !defaultOff;
-  return v;
+  return v !== false;                 // "bell" is still ON, just not by email
+}
+
+/** The channel a notification uses: both, the in-app bell only, or nothing. */
+export type NotifyChannel = "both" | "bell" | "off";
+export function notificationChannel(
+  prefs: Record<string, boolean | "bell"> | undefined, key: string, defaultOff?: boolean,
+): NotifyChannel {
+  const v = prefs?.[key];
+  if (v === undefined) return defaultOff ? "off" : "both";
+  if (v === false) return "off";
+  if (v === "bell") return "bell";
+  return "both";
 }
 
 /** Master switch (a reserved notifications key) for whether platform emails are
@@ -996,7 +1017,10 @@ export interface TenantSettings {
   /** Provider notification switches — key (see PROVIDER_NOTIFICATIONS) → on/off.
    *  An absent key means on; false turns the alert off entirely (no bell, no
    *  email). Checked by notify() for tenant-audience alerts only. */
-  notifications: Record<string, boolean>;
+  /** Per-notification channel. `true`/absent = bell + email, "bell" = in-app
+   *  only, `false` = off entirely. Bare booleans predate the channel choice and
+   *  still mean what they always did. */
+  notifications: Record<string, boolean | "bell">;
 
   // ── People & safeguarding ──
   /** Every child needs a date of birth before the record can be saved. */

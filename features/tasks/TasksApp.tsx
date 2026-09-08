@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { displayName, looksDerived } from "@/lib/display-name";
+import { useSettings, notificationChannel, type NotifyChannel } from "@/lib/settings";
 import { MilestonesApp } from "@/features/milestones/MilestonesApp";
 import { Button } from "@/components/ui";
 import { TourLauncher } from "@/features/common/TourLauncher";
@@ -138,6 +139,8 @@ export function TasksApp() {
   const [myEmail, setMyEmail] = useState("");
   const [roster, setRoster] = useState<{ name: string; email: string }[]>([]);
   const [meDerived, setMeDerived] = useState(false);
+  const [remOpen, setRemOpen] = useState(false);
+  const { settings, save } = useSettings();
   const [tab, setTab] = useState<"mine" | "team" | "board" | "cal" | "archive" | "milestones">("mine");
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -380,6 +383,10 @@ export function TasksApp() {
       {/* Quick add */}
       {!onMilestones && <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setRemOpen(true)}
+            className="shrink-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
+            🔔 Reminders
+          </button>
           <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-[240px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
           <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>Deadline</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
           <Button onClick={addQuick}>Quick add</Button>
@@ -437,6 +444,45 @@ export function TasksApp() {
         {tab === "archive" && <ArchiveView tasks={archived} onOpen={setOpenId} onUnarchive={(t) => patch(t.id, { archived: false })} />}
       </>)}
 
+      {remOpen && (() => {
+        const prefs = settings.notifications ?? {};
+        const rows: [string, string][] = [["task-due", "A task of yours is due today"], ["task-overdue", "A task of yours is overdue"]];
+        const set = (k: string, ch: NotifyChannel) =>
+          void save({ settings: { ...settings, notifications: { ...prefs, [k]: ch === "off" ? false : ch === "bell" ? "bell" : true } } });
+        return (
+          <div className="fixed inset-0 z-[210] flex items-start justify-center bg-black/40 p-4 pt-[10vh]" onClick={() => setRemOpen(false)}>
+            <div className="w-full max-w-[520px] rounded-2xl bg-[var(--surface)] p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+              <div className="flex items-center justify-between">
+                <h3 className="text-[16px] font-extrabold text-[var(--ink)]">Task reminders</h3>
+                <button type="button" onClick={() => setRemOpen(false)} className="flex h-7 w-7 items-center justify-center rounded-full bg-[var(--panel)] text-[15px] font-bold text-[var(--ink-2)]">×</button>
+              </div>
+              <p className="mt-1.5 text-[12.5px] text-[var(--ink-2)]">
+                Sent to <b>both</b> the assignee and whoever created the task. Due-today goes out at the task&rsquo;s time,
+                or from 08:00 if it has none; overdue chases the next morning, once.
+              </p>
+              {rows.map(([k, label]) => (
+                <div key={k} className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-[var(--line)] px-3 py-2.5">
+                  <span className="text-[13px] font-semibold text-[var(--ink)]">{label}</span>
+                  <div className="flex shrink-0 gap-1">
+                    {(["both", "bell", "off"] as NotifyChannel[]).map((c) => (
+                      <button key={c} type="button" onClick={() => set(k, c)}
+                        className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold"
+                        style={notificationChannel(prefs, k) === c
+                          ? { background: c === "off" ? "#fdeaee" : "#eaf0fc", color: c === "off" ? "#b3123c" : "#1d3a8f" }
+                          : { background: "transparent", color: "var(--ink-3)" }}>
+                        {c === "both" ? "Bell + email" : c === "bell" ? "Bell only" : "Off"}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
+              <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">
+                These are the same settings as Setup → Notifications. Everything else lives there.
+              </p>
+            </div>
+          </div>
+        );
+      })()}
       {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">✓ Task logged</div>}
       {creating && <CreateModal noAssignee={noAssignee} team={team} me={me} myEmail={myEmail} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f, toCal); setCreating(false); setQa(""); }} />}
       {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} myEmail={myEmail} meDerived={meDerived} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onSyncCal={() => syncToCalendar(openTask)} onUnsyncCal={() => unsyncFromCalendar(openTask)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)}

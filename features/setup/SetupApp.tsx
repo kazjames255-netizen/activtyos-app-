@@ -17,6 +17,9 @@ import { RolesPermissions } from "./RolesPermissions";
 import {
   useSettings,
   PROVIDER_NOTIFICATIONS,
+  NOTIFICATIONS_SAFETY,
+  notificationChannel,
+  type NotifyChannel,
   EMAIL_DELIVERY_KEY,
   notificationOn,
   answerKey,
@@ -100,6 +103,14 @@ function NotificationsTab() {
   const prefs = settings.notifications ?? {};
   const setPref = (key: string, on: boolean) =>
     void save({ settings: { ...settings, notifications: { ...prefs, [key]: on } } });
+  const setChannel = (key: string, ch: NotifyChannel, label: string) => {
+    // Not locked — but "a child hasn't been collected" isn't a preference in
+    // the way "new booking" is, so say so once before it goes quiet.
+    if (ch === "off" && NOTIFICATIONS_SAFETY.has(key)
+      && !confirm(`Turn off "${label}" completely?\n\nThis is a safety alert. You will get no bell and no email, even when it matters.`)) return;
+    const v = ch === "off" ? false : ch === "bell" ? "bell" : true;
+    void save({ settings: { ...settings, notifications: { ...prefs, [key]: v } } });
+  };
   const groups = [...new Set(PROVIDER_NOTIFICATIONS.map((n) => n.group))];
   const emailOn = prefs[EMAIL_DELIVERY_KEY] !== false;
 
@@ -163,8 +174,27 @@ function NotificationsTab() {
             <div className="overflow-hidden rounded-xl border border-[var(--line)]">
               {PROVIDER_NOTIFICATIONS.filter((n) => n.group === g).map((n, i) => (
                 <div key={n.key} className={`flex items-center justify-between gap-3 px-4 py-2.5 ${i > 0 ? "border-t border-[var(--line)]" : ""}`}>
-                  <div className="min-w-0 text-[13px] font-semibold text-[var(--ink)]">{n.label}</div>
-                  <Toggle on={notificationOn(prefs, n.key, n.defaultOff)} onChange={(v) => setPref(n.key, v)} labels={["On", "Off"]} />
+                  <div className="min-w-0 text-[13px] font-semibold text-[var(--ink)]">
+                    {n.label}
+                    {NOTIFICATIONS_SAFETY.has(n.key) && <span className="ml-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#a5760a]">safety</span>}
+                  </div>
+                  {/* Three-way: bell + email · bell only · off. The old boolean
+                      still reads correctly — true is "both", false is "off". */}
+                  <div className="flex shrink-0 gap-1">
+                    {(["both", "bell", "off"] as NotifyChannel[]).map((c) => {
+                      const cur = notificationChannel(prefs, n.key, n.defaultOff);
+                      const label = c === "both" ? "Bell + email" : c === "bell" ? "Bell only" : "Off";
+                      return (
+                        <button key={c} type="button" onClick={() => setChannel(n.key, c, n.label)}
+                          className="rounded-full px-2.5 py-1 text-[11.5px] font-extrabold"
+                          style={cur === c
+                            ? { background: c === "off" ? "#fdeaee" : "#eaf0fc", color: c === "off" ? "#b3123c" : "#1d3a8f" }
+                            : { background: "transparent", color: "var(--ink-3)" }}>
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
               ))}
             </div>

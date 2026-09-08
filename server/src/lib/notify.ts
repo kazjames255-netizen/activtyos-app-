@@ -42,7 +42,8 @@ export type NotifyCategory =
   | "message"
   | "moment"
   | "register"
-  | "billing";
+  | "billing"
+  | "task";
 
 export interface NotificationDoc {
   tenantId: string;
@@ -216,11 +217,15 @@ export async function notify(input: NotifyInput): Promise<void> {
     let tenantEmailOff = false;
     if (input.to.kind === "tenant") {
       const notifs = (await db.collection("libraries").doc(input.tenantId).get()).data()
-        ?.settings?.notifications as Record<string, boolean> | undefined;
+        ?.settings?.notifications as Record<string, boolean | "bell"> | undefined;
       if (input.key) {
         const pref = notifs?.[input.key];
         // Explicitly off → skip. Absent → skip only for default-off keys.
         if (pref === false || (pref === undefined && DEFAULT_OFF.has(input.key))) return;
+        // "bell" → raise the in-app alert, send no email for THIS alert. The
+        // record is still written: they asked not to be emailed, not to be
+        // kept in the dark.
+        if (pref === "bell") tenantEmailOff = true;
       }
       if (notifs?.[EMAIL_DELIVERY_KEY] === false) tenantEmailOff = true;
     }
@@ -324,10 +329,22 @@ export async function notificationsForTenant(tenantId: string, limit = 100, view
 }
 
 /** A tenant-audience notification aimed at ONE team member (their bell only). */
+/** The channel a tenant alert should use, honouring the provider's Setup. */
+export async function channelFor(tenantId: string, key?: string): Promise<{ send: boolean; email: boolean }> {
+  const notifs = (await db.collection("libraries").doc(tenantId).get()).data()
+    ?.settings?.notifications as Record<string, boolean | "bell"> | undefined;
+  if (key) {
+    const pref = notifs?.[key];
+    if (pref === false || (pref === undefined && DEFAULT_OFF.has(key))) return { send: false, email: false };
+    if (pref === "bell") return { send: true, email: false };
+  }
+  return { send: true, email: notifs?.[EMAIL_DELIVERY_KEY] !== false };
+}
+
 export async function notifyTenantMember(
   tenantId: string,
   email: string,
-  n: { category: NotifyCategory; title: string; body: string; href?: string; ref?: string },
+  n: { category: NotifyCategory; title: string; body: string; href?: string; ref?: string; key?: string; sendEmail?: boolean },
 ): Promise<void> {
   try {
     await col().add({
@@ -342,6 +359,14 @@ export async function notifyTenantMember(
       readAt: null,
       at: new Date().toISOString(),
     } satisfies NotificationDoc);
+    if (n.sendEmail) {
+      const provider = await tenantContact(tenantId);
+      await sendMail(
+        email.trim(),
+        n.title,
+        `<p>${n.body}</p>${n.href ? `<p><a href="${webUrl}${n.href}">Open it in ${provider.name || "your portal"}</a></p>` : ""}`,
+      );
+    }
   } catch { /* best-effort */ }
 }
 
