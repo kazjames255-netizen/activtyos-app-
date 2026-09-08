@@ -18,6 +18,17 @@ const canUse = (role: Role) => role === "staff" || role === "company" || role ==
  * and must never appear in one: "__platform__" can never collide with a real
  * Firestore-generated tenant id.
  */
+/** Is this task assigned to the caller? Email first — a rename must not hand
+ *  someone else's tasks over, nor take yours away. Name only as a fallback for
+ *  tasks written before whoEmail existed. */
+function assignedTo(req: Request, t: { who?: unknown; whoEmail?: unknown }): boolean {
+  const email = (req.user?.email ?? "").trim().toLowerCase();
+  const tEmail = String(t.whoEmail ?? "").trim().toLowerCase();
+  if (tEmail) return !!email && tEmail === email;
+  const name = (req.user?.name ?? req.user?.email ?? "").trim().toLowerCase();
+  return String(t.who ?? "").trim().toLowerCase() === name;
+}
+
 const PLATFORM_BUCKET = "__platform__";
 const bucketOf = (auth: { role: string; tenantId: string | null }) =>
   auth.role === "platform" ? PLATFORM_BUCKET : auth.tenantId;
@@ -75,7 +86,7 @@ tasks.get("/", async (req, res) => {
     list = list.filter((t) => (t.franchiseId ?? null) === mine);
   }
   // Staff only see tasks assigned to them.
-  if (auth.role === "staff") { const me = (req.user?.name ?? req.user?.email ?? "").trim().toLowerCase(); list = list.filter((t) => String(t.who ?? "").trim().toLowerCase() === me); }
+  if (auth.role === "staff") list = list.filter((t) => assignedTo(req, t));
   list.sort((a, b) => (`${a.due ?? "9999-99"}` < `${b.due ?? "9999-99"}` ? -1 : 1));
   res.json(list);
 });
@@ -235,6 +246,10 @@ async function ownTask(req: Request, id: string) {
   if (auth.role === "franchise" && ((snap.data()!.franchiseId as string | null) ?? null) !== (auth.franchiseId ?? null)) {
     return { status: 404 as const };
   }
+  // Staff can only SEE their own tasks (the GET filters), but nothing stopped
+  // them PUTting or DELETEing anyone's by id — a coach could quietly delete the
+  // manager's board. Writes now follow the same rule as reads.
+  if (auth.role === "staff" && !assignedTo(req, snap.data()!)) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -249,6 +264,13 @@ tasks.put("/:id", async (req, res) => {
 });
 
 tasks.delete("/:id", async (req, res) => {
+  // Deleting a task someone assigned you isn't "done", it's "gone" — and the
+  // person who asked for it loses the record that they ever did. Staff mark it
+  // complete or comment; operators delete.
+  if (req.auth!.role === "staff") {
+    res.status(403).json({ error: "Only an operator can delete a task. Mark it complete instead." });
+    return;
+  }
   const own = await ownTask(req, req.params.id);
   if (own.status !== 200) { res.status(own.status).json({ error: own.status === 403 ? "Forbidden" : "Task not found" }); return; }
   await own.snap.ref.delete();

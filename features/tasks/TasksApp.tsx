@@ -303,8 +303,8 @@ export function TasksApp() {
   const toggleDone = (t: Task) => { const done = t.status !== "done"; patch(t.id, { status: done ? "done" : "todo" }); if (done) flashDone(); };
   // Set a task's status from a dropdown; flash "logged" when it newly becomes Done.
   const setStatus = (t: Task, s: Status) => { patch(t.id, { status: s }); if (s === "done" && t.status !== "done") flashDone(); };
-  async function remove(id: string) {
-    if (!confirm("Delete this task?")) return;
+  async function remove(id: string, alreadyConfirmed = false) {
+    if (!alreadyConfirmed && !confirm("Delete this task?")) return;
     setOpenId(null);
     try { await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "DELETE" }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t delete"); }
@@ -463,7 +463,10 @@ export function TasksApp() {
         {tab === "board" && <Board tasks={base} noAssignee={noAssignee} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} onDone={toggleDone} onArchive={(t) => patch(t.id, { archived: true })} />}
         {tab === "cal" && <Calendar tasks={base} anchor={calAnchor} setAnchor={setCalAnchor} view={calView} setView={setCalView} today={today} noAssignee={noAssignee} onOpen={setOpenId} onStatus={setStatus} />}
         {tab === "team" && manager && <TeamView tasks={base} team={teamNames} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onStatus={setStatus} />}
-        {tab === "archive" && <ArchiveView tasks={archived} onOpen={setOpenId} onUnarchive={(t) => patch(t.id, { archived: false })} />}
+        {tab === "archive" && <ArchiveView tasks={archived} onOpen={setOpenId}
+          onUnarchive={(t) => patch(t.id, { archived: false })}
+          canDelete={role !== "staff"}
+          onDelete={(t) => { if (confirm(`Delete "${t.t}" permanently? This cannot be undone.`)) remove(t.id, true); }} />}
       </>)}
 
       {remOpen && (() => {
@@ -519,7 +522,7 @@ export function TasksApp() {
 }
 
 // ── Archive ─────────────────────────────────────────────────────────────────
-function ArchiveView({ tasks, onOpen, onUnarchive }: { tasks: Task[]; onOpen: (id: string) => void; onUnarchive: (t: Task) => void }) {
+function ArchiveView({ tasks, onOpen, onUnarchive, onDelete, canDelete }: { tasks: Task[]; onOpen: (id: string) => void; onUnarchive: (t: Task) => void; onDelete: (t: Task) => void; canDelete: boolean }) {
   if (tasks.length === 0) return <div className="rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)] px-4 py-12 text-center text-[12.5px] text-[var(--ink-3)]">Nothing archived. Archive a task from its card to tuck it away here.</div>;
   return (
     <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
@@ -530,6 +533,14 @@ function ArchiveView({ tasks, onOpen, onUnarchive }: { tasks: Task[]; onOpen: (i
           {t.link && <span className="flex-none"><LinkChip link={t.link} /></span>}
           {t.due && <span className="flex-none text-[11px] text-[var(--ink-3)]">{fmtDay(t.due)}</span>}
           <button type="button" onClick={() => onUnarchive(t)} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">↩ Unarchive</button>
+          {/* Archive is where tasks go to be got rid of, so the delete belongs
+              here rather than only inside the drawer. Operators only. */}
+          {canDelete && (
+            <button type="button" onClick={() => onDelete(t)} title="Delete permanently"
+              className="flex-none rounded-lg border border-[#f6c9cc] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdeaee]">
+              Delete
+            </button>
+          )}
         </div>
       ))}
     </div>
