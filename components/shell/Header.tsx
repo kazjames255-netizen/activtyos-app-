@@ -151,7 +151,16 @@ export function Header({ portal }: { portal: PortalKey }) {
 
   return (
     <header
-      className="flex h-14 flex-none items-center justify-between gap-2 border-b border-[var(--line)] px-3 backdrop-blur-[10px] backdrop-saturate-150 sm:gap-3 sm:px-5"
+      // `relative z-[300]` is load-bearing, not decoration.
+      //
+      // backdrop-blur creates a NEW STACKING CONTEXT, so every dropdown in this
+      // bar — notifications, the account menu, language, Find a child — is
+      // trapped inside the header's context. Their own z-50 only orders them
+      // against each other. The header itself had no z-index, so <main>, which
+      // is a later sibling, painted its content straight over the top: open the
+      // bell on a page with a coloured hero and the hero covered the popover.
+      // Lifting the header lifts every popover inside it in one go.
+      className="relative z-[300] flex h-14 flex-none items-center justify-between gap-2 border-b border-[var(--line)] px-3 backdrop-blur-[10px] backdrop-saturate-150 sm:gap-3 sm:px-5"
       // Same bar as the marketing site's sticky nav: the page navy at 84% with
       // a blur behind it, rather than the lighter --surface panel.
       style={{ background: "color-mix(in srgb, var(--bg) 84%, transparent)" }}
