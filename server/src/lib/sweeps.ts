@@ -720,7 +720,7 @@ async function taskReminders() {
     for (const email of to) {
       await fireOnce(`task_${overdue ? "over" : "due"}_${d.id}_${date}_${email}`, { tenantId: t.tenantId }, () =>
         notifyTenantMember(t.tenantId!, email, {
-          category: "task", title, body, href: "/tasks", key, sendEmail: ch.email,
+          category: "task", title, body, href: `/tasks?task=${d.id}`, key, sendEmail: ch.email,
         }),
       );
     }

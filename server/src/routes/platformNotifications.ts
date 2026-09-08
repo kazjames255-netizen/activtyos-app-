@@ -92,7 +92,7 @@ platformNotifications.get("/", async (_req, res) => {
         id: `task_${d.id}_${t.due}`, type: "task",
         title: overdue ? `Overdue: ${t.t ?? "A task"}` : `Due today: ${t.t ?? "A task"}`,
         body: overdue ? `Was due ${t.due} and is still open.` : `Due today${t.time ? ` at ${t.time}` : ""}.`,
-        href: "/platform/tasks",
+        href: `/platform/tasks?task=${d.id}`,
         // Sorted with everything else by time, so a task due at 18:27 appears
         // at 18:27 rather than jumping to the top of the bell all day.
         at: `${t.due}T${(t.time && /^\d{2}:\d{2}$/.test(t.time)) ? t.time : "08:00"}:00.000Z`,

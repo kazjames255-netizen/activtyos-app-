@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type ReactNode } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { displayName, looksDerived } from "@/lib/display-name";
@@ -143,6 +143,19 @@ export function TasksApp() {
   const { settings, save } = useSettings();
   const [tab, setTab] = useState<"mine" | "team" | "board" | "cal" | "archive" | "milestones">("mine");
   const [openId, setOpenId] = useState<string | null>(null);
+  // ?task=<id> — the bell and the reminder email link straight at a task, so
+  // arriving here should OPEN it, not just land on the list and leave you to
+  // find it. Re-runs on navigation, so clicking a second bell item while
+  // already on this page works too.
+  const sp = useSearchParams();
+  const deepTask = sp.get("task");
+  useEffect(() => { if (deepTask) setOpenId(deepTask); }, [deepTask]);
+  // Closing clears ?task= too, so a refresh doesn't reopen what you just shut,
+  // and the back button doesn't feel broken.
+  const closeTask = useCallback(() => {
+    setOpenId(null);
+    if (deepTask) router.replace(pathname, { scroll: false });
+  }, [deepTask, router, pathname]);
   const [creating, setCreating] = useState(false);
   const [flash, setFlash] = useState(false);
   const [qa, setQa] = useState("");
@@ -485,7 +498,7 @@ export function TasksApp() {
       })()}
       {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">✓ Task logged</div>}
       {creating && <CreateModal noAssignee={noAssignee} team={team} me={me} myEmail={myEmail} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f, toCal); setCreating(false); setQa(""); }} />}
-      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} myEmail={myEmail} meDerived={meDerived} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onSyncCal={() => syncToCalendar(openTask)} onUnsyncCal={() => unsyncFromCalendar(openTask)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)}
+      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} myEmail={myEmail} meDerived={meDerived} opts={linkOpts} onClose={closeTask} onPatch={(f) => patch(openTask.id, f)} onSyncCal={() => syncToCalendar(openTask)} onUnsyncCal={() => unsyncFromCalendar(openTask)} onArchive={() => { patch(openTask.id, { archived: true }); closeTask(); }} onDelete={() => remove(openTask.id)}
         onDeleteSeries={async () => {
           if (!openTask.seriesId) return;
           if (!confirm("Delete every task in this repeat? This cannot be undone.")) return;
