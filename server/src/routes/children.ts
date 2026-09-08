@@ -61,7 +61,22 @@ children.get("/lookup", async (req, res) => {
   if (!auth.tenantId || !CARD_ROLES.has(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
   // Head office can scope the search to one franchise (or its own direct
   // locations) via ?franchiseId=. Company-only; ignored for other roles.
-  const franchiseId = auth.role === "company" && typeof req.query.franchiseId === "string" && req.query.franchiseId ? req.query.franchiseId : null;
+  //
+  // A FRANCHISE is scoped to its own id, always — it does not get to ask. The
+  // client sends no ?franchiseId for a non-company portal, so before this a
+  // franchisee's Find-a-child returned every child in the head-office network.
+  if (auth.role === "franchise" && !auth.franchiseId) {
+    // A franchise account with no franchiseId can't be scoped, so it gets
+    // nothing rather than everything.
+    res.json([]);
+    return;
+  }
+  const franchiseId =
+    auth.role === "franchise"
+      ? auth.franchiseId
+      : auth.role === "company" && typeof req.query.franchiseId === "string" && req.query.franchiseId
+        ? req.query.franchiseId
+        : null;
   const idx = await bookedChildren(auth.tenantId, franchiseId);
   // Also include children a family added to their OWN account (not just booked),
   // so Find-a-child covers everyone on the operator's list. Matched customer
@@ -110,12 +125,21 @@ children.get("/:id", async (req, res) => {
   };
   const snaps = blocks.empty ? [] : await Promise.all(blocks.docs.map((d) => db.collection("bookings").where("blockId", "==", d.id).get()));
   let contact: { parentName: string; email: string; phone: string; ref: string } | null = null;
+  // A franchise may open a child's safeguarding record only if that child is
+  // booked with THIS franchise. Bookings carry franchiseId (bookings.ts), so
+  // that's what we check — without it, any franchisee could read the full
+  // medical/SEND record of any child in the head-office network by id.
+  const isFranchise = auth.role === "franchise";
   const bookings: { ref: string; listing: string; dates: string; pass: string; start: string; end: string; status: string }[] = [];
   for (const s of snaps)
     for (const d of s.docs) {
       const b = fromDoc(d.data() as BookingDoc);
       const has = b.kids?.length ? b.kids.some((k) => k.childId === id) : b.childId === id;
       if (!has) continue;
+      const bFranchiseId = (d.data() as { franchiseId?: string | null }).franchiseId ?? null;
+      if (isFranchise) {
+        if (!auth.franchiseId || bFranchiseId !== auth.franchiseId) continue;
+      }
       if (!contact) contact = { parentName: b.booker ?? "", email: b.email ?? "", phone: b.phone ?? "", ref: b.ref };
       else if (!contact.phone && b.phone) contact.phone = b.phone;
       if (countsTowardCapacity(b.status) && b.status !== "Offered") { const t = timeOf(b.blockId); bookings.push({ ref: b.ref, listing: b.listing ?? "", dates: b.dates ?? "", pass: b.pass ?? "", start: t.start, end: t.end, status: b.status }); }
@@ -123,6 +147,11 @@ children.get("/:id", async (req, res) => {
   const doc = await db.collection("children").doc(id).get();
   if (!doc.exists) { res.status(404).json({ error: "Child not found" }); return; }
   if (!contact) {
+    // The customer-of-this-tenant fallback below is tenant-wide, so it can't
+    // establish that a child belongs to one franchise. A franchisee therefore
+    // gets nothing here — same reasoning as the account-only children skipped
+    // by the lookup above.
+    if (isFranchise) { res.status(404).json({ error: "Child not found for this account" }); return; }
     // Not booked — allow the card only if the child's family is a customer of
     // THIS tenant (so an operator can't open a stranger's child by id).
     const puid = doc.get("parentUid") as string | undefined;

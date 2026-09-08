@@ -185,6 +185,14 @@ export function TeamApp() {
     navigator.clipboard.writeText(`${window.location.origin}/signup?invite=${token}`).then(() => { setCopied(token); setTimeout(() => setCopied(null), 1500); });
   }
   const setStatus = (token: string, status: "active" | "deactivated") => {
+    // IMPORTANT: this does NOT revoke access. There is no disabled-account
+    // concept in the API yet (no flag on the user doc, no check in
+    // server/src/middleware/auth.ts), and PATCH /api/invites/:token/status
+    // does not exist — the call below 404s and is swallowed. So this is a
+    // bookkeeping flag on THIS device only, and the person can still sign in.
+    // Say so out loud rather than letting an operator believe they've removed
+    // someone's access to children's records.
+    if (status === "deactivated" && !confirm(t("team.deactivateNotYetLive"))) return;
     patchMeta(token, { status });
     // Best-effort backend call — no-op until Amir adds the route (handoff).
     void api(`/api/invites/${token}/status`, { method: "PATCH", body: JSON.stringify({ status }) }).catch(() => {});

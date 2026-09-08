@@ -39,7 +39,16 @@ tasks.get("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
   const snap = await col.where("tenantId", "==", auth.tenantId).get();
-  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { due?: string | null; who?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { due?: string | null; who?: string; franchiseId?: string | null })[];
+  // A franchisee sees only its own board — before this it read head office's
+  // internal to-dos, notes and linked entities, and could edit them.
+  // NOTE: tasks created before franchiseId was stamped have none, and are
+  // treated as head office's. A franchisee therefore loses sight of any legacy
+  // task it created. That is the conservative direction: the alternative leaks.
+  if (auth.role === "franchise") {
+    const mine = auth.franchiseId ?? null;
+    list = list.filter((t) => (t.franchiseId ?? null) === mine);
+  }
   // Staff only see tasks assigned to them.
   if (auth.role === "staff") { const me = (req.user?.name ?? req.user?.email ?? "").trim().toLowerCase(); list = list.filter((t) => String(t.who ?? "").trim().toLowerCase() === me); }
   list.sort((a, b) => (`${a.due ?? "9999-99"}` < `${b.due ?? "9999-99"}` ? -1 : 1));
@@ -105,6 +114,9 @@ tasks.post("/", async (req, res) => {
     status: "todo", prio: "med", labels: [], subs: [], comments: [], atts: [], spawn: false, link: null, who: "", due: null,
     ...parsed.data,
     tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Staff", createdAt: new Date().toISOString(),
+    // Which network this task belongs to. Head office and freelancers write
+    // null; a franchisee's tasks are pinned to it so the GET can scope them.
+    franchiseId: auth.role === "franchise" ? (auth.franchiseId ?? null) : null,
   };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
@@ -115,6 +127,11 @@ async function ownTask(req: Request, id: string) {
   if (!auth.tenantId || !canUse(auth.role)) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  // Reads are scoped in the GET; writes need the same rule or a franchisee
+  // could still PUT/DELETE head office's tasks by id.
+  if (auth.role === "franchise" && ((snap.data()!.franchiseId as string | null) ?? null) !== (auth.franchiseId ?? null)) {
+    return { status: 404 as const };
+  }
   return { status: 200 as const, snap };
 }
 

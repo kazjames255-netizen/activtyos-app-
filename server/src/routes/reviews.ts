@@ -136,7 +136,7 @@ function byFranchiseBreakdown(inhouse: NormReview[], franchises: { franchiseId: 
   return [row("__ho__", "Head office (own listings)", null), ...franchises.map((f) => row(f.franchiseId, f.name, f.area))];
 }
 
-async function buildSummary(tenantId: string, opts?: { isHeadOffice?: boolean }) {
+async function buildSummary(tenantId: string, opts?: { isHeadOffice?: boolean; franchiseId?: string | null }) {
   const cfg = await tenantReviewCfg(tenantId);
   let inhouse = await inhouseReviews(tenantId);
   // A head office with an empty inbox gets deterministic demo feedback so the
@@ -151,6 +151,15 @@ async function buildSummary(tenantId: string, opts?: { isHeadOffice?: boolean })
       const ownListings = [...ownerByName.entries()].filter(([, fid]) => fid == null).map(([n]) => n);
       inhouse = [...inhouse, ...demoReviews(ownListings, franchises, ownerByName)];
     }
+  } else if (opts?.franchiseId) {
+    // A franchisee sees only reviews of ITS OWN listings. Same attribution the
+    // head office uses (listing name → owning franchise), then filtered — without
+    // this a franchisee read every review in the network, author names and free
+    // text included, and could publicly reply to a sibling's.
+    const ownerByName = await listingOwnerByName(tenantId);
+    inhouse = inhouse
+      .map((r) => ({ ...r, franchiseId: r.listing ? (ownerByName.get(r.listing) ?? null) : null }))
+      .filter((r) => r.franchiseId === opts.franchiseId);
   }
   const inAvg = inhouse.length ? inhouse.reduce((n, r) => n + r.rating, 0) / inhouse.length : null;
   const primaryPlaceId = cfg.googlePlaces?.find((p) => p.placeId)?.placeId || cfg.googlePlaceId;
@@ -177,7 +186,12 @@ reviews.get("/", async (req, res) => {
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
   // A head office (company) gets the per-franchise breakdown + demo fallback.
   const isHeadOffice = auth.role === "company";
-  const { summary, bySource, items, byFranchise } = await buildSummary(auth.tenantId, { isHeadOffice });
+  const { summary, bySource, items, byFranchise } = await buildSummary(auth.tenantId, {
+    isHeadOffice,
+    // A franchise is pinned to its own listings' reviews. Null franchiseId on a
+    // franchise account means nothing can be attributed to it, so it sees none.
+    franchiseId: auth.role === "franchise" ? (auth.franchiseId ?? "__none__") : null,
+  });
   res.json({ summary, bySource, items, byFranchise, googleConnectConfigured: !!process.env.GOOGLE_BP_CLIENT_ID, trustpilotConfigured: !!process.env.TRUSTPILOT_API_KEY });
 });
 
@@ -191,6 +205,14 @@ reviews.post("/inhouse/:id/reply", async (req, res) => {
   const ref = db.collection("feedback").doc(req.params.id);
   const snap = await ref.get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Not found" }); return; }
+  // Same tenant is not the same franchise: a reply is published under the
+  // provider's name, so a franchisee must not be able to answer a sibling's
+  // review. Attribution is by listing name, as everywhere else in this file.
+  if (auth.role === "franchise") {
+    const listing = (snap.data()!.listing as string | undefined) ?? "";
+    const owner = listing ? (await listingOwnerByName(auth.tenantId)).get(listing) ?? null : null;
+    if (!auth.franchiseId || owner !== auth.franchiseId) { res.status(404).json({ error: "Not found" }); return; }
+  }
   const reply = { text: p.data.text, at: new Date().toISOString() };
   await ref.set({ reply }, { merge: true });
   res.json({ ok: true, reply });

@@ -901,7 +901,13 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     try {
       const r = await api<{ valid: boolean; reason?: string; code?: string; off?: number; exclusive?: boolean }>("/api/discounts/validate", {
         method: "POST",
-        body: JSON.stringify({ tenantId, code, subtotal: grandTotal, attendees, ...(d.id ? { listingId: d.id } : {}) }),
+        // b.total, NOT grandTotal. The server applies a code to the pass
+        // subtotal after automatic discounts and excluding add-ons and meals
+        // (server/src/routes/my.ts:982 — checkCode(l.data, discounted, …)),
+        // and b.total is that same figure. Previewing against the whole basket
+        // quoted a bigger saving than the booking actually took, so the parent
+        // was charged more than the screen said.
+        body: JSON.stringify({ tenantId, code, subtotal: b.total, attendees, ...(d.id ? { listingId: d.id } : {}) }),
       });
       if (!r.valid || !r.off || r.off <= 0) { setCodeErr(r.reason ?? "That code can’t be used on this booking"); return; }
       // Exclusivity: an exclusive code can't join others, and can't be added when others are already on.
@@ -914,7 +920,10 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
     } catch (e) { setCodeErr(e instanceof Error ? e.message : "Couldn’t check that code"); }
     finally { setCodeBusy(false); }
   }
-  const codeOff = Math.min(appliedCodes.reduce((s, a) => s + a.off, 0), grandTotal);
+  // Capped at the pass subtotal, matching the server's own cap
+  // (my.ts:987 — totalOff = Math.min(totalOff, discounted)). A code can never
+  // eat into add-ons or meals, so it must not appear to here either.
+  const codeOff = Math.min(appliedCodes.reduce((s, a) => s + a.off, 0), b.total);
 
   // A friend arriving via a referral link (/store/:id?ref=CODE) gets the code
   // applied automatically — stashed in sessionStorage so it survives navigation

@@ -30,9 +30,12 @@ import { feedback } from "./routes/feedback";
 import { referral, referralsAdmin } from "./routes/referral";
 import { memberships, membershipsAdmin } from "./routes/memberships";
 import { platform } from "./routes/platform";
+import { leads, leadsPublic } from "./routes/leads";
+import { providersPublic } from "./routes/providers";
 import { analytics } from "./routes/analytics";
 import { reconciliation } from "./routes/reconciliation";
 import { dashboard } from "./routes/dashboard";
+import { growth } from "./routes/growth";
 import { discounts } from "./routes/discounts";
 import { splitfees } from "./routes/splitfees";
 import { hoOverview } from "./routes/hoOverview";
@@ -143,6 +146,13 @@ app.use("/api/public/library", optionalAuth, libraryPublic);
 // Public invoice pay page — found by unguessable payToken, no account needed.
 app.use("/api/public/invoice", invoicePublic);
 
+// Marketing "Book a demo" lead capture — POST is public (the /demo form).
+app.use("/api/leads", leadsPublic);
+
+// Provider directory for the parent sign-up picker — a parent has no account
+// yet, so this must sit above requireAuth. Name + rough location only.
+app.use("/api/providers", providersPublic);
+
 app.use("/api", requireAuth, attachRole);
 // The subscription wall: a lapsed owner tenant (canceled / past_due / past
 // its cancel date) gets 402 on everything except the endpoints that let them
@@ -161,6 +171,7 @@ app.use("/api/payments", payments);
 app.use("/api/registers", registers);
 app.use("/api/children", children);
 app.use("/api/platform/notifications", platformNotifications);
+app.use("/api/leads", leads);
 app.use("/api/ratios", ratios);
 app.use("/api/incidents", incidents);
 app.use("/api/medications", medications);
@@ -176,6 +187,7 @@ app.use("/api/shifts", shifts);
 app.use("/api/reviews", reviews);
 app.use("/api/availability", availability);
 app.use("/api/dashboard", dashboard);
+app.use("/api/growth", growth);
 app.use("/api/discounts", discounts);
 app.use("/api/splitfees", splitfees);
 app.use("/api/franchises", franchises);
