@@ -575,6 +575,8 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       footer: false,
       items: [
         { view: "analytics", legacyView: "platform-analytics", label: "Analytics", icon: { type: "glyph", value: "📈" }, badge: null },
+        { view: "tasks", legacyView: "platform-tasks", label: "Tasks", icon: { type: "glyph", value: "✅" }, badge: null },
+        { view: "testing", legacyView: "platform-testing", label: "Testing", icon: { type: "glyph", value: "🧪" }, badge: null },
       ],
     },
     {
@@ -606,7 +608,6 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
       items: [
         { view: "messages", legacyView: "platform-messages", label: "Messages & support", icon: { type: "glyph", value: "▧" }, badge: null },
         { view: "support-review", legacyView: "platform-support-review", label: "Support review", icon: { type: "glyph", value: "📊" }, badge: null },
-        { view: "testing", legacyView: "platform-testing", label: "Testing", icon: { type: "glyph", value: "🧪" }, badge: null },
         { view: "email", legacyView: "platform-email", label: "Email", icon: { type: "svg", markup: "<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.7\" stroke-linecap=\"round\" stroke-linejoin=\"round\" style=\"width:1em;height:1em;vertical-align:-.14em;display:inline-block;flex:none\"><rect x=\"3\" y=\"5\" width=\"18\" height=\"14\" rx=\"2\"></rect><path d=\"M3.5 7l8.5 6 8.5-6\"></path></svg>" }, badge: null },
       ],
     },
