@@ -189,7 +189,7 @@ export const BACKLOG: BacklogItem[] = [
   {
     id: "b26", who: "claude", severity: "high",
     title: "HQ Sales pipeline crashes on any real demo lead",
-    detail: "SalesApp dereferences l.activities[0]; the public demo form writes leads with no activities field. Every genuine inbound lead breaks the page.",
+    detail: "FIXED 8 Sept. The leads collection has two writers with different shapes: the public demo form stores {name, message, status} with no contactName, stage, plan, estMrr or activities, while the board read l.activities[0], l.estMrr and l.stage. One genuine inbound lead took the whole page down. Now normalised on load rather than guarded at each of six read sites. Step d28s2 re-verifies it.",
     file: "features/platform/SalesApp.tsx:183", step: "d28s2",
   },
   {

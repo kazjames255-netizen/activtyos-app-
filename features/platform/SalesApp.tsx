@@ -52,6 +52,42 @@ const fmtDay = (iso: string) => new Date(iso).toLocaleDateString("en-GB", { day:
 // stamps `at`/`by` itself when it lands).
 type NewActivity = { type: Activity["type"]; note: string; outcome?: string };
 
+
+/**
+ * The `leads` collection has TWO writers with different shapes, and the board
+ * only ever knew about one of them.
+ *
+ * The public "Book a demo" form (server/src/routes/leads.ts) stores
+ * { name, email, phone, business, size, interest, message, source, status } —
+ * no contactName, no stage, no plan, no estMrr and, fatally, no activities.
+ * The board reads l.activities[0], l.estMrr and l.stage, so a single genuine
+ * inbound lead threw "Cannot read properties of undefined (reading '0')" and
+ * took the whole page down.
+ *
+ * Normalising on load rather than guarding at each of the six read sites: a
+ * guard would have to be remembered every time someone touches this file, and
+ * the next omission is another white screen on the page you use to sell.
+ */
+function normaliseLead(raw: Lead & Partial<{ name: string; message: string; status: string; interest: string }>): Lead {
+  const plan = (["freelancer", "company", "franchise"] as const).includes(raw.plan) ? raw.plan : "company";
+  return {
+    ...raw,
+    // The demo form calls them name/message/status.
+    contactName: raw.contactName || raw.name || "",
+    notes: raw.notes || raw.message || "",
+    stage: VALID_STAGES.has(raw.stage) ? raw.stage : VALID_STAGES.has(raw.status as Stage) ? (raw.status as Stage) : "new",
+    business: raw.business || raw.name || raw.email || "Untitled",
+    email: raw.email || "", phone: raw.phone || "", location: raw.location || "", owner: raw.owner || "",
+    source: raw.source || "inbound",
+    plan,
+    // estMrr feeds a column total — undefined turns it into NaN on screen.
+    estMrr: typeof raw.estMrr === "number" ? raw.estMrr : PLAN_MRR[plan],
+    activities: Array.isArray(raw.activities) ? raw.activities : [],
+    createdAt: raw.createdAt || nowIso(),
+    updatedAt: raw.updatedAt || raw.createdAt || nowIso(),
+  };
+}
+
 export function SalesApp() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
@@ -67,7 +103,7 @@ export function SalesApp() {
   // "interested") — fold those into "new" so no lead vanishes between columns.
   const refresh = useCallback(() => {
     get<Lead[]>("/api/platform/leads")
-      .then((list) => { setLeads(list.map((l) => (VALID_STAGES.has(l.stage) ? l : { ...l, stage: "new" as Stage }))); setError(null); })
+      .then((list) => { setLeads(list.map(normaliseLead)); setError(null); })
       .catch((e) => setError(e instanceof Error ? e.message : "Couldn't load leads"))
       .finally(() => setLoading(false));
   }, []);
