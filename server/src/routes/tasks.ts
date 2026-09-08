@@ -8,7 +8,19 @@ import type { Role } from "../middleware/role";
 // Tasks rather than a generic to-do. Tenant-scoped; staff see only their own.
 export const tasks = Router();
 const col = db.collection("tasks");
-const canUse = (role: Role) => role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
+const canUse = (role: Role) => role === "staff" || role === "company" || role === "freelancer" || role === "franchise" || role === "platform";
+
+/**
+ * Which bucket a caller's tasks live in.
+ *
+ * A platform (HQ) account has no tenant — tenantId is null — so it gets its own
+ * fixed bucket rather than a tenant's. HQ's own to-do list is not a provider's,
+ * and must never appear in one: "__platform__" can never collide with a real
+ * Firestore-generated tenant id.
+ */
+const PLATFORM_BUCKET = "__platform__";
+const bucketOf = (auth: { role: string; tenantId: string | null }) =>
+  auth.role === "platform" ? PLATFORM_BUCKET : auth.tenantId;
 
 const linkSchema = z.object({ k: z.enum(["child", "parent", "camp", "book", "comp", "venue", "list", "gen"]), v: z.string().max(160), href: z.string().max(400).optional() }).nullable();
 const subSchema = z.object({ t: z.string().max(200), done: z.boolean() });
@@ -37,8 +49,9 @@ const partialSchema = taskSchema.partial();
 
 tasks.get("/", async (req, res) => {
   const auth = req.auth!;
-  if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
-  const snap = await col.where("tenantId", "==", auth.tenantId).get();
+  const bucket = bucketOf(auth);
+  if (!bucket || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
+  const snap = await col.where("tenantId", "==", bucket).get();
   let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { due?: string | null; who?: string; franchiseId?: string | null })[];
   // A franchisee sees only its own board — before this it read head office's
   // internal to-dos, notes and linked entities, and could edit them.
@@ -62,7 +75,15 @@ tasks.get("/", async (req, res) => {
 // a single flat group (their own team).
 tasks.get("/assignees", async (req, res) => {
   const auth = req.auth!;
-  if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  if (!bucketOf(auth) || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  // HQ has no tenant and therefore no team directory to draw from — it assigns
+  // to itself. Returning an empty flat group keeps the picker working instead
+  // of 403-ing the whole panel.
+  if (auth.role === "platform") {
+    const me = (req.user?.name ?? req.user?.email ?? "").trim();
+    res.json({ headOffice: false, groups: [{ franchiseId: null, name: "HQ", people: me ? [me] : [] }] });
+    return;
+  }
   const [usersSnap, tasksSnap] = await Promise.all([
     db.collection("users").where("tenantId", "==", auth.tenantId).get(),
     col.where("tenantId", "==", auth.tenantId).get(),
@@ -107,13 +128,13 @@ tasks.get("/assignees", async (req, res) => {
 
 tasks.post("/", async (req, res) => {
   const auth = req.auth!;
-  if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
+  if (!bucketOf(auth) || !canUse(auth.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
   const parsed = taskSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const doc = {
     status: "todo", prio: "med", labels: [], subs: [], comments: [], atts: [], spawn: false, link: null, who: "", due: null,
     ...parsed.data,
-    tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Staff", createdAt: new Date().toISOString(),
+    tenantId: bucketOf(auth), createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Staff", createdAt: new Date().toISOString(),
     // Which network this task belongs to. Head office and freelancers write
     // null; a franchisee's tasks are pinned to it so the GET can scope them.
     franchiseId: auth.role === "franchise" ? (auth.franchiseId ?? null) : null,
@@ -124,9 +145,10 @@ tasks.post("/", async (req, res) => {
 
 async function ownTask(req: Request, id: string) {
   const auth = req.auth!;
-  if (!auth.tenantId || !canUse(auth.role)) return { status: 403 as const };
+  const bucket = bucketOf(auth);
+  if (!bucket || !canUse(auth.role)) return { status: 403 as const };
   const snap = await col.doc(id).get();
-  if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!snap.exists || snap.data()!.tenantId !== bucket) return { status: 404 as const };
   // Reads are scoped in the GET; writes need the same rule or a franchisee
   // could still PUT/DELETE head office's tasks by id.
   if (auth.role === "franchise" && ((snap.data()!.franchiseId as string | null) ?? null) !== (auth.franchiseId ?? null)) {

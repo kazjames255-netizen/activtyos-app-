@@ -148,7 +148,8 @@ export function TasksApp() {
   const [bookings, setBookings] = useState<{ ref: string; booker?: string; email?: string; phone?: string; postcode?: string; child?: string; kids?: { name: string; age?: number }[]; listing?: string; pass?: string; dates?: string }[]>([]);
   const portal = usePathname()?.split("/")[1] || "freelancer";
   const today = todayIso();
-  const manager = role === "company" || role === "franchise";
+  // HQ runs its own board and gets the full tab set, same as a company.
+  const manager = role === "company" || role === "franchise" || role === "platform";
   const isFreelancer = role === "freelancer";
   const showMilestones = role === "company" || role === "franchise";
   const onMilestones = tab === "milestones";
