@@ -826,15 +826,33 @@ function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal,
   const [sub, setSub] = useState("");
   const [comment, setComment] = useState("");
   const nowLabel = () => new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  // Both of these were Enter-only, with no button and no other affordance: type
+  // a comment, click away, and it vanished with no sign it was ever there.
+  const addComment = () => {
+    const body = comment.trim(); if (!body) return;
+    onPatch({ comments: [...(task.comments ?? []), { who: me || "You", body, when: nowLabel() }] });
+    setComment("");
+  };
+  const addSub = () => {
+    const t = sub.trim(); if (!t) return;
+    onPatch({ subs: [...(task.subs ?? []), { t, done: false }] });
+    setSub("");
+  };
+  // Closing the drawer with something typed but unsent is the other way work
+  // got lost. Ask rather than discard.
+  const closeGuarded = () => {
+    if ((comment.trim() || sub.trim()) && !confirm("You have something typed that hasn't been added yet. Close anyway?")) return;
+    onClose();
+  };
   const field = (name: string, node: ReactNode) => <div className="grid grid-cols-[110px_1fr] items-center gap-2 py-1.5"><span className="text-[11.5px] font-bold text-[var(--ink-3)]">{name}</span><div>{node}</div></div>;
   const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]";
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={closeGuarded}>
       <div className="flex h-full w-full max-w-[460px] flex-col bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="border-b border-[var(--line)] px-4 py-3">
           <div className="flex items-center justify-between">
             <input value={task.t} onChange={(e) => onPatch({ t: e.target.value })} className="min-w-0 flex-1 rounded-lg px-1 text-[15px] font-extrabold outline-none focus:bg-[var(--panel)]" />
-            <button type="button" onClick={onClose} className="ml-2 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[15px] font-bold text-[var(--ink-2)]">×</button>
+            <button type="button" onClick={closeGuarded} className="ml-2 flex h-7 w-7 flex-none items-center justify-center rounded-full bg-[var(--panel)] text-[15px] font-bold text-[var(--ink-2)]">×</button>
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <button type="button" onClick={() => onPatch({ status: task.status === "done" ? "todo" : "done" })} className="rounded-full px-2.5 py-1 text-[11px] font-extrabold" style={task.status === "done" ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#eef4fd", color: "#1d3a8f" }}>{task.status === "done" ? "✓ Done — reopen" : "Mark complete"}</button>
@@ -881,13 +899,21 @@ function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal,
           <div className="mt-3 border-t border-[var(--line)] pt-2">
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Subtasks {task.subs?.length ? `(${task.subs.filter((s) => s.done).length}/${task.subs.length})` : ""}</div>
             {(task.subs ?? []).map((s, i) => <label key={i} className="flex items-center gap-2 py-0.5 text-[12.5px]"><input type="checkbox" checked={s.done} onChange={() => onPatch({ subs: (task.subs ?? []).map((x, j) => (j === i ? { ...x, done: !x.done } : x)) })} className="h-3.5 w-3.5 accent-[#16b364]" /><span className={s.done ? "text-[var(--ink-3)] line-through" : ""}>{s.t}</span></label>)}
-            <input value={sub} onChange={(e) => setSub(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && sub.trim()) { onPatch({ subs: [...(task.subs ?? []), { t: sub.trim(), done: false }] }); setSub(""); } }} placeholder="+ add a subtask" className={`mt-1 ${inputCls}`} />
+            <div className="mt-1 flex gap-1.5">
+              <input value={sub} onChange={(e) => setSub(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addSub(); }} placeholder="+ add a subtask" className={inputCls} />
+              <button type="button" onClick={addSub} disabled={!sub.trim()}
+                className="shrink-0 rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-35">Add</button>
+            </div>
           </div>
 
           <div className="mt-3 border-t border-[var(--line)] pt-2">
             <div className="mb-1 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Comments</div>
             {(task.comments ?? []).map((c, i) => <div key={i} className="mb-1.5 rounded-lg bg-[var(--panel)] px-2.5 py-1.5 text-[12px]"><div className="font-bold">{c.who} <span className="font-normal text-[var(--ink-3)]">· {c.when}</span></div><div className="text-[var(--ink-2)]">{c.body}</div></div>)}
-            <div className="flex gap-1.5"><input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && comment.trim()) { onPatch({ comments: [...(task.comments ?? []), { who: me || "You", body: comment.trim(), when: nowLabel() }] }); setComment(""); } }} placeholder="Write a comment…" className={inputCls} /></div>
+            <div className="flex gap-1.5">
+              <input value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addComment(); }} placeholder="Write a comment…" className={inputCls} />
+              <button type="button" onClick={addComment} disabled={!comment.trim()}
+                className="shrink-0 rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-35">Post</button>
+            </div>
           </div>
 
           <div className="mt-3 border-t border-[var(--line)] pt-2">
