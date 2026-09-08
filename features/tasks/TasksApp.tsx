@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, type CSSProperties, type Rea
 import { usePathname, useRouter } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { displayName, looksDerived } from "@/lib/display-name";
 import { MilestonesApp } from "@/features/milestones/MilestonesApp";
 import { Button } from "@/components/ui";
 import { TourLauncher } from "@/features/common/TourLauncher";
@@ -132,6 +133,7 @@ export function TasksApp() {
   const [role, setRole] = useState("");
   const [me, setMe] = useState("");
   const [roster, setRoster] = useState<string[]>([]);
+  const [meDerived, setMeDerived] = useState(false);
   const [tab, setTab] = useState<"mine" | "team" | "board" | "cal" | "archive" | "milestones">("mine");
   const [openId, setOpenId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -167,13 +169,21 @@ export function TasksApp() {
     apiGet<Task[]>("/api/tasks").then((t) => { setTasks(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
-  useEffect(() => { apiGet<{ role: string; name?: string; email?: string }>("/api/me").then((m) => { setRole(m.role); setMe(m.name || m.email || ""); }).catch(() => {}); }, []);
+  useEffect(() => {
+    apiGet<{ role: string; name?: string; email?: string }>("/api/me").then((m) => {
+      setRole(m.role);
+      // Never put a raw email address on a task. If no name is set, derive one
+      // and flag it, so the hint below can point at Account → Name.
+      setMe(displayName(m.name, m.email));
+      setMeDerived(looksDerived(m.name, m.email));
+    }).catch(() => {});
+  }, []);
   // The real team, from the tenant's own directory. Without this the assignee
   // list was derived ONLY from names already used on existing tasks, so a fresh
   // board offered nobody at all — not even yourself.
   useEffect(() => {
     apiGet<{ groups: { people: string[] }[] }>("/api/tasks/assignees")
-      .then((r) => setRoster((r.groups ?? []).flatMap((g) => g.people ?? [])))
+      .then((r) => setRoster((r.groups ?? []).flatMap((g) => g.people ?? []).map((p) => displayName(p, p))))
       .catch(() => {});
   }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; location?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", location: x.location })))).catch(() => {}); }, []);
@@ -821,7 +831,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
 }
 
 // ── Detail drawer ───────────────────────────────────────────────────────────
-function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal, onUnsyncCal, onArchive, onDelete, onDeleteSeries }: { task: Task; team: string[]; noAssignee: boolean; me: string; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>) => void; onSyncCal: () => void; onUnsyncCal: () => void; onArchive: () => void; onDelete: () => void; onDeleteSeries: () => void }) {
+function Drawer({ task, team, noAssignee, me, meDerived, opts, onClose, onPatch, onSyncCal, onUnsyncCal, onArchive, onDelete, onDeleteSeries }: { task: Task; team: string[]; noAssignee: boolean; me: string; meDerived?: boolean; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>) => void; onSyncCal: () => void; onUnsyncCal: () => void; onArchive: () => void; onDelete: () => void; onDeleteSeries: () => void }) {
   const [label, setLabel] = useState("");
   const [sub, setSub] = useState("");
   const [comment, setComment] = useState("");
@@ -862,6 +872,11 @@ function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal,
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-2">
+          {meDerived && (
+            <div className="mb-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">
+              Your account has no name set, so &ldquo;{me}&rdquo; is being used. Set it properly in <b>Account → Name</b>.
+            </div>
+          )}
           {task.seriesId && (
             <div className="mb-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-bold text-[var(--ink-2)]">
               🔁 Part of a repeat{task.seriesFreq ? ` · ${({ daily: "every day", weekdays: "every weekday", weekly: "every week", monthly: "every month" } as Record<string, string>)[task.seriesFreq] ?? task.seriesFreq}` : ""}
