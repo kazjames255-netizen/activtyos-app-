@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PLAN, PLAN_START, AMIR_DUE, type Day, type Step } from "@/lib/testing/plan";
+import { PLAN, PLAN_START, AMIR_DUE, PREREQS, type Day, type Step } from "@/lib/testing/plan";
+import { BACKLOG, bySeverity, type Who } from "@/lib/testing/backlog";
 import {
   loadRun, saveResult, clearStep, progressOf, openFor, buildHandover, buildFullReport,
   stepById, type Run, type Verdict, type Owner,
@@ -13,6 +14,29 @@ import { testLoggerOn, setTestLoggerOn } from "./TestLogger";
 // the resulting handover lists are produced.
 
 const todayISO = () => new Date().toISOString().slice(0, 10);
+
+const TICK_KEY = "aos.testing.ticks.v1";
+const loadTicks = (): Record<string, boolean> => {
+  if (typeof window === "undefined") return {};
+  try { return JSON.parse(localStorage.getItem(TICK_KEY) ?? "{}") as Record<string, boolean>; } catch { return {}; }
+};
+const saveTick = (id: string, on: boolean) => {
+  const t = loadTicks(); if (on) t[id] = true; else delete t[id];
+  localStorage.setItem(TICK_KEY, JSON.stringify(t));
+  window.dispatchEvent(new Event("aos:testing"));
+};
+
+const WHO: Record<Who, { label: string; bg: string; fg: string }> = {
+  amir: { label: "Amir", bg: "rgba(47,107,216,.12)", fg: "#2f6bd8" },
+  claude: { label: "Front-end", bg: "rgba(107,77,230,.12)", fg: "#6b4de6" },
+  kaz: { label: "You", bg: "#fdf1dc", fg: "#a5760a" },
+  decision: { label: "Needs a decision", bg: "rgba(200,30,94,.10)", fg: "#b3123c" },
+};
+const SEV: Record<string, { bg: string; fg: string }> = {
+  critical: { bg: "#fdeaee", fg: "#b3123c" },
+  high: { bg: "#fdf1dc", fg: "#a5760a" },
+  medium: { bg: "var(--panel)", fg: "var(--ink-2)" },
+};
 
 const VERDICT: Record<Verdict, { label: string; bg: string; fg: string }> = {
   pass: { label: "Pass", bg: "#e4f7ed", fg: "#0b7a52" },
@@ -147,7 +171,8 @@ function HandoverPanel({ run, owner, title, lede }: { run: Run; owner: Owner; ti
 
 export function TestingApp() {
   const [run, setRun] = useState<Run>({});
-  const [tab, setTab] = useState<"plan" | "amir" | "frontend" | "export">("plan");
+  const [tab, setTab] = useState<"start" | "plan" | "backlog" | "amir" | "frontend" | "export">("start");
+  const [ticks, setTicks] = useState<Record<string, boolean>>({});
   const today = todayISO();
   // Land on today's day if the run is under way, else day 1.
   const [dayNo, setDayNo] = useState(() => PLAN.find((d) => d.date === todayISO())?.day ?? 1);
@@ -155,7 +180,7 @@ export function TestingApp() {
   useEffect(() => { setLogger(testLoggerOn()); }, []);
 
   useEffect(() => {
-    const sync = () => setRun(loadRun());
+    const sync = () => { setRun(loadRun()); setTicks(loadTicks()); };
     sync();
     window.addEventListener("aos:testing", sync);
     return () => window.removeEventListener("aos:testing", sync);
@@ -178,9 +203,9 @@ export function TestingApp() {
     <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
       <header className="rounded-[20px] p-6 text-white" style={{ background: "linear-gradient(120deg,#16306e,#274ba3 58%,#3f78d8)" }}>
         <div className="text-[11px] font-extrabold uppercase tracking-[.12em] text-[#f5b81f]">Acceptance testing</div>
-        <h1 className="mt-2 text-[30px] font-extrabold leading-tight">25 days, {p.total} checks.</h1>
+        <h1 className="mt-2 text-[30px] font-extrabold leading-tight">28 days, {p.total} checks.</h1>
         <p className="mt-2 max-w-[70ch] text-[14.5px] text-white/80">
-          {PLAN_START} to 2026-10-05. Days 1&ndash;7 need nothing from Amir; his work is due {AMIR_DUE} and Day 8 is the Tax-Free Childcare reconciliation.
+          {PLAN_START} to 2026-10-08. Days 1&ndash;7 need nothing from Amir; his work is due {AMIR_DUE} and Day 8 is the Tax-Free Childcare reconciliation.
           Log every step as you do it &mdash; a fail is only useful if you write down what actually happened.
         </p>
         <button type="button"
@@ -200,7 +225,7 @@ export function TestingApp() {
       </header>
 
       <nav className="mt-5 flex flex-wrap gap-2">
-        {([["plan", "The 25 days"], ["amir", `For Amir (${p.openForAmir})`], ["frontend", `To triage (${p.openForTriage})`], ["export", "Export"]] as const).map(([k, label]) => (
+        {([["start", "Before you start"], ["plan", "The 28 days"], ["backlog", `Known issues (${BACKLOG.filter((b) => !ticks[b.id]).length})`], ["amir", `For Amir (${p.openForAmir})`], ["frontend", `To triage (${p.openForTriage})`], ["export", "Export"]] as const).map(([k, label]) => (
           <button key={k} type="button" onClick={() => setTab(k)}
             className="rounded-full px-4 py-2 text-[13px] font-extrabold"
             style={tab === k ? { background: "#16306e", color: "#fff" } : { background: "var(--panel)", color: "var(--ink-2)" }}>
@@ -208,6 +233,77 @@ export function TestingApp() {
           </button>
         ))}
       </nav>
+
+      {tab === "start" && (
+        <section className="mt-6">
+          <h3 className="text-[18px] font-extrabold text-[var(--ink)]">Do these before Day 1</h3>
+          <p className="mt-1 max-w-[75ch] text-[13.5px] text-[var(--ink-2)]">
+            Not optional. Without them a large part of the run cannot fail: mail is off by default and a skipped send
+            reports success, Stripe has no key set, and there is no deployed environment to test on.
+          </p>
+          <ul className="mt-4 flex flex-col gap-2.5">
+            {PREREQS.map((q) => (
+              <li key={q.id} className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-4">
+                <div className="flex items-start gap-3">
+                  <input type="checkbox" checked={!!ticks[q.id]} onChange={(e) => { saveTick(q.id, e.target.checked); setTicks(loadTicks()); }}
+                    className="mt-1 h-5 w-5 shrink-0 accent-[#0b7a52]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[14px] font-extrabold text-[var(--ink)]">{q.title}</span>
+                      <Chip bg={q.who === "Amir" ? "rgba(47,107,216,.12)" : "#fdf1dc"} fg={q.who === "Amir" ? "#2f6bd8" : "#a5760a"}>{q.who}</Chip>
+                    </div>
+                    <p className="mt-1.5 whitespace-pre-line text-[13px] text-[var(--ink-2)]">{q.why}</p>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {tab === "backlog" && (
+        <section className="mt-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-[18px] font-extrabold text-[var(--ink)]">Known issues, before you test anything</h3>
+              <p className="mt-1 max-w-[75ch] text-[13.5px] text-[var(--ink-2)]">
+                Every item here is confirmed — verified adversarially by the portal audit, or found by the five-reviewer
+                critique reading the code. Nothing speculative. Tick them off as they land; anything still open on the
+                11th is something the run will hit, and the step that catches it is named.
+              </p>
+            </div>
+            <button type="button"
+              onClick={() => navigator.clipboard.writeText(
+                BACKLOG.filter((b) => !ticks[b.id] && b.who === "amir").sort(bySeverity)
+                  .map((b) => `## ${b.title}\n${b.detail}${b.file ? `\n\nWhere: ${b.file}` : ""}${b.step ? `\nTest step: ${b.step}` : ""}`)
+                  .join("\n\n"))}
+              className="rounded-full bg-[#2f6bd8] px-4 py-2 text-[13px] font-extrabold text-white">
+              Copy Amir&rsquo;s list
+            </button>
+          </div>
+          <ul className="mt-4 flex flex-col gap-2.5">
+            {[...BACKLOG].sort(bySeverity).map((b) => (
+              <li key={b.id} className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-4"
+                style={ticks[b.id] ? { opacity: 0.45 } : undefined}>
+                <div className="flex items-start gap-3">
+                  <input type="checkbox" checked={!!ticks[b.id]} onChange={(e) => { saveTick(b.id, e.target.checked); setTicks(loadTicks()); }}
+                    className="mt-1 h-5 w-5 shrink-0 accent-[#0b7a52]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Chip bg={SEV[b.severity].bg} fg={SEV[b.severity].fg}>{b.severity}</Chip>
+                      <Chip bg={WHO[b.who].bg} fg={WHO[b.who].fg}>{WHO[b.who].label}</Chip>
+                      {b.step && <code className="rounded-md bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-2)]">{b.step}</code>}
+                    </div>
+                    <div className="mt-1.5 text-[14px] font-extrabold text-[var(--ink)]">{b.title}</div>
+                    <p className="mt-1 text-[13px] text-[var(--ink-2)]">{b.detail}</p>
+                    {b.file && <p className="mt-1 text-[11.5px] text-[var(--ink-3)]">{b.file}</p>}
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
 
       {tab === "plan" && (
         <>
