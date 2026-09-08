@@ -1021,6 +1021,10 @@ export interface TenantSettings {
    *  only, `false` = off entirely. Bare booleans predate the channel choice and
    *  still mean what they always did. */
   notifications: Record<string, boolean | "bell">;
+  /** Task "Category" links the operator has used. Kept here rather than derived
+   *  from live tasks alone, so a category doesn't disappear the moment the last
+   *  task carrying it is deleted. */
+  taskCategories?: string[];
 
   // ── People & safeguarding ──
   /** Every child needs a date of birth before the record can be saved. */

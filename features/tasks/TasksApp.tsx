@@ -287,12 +287,31 @@ export function TasksApp() {
     const others = [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));
     return me.trim() ? [{ name: me, email: myEmail }, ...others] : others;
   }, [all, roster, me, myEmail]);
-  const cats = useMemo(() => [...new Set(all.map((t) => t.cat).filter((c): c is string => !!c && c.trim() !== ""))].sort(), [all]);
+  // The picker writes the category to link.v ({k:"gen", v:"…"}), but this list
+  // was reading t.cat — a different field nothing sets. So every category you
+  // typed was saved on the task and never offered again. Read what's actually
+  // written, keep t.cat for older tasks, and union with the saved list so a
+  // category outlives the task that introduced it.
+  const cats = useMemo(() => {
+    const fromTasks = all.flatMap((t) => [t.link?.k === "gen" ? t.link.v : "", t.cat ?? ""]);
+    const saved = settings.taskCategories ?? [];
+    return [...new Set([...saved, ...fromTasks].map((c) => (c ?? "").trim()).filter(Boolean))].sort();
+  }, [all, settings.taskCategories]);
+
+  // Remember a newly typed category. Best-effort: HQ has no tenant library to
+  // save into, so there it simply falls back to the derived list above.
+  const rememberCat = useCallback((link?: TaskLink | null) => {
+    const v = link?.k === "gen" ? (link.v ?? "").trim() : "";
+    if (!v) return;
+    const saved = settings.taskCategories ?? [];
+    if (saved.some((c) => c.toLowerCase() === v.toLowerCase())) return;
+    void save({ settings: { ...settings, taskCategories: [...saved, v] } });
+  }, [settings, save]);
   const locations = useMemo(() => [...new Set(listings.map((l) => l.location).filter((v): v is string => !!v))].sort(), [listings]);
   const linkOpts: LinkOpts = { portal, bookOpts, childOpts, parentOpts, listings, locations, cats, salesOpts };
 
   async function create(fields: Partial<Task>, toCal = false) {
-    try { const created = await apiPost<Task>("/api/tasks", { status: "todo", prio: "med", ...fields }); if (toCal && created?.due) await syncToCalendar(created); refresh(); }
+    try { const created = await apiPost<Task>("/api/tasks", { status: "todo", prio: "med", ...fields }); rememberCat(fields.link); if (toCal && created?.due) await syncToCalendar(created); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t add the task"); }
   }
   // Mirror a task onto the Events calendar. First sync creates the event and
@@ -311,6 +330,7 @@ export function TasksApp() {
     patch(t.id, { calEventId: null });
   }
   async function patch(id: string, fields: Partial<Task>) {
+    if (fields.link) rememberCat(fields.link);
     setTasks((ts) => (ts ?? []).map((t) => (t.id === id ? { ...t, ...fields } : t))); // optimistic
     try { await api(`/api/tasks/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(fields) }); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); refresh(); }
