@@ -30,6 +30,10 @@ const attSchema = z.object({ name: z.string().max(200) });
 const taskSchema = z.object({
   t: z.string().trim().min(1).max(200),               // title
   who: z.string().max(80).optional(),                 // assignee display name ("" = unassigned)
+  // The assignee's email, alongside the name. Names are not unique — two
+  // people called Sarah are one assignee — and renaming someone orphans their
+  // tasks. The email is the stable identity; the name is what's displayed.
+  whoEmail: z.string().max(160).optional(),
   prio: z.enum(["urgent", "high", "med", "low"]).optional(),
   due: z.string().max(10).nullable().optional(),      // ISO date (yyyy-mm-dd) or null
   time: z.string().max(5).nullable().optional(),      // optional HH:MM deadline time
@@ -88,8 +92,9 @@ tasks.get("/assignees", async (req, res) => {
   // to itself. Returning an empty flat group keeps the picker working instead
   // of 403-ing the whole panel.
   if (auth.role === "platform") {
-    const me = (req.user?.name ?? req.user?.email ?? "").trim();
-    res.json({ headOffice: false, groups: [{ franchiseId: null, name: "HQ", people: me ? [me] : [] }] });
+    const nm = (req.user?.name ?? "").trim();
+    const em = (req.user?.email ?? "").trim();
+    res.json({ headOffice: false, groups: [{ franchiseId: null, name: "HQ", people: em || nm ? [{ name: nm, email: em }] : [] }] });
     return;
   }
   const [usersSnap, tasksSnap] = await Promise.all([
@@ -107,29 +112,40 @@ tasks.get("/assignees", async (req, res) => {
     }
   }
   // People buckets: one per franchiseId + "__ho__" for the head office's own team.
-  const buckets = new Map<string, Set<string>>();
-  const add = (key: string, name: string) => { if (!name) return; if (!buckets.has(key)) buckets.set(key, new Set()); buckets.get(key)!.add(name); };
+  // Keyed by email where there is one, so the same person can't appear twice.
+  const buckets = new Map<string, Map<string, { name: string; email: string }>>();
+  const add = (key: string, name: string, email: string) => {
+    if (!name && !email) return;
+    if (!buckets.has(key)) buckets.set(key, new Map());
+    buckets.get(key)!.set((email || name).toLowerCase(), { name, email });
+  };
   for (const d of usersSnap.docs) {
     const u = d.data();
     if (u.role === "parent" || u.role === "platform") continue;      // never assign to a parent
-    const nm = nameOf(u);
     const fid = (u.franchiseId as string) || null;
-    add(fid && franchises.has(fid) ? fid : "__ho__", nm);
+    add(fid && franchises.has(fid) ? fid : "__ho__", nameOf(u), ((u.email as string) || "").trim());
   }
   // Fold in any names already used on existing tasks (free-typed), into HO-own so
   // they never disappear from the picker.
-  for (const d of tasksSnap.docs) { const w = String(d.data().who ?? "").trim(); if (w) add("__ho__", w); }
+  for (const d of tasksSnap.docs) {
+    const t = d.data();
+    const w = String(t.who ?? "").trim();
+    if (w) add("__ho__", w, String(t.whoEmail ?? "").trim());
+  }
 
+  const sortPeople = (m?: Map<string, { name: string; email: string }>) =>
+    [...(m?.values() ?? [])].sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
   const isHeadOffice = auth.role === "company" && franchises.size > 0;
   if (!isHeadOffice) {
     // Flat team = everyone we found (any bucket), sorted & de-duped.
-    const flat = [...new Set([...buckets.values()].flatMap((s) => [...s]))].sort();
+    const flat = [...new Map([...buckets.values()].flatMap((m) => [...m])).values()]
+      .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
     res.json({ headOffice: false, groups: [{ franchiseId: null, name: "Team", people: flat }] });
     return;
   }
   const groups = [
-    { franchiseId: null as string | null, name: "Head office", people: [...(buckets.get("__ho__") ?? [])].sort() },
-    ...[...franchises.values()].map((f) => ({ franchiseId: f.franchiseId, name: f.name, people: [...(buckets.get(f.franchiseId) ?? [])].sort() })),
+    { franchiseId: null as string | null, name: "Head office", people: sortPeople(buckets.get("__ho__")) },
+    ...[...franchises.values()].map((f) => ({ franchiseId: f.franchiseId, name: f.name, people: sortPeople(buckets.get(f.franchiseId)) })),
   ];
   res.json({ headOffice: true, groups });
 });

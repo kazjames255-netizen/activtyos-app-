@@ -33,6 +33,9 @@ interface Att { name: string }
 interface Task {
   id: string; t: string; who?: string; prio?: Prio; due?: string | null; time?: string | null; status?: Status;
   link?: TaskLink | null; co?: string; cat?: string; labels?: string[]; subs?: Sub[]; comments?: Comment[]; atts?: Att[];
+  // The assignee's email alongside the display name. Names aren't unique and
+  // change; this is what actually identifies the person.
+  whoEmail?: string;
   spawn?: boolean; archived?: boolean; createdByName?: string; calEventId?: string | null;
   // Set on create only; the server expands it into one task per date.
   repeat?: { freq: "daily" | "weekdays" | "weekly" | "monthly"; until: string };
@@ -132,7 +135,8 @@ export function TasksApp() {
   const [error, setError] = useState<string | null>(null);
   const [role, setRole] = useState("");
   const [me, setMe] = useState("");
-  const [roster, setRoster] = useState<string[]>([]);
+  const [myEmail, setMyEmail] = useState("");
+  const [roster, setRoster] = useState<{ name: string; email: string }[]>([]);
   const [meDerived, setMeDerived] = useState(false);
   const [tab, setTab] = useState<"mine" | "team" | "board" | "cal" | "archive" | "milestones">("mine");
   const [openId, setOpenId] = useState<string | null>(null);
@@ -175,6 +179,7 @@ export function TasksApp() {
       // Never put a raw email address on a task. If no name is set, derive one
       // and flag it, so the hint below can point at Account → Name.
       setMe(displayName(m.name, m.email));
+      setMyEmail((m.email ?? "").trim());
       setMeDerived(looksDerived(m.name, m.email));
     }).catch(() => {});
   }, []);
@@ -182,8 +187,9 @@ export function TasksApp() {
   // list was derived ONLY from names already used on existing tasks, so a fresh
   // board offered nobody at all — not even yourself.
   useEffect(() => {
-    apiGet<{ groups: { people: string[] }[] }>("/api/tasks/assignees")
-      .then((r) => setRoster((r.groups ?? []).flatMap((g) => g.people ?? []).map((p) => displayName(p, p))))
+    apiGet<{ groups: { people: { name: string; email: string }[] }[] }>("/api/tasks/assignees")
+      .then((r) => setRoster((r.groups ?? []).flatMap((g) => g.people ?? [])
+        .map((p) => ({ name: displayName(p.name, p.email), email: (p.email ?? "").trim() }))))
       .catch(() => {});
   }, []);
   useEffect(() => { apiGet<{ id: string; title?: string; name?: string; location?: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title || x.name || "Listing", location: x.location })))).catch(() => {}); }, []);
@@ -222,17 +228,31 @@ export function TasksApp() {
   const all = useMemo(() => everything.filter((t) => !t.archived), [everything]);
   const archived = useMemo(() => everything.filter((t) => t.archived), [everything]);
   // For a freelancer every task is "mine"; otherwise match on assignee.
-  const mineOf = (t: Task) => noAssignee || (t.who || "").trim().toLowerCase() === me.trim().toLowerCase();
+  // Match on email where both sides have one — a rename must not lose your tasks.
+  const mineOf = (t: Task) =>
+    noAssignee ||
+    (myEmail && (t.whoEmail || "").trim().toLowerCase() === myEmail.toLowerCase()) ||
+    (!(t.whoEmail || "").trim() && (t.who || "").trim().toLowerCase() === me.trim().toLowerCase());
   // You are ALWAYS assignable, in every portal. Then the tenant's directory,
   // then any name free-typed onto an existing task so nothing disappears from
   // the picker. "Me" first — alphabetical order buries you under the Bs.
   const team = useMemo(() => {
-    const used = all.map((t) => t.who).filter((w): w is string => !!w && w.trim() !== "");
-    const others = [...new Set([...roster, ...used])]
-      .filter((w) => w.trim() !== "" && w.trim().toLowerCase() !== me.trim().toLowerCase())
-      .sort();
-    return me.trim() ? [me, ...others] : others;
-  }, [all, roster, me]);
+    const used = all
+      .filter((t) => (t.who ?? "").trim() !== "")
+      .map((t) => ({ name: (t.who ?? "").trim(), email: (t.whoEmail ?? "").trim() }));
+    // Keyed by email where there is one, so the same person appears once even
+    // if their name has changed since an older task was assigned.
+    const byKey = new Map<string, { name: string; email: string }>();
+    for (const p of [...roster, ...used]) {
+      const key = (p.email || p.name).toLowerCase();
+      if (!key) continue;
+      if (!byKey.has(key) || (!byKey.get(key)!.email && p.email)) byKey.set(key, p);
+    }
+    const meKey = (myEmail || me).toLowerCase();
+    byKey.delete(meKey);
+    const others = [...byKey.values()].sort((a, b) => a.name.localeCompare(b.name));
+    return me.trim() ? [{ name: me, email: myEmail }, ...others] : others;
+  }, [all, roster, me, myEmail]);
   const cats = useMemo(() => [...new Set(all.map((t) => t.cat).filter((c): c is string => !!c && c.trim() !== ""))].sort(), [all]);
   const locations = useMemo(() => [...new Set(listings.map((l) => l.location).filter((v): v is string => !!v))].sort(), [listings]);
   const linkOpts: LinkOpts = { portal, bookOpts, childOpts, parentOpts, listings, locations, cats };
@@ -305,8 +325,9 @@ export function TasksApp() {
   const filtersActive = !!term || !!prioFilter || !!kpiFilter || !!dueScope;
   const clearFilters = () => { setSearch(""); setPrioFilter(""); setKpiFilter(""); setDueScope(""); };
 
+  const teamNames = useMemo(() => team.map((p) => p.name).filter(Boolean), [team]);
   const preview = qa.trim() ? parseQuick(qa, today) : null;
-  const previewWhoUnknown = preview?.who && !team.some((w) => w.toLowerCase() === preview.who!.toLowerCase());
+  const previewWhoUnknown = preview?.who && !teamNames.some((w) => w.toLowerCase() === preview.who!.toLowerCase());
 
   if (!tasks) return <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5" style={LIGHT_PALETTE}><div className="py-16 text-center text-[12.5px] text-[var(--ink-3)]">Loading the task manager…</div></div>;
 
@@ -412,13 +433,13 @@ export function TasksApp() {
         {tab === "mine" && <MyTasks tasks={base.filter(mineOf)} today={today} noAssignee={noAssignee} onOpen={setOpenId} onStatus={setStatus} />}
         {tab === "board" && <Board tasks={base} noAssignee={noAssignee} onOpen={setOpenId} drag={drag} setDrag={setDrag} onDrop={(id, s) => patch(id, { status: s })} onDone={toggleDone} onArchive={(t) => patch(t.id, { archived: true })} />}
         {tab === "cal" && <Calendar tasks={base} anchor={calAnchor} setAnchor={setCalAnchor} view={calView} setView={setCalView} today={today} noAssignee={noAssignee} onOpen={setOpenId} onStatus={setStatus} />}
-        {tab === "team" && manager && <TeamView tasks={base} team={team} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onStatus={setStatus} />}
+        {tab === "team" && manager && <TeamView tasks={base} team={teamNames} filter={teamFilter} setFilter={setTeamFilter} sort={teamSort} setSort={setTeamSort} today={today} onOpen={setOpenId} onStatus={setStatus} />}
         {tab === "archive" && <ArchiveView tasks={archived} onOpen={setOpenId} onUnarchive={(t) => patch(t.id, { archived: false })} />}
       </>)}
 
       {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">✓ Task logged</div>}
-      {creating && <CreateModal noAssignee={noAssignee} team={team} me={me} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f, toCal); setCreating(false); setQa(""); }} />}
-      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onSyncCal={() => syncToCalendar(openTask)} onUnsyncCal={() => unsyncFromCalendar(openTask)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)}
+      {creating && <CreateModal noAssignee={noAssignee} team={team} me={me} myEmail={myEmail} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f, toCal); setCreating(false); setQa(""); }} />}
+      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} myEmail={myEmail} meDerived={meDerived} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onSyncCal={() => syncToCalendar(openTask)} onUnsyncCal={() => unsyncFromCalendar(openTask)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)}
         onDeleteSeries={async () => {
           if (!openTask.seriesId) return;
           if (!confirm("Delete every task in this repeat? This cannot be undone.")) return;
@@ -701,9 +722,10 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
 }
 
 // ── Create-task modal ───────────────────────────────────────────────────────
-export function CreateModal({ noAssignee, team, me, opts, initialTitle, onClose, onCreate }: { noAssignee: boolean; team: string[]; me: string; opts: LinkOpts; initialTitle?: string; onClose: () => void; onCreate: (f: Partial<Task>, toCal: boolean) => void }) {
+export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle, onClose, onCreate }: { noAssignee: boolean; team: { name: string; email: string }[]; me: string; myEmail?: string; opts: LinkOpts; initialTitle?: string; onClose: () => void; onCreate: (f: Partial<Task>, toCal: boolean) => void }) {
   const [t, setT] = useState(initialTitle ?? "");
   const [who, setWho] = useState("");
+  const [whoEmail, setWhoEmail] = useState("");
   const [prio, setPrio] = useState<Prio>("med");
   const [due, setDue] = useState("");
   const [time, setTime] = useState("");
@@ -724,7 +746,7 @@ export function CreateModal({ noAssignee, team, me, opts, initialTitle, onClose,
   const submit = () => {
     if (!t.trim() || repeatBad) return;
     onCreate({
-      t: t.trim(), who: noAssignee ? "" : who, prio, due: due || null, time: time || null, status, link, labels,
+      t: t.trim(), who: noAssignee ? "" : who, whoEmail: noAssignee ? "" : whoEmail, prio, due: due || null, time: time || null, status, link, labels,
       ...(repeatOn ? { repeat: { freq: rptFreq, until: rptUntil } } : {}),
     } as Partial<Task>, toCal);
   };
@@ -767,10 +789,15 @@ export function CreateModal({ noAssignee, team, me, opts, initialTitle, onClose,
             )}
             {!noAssignee && fieldRow("Assignee", (
               <div className="flex items-center gap-2">
-                <input list="team-list-c" value={who} onChange={(e) => setWho(e.target.value)} placeholder="Unassigned" className={inputCls} />
-                <datalist id="team-list-c">{team.map((w) => <option key={w} value={w} />)}</datalist>
+                <input list="team-list-c" value={who}
+                  onChange={(e) => {
+                    const v = e.target.value; setWho(v);
+                    setWhoEmail(team.find((p) => p.name.toLowerCase() === v.trim().toLowerCase())?.email ?? "");
+                  }}
+                  placeholder="Unassigned" className={inputCls} />
+                <datalist id="team-list-c">{team.map((p) => <option key={p.email || p.name} value={p.name}>{p.email}</option>)}</datalist>
                 {me && who.trim().toLowerCase() !== me.trim().toLowerCase() && (
-                  <button type="button" onClick={() => setWho(me)}
+                  <button type="button" onClick={() => { setWho(me); setWhoEmail(myEmail || ""); }}
                     className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[var(--panel)]">
                     Me
                   </button>
@@ -831,7 +858,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
 }
 
 // ── Detail drawer ───────────────────────────────────────────────────────────
-function Drawer({ task, team, noAssignee, me, meDerived, opts, onClose, onPatch, onSyncCal, onUnsyncCal, onArchive, onDelete, onDeleteSeries }: { task: Task; team: string[]; noAssignee: boolean; me: string; meDerived?: boolean; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>) => void; onSyncCal: () => void; onUnsyncCal: () => void; onArchive: () => void; onDelete: () => void; onDeleteSeries: () => void }) {
+function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose, onPatch, onSyncCal, onUnsyncCal, onArchive, onDelete, onDeleteSeries }: { task: Task; team: { name: string; email: string }[]; noAssignee: boolean; me: string; myEmail?: string; meDerived?: boolean; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>) => void; onSyncCal: () => void; onUnsyncCal: () => void; onArchive: () => void; onDelete: () => void; onDeleteSeries: () => void }) {
   const [label, setLabel] = useState("");
   const [sub, setSub] = useState("");
   const [comment, setComment] = useState("");
@@ -872,6 +899,9 @@ function Drawer({ task, team, noAssignee, me, meDerived, opts, onClose, onPatch,
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-2">
+          {(task.whoEmail ?? "").trim() && (
+            <div className="-mt-1 mb-1 pl-[110px] text-[11px] text-[var(--ink-3)]">{task.whoEmail}</div>
+          )}
           {meDerived && (
             <div className="mb-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[11.5px] text-[var(--ink-2)]">
               Your account has no name set, so &ldquo;{me}&rdquo; is being used. Set it properly in <b>Account → Name</b>.
@@ -885,12 +915,22 @@ function Drawer({ task, team, noAssignee, me, meDerived, opts, onClose, onPatch,
           )}
           {!noAssignee && field("Assignee", (
             <div className="flex items-center gap-2">
-              <input list="team-list" value={task.who ?? ""} onChange={(e) => onPatch({ who: e.target.value })} placeholder="Unassigned" className={inputCls} />
-              <datalist id="team-list">{team.map((w) => <option key={w} value={w} />)}</datalist>
+              <input list="team-list" value={task.who ?? ""}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  // Typing a known name attaches their email; a free-typed name
+                  // clears it rather than leaving a stale one attached.
+                  const hit = team.find((p) => p.name.toLowerCase() === v.trim().toLowerCase());
+                  onPatch({ who: v, whoEmail: hit?.email ?? "" });
+                }}
+                placeholder="Unassigned" className={inputCls} />
+              {/* value is what lands in the field; the label disambiguates two
+                  people with the same name. */}
+              <datalist id="team-list">{team.map((p) => <option key={p.email || p.name} value={p.name}>{p.email}</option>)}</datalist>
               {/* A datalist only opens once you type, so there was no visible way
                   to put a task on yourself. This is the one-tap version. */}
               {me && (task.who ?? "").trim().toLowerCase() !== me.trim().toLowerCase() && (
-                <button type="button" onClick={() => onPatch({ who: me })}
+                <button type="button" onClick={() => onPatch({ who: me, whoEmail: myEmail || "" })}
                   className="shrink-0 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[var(--panel)]">
                   Me
                 </button>
