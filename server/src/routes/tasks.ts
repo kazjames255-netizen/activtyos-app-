@@ -44,6 +44,14 @@ const taskSchema = z.object({
   cat: z.string().max(60).optional(),                 // custom "linked to" category
   archived: z.boolean().optional(),                   // hidden from the main views, kept in Archive
   calEventId: z.string().max(60).nullable().optional(),// id of the mirrored calendarEvents doc (if shown on the Events calendar)
+  // Recurrence, on CREATE only. The series is materialised into one real task
+  // per date (see below) rather than stored as a rule, so each day's task can
+  // be ticked, reassigned or deleted on its own — which is what a to-do list
+  // is for. `seriesId` ties them together for a future "delete the series".
+  repeat: z.object({
+    freq: z.enum(["daily", "weekdays", "weekly", "monthly"]),
+    until: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),   // inclusive end date
+  }).optional(),
 });
 const partialSchema = taskSchema.partial();
 
@@ -139,8 +147,65 @@ tasks.post("/", async (req, res) => {
     // null; a franchisee's tasks are pinned to it so the GET can scope them.
     franchiseId: auth.role === "franchise" ? (auth.franchiseId ?? null) : null,
   };
-  const ref = await col.add(doc);
-  res.status(201).json({ id: ref.id, ...doc });
+  const { repeat, ...base } = doc as typeof doc & { repeat?: { freq: string; until: string } };
+
+  if (!repeat) {
+    const ref = await col.add(base);
+    res.status(201).json({ id: ref.id, ...base });
+    return;
+  }
+
+  // ── Recurrence ──────────────────────────────────────────────────────────
+  // Needs a start: the task's own due date, or today if it has none.
+  const start = (base.due as string | null) || new Date().toISOString().slice(0, 10);
+  if (repeat.until < start) { res.status(400).json({ error: "The repeat end date is before the start date" }); return; }
+
+  const dates: string[] = [];
+  // Parsed as UTC and stepped by whole days — using the local timezone here
+  // would drop or duplicate a date across the October clock change.
+  const d = new Date(`${start}T00:00:00Z`);
+  const end = new Date(`${repeat.until}T00:00:00Z`);
+  const MAX = 366;   // a year of dailies; guards a typo'd year from writing 30k docs
+  while (d <= end && dates.length < MAX) {
+    const day = d.getUTCDay();
+    const keep = repeat.freq === "daily" || repeat.freq === "weekly" || repeat.freq === "monthly"
+      ? true
+      : day !== 0 && day !== 6;              // weekdays
+    if (keep) dates.push(d.toISOString().slice(0, 10));
+    if (repeat.freq === "weekly") d.setUTCDate(d.getUTCDate() + 7);
+    else if (repeat.freq === "monthly") d.setUTCMonth(d.getUTCMonth() + 1);
+    else d.setUTCDate(d.getUTCDate() + 1);
+  }
+  if (!dates.length) { res.status(400).json({ error: "That repeat produces no dates" }); return; }
+
+  const seriesId = col.doc().id;
+  // Firestore caps a batch at 500 writes; MAX keeps us inside one batch.
+  const batch = db.batch();
+  const first = { ...base, due: dates[0], seriesId, seriesFreq: repeat.freq, seriesUntil: repeat.until };
+  const firstRef = col.doc();
+  batch.set(firstRef, first);
+  for (const due of dates.slice(1)) {
+    batch.set(col.doc(), { ...base, due, seriesId, seriesFreq: repeat.freq, seriesUntil: repeat.until });
+  }
+  await batch.commit();
+  res.status(201).json({ id: firstRef.id, ...first, created: dates.length });
+});
+
+// DELETE /api/tasks/series/:seriesId — remove the whole repeat, not one date.
+tasks.delete("/series/:seriesId", async (req, res) => {
+  const auth = req.auth!;
+  const bucket = bucketOf(auth);
+  if (!bucket || !canUse(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
+  const snap = await col.where("tenantId", "==", bucket).where("seriesId", "==", req.params.seriesId).get();
+  if (snap.empty) { res.status(404).json({ error: "Series not found" }); return; }
+  // A franchisee may only delete its own series — same rule as a single task.
+  if (auth.role === "franchise" && snap.docs.some((d) => ((d.data().franchiseId as string | null) ?? null) !== (auth.franchiseId ?? null))) {
+    res.status(404).json({ error: "Series not found" }); return;
+  }
+  const batch = db.batch();
+  snap.docs.forEach((d) => batch.delete(d.ref));
+  await batch.commit();
+  res.json({ ok: true, deleted: snap.size });
 });
 
 async function ownTask(req: Request, id: string) {

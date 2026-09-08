@@ -33,6 +33,11 @@ interface Task {
   id: string; t: string; who?: string; prio?: Prio; due?: string | null; time?: string | null; status?: Status;
   link?: TaskLink | null; co?: string; cat?: string; labels?: string[]; subs?: Sub[]; comments?: Comment[]; atts?: Att[];
   spawn?: boolean; archived?: boolean; createdByName?: string; calEventId?: string | null;
+  // Set on create only; the server expands it into one task per date.
+  repeat?: { freq: "daily" | "weekdays" | "weekly" | "monthly"; until: string };
+  // Present on every task the server generated from a repeat, tying the series
+  // together so the whole run can be removed in one go.
+  seriesId?: string; seriesFreq?: string; seriesUntil?: string;
 }
 
 const PRIO: Record<Prio, { label: string; dot: string }> = {
@@ -403,7 +408,13 @@ export function TasksApp() {
 
       {flash && <div className="pointer-events-none fixed bottom-6 left-1/2 z-[60] -translate-x-1/2 rounded-full bg-[#16803d] px-4 py-2 text-[13px] font-extrabold text-white shadow-lg">✓ Task logged</div>}
       {creating && <CreateModal noAssignee={noAssignee} team={team} me={me} opts={linkOpts} initialTitle={qa} onClose={() => { setCreating(false); setQa(""); }} onCreate={(f, toCal) => { create(f, toCal); setCreating(false); setQa(""); }} />}
-      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onSyncCal={() => syncToCalendar(openTask)} onUnsyncCal={() => unsyncFromCalendar(openTask)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)} />}
+      {openTask && <Drawer task={openTask} team={team} noAssignee={noAssignee} me={me} opts={linkOpts} onClose={() => setOpenId(null)} onPatch={(f) => patch(openTask.id, f)} onSyncCal={() => syncToCalendar(openTask)} onUnsyncCal={() => unsyncFromCalendar(openTask)} onArchive={() => { patch(openTask.id, { archived: true }); setOpenId(null); }} onDelete={() => remove(openTask.id)}
+        onDeleteSeries={async () => {
+          if (!openTask.seriesId) return;
+          if (!confirm("Delete every task in this repeat? This cannot be undone.")) return;
+          try { await api(`/api/tasks/series/${encodeURIComponent(openTask.seriesId)}`, { method: "DELETE" }); setOpenId(null); refresh(); }
+          catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
+        }} />}
     </div>
   );
 }
@@ -691,9 +702,22 @@ export function CreateModal({ noAssignee, team, me, opts, initialTitle, onClose,
   const [labels, setLabels] = useState<string[]>([]);
   const [labelIn, setLabelIn] = useState("");
   const [toCal, setToCal] = useState(false);
+  // Recurrence. Off unless a frequency is chosen; the end date is required so a
+  // repeat can never run forever by accident.
+  const [rptFreq, setRptFreq] = useState<"" | "daily" | "weekdays" | "weekly" | "monthly">("");
+  const [rptUntil, setRptUntil] = useState("");
   const inputCls = "w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-2 text-[12.5px] outline-none focus:border-[#1d3a8f]";
   const fieldRow = (name: string, node: ReactNode) => <div><div className="mb-0.5 text-[11px] font-bold text-[var(--ink-3)]">{name}</div>{node}</div>;
-  const submit = () => { if (!t.trim()) return; onCreate({ t: t.trim(), who: noAssignee ? "" : who, prio, due: due || null, time: time || null, status, link, labels }, toCal); };
+  const repeatOn = rptFreq !== "";
+  const start = due || new Date().toISOString().slice(0, 10);
+  const repeatBad = repeatOn && (!rptUntil || rptUntil < start);
+  const submit = () => {
+    if (!t.trim() || repeatBad) return;
+    onCreate({
+      t: t.trim(), who: noAssignee ? "" : who, prio, due: due || null, time: time || null, status, link, labels,
+      ...(repeatOn ? { repeat: { freq: rptFreq, until: rptUntil } } : {}),
+    } as Partial<Task>, toCal);
+  };
   return (
     <div className="fixed inset-0 z-[200] flex items-start justify-center bg-black/40 p-4 pt-[6vh]" onClick={onClose}>
       <div className="w-full max-w-[520px] overflow-hidden rounded-3xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -707,6 +731,30 @@ export function CreateModal({ noAssignee, team, me, opts, initialTitle, onClose,
             {fieldRow("Due / deadline", <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={inputCls} />)}
             {fieldRow("Time (optional)", <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} />)}
             {fieldRow("Priority", <select value={prio} onChange={(e) => setPrio(e.target.value as Prio)} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}
+            {fieldRow("Repeat", (
+              <div className="flex flex-wrap items-center gap-2">
+                <select value={rptFreq} onChange={(e) => setRptFreq(e.target.value as typeof rptFreq)} className={inputCls}>
+                  <option value="">Does not repeat</option>
+                  <option value="daily">Every day</option>
+                  <option value="weekdays">Every weekday (Mon–Fri)</option>
+                  <option value="weekly">Every week</option>
+                  <option value="monthly">Every month</option>
+                </select>
+                {repeatOn && (
+                  <label className="flex items-center gap-2 text-[12.5px] font-bold text-[var(--ink-2)]">
+                    until
+                    <input type="date" value={rptUntil} min={start} onChange={(e) => setRptUntil(e.target.value)} className={inputCls} />
+                  </label>
+                )}
+              </div>
+            ))}
+            {repeatOn && (
+              <p className="-mt-1 pl-1 text-[11.5px] text-[var(--ink-3)]">
+                {repeatBad
+                  ? "Choose an end date on or after the start date."
+                  : `Creates one task per date from ${start} to ${rptUntil}, each tickable on its own. Max 366.`}
+              </p>
+            )}
             {!noAssignee && fieldRow("Assignee", (
               <div className="flex items-center gap-2">
                 <input list="team-list-c" value={who} onChange={(e) => setWho(e.target.value)} placeholder="Unassigned" className={inputCls} />
@@ -773,7 +821,7 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
 }
 
 // ── Detail drawer ───────────────────────────────────────────────────────────
-function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal, onUnsyncCal, onArchive, onDelete }: { task: Task; team: string[]; noAssignee: boolean; me: string; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>) => void; onSyncCal: () => void; onUnsyncCal: () => void; onArchive: () => void; onDelete: () => void }) {
+function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal, onUnsyncCal, onArchive, onDelete, onDeleteSeries }: { task: Task; team: string[]; noAssignee: boolean; me: string; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>) => void; onSyncCal: () => void; onUnsyncCal: () => void; onArchive: () => void; onDelete: () => void; onDeleteSeries: () => void }) {
   const [label, setLabel] = useState("");
   const [sub, setSub] = useState("");
   const [comment, setComment] = useState("");
@@ -796,6 +844,12 @@ function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal,
           </div>
         </div>
         <div className="flex-1 overflow-y-auto px-4 py-2">
+          {task.seriesId && (
+            <div className="mb-2 rounded-lg bg-[var(--panel)] px-3 py-2 text-[12px] font-bold text-[var(--ink-2)]">
+              🔁 Part of a repeat{task.seriesFreq ? ` · ${({ daily: "every day", weekdays: "every weekday", weekly: "every week", monthly: "every month" } as Record<string, string>)[task.seriesFreq] ?? task.seriesFreq}` : ""}
+              {task.seriesUntil ? ` until ${task.seriesUntil}` : ""}
+            </div>
+          )}
           {!noAssignee && field("Assignee", (
             <div className="flex items-center gap-2">
               <input list="team-list" value={task.who ?? ""} onChange={(e) => onPatch({ who: e.target.value })} placeholder="Unassigned" className={inputCls} />
@@ -865,6 +919,10 @@ function Drawer({ task, team, noAssignee, me, opts, onClose, onPatch, onSyncCal,
         </div>
         <div className="flex items-center justify-between border-t border-[var(--line)] px-4 py-3">
           <button type="button" onClick={onDelete} className="rounded-lg border border-[#f6c9cc] px-3 py-1.5 text-[12px] font-bold text-[#c02636]">Delete</button>
+          {/* Deleting one date out of a 200-day repeat is rarely what you meant. */}
+          {task.seriesId && (
+            <button type="button" onClick={onDeleteSeries} className="rounded-lg border border-[#f6c9cc] px-3 py-1.5 text-[12px] font-bold text-[#c02636]">Delete whole repeat</button>
+          )}
           <div className="flex gap-2">
             <button type="button" onClick={onArchive} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)]">Archive</button>
             <Button sm variant="primary" onClick={onClose}>Done</Button>
