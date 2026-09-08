@@ -9,7 +9,7 @@ import { db } from "../firebase";
 // last-read live in platform/notifPrefs.
 export const platformNotifications = Router();
 const prefsDoc = db.collection("platform").doc("notifPrefs");
-const TYPES = ["signup", "cancel", "support", "bug", "lead"] as const;
+const TYPES = ["signup", "cancel", "support", "bug", "lead", "task"] as const;
 type NType = (typeof TYPES)[number];
 
 platformNotifications.use((req, res, next) => {
@@ -74,6 +74,29 @@ platformNotifications.get("/", async (_req, res) => {
           href: `/platform/leads`, at: l.createdAt,
         });
       }
+    }
+  }
+
+  if (on("task")) {
+    // HQ's own task board. This bell AGGREGATES on read rather than consuming
+    // written notifications, so the task-reminder sweep — which writes into the
+    // per-tenant `notifications` collection — could never surface here. Derive
+    // the same two moments straight from the tasks instead.
+    const today = new Date().toISOString().slice(0, 10);
+    const snap = await db.collection("tasks").where("tenantId", "==", "__platform__").get();
+    for (const d of snap.docs) {
+      const t = d.data() as { t?: string; due?: string | null; time?: string | null; status?: string; archived?: boolean };
+      if (t.archived || t.status === "done" || !t.due || t.due > today) continue;
+      const overdue = t.due < today;
+      items.push({
+        id: `task_${d.id}_${t.due}`, type: "task",
+        title: overdue ? `Overdue: ${t.t ?? "A task"}` : `Due today: ${t.t ?? "A task"}`,
+        body: overdue ? `Was due ${t.due} and is still open.` : `Due today${t.time ? ` at ${t.time}` : ""}.`,
+        href: "/platform/tasks",
+        // Sorted with everything else by time, so a task due at 18:27 appears
+        // at 18:27 rather than jumping to the top of the bell all day.
+        at: `${t.due}T${(t.time && /^\d{2}:\d{2}$/.test(t.time)) ? t.time : "08:00"}:00.000Z`,
+      });
     }
   }
 

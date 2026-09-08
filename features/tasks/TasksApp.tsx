@@ -807,7 +807,12 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
           {fieldRow("Task", <input autoFocus value={t} onChange={(e) => setT(e.target.value)} placeholder="What needs doing?" className={inputCls} />)}
           <div className="grid grid-cols-2 gap-2.5">
             {fieldRow("Due / deadline", <input type="date" value={due} onChange={(e) => setDue(e.target.value)} className={inputCls} />)}
-            {fieldRow("Time (optional)", <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className={inputCls} />)}
+            {fieldRow("Time (optional)", <input type="time" value={time} onChange={(e) => {
+              setTime(e.target.value);
+              // A time with no date is a reminder that can never fire — the
+              // sweep keys off the due date. Setting a time means today.
+              if (e.target.value && !due) setDue(new Date().toISOString().slice(0, 10));
+            }} className={inputCls} />)}
             {fieldRow("Priority", <select value={prio} onChange={(e) => setPrio(e.target.value as Prio)} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}
             {fieldRow("Repeat", (
               <div className="flex flex-wrap items-center gap-2">
@@ -984,7 +989,12 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
             </div>
           ))}
           {field("Due date", <input type="date" value={task.due ?? ""} onChange={(e) => onPatch({ due: e.target.value || null })} className={inputCls} />)}
-          {field("Time", <input type="time" value={task.time ?? ""} onChange={(e) => onPatch({ time: e.target.value || null })} className={inputCls} />)}
+          {field("Time", <input type="time" value={task.time ?? ""} onChange={(e) => {
+            const v = e.target.value || null;
+            // Same rule as the create form: a time implies a date, or nothing
+            // will ever remind you.
+            onPatch(v && !task.due ? { time: v, due: new Date().toISOString().slice(0, 10) } : { time: v });
+          }} className={inputCls} />)}
           {field("Priority", <select value={task.prio ?? "med"} onChange={(e) => onPatch({ prio: e.target.value as Prio })} className={inputCls}>{(Object.keys(PRIO) as Prio[]).map((p) => <option key={p} value={p}>{PRIO[p].label}</option>)}</select>)}
           {field("Status", <select value={task.status ?? "todo"} onChange={(e) => onPatch({ status: e.target.value as Status })} className={inputCls}>{COLS.map((c) => <option key={c.k} value={c.k}>{c.label}</option>)}</select>)}
           {field("Linked to", <LinkedPicker link={task.link} onChange={(l) => onPatch({ link: l })} opts={opts} inputCls={inputCls} />)}

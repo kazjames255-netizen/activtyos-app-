@@ -8,9 +8,9 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 // messages and bug reports, aggregated server-side. Clicking an entry deep-links
 // straight to it (the support thread, the provider), not just the page.
 interface Item { id: string; type: NType; title: string; body: string; href: string; at: string }
-type NType = "signup" | "cancel" | "support" | "bug";
-const GLYPH: Record<NType, string> = { signup: "🎉", cancel: "🚫", support: "✉️", bug: "🐛" };
-const LABEL: Record<NType, string> = { signup: "New signups", cancel: "Cancellations", support: "Support messages", bug: "Bug reports" };
+type NType = "signup" | "cancel" | "support" | "bug" | "lead" | "task";
+const GLYPH: Record<NType, string> = { signup: "🎉", cancel: "🚫", support: "✉️", bug: "🐛", lead: "💬", task: "✅" };
+const LABEL: Record<NType, string> = { signup: "New signups", cancel: "Cancellations", support: "Support messages", bug: "Bug reports", lead: "Demo requests", task: "Task reminders" };
 
 function ago(iso: string) {
   const mins = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 60_000));
