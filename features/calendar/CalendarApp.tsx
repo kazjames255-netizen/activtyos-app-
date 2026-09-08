@@ -237,7 +237,7 @@ export function CalendarApp() {
               <div className="flex-1 border-t border-[var(--line)]" />
             </div>
           ))}
-          {nowTop != null && <div className="absolute z-10 flex w-full items-center" style={{ top: nowTop, left: 0 }}><div className="w-12 flex-none" /><div className="h-[2px] flex-1" style={{ background: RED }} /></div>}
+          {nowTop != null && <div className="absolute z-10 flex w-full items-center" style={{ top: nowTop, left: 0 }}><div className="w-12 flex-none" /><div className="h-[2px] flex-1" style={{ background: "#C81E5E" }} /></div>}
           <div className="absolute bottom-0 top-0" style={{ left: 48, right: 0 }}>
             {placed.map(({ it, s, e, col }, i) => {
               const top = (s - lo * 60) / 60 * rowH, height = Math.max(24, (e - s) / 60 * rowH - 3);
@@ -257,7 +257,7 @@ export function CalendarApp() {
   }
 
   const modePill = (m: Mode, lbl: string) => (
-    <button type="button" onClick={() => setMode(m)} className="rounded-lg px-4 py-1.5 text-[13px] font-extrabold transition-colors" style={mode === m ? { background: BLUE, color: "#fff" } : { background: "var(--surface)", color: "var(--ink-2)" }}>{lbl}</button>
+    <button type="button" onClick={() => setMode(m)} className="rounded-lg px-4 py-1.5 text-[13px] font-extrabold transition-colors" style={mode === m ? { background: "#2f5fd0", color: "#fff" } : { background: "var(--surface)", color: "var(--ink-2)" }}>{lbl}</button>
   );
 
   return (
@@ -272,7 +272,7 @@ export function CalendarApp() {
           <div className="flex flex-none flex-wrap items-center gap-2">
             <TourLauncher view="calendar" compact />
             <SettingsLink />
-            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Add event</button>
+            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[var(--surface)] px-4 py-2 text-[13px] font-extrabold text-[#2f5fd0] shadow-md transition-transform hover:-translate-y-px">＋ Add event</button>
           </div>
         </div>
       </div>

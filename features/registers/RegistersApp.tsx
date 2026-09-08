@@ -47,7 +47,7 @@ const SIDE_SURFACE = {
 } as const;
 const AURORA_BG = "#23479f"; // mid-stop of --side-bg, for the on-white pill text
 const GHOST = "inline-flex items-center gap-1.5 rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-[12.5px] font-bold text-white/95 transition hover:bg-white/20";
-const GHOST_ON = "inline-flex items-center gap-1.5 rounded-lg border border-white/70 bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#0f2452] transition";
+const GHOST_ON = "inline-flex items-center gap-1.5 rounded-lg border border-white/70 bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] transition";
 
 interface Attendance { status?: "in" | "absent"; inAt?: string | null; collectedAt?: string | null; collectedBy?: string | null }
 interface SGRec { photo?: string; dob?: string; school?: string; allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; careNotes?: string; collectionPassword?: string; emergencyName?: string; emergencyPhone?: string; photoConsent?: boolean; likes?: string; dislikes?: string; swimming?: string; sex?: string; suncreamConsent?: boolean; firstAidConsent?: boolean; walkHomeConsent?: boolean; answers?: Record<string, string> }
@@ -148,7 +148,11 @@ function nudgeCopy(items: { kid: string; late: Late }[], from?: string) {
     : `Nothing to worry about — we only wanted to check everything's OK. Just reply and let us know, and we'll sort things this end.`;
   return { subject: `${allCollect ? "Collection reminder" : "Just checking in"} — ${list}`, body: `Hi,\n\nHope you're well. Just a quick note about today:\n\n${lines}\n\n${ask}${signoff}` };
 }
-const AV = ["#fde2e4", "#e2f0d9", "#e0e7ff", "#fff3d6", "#e5f6f8", "#f3e8ff", "#ffe9d6", "#dce7ff"];
+// Avatar chips. These were near-white pastels (#fde2e4 etc) carried over from
+// the light theme -- on a dark ground they blaze, and the initials sat on them
+// at light-blue, which failed both ways. Now dark tints in the same hue spread,
+// with initials in --ink (>=8.9:1 on every one).
+const AV = ["#FDE7EF", "#E2F6EC", "#E8EEFD", "#FCF1DC", "#DEF4F1", "#EDE9FD", "#FCF1DC", "#E8EEFD"];
 const avBg = (n: string) => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
 
 
@@ -168,10 +172,10 @@ function ListingPicker({ listings, venues, active, activeName, onPick }: { listi
   const shown = listings.filter(([id, n]) => `${n} ${venues[id] ?? ""}`.toLowerCase().includes(needle));
   return (
     <div className="relative">
-      <button type="button" aria-label={t("registers.chooseListing")} onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-white/90 px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f]">{activeName || t("registers.chooseListing")} <span className="text-[9px]">▾</span></button>
+      <button type="button" aria-label={t("registers.chooseListing")} onClick={() => setOpen((v) => !v)} className="flex items-center gap-1.5 rounded-lg bg-[var(--raised)] px-2.5 py-1.5 text-[12.5px] font-extrabold text-[#2f5fd0]">{activeName || t("registers.chooseListing")} <span className="text-[9px]">▾</span></button>
       {open && (<>
         <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-        <div className="absolute left-0 z-20 mt-1 w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--line)] bg-white p-1.5 shadow-xl">
+        <div className="absolute left-0 z-20 mt-1 w-[360px] max-w-[calc(100vw-2rem)] rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl">
           <div className="px-1.5 pb-1 pt-0.5 text-[10px] font-bold uppercase tracking-[0.08em] text-[var(--ink-3)]">{t("registers.chooseListing")}</div>
           <input autoFocus value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("registers.searchListingsVenues")} className="mb-1 w-full rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
           <div className="max-h-[280px] overflow-y-auto">
@@ -407,7 +411,7 @@ function NoteChip({ note, onClick }: { note?: RegNote; onClick: () => void }) {
   const active = !!note?.text?.trim() && !note?.archived;
   return (
     <button type="button" onClick={onClick} title={active ? t("registers.importantNoteView") : t("registers.addImportantNote")} aria-label={t("registers.importantNote")}
-      className={"relative grid h-7 w-7 place-items-center rounded-lg border transition " + (active ? "border-[#f3d9a7] bg-[#fff7e6] text-[#b45309]" : "border-[var(--line)] bg-white text-[var(--ink-3)] hover:border-[#c9dcfa] hover:text-[#1d3a8f]")}>
+      className={"relative grid h-7 w-7 place-items-center rounded-lg border transition " + (active ? "border-[#E4E9F5] bg-[#FCF1DC] text-[var(--ink-2)]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-3)] hover:border-[#E4E9F5] hover:text-[#2f5fd0]")}>
       {NOTE_SVG}
       {active && <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-[#e11d48] ring-2 ring-white" />}
     </button>
@@ -428,10 +432,10 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
   const [openArchive, setOpenArchive] = useState(false);
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="w-full max-w-[440px] overflow-hidden rounded-2xl bg-white shadow-[0_30px_70px_-20px_rgba(0,0,0,.5)]" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-[440px] overflow-hidden rounded-2xl bg-[var(--surface)] shadow-[0_30px_70px_-20px_rgba(0,0,0,.5)]" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 bg-gradient-to-r from-[#fff7e6] to-[#fdeede] px-4 py-3 text-[#b45309]">
           {NOTE_SVG}<span className="text-[14px] font-extrabold">{t("registers.importantNote")}</span>{name && <span className="text-[12px] font-semibold text-[#b45309]/70">· {name}</span>}
-          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#b45309] hover:bg-white/60">✕</button>
+          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#F5A524] hover:bg-white/10">✕</button>
         </div>
         <div className="p-4">
           {/* The archive is a closed folder — click to look inside. It never
@@ -451,7 +455,7 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
                     <button type="button" onClick={() => { onRestore(); onClose(); }} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12px] font-extrabold text-white hover:brightness-110">↩ {t("registers.restore")}</button>
                     {canDeleteForever ? (confirmDel
                       ? <span className="flex items-center gap-2 text-[12px]"><b className="text-[#c02636]">{t("registers.deletePermanently")}</b><button type="button" onClick={() => { onDeleteForever(); onClose(); }} className="rounded-full bg-[#c02636] px-3 py-1 text-[11.5px] font-extrabold text-white">{t("registers.yesForever")}</button><button type="button" onClick={() => setConfirmDel(false)} className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("registers.cancelLower")}</button></span>
-                      : <button type="button" onClick={() => setConfirmDel(true)} className="rounded-full border border-[#f3c6c1] bg-white px-4 py-1.5 text-[12px] font-extrabold text-[#c02636] hover:bg-[#fdecec]">🗑 {t("registers.deleteForever")}</button>)
+                      : <button type="button" onClick={() => setConfirmDel(true)} className="rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-4 py-1.5 text-[12px] font-extrabold text-[#C81E5E] hover:bg-[#FDE7EF]">🗑 {t("registers.deleteForever")}</button>)
                       : <span className="text-[11px] text-[var(--ink-3)]">{t("registers.onlyAdminDelete")}</span>}
                   </div>
                 </div>
@@ -482,10 +486,10 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
               </div>
               <div className="mt-3 flex items-center justify-between gap-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] px-3 py-2">
                 <div><div className="text-[12.5px] font-bold text-[var(--ink)]">👪 {t("registers.letParentSeeNote")}</div><div className="text-[11px] text-[var(--ink-3)]">{share ? t("registers.familyWillSee") : t("registers.staffOnlyHidden")}</div></div>
-                <button type="button" role="switch" aria-checked={share} onClick={() => setShare((s) => !s)} className={"relative h-6 w-11 flex-none rounded-full transition-colors " + (share ? "bg-[#0f9d58]" : "bg-[#cbd5e1]")}><span className={"absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all " + (share ? "left-[22px]" : "left-0.5")} /></button>
+                <button type="button" role="switch" aria-checked={share} onClick={() => setShare((s) => !s)} className={"relative h-6 w-11 flex-none rounded-full transition-colors " + (share ? "bg-[#0f9d58]" : "bg-[#E8EEFD]")}><span className={"absolute top-0.5 h-5 w-5 rounded-full bg-[var(--surface)] shadow transition-all " + (share ? "left-[22px]" : "left-0.5")} /></button>
               </div>
               <div className="mt-3 flex items-center gap-3">
-                <button type="button" disabled={!text.trim()} onClick={() => { onSave(text.trim(), share); onClose(); }} className="rounded-full bg-[#b45309] px-5 py-2 text-[12.5px] font-extrabold text-white hover:brightness-110 disabled:opacity-40">{t("registers.saveNote")}</button>
+                <button type="button" disabled={!text.trim()} onClick={() => { onSave(text.trim(), share); onClose(); }} className="rounded-full bg-[var(--brand)] px-5 py-2 text-[12.5px] font-extrabold text-white hover:bg-[var(--brand-strong)] disabled:opacity-40">{t("registers.saveNote")}</button>
                 {!archived && note?.text && <button type="button" onClick={() => { onArchive(); onClose(); }} className="inline-flex items-center gap-1 text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">🗑 {t("registers.delete")}</button>}
               </div>
               <p className="mt-2 text-[11px] leading-snug text-[var(--ink-3)]">{!archived && note?.at ? `${t("registers.updatedStamp", { when: stamp(note.at) })}${note.by ? t("registers.byName2", { name: note.by }) : ""}. ` : ""}{archived ? t("registers.savingReplacesArchived") : <>{t("registers.deletingArchivesLead")}<b>{t("registers.archivesWord")}</b>{t("registers.deletingArchivesTail")}</>}</p>
@@ -516,7 +520,7 @@ function SafeguardingEditor({ child, edit, canEdit, onSave, onOpenFamilies }: { 
   const save = () => { onSave({ allergies: f.allergies.trim(), medical: f.medical.trim(), send: f.send.trim(), dietary: f.dietary.trim(), careNotes: f.careNotes.trim() }); setSaved(true); };
   const Field = (label: string, key: keyof typeof f, tint: string, ph: string) => (
     <label className="block"><span className="text-[11px] font-extrabold uppercase tracking-wide" style={{ color: tint }}>{label}</span>
-      <textarea value={f[key]} onChange={(e) => set(key, e.target.value)} rows={2} placeholder={ph} className="mt-1 w-full resize-y rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#6d28d9]" /></label>
+      <textarea value={f[key]} onChange={(e) => set(key, e.target.value)} rows={2} placeholder={ph} className="mt-1 w-full resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] outline-none focus:border-[#6d28d9]" /></label>
   );
   return (
     <div className="rounded-2xl border border-[#e0d3f5] bg-[#faf7ff] p-4 shadow-sm">
@@ -568,7 +572,7 @@ function LikesChip({ likes, dislikes }: { likes?: string; dislikes?: string }) {
           event the way a JS mouseenter can. `pinned` (a tap) and focus-within
           (keyboard) add the paths CSS hover can't cover on touch. */}
       <span role="tooltip"
-        className={"absolute left-1/2 top-full z-30 mt-1.5 w-[248px] -translate-x-1/2 rounded-xl border border-[var(--line)] bg-white p-2.5 text-left shadow-xl "
+        className={"absolute left-1/2 top-full z-30 mt-1.5 w-[248px] -translate-x-1/2 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 text-left shadow-xl "
           + (pinned ? "block" : "hidden group-hover:block group-focus-within:block")}>
           {likes && <span className="block"><b className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#15803d]">{t("registers.likes")}</b><span className="mt-0.5 block text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{likes}</span></span>}
           {dislikes && <span className={"block " + (likes ? "mt-2" : "")}><b className="text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[#b45309]">{t("registers.dislikesAvoid")}</b><span className="mt-0.5 block text-[12.5px] font-semibold leading-snug text-[var(--ink)]">{dislikes}</span></span>}
@@ -591,12 +595,12 @@ function Menu({ label, on, badge, width = 250, dark, children }: { label: ReactN
           : "inline-flex items-center gap-1.5 rounded-lg border px-3.5 py-1.5 text-[12px] font-bold"}
         style={dark ? undefined : sel(!!on)}>
         {label}
-        {badge ? <span className={"rounded-full px-1.5 text-[10px] font-extrabold " + (dark && !on ? "bg-white text-[#0f2452]" : "bg-[#1d3a8f] text-white")}>{badge}</span> : null}
+        {badge ? <span className={"rounded-full px-1.5 text-[10px] font-extrabold " + (dark && !on ? "bg-[var(--surface)] text-[#2f5fd0]" : "bg-[#2f5fd0] text-white")}>{badge}</span> : null}
         <span className="text-[9px] opacity-70">▾</span>
       </button>
       {open && (<>
         <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
-        <div className="absolute left-0 z-20 mt-1 rounded-xl border border-[var(--line)] bg-white p-1.5 shadow-xl" style={{ width }}>{children(() => setOpen(false))}</div>
+        <div className="absolute left-0 z-20 mt-1 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-xl" style={{ width }}>{children(() => setOpen(false))}</div>
       </>)}
     </div>
   );
@@ -633,7 +637,7 @@ function CollectPin({ pw }: { pw: string }) {
   useEffect(() => { if (!show) return; const timer = setTimeout(() => setShow(false), 4000); return () => clearTimeout(timer); }, [show]);
   return (
     <button type="button" onClick={() => setShow((s) => !s)} title={t("registers.collectionPasswordReveal")}
-      className={"inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-extrabold transition-all " + (show ? "border-[#f3d9a7] bg-[#fff7e6] text-[#b45309] shadow-sm" : "border-[var(--line)] bg-white text-[var(--ink-3)] hover:border-[#c9dcfa] hover:text-[#1d3a8f]")}>
+      className={"inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-extrabold transition-all " + (show ? "border-[#E4E9F5] bg-[#FCF1DC] text-[var(--ink-2)] shadow-sm" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-3)] hover:border-[#E4E9F5] hover:text-[#2f5fd0]")}>
       🔑 <span className={"tabular-nums " + (show ? "tracking-normal" : "tracking-[0.15em]")}>{show ? pw : "••••"}</span>
     </button>
   );
@@ -1110,7 +1114,7 @@ export function RegistersApp() {
                       ))}
                     </span>
                     <button type="button" onClick={() => setRollCall((v) => !v)} className={rollCall ? GHOST_ON : GHOST}>🚨 {t("registers.rollCall")}</button>
-                    <button type="button" onClick={() => messageAttending()} disabled={attendingEmails.length === 0} title={attendingEmails.length ? (attendingEmails.length === 1 ? t("registers.oneFamilyMessagedOnce") : t("registers.manyFamiliesMessagedOnce", { n: attendingEmails.length })) : ""} className="rounded-lg bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#0f2452] transition hover:bg-white/90 disabled:opacity-40">{t("registers.messageAllAttending")}{attendingKids ? ` (${attendingKids})` : ""}</button>
+                    <button type="button" onClick={() => messageAttending()} disabled={attendingEmails.length === 0} title={attendingEmails.length ? (attendingEmails.length === 1 ? t("registers.oneFamilyMessagedOnce") : t("registers.manyFamiliesMessagedOnce", { n: attendingEmails.length })) : ""} className="rounded-lg bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#2f5fd0] transition hover:bg-white/10 disabled:opacity-40">{t("registers.messageAllAttending")}{attendingKids ? ` (${attendingKids})` : ""}</button>
                   </div>
                 </div>
               )}
@@ -1132,7 +1136,7 @@ export function RegistersApp() {
                     roll-call card. Absent entirely until something is logged. */}
                 {passBlocks[0] && lastHead && (
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[var(--line)] bg-[var(--panel)]/40 px-4 py-2 text-[12px]">
-                    <button type="button" onClick={() => setRollCall(true)} className="font-semibold underline" style={{ color: lastHead.n >= agg.present ? GREEN : AMBER }}>{t("registers.headCountLast", { n: lastHead.n, expected: agg.expected, time: timeOf(lastHead.at) })}</button>
+                    <button type="button" onClick={() => setRollCall(true)} className="font-semibold underline" style={{ color: lastHead.n >= agg.present ? GREEN : "var(--brand)" }}>{t("registers.headCountLast", { n: lastHead.n, expected: agg.expected, time: timeOf(lastHead.at) })}</button>
                   </div>
                 )}
                 {/* Selection / bulk-action bar */}
@@ -1226,7 +1230,7 @@ function RollCallDialog({ expected, present, presentAll, heads, readOnly, onLog,
               )}
               {over ? <span className="font-semibold text-[#c02636]">{t("registers.onlyNCantLogMore", { expected })}</span>
                 : <span className="text-[11px] text-[var(--ink-3)]">{t("registers.nLoggedMax", { n: heads.length, expected })}</span>}
-              {last && <span className="font-semibold" style={{ color: last.n >= present ? GREEN : AMBER }}>{t("registers.lastNOfExpected", { n: last.n, expected, time: timeOf(last.at) })}</span>}
+              {last && <span className="font-semibold" style={{ color: last.n >= present ? GREEN : "var(--brand)" }}>{t("registers.lastNOfExpected", { n: last.n, expected, time: timeOf(last.at) })}</span>}
               <button type="button" onClick={() => setOpen((v) => !v)} className="text-[11px] font-bold text-[#1d3a8f] underline">{open ? t("registers.hideLog") : t("registers.recordsN", { n: heads.length })}</button>
             </div>
             {open && (
@@ -1234,7 +1238,7 @@ function RollCallDialog({ expected, present, presentAll, heads, readOnly, onLog,
                 {heads.length === 0 ? <div className="text-[11.5px] text-[var(--ink-3)]">{t("registers.noHeadCountsYet")}</div>
                   : <ol className="space-y-1">{heads.slice().reverse().map((h, i) => (
                       <li key={`${h.at}-${i}`} className="flex items-center gap-2 text-[11.5px]">
-                        <span className="inline-flex h-5 min-w-[38px] items-center justify-center rounded-md px-1.5 font-extrabold" style={{ background: h.n >= present ? "#e7f6ee" : "#fff4e5", color: h.n >= present ? GREEN : AMBER }}>{h.n}/{expected}</span>
+                        <span className="inline-flex h-5 min-w-[38px] items-center justify-center rounded-md px-1.5 font-extrabold" style={{ background: h.n >= present ? "#E2F6EC" : "#FCF1DC", color: h.n >= present ? GREEN : "var(--brand)" }}>{h.n}/{expected}</span>
                         <span className="font-semibold">{timeOf(h.at)}</span>
                         <span className="text-[var(--ink-3)]">{t("registers.byNameDot", { name: h.by })}</span>
                         {h.n < present && <span className="text-[#c02636]">{t("registers.nShortOfIn", { short: present - h.n, present })}</span>}
@@ -1327,11 +1331,11 @@ function NudgeDialog({ kid, late, email, parentName, refId, subject: subject0, b
   };
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4" onClick={onClose}>
-      <div className="max-h-[86vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-white shadow-[0_30px_70px_-20px_rgba(0,0,0,.5)]" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
+      <div className="max-h-[86vh] w-full max-w-[520px] overflow-y-auto rounded-2xl bg-[var(--surface)] shadow-[0_30px_70px_-20px_rgba(0,0,0,.5)]" style={LIGHT_PALETTE} onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 bg-[#fdecec] px-4 py-3 text-[#c02636]">
           <span className="text-[14px] font-extrabold">🔔 {t("registers.nudgeParent", { parent: parentName || t("registers.parentWord") })}</span>
           <span className="text-[11.5px] font-semibold text-[#c02636]/75">· {kid} · {late.kind === "collect" ? t("registers.collectionLower") : t("registers.arrivalLower")} {t("registers.lateSuffix", { time: lateFor(late.mins) })}</span>
-          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#c02636] hover:bg-white/60">✕</button>
+          <button type="button" onClick={onClose} aria-label={t("registers.close")} className="ml-auto grid h-7 w-7 place-items-center rounded-full text-[#C81E5E] hover:bg-white/10">✕</button>
         </div>
         <div className="p-4">
           {others.length > 1 && (
@@ -1429,7 +1433,7 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
           {c?.photo
             // eslint-disable-next-line @next/next/no-img-element
             ? <img src={c.photo} alt="" className="h-11 w-11 flex-none rounded-2xl object-cover ring-2 ring-white shadow-sm" />
-            : <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl text-[14px] font-extrabold text-[#1d3a8f] ring-2 ring-white shadow-sm" style={{ background: avBg(kid?.name ?? "?") }}>{(kid?.name ?? "?").slice(0, 1)}</span>}
+            : <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl text-[14px] font-extrabold text-[var(--ink)] ring-1 ring-[var(--line)]" style={{ background: avBg(kid?.name ?? "?") }}>{(kid?.name ?? "?").slice(0, 1)}</span>}
           <div className="min-w-0">
             <div className="truncate text-[13.5px] font-extrabold">
               {a.children.map((k) => k.name).join(", ")}

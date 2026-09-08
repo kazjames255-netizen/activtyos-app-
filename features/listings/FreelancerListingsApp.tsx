@@ -427,7 +427,7 @@ export function FreelancerListingsApp() {
                   alert(`Copied! Paste this into your website's HTML for a button that opens your WHOLE storefront (every live listing):\n\n${snippet}\n\nTips:\n· data-mode="inline" embeds the storefront directly in the page\n· on React/Next sites, put <div data-activityos-store="${tid}"></div> where it should go and load the script anywhere`),
                 ).catch(() => {});
               }}
-              className="rounded-full bg-white px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#1d3a8f] shadow-sm transition hover:bg-white/90"
+              className="rounded-full bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-extrabold text-[#2f5fd0] shadow-sm transition hover:bg-white/10"
             >
               {"</>"} Embed
             </button>
@@ -918,7 +918,10 @@ function ListingsTab({
                     const left = Math.max(0, spaces ?? cap);
                     const booked = Math.max(0, cap - left);
                     const pct = cap > 0 ? Math.round((booked / cap) * 100) : 0;
-                    const tone = left <= 0 ? "#dc2626" : left <= cap * 0.15 ? "#d97706" : "#3f78d8";
+                    // Filling up and full are both "act now", so both take the
+                    // brand pink and the bar's own length says which. The old
+                    // amber middle step drew a wide orange slab across the card.
+                    const tone = left <= 0 ? "#B3124F" : left <= cap * 0.15 ? "#C81E5E" : "#2f5fd0";
                     return (
                       <div className="mt-3">
                         <div className="h-[7px] overflow-hidden rounded-full bg-[var(--line)]">
@@ -1031,7 +1034,7 @@ function ListingsTab({
         };
         return (
           <div onClick={(e) => e.target === e.currentTarget && setQrFor(null)} className="fixed inset-0 z-[10000] grid place-items-center overflow-auto bg-black/55 p-4">
-            <div className="w-full max-w-[360px] rounded-2xl bg-white p-5 shadow-2xl">
+            <div className="w-full max-w-[360px] rounded-2xl bg-[var(--surface)] p-5 shadow-2xl">
               <div className="mb-3 flex items-center gap-2">
                 <span className="text-[14px] font-extrabold text-[var(--ink)]">📱 Scan to book</span>
                 <button type="button" onClick={() => setQrFor(null)} className="ml-auto text-[20px] leading-none text-[var(--ink-3)]">×</button>
@@ -1063,7 +1066,7 @@ function ListingsTab({
       {archivedList.length > 0 && (
         <div className="mt-2 rounded-2xl border border-[var(--line)] bg-[var(--panel)] p-2.5">
           <button type="button" onClick={() => setShowArchived((v) => !v)} className="flex w-full items-center gap-2 text-[12px] font-extrabold text-[var(--ink-2)]">
-            <span className="grid h-6 w-6 place-items-center rounded-lg bg-white text-[13px] ring-1 ring-[var(--line)]">📦</span>
+            <span className="grid h-6 w-6 place-items-center rounded-lg bg-[var(--surface)] text-[13px] ring-1 ring-[var(--line)]">📦</span>
             <span>Archived</span>
             <span className="grid h-[18px] min-w-[18px] place-items-center rounded-full bg-[#5b6478] px-1.5 text-[10.5px] font-extrabold text-white">{archivedList.length}</span>
             <span className="ml-auto text-[11px] font-semibold text-[var(--ink-3)]">{showArchived ? "▾ hide" : "▸ show"}</span>

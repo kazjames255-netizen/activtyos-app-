@@ -47,7 +47,7 @@ function withNet(url: string): string {
 function Toggle({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
     <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={onClick} className="relative h-6 w-11 flex-none rounded-full transition-colors" style={{ background: on ? "#22a565" : "#cfd3dd" }}>
-      <span className="absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all" style={{ left: on ? 22 : 2 }} />
+      <span className="absolute top-0.5 h-5 w-5 rounded-full bg-[var(--surface)] shadow transition-all" style={{ left: on ? 22 : 2 }} />
     </button>
   );
 }
@@ -63,7 +63,7 @@ function AutoEmails({ settings, save }: { settings: TenantSettings; save: (patch
           // Effective on-state: everything defaults ON except announcements (opt-in re-marketing).
           const value = (ae[c.key] as boolean | undefined) ?? (c.key === "announcements" ? false : true);
           return (
-            <div key={c.key} className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
+            <div key={c.key} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-[0_1px_3px_rgba(20,30,60,.06)]">
               <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
@@ -143,7 +143,7 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
   const cmd = (c: string, arg?: string) => { ref.current?.focus(); document.execCommand(c, false, arg); if (ref.current) onChange(ref.current.innerHTML); };
   const pickImg = (e: React.MouseEvent) => { const t = e.target as HTMLElement; if (t.tagName === "IMG") { const img = t as HTMLImageElement; selImg.current = img; setImgW(parseInt(img.style.width) || 100); } };
   const sizeImg = (w: number) => { const img = targetImg(); if (!img) return; selImg.current = img; const cw = Math.min(100, Math.max(10, Math.round(w))); img.style.width = `${cw}%`; img.style.height = "auto"; setImgW(cw); if (ref.current) onChange(ref.current.innerHTML); };
-  const btn = "rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-white";
+  const btn = "rounded px-2 py-1 text-[13px] text-[var(--ink-2)] hover:bg-[var(--surface)]";
   const sep = <span className="mx-0.5 h-4 w-px bg-[var(--line)]" />;
   // [command, arg, title, label, extraClass] — plain <button>s (no inline components).
   const tools: [string, string | undefined, string, string, string][] = [
@@ -166,12 +166,12 @@ function RichText({ value, onChange }: { value: string; onChange: (html: string)
       {hasImg && (
         <div className="flex flex-wrap items-center gap-2 border-b border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2">
           <span className="flex-none text-[11.5px] font-extrabold text-[#1d3a8f]">🖼 Photo size</span>
-          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW - 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#dbe6fb] bg-white text-[15px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">−</button>
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW - 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#E4E9F5] bg-[var(--surface)] text-[15px] font-extrabold text-[#2f5fd0] hover:bg-[#E8EEFD]">−</button>
           <input type="range" min={10} max={100} step={1} value={imgW} onChange={(e) => sizeImg(Number(e.target.value))} className="h-1.5 min-w-[120px] flex-1 accent-[#2f6bd8]" />
-          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW + 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#dbe6fb] bg-white text-[15px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">+</button>
+          <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(imgW + 5)} className="flex h-6 w-6 flex-none items-center justify-center rounded-full border border-[#E4E9F5] bg-[var(--surface)] text-[15px] font-extrabold text-[#2f5fd0] hover:bg-[#E8EEFD]">+</button>
           <span className="w-10 flex-none text-right text-[12px] font-extrabold text-[var(--ink)]" style={{ fontVariantNumeric: "tabular-nums" }}>{imgW}%</span>
           <div className="mx-1 h-4 w-px flex-none bg-[#dbe6fb]" />
-          {([["S", 30], ["M", 60], ["L", 100]] as const).map(([l, w]) => <button key={l} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(w)} className="flex-none rounded-md border border-[#dbe6fb] bg-white px-2 py-0.5 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">{l}</button>)}
+          {([["S", 30], ["M", 60], ["L", 100]] as const).map(([l, w]) => <button key={l} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => sizeImg(w)} className="flex-none rounded-md border border-[#E4E9F5] bg-[var(--surface)] px-2 py-0.5 text-[11px] font-bold text-[#2f5fd0] hover:bg-[#E8EEFD]">{l}</button>)}
         </div>
       )}
       <div ref={ref} contentEditable suppressContentEditableWarning
@@ -247,7 +247,7 @@ function SavedImageCard({ im, onPatch, onRemove, onAdd }: { im: SavedImage; onPa
         )}
 
         <div className="mt-2 flex gap-1.5">
-          <button type="button" onClick={onAdd} className="flex-1 rounded-md px-2 py-1 text-[11px] font-extrabold text-white" style={{ background: BROWN }}>➕ Add to email</button>
+          <button type="button" onClick={onAdd} className="flex-1 rounded-md px-2 py-1 text-[11px] font-extrabold text-white" style={{ background: "#7a4e2a" }}>➕ Add to email</button>
           <button type="button" onClick={() => triggerDownload(preview ?? im.photoUrl, `${(im.childName ?? "moment").replace(/\s+/g, "-")}-${im.ratio}.jpg`)} className="rounded-md border border-[var(--line)] px-2 py-1 text-[11px] font-bold" title="Download this image (with everything shown in the preview)">⬇</button>
           <button type="button" onClick={onRemove} className="rounded-md border border-[#f6c9cc] px-2 py-1 text-[11px] font-bold text-[#c02636] hover:bg-[#fdebec]" title="Delete this photo from your Email library">🗑</button>
         </div>
@@ -434,7 +434,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
     return (
       <div data-ui="mailbox-setup" className="flex flex-wrap items-center gap-2 rounded-2xl border border-[#cdeacd] bg-[#f3fbf3] px-4 py-2.5">
         <span className="text-[13px] font-extrabold text-[#127a3e]">✓ Your email is connected</span>
-        <code data-ui="inbound-address" className="rounded-md bg-white px-2 py-0.5 text-[11.5px] font-bold text-[var(--ink-2)]">{address}</code>
+        <code data-ui="inbound-address" className="rounded-md bg-[var(--surface)] px-2 py-0.5 text-[11.5px] font-bold text-[var(--ink-2)]">{address}</code>
         <span className="text-[11.5px] text-[var(--ink-3)]">Last message {when(mb.lastAt ?? undefined)}</span>
         <button type="button" onClick={() => setWalk(true)} className="text-[11.5px] font-bold text-[#1d3a8f] underline">Gmail walkthrough</button>
         <button type="button" onClick={() => setHost("outlook")} className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] underline">Change or re-check setup</button>
@@ -444,7 +444,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
   }
 
   return (
-    <div data-ui="mailbox-setup" className="overflow-hidden rounded-2xl border border-[#dbe6fb] bg-white">
+    <div data-ui="mailbox-setup" className="overflow-hidden rounded-2xl border border-[#E4E9F5] bg-[var(--surface)]">
       {/* The dropdown header — always visible; a click reveals the steps. */}
       <div className="flex items-center gap-2 bg-[#f4f8ff] px-4 py-3">
         <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
@@ -457,7 +457,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
         </button>
         {context === "inbox" && (
           <button type="button" onClick={() => setDismissed(true)} title="Hide this — you can bring it back from Email → Settings"
-            className="flex-none rounded-lg px-1.5 py-0.5 text-[15px] font-bold leading-none text-[var(--ink-3)] hover:bg-white hover:text-[var(--ink)]">×</button>
+            className="flex-none rounded-lg px-1.5 py-0.5 text-[15px] font-bold leading-none text-[var(--ink-3)] hover:bg-[var(--surface)] hover:text-[var(--ink)]">×</button>
         )}
       </div>
 
@@ -516,7 +516,7 @@ function MailboxSetup({ context = "inbox" }: { context?: "inbox" | "settings" })
           <div className="mt-3 rounded-xl border border-[#f3d98a] bg-[#fdf6e3] p-3.5">
             <div className="text-[12.5px] font-extrabold text-[#7a5a12]">Gmail sent us your confirmation code</div>
             <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
-              {mb.pendingVerification.code && <code data-ui="gmail-code" className="rounded-lg bg-white px-3 py-1.5 text-[17px] font-extrabold tracking-[0.15em] text-[#7a5a12]">{mb.pendingVerification.code}</code>}
+              {mb.pendingVerification.code && <code data-ui="gmail-code" className="rounded-lg bg-[var(--surface)] px-3 py-1.5 text-[17px] font-extrabold tracking-[0.15em] text-[var(--ink-2)]">{mb.pendingVerification.code}</code>}
               <span className="text-[12px] text-[#7a5a12]">Type this into Gmail and press <b>Verify</b> to finish.</span>
             </div>
             {mb.pendingVerification.link && <a href={mb.pendingVerification.link} target="_blank" rel="noreferrer" className="mt-1.5 inline-block text-[11.5px] font-bold text-[#1d3a8f] underline">Or just click Google&rsquo;s confirm link ↗</a>}
@@ -633,7 +633,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative min-w-[240px] flex-1">
-          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search mail · try from: subject: label: is:unread has:attachment" className="w-full rounded-full border border-[var(--line)] bg-white px-4 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search mail · try from: subject: label: is:unread has:attachment" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] px-4 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />
         </div>
         {([["cozy", "Cozy"], ["compact", "Compact"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setDensity(k)} className="rounded-full px-4 py-2 text-[13px] font-bold" style={density === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)", background: "#fff" }}>{l}</button>)}
       </div>
@@ -653,7 +653,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
         </div>
         <div className="flex min-w-0 flex-col gap-3">
         <MailboxSetup />
-        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
+        <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] px-3 py-2">
             {([["all", "All"], ["unread", "Unread"], ["starred", "Starred"], ["files", "Has files"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setFilter(k)} className="rounded-full px-3 py-1 text-[12.5px] font-bold" style={filter === k ? { background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff" } : { border: "1px solid var(--line)", color: "var(--ink-2)" }}>{l}</button>)}
             <span className="ml-auto text-[12px] text-[var(--ink-3)]">{list.length ? `1–${list.length} of ${list.length}` : "0"}</span>
@@ -686,10 +686,10 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Star, read, folders, snooze and delete are saved to your account. Sent shows your real send history; Scheduled shows queued sends you can still cancel.</div>
       {open && (() => { const o = open; const initials = o.from.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-        const toolBtn = "flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#2f6bd8] hover:text-[#1d3a8f]";
+        const toolBtn = "flex-none rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#2f6bd8] hover:text-[#2f5fd0]";
         return (
         <div className="fixed inset-0 z-[120] flex items-start justify-center overflow-y-auto bg-[#0b1730]/50 p-4 pt-[5vh] backdrop-blur-[2px]" onClick={() => setOpen(null)}>
-          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#16306e]/10" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-2xl overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl ring-1 ring-[#2f5fd0]/10" onClick={(e) => e.stopPropagation()}>
             {/* blue gradient header */}
             <div className="px-6 py-4 text-white" style={{ background: "radial-gradient(120% 160% at 8% -30%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#2f6bd8 100%)" }}>
               <div className="flex items-start gap-2">
@@ -701,7 +701,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
             {/* toolbar — file/flag actions only exist for real stored messages */}
             <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f5f8fd] px-4 py-2.5">
               <button type="button" onClick={() => setOpen(null)} className={toolBtn}>← Back</button>
-              {o.folder === "scheduled" && <button type="button" onClick={() => cancelScheduled(o)} className="flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#c02636]">✕ Cancel send</button>}
+              {o.folder === "scheduled" && <button type="button" onClick={() => cancelScheduled(o)} className="flex-none rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#C81E5E]">✕ Cancel send</button>}
               {isMsg(o.id) && <>
                 {o.folder && o.folder !== "inbox"
                   ? <button type="button" onClick={() => restore(o)} className={toolBtn}>↩ Move to Inbox</button>
@@ -709,7 +709,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
                 <button type="button" onClick={() => snooze(o)} className={toolBtn} title="Hide it until later — it comes back tomorrow morning">⏰ Snooze</button>
                 <button type="button" onClick={() => markUnread(o)} className={toolBtn}>✉ Unread</button>
                 <button type="button" onClick={() => spam(o)} className={toolBtn}>⊘ Spam</button>
-                <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[#dbe6fb] bg-white px-3 py-1.5 text-[12.5px] font-bold text-[#2a3a63] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#c02636]">🗑 {o.folder === "trash" ? "Delete forever" : "Delete"}</button>
+                <button type="button" onClick={() => del(o)} className="flex-none rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] shadow-[0_1px_2px_rgba(20,40,90,.06)] transition-colors hover:border-[#e2b4b8] hover:text-[#C81E5E]">🗑 {o.folder === "trash" ? "Delete forever" : "Delete"}</button>
               </>}
               <button type="button" onClick={() => setShowContact((v) => !v)} className={`${toolBtn} ml-auto`} title="Show this sender's contact card">◐ Contact</button>
             </div>
@@ -732,7 +732,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
               <p className="mt-4 whitespace-pre-wrap break-words text-[14px] leading-relaxed text-[var(--ink-2)]">{linkify(o.body ?? o.preview)}</p>
               {o.attachment && <div className="mt-4 inline-flex items-center gap-2 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">📎 {o.attachment}{o.attachmentSize && <span className="font-normal text-[var(--ink-3)]">{o.attachmentSize}</span>}</div>}
             </div>
-            {o.quickReplies?.length ? <div className="border-t border-[var(--line)] bg-[#fbfdff] px-6 py-3"><div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Quick replies</div><div className="flex flex-wrap gap-2">{o.quickReplies.map((qr) => <button key={qr} type="button" onClick={() => quickReply(o, qr)} className="rounded-full border border-[#dbe6fb] bg-white px-3.5 py-1.5 text-[12.5px] font-semibold text-[#2a3a63] transition-colors hover:border-[#2f6bd8] hover:bg-[#eef4fd] hover:text-[#1d3a8f]">{qr}</button>)}</div></div> : null}
+            {o.quickReplies?.length ? <div className="border-t border-[var(--line)] bg-[#E8EEFD] px-6 py-3"><div className="mb-1.5 text-[10px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Quick replies</div><div className="flex flex-wrap gap-2">{o.quickReplies.map((qr) => <button key={qr} type="button" onClick={() => quickReply(o, qr)} className="rounded-full border border-[#E4E9F5] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] font-semibold text-[#2f5fd0] transition-colors hover:border-[#2f6bd8] hover:bg-[#E8EEFD] hover:text-[#2f5fd0]">{qr}</button>)}</div></div> : null}
             {isMsg(o.id) && <div className="flex flex-wrap gap-2 border-t border-[var(--line)] px-6 py-3.5">
               <button type="button" onClick={() => reply(o)} className="rounded-lg px-4 py-2 text-[13px] font-extrabold text-white shadow-[0_3px_10px_-2px_rgba(47,107,216,.5)]" style={{ background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)" }}>↩ Reply</button>
               {(o.cc?.length ?? 0) > 0 && <button type="button" onClick={() => reply(o)} className="rounded-lg border border-[#dbe6fb] px-4 py-2 text-[13px] font-bold text-[#2a3a63] hover:border-[#2f6bd8] hover:text-[#1d3a8f]">↩ Reply all</button>}
@@ -744,7 +744,7 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
       ); })()}
       {enqFor && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center bg-black/40 p-4" onClick={() => setEnqFor(null)}>
-          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-[#16306e]/10" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-md overflow-hidden rounded-2xl bg-[var(--surface)] shadow-2xl ring-1 ring-[#2f5fd0]/10" onClick={(e) => e.stopPropagation()}>
             <div className="rounded-t-2xl px-5 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
               <div className="text-[15px] font-extrabold">Mark as enquiry</div>
               <div className="text-[12.5px] text-white/80">{enqFor.from} — which location are they interested in?</div>
@@ -858,7 +858,7 @@ function filterDesc(f: AudFilter): string {
 }
 
 function StatCard({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: string }) {
-  return <div className="rounded-2xl border border-[var(--line)] bg-white p-4"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div><div className="mt-1 text-[26px] font-extrabold" style={{ color: tone ?? "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{value}</div>{sub && <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div>}</div>;
+  return <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4"><div className="text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{label}</div><div className="mt-1 text-[26px] font-extrabold" style={{ color: tone ?? "var(--ink)", fontVariantNumeric: "tabular-nums" }}>{value}</div>{sub && <div className="mt-0.5 text-[11.5px] text-[var(--ink-3)]">{sub}</div>}</div>;
 }
 function FunnelBar({ label, n, max, color }: { label: string; n: number; max: number; color: string }) {
   return <div className="mb-2.5"><div className="flex justify-between text-[13px]"><span className="text-[var(--ink-2)]">{label}</span><span className="font-bold text-[var(--ink)]">{n}</span></div><div className="mt-1 h-2.5 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${max ? Math.round((n / max) * 100) : 0}%`, background: color }} /></div></div>;
@@ -885,7 +885,7 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
-      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center gap-2 border-b border-[var(--line)] px-5 py-3.5">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f9d58] text-white">●</span>
           <div><div className="text-[16px] font-extrabold text-[var(--ink)]">Build an audience</div><div className="text-[12px] text-[var(--ink-3)]">Filter your customers — the count updates live.</div></div>
@@ -940,8 +940,8 @@ function AudienceBuilder({ bookings, listings, locations, onCancel, onCreate }: 
   );
 }
 
-function NewCampaign({ audiences, templates, initialAudienceId, company, socials, onCancel, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
-  const [name, setName] = useState("");
+function NewCampaign({ audiences, templates, initialAudienceId, initialName, initialSubject, restrictEmails, restrictLabel, company, socials, onCancel, onSubmit, onRemovePerson }: { audiences: Audience[]; templates: EmailTemplate[]; initialAudienceId?: string | null; initialName?: string; initialSubject?: string; restrictEmails?: Set<string>; restrictLabel?: string; company?: Partial<Company>; socials?: Social[]; onCancel: () => void; onSubmit: (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => void | Promise<void>; onRemovePerson?: (email: string) => void }) {
+  const [name, setName] = useState(initialName ?? "");
   const [audIds, setAudIds] = useState<string[]>(initialAudienceId ? [initialAudienceId] : (audiences[0] ? [audiences[0].id] : []));
   const [tmplId, setTmplId] = useState(templates[0]?.id ?? "");
   const [tmplBody, setTmplBody] = useState(() => templates[0]?.body ?? "");   // editable copy of the worded template
@@ -950,7 +950,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   const [cdDate, setCdDate] = useState("");
   const [cdTime, setCdTime] = useState("");
   const [cdHeading, setCdHeading] = useState("Hurry — offer ends soon");
-  const [subject, setSubject] = useState("");
+  const [subject, setSubject] = useState(initialSubject ?? "");
   const [excludedEmails, setExcludedEmails] = useState<string[]>([]);
   const [showList, setShowList] = useState(false);
   const [mode, setMode] = useState<"template" | "design">("template");
@@ -970,7 +970,8 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     const isEnq = a.id.startsWith("enq-");
     for (const p of ppl) { const k = p.email.toLowerCase(); if (!peopleMap.has(k)) peopleMap.set(k, { email: p.email, name: p.name }); if (isEnq) enqEmails.add(k); }
   }
-  const people = [...peopleMap.values()];
+  // A growth-page "focus on <listing>" narrows every chosen audience to families who booked it.
+  const people = [...peopleMap.values()].filter((p) => !restrictEmails || restrictEmails.has(p.email.toLowerCase()));
   const excluded = new Set(excludedEmails.map((e) => e.toLowerCase()));
   const toggleExclude = (email: string) => setExcludedEmails((xs) => { const k = email.toLowerCase(); return xs.some((e) => e.toLowerCase() === k) ? xs.filter((e) => e.toLowerCase() !== k) : [...xs, email]; });
   const included = people.filter((p) => !excluded.has(p.email.toLowerCase()));
@@ -998,7 +999,8 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     if (!primary) { setSendErr("Pick an audience for this send first."); return; }
     if (action === "scheduled" && !schedAt) { setSendErr("Pick a date & time to schedule the send."); return; }
     const subj = subject.trim() || template?.subject || name.trim();
-    const combined: Audience = { id: primary.id, name: selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name, count: included.length, emails: included.map((p) => p.email), desc: primary.desc };
+    const baseName = selectedAuds.length > 1 ? `${primary.name} +${selectedAuds.length - 1} more` : primary.name;
+    const combined: Audience = { id: primary.id, name: restrictLabel ? `${baseName} · ${restrictLabel}` : baseName, count: included.length, emails: included.map((p) => p.email), desc: restrictLabel ? `${primary.desc} — who booked ${restrictLabel}` : primary.desc };
     setSendErr(null); setBusy(action);
     try {
       const html = useDesign && design ? renderDesignHtml(design, company, nowMs) : (mode === "template" && wordedHasCountdown ? renderDesignHtml(wordedDesign(), company, nowMs) : undefined);
@@ -1034,63 +1036,63 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
   return (
     <>
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onCancel}>
-      <div className="w-full max-w-5xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-5xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <style>{`.camp-scroll{overflow-y:scroll}.camp-scroll::-webkit-scrollbar{width:14px}.camp-scroll::-webkit-scrollbar-track{background:#e7ecf4;border-radius:8px}.camp-scroll::-webkit-scrollbar-thumb{background:#8aa0c6;border-radius:8px;border:3px solid #e7ecf4;min-height:44px}.camp-scroll::-webkit-scrollbar-thumb:hover{background:#5f7cab}`}</style>
         <div className="rounded-t-2xl px-6 py-4 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>
           <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0"><div className="text-[19px] font-extrabold">New campaign</div><div className="truncate text-[12.5px] text-white/80">{primary ? <>To <b className="font-extrabold text-white">{primary.name}</b>{selectedAuds.length > 1 ? ` +${selectedAuds.length - 1} more` : ""} · {included.length} recipient{included.length === 1 ? "" : "s"}</> : "Branded-domain send with tracking + unsubscribe."}</div></div>
+            <div className="min-w-0"><div className="text-[19px] font-extrabold">New campaign</div><div className="truncate text-[12.5px] text-white/80">{primary ? <>To <b className="font-extrabold text-white">{primary.name}</b>{selectedAuds.length > 1 ? ` +${selectedAuds.length - 1} more` : ""}{restrictLabel ? <> who booked <b className="font-extrabold text-white">{restrictLabel}</b></> : ""} · {included.length} recipient{included.length === 1 ? "" : "s"}</> : "Branded-domain send with tracking + unsubscribe."}</div></div>
             <div className="flex flex-none items-center gap-3"><span className="text-[12px] font-bold text-white/85">Step {step + 1} of {STEPS.length}</span><button type="button" onClick={onCancel} disabled={!!busy} title="Cancel" className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[16px] font-bold hover:bg-white/30 disabled:opacity-40">×</button></div>
           </div>
           <div className="mt-3 flex items-center gap-1.5">
-            {STEPS.map((s, i) => <button key={s} type="button" onClick={() => setStep(i)} title={s} className="flex-1"><div className={`h-1.5 rounded-full transition ${i <= step ? "bg-white" : "bg-white/25"}`} /></button>)}
+            {STEPS.map((s, i) => <button key={s} type="button" onClick={() => setStep(i)} title={s} className="flex-1"><div className={`h-1.5 rounded-full transition ${i <= step ? "bg-[var(--surface)]" : "bg-white/25"}`} /></button>)}
           </div>
         </div>
         <div className="camp-scroll max-h-[64vh] bg-[#f4f7fc] px-8 py-6">
           <div className="mx-auto flex min-h-[210px] max-w-2xl flex-col">
             {step === 0 && <div className="space-y-5">
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Let&apos;s name your campaign</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Just for you — recipients never see this. Pick something you&apos;ll recognise later.</p></div>
-              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full rounded-2xl border-2 border-[var(--line)] bg-white px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#3f78d8]" />
+              <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. August football camp" className="w-full rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#2f5fd0]" />
             </div>}
             {step === 1 && <div className="space-y-5">
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">Who&apos;s it going to?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Combine any audiences — recipients are deduped so no one is emailed twice.</p></div>
               <div className="flex flex-wrap gap-2">{selectedAuds.map((a) => <span key={a.id} className="inline-flex items-center gap-2 rounded-full bg-[#eef4fd] px-4 py-2 text-[14px] font-bold text-[#1d3a8f]">{a.name} <span className="rounded-full bg-white/70 px-1.5 text-[12px]">{a.count}</span>{selectedAuds.length > 1 && <button type="button" onClick={() => removeAud(a.id)} className="text-[#1d3a8f]/50 hover:text-[#c02636]" title="Remove from this send">✕</button>}</span>)}</div>
               {availableToAdd.length > 0 && <Select value="" onChange={(e) => addAud(e.target.value)} className="w-full max-w-md"><option value="">＋ Add another audience…</option>{segG.length > 0 && <optgroup label="🎯 Groups">{segG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{enqG.length > 0 && <optgroup label="📩 Enquiries">{enqG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}{cusG.length > 0 && <optgroup label="⭐ Your audiences">{cusG.map((a) => <option key={a.id} value={a.id}>{a.name} ({a.count})</option>)}</optgroup>}</Select>}
-              <div className="rounded-xl border border-[#cfe0f7] bg-white px-4 py-3 text-[13.5px] font-semibold text-[#1d3a8f] shadow-sm">📤 This send reaches <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}.</div>
+              <div className="rounded-xl border border-[#E4E9F5] bg-[var(--surface)] px-4 py-3 text-[13.5px] font-semibold text-[#2f5fd0] shadow-sm">📤 This send reaches <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}.</div>
             </div>}
             {step === 2 && <div className="space-y-5">
               <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">What&apos;s the subject line?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">The first thing people read in their inbox — make it count.</p></div>
-              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. ☀️ August camp places are open!" className="w-full rounded-2xl border-2 border-[var(--line)] bg-white px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#3f78d8]" />
+              <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. ☀️ August camp places are open!" className="w-full rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] px-5 py-4 text-[19px] font-semibold text-[var(--ink)] shadow-sm outline-none transition focus:border-[#2f5fd0]" />
             </div>}
             {step === 3 && <div className="space-y-5">
               <div className="flex flex-wrap items-end justify-between gap-3">
                 <div><div className="text-[27px] font-extrabold leading-tight tracking-tight text-[#16306e]">How should it look?</div><p className="mt-1.5 text-[14.5px] text-[var(--ink-3)]">Use a ready-worded template, or design your own branded email.</p></div>
-                <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">{([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => { setMode(k); setChooseView(false); }} className="px-4 py-2.5" style={!chooseView && mode === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
+                <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[13px] font-bold shadow-sm">{([["template", "📄 Worded templates"], ["design", "🎨 Design your own"]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => { setMode(k); setChooseView(false); }} className="px-4 py-2.5" style={!chooseView && mode === k ? { background: "#E8EEFD", color: "#2f5fd0" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
               </div>
-              {chooseView && <div className="rounded-2xl border-2 border-dashed border-[#cfe0f7] bg-white p-8 text-center shadow-sm"><div className="text-[15px] font-extrabold text-[var(--ink)]">How should your email look?</div><p className="mx-auto mt-1 max-w-sm text-[13px] text-[var(--ink-3)]">Tap <b>📄 Worded templates</b> or <b>🎨 Design your own</b> above to choose.</p></div>}
+              {chooseView && <div className="rounded-2xl border-2 border-dashed border-[#E4E9F5] bg-[var(--surface)] p-8 text-center shadow-sm"><div className="text-[15px] font-extrabold text-[var(--ink)]">How should your email look?</div><p className="mx-auto mt-1 max-w-sm text-[13px] text-[var(--ink-3)]">Tap <b>📄 Worded templates</b> or <b>🎨 Design your own</b> above to choose.</p></div>}
               {!chooseView && <>
               {mode === "template"
-                ? <div className="rounded-2xl border border-[var(--line)] bg-white p-5 shadow-sm"><Select value={tmplId} onChange={(e) => pickTemplate(e.target.value)} className="w-full"><option value="">Start from blank</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
+                ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm"><Select value={tmplId} onChange={(e) => pickTemplate(e.target.value)} className="w-full"><option value="">Start from blank</option>{templates.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}</Select>
                     <div className="mt-3"><FieldLabel>Subject line</FieldLabel><Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. A quick reminder about your booking" className="w-full" /></div>
                     <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
                       <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--line)] bg-[#f4f7fc] px-3 py-2">
                         <button type="button" onClick={aiWrite} disabled={aiBusy} className="rounded-md border border-[#7c3aed] px-2 py-1 text-[11.5px] font-extrabold text-[#7c3aed] hover:bg-[#f5f0ff] disabled:opacity-50">{aiBusy ? "✨ Writing…" : "✨ Help me write"}</button>
                         <span className="mx-1 h-4 w-px bg-[var(--line)]" />
                         <span className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Insert:</span>
-                        {MERGE_FIELDS.slice(0, 6).map((f) => <button key={f.token} type="button" title={f.desc} onClick={() => insertMerge(f.token)} className="rounded-full border border-[var(--line)] bg-white px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>)}
+                        {MERGE_FIELDS.slice(0, 6).map((f) => <button key={f.token} type="button" title={f.desc} onClick={() => insertMerge(f.token)} className="rounded-full border border-[var(--line)] bg-[var(--surface)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>)}
                       </div>
-                      <textarea value={tmplBody} onChange={(e) => setTmplBody(e.target.value)} rows={9} placeholder="Write your email… use merge fields like {ChildName} or {ListingName} and they fill in per family." className="w-full resize-y bg-white px-4 py-3 text-[13.5px] leading-relaxed text-[var(--ink)] outline-none" />
+                      <textarea value={tmplBody} onChange={(e) => setTmplBody(e.target.value)} rows={9} placeholder="Write your email… use merge fields like {ChildName} or {ListingName} and they fill in per family." className="w-full resize-y bg-[var(--surface)] px-4 py-3 text-[13.5px] leading-relaxed text-[var(--ink)] outline-none" />
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2"><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Preview email</button><p className="text-[11.5px] text-[var(--ink-3)]">Edit freely — this text becomes the email body. Merge fields resolve per family on send.</p></div>
                   </div>
                 : design
-                  ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4 shadow-sm">
+                  ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">
                       <div className="mb-2 flex flex-wrap items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">Your design</span><button type="button" onClick={() => setDesigning(true)} className="ml-auto rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">✏️ Edit</button><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Pop out</button><button type="button" onClick={() => setDesign(null)} className="rounded-lg border border-[#f0c9cd] px-3 py-1.5 text-[12px] font-bold text-[#c02636] hover:bg-[#fdecec]">Discard</button></div>
                       {designCd
                         ? <div className="mb-2 rounded-lg border border-[#bfe6cf] bg-[#eafaf0] px-3 py-2 text-[12.5px] font-bold text-[#127a3e]">⏱ Countdown clock is in this email — it&apos;ll send as a big ticking clock.</div>
                         : <button type="button" onClick={addCountdownToDesign} className="mb-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bfe0c9] bg-[#f0faf3] px-4 py-3 text-[13.5px] font-extrabold text-[#127a3e] hover:bg-[#e3f6ea]">⏱ Add a big countdown clock to this email</button>}
-                      <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#eef1f6] p-3"><div className="mx-auto max-h-80 max-w-[560px] overflow-hidden rounded-lg bg-white shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
+                      <button type="button" onClick={() => setPreviewBig(true)} title="Click to enlarge" className="block w-full cursor-zoom-in overflow-hidden rounded-xl border border-[var(--line)] bg-[#E8EEFD] p-3"><div className="mx-auto max-h-80 max-w-[560px] overflow-hidden rounded-lg bg-[var(--surface)] shadow-sm" dangerouslySetInnerHTML={{ __html: renderDesignHtml(design, company, nowMs) }} /></button>
                     </div>
-                  : <div className="rounded-2xl border-2 border-dashed border-[#cfe0f7] bg-white p-8 text-center shadow-sm">
+                  : <div className="rounded-2xl border-2 border-dashed border-[#E4E9F5] bg-[var(--surface)] p-8 text-center shadow-sm">
                       <div className="text-[16px] font-extrabold text-[var(--ink)]">Design your own email</div>
                       <p className="mx-auto mt-1 max-w-md text-[13px] text-[var(--ink-3)]">Start a fresh design in the builder, or pick up a previous designed campaign and tweak it.</p>
                       <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
@@ -1100,9 +1102,9 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
                     </div>}
               {cdMissingDate && <div className="rounded-xl border border-[#f2c4c9] bg-[#fdf0f1] px-4 py-3 text-[13px] font-semibold text-[#c02636]">⚠ Your countdown has no date set, so the clock won&apos;t appear. Open the {useDesign ? "designer" : "⏱ Countdown panel"} and set a date &amp; time.</div>}
               {cdIncluded && <div className="rounded-xl border border-[#bfe6cf] bg-[#eafaf0] px-4 py-3 text-[13px] font-semibold text-[#127a3e]">⏱ Countdown included — it&apos;ll send as a big clock in the email.</div>}
-              <div className="rounded-xl border border-[#cfe0f7] bg-gradient-to-r from-[#eef4ff] to-white px-4 py-3 text-[13.5px] font-semibold text-[#1d3a8f] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}{selectedAuds.length > 1 ? ` · deduped across ${selectedAuds.length} audiences` : ""}.</div>
+              <div className="rounded-xl border border-[#E4E9F5] bg-gradient-to-r from-[#FFFFFF] to-[#FFFFFF] px-4 py-3 text-[13.5px] font-semibold text-[#2f5fd0] shadow-sm">📤 Sending to <b>{included.length}</b> contact{included.length === 1 ? "" : "s"}{excluded.size > 0 ? ` · ${excluded.size} skipped` : ""}{selectedAuds.length > 1 ? ` · deduped across ${selectedAuds.length} audiences` : ""}.</div>
               {people.length > 0 && (
-                <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-sm">
+                <div className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] shadow-sm">
                   <button type="button" onClick={() => setShowList((v) => !v)} className="flex w-full items-center gap-2 px-4 py-3 text-left"><span className="text-[13px] font-extrabold text-[var(--ink)]">Recipients</span><span className="rounded-full bg-[#eef4fd] px-2 py-0.5 text-[11.5px] font-extrabold text-[#1d3a8f] tabular-nums">{included.length} of {people.length}</span><span className="ml-auto text-[12px] font-bold text-[var(--ink-3)]">{showList ? "▲ Hide" : "▼ Show"}</span></button>
                   {showList && <div className="max-h-52 overflow-y-auto border-t border-[var(--line)]">
                     {people.map((p) => { const off = excluded.has(p.email.toLowerCase()); return (
@@ -1138,7 +1140,7 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     {previewBig && (
       <div className="fixed inset-0 z-[140] flex flex-col bg-[#0b1730]/70 p-4 backdrop-blur-[2px]" onClick={() => setPreviewBig(false)}>
         <div className="mx-auto flex w-full max-w-3xl items-center gap-2 py-2 text-white"><span className="text-[13px] font-extrabold">Email preview</span><span className="text-[12px] text-white/70">This is roughly how it lands in a parent&apos;s inbox.</span><button type="button" onClick={() => setPreviewBig(false)} className="ml-auto rounded-lg bg-white/15 px-3 py-1.5 text-[13px] font-bold hover:bg-white/25">✕ Close</button></div>
-        <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto rounded-2xl bg-white p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="mx-auto w-full max-w-3xl flex-1 overflow-y-auto rounded-2xl bg-[var(--surface)] p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
           <div className="mx-auto max-w-[600px]" dangerouslySetInnerHTML={{ __html: renderDesignHtml(useDesign && design ? design : wordedDesign(), company, nowMs) }} />
         </div>
       </div>
@@ -1146,11 +1148,11 @@ function NewCampaign({ audiences, templates, initialAudienceId, company, socials
     {designing && <div className="relative z-[145]"><CampaignDesigner initial={design} company={company} socials={socials} onCancel={() => setDesigning(false)} onSave={(d) => { setDesign(d); setDesigning(false); }} /></div>}
     {sentOk && (
       <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/45 p-4">
-        <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
+        <div className="w-full max-w-sm rounded-2xl bg-[var(--surface)] p-6 text-center shadow-2xl">
           <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-[#e8f6ee] text-[24px]">✅</div>
           <div className="text-[18px] font-extrabold text-[var(--ink)]">Sent to {included.length} {included.length === 1 ? "family" : "families"}!</div>
           <p className="mx-auto mt-1.5 max-w-xs text-[13px] text-[var(--ink-3)]">Save this design to reuse it next time? Give it a name:</p>
-          <input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="e.g. Summer camp email" className="mt-3 w-full rounded-lg border-2 border-[var(--line)] bg-white px-3.5 py-2.5 text-center text-[14px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]" />
+          <input value={saveName} onChange={(e) => setSaveName(e.target.value)} placeholder="e.g. Summer camp email" className="mt-3 w-full rounded-lg border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-center text-[14px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]" />
           <div className="mt-4 flex gap-2">
             <button type="button" onClick={onCancel} className="flex-1 rounded-lg border border-[var(--line)] px-4 py-2.5 text-[13px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">No thanks</button>
             <button type="button" onClick={() => { saveCurrentDesign(); onCancel(); }} disabled={!saveName.trim()} className="flex-1 rounded-lg py-2.5 text-[13px] font-extrabold text-white shadow-sm disabled:opacity-40" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>Save it</button>
@@ -1194,7 +1196,7 @@ function useCampaignData() {
   return { bookings, listings, templates, locations, allAudience, liveSegments };
 }
 
-function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, socials }: { onSent: () => void; seedAudienceId?: string | null; onSeedConsumed?: () => void; company?: Partial<Company>; socials?: Social[] }) {
+function CampaignsView({ onSent, seedAudienceId, seedName, seedSubject, seedListingId, onSeedConsumed, company, socials }: { onSent: () => void; seedAudienceId?: string | null; seedName?: string; seedSubject?: string; seedListingId?: string | null; onSeedConsumed?: () => void; company?: Partial<Company>; socials?: Social[] }) {
   const { bookings, listings, templates, locations, allAudience, liveSegments } = useCampaignData();
   // Local rows hold the DESIGN (drafts + reusable content); live status,
   // delivery and opens come from the server records they link to.
@@ -1218,6 +1220,12 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
   const removeEnquiryPerson = (email: string) => setEnquiries((xs) => { const next = xs.filter((e) => e.email.toLowerCase() !== email.toLowerCase()); writeLS(LS_ENQ, next); return next; });
   const closeCampaign = () => { setModal(null); onSeedConsumed?.(); };
   const audiences = [allAudience, ...liveSegments, ...computeEnquiryAudiences(enquiries, bookings), ...custom];
+  // From the growth page's listing focus: narrow the seeded audience to the set of
+  // families who have booked THAT listing, so counts match what the card showed.
+  const restrictEmails = seedListingId
+    ? new Set(bookings.filter((b) => b.listingId === seedListingId && b.email).map((b) => (b.email || "").toLowerCase()))
+    : undefined;
+  const restrictLabel = seedListingId ? (listings.find((l) => l.id === seedListingId)?.title || "this listing") : undefined;
   const create = async (c: { name: string; audience: Audience; template?: EmailTemplate; subject: string; html?: string; body?: string; design?: CampaignDesign; scheduledAt?: string }, action: CampStatus) => {
     setErr(null);
     const schedLabel = c.scheduledAt ? new Date(c.scheduledAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : undefined;
@@ -1264,9 +1272,9 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
   const rows = cq ? allRows.filter((c) => `${c.name} ${c.subtitle ?? ""} ${c.subject ?? ""} ${c.audienceName}`.toLowerCase().includes(cq)) : allRows;
   return (
     <div>
-      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ml-2 max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div><button type="button" onClick={() => setModal("campaign")} className="ml-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
+      <div className="mb-3 flex flex-wrap items-center gap-2"><span className="text-[13px] font-bold text-[var(--ink-2)]">Campaigns</span><div className="relative ml-2 max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search campaigns…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div><button type="button" onClick={() => setModal("campaign")} className="ml-auto rounded-lg px-3.5 py-2 text-[12.5px] font-extrabold text-white" style={{ background: "linear-gradient(180deg,#0f9d58,#0b7a43)" }}>＋ New campaign</button></div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
-      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
+      <div className="overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)]">
         <div className="grid grid-cols-[1.6fr_1.4fr_1fr_0.9fr_70px] gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]"><span>Campaign</span><span>Audience</span><span>Status</span><span>Opens</span><span></span></div>
         {rows.length === 0 && <div className="px-4 py-6 text-center text-[12.5px] text-[var(--ink-3)]">{cq ? `No campaigns match “${q}”.` : "No campaigns yet."}</div>}
         {rows.map((c) => { const p = STATUS_PILL[c.status]; return (
@@ -1280,7 +1288,7 @@ function CampaignsView({ onSent, seedAudienceId, onSeedConsumed, company, social
         ); })}
       </div>
       <div className="mt-3 rounded-lg border border-[#dbe6fb] bg-[#f4f8ff] px-3 py-2 text-[11.5px] text-[#1d3a8f]">Audiences are computed live from your bookings &amp; customer list. “Send now” and “Schedule” are real (cancel a scheduled send from Inbox → Scheduled); delivery and opens are tracked per send — opens via a pixel, so image-blocking clients won’t count.</div>
-      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} company={company} socials={socials} onCancel={closeCampaign} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
+      {modal === "campaign" && <NewCampaign audiences={audiences} templates={templates} initialAudienceId={seedAudienceId} initialName={seedName} initialSubject={seedSubject} restrictEmails={restrictEmails} restrictLabel={restrictLabel} company={company} socials={socials} onCancel={closeCampaign} onSubmit={create} onRemovePerson={removeEnquiryPerson} />}
       {modal === "audience" && <AudienceBuilder bookings={bookings} listings={listings} locations={locations} onCancel={() => setModal("campaign")} onCreate={(a) => { setCustom((xs) => [...xs, a]); setModal("campaign"); }} />}
       {detail && <CampaignDetail c={detail} onClose={() => setDetail(null)} />}
     </div>
@@ -1298,7 +1306,7 @@ function CampaignDetail({ c, onClose }: { c: Campaign; onClose: () => void }) {
   const p = STATUS_PILL[c.status];
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose}>
-      <div className="w-full max-w-2xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-2xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-start gap-2 border-b border-[var(--line)] px-5 py-4">
           <div><div className="text-[20px] font-extrabold text-[var(--ink)]">{c.name}</div><div className="text-[12.5px] text-[var(--ink-3)]">{[c.subtitle, c.audienceName, `${c.recipients} recipients`].filter(Boolean).join(" · ")}</div></div>
           <span className="ml-auto inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[12px] font-extrabold" style={{ background: p.bg, color: p.fg }}>● {p.label}</span>
@@ -1348,7 +1356,7 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
   const allPeople = a.people?.length ? a.people : a.emails.map((e) => ({ email: e, name: undefined as string | undefined }));
   const people = pq.trim() ? allPeople.filter((p) => `${p.name ?? ""} ${p.email}`.toLowerCase().includes(pq.trim().toLowerCase())) : allPeople;
   return (
-    <div data-ui="card" className="rounded-2xl border border-[var(--line)] bg-white p-4">
+    <div data-ui="card" className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
       <div className="flex items-start justify-between gap-2"><span className="text-[15px] font-extrabold text-[var(--ink)]">{SEG_NAMES[a.name] ?? a.name}</span><span className="text-[22px] font-extrabold text-[#1d3a8f]" style={{ fontVariantNumeric: "tabular-nums" }}>{a.count}</span></div>
       <p className="mt-1 text-[12px] text-[var(--ink-3)]">{SEG_DESCS[a.name] ?? a.desc}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -1359,8 +1367,8 @@ function AudienceCard({ a, onUse, extra, accent = AUD_ACCENT.segments, onRemoveP
       {open && (
         <div className="mt-3 overflow-hidden rounded-xl border border-[var(--line)]">
           <style>{`.aud-scroll{overflow-y:scroll}.aud-scroll::-webkit-scrollbar{width:11px}.aud-scroll::-webkit-scrollbar-track{background:#eef1f6}.aud-scroll::-webkit-scrollbar-thumb{background:#9aa9c4;border-radius:6px;border:2px solid #eef1f6}`}</style>
-          <div className="border-b border-[var(--line)] bg-[var(--panel)] p-2"><input value={pq} onChange={(e) => setPq(e.target.value)} placeholder={`🔍 Search ${allPeople.length} recipient${allPeople.length === 1 ? "" : "s"}…`} className="w-full rounded-lg border border-[var(--line)] bg-white px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" /></div>
-          <div className="aud-scroll h-52 bg-white">
+          <div className="border-b border-[var(--line)] bg-[var(--panel)] p-2"><input value={pq} onChange={(e) => setPq(e.target.value)} placeholder={`🔍 Search ${allPeople.length} recipient${allPeople.length === 1 ? "" : "s"}…`} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12.5px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" /></div>
+          <div className="aud-scroll h-52 bg-[var(--surface)]">
             {people.length === 0 ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">{pq.trim() ? `No recipients match “${pq}”.` : "No recipients in this list."}</div>
               : people.map((p) => (
                   <div key={p.email} className="flex items-center gap-2 border-b border-[var(--line)] px-3 py-2 last:border-0">
@@ -1505,22 +1513,22 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   return (
     <div>
       <div className="mb-3 rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">✉ <b>Audiences are live CRM segments</b> — membership is recomputed from booking &amp; enrolment data each send, and opt-outs are always excluded.</div>
-      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search audiences…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div>
+      <div className="relative mb-3 max-w-sm"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search audiences…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
 
       {/* switch between the three audience areas */}
       <div className="mb-4 flex flex-wrap gap-1.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1">
-        {SUBS.map((s) => <button key={s.k} type="button" onClick={() => setSub(s.k)} className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-[13px] font-extrabold transition ${sub === s.k ? "bg-white text-[#1d3a8f] shadow-sm" : "text-[var(--ink-2)] hover:text-[#1d3a8f]"}`}>{s.label}<span className={`rounded-full px-1.5 py-0.5 text-[10.5px] tabular-nums ${sub === s.k ? "bg-[#eef4fd] text-[#1d3a8f]" : "bg-[var(--line)] text-[var(--ink-3)]"}`}>{s.count}</span></button>)}
+        {SUBS.map((s) => <button key={s.k} type="button" onClick={() => setSub(s.k)} className={`flex items-center gap-2 rounded-lg px-3.5 py-2 text-[13px] font-extrabold transition ${sub === s.k ? "bg-[var(--surface)] text-[#2f5fd0] shadow-sm" : "text-[var(--ink-2)] hover:text-[#2f5fd0]"}`}>{s.label}<span className={`rounded-full px-1.5 py-0.5 text-[10.5px] tabular-nums ${sub === s.k ? "bg-[#E8EEFD] text-[#2f5fd0]" : "bg-[var(--line)] text-[var(--ink-3)]"}`}>{s.count}</span></button>)}
       </div>
 
       {sub === "segments" && (<>
         <AudSection title="🎯 Groups" hint="Ready-made groups that update themselves from your bookings & customer list — e.g. all families, or families on a given activity." />
-        <div className="mb-4 rounded-2xl border border-[#cfe0f7] bg-white p-4 shadow-sm">
+        <div className="mb-4 rounded-2xl border border-[#E4E9F5] bg-[var(--surface)] p-4 shadow-sm">
           <div className="mb-3 text-[14px] font-extrabold text-[#16306e]">🔎 Narrow by {seasons.length ? "season, " : ""}location, listing & payment</div>
           <div className={`grid gap-3 sm:grid-cols-2 ${seasons.length ? "lg:grid-cols-4" : "lg:grid-cols-3"}`}>
-            {seasons.length > 0 && <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📅 Season</div><select value={segSeason} onChange={(e) => setSegSeason(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All seasons</option>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
-            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📍 Location</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All locations</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
-            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🎫 Listing</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">All listings</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
-            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-white px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#3f78d8]"><option value="">Any method</option>{payMethods.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
+            {seasons.length > 0 && <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📅 Season</div><select value={segSeason} onChange={(e) => setSegSeason(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">All seasons</option>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📍 Location</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">All locations</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🎫 Listing</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">All listings</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">Any method</option>{payMethods.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
           </div>
           {!hasPayData && <p className="mt-2 text-[11px] text-[#9a6b00]">⚠ Options come from your <b>Setup → “How parents pay”</b> list. Filtering needs the method saved on each booking — it works the moment bookings include it (backend).</p>}
           {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); setSegPay(""); setSegSeason(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
@@ -1532,14 +1540,14 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
         <div className="flex flex-wrap items-center justify-between gap-2">
           <AudSection title="📩 New enquiries" hint="Everyone interested who hasn’t booked. The first card is the full total; the rest split it by location and always add back up to it. All drop off automatically once they book." />
           <div className="flex flex-wrap items-center gap-2">
-            <select value={enqLoc} onChange={(e) => setEnqLoc(e.target.value)} title="Filter enquiries by location" className="rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]"><option value="all">📍 All locations</option>{enqBreakdown.map((a) => { const loc = a.name.replace(/^New enquiries · /, ""); return <option key={a.id} value={loc}>{loc} ({a.count})</option>; })}</select>
+            <select value={enqLoc} onChange={(e) => setEnqLoc(e.target.value)} title="Filter enquiries by location" className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] font-bold text-[var(--ink-2)]"><option value="all">📍 All locations</option>{enqBreakdown.map((a) => { const loc = a.name.replace(/^New enquiries · /, ""); return <option key={a.id} value={loc}>{loc} ({a.count})</option>; })}</select>
             <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Enquired within</span><div className="inline-flex overflow-hidden rounded-lg border border-[var(--line)] text-[12px] font-bold">{([["30", "Last 30d", "past 30 days"], ["90", "Last 90d", "past 90 days"], ["all", "All time", "ever"]] as const).map(([v, l, t]) => <button key={v} type="button" title={`Show enquiries received in the ${t}`} onClick={() => setPeriod(v)} className="px-3 py-1" style={period === v ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}</div>
           </div>
         </div>
         <p className="mb-2 mt-1 text-[11.5px] text-[var(--ink-3)]">Filters this list by <b>how recently they first emailed you</b> — <b>Last 30d</b> shows only enquiries from the past month, <b>All time</b> shows everyone who ever enquired and still hasn&apos;t booked. Handy for chasing fresh leads vs. re-engaging old ones.</p>
         <div className="mb-3 rounded-lg border-l-4 border-[#c78a00] bg-[#fff8e8] px-3 py-2 text-[11.5px] text-[#7a5600]">⚖️ <b>Law (UK PECR):</b> enquiries haven’t bought anything, so you can only <b>market</b> to them once they’ve <b>opted in</b> (the “yes to hearing about activities” tick on their family record). Anyone who hasn’t opted in is automatically skipped on a send. You can always reply to their enquiry directly — that’s not marketing.</div>
         {!combinedNotBooked?.count
-          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-white p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Add a family under <b>New Family</b>, or open an email in the Inbox and hit <b>➕ Mark as enquiry</b>.</div>
+          ? <div className="rounded-xl border border-dashed border-[var(--line)] bg-[var(--surface)] p-5 text-center text-[12.5px] text-[var(--ink-3)]">No open enquiries. Add a family under <b>New Family</b>, or open an email in the Inbox and hit <b>➕ Mark as enquiry</b>.</div>
           : <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               {enqLoc === "all" && combinedNotBooked && matchAud(combinedNotBooked) && <AudienceCard key="notbooked" a={combinedNotBooked} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeFromNotBooked} />}
               {(enqLoc === "all" ? enqBreakdown : enqBreakdown.filter((a) => a.name.replace(/^New enquiries · /, "") === enqLoc)).filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.enquiries} onRemovePerson={removeFromNotBooked} />)}
@@ -1601,10 +1609,10 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-3">
-        <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-white text-[13px] font-bold shadow-sm">
+        <div className="inline-flex overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] text-[13px] font-bold shadow-sm">
           {([["worded", "✍️ Worded templates"], ["designed", `🎨 Builder templates${designs.length ? ` (${designs.length})` : ""}`]] as const).map(([k, l]) => <button key={k} type="button" onClick={() => setSub(k)} className="px-4 py-2.5" style={sub === k ? { background: "#eef4fd", color: "#1d3a8f" } : { color: "var(--ink-2)" }}>{l}</button>)}
         </div>
-        <div className="relative max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="w-full rounded-full border border-[var(--line)] bg-white py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#c02636]">×</button>}</div>
+        <div className="relative max-w-xs flex-1"><span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[13px] text-[var(--ink-3)]">🔍</span><input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search templates…" className="w-full rounded-full border border-[var(--line)] bg-[var(--surface)] py-2 pl-9 pr-8 text-[13px] text-[var(--ink)] outline-none focus:border-[#2f6bd8]" />{q && <button type="button" onClick={() => setQ("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-[14px] text-[var(--ink-3)] hover:text-[#C81E5E]">×</button>}</div>
       </div>
       {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{err}</div>}
 
@@ -1615,7 +1623,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
       </div>
       {wShown.length === 0 ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">{tq ? `No worded templates match “${q}”.` : "No templates yet. Create one — it’s available here and in Messages."}</Card>
       : <div className="flex flex-col gap-2">{wShown.map((t) => (
-          <div key={t.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-white p-3">
+          <div key={t.id} className="flex items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
             <div className="min-w-0 flex-1"><div className="truncate text-[13.5px] font-bold text-[var(--ink)]">{t.name}</div>{t.subject && <div className="truncate text-[12px] text-[var(--ink-3)]">{t.subject}</div>}</div>
             <button type="button" onClick={() => onUse(t)} className="flex-none rounded-lg border border-[#2f6bd8] px-3 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] hover:bg-[#eef4fd]">Use</button>
             <button type="button" onClick={() => setEdit(t)} className="flex-none rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button>
@@ -1633,8 +1641,8 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
       {dShown.length === 0
         ? <Card className="p-8 text-center text-[13px] text-[var(--ink-3)]">{tq ? `No builder templates match “${q}”.` : <>No designs yet. Hit <b>＋ New builder template</b> to build one in the visual editor — it saves here and appears in Campaigns → Design your own → “Use a saved one”.</>}</Card>
         : <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))" }}>{dShown.map((s) => (
-            <div key={s.id} className="overflow-hidden rounded-xl border border-[var(--line)] bg-white">
-              <div className="h-44 w-full overflow-hidden border-b border-[var(--line)] bg-white"><div style={{ width: 640, transform: "scale(0.375)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: s.accent, blocks: s.blocks }, company, dNow) }} /></div>
+            <div key={s.id} className="overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)]">
+              <div className="h-44 w-full overflow-hidden border-b border-[var(--line)] bg-[var(--surface)]"><div style={{ width: 640, transform: "scale(0.375)", transformOrigin: "top left", pointerEvents: "none" }} dangerouslySetInnerHTML={{ __html: renderDesignHtml({ accent: s.accent, blocks: s.blocks }, company, dNow) }} /></div>
               <div className="flex items-center gap-2 p-2.5"><div className="min-w-0 flex-1 truncate text-[13px] font-extrabold text-[var(--ink)]">{s.name}</div><button type="button" onClick={() => setDesigner({ mode: "edit", item: s })} className="flex-none rounded-lg border border-[var(--line)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">Edit</button><button type="button" onClick={() => delDesign(s)} className="flex-none rounded-lg border border-[#f6c9cc] px-2.5 py-1 text-[11.5px] font-bold text-[#c02636] hover:bg-[#fdebec]">Delete</button></div>
             </div>
           ))}</div>}
@@ -1644,7 +1652,7 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
 
       {edit && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setEdit(null)}>
-          <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <div className="w-full max-w-xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">{edit.id ? "Edit template" : "New template"}</div><button type="button" onClick={() => setEdit(null)} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
             <div className="max-h-[66vh] space-y-2.5 overflow-y-auto p-5">
               <div><FieldLabel>Name</FieldLabel><Input value={edit.name} onChange={(e) => setEdit({ ...edit, name: e.target.value })} placeholder="e.g. Booking confirmation" className="w-full" /></div>
@@ -1694,7 +1702,7 @@ function AnalyticsView() {
         <StatCard label="Click rate" value="—" sub="link tracking to come" />
       </div>
       {active
-        ? <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
+        ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
             <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Delivery funnel</div>
             <div className="space-y-2.5">
               <FunnelBar label="Sent" n={sent} max={sent} color="#6b7280" />
@@ -1702,7 +1710,7 @@ function AnalyticsView() {
               <FunnelBar label="Opened" n={opened} max={sent} color="#16a34a" />
             </div>
           </div>
-        : <div className="rounded-2xl border border-[var(--line)] bg-white p-4">
+        : <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
             <div className="mb-3 text-[15px] font-extrabold text-[var(--ink)]">Open rate by send <span className="text-[12px] font-normal text-[var(--ink-3)]">— tap one for its full breakdown</span></div>
             {rows.length === 0 ? <div className="py-4 text-center text-[13px] text-[var(--ink-3)]">No sends yet.</div>
             : rows.filter((c) => c.deliveredN > 0).slice(0, 10).map((c) => { const pct = Math.round((c.openedN / c.deliveredN) * 100); return (
@@ -1726,7 +1734,7 @@ function SignatureManager({ settings, save, onClose }: { settings: TenantSetting
   const del = (id: string) => { if (confirm("Delete this signature?")) persist(sigs.filter((s) => s.id !== id), settings.defaultSignatureId === id ? "" : undefined); };
   return (
     <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose}>
-      <div className="w-full max-w-xl rounded-2xl bg-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-xl rounded-2xl bg-[var(--surface)] shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="flex items-center border-b border-[var(--line)] px-5 py-3.5"><div className="text-[17px] font-extrabold text-[var(--ink)]">Manage signatures</div><button type="button" onClick={onClose} className="ml-auto flex h-7 w-7 items-center justify-center rounded-full text-[16px] text-[var(--ink-3)] hover:bg-[var(--panel)]">×</button></div>
         <div className="max-h-[66vh] overflow-y-auto p-5">
           {!draft ? (
@@ -1800,10 +1808,29 @@ function EmailPrefs({ settings, save }: { settings: TenantSettings; save: (patch
   );
 }
 
+// Growth-page goals → a ready-made campaign name + subject line, so a play lands
+// in the composer with sensible content already written (the operator edits from there).
+const GOAL_SEED: Record<string, { name: string; subject: string }> = {
+  winback: { name: "Win-back offer", subject: "We’ve missed you — here’s a little something to come back" },
+  fill: { name: "Fill the last spaces", subject: "A few spaces left — grab one before they’re gone" },
+  review: { name: "Review request", subject: "How did we do? A quick favour" },
+  membership: { name: "Membership offer", subject: "Save on every booking with membership" },
+  newsletter: { name: "Newsletter", subject: "What’s on with us" },
+  midweek: { name: "Midweek offer", subject: "A midweek treat — a little off your next booking" },
+};
+
 export function EmailApp() {
   // Deep-link from the Register: ?to=parent@email opens addressed to one parent.
   const searchParams = useSearchParams();
   const presetTo = searchParams.get("to") ?? "";
+  // Deep-link from the growth page ("Grow your numbers"): ?aud=<segment id> opens
+  // the Campaigns composer with that audience already selected, ready to send.
+  // An optional ?goal= pre-fills a matching campaign name + subject.
+  const seedAud = searchParams.get("aud");
+  const seedGoal = searchParams.get("goal");
+  const seedContent = seedGoal ? GOAL_SEED[seedGoal] : undefined;
+  // ?listing=<id> — narrows the seeded audience to families who booked that listing.
+  const seedListing = searchParams.get("listing");
   // Head-office network scope — which network's families this Email surface is
   // acting on. Drives the "Sending within" banner and re-reads when it changes.
   const emailPortalSeg = usePathname()?.split("/")[1] || "freelancer";
@@ -1861,7 +1888,7 @@ export function EmailApp() {
   const undoFired = useRef(false);
   const [undoEnq, setUndoEnq] = useState<{ name: string; location?: string; prev: EnquiryRec[] } | null>(null);
   const [undoEnqLeft, setUndoEnqLeft] = useState(0);
-  const [campaignSeedId, setCampaignSeedId] = useState<string | null>(null); // audience picked from a card's "Use in campaign"
+  const [campaignSeedId, setCampaignSeedId] = useState<string | null>(seedAud || null); // audience picked from a card's "Use in campaign", or a ?aud= deep-link
   const [subject, setSubject] = useState(nlDraft?.subject ?? "");
   const [body, setBody] = useState(nlDraft?.body ? mdToHtml(nlDraft.body) : ""); // HTML (rich editor)
   const [attachments, setAttachments] = useState<{ name: string; size: string }[]>([]);
@@ -1878,7 +1905,7 @@ export function EmailApp() {
   // Land on Compose when arriving from a hand-off (newsletter/register), else on
   // the Inbox (the manual's default Email view).
   type Tab = "inbox" | "campaigns" | "audiences" | "templates" | "automatic" | "analytics" | "compose" | "settings";
-  const [tab, setTab] = useState<Tab>(nlDraft || presetTo ? "compose" : "inbox");
+  const [tab, setTab] = useState<Tab>(seedAud ? "campaigns" : nlDraft || presetTo ? "compose" : "inbox");
   const savedImages: SavedImage[] = settings.emailAssets?.images ?? [];
   const momentById = new Map((moments ?? []).map((m) => [m.id, m]));
   // Read the live moment so a photo carries its own message + marketing quote
@@ -2143,7 +2170,7 @@ export function EmailApp() {
       {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
       {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
       {undoEnq && (
-        <div className="fixed bottom-6 left-1/2 z-[140] flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-[#bfe6cf] bg-white px-4 py-3 shadow-[0_12px_40px_-8px_rgba(18,122,62,.4)]">
+        <div className="fixed bottom-6 left-1/2 z-[140] flex -translate-x-1/2 items-center gap-3 rounded-2xl border border-[#E4E9F5] bg-[var(--surface)] px-4 py-3 shadow-[0_12px_40px_-8px_rgba(18,122,62,.4)]">
           <span className="flex h-7 w-7 flex-none items-center justify-center rounded-full text-[14px] text-white shadow-sm" style={{ background: "linear-gradient(180deg,#33b06a,#127a3e)" }}>✓</span>
           <span className="text-[13px] font-semibold text-[var(--ink)]">Added <b>{undoEnq.name}</b> to New enquiries{undoEnq.location ? <> · <b>{undoEnq.location}</b></> : ""}</span>
           <span className="relative flex h-7 w-7 flex-none items-center justify-center">
@@ -2155,7 +2182,7 @@ export function EmailApp() {
       )}
 
       {tab === "inbox" && <InboxView history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} />}
-      {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
+      {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} seedName={seedContent?.name} seedSubject={seedContent?.subject} seedListingId={seedListing} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} payMethods={settings.payMethods ?? []} seasons={settings.seasons ?? []} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "analytics" && <AnalyticsView />}
@@ -2163,7 +2190,7 @@ export function EmailApp() {
       {tab === "settings" && <EmailPrefs settings={settings} save={save} />}
 
       {tab === "compose" && (<>
-      {undoSend && <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#dbe6fb] bg-[#eaf0fc] px-3 py-2 text-[12.5px] font-semibold text-[#1d3a8f]"><span>Sending to {undoSend.count} recipient{undoSend.count === 1 ? "" : "s"} in {undoLeft}s…</span><button type="button" onClick={() => { setUndoSend(null); setUndoLeft(0); setOk("Send cancelled — your draft is still here."); }} className="ml-auto rounded-md bg-white px-3 py-1 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm">↩ Undo</button></div>}
+      {undoSend && <div className="mb-3 flex items-center gap-3 rounded-lg border border-[#E4E9F5] bg-[#E8EEFD] px-3 py-2 text-[12.5px] font-semibold text-[#2f5fd0]"><span>Sending to {undoSend.count} recipient{undoSend.count === 1 ? "" : "s"} in {undoLeft}s…</span><button type="button" onClick={() => { setUndoSend(null); setUndoLeft(0); setOk("Send cancelled — your draft is still here."); }} className="ml-auto rounded-md bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[#2f5fd0] shadow-sm">↩ Undo</button></div>}
       {designedDoc && (
         <div className="mb-4 rounded-2xl border-2 border-[#2f6bd8] bg-[#f4f8ff] p-4">
           <div className="text-[14px] font-extrabold text-[#1d3a8f]">{docHtml ? "📰 A designed newsletter came from the Newsfeed — how should families get it?" : "🖼 This email has photos / formatting — how should families get it?"}</div>
@@ -2297,7 +2324,7 @@ export function EmailApp() {
             <button type="button" onClick={send} disabled={sending} className="rounded-l-lg bg-[#1d3a8f] px-4 py-2 text-[13px] font-extrabold text-white disabled:opacity-50">{sending ? "Sending…" : `Send to ${finalRecipients.length} recipient${finalRecipients.length === 1 ? "" : "s"}`}</button>
             <button type="button" onClick={() => setSchedOpen((o) => !o)} disabled={sending} aria-label="Schedule send" className="rounded-r-lg border-l border-white/30 bg-[#1d3a8f] px-2.5 py-2 text-[12px] font-bold text-white disabled:opacity-50">▲</button>
             {schedOpen && (
-              <div className="absolute bottom-full left-0 z-20 mb-1.5 w-72 rounded-xl border border-[var(--line)] bg-white p-3 shadow-xl">
+              <div className="absolute bottom-full left-0 z-20 mb-1.5 w-72 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-xl">
                 <div className="mb-1.5 flex items-center gap-1.5 text-[12.5px] font-extrabold text-[var(--ink)]">📣 Schedule send</div>
                 <input type="datetime-local" value={schedAt} onChange={(e) => setSchedAt(e.target.value)} className="w-full rounded-md border border-[var(--line)] bg-[var(--surface)] px-2 py-1.5 text-[12.5px] outline-none focus:border-[#2f6bd8]" />
                 <div className="mt-2 flex gap-2"><button type="button" onClick={scheduleSend} className="flex-1 rounded-md bg-[#1d3a8f] px-3 py-1.5 text-[12.5px] font-extrabold text-white">Schedule</button><button type="button" onClick={() => setSchedOpen(false)} className="rounded-md border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button></div>
@@ -2313,7 +2340,7 @@ export function EmailApp() {
       {savedImages.length > 0 && (
         <div className="mb-4 rounded-2xl border border-[#f6e2a8] bg-[#fffdf3] p-3.5">
           <button type="button" onClick={() => setAssetsOpen((v) => !v)} className="flex w-full items-center justify-between gap-2 text-left">
-            <span className="flex items-center gap-2 text-[13px] font-extrabold" style={{ color: BROWN, fontFamily: "var(--ff-display)" }}>{assetsOpen ? "📂" : "📁"} Photos from Moments <span className="rounded-full bg-[#f6e2a8] px-2 py-0.5 text-[11px] font-extrabold text-[#8a5a00]">{savedImages.length}</span>{assetsOpen && <span className="text-[11px] font-semibold text-[var(--ink-3)]">— type your message, add the quote, set size/crop/colour.</span>}</span>
+            <span className="flex items-center gap-2 text-[13px] font-extrabold" style={{ color: "var(--ink-2)", fontFamily: "var(--ff-display)" }}>{assetsOpen ? "📂" : "📁"} Photos from Moments <span className="rounded-full bg-[#FCF1DC] px-2 py-0.5 text-[11px] font-extrabold text-[var(--ink-2)]">{savedImages.length}</span>{assetsOpen && <span className="text-[11px] font-semibold text-[var(--ink-3)]">— type your message, add the quote, set size/crop/colour.</span>}</span>
             <span className="flex-none rounded-full border border-[#f0d488] px-2.5 py-0.5 text-[11.5px] font-bold text-[#8a5a00]">{assetsOpen ? "▲ Close folder" : "▼ Open folder"}</span>
           </button>
           {assetsOpen && (

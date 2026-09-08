@@ -1,19 +1,25 @@
 import type { CSSProperties } from "react";
 
-// Auth screens (sign in / create account) run the same light palette as the
-// operator workspace — never the default dark shell — so they read as a clean,
-// branded provider sign-in rather than a black system screen.
+// Auth screens run the marketing-site palette so the hand-off from the website
+// into sign-up feels like one product. That palette is the blue + gold one —
+// this file was still carrying the dark-navy/pink retheme that was reverted,
+// which is why sign-in looked nothing like the site.
 export const AUTH_LIGHT: CSSProperties = {
-  "--bg": "#eef2fb",
+  "--bg": "#1d3a8f",
   "--surface": "#ffffff",
-  "--panel": "#f6f8fd",
+  "--panel": "#f5f8fd",
   "--ink": "#171534",
   "--ink-2": "#4a4763",
   "--ink-3": "#8a86a3",
-  "--line": "#e4e9f4",
+  "--line": "#ece6f1",
+  "--brand": "#2f6bd8",
+  "--brand-soft": "#e8f0fe",
+  "--brand-ink": "#ffffff",
+  "--brand-strong": "#1d3a8f",
+  "--gold": "#f5b81f",
 } as CSSProperties;
 
-// The ActivityOS mark — blue rounded square + white paper-plane.
+// The mark — blue rounded square + white paper-plane (matches the site logo).
 export function AosMark({ size = 30 }: { size?: number }) {
   return (
     <svg viewBox="0 0 32 32" width={size} height={size} fill="none" aria-hidden="true">
@@ -30,11 +36,12 @@ export function AosMark({ size = 30 }: { size?: number }) {
   );
 }
 
+// Wordmark — Wigglekit.
 export function AosWordmark({ className = "" }: { className?: string }) {
   return (
     <span className={className} style={{ fontFamily: "var(--ff-display)" }}>
-      <span style={{ color: "#171534" }}>Activity</span>
-      <span style={{ color: "#EE1F63" }}>OS</span>
+      <span style={{ color: "var(--ink, #171534)" }}>Wiggle</span>
+      <span style={{ color: "var(--gold, #f5b81f)" }}>kit</span>
     </span>
   );
 }

@@ -76,7 +76,7 @@ function LoginForm() {
 
   return (
     <div
-      className="relative w-full max-w-[400px] overflow-hidden rounded-[20px] bg-[var(--surface)] p-7 shadow-[0_24px_70px_-24px_rgba(20,30,90,.28)]"
+      className="relative w-full max-w-[520px] overflow-hidden rounded-[22px] bg-[var(--surface)] p-9 shadow-[0_24px_70px_-24px_rgba(20,30,90,.28)]"
       style={{ borderLeft: "4px solid #1d3a8f" }}
     >
       <div className="mb-5 flex items-center gap-2.5">

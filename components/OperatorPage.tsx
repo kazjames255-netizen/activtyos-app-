@@ -59,6 +59,12 @@ const VIEW_SETTINGS: Record<string, string> = {
 // reaches the edges, then puts it back inside.
 // ─────────────────────────────────────────────────────────────────────────
 
+// The operator page's local token scope. Named LIGHT_PALETTE for historical
+// reasons, but it now carries the Wigglekit marketing-site palette verbatim so
+// every operator page sits on the same dark navy #F4F6FC ground, #FFFFFF
+// surface cards, #101A38 ink and #C81E5E pink accents as the website. Because
+// it is applied as an inline style on the page wrapper it overrides :root, so
+// this is the single switch that themes every OperatorPage-based screen.
 export const LIGHT_PALETTE = {
   background: "var(--bg)",
   color: "var(--ink)",
@@ -268,7 +274,7 @@ export function MasterCard({
   bodyClassName?: string;
 }) {
   return (
-    <div className={`overflow-hidden rounded-2xl border border-[var(--line)] bg-white shadow-[0_1px_3px_rgba(20,30,60,.06)] ${className}`}>
+    <div className={`overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_3px_rgba(20,30,60,.06)] ${className}`}>
       <div className="px-4 py-2.5 text-white" style={{ background: "radial-gradient(120% 140% at 12% -20%, #4f8bf5 0%, transparent 55%), linear-gradient(120deg,#16306e 0%,#3f78d8 100%)" }}>
         {header}
       </div>
@@ -332,7 +338,9 @@ export function TabStrip<T extends string>({
               on
                 ? { borderColor: "transparent", background: "linear-gradient(180deg,#4f8bf5,#2f6bd8)", color: "#fff", boxShadow: "0 3px 10px -2px rgba(47,107,216,.55)" }
                 : isAccent
-                  ? { borderColor: "transparent", background: "linear-gradient(180deg,#f7c948,#eda100)", color: "#4a2f00", boxShadow: "0 3px 10px -2px rgba(237,161,0,.5)" }
+                  // A bright gold fill needs dark ink — the label was #F5A524
+                  // gold-on-gold, i.e. invisible.
+                  ? { borderColor: "transparent", background: "linear-gradient(180deg,#f7c948,#eda100)", color: "#3A2A05", boxShadow: "0 3px 10px -2px rgba(237,161,0,.5)" }
                   : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }
             }
           >

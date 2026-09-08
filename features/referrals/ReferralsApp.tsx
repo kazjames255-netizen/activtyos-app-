@@ -1,13 +1,13 @@
 "use client";
 
-import { useEffect, useState, type CSSProperties } from "react";
+import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
-import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
 
 const LIGHT_PALETTE = {
@@ -38,6 +38,33 @@ const fmt = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", {
 const nameOf = (email: string) => email.split("@")[0].replace(/[._]/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 const fmtAmt = (v?: number, type?: "amount" | "percent") => (type === "percent" ? `${Math.round(v ?? 0)}%` : money(v ?? 0));
 
+// Inline reward-settings editor bits (moved here from Setup).
+function RowEd({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-dashed border-[var(--line)] pb-3 last:border-0 last:pb-0">
+      <div className="min-w-0 max-w-[74%]"><div className="text-[13px] font-bold text-[var(--ink)]">{label}</div>{hint && <div className="text-[11px] leading-snug text-[var(--ink-3)]">{hint}</div>}</div>
+      <div className="flex-none">{children}</div>
+    </div>
+  );
+}
+function Seg({ on, onChange, labels }: { on: boolean; onChange: (v: boolean) => void; labels: [string, string] }) {
+  return (
+    <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)] text-[12px] font-bold">
+      <button type="button" onClick={() => onChange(true)} className="px-3.5 py-1.5 transition-colors" style={on ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{labels[0]}</button>
+      <button type="button" onClick={() => onChange(false)} className="px-3.5 py-1.5 transition-colors" style={!on ? { background: "#2f6bd8", color: "#fff" } : { color: "var(--ink-3)" }}>{labels[1]}</button>
+    </div>
+  );
+}
+function NumIn({ value, onChange, pct }: { value: number; onChange: (n: number) => void; pct?: boolean }) {
+  return (
+    <span className="inline-flex items-center gap-1">
+      {!pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">£</span>}
+      <input type="number" min="0" max={pct ? 100 : undefined} step="1" value={String(value)} onChange={(e) => onChange(Math.max(0, Math.round(Number(e.target.value) || 0)))} className="w-[80px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[var(--brand-line,#cdddf7)]" />
+      {pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">%</span>}
+    </span>
+  );
+}
+
 export function ReferralsApp() {
   const [d, setD] = useState<Data | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +72,13 @@ export function ReferralsApp() {
   const load = () => apiGet<Data>("/api/referrals").then((r) => { setD(r); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   useEffect(() => { void load(); }, []);
   useRealtime(["referrals", "bookings", "discountCodes"], load);
+  // Reward settings — edited right here now (moved off Setup). Writes settings.referral
+  // and reloads the stats so the hero + everything reflects it straight away.
+  const { settings, save } = useSettings();
+  const r = settings.referral;
+  const pct = r.type === "percent";
+  const [editOpen, setEditOpen] = useState(false);
+  const patchR = (patch: Partial<typeof r>) => { void save({ settings: { ...settings, referral: { ...r, ...patch } } }).then(load).catch(() => {}); };
   // Discount as a share of the revenue those referrals brought in (£ vs %).
   const costPct = d && d.referredRevenue > 0 ? Math.round((d.friendDiscountTotal / d.referredRevenue) * 100) : 0;
   const [q, setQ] = useState("");
@@ -64,8 +98,11 @@ export function ReferralsApp() {
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {/* Hero — kept compact: title + inline stats on the left, small leaderboard on the right */}
-      <div className="relative mb-4 overflow-hidden rounded-2xl p-4 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
-        <div className="absolute right-4 top-4 z-10 flex items-center gap-2"><TourLauncher view="referrals" compact /><SettingsLink /></div>
+      <div className="relative mb-4 overflow-hidden rounded-2xl p-4 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "var(--hero-grad)" }}>
+        <div className="absolute right-4 top-4 z-10 flex items-center gap-2">
+          <TourLauncher view="referrals" compact />
+          <button type="button" onClick={() => setEditOpen((o) => !o)} className="rounded-full bg-white/20 px-3 py-1.5 text-[12px] font-bold text-white backdrop-blur-sm transition-colors hover:bg-white/30">⚙️ Edit rewards</button>
+        </div>
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div className="min-w-[240px] flex-1">
             <div className="flex items-center gap-2 text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
@@ -73,7 +110,7 @@ export function ReferralsApp() {
               Referrals
             </div>
             <p className="mt-1 max-w-[520px] text-[12px] leading-[1.45] text-white/85">
-              Families who bring you new bookings. {d?.enabled ? <>Currently <b>{fmtAmt(d.friendOff, d.type)}</b> off for the friend, <b>{fmtAmt(d.referrerReward, d.type)}</b> back for the referrer.</> : <>Referrals are <b>off</b> — switch them on in Setup.</>}
+              Families who bring you new bookings. {r.enabled ? <>Currently <b>{fmtAmt(r.friendOff, r.type)}</b> off for the friend, <b>{fmtAmt(r.referrerReward, r.type)}</b> back for the referrer.</> : <>Referrals are <b>off</b> — turn them on in <button type="button" onClick={() => setEditOpen(true)} className="font-bold underline">Edit rewards</button>.</>}
             </p>
             {d && (
               <div className="mt-2.5 flex flex-wrap gap-2">
@@ -85,7 +122,46 @@ export function ReferralsApp() {
           </div>
         </div>
       </div>
-      {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
+      {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#C81E5E)]">{error}</div>}
+
+      {/* Reward settings — the inline dropdown editor (moved off Setup). */}
+      <Card className="mb-3.5 overflow-hidden p-0">
+        <button type="button" onClick={() => setEditOpen((o) => !o)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--panel)]">
+          <div className="flex items-center gap-2.5">
+            <span className="text-[17px]">🎁</span>
+            <div>
+              <div className="text-[13.5px] font-extrabold">Refer-a-friend rewards</div>
+              <div className="text-[11.5px] text-[var(--ink-3)]">{r.enabled ? `On · friend gets ${fmtAmt(r.friendOff, r.type)}, referrer earns ${fmtAmt(r.referrerReward, r.type)}${r.minSpend ? ` · min spend ${money(r.minSpend)}` : ""}` : "Off — families don’t see a referral page"}</div>
+            </div>
+          </div>
+          <span className={`text-[13px] text-[var(--ink-3)] transition-transform ${editOpen ? "rotate-180" : ""}`}>▾</span>
+        </button>
+        {editOpen && (
+          <div className="flex flex-col gap-3 border-t border-[var(--line)] px-4 py-3.5">
+            <p className="text-[11.5px] leading-snug text-[var(--ink-3)]">A give-X-get-X reward: a family shares their personal link, a friend gets money off their first booking, and the family earns a code once that booking goes through. You fund the rewards, so the amounts are yours.</p>
+            <RowEd label="Refer a friend" hint="Off: no referral page for families. On: each family gets a shareable link and both sides earn.">
+              <Seg on={r.enabled} onChange={(v) => patchR({ enabled: v })} labels={["On", "Off"]} />
+            </RowEd>
+            <RowEd label="Reward type" hint="Money off a fixed amount, or a percentage off.">
+              <Seg on={r.type === "amount"} onChange={(v) => patchR({ type: v ? "amount" : "percent" })} labels={["£ off", "% off"]} />
+            </RowEd>
+            <RowEd label={`Friend gets — ${pct ? "% " : ""}off their first booking`} hint="The discount a brand-new family gets when they book with a friend’s link.">
+              <NumIn value={r.friendOff} onChange={(n) => patchR({ friendOff: pct ? Math.min(100, n) : n })} pct={pct} />
+            </RowEd>
+            <RowEd label={`Referrer earns — as a ${pct ? "% " : ""}code`} hint="The reward the referring family gets in their Coupons area once the friend’s first booking is made.">
+              <NumIn value={r.referrerReward} onChange={(n) => patchR({ referrerReward: pct ? Math.min(100, n) : n })} pct={pct} />
+            </RowEd>
+            <RowEd label="Minimum spend" hint="The friend’s first basket must reach this for the reward to apply. 0 = no minimum.">
+              <NumIn value={r.minSpend} onChange={(n) => patchR({ minSpend: n })} />
+            </RowEd>
+            {pct && (
+              <RowEd label="Cap reward to the friend’s spend" hint="Keeps you safe: the reward can never take off more than the friend actually paid.">
+                <Seg on={r.capToFriendSpend} onChange={(v) => patchR({ capToFriendSpend: v })} labels={["On", "Off"]} />
+              </RowEd>
+            )}
+          </div>
+        )}
+      </Card>
 
       {d && d.leaderboard.length > 0 && (
         <Card className="mb-3.5 p-4">

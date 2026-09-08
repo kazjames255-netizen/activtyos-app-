@@ -5,6 +5,39 @@ import type { BookingDoc } from "../lib/bookingDoc";
 
 export const platform = Router();
 
+// ── Impersonation: the accounts HQ can "open" + an audit trail ───────────────
+// GET /api/platform/accounts — every real account HQ can view-as, labelled by
+// who they are and which portal they use. POST /api/platform/impersonate logs
+// the act (see attachRole in middleware/role.ts for the actual override).
+type PortalKey = "company" | "freelancer" | "franchise" | "staff" | "custdash" | "platform";
+const portalForRole = (role: string): PortalKey => role === "parent" ? "custdash" : role === "company" || role === "franchise" || role === "freelancer" || role === "staff" || role === "platform" ? role : "custdash";
+platform.get("/accounts", async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  const [usersSnap, tenantsSnap] = await Promise.all([db.collection("users").get(), db.collection("tenants").get()]);
+  const tenantName = new Map(tenantsSnap.docs.map((d) => [d.id, (d.data().name as string) ?? d.id]));
+  const accounts = usersSnap.docs.map((d) => {
+    const u = d.data() as { role?: string; tenantId?: string; franchiseId?: string; email?: string; name?: string; franchiseName?: string; franchiseArea?: string };
+    const role = u.role === "provider" ? "freelancer" : (u.role ?? "parent");
+    const tName = u.tenantId ? tenantName.get(u.tenantId) : undefined;
+    const frLabel = u.franchiseName ? (u.franchiseArea ? `${u.franchiseName} · ${u.franchiseArea}` : u.franchiseName) : undefined;
+    const label = role === "parent" ? (u.name || u.email || "Parent") : (role === "franchise" ? (frLabel || tName) : tName) || u.name || u.email || "Account";
+    return { uid: d.id, email: u.email ?? "", name: u.name ?? "", role, label, provider: role === "parent" ? "" : (tName ?? ""), portal: portalForRole(role) };
+  }).filter((a) => a.email && a.role !== "platform");
+  accounts.sort((a, b) => a.role === b.role ? a.label.localeCompare(b.label) : a.role.localeCompare(b.role));
+  res.json({ accounts });
+});
+const impersonateSchema = z.object({ uid: z.string().min(1).max(128) });
+platform.post("/impersonate", async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  const parsed = impersonateSchema.safeParse(req.body ?? {});
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const target = await db.collection("users").doc(parsed.data.uid).get();
+  if (!target.exists) { res.status(404).json({ error: "No such account" }); return; }
+  const t = target.data()!;
+  await db.collection("impersonationLog").add({ byUid: req.user!.uid, byEmail: req.user?.email ?? null, targetUid: parsed.data.uid, targetEmail: t.email ?? null, targetRole: t.role ?? "parent", at: new Date().toISOString() });
+  res.json({ uid: parsed.data.uid, role: t.role === "provider" ? "freelancer" : (t.role ?? "parent"), email: t.email ?? "", portal: portalForRole((t.role as string) ?? "parent") });
+});
+
 // GET /api/platform/overview — platform-wide aggregates for the HQ
 // dashboard. Fine as full-collection reads at the current scale; becomes a
 // scheduled aggregation job when tenant counts grow.

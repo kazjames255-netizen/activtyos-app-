@@ -9,7 +9,7 @@ import { db } from "../firebase";
 // last-read live in platform/notifPrefs.
 export const platformNotifications = Router();
 const prefsDoc = db.collection("platform").doc("notifPrefs");
-const TYPES = ["signup", "cancel", "support", "bug"] as const;
+const TYPES = ["signup", "cancel", "support", "bug", "lead"] as const;
 type NType = (typeof TYPES)[number];
 
 platformNotifications.use((req, res, next) => {
@@ -59,6 +59,21 @@ platformNotifications.get("/", async (_req, res) => {
         title: type === "bug" ? `Bug report${th.providerName ? ` — ${th.providerName}` : ""}` : `New support message${th.providerName ? ` — ${th.providerName}` : ""}`,
         body: th.subject || last?.body || "", href: `/platform/messages?thread=${d.id}`, at,
       });
+    }
+  }
+
+  if (on("lead")) {
+    const leadsSnap = await db.collection("leads").get();
+    for (const d of leadsSnap.docs) {
+      const l = d.data() as { name?: string; business?: string; createdAt?: string };
+      if (l.createdAt && l.createdAt > cutoff) {
+        items.push({
+          id: `lead_${d.id}`, type: "lead",
+          title: "New demo request",
+          body: [l.name, l.business].filter(Boolean).join(" · ") || d.id,
+          href: `/platform/leads`, at: l.createdAt,
+        });
+      }
     }
   }
 

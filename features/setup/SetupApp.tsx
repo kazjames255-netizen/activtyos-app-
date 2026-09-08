@@ -426,7 +426,7 @@ function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next
   return (
     <div className="flex flex-col gap-1.5">
       {PAY_STANDARD.map((m) => (
-        <div key={m.label} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2">
+        <div key={m.label} className="flex flex-wrap items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
           <span className="text-[13px] font-semibold text-[var(--ink)]">{m.label}</span>
           {badge(m.tone, m.behaviour)}
           <span className="hidden text-[11px] text-[var(--ink-3)] lg:inline">· {m.note}</span>
@@ -435,7 +435,7 @@ function PayMethodEditor({ items, onChange }: { items: string[]; onChange: (next
       ))}
       {customs.length > 0 && <div className="mt-2 text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Your own methods</div>}
       {customs.map((it) => (
-        <div key={it} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-white px-3 py-2">
+        <div key={it} className="flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
           <Input value={it} onChange={(e) => onChange(items.map((x) => (x === it ? e.target.value : x)))} className="flex-1" />
           {badge("pending", "Awaiting payment")}
           <button type="button" aria-label={`Remove ${it}`} onClick={() => { if (!confirm(`Remove “${it}”?\n\nBookings already recorded against it keep the method; it just stops being offered on new ones.`)) return; onChange(items.filter((x) => x !== it)); }} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
@@ -459,7 +459,7 @@ function SeasonsEditor({ items, onChange }: { items: Season[]; onChange: (next: 
     <div className="flex flex-col gap-1.5">
       <div className="rounded-lg border-l-4 border-[#2f6bd8] bg-[#eef4fd] px-3 py-2 text-[12px] text-[#1d3a8f]">📅 Just the <b>names</b> here — no dates. You pick a listing’s season <b>when you build the listing</b> (Basics step). Bookings, audiences and takings then group by it, so different holiday dates across towns don’t matter.</div>
       {items.map((s) => (
-        <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-white px-3 py-2">
+        <div key={s.id} className="flex flex-wrap items-center gap-2 rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3 py-2">
           <Input value={s.name} onChange={(e) => patch(s.id, (x) => ({ ...x, name: e.target.value }))} placeholder="Season name" className="min-w-[160px] flex-1 font-semibold" />
           <button type="button" aria-label={`Remove ${s.name}`} onClick={() => remove(s.name, s.id)} className="px-1.5 text-[var(--ink-3)] hover:text-[var(--red,#e21d27)]">✕</button>
         </div>
@@ -1398,7 +1398,7 @@ export function SetupApp() {
       actions={
         <>
           {fromView && (
-            <Link href={`/${portal}/${fromView}`} className="inline-flex items-center gap-1.5 rounded-full bg-white px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm transition hover:brightness-95">
+            <Link href={`/${portal}/${fromView}`} className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface)] px-3.5 py-1.5 text-[12px] font-extrabold text-[#2f5fd0] shadow-sm transition hover:brightness-95">
               <span className="text-[14px] leading-none">‹</span>{t("setup.backTo", { label: backLabel })}
             </Link>
           )}
@@ -1549,7 +1549,7 @@ export function SetupApp() {
             ] as { k: "inhouse" | "external"; icon: string; title: string; tag: string; benefits: string[] }[]).map((o) => {
               const on = (rv.captureMode ?? "inhouse") === o.k;
               return (
-                <button key={o.k} type="button" onClick={() => set("reviews", { ...rv, captureMode: o.k })} className={"rounded-xl border-2 p-3.5 text-left transition " + (on ? "border-[#1d3a8f] bg-[#f5f8ff]" : "border-[var(--line)] bg-white hover:border-[#c9d6f5]")}>
+                <button key={o.k} type="button" onClick={() => set("reviews", { ...rv, captureMode: o.k })} className={"rounded-xl border-2 p-3.5 text-left transition " + (on ? "border-[#C6D0E6] bg-[#E8EEFD]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#E4E9F5]")}>
                   <div className="flex items-center gap-2">
                     <span className="text-[18px]">{o.icon}</span>
                     <span className="text-[13.5px] font-extrabold text-[var(--ink)]">{o.title}</span>
@@ -1568,7 +1568,7 @@ export function SetupApp() {
           <div className="mb-4 flex flex-wrap gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-[#eef4fd] px-3 py-1.5 text-[12.5px] font-bold text-[#1d3a8f]"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#1d3a8f" }} />In-house · always on</span>
             {([["google", "Google", "#ea4335"], ["trustpilot", "Trustpilot", "#00b67a"]] as [("google" | "trustpilot"), string, string][]).map(([k, label, col]) => (
-              <button key={k} type="button" onClick={() => toggleSrc(k)} className={"inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition " + (has(k) ? "border-transparent text-white" : "border-[var(--line)] bg-white text-[var(--ink-2)] hover:bg-[var(--panel)]")} style={has(k) ? { background: col } : undefined}>
+              <button key={k} type="button" onClick={() => toggleSrc(k)} className={"inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-[12.5px] font-bold transition " + (has(k) ? "border-transparent text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)] hover:bg-[var(--panel)]")} style={has(k) ? { background: col } : undefined}>
                 <span className="h-2.5 w-2.5 rounded-full" style={{ background: has(k) ? "#fff" : col }} />{has(k) ? `✓ ${label}` : label}
               </button>
             ))}
@@ -1604,7 +1604,7 @@ export function SetupApp() {
                 </ol>
                 {/* Visual: a mock of Google's info window, with the Place ID highlighted. */}
                 <div className="mt-2.5 flex flex-wrap items-center gap-3">
-                  <div className="relative w-[340px] max-w-full rounded-md border border-[#e4e4e4] bg-white p-2.5 shadow-[0_4px_16px_rgba(0,0,0,.14)]">
+                  <div className="relative w-[340px] max-w-full rounded-md border border-[#E4E9F5] bg-[var(--surface)] p-2.5 shadow-[0_4px_16px_rgba(0,0,0,.14)]">
                     <div className="absolute right-1.5 top-1.5 flex h-5 w-5 items-center justify-center rounded-sm text-[12px] text-[#70757a]">✕</div>
                     <div className="text-[12.5px] font-bold text-[#3c4043]">Kings Camps - Sheffield</div>
                     <div className="mt-1 text-[11.5px] text-[#3c4043]"><span className="font-bold">Place ID:</span> <mark className="rounded bg-[#fff2a8] px-1 py-0.5 font-mono text-[11px] font-bold text-[#7a2a22] ring-1 ring-[#efcf3d]">ChIJSbBEmHOCeUgRTzxu9F_YMUg</mark></div>
@@ -1617,16 +1617,16 @@ export function SetupApp() {
 
               <div className="mb-3 flex flex-col gap-2.5">
                 {places.map((p, i) => (
-                  <div key={p.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
+                  <div key={p.id} className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       {multi ? (
-                        <input value={p.label} placeholder={`Location ${i + 1} name — e.g. Ashford`} onChange={(e) => patch(p.id, { label: e.target.value })} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] font-bold text-[var(--ink)]" />
+                        <input value={p.label} placeholder={`Location ${i + 1} name — e.g. Ashford`} onChange={(e) => patch(p.id, { label: e.target.value })} className="min-w-0 flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] font-bold text-[var(--ink)]" />
                       ) : (
                         <span className="flex-1 text-[12px] font-extrabold text-[var(--ink-2)]">Your Google listing</span>
                       )}
                       {multi && <button type="button" onClick={() => writePlaces(places.filter((x) => x.id !== p.id))} className="flex-none rounded-full border border-[var(--line)] px-2.5 py-1.5 text-[11px] font-bold text-[var(--ink-3)] transition hover:bg-[var(--panel)]" aria-label="Remove location">✕</button>}
                     </div>
-                    <input value={p.placeId || p.reviewUrl || ""} placeholder="Paste your ChIJ… Place ID here" onChange={(e) => { const g = parseGoogle(e.target.value); patch(p.id, { placeId: g.googlePlaceId, reviewUrl: g.googleReviewUrl }); }} className="w-full rounded-lg border border-[var(--line)] bg-white px-2.5 py-1.5 text-[12.5px] text-[var(--ink)]" />
+                    <input value={p.placeId || p.reviewUrl || ""} placeholder="Paste your ChIJ… Place ID here" onChange={(e) => { const g = parseGoogle(e.target.value); patch(p.id, { placeId: g.googlePlaceId, reviewUrl: g.googleReviewUrl }); }} className="w-full rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)]" />
                     {connected(p) && <div className="mt-2 flex flex-wrap items-center gap-1.5 text-[11px] font-bold text-[#0f7a43]">✓ Connected{multi && p.label ? ` — ${p.label}` : ""} — {precise(p) ? "parents get a one-tap review box." : "parents land on your listing (one extra tap)."}<button type="button" onClick={() => patch(p.id, { placeId: "", reviewUrl: "" })} className="text-[var(--ink-3)] underline hover:text-[var(--ink)]">Clear</button></div>}
                   </div>
                 ))}
@@ -1748,7 +1748,7 @@ export function SetupApp() {
             <div className="flex flex-wrap items-center gap-2">
               <label className="cursor-pointer rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ Upload signature<input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (!f) return; const r = new FileReader(); r.onload = () => set("learning", { ...settings.learning, certSignature: String(r.result) }); r.readAsDataURL(f); }} /></label>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              {settings.learning?.certSignature && <img src={settings.learning.certSignature} alt="Signature" className="h-9 w-auto rounded border border-[var(--line)] bg-white object-contain px-1" />}
+              {settings.learning?.certSignature && <img src={settings.learning.certSignature} alt="Signature" className="h-9 w-auto rounded border border-[var(--line)] bg-[var(--surface)] object-contain px-1" />}
               {settings.learning?.certSignature && <button type="button" onClick={() => set("learning", { ...settings.learning, certSignature: undefined })} className="text-[12px] font-semibold text-[var(--ink-3)] hover:text-[#c0392b]">Remove</button>}
             </div>
           </div>
@@ -2484,41 +2484,20 @@ export function SetupApp() {
 
       {activeTab === "refer" && (() => {
         const r = settings.referral;
-        const setR = (patch: Partial<typeof r>) => set("referral", { ...r, ...patch });
-        const num = (v: string) => Math.max(0, Math.round(Number(v) || 0));
-        const pct = r.type === "percent";
-        const Amount = ({ value, onChange }: { value: number; onChange: (n: number) => void }) => (
-          <span className="inline-flex items-center gap-1">
-            {!pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">£</span>}
-            <Input type="number" min="0" step="1" max={pct ? "100" : undefined} value={String(value)} onChange={(e) => onChange(Math.min(pct ? 100 : 1e6, num(e.target.value)))} className="w-[84px]" />
-            {pct && <span className="text-[12px] font-bold text-[var(--ink-3)]">%</span>}
-          </span>
-        );
+        const unit = (v: number) => (r.type === "percent" ? `${v}%` : `£${v}`);
         return (
           <Section
             title="Refer a friend"
-            lede="A give-X-get-X reward: a family shares their personal link, a friend gets money off their first booking, and the family earns a code once that booking goes through. You fund the rewards, so the amounts are yours."
+            lede="Refer-a-friend rewards now live on the Referrals page, so you set them up right where you track the results."
           >
-            <Row label="🎁 Refer a friend" hint="Off: no referral page for families. On: each family gets a shareable link and both sides earn.">
-              <Toggle on={r.enabled} onChange={(v) => setR({ enabled: v })} labels={["On", "Off"]} />
-            </Row>
-            <Row label="Reward type" hint="Money off a fixed amount, or a percentage off.">
-              <Toggle on={r.type === "amount"} onChange={(v) => setR({ type: v ? "amount" : "percent" })} labels={["£ off", "% off"]} />
-            </Row>
-            <Row label={`Friend gets — ${pct ? "% " : ""}off their first booking`} hint="The discount a brand-new family gets when they book with a friend's link.">
-              <Amount value={r.friendOff} onChange={(n) => setR({ friendOff: n })} />
-            </Row>
-            <Row label={`Referrer earns — as a ${pct ? "% " : ""}code`} hint="The reward the referring family gets in their Coupons area once the friend's first booking is made.">
-              <Amount value={r.referrerReward} onChange={(n) => setR({ referrerReward: n })} />
-            </Row>
-            <Row label="Minimum spend (£)" hint="The friend's first basket must reach this for the reward to apply. 0 = no minimum.">
-              <span className="inline-flex items-center gap-1"><span className="text-[12px] font-bold text-[var(--ink-3)]">£</span><Input type="number" min="0" step="1" value={String(r.minSpend)} onChange={(e) => setR({ minSpend: num(e.target.value) })} className="w-[84px]" /></span>
-            </Row>
-            {pct && (
-              <Row label="Cap reward to the friend's spend" note="Recommended" hint="Keeps you safe: the reward can never take off more than the friend actually paid — so a cheap referral can't unlock a big % discount on the referrer's next large booking.">
-                <Toggle on={r.capToFriendSpend} onChange={(v) => setR({ capToFriendSpend: v })} labels={["On", "Off"]} />
-              </Row>
-            )}
+            <div className="flex flex-col items-start gap-3 py-1">
+              <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[12.5px] text-[var(--ink-2)]">
+                {r.enabled
+                  ? <>Currently <b>on</b> — friend gets <b>{unit(r.friendOff)}</b> off, referrer earns <b>{unit(r.referrerReward)}</b>.</>
+                  : <>Currently <b>off</b> — families don’t see a referral page.</>}
+              </div>
+              <a href={`/${portal}/referrals`} className="rounded-full bg-[#2f5fd0] px-4 py-2 text-[12.5px] font-bold text-white transition-opacity hover:opacity-90">Open Referrals to edit →</a>
+            </div>
           </Section>
         );
       })()}

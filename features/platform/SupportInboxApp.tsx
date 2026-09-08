@@ -403,3 +403,70 @@ function TierChip({ tier }: { tier: Tier }) {
   const s = TIERS[tier];
   return <span className="shrink-0 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: s.bg, color: s.fg }}>{s.label}</span>;
 }
+
+// ── Category manager ─────────────────────────────────────────────────────────
+// Modal for HQ to edit the triage categories (label + emoji). Shared with the
+// Support review screen. Saves via PUT /api/platform/support/categories.
+type SupportCategory = { id: string; label: string; emoji?: string };
+
+export function CategoryManager({
+  categories,
+  onClose,
+  onSaved,
+}: {
+  categories: SupportCategory[];
+  onClose: () => void;
+  onSaved: (c: SupportCategory[]) => void;
+}) {
+  const [cats, setCats] = useState<SupportCategory[]>(categories.map((c) => ({ ...c })));
+  const [saving, setSaving] = useState(false);
+
+  const slug = (label: string) =>
+    label.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 40) || `cat-${Math.floor(Math.random() * 1e6)}`;
+
+  const setAt = (i: number, patch: Partial<SupportCategory>) =>
+    setCats((cs) => cs.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+  const add = () => setCats((cs) => [...cs, { id: `cat-${Math.floor(Math.random() * 1e6)}`, label: "", emoji: "" }]);
+  const remove = (i: number) => setCats((cs) => cs.filter((_, j) => j !== i));
+
+  const save = async () => {
+    const clean = cats
+      .map((c) => ({ id: c.id || slug(c.label), label: c.label.trim(), emoji: (c.emoji || "").trim() || undefined }))
+      .filter((c) => c.label);
+    setSaving(true);
+    try {
+      const r = await apiPut<{ ok: boolean; categories: SupportCategory[] }>("/api/platform/support/categories", { categories: clean });
+      onSaved(r.categories ?? clean);
+      onClose();
+    } catch {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/50 p-4 pt-[8vh]" onClick={onClose}>
+      <div className="w-full max-w-[440px] rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-[0_30px_70px_-30px_rgba(0,0,0,.7)]" onClick={(e) => e.stopPropagation()}>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-[16px] font-extrabold text-[var(--ink)]">Manage categories</h3>
+          <button type="button" onClick={onClose} className="text-[var(--ink-3)] hover:text-[var(--ink)]">✕</button>
+        </div>
+        <div className="flex flex-col gap-2">
+          {cats.map((c, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input value={c.emoji || ""} onChange={(e) => setAt(i, { emoji: e.target.value })} placeholder="🙂" maxLength={4}
+                className="w-12 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-center text-[14px] outline-none" />
+              <input value={c.label} onChange={(e) => setAt(i, { label: e.target.value })} placeholder="Category name"
+                className="flex-1 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#C6D0E6]" />
+              <button type="button" onClick={() => remove(i)} className="px-1.5 text-[var(--ink-3)] hover:text-[#C81E5E]" title="Remove">✕</button>
+            </div>
+          ))}
+        </div>
+        <button type="button" onClick={add} className="mt-2.5 rounded-lg border border-dashed border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] hover:border-[#C6D0E6]">+ Add category</button>
+        <div className="mt-4 flex justify-end gap-2">
+          <button type="button" onClick={onClose} className="rounded-lg border border-[var(--line)] px-3.5 py-2 text-[13px] font-bold text-[var(--ink-2)]">Cancel</button>
+          <button type="button" onClick={save} disabled={saving} className="rounded-lg bg-[#2f5fd0] px-4 py-2 text-[13px] font-bold text-white disabled:opacity-40">{saving ? "Saving…" : "Save"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}

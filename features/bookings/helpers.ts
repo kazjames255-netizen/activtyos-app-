@@ -111,7 +111,7 @@ export const EXPORT_PRESETS: { name: string; hint: string; keys: string[] }[] = 
     keys: ["children", "ages", "listing", "dates", "sessions", "booker", "phone", "status"] },
   { name: "Finance", hint: "What was charged and paid",
     keys: ["ref", "booker", "listing", "pass", "amount", "pay", "method", "refund", "dates"] },
-  { name: "Contacts", hint: "For an email or SMS list",
+  { name: "Contacts", hint: "For an email list",
     keys: ["booker", "email", "phone", "children", "listing"] },
 ];
 

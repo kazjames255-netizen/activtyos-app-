@@ -1,8 +1,10 @@
 import { Router } from "express";
+import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { tenantTier, franchiseLabel, nextTicket, type ThreadDoc, type Msg } from "./platformSupport";
 import { emailNewMessage } from "../lib/emails";
 import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope";
 import { webUrl } from "../lib/stripe";
@@ -624,49 +626,100 @@ messages.delete("/templates/:id", async (req, res) => {
   res.json({ ok: true });
 });
 
-// ─── ActivityOS support channel (operator ↔ platform/HQ) ────────────────────
-// A separate conversation from customer messages. HQ (platform portal) reading
-// and replying is still to build (handoff §BB.2); this is the operator side.
-const supportCol = db.collection("supportMessages");
-// Operator topics + the customer-side app-problem topics (error/account/other).
-// The customer picker offers these, so the server must accept them or every
-// "A page broke" / "Login issue" / "Other" report 400s.
+// ─── ActivityOS support channel (operator/parent ↔ platform HQ) ─────────────
+// UNIFIED with the HQ Support inbox: a "Message ActivityOS" note (or a customer
+// "Report a problem") is ONE ongoing thread in `supportThreads` — the very
+// collection the HQ inbox + notification bell read — so HQ sees every message
+// and replies flow straight back into this chat. See platformSupport.ts.
+const supportThreadsCol = db.collection("supportThreads");
 const supportTopics = ["general", "billing", "bug", "feature", "onboarding", "compliance", "error", "account", "other"] as const;
 const supportSchema = z.object({
   body: z.string().trim().min(1).max(4_000),
   topic: z.enum(supportTopics).optional(),
   subject: z.string().trim().max(80).optional(),
 });
-// Support works for operators (scoped by tenant) AND parents (scoped by email).
-function supportScope(req: import("express").Request): { field: "tenantId" | "parentEmail"; value: string } | null {
+// The single "message" support thread for the signed-in account (operator → a
+// provider thread; parent → a customer thread). Optionally creates it.
+// A franchise shares its head office's tenantId, so scope its support to its
+// own franchiseId; freelancers / a company's own threads use null.
+const supportFranchiseId = (req: import("express").Request): string | null => (req.auth!.role === "franchise" ? (req.auth!.franchiseId ?? null) : null);
+
+// EVERY support thread for the signed-in account (message + bug), correctly
+// scoped for franchises. Used by the GET so the provider sees their bug reports too.
+async function accountThreads(req: import("express").Request): Promise<{ ref: FirebaseFirestore.DocumentReference; data: ThreadDoc }[]> {
   const auth = req.auth!;
-  if (isOperator(auth.role) && auth.tenantId) return { field: "tenantId", value: auth.tenantId };
-  if (auth.role === "parent" && req.user?.email) return { field: "parentEmail", value: req.user.email.toLowerCase() };
+  if (isOperator(auth.role) && auth.tenantId) {
+    const fr = supportFranchiseId(req);
+    const snap = await supportThreadsCol.where("providerId", "==", auth.tenantId).get();
+    return snap.docs.map((d) => ({ ref: d.ref, data: d.data() as ThreadDoc })).filter((x) => x.data.party === "provider" && (x.data.franchiseId ?? null) === fr);
+  }
+  if (auth.role === "parent" && req.user?.email) {
+    const em = req.user.email.toLowerCase();
+    const snap = await supportThreadsCol.where("email", "==", em).get();
+    return snap.docs.map((d) => ({ ref: d.ref, data: d.data() as ThreadDoc })).filter((x) => x.data.party === "customer");
+  }
+  return [];
+}
+
+async function accountSupportThread(req: import("express").Request, create: boolean): Promise<{ ref: FirebaseFirestore.DocumentReference; data: ThreadDoc } | null> {
+  const auth = req.auth!;
+  const at = new Date().toISOString();
+  if (isOperator(auth.role) && auth.tenantId) {
+    const providerId = auth.tenantId;
+    const fr = supportFranchiseId(req);
+    const snap = await supportThreadsCol.where("providerId", "==", providerId).get();
+    const found = snap.docs.find((d) => { const t = d.data() as ThreadDoc; return t.party === "provider" && t.kind === "message" && (t.franchiseId ?? null) === fr; });
+    if (found) return { ref: found.ref, data: found.data() as ThreadDoc };
+    if (!create) return null;
+    const tt = await tenantTier(providerId);
+    // Franchisees share the head office's tenant — label the thread as the franchise.
+    const label = (fr ? await franchiseLabel(providerId, fr) : null) ?? tt?.providerName ?? "Provider";
+    const doc: ThreadDoc = { party: "provider", name: label, email: req.user?.email ?? "", tier: tt?.tier ?? "company", providerId, franchiseId: fr, providerName: label, subject: "Message ActivityOS", ticket: await nextTicket("message"), kind: "message", status: "open", unreadByHq: false, messages: [], createdAt: at, updatedAt: at };
+    const ref = await supportThreadsCol.add(doc);
+    return { ref, data: doc };
+  }
+  if (auth.role === "parent" && req.user?.email) {
+    const email = req.user.email.toLowerCase();
+    const snap = await supportThreadsCol.where("email", "==", email).get();
+    const found = snap.docs.find((d) => { const t = d.data() as ThreadDoc; return t.party === "customer" && t.kind === "message"; });
+    if (found) return { ref: found.ref, data: found.data() as ThreadDoc };
+    if (!create) return null;
+    const doc: ThreadDoc = { party: "customer", name: req.user.name ?? email.split("@")[0], email, tier: "company", providerId: null, franchiseId: null, providerName: "", subject: "App problem", ticket: await nextTicket("message"), kind: "message", status: "open", unreadByHq: false, messages: [], createdAt: at, updatedAt: at };
+    const ref = await supportThreadsCol.add(doc);
+    return { ref, data: doc };
+  }
   return null;
 }
+// Map an embedded thread message to the shape the SupportApp chat expects.
+const toChatMsg = (m: Msg, senderName: string) => ({ id: m.id, from: m.from === "hq" ? "activityos" : "user", senderName: m.from === "hq" ? "ActivityOS" : senderName, topic: m.topic, subject: m.subject, body: m.body, createdAt: m.at });
+
 messages.get("/support", async (req, res) => {
-  const scope = supportScope(req);
-  if (!scope) { res.status(403).json({ error: "Requires an account" }); return; }
-  const snap = await supportCol.where(scope.field, "==", scope.value).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
-  list.sort((a, b) => (`${a.createdAt ?? ""}` < `${b.createdAt ?? ""}` ? -1 : 1));
-  res.json(list);
+  if (!req.auth) { res.status(403).json({ error: "Requires an account" }); return; }
+  const threads = await accountThreads(req);
+  // Opening the chat clears any "HQ replied" unread flag on the account's threads.
+  await Promise.all(threads.filter((t) => t.data.unreadByUser).map((t) => t.ref.update({ unreadByUser: false })));
+  const out = threads.flatMap((t) => (t.data.messages ?? []).map((m) => {
+    const base = toChatMsg(m, t.data.name);
+    // A bug report thread: label the provider's message so they recognise it in the chat.
+    return t.data.kind === "bug" && m.from !== "hq" ? { ...base, topic: "bug", subject: t.data.subject.replace(/^Bug:\s*/, "") } : base;
+  }));
+  out.sort((a, b) => ((a.createdAt ?? "") < (b.createdAt ?? "") ? -1 : 1));
+  res.json(out);
 });
 messages.post("/support", async (req, res) => {
-  const scope = supportScope(req);
-  if (!scope) { res.status(403).json({ error: "Requires an account" }); return; }
   const parsed = supportSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = {
-    [scope.field]: scope.value,
-    ...(scope.field === "tenantId" ? { tenantName: await tenantName(scope.value) } : {}),
-    from: "user" as const, // the account holder (operator or parent); HQ replies are "activityos"
-    senderName: req.user?.name ?? (req.auth!.role === "parent" ? "Customer" : "Operator"),
-    topic: parsed.data.topic ?? "general",
-    subject: parsed.data.subject ?? "",
-    body: parsed.data.body,
-    createdAt: new Date().toISOString(),
-  };
-  const ref = await supportCol.add(doc);
-  res.status(201).json({ id: ref.id, ...doc });
+  const t = await accountSupportThread(req, true);
+  if (!t) { res.status(403).json({ error: "Requires an account" }); return; }
+  const at = new Date().toISOString();
+  const m: Msg = { id: randomUUID(), from: "them", body: parsed.data.body, at, topic: parsed.data.topic ?? "general", subject: parsed.data.subject ?? "" };
+  const isFirst = !(t.data.messages?.length);
+  await t.ref.update({
+    messages: [...(t.data.messages ?? []), m],
+    status: "open",
+    unreadByHq: true, // surfaces in the HQ inbox + notification bell
+    updatedAt: at,
+    ...(isFirst && parsed.data.subject ? { subject: parsed.data.subject } : {}),
+  });
+  res.status(201).json(toChatMsg(m, t.data.name));
 });

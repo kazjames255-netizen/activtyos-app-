@@ -202,9 +202,6 @@ function ContactPane({
             <a href={`https://wa.me/${intl}`} target="_blank" rel="noreferrer" className={item}>
               {t("customers.whatsapp")}
             </a>
-            <a href={`sms:${phone}`} className={item}>
-              {t("customers.textMessage")}
-            </a>
             <a href={`tel:${phone}`} className={item}>
               {t("customers.call")}
             </a>
@@ -619,7 +616,7 @@ export function CustomersApp() {
               </Button>
             )}
             {canWrite && !draft && (
-              <Button variant="primary" className="!bg-white !border-white !text-[#1d3a8f]" onClick={() => { topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setDraft(emptyDraft()); }}>
+              <Button variant="primary" className="!bg-[var(--surface)] !border-white !text-[#2f5fd0]" onClick={() => { topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setDraft(emptyDraft()); }}>
                 {t("customers.addFamily")}
               </Button>
             )}

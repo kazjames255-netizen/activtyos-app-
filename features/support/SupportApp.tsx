@@ -58,7 +58,7 @@ export function SupportApp() {
     apiGet<SupportMsg[]>("/api/messages/support").then(setMsgs).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, []);
   useEffect(() => { load(); }, [load]);
-  useRealtime(["support"], load);
+  useRealtime(["supportThreads"], load);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [msgs]);
 
   async function send() {

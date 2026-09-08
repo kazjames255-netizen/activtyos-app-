@@ -252,7 +252,7 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       })
       .catch(() => {});
   }, []);
-  const brandName = brand || "ActivityOS";
+  const brandName = brand || "Wigglekit";
 
   // Live unread-message total for the Messages nav badge (see useUnreadMessages).
   const unread = useUnreadMessages(portal);
@@ -524,8 +524,8 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
               </defs>
             </svg>
             <span className="text-[15px] font-extrabold leading-none" style={{ fontFamily: "var(--ff-display)" }}>
-              <span style={{ color: "var(--side-ink)" }}>Activity</span>
-              <span style={{ color: "#EE1F63" }}>OS</span>
+              <span style={{ color: "var(--side-ink)" }}>Wiggle</span>
+              <span style={{ color: "#FF3D7F" }}>kit</span>
             </span>
           </div>
           <div className="mt-1.5 text-[10px] font-semibold leading-snug" style={{ color: "var(--side-muted)" }}>

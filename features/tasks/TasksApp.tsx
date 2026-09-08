@@ -67,7 +67,11 @@ function LinkChip({ link, size = "sm" }: { link: TaskLink; size?: "sm" | "xs" })
   if (link.href) return <button type="button" title={`Open ${m.label.toLowerCase()}`} onClick={(e) => { e.stopPropagation(); router.push(link.href!); }} className={`${cls} underline decoration-transparent hover:decoration-current`} style={{ background: m.bg, color: m.fg }}>{label} <span className="font-black">↗</span></button>;
   return <span className={cls} style={{ background: m.bg, color: m.fg }}>{label}</span>;
 }
-const AV = ["#e0e7ff", "#efe0ff", "#dcfce7", "#fff3d6", "#ffe4ef", "#e5f6f8", "#ffe9d6"];
+// Avatar chips. These were near-white pastels (#fde2e4 etc) carried over from
+// the light theme -- on a dark ground they blaze, and the initials sat on them
+// at light-blue, which failed both ways. Now dark tints in the same hue spread,
+// with initials in --ink (>=8.9:1 on every one).
+const AV = ["#FDE7EF", "#E2F6EC", "#E8EEFD", "#FCF1DC", "#DEF4F1", "#EDE9FD", "#FCF1DC", "#E8EEFD"];
 const avBg = (n: string) => AV[[...(n || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
 const initials = (n: string) => (n || "?").split(/\s+/).map((x) => x[0]).slice(0, 2).join("").toUpperCase();
 
@@ -302,7 +306,9 @@ export function TasksApp() {
               <button key={label} type="button" onClick={() => setKpiFilter(on ? "" : key)} title={`Show ${label.toLowerCase()}`}
                 className="rounded-xl px-4 py-2 text-left backdrop-blur-sm transition hover:-translate-y-0.5"
                 style={on ? { background: "#fff", boxShadow: "0 6px 18px -8px rgba(0,0,0,.4)" } : { background: "rgba(255,255,255,.15)" }}>
-                <div className="text-[20px] font-extrabold leading-none" style={{ fontVariantNumeric: "tabular-nums", color: on ? "#1d3a8f" : "#fff" }}>{n}</div>
+                {/* `on` renders a white pill, so its ink has to be navy — the
+                    light accent on white was ~2.3:1. */}
+                <div className="text-[20px] font-extrabold leading-none" style={{ fontVariantNumeric: "tabular-nums", color: on ? "#F4F6FC" : "#fff" }}>{n}</div>
                 <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.06em]" style={{ color: on ? "#4a4763" : "rgba(255,255,255,.8)" }}>{label}</div>
                 <div className="mt-0.5 h-0.5 w-6 rounded-full" style={{ background: color }} />
               </button>
@@ -408,7 +414,9 @@ function MyTasks({ tasks, today, noAssignee, onOpen, onStatus }: { tasks: Task[]
   const todayT = open.filter((t) => t.due && daysBetween(today, t.due) === 0).sort(byPrioDue);
   const upcoming = open.filter((t) => !t.due || daysBetween(today, t.due) > 0).sort((a, b) => `${a.due ?? "9999"}`.localeCompare(`${b.due ?? "9999"}`) || byPrioDue(a, b));
   const done = tasks.filter((t) => t.status === "done");
-  const groups: [string, Task[], string, string][] = [["Overdue", overdue, "Nothing overdue — nice.", "#c02636"], ["Today", todayT, "Clear for today.", "#b45309"], ["Upcoming", upcoming, "Nothing scheduled.", "#3b82f6"], ["Done", done, "Nothing done yet.", "#16b364"]];
+  // Group heading colours are ink on the page, so they use the light accents.
+  // The dark 500-weights they had (#C81E5E etc) sat at ~2.6:1 on the dimmed navy.
+  const groups: [string, Task[], string, string][] = [["Overdue", overdue, "Nothing overdue — nice.", "#C81E5E"], ["Today", todayT, "Clear for today.", "#16307a"], ["Upcoming", upcoming, "Nothing scheduled.", "#2f5fd0"], ["Done", done, "Nothing done yet.", "#0f7a43"]];
   return (
     <div className="space-y-4">
       {groups.map(([title, list, empty, color]) => (

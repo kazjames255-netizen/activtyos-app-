@@ -199,7 +199,7 @@ function PostForm({ activities, settings, save, listings, initialChild, onPosted
 
       {error && <div className="mt-2 text-[12.5px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
       <div className="mt-2 rounded-lg bg-[#f4f8ff] px-3 py-1.5 text-[11px] text-[var(--ink-2)]">📨 Once posted, the tagged children&rsquo;s parents are notified and emailed a direct link to view it in their area. Photos also land in the gallery, filed under each child and the listing.</div>
-      <div className="mt-3 flex gap-2"><button type="button" disabled={busy} onClick={post} className="rounded-lg px-4 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-60" style={{ background: BLUE }}>{busy ? "Posting…" : "Post moment 🚀"}</button><button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button></div>
+      <div className="mt-3 flex gap-2"><button type="button" disabled={busy} onClick={post} className="rounded-lg px-4 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-60" style={{ background: "#2f5fd0" }}>{busy ? "Posting…" : "Post moment 🚀"}</button><button type="button" onClick={onCancel} className="rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)]">Cancel</button></div>
     </div>
   );
 }
@@ -366,7 +366,7 @@ export function MomentsApp() {
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             <TourLauncher view="moments" compact />
-            {!posting && <button type="button" onClick={() => setPosting(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Share a moment</button>}
+            {!posting && <button type="button" onClick={() => setPosting(true)} className="rounded-full bg-[var(--surface)] px-4 py-2 text-[13px] font-extrabold text-[#2f5fd0] shadow-md transition-transform hover:-translate-y-px">＋ Share a moment</button>}
           </div>
         </div>
         {moments && <div className="mt-4 flex flex-wrap gap-2.5">{tiles.map(([label, v]) => <div key={label} className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{v}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{label}</div></div>)}</div>}
@@ -423,7 +423,7 @@ export function MomentsApp() {
                   <button key={m.id} type="button" onClick={() => setLightbox(m.photoUrl!)} className="relative aspect-square overflow-hidden rounded-lg bg-black">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={m.photoUrl} alt={m.caption ?? ""} className="h-full w-full object-cover" />
-                    {m.photoType === "work" && <span className="absolute bottom-1 left-1 rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold text-white" style={{ background: GREEN }}>Work</span>}
+                    {m.photoType === "work" && <span className="absolute bottom-1 left-1 rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold text-white" style={{ background: "#0f7a43" }}>Work</span>}
                   </button>
                 ))}
               </div>
@@ -446,7 +446,7 @@ export function MomentsApp() {
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img src={m.photoUrl} alt={m.caption ?? ""} className="h-full w-full object-cover" />
                     {a && <span className="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: col }}>{a.e} {a.n}</span>}
-                    {m.photoType === "work" && <span className="absolute bottom-2.5 left-2.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-white" style={{ background: GREEN }}>🎨 Their work</span>}
+                    {m.photoType === "work" && <span className="absolute bottom-2.5 left-2.5 rounded-full px-2.5 py-0.5 text-[11px] font-extrabold text-white" style={{ background: "#0f7a43" }}>🎨 Their work</span>}
                   </button>
                 ) : (
                   <div className="relative flex h-[108px] items-center justify-center" style={{ background: `linear-gradient(135deg,${col},${col}cc)` }}><span className="text-[46px]">{a?.e ?? "✨"}</span>{a && <span className="absolute left-2.5 top-2.5 rounded-full bg-white/95 px-2.5 py-0.5 text-[11px] font-extrabold" style={{ color: col }}>{a.e} {a.n}</span>}</div>
@@ -471,7 +471,7 @@ export function MomentsApp() {
                           {([["caption", `Caption${m.caption ? "" : " (none)"}`, !!m.caption], ["quote", `Starred quote${nQuotes ? ` (${nQuotes})` : " (none)"}`, nQuotes > 0], ["comments", `All parent comments${nParent ? ` (${nParent})` : " (none)"}`, nParent > 0]] as const).map(([k, l, avail]) => <button key={k} type="button" disabled={!avail} onClick={() => inc(k)} className="rounded-full border-2 px-2.5 py-0.5 text-[11px] font-bold transition-colors disabled:opacity-45" style={dlInc[k] && avail ? { borderColor: GREEN, background: "#e7f6ee", color: GREEN } : { borderColor: "var(--line)", color: "var(--ink-2)" }}>{dlInc[k] && avail ? "✓ " : ""}{l}</button>)}
                         </div>
                         <div className="mb-2 flex flex-wrap items-center gap-1.5"><span className="text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Text colour</span>{["#171534", "#1d3a8f", "#be1259", "#047857", "#b45309"].map((sw) => <button key={sw} type="button" onClick={() => setDlColor(sw)} className="h-5 w-5 rounded-full border-2" style={{ background: sw, borderColor: dlColor === sw ? "#171534" : "var(--line)" }} title={sw} />)}<input type="color" value={dlColor} onChange={(e) => setDlColor(e.target.value)} className="h-6 w-7 cursor-pointer rounded border border-[var(--line)]" title="Custom colour" /></div>
-                        <div className="flex flex-wrap gap-1.5"><button type="button" onClick={() => downloadComposite(m, dlRatio, { caption: false, quote: false, comments: false }, dlColor, dlFit)} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold">Photo only</button><button type="button" onClick={() => downloadComposite(m, dlRatio, dlInc, dlColor, dlFit)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: BLUE }}>⬇ Download with banner</button></div>
+                        <div className="flex flex-wrap gap-1.5"><button type="button" onClick={() => downloadComposite(m, dlRatio, { caption: false, quote: false, comments: false }, dlColor, dlFit)} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold">Photo only</button><button type="button" onClick={() => downloadComposite(m, dlRatio, dlInc, dlColor, dlFit)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: "#2f5fd0" }}>⬇ Download with banner</button></div>
                         {canManage && <div className="mt-2 border-t border-[var(--line)] pt-2"><div className="mb-1 text-[10px] font-bold uppercase tracking-[0.04em] text-[var(--ink-3)]">Or keep it in the Email area</div><div className="flex flex-wrap gap-1.5"><button type="button" onClick={() => saveImageToEmail(m, dlRatio, { caption: false, quote: false, comments: false }, dlColor, dlFit)} className="rounded-md border border-[var(--line)] px-2.5 py-1 text-[11px] font-bold">✉ Save photo only</button><button type="button" onClick={() => saveImageToEmail(m, dlRatio, dlInc, dlColor, dlFit)} className="rounded-md px-2.5 py-1 text-[11px] font-extrabold text-white" style={{ background: "#9a5a00" }}>✉ Save with banner</button></div></div>}
                       </div>
                     );

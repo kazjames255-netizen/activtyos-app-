@@ -4,6 +4,23 @@ import { firebaseAuth } from "./firebase/client";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
+// ── Platform (HQ) "view as" impersonation ────────────────────────────────────
+// When an HQ owner opens another account, we remember it here and send its uid
+// on every request as `x-act-as`; the backend (platform-only) then serves that
+// account's data. Cleared on Exit. `aos:actas` fires so the banner/UI react.
+export interface ActAs { uid: string; label: string; portal: string; role: string }
+const ACT_AS_KEY = "aos.actAs";
+export function getActAs(): ActAs | null {
+  if (typeof window === "undefined") return null;
+  try { const v = localStorage.getItem(ACT_AS_KEY); return v ? (JSON.parse(v) as ActAs) : null; } catch { return null; }
+}
+export function setActAs(v: ActAs | null): void {
+  if (typeof window === "undefined") return;
+  if (v) localStorage.setItem(ACT_AS_KEY, JSON.stringify(v)); else localStorage.removeItem(ACT_AS_KEY);
+  window.dispatchEvent(new Event("aos:actas"));
+}
+const actAsHeader = (): Record<string, string> => { const a = getActAs(); return a ? { "x-act-as": a.uid } : {}; };
+
 export class ApiError extends Error {
   constructor(
     public status: number,
@@ -91,6 +108,7 @@ async function request<T>(path: string, token: string | null, init?: RequestInit
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      ...actAsHeader(),
       ...init?.headers,
     },
   })

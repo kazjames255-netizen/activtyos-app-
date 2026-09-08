@@ -328,7 +328,7 @@ export function NewsfeedApp() {
 
   // Parents (this newsfeed) vs Staff (internal notices → their Announcements board).
   const audienceSwitch = (
-    <div className="mb-3.5 inline-flex rounded-full border border-[#dbe6fb] bg-white p-1 shadow-sm">
+    <div className="mb-3.5 inline-flex rounded-full border border-[#E4E9F5] bg-[var(--surface)] p-1 shadow-sm">
       {([["parents", "👪 To parents"], ["staff", "🧑‍🏫 To staff"]] as const).map(([a, label]) => (
         <button key={a} type="button" onClick={() => setAudience(a)} className={"rounded-full px-4 py-1.5 text-[12.5px] font-extrabold transition-colors " + (audience === a ? "bg-[#1d3a8f] text-white" : "text-[var(--ink-3)] hover:text-[var(--ink)]")}>{label}</button>
       ))}
@@ -453,7 +453,7 @@ function PostCountdown({ label, onSend, onCancel }: { label: string; onSend: () 
         </div>
       </div>
       <div className="text-[14px] text-white/85">Going to families in <b>{left}</b> second{left === 1 ? "" : "s"}…</div>
-      <button type="button" onClick={onCancel} className="mt-6 rounded-full bg-white px-10 py-4 text-[18px] font-black text-[#0b1020] shadow-xl transition hover:scale-105 active:scale-95">✋ Cancel</button>
+      <button type="button" onClick={onCancel} className="mt-6 rounded-full bg-[var(--surface)] px-10 py-4 text-[18px] font-black text-[#2f5fd0] shadow-xl transition hover:scale-105 active:scale-95">✋ Cancel</button>
       <div className="mt-3 text-[12px] text-white/60">Tap Cancel to stop — nothing is sent until the count reaches zero.</div>
     </div>
   );
@@ -659,7 +659,7 @@ function Composer({ draft, setDraft, listings, folders = [], franchises = [], on
             <div className="mt-2 flex flex-wrap items-center gap-2">
               {(draft.tpl === "event" || draft.tpl === "booking") && <input value={aiCost} onChange={(e) => setAiCost(e.target.value)} placeholder="Cost (optional) e.g. £30" className="w-[150px] rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12px] outline-none" />}
               <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)]">
-                {(["short", "medium", "long"] as const).map((l) => <button key={l} type="button" onClick={() => setAiLen(l)} className="px-2.5 py-1 text-[11px] font-bold capitalize transition-colors" style={aiLen === l ? { background: BLUE, color: "#fff" } : { color: "var(--ink-2)" }}>{l}</button>)}
+                {(["short", "medium", "long"] as const).map((l) => <button key={l} type="button" onClick={() => setAiLen(l)} className="px-2.5 py-1 text-[11px] font-bold capitalize transition-colors" style={aiLen === l ? { background: "#2f5fd0", color: "#fff" } : { color: "var(--ink-2)" }}>{l}</button>)}
               </div>
               <button type="button" onClick={generate} disabled={aiBusy} className="ml-auto rounded-lg bg-[#1d3a8f] px-3 py-1.5 text-[12px] font-extrabold text-white disabled:opacity-60">{aiBusy ? "Writing…" : "Write it for me"}</button>
             </div>

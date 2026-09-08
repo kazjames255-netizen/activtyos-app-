@@ -18,7 +18,7 @@ const en = {
     bookings: "Bookings",
     announcements: "Announcements",
     families: "Families",
-    contactParents: "Contact parents",
+    contactParents: "Contact",
     findChild: "Find a child",
     reportBug: "Report a bug",
   },

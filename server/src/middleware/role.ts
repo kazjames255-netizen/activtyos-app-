@@ -37,6 +37,8 @@ export interface AuthContext {
 declare module "express-serve-static-core" {
   interface Request {
     auth?: AuthContext;
+    // Set when a Platform (HQ) owner is viewing the app AS another account.
+    impersonating?: { byUid: string; byEmail: string | null; uid: string };
   }
 }
 
@@ -65,7 +67,28 @@ export async function attachRole(req: Request, _res: Response, next: NextFunctio
     await ref.set({ email: user.email ?? null, role: "parent" });
     req.auth = { role: "parent", tenantId: null, franchiseId: null };
   }
+  await applyImpersonation(req, user);
   next();
+}
+
+// ── Platform (HQ) impersonation ─────────────────────────────────────────────
+// SECURITY-CRITICAL: only a genuine platform account may act as another user.
+// When it does, we swap req.auth + req.user to the TARGET so every downstream
+// route behaves exactly as that account would (their tenant, their email scope).
+// Guarded strictly on the REAL account's role; header-driven so it's per-request
+// and never persisted server-side. (Flagged for Amir's security review.)
+async function applyImpersonation(req: Request, realUser: NonNullable<Request["user"]>) {
+  if (req.auth?.role !== "platform") return;
+  const actAs = (req.header("x-act-as") || "").trim();
+  if (!actAs || actAs === realUser.uid) return;
+  const tSnap = await db.collection("users").doc(actAs).get();
+  if (!tSnap.exists) return;
+  const t = tSnap.data()!;
+  req.auth = { role: normalizeRole(t.role), tenantId: t.tenantId ?? null, franchiseId: t.franchiseId ?? null };
+  // Email/uid scoping (parents, message senderName, etc.) must be the target too.
+  req.user = { ...realUser, uid: actAs, email: (t.email as string) ?? realUser.email, name: (t.name as string) ?? realUser.name } as typeof realUser;
+  req.impersonating = { byUid: realUser.uid, byEmail: realUser.email ?? null, uid: actAs };
+  console.warn(`[impersonate] platform ${realUser.email ?? realUser.uid} acting as ${(t.email as string) ?? actAs} (${t.role ?? "parent"})`);
 }
 
 // After optionalAuth: signed-in users get their real role, anonymous

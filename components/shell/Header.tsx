@@ -21,11 +21,12 @@ import { ChildLookupModal } from "@/features/registers/ChildLookupModal";
 import { LanguageSelector } from "@/components/i18n/LanguageSelector";
 import { useT } from "@/lib/i18n/provider";
 
-// Shared pill for the top-bar controls: white with a hairline border and blue
-// writing. Each control keeps a differently-coloured symbol so they don't all
-// read as one block.
-const PILL = { background: "#ffffff", boxShadow: "inset 0 0 0 1px #e3e9f5" } as const;
-const PILL_INK = "#1d3a8f";
+// Shared pill for the top-bar controls — the marketing site's ghost button:
+// transparent on the navy bar with a hairline outline, turning pink on hover.
+// Each control keeps a differently-coloured symbol so they don't all read as
+// one block.
+const PILL = { background: "transparent", boxShadow: "inset 0 0 0 1px var(--line)" } as const;
+const PILL_INK = "var(--ink-2)";
 
 // Lives in the portal layout (not the per-view page) so it persists across
 // view navigation; derives the current view from the URL rather than a prop
@@ -149,7 +150,12 @@ export function Header({ portal }: { portal: PortalKey }) {
   const commActive = commItems.some((c) => c.view === view);
 
   return (
-    <header className="flex h-14 flex-none items-center justify-between gap-2 border-b border-[var(--line)] bg-[var(--surface)] px-3 sm:gap-3 sm:px-5">
+    <header
+      className="flex h-14 flex-none items-center justify-between gap-2 border-b border-[var(--line)] px-3 backdrop-blur-[10px] backdrop-saturate-150 sm:gap-3 sm:px-5"
+      // Same bar as the marketing site's sticky nav: the page navy at 84% with
+      // a blur behind it, rather than the lighter --surface panel.
+      style={{ background: "color-mix(in srgb, var(--bg) 84%, transparent)" }}
+    >
       {/* Hamburger — mobile only; the desktop rail is always visible. */}
       <button
         onClick={() => setMenuOpen(true)}
@@ -169,27 +175,31 @@ export function Header({ portal }: { portal: PortalKey }) {
           left), so the account controls stay up here alongside it. */}
       <HoScopeSwitcher portal={portal} />
 
+      {/* Bare text links spaced like the marketing site's nav — no pill
+          container, no panel fill; the bar itself is the background. */}
       {(tabs.length > 0 || commItems.length > 0) && (
-        <nav className="flex min-w-0 items-center gap-1.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-1">
+        <nav className="flex min-w-0 items-center gap-4 px-1 sm:gap-6">
           {tabs.map((t) => {
             const active = view === t.view;
-            // The Memberships tab gets a standing gold gradient (member-club feel)
-            // so it draws the eye whether or not it's the active view.
+            // The Memberships tab stays a solid pill so it draws the eye whether
+            // or not it's the active view — in the site's pink CTA colour
+            // (.btn-pink) rather than the old off-palette gold.
             const fancyStyle = active
-              ? { background: "linear-gradient(120deg,#d4a017,#f5c542)", color: "#3a2a00", boxShadow: "0 2px 8px rgba(212,160,23,.5)" }
-              : { background: "linear-gradient(120deg,#f7d774,#ffe9a8)", color: "#6b4e00", boxShadow: "0 1px 5px rgba(212,160,23,.35)" };
-            // Every tab wears the house sidebar blue with the same white dot
-            // texture, so the bar matches the sidebar; the active tab just lifts
-            // with a soft shadow.
-            const colourStyle = { ...PILL, color: PILL_INK, boxShadow: active ? "inset 0 0 0 1px #b9c8ee, 0 4px 12px -2px rgba(29,58,143,.28)" : PILL.boxShadow };
+              ? { background: "var(--brand-strong)", color: "#fff", boxShadow: "0 12px 26px -12px var(--brand)" }
+              : { background: "var(--brand)", color: "#fff", boxShadow: "0 12px 26px -12px var(--brand)" };
+            // Marketing-site nav treatment: muted ink that goes pink on hover,
+            // and the current view stays pink and heavier (.navtab/.navactive).
+            const colourStyle = { color: active ? "var(--brand)" : "var(--ink-2)" };
             return (
               <Link
                 key={t.view}
                 href={t.href}
                 title={t.tip || t.label}
-                // shrink-0 so a crowded bar never squeezes the pill to an
+                // shrink-0 so a crowded bar never squeezes a tab to an
                 // unreadable icon+sliver — the label always shows from sm up.
-                className="relative inline-flex shrink-0 items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold no-underline transition-all duration-150 hover:-translate-y-px hover:brightness-105"
+                className={`relative inline-flex shrink-0 items-center gap-1.5 text-[14.5px] no-underline transition-colors duration-150 ${
+                  t.fancy ? "rounded-full px-4 py-1.5 text-[12.5px] font-extrabold" : `hover:text-[var(--brand)] ${active ? "font-extrabold" : "font-semibold"}`
+                }`}
                 style={t.fancy ? fancyStyle : colourStyle}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{t.icon}</span>
@@ -213,12 +223,12 @@ export function Header({ portal }: { portal: PortalKey }) {
               <button
                 type="button"
                 onClick={() => setCommOpen((o) => !o)}
-                title="Contact parents — newsfeed, messages and email"
-                className="relative inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105"
-                style={{ ...PILL, color: PILL_INK, boxShadow: commActive || commOpen ? "inset 0 0 0 1px #b9c8ee, 0 4px 12px -2px rgba(29,58,143,.28)" : PILL.boxShadow }}
+                title="Contact — newsfeed, messages and email"
+                className={`relative inline-flex items-center gap-1.5 text-[14.5px] transition-colors duration-150 hover:text-[var(--brand)] ${commActive || commOpen ? "font-extrabold" : "font-semibold"}`}
+                style={{ color: commActive || commOpen ? "var(--brand)" : "var(--ink-2)" }}
               >
                 <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" aria-hidden>{CHAT}</span>
-                <span className="hidden truncate sm:inline">Contact parents</span>
+                <span className="hidden truncate sm:inline">Contact</span>
                 <span className="flex-none text-[9px] leading-none" aria-hidden>▼</span>
                 {unread > 0 && (
                   <span className="ml-0.5 flex h-[16px] min-w-[16px] flex-none items-center justify-center rounded-full px-1 text-[10px] font-extrabold leading-none" style={{ background: "var(--sem-crit, #ef4444)", color: "#fff" }}>{unread}</span>
@@ -226,7 +236,7 @@ export function Header({ portal }: { portal: PortalKey }) {
               </button>
               {commOpen && (
                 <div className="absolute right-0 z-50 mt-2 w-56 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.4)]">
-                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Contact parents</div>
+                  <div className="px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Contact</div>
                   {commItems.map((it) => {
                     const on = it.view === view;
                     return (
@@ -251,7 +261,7 @@ export function Header({ portal }: { portal: PortalKey }) {
           type="button"
           onClick={() => setLookupOpen(true)}
           title="Find a child — key info card"
-          className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105"
+          className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:text-[var(--brand)] hover:shadow-[inset_0_0_0_1px_var(--brand)]"
           style={{ ...PILL, color: PILL_INK }}
         >
           <span className="flex-none [&_svg]:h-4 [&_svg]:w-4" style={{ color: "#0ea5e9" }} aria-hidden>{SEARCH}</span>
@@ -272,7 +282,7 @@ export function Header({ portal }: { portal: PortalKey }) {
         {/* On phones the drawer's "Log out" item covers this. */}
         <button
           type="button"
-          className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:brightness-105 max-sm:hidden"
+          className="inline-flex flex-none items-center gap-1.5 rounded-full px-3.5 py-[7px] text-[12.5px] font-extrabold transition-all duration-150 hover:-translate-y-px hover:text-[var(--brand)] hover:shadow-[inset_0_0_0_1px_var(--brand)] max-sm:hidden"
           style={{ ...PILL, color: PILL_INK }}
           onClick={async () => {
             await signOutUser();

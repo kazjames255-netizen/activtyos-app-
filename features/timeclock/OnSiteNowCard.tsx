@@ -159,7 +159,7 @@ export function OnSiteNowCard() {
     const here = r.status === "in" || r.status === "break";
     const state = r.status === "break" ? "On break" : r.status === "in" ? "On site" : r.clockInAt ? "Left" : "Not on site";
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-white px-2 py-1 text-[12px] ring-1 ring-[var(--line)]">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--surface)] px-2 py-1 text-[12px] ring-1 ring-[var(--line)]">
         <span className="grid h-5 w-5 flex-none place-items-center rounded-full text-[9px] font-extrabold text-white" style={{ background: tone }}>{initials}</span>
         <span className={here ? "font-bold text-[var(--ink)]" : "text-[var(--ink-3)]"}>{r.name}</span>
         {role && <span className="text-[11.5px] font-semibold text-[var(--ink-2)]">· {role}</span>}
@@ -173,7 +173,7 @@ export function OnSiteNowCard() {
   };
 
   return (
-    <div className="rounded-2xl border border-[var(--line)] bg-white p-4 sm:p-5">
+    <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <span className="relative flex h-2.5 w-2.5"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#12b76a] opacity-60" /><span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#12b76a]" /></span>
         <div className="text-[14px] font-extrabold text-[var(--ink)]">On site now</div>
@@ -206,16 +206,17 @@ export function OnSiteNowCard() {
             return (
               <div key={r.id} className="overflow-hidden rounded-2xl border border-[#dbe6fb] shadow-[0_2px_12px_-6px_rgba(29,58,143,.3)]">
                 {/* header band — gradient, like the leave planner's tiles */}
-                <div className="flex flex-wrap items-center gap-2 px-4 py-3" style={{ background: "linear-gradient(120deg,#16306e,#274ba3)" }}>
-                  <span className="text-[15px] font-extrabold text-white">{r.name}</span>
+                {/* header band — part of the dark chrome, like the page hero */}
+                <div className="flex flex-wrap items-center gap-2 px-4 py-3 text-white" style={{ background: "var(--hero-grad)" }}>
+                  <span className="text-[15px] font-extrabold">{r.name}</span>
                   {r.venue
-                    ? <span className="rounded-md bg-white/15 px-2 py-0.5 text-[11px] font-bold text-white ring-1 ring-white/20">📍 {r.venue}</span>
+                    ? <span className="rounded-md bg-white/15 px-2 py-0.5 text-[11px] font-bold ring-1 ring-white/20">📍 {r.venue}</span>
                     : <span className="rounded-md bg-white/10 px-2 py-0.5 text-[11px] font-bold text-white/70">No venue set</span>}
-                  <span className="ml-auto text-[13px] font-extrabold tabular-nums text-white">{r.present}/{r.expected} in{r.absent ? ` · ${r.absent} absent` : ""}</span>
+                  <span className="ml-auto text-[13px] font-extrabold tabular-nums">{r.present}/{r.expected} in{r.absent ? ` · ${r.absent} absent` : ""}</span>
                 </div>
 
                 {/* ── visual summary: completion ring + segmented bar + staff avatars ── */}
-                <div className="grid gap-4 border-b border-[#eef1f6] bg-white px-4 py-4 sm:grid-cols-[1fr_auto]">
+                <div className="grid gap-4 border-b border-[#E4E9F5] bg-[var(--surface)] px-4 py-4 sm:grid-cols-[1fr_auto]">
                   <div className="flex items-center gap-4">
                     <Ring pct={inPct} />
                     <div className="min-w-0 flex-1">
@@ -241,7 +242,7 @@ export function OnSiteNowCard() {
                 </div>
 
                 {/* per-session mini bars */}
-                <div className="bg-white px-4 py-3">
+                <div className="bg-[var(--surface)] px-4 py-3">
                   <div className="mb-2"><span className="rounded-md px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-[0.09em]" style={{ background: "#e2f5ea", color: GREEN }}>🧒 By session</span></div>
                   <div className="flex flex-col gap-2">
                     {r.sessions.map((s) => {
@@ -257,9 +258,9 @@ export function OnSiteNowCard() {
                   </div>
                   {r.notIn.length > 0 && (
                     <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      <span className="text-[11.5px] font-extrabold" style={{ color: AMBER }}>⏳ Not signed in:</span>
+                      <span className="text-[11.5px] font-extrabold" style={{ color: "var(--ink-2)" }}>⏳ Not signed in:</span>
                       {r.notIn.map((n, i) => (
-                        <span key={`${n}-${i}`} className="rounded-md px-2 py-0.5 text-[12px] font-bold" style={{ background: "#fff4e5", color: AMBER, boxShadow: "inset 0 0 0 1px #f5d9a8" }}>{n}</span>
+                        <span key={`${n}-${i}`} className="rounded-md px-2 py-0.5 text-[12px] font-bold" style={{ background: "#FCF1DC", color: "var(--ink-2)", boxShadow: "inset 0 0 0 1px #f5d9a8" }}>{n}</span>
                       ))}
                     </div>
                   )}

@@ -34,11 +34,14 @@ const putSchema = z.object({
       color: z.string().max(16),
       rings: z.array(z.object({ lat: z.number(), lng: z.number() })).max(4000),
     })).max(50),
-    // draft = franchise still drawing · proposed = submitted, awaiting HO · agreed = HO approved.
+    // draft = still drawing · proposed = submitted, awaiting the other party · agreed = signed off.
     status: z.enum(["draft", "proposed", "agreed"]).optional(),
+    // Who proposed the current border: "franchise" (head office agrees) or "ho"
+    // (the franchise approves). Set server-side; client value is ignored.
+    by: z.enum(["ho", "franchise"]).optional(),
   }).optional(),
 });
-type Territory = { areas: { id: string; name: string; color: string; rings: { lat: number; lng: number }[] }[]; status?: "draft" | "proposed" | "agreed" };
+type Territory = { areas: { id: string; name: string; color: string; rings: { lat: number; lng: number }[] }[]; status?: "draft" | "proposed" | "agreed"; by?: "ho" | "franchise"; agreedAt?: string; agreedBy?: string };
 type UserProfile = { name?: string; phone?: string; address?: string; postcode?: string; marketingConsent?: boolean; emergencyName?: string; emergencyPhone?: string; locale?: string; franchiseName?: string; franchiseArea?: string; franchiseTerritory?: Territory };
 
 account.get("/", async (req, res) => {
@@ -72,16 +75,38 @@ account.put("/", async (req, res) => {
   const parsed = putSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const data = parsed.data;
-  // Territory agreement is HEAD-OFFICE-ONLY: a franchise can draw/propose its
-  // border but can never mark it "agreed" itself. Coerce their status to
-  // proposed (has areas) or draft (none) regardless of what the client sent.
+  // A franchise drawing/editing its own border always re-opens negotiation: the
+  // status becomes proposed (has areas) or draft (none), stamped "by franchise"
+  // so head office is the one who signs it off. A franchise can never mark its own
+  // border "agreed" here — approving a HEAD-OFFICE-proposed border is a separate,
+  // explicit action (POST /territory/approve below).
   if (auth.role === "franchise" && data.franchiseTerritory) {
     data.franchiseTerritory.status = data.franchiseTerritory.areas.length ? "proposed" : "draft";
+    data.franchiseTerritory.by = "franchise";
   }
   await db.collection("users").doc(uid).set({ ...data, profileUpdatedAt: new Date().toISOString() }, { merge: true });
   const doc = await db.collection("users").doc(uid).get();
   const u = doc.data()! as UserProfile;
   res.json({ name: u.name ?? "", phone: u.phone ?? "", address: u.address ?? "", postcode: u.postcode ?? "", marketingConsent: u.marketingConsent ?? false });
+});
+
+// POST /api/account/territory/approve — a franchise accepts the territory their
+// HEAD OFFICE proposed (drawn on the invite). Only valid when there's an
+// HO-proposed border waiting; marks it agreed. (The mirror — head office agreeing
+// a FRANCHISE-proposed border — lives in franchises.ts.)
+account.post("/territory/approve", async (req, res) => {
+  const auth = req.auth!;
+  const uid = req.user?.uid;
+  if (auth.role !== "franchise" || !uid) { res.status(403).json({ error: "Franchise only" }); return; }
+  const doc = await db.collection("users").doc(uid).get();
+  const cur = (doc.data()?.franchiseTerritory ?? null) as Territory | null;
+  if (!cur?.areas?.length || cur.by !== "ho") {
+    res.status(400).json({ error: "There's no head-office territory waiting for your approval." });
+    return;
+  }
+  const next: Territory = { ...cur, status: "agreed", agreedAt: new Date().toISOString(), agreedBy: req.user?.email ?? "franchise" };
+  await db.collection("users").doc(uid).set({ franchiseTerritory: next }, { merge: true });
+  res.json({ ok: true, status: "agreed" });
 });
 
 // POST /api/account/deactivate — parent self-service soft close. Records the

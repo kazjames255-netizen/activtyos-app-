@@ -87,7 +87,9 @@ import { PlatformEngagementApp } from "@/features/platform/PlatformEngagementApp
 import { PlatformFeaturesApp } from "@/features/platform/PlatformFeaturesApp";
 import { PlatformAtRiskApp } from "@/features/platform/PlatformAtRiskApp";
 import { SalesApp } from "@/features/platform/SalesApp";
+import { LeadsApp } from "@/features/platform/LeadsApp";
 import { SupportInboxApp } from "@/features/platform/SupportInboxApp";
+import { SupportReviewApp } from "@/features/platform/SupportReviewApp";
 import { TeamApp } from "@/features/team/TeamApp";
 import { TimetableApp } from "@/features/timetable/TimetableApp";
 import { StaffTimetableApp } from "@/features/timetable/PublishedTimetable";
@@ -339,6 +341,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     engagement: PlatformEngagementApp,
     "at-risk": PlatformAtRiskApp,
     sales: SalesApp,
+    leads: LeadsApp,
     // Platform tooling on the roadmap — these need PLATFORM-scoped
     // backends (a platform account has no tenant, so the operator
     // components can't run here).
@@ -347,6 +350,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     pricing: ProvidersApp, // Pricing is now a tab on Providers & billing
     support: SupportInboxApp,
     messages: SupportInboxApp,
+    "support-review": SupportReviewApp,
     email: planned({
       title: "Email",
       blurb: "Platform-level email campaigns to providers, with delivery tracking.",

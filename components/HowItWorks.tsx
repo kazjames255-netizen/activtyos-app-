@@ -31,7 +31,9 @@ export function HowItWorks({
 }) {
   return (
     <details className="group mb-3.5 rounded-xl border border-[var(--line)] bg-[var(--surface)]">
-      <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[13px] font-bold text-[var(--brand-ink,#1d3a8f)] [&::-webkit-details-marker]:hidden">
+      {/* --brand-ink is the ink that sits ON a brand fill (white); this label sits
+          on a plain card, so it wants the brand colour itself. */}
+      <summary className="flex cursor-pointer list-none items-center gap-2 px-3.5 py-2.5 text-[13px] font-bold text-[var(--brand)] [&::-webkit-details-marker]:hidden">
         <span className="inline-block transition-transform group-open:rotate-90">▸</span>
         <span>ℹ️ How it works</span>
         <span className="ml-1 rounded-full bg-[var(--brand-soft,#eaf0fc)] px-2 py-[1px] text-[10px] font-extrabold">

@@ -32,12 +32,12 @@ export const DEFAULT_PLANS = [
   {
     id: "freelancer", name: "Freelancer", price: 29, cadence: "month",
     blurb: "For solo coaches & instructors — your own branding.",
-    features: ["Branded booking page & basket", "Payments to your own account", "Blocks & smart listings", "Registers on any device", "Parent app & messaging", "Dashboard & finance analytics", "150 SMS a month included"],
+    features: ["Branded booking page & basket", "Payments to your own account", "Blocks & smart listings", "Registers on any device", "Parent app & messaging", "Dashboard & finance analytics"],
   },
   {
     id: "company", name: "Company", price: 49, cadence: "month",
     blurb: "For established companies — priced by team size, never a cut of bookings.",
-    features: ["Everything in Freelancer, plus:", "Staff scheduling, timetable & payroll", "Learning Centre & recruitment", "Multi-staff dashboard & team performance", "500 SMS a month included"],
+    features: ["Everything in Freelancer, plus:", "Staff scheduling, timetable & payroll", "Learning Centre & recruitment", "Multi-staff dashboard & team performance"],
     // staffMax = hard cap for the band; over it they must upgrade. The 76+ tier
     // has no fixed band — it meters at +£1/staff (staffMax: null).
     bands: [

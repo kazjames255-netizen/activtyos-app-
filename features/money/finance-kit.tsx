@@ -5,6 +5,11 @@
 // the freelancer Dashboard so Finance & Analytics reads as the same system.
 import { useState, type ReactNode } from "react";
 
+// KPI accent colours. These were fully-saturated gradient slabs; four of them
+// side by side read as a carnival, and white text failed AA on every one (amber
+// was 1.79:1). The colour now lands on the numeral and a thin rail instead —
+// which is what the marketing site's own dashboard mock does
+// (`.pf-k .n.p{color:#ee1f63}` in nametbc.css). All clear AA on --surface.
 export const GRAD = {
   blue: "linear-gradient(135deg,#16306e 0%,#3f78d8 100%)",
   teal: "linear-gradient(135deg,#0e6f8a 0%,#14b8a6 100%)",
@@ -13,42 +18,55 @@ export const GRAD = {
   amber: "linear-gradient(135deg,#9a5a12 0%,#f5b81f 100%)",
   violet: "linear-gradient(135deg,#5b21b6 0%,#8b5cf6 100%)",
 } as const;
-export const ACT_C = ["#3f78d8", "#0f7a43", "#e2225f", "#7c3aed", "#e88f1f", "#0ea5a0", "#c81e77", "#1d3a8f"];
+// Chart series colours — rank bars, donut segments, calendar events. Eight
+// mutually distinguishable tones, each ≥4.5:1 on a white card and each taking
+// white text, so the numbered rank badge works on any of them.
+export const ACT_C = ["#2f5fd0", "#0f7a43", "#C81E5E", "#5a3fd0", "#F5A524", "#0e7a75", "#b02a7a", "#1749a8"];
+// Ink for text sitting ON one of those marks (rank badges, segment labels).
+export const ON_ACT = "#FFFFFF";
 export const money = (n: number) => (n < 0 ? `−£${Math.abs(Math.round(n * 100) / 100).toFixed(2)}` : `£${(Math.round(n * 100) / 100).toFixed(2)}`);
 export const compactMoney = (n: number) => (Math.abs(n) >= 1000 ? `£${(n / 1000).toFixed(Math.abs(n) >= 10000 ? 0 : 1)}k` : `£${Math.round(n)}`);
 export const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
 export const colorFor = (s: string) => ACT_C[[...(s || "?")].reduce((a, c) => a + c.charCodeAt(0), 0) % ACT_C.length];
 
-// A dark-gradient KPI tile with an icon badge, optional right-hand visual and children.
+// A KPI tile: plain card, colour carried by the numeral and a thin left rail.
+// `grad` is kept as the prop name so the ~70 call sites don't need touching, but
+// it now takes a plain accent colour rather than a gradient.
 export function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: ReactNode; grad: string; icon?: string; aside?: ReactNode; children?: ReactNode }) {
   return (
-    <div className="relative overflow-hidden rounded-2xl p-4 text-white" style={{ background: grad, boxShadow: "0 10px 24px -16px rgba(20,30,80,.45)" }}>
-      {/* one restrained top sheen — less "showroom", more dashboard */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2" style={{ background: "linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,0))" }} />
-      <div className="relative">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/75">
-            {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/20 text-[11px]">{icon}</span>}
-            <span className="truncate">{label}</span>
-          </div>
-          <div className="mt-1.5 text-[26px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{value}</div>
-          {sub && <div className="mt-1 text-[11px] font-semibold text-white/85">{sub}</div>}
+    <div
+      className="relative overflow-hidden rounded-2xl p-4 pl-[18px]"
+      style={{ background: "var(--surface)", border: "1px solid var(--line)" }}
+    >
+      {/* the accent rail — the whole colour budget for this card */}
+      <div className="pointer-events-none absolute bottom-3 left-0 top-3 w-[3px] rounded-r" style={{ background: grad }} />
+      {/* `aside` is the optional right-hand visual (a Ring, usually). It sits
+          absolutely so a tile that has one stays the same height as one that
+          doesn't — otherwise it stretches its whole grid row. */}
+      {aside && <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-90" style={{ color: grad }}>{aside}</div>}
+      <div className={`min-w-0 ${aside ? "pr-[68px]" : ""}`}>
+        <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-[var(--ink-3)]">
+          {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-[var(--panel)] text-[11px]">{icon}</span>}
+          <span className="truncate">{label}</span>
         </div>
+        <div className="mt-2 text-[27px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", color: grad }}>{value}</div>
+        {sub && <div className="mt-1.5 text-[11px] font-semibold text-[var(--ink-3)]">{sub}</div>}
       </div>
       {children}
     </div>
   );
 }
 
-// Ring gauge — white on a coloured tile.
-export function Ring({ pct, size = 60, label }: { pct: number; size?: number; label: string }) {
+// Ring gauge, sized to sit inside a Tile. `color` defaults to the tile's own
+// accent so the ring and the numeral read as one object.
+export function Ring({ pct, size = 60, label, color = "currentColor" }: { pct: number; size?: number; label: string; color?: string }) {
   const sw = 7, r = size / 2 - sw / 2, c = 2 * Math.PI * r;
   const dash = c * Math.min(1, Math.max(0, pct / 100));
   return (
     <div className="relative flex-none" style={{ width: size, height: size }}>
       <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} className="-rotate-90">
         <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,.22)" strokeWidth={sw} />
-        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#fff" strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${dash.toFixed(1)} ${c.toFixed(1)}`} />
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke={color} strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${dash.toFixed(1)} ${c.toFixed(1)}`} />
       </svg>
       <div className="absolute inset-0 flex items-center justify-center text-[12.5px] font-extrabold tabular-nums">{label}</div>
     </div>
@@ -99,7 +117,7 @@ export function Breakdown({ entries }: { entries: { label: string; value: number
         <div key={e.label}>
           <div className="mb-1.5 flex items-start justify-between gap-2 text-[12.5px]">
             <span className="flex min-w-0 items-start gap-2">
-              <span className="mt-[1px] grid h-5 w-5 flex-none place-items-center rounded-md text-[10px] font-extrabold text-white" style={{ background: e.color }}>{i + 1}</span>
+              <span className="mt-[1px] grid h-5 w-5 flex-none place-items-center rounded-md text-[10px] font-extrabold" style={{ background: e.color, color: ON_ACT }}>{i + 1}</span>
               <span className="min-w-0">
                 <span className="block truncate font-semibold">{e.label}</span>
                 {e.meta && <span className="block truncate text-[11px] font-medium text-[var(--ink-3)]">📍 {e.meta}</span>}
@@ -116,21 +134,24 @@ export function Breakdown({ entries }: { entries: { label: string; value: number
   );
 }
 
-// A white bar chart on a coloured tile — recent periods at a glance, with values.
-export function MiniBars({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
+// A small bar chart shown inside a Tile — recent periods at a glance, with
+// values. The bars used to be white-on-a-coloured-tile; now the tile is
+// --surface, so they take an accent (`color`, matching the tile's rail) and the
+// captions use --ink-3 rather than white/70.
+export function MiniBars({ data, labels, caption, color = "var(--ink-2)" }: { data: number[]; labels: string[]; caption: string; color?: string }) {
   const max = Math.max(1, ...data);
   return (
     <div className="mt-2.5">
-      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.06em] text-white/70">{caption}</div>
+      <div className="mb-1 text-[9px] font-bold uppercase tracking-[0.06em] text-[var(--ink-3)]">{caption}</div>
       <div className="flex items-end gap-1" style={{ height: 40 }}>
         {data.map((v, i) => (
           <div key={i} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={`${labels[i]}: ${v}`}>
-            <span className="mb-0.5 text-[9px] font-extrabold tabular-nums" style={{ opacity: i === data.length - 1 ? 1 : 0.75 }}>{v}</span>
-            <div className="w-full rounded-t-[3px] bg-white" style={{ height: `${Math.max(8, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
+            <span className="mb-0.5 text-[9px] font-extrabold tabular-nums text-[var(--ink-2)]" style={{ opacity: i === data.length - 1 ? 1 : 0.7 }}>{v}</span>
+            <div className="w-full rounded-t-[3px]" style={{ background: color, height: `${Math.max(8, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.45 }} />
           </div>
         ))}
       </div>
-      <div className="mt-1 flex gap-1 text-[8.5px] font-bold text-white/70">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
+      <div className="mt-1 flex gap-1 text-[8.5px] font-bold text-[var(--ink-3)]">{labels.map((l, i) => <span key={i} className="flex-1 text-center">{l}</span>)}</div>
     </div>
   );
 }
@@ -174,7 +195,9 @@ export function TrendChart({ series, series2, fmt, color, color2 }: { series: { 
     const ly = dir < 0 ? (cy < 18 ? cy + 15 : cy - 8) : (cy > H - 18 ? cy - 8 : cy + 15);
     const half = text.length * 3.2;
     const xc = Math.max(PAD + half, Math.min(W - PAD - half, cx));
-    return <text x={xc} y={ly} fontSize="10.5" fontWeight="800" fill={fill} stroke="#fff" strokeWidth="3" paintOrder="stroke" textAnchor="middle">{text}</text>;
+    // Halo is the card colour, not white — it exists to punch the label out of
+    // the plotted line behind it, so it has to match what's underneath.
+    return <text x={xc} y={ly} fontSize="10.5" fontWeight="800" fill={fill} stroke="var(--surface)" strokeWidth="3" paintOrder="stroke" textAnchor="middle">{text}</text>;
   };
   const dots = (arr: { value: number }[], col: string, dir: -1 | 1) =>
     arr.map((p, i) => (p.value > 0 || i === arr.length - 1) ? (
@@ -198,7 +221,7 @@ export function TrendChart({ series, series2, fmt, color, color2 }: { series: { 
       </svg>
       <div className="mt-1 flex justify-between text-[10px] text-[var(--ink-3)]">{series.filter((_, i) => i % Math.ceil(n / 6) === 0 || i === n - 1).map((p, i) => <span key={i}>{monthLabel(p.label)}</span>)}</div>
       {hover != null && series[hover] && (
-        <div className="pointer-events-none absolute -top-1 rounded-lg bg-[var(--ink)] px-2 py-1 text-[11px] font-bold text-white shadow" style={{ left: `${(x(hover) / W) * 100}%`, transform: "translateX(-50%)" }}>
+        <div className="pointer-events-none absolute -top-1 rounded-lg border border-[var(--line)] bg-[var(--raised)] px-2 py-1 text-[11px] font-bold text-[var(--ink)] shadow" style={{ left: `${(x(hover) / W) * 100}%`, transform: "translateX(-50%)" }}>
           {monthLabel(series[hover].label)} · {fmt(series[hover].value)}{series2 && series2[hover] ? ` / ${fmt(series2[hover].value)}` : ""}
         </div>
       )}

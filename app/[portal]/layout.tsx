@@ -3,6 +3,7 @@ import type { CSSProperties } from "react";
 import { PORTALS, type PortalKey } from "@/lib/nav/config";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { Header } from "@/components/shell/Header";
+import { ImpersonationBar } from "@/components/shell/ImpersonationBar";
 import { RequireAuth } from "@/components/auth/AuthProvider";
 import { PortalGuard } from "@/components/auth/PortalGuard";
 import { SubscriptionGate } from "@/components/auth/SubscriptionGate";
@@ -41,7 +42,10 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
       <PortalGuard portal={portalKey}>
         <PageTracker portal={portalKey} />
         <SubscriptionGate portal={portalKey}>
-        <div className="flex h-screen">
+        <div className="flex h-screen flex-col">
+          {/* HQ impersonation bar — full width across the top when viewing-as. */}
+          <ImpersonationBar />
+          <div className="flex min-h-0 flex-1">
           {/* Desktop-only rail; on mobile the Header's hamburger opens the same
               Sidebar as a slide-over drawer. */}
           <div className="hidden flex-none lg:block">
@@ -77,6 +81,7 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
                 the main surface itself must be light too — otherwise the dark
                 --bg shows through as a black flash while a route loads. */}
             <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]" style={light ? undefined : LIGHT_PALETTE}>{props.children}</main>
+          </div>
           </div>
         </div>
         </SubscriptionGate>

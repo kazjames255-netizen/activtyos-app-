@@ -7,7 +7,6 @@ import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { post as apiPost, get as apiGet, api } from "@/lib/api";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
-import { TerritoryMapClient, type TerritoryArea } from "@/features/franchise/TerritoryMapClient";
 import { AUTH_LIGHT, AosMark } from "@/components/auth/AuthBrand";
 
 type AccountType = "parent" | "freelancer" | "company" | "franchise";
@@ -46,12 +45,17 @@ const HEARD_OPTIONS: { label: string; icon: string }[] = [
   { label: "Somewhere else", icon: "✨" },
 ];
 
-interface InvitePreview { role: "franchise" | "staff"; tenantName: string; franchiseName?: string | null; franchiseArea?: string | null }
+interface InvitePreview { role: "franchise" | "staff"; tenantName: string; franchiseName?: string | null; franchiseArea?: string | null; territoryByHo?: boolean }
 
 // Per-step copy shown in the gradient hero.
 type StepId = "type" | "you" | "business" | "identity" | "hear" | "login" | "payments";
+
+// Legal versions a provider agrees to at sign-up (bump when the docs change so
+// re-acceptance can be prompted). Stored on the tenant as evidence of consent.
+const TERMS_VERSION = "2026-09-05";
+const DPA_VERSION = "2026-09-05";
 const STEP_META: Record<StepId, { emoji: string; title: string; lede: string }> = {
-  type: { emoji: "", title: "Let's get you set up", lede: "Choose how you’ll use ActivityOS." },
+  type: { emoji: "", title: "Let's get you set up", lede: "Choose how you’ll use Wigglekit." },
   you: { emoji: "🙋", title: "About you", lede: "So we can set up your account." },
   business: { emoji: "🏢", title: "About your business", lede: "This seeds your storefront, invoices and Setup." },
   identity: { emoji: "🌟", title: "How parents see you", lede: "Your public name on booking pages, and your logo." },
@@ -106,12 +110,15 @@ function SignupForm() {
 
   const [invite, setInvite] = useState<InvitePreview | null>(null);
   const [inviteError, setInviteError] = useState<string | null>(null);
-  // Franchise invites: HO may have granted a business name + territory; the joiner confirms/completes them here.
+  // Franchise invites: HO grants a business name + area; the joiner confirms them
+  // here. The service territory (map) is drawn later, on their own onboarding page
+  // once they're in — not at this sign-up step.
   const [frName, setFrName] = useState("");
   const [frArea, setFrArea] = useState("");
-  const [frTerritory, setFrTerritory] = useState<TerritoryArea[]>([]);
 
   const [accountType, setAccountType] = useState<AccountType>(planParam === "company" ? "company" : planParam === "franchise" ? "franchise" : "freelancer");
+  // Provider must accept the Terms + DPA before the account is created.
+  const [agreed, setAgreed] = useState(false);
   const [step, setStep] = useState(0);
   const [businessName, setBusinessName] = useState("");
   const [name, setName] = useState("");
@@ -148,6 +155,8 @@ function SignupForm() {
       .catch((e) => setInviteError(e instanceof Error ? e.message : "Invalid invite"));
   }, [inviteToken]);
 
+  // Whether the head office pre-filled this franchise's name/area on the invite.
+  const frFromHo = Boolean(invite?.role === "franchise" && (invite?.franchiseName || invite?.franchiseArea));
   const isOperator = accountType !== "parent";
   const steps: StepId[] = useMemo(
     () => (isOperator ? ["type", "business", "identity", "hear", "login", "payments"] : ["type", "you", "login"]),
@@ -202,7 +211,10 @@ function SignupForm() {
     setError(null);
     // "login" is where the account is created. Operators then get one more
     // (optional) "payments" step; parents finish here. "payments" is the finish.
-    if (current === "login") { void submit(); return; }
+    if (current === "login") {
+      if (isOperator && !agreed) { setError("Please agree to the Terms of Service and Data Processing Agreement to continue."); return; }
+      void submit(); return;
+    }
     if (current === "payments") { void finishPayments(); return; }
     if (step < steps.length - 1) setStep(step + 1);
     else router.replace(homeUrl);
@@ -288,6 +300,9 @@ function SignupForm() {
               ...(logoUrl ? { logoUrl } : {}),
               ...(heard ? { heardAbout: heard } : {}),
               ...(referredBy ? { referredBy } : {}),
+              agreedTermsAt: new Date().toISOString(),
+              termsVersion: TERMS_VERSION,
+              dpaVersion: DPA_VERSION,
             }
           : {}),
       });
@@ -328,7 +343,7 @@ function SignupForm() {
       );
     }
     return (
-      <Card className="w-full max-w-[460px] overflow-hidden p-0">
+      <Card className={`w-full overflow-hidden p-0 ${invite?.role === "franchise" ? "max-w-[840px]" : "max-w-[460px]"}`}>
         <Hero emoji="🎉" eyebrow="You're invited" title={invite ? `Join ${invite.tenantName}` : "Join your team"}
           lede={invite ? (invite.role === "franchise" ? `You've been invited to run ${[invite.franchiseName, invite.franchiseArea && `${invite.franchiseArea} franchise`].filter(Boolean).join(" · ") || "a franchise"}.` : "You've been invited as staff.") : "Loading your invite…"} />
         <form
@@ -344,7 +359,6 @@ function SignupForm() {
                 invite?.role === "franchise" ? {
                   franchiseName: frName.trim() || undefined,
                   franchiseArea: frArea.trim() || undefined,
-                  ...(frTerritory.length ? { franchiseTerritory: { areas: frTerritory.map((a) => ({ ...a, rings: a.rings.map(([lat, lng]) => ({ lat, lng })) })), status: "proposed" } } : {}),
                 } : {});
               router.replace(INVITE_HOME[joined.role] ?? "/");
             } catch (err) {
@@ -353,30 +367,49 @@ function SignupForm() {
               setBusy(false);
             }
           }}
-          className="flex flex-col gap-3.5 px-7 py-6"
+          className={`px-7 py-6 ${invite?.role === "franchise" ? "grid gap-5 md:grid-cols-2 md:items-start" : "flex flex-col gap-3.5"}`}
         >
           {invite?.role === "franchise" && (
-            <div className="rounded-xl border-2 border-[#e6d8f6] bg-[#faf6ff] p-3.5">
-              <div className="text-[12px] font-extrabold text-[#7a3aa8]">🌐 Your franchise</div>
-              <p className="mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">Confirm your franchise business name and the area you cover — set by your head office, edit if needed.</p>
-              <div className="mt-2.5 flex flex-col gap-2.5">
-                <div><FieldLabel htmlFor="iv-frname">Franchise business name</FieldLabel><Input id="iv-frname" value={frName} onChange={(e) => setFrName(e.target.value)} placeholder="e.g. APF Activity Camps" className="w-full" /></div>
-                <div><FieldLabel htmlFor="iv-frarea">Area / territory</FieldLabel><Input id="iv-frarea" value={frArea} onChange={(e) => setFrArea(e.target.value)} placeholder="e.g. London" className="w-full" /></div>
+            <div className="rounded-xl border-2 border-[#39426E] bg-[#392B73] p-3.5">
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[12px] font-extrabold text-[#2f5fd0]">🌐 Your franchise</div>
+                {frFromHo && <span className="rounded-full bg-[var(--raised)] px-2 py-0.5 text-[9.5px] font-extrabold uppercase tracking-wide text-[#2f5fd0] ring-1 ring-[#39426E]">Set by head office</span>}
               </div>
-              {(frName.trim() || frArea.trim()) && <div className="mt-2.5 rounded-lg bg-white px-3 py-2 text-center text-[12px] font-extrabold uppercase tracking-wide text-[#7a3aa8] ring-1 ring-[#e6d8f6]">{frName.trim() || "Your brand"} · {frArea.trim() || "Area"} Franchise</div>}
-              <div className="mt-3 border-t border-[#e6d8f6] pt-3">
-                <div className="text-[11px] font-extrabold uppercase tracking-wide text-[#7a3aa8]">🗺 Your territory <span className="font-bold normal-case text-[var(--ink-3)]">— optional</span></div>
-                <p className="mb-2 mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">Draw the area(s) where you'll run services — your head office reviews & agrees it. You can skip this and set it later.</p>
-                <TerritoryMapClient value={frTerritory} onChange={setFrTerritory} editable focus={frArea || "London"} height={280} />
+              <p className="mt-0.5 text-[11px] leading-snug text-[var(--ink-3)]">{frFromHo ? "Your head office set your franchise name and area — these are locked. Ask them if anything needs changing." : "Confirm your franchise business name and the area you cover."}</p>
+              {frFromHo ? (
+                <div className="mt-2.5 flex flex-col gap-2.5">
+                  <div>
+                    <FieldLabel htmlFor="iv-frname">Franchise business name</FieldLabel>
+                    <div className="flex items-center justify-between gap-2 rounded-lg border border-[#39426E] bg-white/80 px-3 py-2.5 text-[14px] font-bold text-white"><span className="truncate">{frName}</span><span className="flex-none text-[12px] text-[var(--ink-3)]" title="Set by head office">🔒</span></div>
+                  </div>
+                  <div>
+                    <FieldLabel htmlFor="iv-frarea">Area / territory</FieldLabel>
+                    <div className="flex items-center justify-between gap-2 rounded-lg border border-[#39426E] bg-white/80 px-3 py-2.5 text-[14px] font-bold text-white"><span className="truncate">{frArea}</span><span className="flex-none text-[12px] text-[var(--ink-3)]" title="Set by head office">🔒</span></div>
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-2.5 flex flex-col gap-2.5">
+                  <div><FieldLabel htmlFor="iv-frname">Franchise business name</FieldLabel><Input id="iv-frname" value={frName} onChange={(e) => setFrName(e.target.value)} placeholder="e.g. APF Activity Camps" className="w-full" /></div>
+                  <div><FieldLabel htmlFor="iv-frarea">Area / territory</FieldLabel><Input id="iv-frarea" value={frArea} onChange={(e) => setFrArea(e.target.value)} placeholder="e.g. London" className="w-full" /></div>
+                </div>
+              )}
+              {(frName.trim() || frArea.trim()) && <div className="mt-2.5 rounded-lg bg-[var(--raised)] px-3 py-2 text-center text-[12px] font-extrabold uppercase tracking-wide text-[#2f5fd0] ring-1 ring-[#39426E]">{frName.trim() || "Your brand"} · {frArea.trim() || "Area"} Franchise</div>}
+              <div className="mt-3 flex items-start gap-2 border-t border-[#39426E] pt-3 text-[11px] leading-snug text-[var(--ink-3)]">
+                <span className="text-[13px] leading-none">🗺</span>
+                {invite?.territoryByHo
+                  ? <span>Your head office has already mapped your <b className="text-[#2f5fd0]">service territory</b> — you&rsquo;ll review and approve it from your dashboard once you&rsquo;re in.</span>
+                  : <span>You&rsquo;ll map out your <b className="text-[#2f5fd0]">service territory</b> once you&rsquo;re in — from your dashboard&rsquo;s onboarding, so your head office can review and agree it.</span>}
               </div>
             </div>
           )}
-          <div><FieldLabel htmlFor="iv-name">Your name</FieldLabel><Input id="iv-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" /></div>
-          <div><FieldLabel htmlFor="iv-email">Email</FieldLabel><Input id="iv-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
-          <div><FieldLabel htmlFor="iv-pw">Password</FieldLabel><Input id="iv-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full" /></div>
-          {error && <ErrorBox>{error}</ErrorBox>}
-          <Button variant="primary" type="submit" disabled={busy || !invite} className="mt-1 h-11 w-full text-[14px]">{busy ? "Joining…" : invite ? `Join ${invite.tenantName}` : "Join"}</Button>
-          <SignInLink />
+          <div className="flex flex-col gap-3.5">
+            <div><FieldLabel htmlFor="iv-name">Your name</FieldLabel><Input id="iv-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} className="w-full" /></div>
+            <div><FieldLabel htmlFor="iv-email">Email</FieldLabel><Input id="iv-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
+            <div><FieldLabel htmlFor="iv-pw">Password</FieldLabel><Input id="iv-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full" /></div>
+            {error && <ErrorBox>{error}</ErrorBox>}
+            <Button variant="primary" type="submit" disabled={busy || !invite} className="mt-1 h-11 w-full text-[14px]">{busy ? "Joining…" : invite ? `Join ${invite.tenantName}` : "Join"}</Button>
+            <SignInLink />
+          </div>
         </form>
       </Card>
     );
@@ -384,7 +417,7 @@ function SignupForm() {
 
   // ── Operator / parent wizard ─────────────────────────────────────────────
   const meta = STEP_META[current];
-  const eyebrow = current === "payments" ? "🎉 Account created" : current === "type" && referredBy ? "🎉 You're invited to ActivityOS" : `Step ${step + 1} of ${steps.length}`;
+  const eyebrow = current === "payments" ? "🎉 Account created" : current === "type" && referredBy ? "🎉 You're invited to Wigglekit" : `Step ${step + 1} of ${steps.length}`;
   return (
     <Card className="w-full max-w-[640px] overflow-hidden p-0">
       <Hero emoji={meta.emoji} eyebrow={eyebrow} title={meta.title} lede={meta.lede} steps={steps} step={step} />
@@ -516,6 +549,15 @@ function SignupForm() {
           <div className="flex flex-col gap-4">
             <div><FieldLabel htmlFor="l-email">Email</FieldLabel><Input id="l-email" type="email" required autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full" /></div>
             <div><FieldLabel htmlFor="l-pw">Password</FieldLabel><Input id="l-pw" type="password" required autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="At least 6 characters" className="w-full" /></div>
+            {isOperator && (
+              <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3 text-[12.5px] leading-snug text-[var(--ink-2)]">
+                <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 flex-none accent-[#FF3D7F]" />
+                <span>I agree, on behalf of my organisation, to the{" "}
+                  <a href="/terms.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">Terms of Service</a> and the{" "}
+                  <a href="/dpa.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">Data Processing Agreement</a>, and have read the{" "}
+                  <a href="/privacy.html" target="_blank" rel="noreferrer" className="font-bold text-[#FF3D7F]">Privacy Policy</a>.</span>
+              </label>
+            )}
           </div>
         )}
 
@@ -576,7 +618,7 @@ function SignupForm() {
           ? <button type="button" onClick={back} disabled={busy} className="text-[13px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)] disabled:opacity-50">← Back</button>
           : <SignInLink inline />}
         <div className="flex items-center gap-3">
-          <Button variant={current === "login" || current === "payments" ? "primary" : "solid"} type="button" onClick={next} disabled={busy} className="h-11 min-w-[150px] justify-center text-[14px]">
+          <Button variant={current === "login" || current === "payments" ? "primary" : "solid"} type="button" onClick={next} disabled={busy || (current === "login" && isOperator && !agreed)} className="h-11 min-w-[150px] justify-center text-[14px]">
             {current === "payments"
               ? (busy ? "Saving…" : "Go to dashboard →")
               : current === "login"
@@ -601,7 +643,7 @@ function Hero({ emoji, eyebrow, title, lede, steps, step }: { emoji: string; eye
       <div className="mb-4 flex items-center gap-2.5">
         <AosMark />
         <span className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span style={{ color: "#fff" }}>Activity</span><span style={{ color: "#EE1F63" }}>OS</span>
+          <span style={{ color: "#fff" }}>Wiggle</span><span style={{ color: "#FF3D7F" }}>kit</span>
         </span>
       </div>
       {typeof step === "number" && steps && (

@@ -40,6 +40,11 @@ const schema = z.discriminatedUnion("role", [
     heardAbout: z.string().trim().max(60).optional(),
     // The `?ref=` code from the invite link they signed up through, if any.
     referredBy: z.string().trim().max(80).optional(),
+    // Evidence the provider accepted the Terms + DPA at sign-up (see the
+    // agreement checkbox on the signup wizard's login step).
+    agreedTermsAt: z.string().trim().max(40).optional(),
+    termsVersion: z.string().trim().max(20).optional(),
+    dpaVersion: z.string().trim().max(20).optional(),
     billing: z
       .object({
         bankName: z.string().trim().max(120).optional(),
@@ -76,7 +81,7 @@ registerRole.post("/", async (req, res) => {
     return;
   }
 
-  const { role, businessName, providerName, providerNameMode, activityKinds, address, postcode, logoUrl, billing, heardAbout, referredBy, plan, contactEmail, phone } = parsed.data;
+  const { role, businessName, providerName, providerNameMode, activityKinds, address, postcode, logoUrl, billing, heardAbout, referredBy, plan, contactEmail, phone, agreedTermsAt, termsVersion, dpaVersion } = parsed.data;
   const tenantRef = db.collection("tenants").doc();
   const libRef = db.collection("libraries").doc(tenantRef.id);
   // Only carry the billing keys that were actually given (drop undefineds so we
@@ -108,6 +113,8 @@ registerRole.post("/", async (req, res) => {
       // subscription page until they start a plan. (Pre-existing tenants have
       // no `subscription` field and are treated as active — never retro-gated.)
       subscription: { status: "none", plan: plan ?? (role === "company" ? "company" : "freelancer"), since: null },
+      // Signed record that the provider accepted the Terms + DPA at sign-up.
+      ...(agreedTermsAt ? { agreements: { acceptedAt: agreedTermsAt, termsVersion: termsVersion ?? null, dpaVersion: dpaVersion ?? null } } : {}),
     });
     tx.set(userRef, {
       email: user.email ?? null,

@@ -108,7 +108,7 @@ export function InventoryApp() {
           <div className="flex flex-none flex-wrap items-center gap-2">
             <SettingsLink />
             <button type="button" onClick={toggleHero} aria-expanded={heroOpen} className="inline-flex items-center gap-1 rounded-full border border-white/20 px-2.5 py-1 text-[11px] font-semibold text-white/85 backdrop-blur-sm transition hover:text-white" style={{ background: "rgba(12,26,68,.42)" }}><span className="text-[10px] leading-none">{heroOpen ? "▾" : "▸"}</span>{heroOpen ? "Hide" : "Show"}</button>
-            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">＋ Add item</button>
+            <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[var(--surface)] px-4 py-2 text-[13px] font-extrabold text-[#2f5fd0] shadow-md transition-transform hover:-translate-y-px">＋ Add item</button>
           </div>
         </div>
         {items && heroOpen && (
@@ -154,7 +154,7 @@ export function InventoryApp() {
           <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={inputCls}><option value="">All categories</option>{[...new Set(seasonItems.map((i) => i.category || "Uncategorised"))].sort().map((c) => <option key={c} value={c === "Uncategorised" ? "" : c}>{c}</option>)}</select>
           <select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className={inputCls}><option value="">All locations</option>{[...new Set(seasonItems.map((i) => i.location).filter(Boolean))].sort().map((l) => <option key={l} value={l!}>{l}</option>)}</select>
           <button type="button" onClick={() => setLowOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={lowOnly ? { borderColor: RED, background: "#fdebec", color: RED } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{lowOnly ? "✓ " : ""}Low stock</button>
-          <button type="button" onClick={() => setUncheckedOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={uncheckedOnly ? { borderColor: AMBER, background: "#fdf3d8", color: AMBER } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{uncheckedOnly ? "✓ " : ""}Needs a check</button>
+          <button type="button" onClick={() => setUncheckedOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={uncheckedOnly ? { borderColor: AMBER, background: "#FCF1DC", color: "var(--ink-2)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{uncheckedOnly ? "✓ " : ""}Needs a check</button>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items…" className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
         </div>
       )}
@@ -194,7 +194,7 @@ export function InventoryApp() {
                             // most recent count, inline in the header — click to see the last 5
                             <button type="button" onClick={() => nChecks && setHistId(histId === i.id ? null : i.id)} className="text-right" title={nChecks ? "Count history" : undefined}>
                               <div className="text-[17px] font-extrabold leading-none tabular-nums" style={{ color: lowStock(i) ? RED : "var(--ink)" }}>{i.quantity}{i.unit ? <span className="text-[11px] font-semibold text-[var(--ink-3)]"> {i.unit}</span> : ""}</div>
-                              <div className="mt-0.5 text-[10px]" style={stale || !i.lastCheckedAt ? { color: AMBER, fontWeight: 700 } : { color: "var(--ink-3)" }}>{i.lastCheckedAt ? `✓ ${fmtDate(i.lastCheckedAt)}${i.lastCheckedBy ? ` · ${i.lastCheckedBy.split(" ")[0]}` : ""}${stale ? " · due" : ""}` : "never checked"}{i.minQty != null ? ` · min ${i.minQty}` : ""}{nChecks > 0 ? (histOpen ? " ▴" : " ▾") : ""}</div>
+                              <div className="mt-0.5 text-[10px]" style={stale || !i.lastCheckedAt ? { color: "var(--ink-2)", fontWeight: 700 } : { color: "var(--ink-3)" }}>{i.lastCheckedAt ? `✓ ${fmtDate(i.lastCheckedAt)}${i.lastCheckedBy ? ` · ${i.lastCheckedBy.split(" ")[0]}` : ""}${stale ? " · due" : ""}` : "never checked"}{i.minQty != null ? ` · min ${i.minQty}` : ""}{nChecks > 0 ? (histOpen ? " ▴" : " ▾") : ""}</div>
                             </button>
                           )}
                           <div className="flex flex-wrap gap-1.5">
@@ -211,7 +211,7 @@ export function InventoryApp() {
                               <div key={idx} className="flex flex-none items-center gap-1.5 rounded-lg border px-2 py-1" style={idx === 0 ? { borderColor: GREEN, background: "#e7f6ee" } : { borderColor: "var(--line)", background: "var(--panel)" }}>
                                 <span className="text-[13px] font-extrabold tabular-nums" style={{ color: idx === 0 ? GREEN : "var(--ink)" }}>{c.quantity}</span>
                                 <span className="text-[10px] text-[var(--ink-3)]">{fmtStamp(c.at)}{c.by ? ` · ${c.by.split(" ")[0]}` : ""}</span>
-                                {idx === 0 && <span className="rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase text-white" style={{ background: GREEN }}>latest</span>}
+                                {idx === 0 && <span className="rounded-full px-1.5 py-0.5 text-[8.5px] font-extrabold uppercase text-white" style={{ background: "#0f7a43" }}>latest</span>}
                               </div>
                             ))}
                           </div>

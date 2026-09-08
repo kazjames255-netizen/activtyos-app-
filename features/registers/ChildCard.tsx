@@ -9,8 +9,12 @@ import { useT } from "@/lib/i18n/provider";
 // Register (in a modal) and in the Bookings detail (inline as a tab). One
 // source of truth so both stay identical.
 
-const BLUE = "#1d3a8f";
-const AV = ["#fde2e4", "#e2f0d9", "#e0e7ff", "#fff3d6", "#e5f6f8", "#f3e8ff", "#ffe9d6", "#dce7ff"];
+const BLUE = "#2f5fd0";
+// Avatar chips. These were near-white pastels (#fde2e4 etc) carried over from
+// the light theme -- on a dark ground they blaze, and the initials sat on them
+// at light-blue, which failed both ways. Now dark tints in the same hue spread,
+// with initials in --ink (>=8.9:1 on every one).
+const AV = ["#FDE7EF", "#E2F6EC", "#E8EEFD", "#FCF1DC", "#DEF4F1", "#EDE9FD", "#FCF1DC", "#E8EEFD"];
 const avBg = (n: string) => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
 
 export const SWIM_LABEL: Record<string, string> = { none: "Non-swimmer", weak: "Weak / needs support", confident: "Confident", strong: "Strong swimmer" };
@@ -96,7 +100,7 @@ function PlanButton({ id, name }: { id: string; name?: string }) {
   );
 }
 
-// A contact action that hands off to the device — dialler, SMS, mail client,
+// A contact action that hands off to the device — dialler, mail client,
 // maps. `external` opens a new tab; tel:/mailto: must not, or the register is
 // left sitting on a blank page when the handler takes over.
 function ContactLink({ href, external, children }: { href: string; external?: boolean; children: ReactNode }) {
@@ -345,7 +349,6 @@ export function ChildCard({ info, card, questions, fields, inline, actions, canS
                   mid-register that beats copying a number out by hand. */}
               <div className="mt-2.5 flex flex-wrap gap-2">
                 {info.contactPhone && <ContactLink href={`tel:${info.contactPhone.replace(/[^\d+]/g, "")}`}>📞 {t("registers.call")}</ContactLink>}
-                {info.contactPhone && <ContactLink href={`sms:${info.contactPhone.replace(/[^\d+]/g, "")}`}>💬 {t("registers.text")}</ContactLink>}
                 {info.contactPhone && <ContactLink href={`https://wa.me/${info.contactPhone.replace(/[^\d]/g, "").replace(/^0/, "44")}`} external>🟢 {t("registers.whatsapp")}</ContactLink>}
                 {info.contactEmail && <ContactLink href={`mailto:${info.contactEmail}`}>✉️ {t("registers.email")}</ContactLink>}
                 {info.contactAddress && <ContactLink href={`https://maps.google.com/?q=${encodeURIComponent(info.contactAddress)}`} external>🗺️ {t("registers.map")}</ContactLink>}

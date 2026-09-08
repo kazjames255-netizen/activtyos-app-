@@ -13,6 +13,7 @@ import { OnSiteNowCard } from "@/features/timeclock/OnSiteNowCard";
 import { Badge } from "@/components/ui";
 import { greeting } from "@/lib/greeting";
 import { useT } from "@/lib/i18n/provider";
+import { GRAD, Tile } from "@/features/money/finance-kit";
 
 interface Dash {
   today: { date: string; booked: number; sessions: { listing: string; start: string; end: string; booked: number; capacity: number }[] };
@@ -34,10 +35,11 @@ const TASK_STATUS: Record<string, { label: string; color: string }> = {
 
 // ── shared bits (visual system lifted from the HQ provider-analytics page) ──
 const HERO = "radial-gradient(120% 160% at 12% -30%, rgba(255,255,255,.20) 0%, transparent 55%), var(--hero-grad)";
-const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GREEN = "#0f7a43";
-const ACT_C = ["#3f78d8", "#0f7a43", "#e2225f", "#7c3aed", "#e88f1f", "#0ea5a0", "#c81e77", "#1d3a8f"];
-const STATUS_C: Record<string, string> = { Confirmed: "#1749a8", "Approval needed": "#a85f08", Waitlisted: "#0b8446", Offered: "#0b8446", Cancelled: "#c53030", Declined: "#c53030" };
-const PAY_C: Record<string, string> = { Paid: "#0f7a43", Funded: "#0f7a43", Unpaid: "#c9791a", "Invoice sent": "#a85f08", Refunded: "#c53030", "Partially refunded": "#c53030" };
+const BLUE = "#2f5fd0", LIGHTB = "#2f5fd0", GREEN = "#0f7a43";
+const ACT_C = ["#2f5fd0", "#0f7a43", "#C81E5E", "#5a3fd0", "#F5A524", "#0ea5a0", "#C81E5E", "#2f5fd0"];
+// Donut segments are marks on a dark card, so they take the light tones.
+const STATUS_C: Record<string, string> = { Confirmed: "#2f5fd0", "Approval needed": "#F5A524", Waitlisted: "#0f7a43", Offered: "#0e7a75", Cancelled: "#C81E5E", Declined: "#C81E5E" };
+const PAY_C: Record<string, string> = { Paid: "#0f7a43", Funded: "#0e7a75", Unpaid: "#F5A524", "Invoice sent": "#5a3fd0", Refunded: "#C81E5E", "Partially refunded": "#C81E5E" };
 const monthLabel = (k: string) => new Date(`${k}-01T00:00:00Z`).toLocaleDateString("en-GB", { month: "short", timeZone: "UTC" });
 const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
 const fmtDay = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
@@ -62,34 +64,6 @@ const monthOf = (b: Booking): string | null => {
   return /^\d{4}-\d{2}$/.test(m) ? m : null;
 };
 
-// Rich, colourful KPI tile — a dark gradient with white figures.
-const GRAD = {
-  blue: "linear-gradient(135deg,#16306e 0%,#3f78d8 100%)",
-  teal: "linear-gradient(135deg,#0e6f8a 0%,#14b8a6 100%)",
-  green: "linear-gradient(135deg,#0b6b3a 0%,#2fb56f 100%)",
-  pink: "linear-gradient(135deg,#9c1458 0%,#ee1f63 100%)",
-  amber: "linear-gradient(135deg,#9a5a12 0%,#f5b81f 100%)",
-  violet: "linear-gradient(135deg,#5b21b6 0%,#8b5cf6 100%)",
-} as const;
-function Tile({ label, value, sub, grad, icon, aside, children }: { label: string; value: string; sub?: React.ReactNode; grad: string; icon?: string; aside?: React.ReactNode; children?: React.ReactNode }) {
-  return (
-    <div className="relative overflow-hidden rounded-2xl p-4 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)]" style={{ background: grad }}>
-      <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
-      <div className="relative flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">
-            {icon && <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/15 text-[11px]">{icon}</span>}
-            <span className="truncate">{label}</span>
-          </div>
-          <div className="mt-1.5 text-[27px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>{value}</div>
-          {sub && <div className="mt-1 text-[11px] font-semibold text-white/80">{sub}</div>}
-        </div>
-        {aside && <div className="flex-none">{aside}</div>}
-      </div>
-      {children}
-    </div>
-  );
-}
 // A clean white line sparkline on a coloured tile — money over recent weeks.
 function MiniLine({ data, labels, caption }: { data: number[]; labels: string[]; caption: string }) {
   const max = Math.max(1, ...data);
@@ -124,7 +98,7 @@ function MiniBars({ data, labels, caption }: { data: number[]; labels: string[];
         {data.map((v, i) => (
           <div key={i} className="flex flex-1 flex-col items-center justify-end" style={{ height: "100%" }} title={`${labels[i]}: ${v}`}>
             <span className="mb-0.5 text-[9px] font-extrabold tabular-nums" style={{ opacity: i === data.length - 1 ? 1 : 0.75 }}>{v}</span>
-            <div className="w-full rounded-t-[3px] bg-white" style={{ height: `${Math.max(8, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
+            <div className="w-full rounded-t-[3px] bg-[var(--surface)]" style={{ height: `${Math.max(8, (v / max) * 100)}%`, opacity: i === data.length - 1 ? 1 : 0.5 }} />
           </div>
         ))}
       </div>
@@ -638,7 +612,7 @@ export function DashboardApp() {
         <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("dashboard.businessAnalytics")}</div>
         <div className="inline-flex items-center gap-1 rounded-full border border-[var(--line)] bg-[var(--surface)] p-1 text-[12px] font-bold">
           {[3, 6, 12].map((m) => (
-            <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: BLUE, color: "#fff" } : { color: "var(--ink-3)" }}>{m}m</button>
+            <button key={m} type="button" onClick={() => setMonths(m)} className="rounded-full px-3 py-1 transition-colors" style={months === m ? { background: "#2f5fd0", color: "#fff" } : { color: "var(--ink-3)" }}>{m}m</button>
           ))}
         </div>
       </div>
