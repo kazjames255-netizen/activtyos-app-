@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { findNavItem, type PortalKey } from "@/lib/nav/config";
+import { displayName } from "@/lib/display-name";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { getMe, peekMe } from "@/components/auth/PortalGuard";
@@ -279,7 +280,14 @@ export function Header({ portal }: { portal: PortalKey }) {
       )}
 
       <div className="flex flex-none items-center gap-2 sm:gap-3">
-        {portal !== "custdash" && (meName || user?.displayName || user?.email) && <span className="hidden max-w-[180px] truncate text-[12px] font-semibold text-[var(--ink-2)] xl:inline" title={user?.email ?? undefined}>{meName || user?.displayName || user?.email}</span>}
+        {/* A person, not an address. displayName falls back to a name-shaped
+            reading of the email's local part rather than printing the whole
+            thing; the full address stays in the tooltip. */}
+        {portal !== "custdash" && (meName || user?.displayName || user?.email) && (
+          <span className="hidden max-w-[180px] truncate text-[12px] font-semibold text-[var(--ink-2)] xl:inline" title={user?.email ?? undefined}>
+            {displayName(meName || user?.displayName, user?.email)}
+          </span>
+        )}
         {/* Platform accounts have no tenant, so no bell of their own (the API
             would return an empty list anyway). HQ triages bug reports rather
             than filing them, so no bug button either. */}
