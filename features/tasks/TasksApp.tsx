@@ -398,11 +398,15 @@ export function TasksApp() {
       {/* Quick add */}
       {!onMilestones && <div className="mb-3 rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] p-3 shadow-sm">
         <div className="flex flex-wrap items-center gap-2">
-          <button type="button" onClick={() => setRemOpen(true)}
-            className="shrink-0 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">
-            🔔 Reminders
-          </button>
-          <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-[240px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] outline-none focus:border-[#1d3a8f]" />
+          {/* The reminders control lives IN the quick-add field rather than as
+              another button competing with it in the row. */}
+          <div className="flex min-w-[240px] flex-1 items-center gap-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] pr-1 focus-within:border-[#1d3a8f]">
+            <input value={qa} onChange={(e) => setQa(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") addQuick(); }} placeholder={`Quick add…   try:  Brief coaches tomorrow ${noAssignee ? "" : "@Jess "}!high #Riverside`} className="min-w-0 flex-1 bg-transparent px-3 py-2 text-[13px] outline-none" />
+            <button type="button" onClick={() => setRemOpen(true)} title="Task reminders"
+              className="shrink-0 rounded-md px-2 py-1 text-[12.5px] font-bold text-[var(--ink-3)] hover:bg-[var(--panel)] hover:text-[var(--ink-2)]">
+              🔔
+            </button>
+          </div>
           <label className="flex items-center gap-1.5 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px] text-[var(--ink-3)]"><span>Deadline</span><input type="date" value={qaDue} onChange={(e) => setQaDue(e.target.value)} className="bg-transparent text-[12.5px] text-[var(--ink)] outline-none" /></label>
           <Button onClick={addQuick}>Quick add</Button>
           <button type="button" onClick={() => setCreating(true)} className="rounded-lg bg-[#1d3a8f] px-3.5 py-2 text-[12.5px] font-extrabold text-white shadow-sm transition hover:-translate-y-px">+ New task</button>
@@ -661,6 +665,8 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
 
 // ── Calendar — Day / Week / Month ───────────────────────────────────────────
 function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, onOpen, onStatus }: { tasks: Task[]; anchor: string; setAnchor: (d: string) => void; view: "day" | "week" | "month"; setView: (v: "day" | "week" | "month") => void; today: string; noAssignee: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
+  // Which day has its overflow list open.
+  const [moreDay, setMoreDay] = useState<string | null>(null);
   const on = (iso: string) => tasks.filter((t) => t.due === iso).slice().sort(byPrioDue);
   const dowMon = (iso: string) => (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon
   const weekStart = shiftIso(anchor, -dowMon(anchor));
@@ -685,7 +691,31 @@ function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, 
       <div className="grid grid-cols-7 gap-1 text-center text-[10px] font-extrabold uppercase text-[var(--ink-3)]">{["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((d) => <div key={d} className="py-1">{d}</div>)}</div>
       <div className="grid grid-cols-7 gap-1">{cells.map((iso, i) => (
         <div key={i} className="min-h-[78px] rounded-lg border p-1" style={{ borderColor: iso === today ? BLUE : "var(--line)", background: iso === today ? "#eef4fd" : iso ? "var(--surface)" : "transparent" }}>
-          {iso && <><div className="text-right text-[10.5px] font-bold text-[var(--ink-3)]">{Number(iso.slice(-2))}</div><div className="space-y-0.5">{on(iso).slice(0, 3).map(chip)}{on(iso).length > 3 && <div className="px-1 text-[9.5px] text-[var(--ink-3)]">+{on(iso).length - 3} more</div>}</div></>}
+          {iso && <>
+            <div className="text-right text-[10.5px] font-bold text-[var(--ink-3)]">{Number(iso.slice(-2))}</div>
+            <div className="relative space-y-0.5">
+              {on(iso).slice(0, 3).map(chip)}
+              {on(iso).length > 3 && (
+                <button type="button" onClick={() => setMoreDay(moreDay === iso ? null : iso)}
+                  className="w-full rounded px-1 text-left text-[9.5px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">
+                  +{on(iso).length - 3} more
+                </button>
+              )}
+              {/* Was plain text, so the hidden tasks were unreachable — on a busy
+                  day the calendar simply hid work from you. */}
+              {moreDay === iso && (
+                <>
+                  <div className="fixed inset-0 z-[150]" onClick={() => setMoreDay(null)} />
+                  <div className="absolute left-0 top-full z-[151] mt-1 max-h-[220px] w-[210px] overflow-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_44px_-16px_rgba(15,23,42,.45)]">
+                    <div className="px-1 pb-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">
+                      {new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" })} · {on(iso).length}
+                    </div>
+                    <div className="space-y-0.5">{on(iso).map(chip)}</div>
+                  </div>
+                </>
+              )}
+            </div>
+          </>}
         </div>
       ))}</div>
     </>;
