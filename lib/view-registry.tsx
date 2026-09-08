@@ -87,6 +87,7 @@ import { PlatformEngagementApp } from "@/features/platform/PlatformEngagementApp
 import { PlatformFeaturesApp } from "@/features/platform/PlatformFeaturesApp";
 import { PlatformAtRiskApp } from "@/features/platform/PlatformAtRiskApp";
 import { SalesApp } from "@/features/platform/SalesApp";
+import { TestingApp } from "@/features/testing/TestingApp";
 import { LeadsApp } from "@/features/platform/LeadsApp";
 import { SupportInboxApp } from "@/features/platform/SupportInboxApp";
 import { SupportReviewApp } from "@/features/platform/SupportReviewApp";
@@ -335,6 +336,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     dash: BrowseApp, // routable alias — parents' home is Browse
   },
   platform: {
+    testing: TestingApp,
     dash: PlatformAnalyticsApp, // Overview retired — /platform/dash lands on Analytics
     providers: ProvidersApp,
     analytics: PlatformAnalyticsApp,

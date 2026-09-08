@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import type { CSSProperties } from "react";
+import { TestLogger } from "@/features/testing/TestLogger";
 import { PORTALS, type PortalKey } from "@/lib/nav/config";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { Header } from "@/components/shell/Header";
@@ -81,6 +82,9 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
                 the main surface itself must be light too — otherwise the dark
                 --bg shows through as a black flash while a route loads. */}
             <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]" style={light ? undefined : LIGHT_PALETTE}>{props.children}</main>
+            {/* The 25-day acceptance-test logger. Renders nothing unless it's
+                been switched on from HQ → Testing, so providers never see it. */}
+            <TestLogger />
           </div>
           </div>
         </div>
