@@ -21,7 +21,7 @@ for (const f of files) { let arr; try { arr = JSON.parse(fs.readFileSync(path.jo
   for (const la of arr) { if (!la?.la || NATION_REGIONS.has(la.la)) continue; councils.push({la:la.la, region:la.region, programme:la.programmeName, n:(la.providers||[]).length});
     for (const p of (la.providers||[])) { const name = (p.name||"").trim(); if (!name || name.length<3) { skipped++; continue; }
       const key = `${la.la}|${norm(name)}`; if (doneSet.has(key)) continue; newDone.push(key);
-      const h = host(p.website||""); let ids = (h && byHost.get(h)) || [];
+      const GENERIC = /^(facebook|instagram|linktr|eequ|gmail|twitter|x|tiktok|youtube|sites\.google)\./; const h0 = host(p.website||""); const h = GENERIC.test(h0) ? "" : h0; let ids = (h && byHost.get(h)) || [];
       // A national brand's host (Stagecoach, Premier Education…) maps to many franchisee leads — keep only this council's region, and give up on host if it's still a crowd.
       if (ids.length > 1) ids = ids.filter(id => leadOf.get(id).region === la.region); if (ids.length > 3) ids = [];
       if (!ids.length) { const cands = byName.get(norm(name)) || []; if (cands.length===1) ids = cands; else if (cands.length>1) { const same = cands.filter(id => { const l=leadOf.get(id); return l.region===la.region || (l.location||"").toLowerCase().includes(la.la.toLowerCase()) || (l.county||"").toLowerCase().includes(la.la.toLowerCase()); }); if (same.length===1) ids = same; else if (same.length>1) { ids = same; ambiguous++; } } }
