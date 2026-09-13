@@ -110,7 +110,14 @@ growth.get("/", async (req, res) => {
   // new/loyal/lapsed status and can never exceed the all-listings totals.
   const frInScope = (listingId?: string | null) => !allowedIds || (listingId != null && allowedIds.has(listingId));
 
-  const allLive = bookingsSnap.docs.map((d) => fromDoc(d.data() as BookingDoc)).filter(LIVE);
+  // Bookings store a blockId, not a listingId — resolve the listing via the block
+  // so the listing / franchise lenses keep the bookings they own.
+  const blockListing = new Map(blocksSnap.docs.map((d) => [d.id, (d.data() as BlockDoc).listingId] as const));
+  const allLive = bookingsSnap.docs.map((d) => {
+    const b = fromDoc(d.data() as BookingDoc);
+    const raw = d.data() as { blockId?: string | null };
+    return { ...b, listingId: b.listingId ?? (raw.blockId ? blockListing.get(raw.blockId) : undefined) };
+  }).filter(LIVE);
   const bookings = allLive.filter((b) => inScope(b.listingId));   // listing-scoped when focused
   const live = bookings;
   const liveFr = pickListing ? allLive.filter((b) => frInScope(b.listingId)) : bookings; // franchise-wide lifecycle

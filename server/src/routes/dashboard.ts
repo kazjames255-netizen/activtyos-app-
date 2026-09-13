@@ -98,10 +98,16 @@ dashboard.get("/", async (req, res) => {
   const next = sessions.find((s) => s.date > today && s.open) ?? sessions.find((s) => s.date === today && s.open) ?? null;
 
   // ── Bookings ──
+  // A booking stores its blockId, not a listingId — resolve the listing via the
+  // block so the venue / franchise lenses actually keep the bookings they own.
+  // A booking stamped with the franchise's id counts too (dates-label bookings
+  // with no block).
+  const blockListing = new Map(blocksSnap.docs.map((d) => [d.id, (d.data() as BlockDoc).listingId] as const));
   const bookings = bookingsSnap.docs.map((d) => {
     const b = fromDoc(d.data() as BookingDoc);
-    return { ...b, createdAt: b.createdAt ?? d.createTime?.toDate().toISOString() ?? "" };
-  }).filter((b) => inVenue(b.listingId));
+    const raw = d.data() as { blockId?: string | null; franchiseId?: string | null };
+    return { ...b, createdAt: b.createdAt ?? d.createTime?.toDate().toISOString() ?? "", _listingId: b.listingId ?? (raw.blockId ? blockListing.get(raw.blockId) ?? null : null), _franchiseId: raw.franchiseId ?? null };
+  }).filter((b) => inVenue(b._listingId) || (!!franchiseId && !ownOnly && !venueId && b._franchiseId === franchiseId));
   // Payments only reference bookings by ref — a payment counts for the venue if
   // one of its refs belongs to a booking at that venue.
   const venueRefs = (venueId || franchiseId) ? new Set(bookings.map((b) => b.ref)) : null;
