@@ -5,8 +5,8 @@
 // Results → /tmp/p2h_day6.json
 import fs from "node:fs";
 import { api, db, mkTenant, mkFranchise, mkStaff, setSettings, cleanup, start, stop, log, ymd, daysFromNow, type Actor } from "./p2H_harness.mts";
-import { computeLine, timesheetHours, leaveForPeriod, clockPayHours, ukShiftHours, r2, type Emp, type ClockRec } from "../features/payroll/payCalc";
-import { statutoryDays, accruedAllowance, workingDays, DEFAULT_POLICY, leaveYear } from "../lib/holiday";
+import { computeLine, timesheetHours, leaveForPeriod, clockPayHours, ukShiftHours, r2, type Emp, type ClockRec } from "../../../features/payroll/payCalc";
+import { statutoryDays, accruedAllowance, workingDays, DEFAULT_POLICY, leaveYear } from "../../../lib/holiday";
 
 const results: Record<string, { verdict: "pass" | "fail" | "blocked"; actual: string; notes?: string }> = {};
 const origLog = console.log;

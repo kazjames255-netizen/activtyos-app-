@@ -1,1 +1,164 @@
-{}
+{
+  "p2-m1": {
+    "verdict": "fail",
+    "method": "code",
+    "actual": "stripeWebhook.ts handles: customer.subscription.updated, customer.subscription.deleted, customer.subscription.trial_will_end, invoice.payment_succeeded, invoice.payment_failed. payment_intent.* handler: ABSENT",
+    "notes": "As the plan predicts: a booking paid with the tab closed is settled only by the browser's confirm call (backlog b7 / Amir). Fix needed: add payment_intent.succeeded → settle booking(s) in refs by paymentIntentId.",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m2": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "STRIPE_SECRET_KEY not set in server/.env; POST /api/payments/checkout → 503 {\"error\":\"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\"}",
+    "notes": "Needs Stripe test keys (prereq q4, Amir). Also depends on p2-m1 (no payment_intent webhook) — even with keys this would fail today.",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m3": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "confirm without Stripe → 503 {\"error\":\"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\"}",
+    "notes": "Needs Stripe test keys (q4). Code read: confirm is idempotent by design — payments doc status 'succeeded' short-circuits the second write (payments.ts:370-420), but the 'paid' notification/email path was not observable.",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m4": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "P2 confirms P's payment doc → 503 {\"error\":\"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\"}; A's booking pay=Invoice sent",
+    "notes": "Stripe not configured so needStripe() answers first (503). Code read: the email check (snap.data().email !== req.user.email → 404) sits before any Stripe call, so with keys this passes. Re-run with q4.",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "two simultaneous record-payment £50 BACS-1 → 200/409; booking amountPaid=50 pay=Paid; reconciliation row paid=50 outstanding=0",
+    "notes": "409 body: This looks like a payment that's already been logged: £50.00 with reference BACS-1 was recorded against this booking on ",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m6": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "amount -10 → 400; amount 99999 on £40 → 200 (accepted; amountPaid now 99999, overpaid=99959); amount \"ten\" → 400; amountPaid before 0 after 99999",
+    "notes": "Fix needed (minor): record-payment accepts any positive amount — £99,999 on a £40 booking is stored (flagged as overpaid in the response, not refused). Plan expects a 400 with a readable message. Also the 400 bodies are raw zod issue arrays, not a sentence.",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "refund-approve with no cancellation → 409 There's no cancellation on this booking to refund; parent cancel → 200 (cancel.refund=pending, amount=undefined); staff refund-approve on it → 403 Your account is read-only for bookings; refund payment docs written: 0",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "3-day booking with £4/day add-on: amount £22 (addons stored as [\"Lunch × 3 — £12.00\"]); cancel one day (3 weeks' notice) → 200 {\"createdAt\":\"2026-09-13T22:41:00.780Z\",\"ref\":\"APF-10316\",\"bid\":\"0307310316\",\"booker\":\"Money Parent\",\"email\":\"p2hmu0edjej-pa-5axbi9@p2h.test\",\"phone\":\"\",\"child\"; quoted refund=7.33 vs one day's share £7.33",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "invoice aged to 100 days past due: GET public → 410 {\"error\":\"This payment link has expired.\",\"code\":\"link_expired\",\"provider\":\"P2H Money A\",\"status\":\"expired\"}; POST checkout → 503 {\"error\":\"Card payments aren't configured\"}",
+    "notes": "/pay/<token> page not opened (browser); the API it renders from answers 410 link_expired. Checkout refuses with 503 here because Stripe isn't configured — the 410 branch sits right after it in invoices.ts.",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m10": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "DELETE → 200; GET public → 404; POST checkout (no account) → 503 Card payments aren't configured",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "HO invoice 201; F1 emails it → 404 Invoice not found; staff → 403 Requires an operator account",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "wallet/summary.outstanding=17.5; sum of family balances at A: 17.5 (Money Parent=10, Money Parent Two=7.5, Money Parent Three=0); B's £3 for P excluded",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "£30 basket (3 × £10 pass) with £10 credit and walletCap 500 → 201; 1 booking(s); walletApplied total=10; amounts still to pay=20; first booking pay=Funded; balance after=0",
+    "notes": "walletCap is clamped to the real balance (my.ts:1303). Side finding (fix needed, minor): a basket with £20 still to pay after £10 credit is stored with pay=\"Funded\" — the wallet-part path stamps Funded even when a cash balance remains (should be Partially paid / awaiting the rest).",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m14": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "P2 (£10 at A) books at B with walletCap 10 → 201; walletApplied=0; B booking amount=10; balances after A=10 B=0",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m15": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "two simultaneous £20 baskets, £20 credit → 201/201; walletApplied total=20; ledger spent=20; balance after=0",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m16": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "monthly series from 2026-06-13: 7 rows (4 past); DELETE series → 200 deleted=7; rows of the series left: 0",
+    "notes": "Fix needed: DELETE /api/income/series/:id removes every occurrence including past ones (income.ts:102-110 deletes the whole query). Plan expects past receipts to survive. Same shape in expenses.ts:113.",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m17": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "weekly series 5 rows; PUT one → 200; rows at £45: 1, still £30: 4; DELETE series → 200 deleted=5; left=0",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m18": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "HO row for F1: {\"franchiseId\":\"p2hmu0edjej-fr-o5k6ed\",\"name\":\"P2H Money F1 · P2H Money F1 area\",\"count\":2,\"revenue\":100,\"collected\":0,\"fee\":10}; F1 /mine: revenue=100 count=2 fee=10; F1 PUT settings → 403",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  },
+  "p2-m20": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "dashboard.money.outstanding=25; reconciliation summary.outstanding=25; Σ owedNow(bookings)=25 over 8 bookings; growth has no outstanding field (keys matching owed/outstanding: none)",
+    "notes": "Reconciliation and Dashboard agree with financeFigures owedNow. /api/growth reports revenue/bookings only — nothing to compare.",
+    "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
+    "at": "2026-09-13T22:42:47.257Z",
+    "agent": "plan2-G"
+  }
+}

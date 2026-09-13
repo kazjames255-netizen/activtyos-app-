@@ -38,7 +38,7 @@ interface Lead {
   /** Where the HAF mention was read, the words matched, the council programme that lists them, and whether they also sell paid places. */
   hafFrom?: string; hafText?: string; hafLocalAuthority?: string; hafPaid?: boolean;
   /** Where parents actually book, and which research pass found the booking system. */
-  bookingUrl?: string; bookingFrom?: string;
+  bookingUrl?: string; bookingFrom?: string; bookingChecked?: boolean;
 }
 
 // ── What we sell vs who they are ─────────────────────────────────────────────
@@ -59,7 +59,7 @@ const DIRECTORY = ["eequ", "playwaze", "pebble", "yellowdays"];
 const HOLIDAY_WORDS = /\b(holiday|camps?|play ?scheme|half[- ]term)\b/i;
 type Fit = "core" | "adjacent" | "nursery";
 type Size = "solo" | "single" | "multi" | "large" | "franchise" | "group";
-type Booking = "none" | "soon" | "platform";
+type Booking = "none" | "unknown" | "soon" | "platform";
 interface Derived { types: string[]; fit: Fit; size: Size; booking: Booking; srcs: string[]; region: string; nation: string; acts: string[]; hafPaid: boolean | null; system: string }
 // What kind of activity they offer — read from their name, the directory's
 // activity field, the Ofsted site names, and (when research found it) words on
@@ -126,7 +126,9 @@ function derive(l: Lead): Derived {
   const fit: Fit = !types.length || types.some((t) => CORE.includes(t)) ? "core" : types.some((t) => t === "tuition" || t === "preschool") ? "adjacent" : "nursery";
   const n = l.ofstedSites ?? 0;
   const size: Size = l.networkKind === "franchise" ? "franchise" : l.networkKind === "group" ? "group" : n >= 10 ? "large" : n >= 2 ? "multi" : l.kind === "person" || l.plan === "freelancer" ? "solo" : "single";
-  const booking: Booking = onDir || l.bookingSystem ? "platform" : l.comingSoon ? "soon" : "none";
+  // "none" is a CLAIM (their site was crawled and only offers enquiry) — a lead with no website, or one the
+  // crawler never got proof from, is "unknown", not greenfield.
+  const booking: Booking = onDir || l.bookingSystem ? "platform" : l.comingSoon ? "soon" : l.bookingChecked ? "none" : "unknown";
   // (The Ofsted description starts with our own type labels — "Sports & activity classes…" — so skip that clause.)
   const text = `${l.name} ${l.business ?? ""} ${l.sport ?? ""} ${(l.message ?? "").replace(/^Ofsted-registered — [^.]*\./, "")} ${l.network ?? ""} ${(l.website ?? "").replace(/^https?:\/\/(www\.)?/, "")}`;
   const acts = [...new Set([...ACTIVITY.filter(([, , re]) => re.test(text)).map(([k]) => k), ...(l.activityTypes ?? []), ...(l.haf ? ["haf"] : [])])];
@@ -145,7 +147,8 @@ const FIT: Record<Fit, { label: string; hint: string }> = {
 };
 const SIZE: Record<Size, string> = { solo: "🧑 Sole trader", single: "🏠 One site / not known", multi: "🏢 2–9 sites", large: "🏬 10+ sites", franchise: "🌐 Franchisee", group: "🏛 Part of a group" };
 const BOOKING: Record<Booking, { label: string; hint: string }> = {
-  none: { label: "🆕 No booking platform found", hint: "Not on any booking directory and no booking system spotted — greenfield" },
+  none: { label: "🆕 No booking platform (site checked)", hint: "Their website was read and only sends parents to a form, phone or email — greenfield, confirmed" },
+  unknown: { label: "❔ Not checked yet", hint: "No website to read, or their site couldn't be read — no booking system seen, but not proven" },
   soon: { label: "🚧 Website coming soon", hint: "Their site is a holding page — likely no booking platform yet" },
   platform: { label: "🔁 Already on a platform", hint: "Listed on EEQU / Pebble / Playwaze / Yellow Days or books through another system — a switch sale" },
 };

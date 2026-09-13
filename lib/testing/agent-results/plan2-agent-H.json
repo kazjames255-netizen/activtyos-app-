@@ -157,5 +157,139 @@
     "notes": "Needs: a company (HO) login with at least one franchise, or a dev sign-in bypass for localhost:3000.",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
+  },
+  "p2-h1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "timesheets API → Sam approved hours 62; leave API → Sal unpaid days 1; expense claim approved 200 (lands in /api/expenses as expenseId set — not a payroll line). Sam (hourly £12 × 62h): calc gross 744 PAYE 0 NI 0 pension 11.2 net 732.8 vs hand 744/0/0/11.2/732.8. Sal (£30,000, 1 unpaid day): calc gross 2384.62 PAYE 267.42 NI 106.97 pension 93.23 net 1917 vs hand 2384.62/267.42/106.97/93.23/1917. POST /api/payroll/runs → 201; stored lines gross/net Sam 744/732.8, Sal 2384.62/1917.",
+    "notes": "The four numbers (Sam gross 744.00 net 732.80; Sal gross 2384.62 net 1917.00). Payroll maths runs in the browser (features/payroll/payCalc.ts computeLine) — POST /api/payroll/runs stores the lines it is given; the API does not recompute. An approved expense claim becomes an expenses row, never a payslip addition.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "publish → 200; GET /api/payroll/mine as Sam → lines [sam-hourly]; as Sal → [sal-salaried]; GET /api/payroll as Sam → 403 Only a manager or owner can see payroll",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "second POST for 2026-08 → 201 new id pr_mu0e5dl8u0mk (now 2 runs for the period, first untouched); PUT /adjust after publish → 200, adjust stored under config for the period ({\"sam-hourly\":{\"hours\":70}}); published run's lines/publishedAt unchanged=true",
+    "notes": "Rule: a second run for the same period is a second record (never overwrites — payroll.ts:314-333 uses .create on a fresh id); adjust changes the per-period config that the NEXT run is computed from, not a published run. Nothing supersedes explicitly — both runs sit side by side and staff's /mine lists both.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "clocks-back night (25 Oct, 00:30 BST → 03:30 GMT): worked 4h, scheduled-shift length 4h; clocks-forward night (29 Mar, 00:30 GMT → 03:30 BST): worked 2h, scheduled 2h",
+    "notes": "Clock records are absolute instants (clockInAt/clockOutAt ISO) so the span is real; the rota's scheduled length uses londonMs/ukShiftHours (payCalc.ts) — s13-rtD1 holds.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Sam sets own rate → 403 (rate still £12); F1 PUT employees naming HO's person → 200 — written to F1's OWN payroll key (F1 employees now [{\"id\":\"ho-person\",\"name\":\"Ho Person\",\"role\":\"\",\"op\":\"\",\"basis\":\"hour\",\"rate\":99); HO's employees before/after identical=true (null)",
+    "notes": "Expected 404 for the franchise; actual 200, but it can only write its own tenant__fr__ config (payroll.ts keyOf) — head office's pay details are untouched, so the isolation property holds even though the status differs.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h7": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "records from /api/timeclock and /api/payroll/timesheets identical=false; day 1 (30-min break): worked 6.5h pay 7h on both; day 2 (20 min late, grace 5, auto-deduct): pay 6.75h on both (7h sched − 0.25h)",
+    "notes": "Both endpoints read the same clockRecords doc; the deduction is applied by the shared clockPayHours rule.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "reviewee PUT changing the manager's rating → 403; another staff member POST /self → 404; reviewee DELETE → 403; reviewee GET → 1 review with manager ratings hidden (0 shown), keys=reviews,templates (no pips/feedback/talent); own /self → 200; manager view keeps rating 3 and self.done=true",
+    "notes": "PIP / probation records are NOT visible to their subject: staff GET returns only {reviews, templates} (appraisals.ts:317-321); pips live in the manager-only config.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h10": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "statutoryDays: 3 days/wk → 16.8; 5 → 28; 6 → 28 (capped). Mid-year starter (1 Jul, Jan leave year, as at 13 Sep): accrued 7 of 28 (3/12). PUT /api/leave/config moving the year start to April → 200; GET /api/leave policy.leaveYearStartMonth=4, profiles 2; leave year now 2026-04-01–2027-03-31; starter recomputed 7",
+    "notes": "The engine is lib/holiday.ts (client): statutoryDays = min(28, dpw × 5.6); first-year accrual 1/12 per month from start. The server stores policy/profiles (leaveConfig) and hands them back — balances are recomputed on every read from the stored policy, so the config change takes effect on the next load.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h11": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "overlapping an approved day → 201 (status pending); a day last month → 201 (status pending); 24–28 Dec 2026: client workingDays=1 (25th and 28th are bank holidays, 26/27 weekend) → POST with days:1 → 201, stored days=1; Sam now has 4 own absences",
+    "notes": "needsBackend: the API refuses neither an overlap nor a past date (leave.ts:106-133 validates shape only) — both land as pending. Bank holidays ARE excluded, but by the client's workingDays() (lib/holiday.ts:205, England & Wales table hard-coded, gov.uk feed owed); the server stores whatever `days` it is sent.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h12": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "rota saved 200; leave approved 200; GET /api/rota after approval: shift sh1 staffId=sam-hourly, keys=id,staffId,site,role,date,start,end (no uncovered/needs-covering flag); after cancel (200): staffId=sam-hourly",
+    "notes": "The rota store is unaware of leave: rota.ts never reads absences, so an approved absence leaves the shift assigned. Any 'needs covering' is the browser's (Schedule screen) and is not visible through the API.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h13": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "request → 201; bells F1 staff +1, F2 staff +0; PUT /mine with a date outside the window → 200; DELETE request → 200; GET /mine after delete: requests=0, pattern survives=true (grid keys 2031-01-01)",
+    "notes": "Only F1's person is belled (pass). The outside-window date is accepted (availability.ts:159-190 never compares grid dates to the request window) — expected 400. The submission (availabilityPatterns/{tenant}_{email}) survives deleting the request.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h14": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "site lead invited to V1: GET /api/registers?date=2026-09-22 → 1 session(s) [Six V1 Camp]; after PUT /api/location-staff moving them to V2 (200): 1 session(s) [Six V1 Camp]",
+    "notes": "Today the INVITE assignment (users.assignment → lib/siteScope.staffSiteScope) decides register scope; Deployment (locationStaff) is read only by the Schedule when filling a shift (locationStaff.ts header). s13-so4 recorded: invite wins; moving someone in Deployment does not change what they can register.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h15": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT /api/rota adding a shift for a deactivated member → 409 Sal Salaried's account is switched off — they're no longer on the team. Switch them back o; clock sources: POST /api/timeclock/event in → 200 (clockRecords row status=in); the rota shift for the same day had in=unset until POST /api/rota/clock (200, stamped=true) set in=09:01",
+    "notes": "The who's-in board reads ONE source: clockRecords via GET /api/timeclock (features/timeclock/data.ts:172); the rota's in/out stamps are a second, separate store written by /api/rota/clock — the client posts to both (data.ts:81,200), the server does not sync them.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h16": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Sam PUT own record → 200; Sal GET /api/onboarding → 200 with 0 records (Sam's hidden); F1 GET → 200, HO's person present=false (records 0); GET /files/<id> with no token → 401; as a colleague → 404. NI stored in onboardRecords as plain text: [\"QQ123456C\"]",
+    "notes": "Privacy holds, but the shapes differ from the expectation text: a colleague gets 200 with an empty list (not 403); a sibling franchise gets 200 without the record (not 404) — both filtered by key/name (onboarding.ts:75-78). Amir 61 confirmed: bank details and NI are stored as entered, not encrypted.",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
+  },
+  "p2-h18": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "record with file → 200; GET file as manager → 200 (9 bytes); as staff → 403; DELETE a RETURNED reference → 409 This reference has already come back — it can't be deleted.; DELETE an unreturned one → 200; its file afterwards → 404; its public form → 404",
+    "notes": "A returned reference cannot be deleted (409, references.ts:383-393 — deliberate, keeps what a referee said about a concern); an open request revokes cleanly and the file/link are gone (404).",
+    "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
+    "at": "2026-09-13T22:40:13.659Z",
+    "agent": "plan2-H"
   }
 }
