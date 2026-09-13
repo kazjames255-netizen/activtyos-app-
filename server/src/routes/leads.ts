@@ -62,7 +62,7 @@ const LIST_FIELDS = ["name", "email", "phone", "business", "size", "message", "s
   // What kind of provider (Ofsted-classified) and whether it's part of a franchise / group.
   "providerTypes", "providerType", "network", "networkKind", "networkOperators", "ofstedRegions",
   // Where they are (from postcode / town via ONS data) and where each contact detail was read.
-  "region", "county", "nation", "emailFrom", "phoneFrom", "haf", "hafFrom", "hafPaid", "hafLocalAuthority", "bookingUrl", "bookingFrom", "hafText", "websiteParked", "webShop", "hafProgramme", "bookingChecked", "websiteDown", "comingSoonWhy",
+  "region", "county", "nation", "emailFrom", "phoneFrom", "haf", "hafFrom", "hafPaid", "hafLocalAuthority", "bookingUrl", "bookingFrom", "hafText", "websiteParked", "webShop", "hafProgramme", "bookingChecked", "socialUrl", "websiteSearchedAt", "duplicateOf", "websiteDown", "comingSoonWhy",
   // A site that matches their name but couldn't be confirmed as theirs (no contacts taken from it).
   "websiteCandidate", "websiteCandidateWhy",
   // Activities / HAF read from their own website.
