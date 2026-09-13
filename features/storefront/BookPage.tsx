@@ -6,6 +6,8 @@ import { useSearchParams } from "next/navigation";
 import { apiPublic } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { CustomerPage, type ServerListing } from "@/features/listings/ListingWizard";
+import { DEFAULT_SETTINGS, useTenantSettings } from "@/lib/settings";
+import { brandAccent, brandLogo, brandVars } from "@/lib/brand-theme";
 
 // ─────────────────────────────────────────────────────────────────────────
 // /book/{id} — the provider's public storefront page. Renders the exact
@@ -32,6 +34,8 @@ export function BookPage({ id }: { id: string }) {
   // home page / My bookings / Back to activities), so a provider previewing
   // isn't handed links that drop them into the parent app.
   const preview = sp.get("preview") === "1";
+  // The listing's provider's public settings — for their logo + brand colour.
+  const { settings, ready } = useTenantSettings(listing?.tenantId);
 
   useEffect(() => {
     apiPublic<ServerListing>(`/api/listings/${encodeURIComponent(id)}`)
@@ -94,8 +98,15 @@ export function BookPage({ id }: { id: string }) {
     </span>
   ) : null;
 
+  // Provider branding: logo in the storefront header; the accent as a top rule
+  // and on the --brand-* surfaces below (checkout confirmation buttons etc.),
+  // scoped to this page. Unset / the stock blue = the page's own colours.
+  const picked = ready && settings.brandColor?.toLowerCase() !== DEFAULT_SETTINGS.brandColor?.toLowerCase() ? settings.brandColor : null;
+  const accent = brandAccent(picked);
+
   return (
-    <div className="min-h-screen pb-16">
+    <div className="min-h-screen pb-16" style={brandVars(picked) as React.CSSProperties}>
+      {accent && <div className="h-1" style={{ background: accent.bg }} />}
       {preview && (
         // Provider-only bar; parents never see this. Distinct amber so it reads
         // as "preview chrome", not part of the storefront.
@@ -106,10 +117,10 @@ export function BookPage({ id }: { id: string }) {
       )}
       {embedded && fromStore && (
         <div className="px-4 pt-3 text-[12.5px]">
-          <button type="button" onClick={() => window.history.back()} className="font-bold text-[#2f6bd8] underline">← All activities</button>
+          <button type="button" onClick={() => window.history.back()} className="font-bold text-[#2f6bd8] underline" style={accent ? { color: accent.text } : undefined}>← All activities</button>
         </div>
       )}
-      <CustomerPage listing={listing} topRight={topRight} />
+      <CustomerPage listing={listing} topRight={topRight} logo={brandLogo(settings)} />
       <div id="book"></div>
     </div>
   );

@@ -8,9 +8,9 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 // messages and bug reports, aggregated server-side. Clicking an entry deep-links
 // straight to it (the support thread, the provider), not just the page.
 interface Item { id: string; type: NType; title: string; body: string; href: string; at: string }
-type NType = "signup" | "cancel" | "support" | "bug" | "lead" | "task";
-const GLYPH: Record<NType, string> = { signup: "🎉", cancel: "🚫", support: "✉️", bug: "🐛", lead: "💬", task: "✅" };
-const LABEL: Record<NType, string> = { signup: "New signups", cancel: "Cancellations", support: "Support messages", bug: "Bug reports", lead: "Demo requests", task: "Task reminders" };
+type NType = "signup" | "cancel" | "support" | "bug" | "lead" | "task" | "privacy";
+const GLYPH: Record<NType, string> = { signup: "🎉", cancel: "🚫", support: "✉️", bug: "🐛", lead: "💬", task: "✅", privacy: "🔐" };
+const LABEL: Record<NType, string> = { signup: "New signups", cancel: "Cancellations", support: "Support messages", bug: "Bug reports", lead: "Demo requests", task: "Task reminders", privacy: "Data deletion requests" };
 
 function ago(iso: string) {
   const mins = Math.max(0, Math.floor((Date.now() - Date.parse(iso)) / 60_000));
@@ -44,7 +44,15 @@ export function PlatformBell() {
     const next = !open; setOpen(next);
     if (next && unread > 0) { setUnread(0); apiPost("/api/platform/notifications/read", {}).catch(() => {}); }
   }
-  function go(it: Item) { setOpen(false); router.push(it.href); }
+  // Clicking takes you to the thing itself, so it's dealt with: drop it from the
+  // list here AND on the server, or it comes straight back on the next poll.
+  function go(it: Item) {
+    setOpen(false);
+    setItems((cur) => cur.filter((i) => i.id !== it.id));
+    setUnread((u) => Math.max(0, u - 1));
+    apiPost("/api/platform/notifications/dismiss", { id: it.id }).catch(() => {});
+    router.push(it.href);
+  }
   function toggleMute(t: NType) {
     const next = muted.includes(t) ? muted.filter((m) => m !== t) : [...muted, t];
     setMuted(next);
@@ -68,7 +76,7 @@ export function PlatformBell() {
           {settings && (
             <div className="border-b border-[var(--line)] bg-[var(--panel)] px-3.5 py-2.5">
               <div className="mb-1.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Show me</div>
-              {(["signup", "cancel", "support", "bug"] as NType[]).map((t) => (
+              {(["signup", "cancel", "support", "bug", "privacy"] as NType[]).map((t) => (
                 <label key={t} className="flex cursor-pointer items-center justify-between py-1 text-[12.5px]">
                   <span>{GLYPH[t]} {LABEL[t]}</span>
                   <input type="checkbox" checked={!muted.includes(t)} onChange={() => toggleMute(t)} className="h-4 w-4 accent-[#1d3a8f]" />

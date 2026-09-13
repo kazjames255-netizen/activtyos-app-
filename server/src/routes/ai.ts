@@ -5,7 +5,10 @@ import { operatorScope } from "../middleware/role";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
 import { walletsForFamily } from "../lib/wallet";
+import { entryFor, registerRows } from "../lib/registerRows";
 import type { Booking } from "../../../features/bookings/types";
+import { owedNow } from "../../../features/bookings/helpers";
+import { ukToday } from "../lib/ukDate";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AI assistant — answers plain-English questions from the account's LIVE
@@ -134,8 +137,9 @@ const chatSchema = z.object({
 });
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
-const OWES = new Set(["Unpaid", "Invoice sent", "Awaiting voucher payment", "Partially paid"]);
-const outstandingOf = (b: Booking) => Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
+// The same "still owed" rule the Dashboard and Finance use (d19s7) — so the
+// co-pilot quotes the figure the operator sees on screen.
+const outstandingOf = (b: Booking) => owedNow(b);
 const RECEIVED = new Set(["recorded", "succeeded"]);
 
 // ── Operator snapshot — the dashboard's numbers plus a compact booking list
@@ -153,7 +157,7 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   ]);
 
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = ukToday(now);
   const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
   const title = new Map(listingsSnap.docs.map((d) => [d.id, (d.data() as { title?: string }).title ?? "Untitled"]));
 
@@ -186,24 +190,29 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   // "any children with allergies in?", "who's not arrived?", "who has SEND?".
   type CDoc = { name?: string; send?: string; sendPlanId?: string; sendPlanName?: string; allergies?: string; medical?: string; dietary?: string };
   const childByName = new Map(childrenSnap.docs.map((d) => [((d.data() as CDoc).name ?? "").trim().toLowerCase(), d.data() as CDoc]));
+  const childById = new Map(childrenSnap.docs.map((d) => [d.id, d.data() as CDoc]));
   const [registersSnap, menuDoc] = await Promise.all([
     db.collection("registers").where("tenantId", "==", tenantId).where("date", "==", today).get(),
     db.collection("menus").doc(`${tenantId}_${today}`).get(),
   ]);
-  const attByRef = new Map<string, string>();
+  const allEntries: Record<string, { status?: string; collectedAt?: string | null }> = {};
   registersSnap.docs.forEach((d) => {
-    const entries = (d.data() as { entries?: Record<string, { status?: string; collectedAt?: string | null }> }).entries ?? {};
-    for (const [ref, v] of Object.entries(entries)) attByRef.set(ref, v.collectedAt ? "collected" : (v.status ?? ""));
+    Object.assign(allEntries, (d.data() as { entries?: typeof allEntries }).entries ?? {});
   });
+  const attOf = (r: { key: string; bookingRef: string }) => {
+    const v = entryFor(allEntries, r);
+    return v ? (v.collectedAt ? "collected" : (v.status ?? "")) : undefined;
+  };
   const statusWord = (s?: string) => (s === "in" ? "signed in" : s === "collected" ? "collected" : s === "absent" ? "absent" : "not signed in yet");
-  const childrenTodayDetailed = inToday.slice(0, 80).map((b) => {
-    const c = childByName.get((b.child ?? "").trim().toLowerCase()) ?? {};
+  // One entry per CHILD — siblings on a joint booking are two children.
+  const childrenTodayDetailed = inToday.flatMap((b) => registerRows(b, today).filter((r) => r.expected).map((r) => ({ b, r }))).slice(0, 80).map(({ b, r }) => {
+    const c = (r.childId ? childById.get(r.childId) : undefined) ?? childByName.get(r.name.trim().toLowerCase()) ?? {};
     const care: string[] = [];
     if (c.send || c.sendPlanId || c.sendPlanName) care.push("SEND");
     if (c.allergies) care.push(`allergy: ${c.allergies}`);
     if (c.medical) care.push(`medical: ${c.medical}`);
     if (c.dietary) care.push(`dietary: ${c.dietary}`);
-    return { child: b.child, listing: b.listing, family: b.booker, status: statusWord(attByRef.get(b.ref)), care };
+    return { child: r.name, listing: b.listing, family: b.booker, status: statusWord(attOf(r)), care };
   });
   const attendance = {
     expected: childrenTodayDetailed.length,
@@ -214,7 +223,7 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   };
   const sendChildrenToday = childrenTodayDetailed.filter((k) => k.care.includes("SEND")).map((k) => k.child);
 
-  const owing = live.filter((b) => OWES.has(b.pay) && outstandingOf(b) > 0);
+  const owing = live.filter((b) => outstandingOf(b) > 0);
   const takenThisWeek = round2(
     paymentsSnap.docs
       .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string })
@@ -244,7 +253,10 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
     .map((t) => ({ name: t.name || t.email || "—", role: t.role || "staff", status: t.status || "invited" })).slice(0, 50);
 
   // Recent accidents / incidents / safeguarding records.
-  const incidents = incidentsSnap.docs.map((d) => d.data() as { kind?: string; childName?: string; severity?: string; date?: string; description?: string })
+  const incidents = incidentsSnap.docs.map((d) => d.data() as { kind?: string; childName?: string; severity?: string; date?: string; description?: string; confidential?: boolean; subject?: string })
+    // Staff don't read safeguarding concerns, confidential records or concerns
+    // about a colleague on the log (routes/incidents.ts staffAccess) — nor here.
+    .filter((r) => !forStaff || (r.kind !== "safeguarding" && r.confidential !== true && r.subject !== "staff"))
     .sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1)).slice(0, 12)
     .map((r) => ({ kind: r.kind || "incident", child: r.childName, severity: r.severity, date: r.date, summary: (r.description || "").slice(0, 160) }));
 
@@ -409,16 +421,21 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
 
 // ── Parent snapshot — the family's own world: bookings, children, credit. ──
 async function familySnapshot(email: string, uid: string) {
-  const [bookingsSnap, childrenSnap, wallets, threadsSnap, memSnap] = await Promise.all([
+  const [bookingsSnap, childrenSnap, wallets, threadsSnap, memSnap, paymentsSnap] = await Promise.all([
     db.collection("bookings").where("email", "==", email).get(),
     db.collection("children").where("parentUid", "==", uid).get(),
     walletsForFamily(email),
     db.collection("threads").where("parentEmail", "==", email).get(),
     db.collection("memberships").where("email", "==", email).get(),
+    // This family's own payment records only (card, offline, refunds) — the
+    // dated money trail, so "what did I pay in September?" is answerable.
+    db.collection("payments").where("email", "==", email).get(),
   ]);
   const bookings = bookingsSnap.docs.map((d) => fromDoc(d.data() as BookingDoc));
   const tenantIds = [...new Set(bookings.map((b) => b.tenantId).filter(Boolean) as string[])].slice(0, 30);
-  const tenants = tenantIds.length ? await db.getAll(...tenantIds.map((id) => db.collection("tenants").doc(id))) : [];
+  const payTids = paymentsSnap.docs.map((d) => d.get("tenantId") as string | undefined).filter((t): t is string => !!t && !tenantIds.includes(t));
+  const nameTids = [...new Set([...tenantIds, ...payTids])].slice(0, 40);
+  const tenants = nameTids.length ? await db.getAll(...nameTids.map((id) => db.collection("tenants").doc(id))) : [];
   const providerName = new Map(tenants.filter((t) => t.exists).map((t) => [t.id, (t.data()!.name as string) ?? "Your provider"]));
   // Recent provider news (Firestore `in` caps at 10 tenants).
   const provTids = tenantIds.slice(0, 10);
@@ -427,20 +444,42 @@ async function familySnapshot(email: string, uid: string) {
     .filter((p) => p.status === "published").sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")).slice(0, 5);
   const threads = threadsSnap.docs.map((d) => d.data() as { tenantName?: string; subject?: string; lastFrom?: string; parentUnread?: number });
   const memRows = memSnap.docs.map((d) => d.data() as { tenantId?: string; tierName?: string; status?: string; benefitType?: string; benefitValue?: number });
+  // Money that actually moved: settled card payments, recorded offline
+  // payments, and refunds. Unfinished card attempts ("created") and failed
+  // refunds never happened, so they're left out.
+  type PayDoc = { tenantId?: string; refs?: string[]; amount?: number; method?: string; type?: string; status?: string; reference?: string | null; paymentIntentId?: string; createdAt?: string; paidAt?: string };
+  const payments = paymentsSnap.docs.map((d) => d.data() as PayDoc)
+    .filter((p) => (p.type === "refund" ? p.status !== "failed" : p.status === "succeeded" || p.status === "recorded"))
+    .map((p) => ({
+      date: (p.paidAt ?? p.createdAt ?? "").slice(0, 10) || null,
+      type: p.type === "refund" ? (p.status === "to-reimburse" ? "refund owed to you" : "refund") : "payment",
+      amountGBP: round2(Number(p.amount) || 0),
+      method: p.method ?? (p.paymentIntentId ? "card" : null),
+      bookingRefs: p.refs ?? [],
+      reference: p.reference ?? null,
+      provider: providerName.get(p.tenantId ?? "") ?? null,
+    }))
+    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  const today = ukToday();
+  const inactive = (s?: string) => s === "Cancelled" || s === "Declined";
 
   return {
-    children: childrenSnap.docs.map((d) => {
+    // Removed children are archived (kept for records) — not part of the family now.
+    children: childrenSnap.docs.filter((d) => d.get("archived") !== true).map((d) => {
       const c = d.data() as { name?: string; age?: number; dob?: string };
       return { name: c.name, age: c.age ?? null };
     }),
     bookings: bookings.slice(0, 60).map((b) => ({
       ref: b.ref, child: b.child, activity: b.listing,
       provider: providerName.get(b.tenantId ?? "") ?? null,
-      dates: b.dates, upcomingDays: (b.days ?? []).filter((d) => d >= new Date().toISOString().slice(0, 10)),
+      // A cancelled/declined booking has no sessions still to come.
+      dates: b.dates, upcomingDays: inactive(b.status) ? [] : (b.days ?? []).filter((d) => d >= today),
       status: b.status, pay: b.pay, amount: b.amount,
       outstanding: round2(outstandingOf(b)),
       cancelled: b.status === "Cancelled" ? { refund: b.cancel?.refund ?? null, amount: b.cancel?.amount ?? null } : null,
     })),
+    // Dated payment history (newest first) — use THIS for "what did I pay in <month>?".
+    payments: payments.slice(0, 80),
     storeCredit: wallets.map((w) => ({ provider: w.provider, balanceGBP: w.balance })),
     memberships: memRows.filter((m) => m.status === "active").map((m) => ({ provider: providerName.get(m.tenantId ?? "") ?? null, tier: m.tierName, benefit: m.benefitType, value: m.benefitValue })),
     messages: { unread: threads.reduce((s, t) => s + (t.parentUnread ?? 0), 0), recent: threads.filter((t) => (t.parentUnread ?? 0) > 0).slice(0, 5).map((t) => ({ provider: t.tenantName, subject: t.subject, from: t.lastFrom })) },
@@ -576,7 +615,7 @@ ai.post("/chat", async (req, res) => {
     if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
     snapshot = await familySnapshot(email, req.user!.uid);
     howtoKey = "parent";
-    who = "a parent using the customer portal. The data is their own family's: their children, their bookings across providers, and their store credit. Their portal's areas are: Browse activities, My bookings, Payments (paying what's owed), Wallet (store credit), Children, Schedule, Messages.";
+    who = "a parent using the customer portal. The data is their own family's: their children, their bookings across providers, their dated payment history (payments — each with a date, amount and method; totals for a month come from here, not from bookings marked Paid) and their store credit. Their portal's areas are: Browse activities, My bookings, Payments (paying what's owed), Wallet (store credit), Children, Schedule, Messages.";
   } else if (auth.role === "platform") {
     snapshot = await platformSnapshot();
     howtoKey = "platform";

@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
+import { forgetSettings } from "../middleware/access";
 import { geocodeAddress } from "./geo";
 
 type Venue = { id: string; name?: string; address?: string; city?: string; kind?: string; lat?: number; lng?: number };
@@ -47,7 +48,7 @@ const MAX_BYTES = 400_000; // well under Firestore's 1MB doc limit
 // so its Setup never clobbers the HO's (or a sibling's). Its doc is keyed per
 // franchise; every other role uses the tenant doc.
 function libDocId(auth: { role: string; tenantId: string | null; franchiseId: string | null }): string {
-  return auth.role === "franchise" && auth.franchiseId ? `${auth.tenantId}__fr__${auth.franchiseId}` : auth.tenantId!;
+  return (auth.role === "franchise" || auth.role === "staff") && auth.franchiseId ? `${auth.tenantId}__fr__${auth.franchiseId}` : auth.tenantId!;
 }
 
 // GET /api/library — any member of the tenant (staff included).
@@ -61,7 +62,7 @@ library.get("/", async (req, res) => {
   let snap = await db.collection("libraries").doc(docId).get();
   // Seed a franchise's library from the head office's the first time it's read,
   // so a new franchise starts fully configured and then diverges on its own.
-  if (!snap.exists && auth.role === "franchise" && auth.franchiseId) {
+  if (!snap.exists && (auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) {
     const ho = await db.collection("libraries").doc(auth.tenantId).get();
     if (ho.exists) {
       await db.collection("libraries").doc(docId).set({ ...ho.data(), tenantId: auth.tenantId, franchiseId: auth.franchiseId });
@@ -99,6 +100,17 @@ library.put("/", async (req, res) => {
   const existing = (await ref.get()).data() ?? {};
   const doc: Record<string, unknown> = { ...existing, tenantId: auth.tenantId, ...(auth.role === "franchise" && auth.franchiseId ? { franchiseId: auth.franchiseId } : {}) };
   for (const k of KEYS) if (k in body) doc[k] = body[k];
+  // "Show your name as" (business ↔ own name) switched without the display
+  // name being edited in the same save: fill it in, so families actually see
+  // the chosen name — the switch used to change only a label (acceptance d1s4).
+  const prevS = (existing.settings ?? {}) as Record<string, unknown>;
+  const nextS = (doc.settings ?? {}) as Record<string, unknown>;
+  if (nextS !== prevS && nextS.providerNameMode && nextS.providerNameMode !== prevS.providerNameMode && nextS.providerName === prevS.providerName) {
+    let name = "";
+    if (nextS.providerNameMode === "business") name = String((nextS.billing as { businessName?: string } | undefined)?.businessName ?? "").trim() || String((await db.collection("tenants").doc(auth.tenantId).get()).get("name") ?? "").trim();
+    else if (req.user?.uid) name = String((await db.collection("users").doc(req.user.uid).get()).get("name") ?? "").trim();
+    if (name) doc.settings = { ...nextS, providerName: name };
+  }
   const size = JSON.stringify(doc).length;
   if (size > MAX_BYTES) {
     res.status(413).json({
@@ -107,6 +119,7 @@ library.put("/", async (req, res) => {
     return;
   }
   await ref.set(doc);
+  forgetSettings(auth.tenantId); // a Features / Roles switch applies on the next request
   res.json(doc);
 
   // Geocode venues ONCE at save time and store lat/lng, so the browse page
@@ -211,6 +224,10 @@ const PUBLIC_SETTINGS_KEYS = [
   // Operator module switches — the family app reads these so a module the
   // operator switched off is hidden on the customer side too.
   "features",
+  // The accent colour picked in Setup → Branding — tints the storefront + the
+  // family's portal. (The logo is exposed separately below: it lives inside
+  // `billing`, which also holds bank details, so billing itself never goes out.)
+  "brandColor",
 ] as const;
 
 export const libraryPublic = Router();
@@ -228,6 +245,10 @@ libraryPublic.get("/:tenantId", async (req, res) => {
 
   const settings: Record<string, unknown> = {};
   for (const k of PUBLIC_SETTINGS_KEYS) if (k in src) settings[k] = src[k];
+  // Just the logo URL out of billing, lifted to a top-level public field — the
+  // rest of billing (sort code, account number…) stays private.
+  const logoUrl = (src.billing as { logoUrl?: unknown } | undefined)?.logoUrl;
+  if (typeof logoUrl === "string" && logoUrl.trim()) settings.logoUrl = logoUrl.trim();
 
   // Only the reasons a parent may be offered — "both" and "parent" scoped. The
   // full list carries provider-only wording ("Staffing") that isn't theirs to

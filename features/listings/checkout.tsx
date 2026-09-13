@@ -20,6 +20,8 @@ import { fmtDate, ordinal } from "./format";
 import { uploadPlan, PLAN_MAX_BYTES } from "./planUpload";
 import { useTenantSettings, questionsFor, dobRequired, asksEveryBooking, limitFor, liveVouchers, detailsForListing } from "@/lib/settings";
 import { voucherWindow } from "@/lib/vouchers";
+import { HMRC_CONNECTED, TFC_FAILURE_COPY, balance as tfcBalance, referenceHint, referencePrefix, type TfcBalance, type TfcFailure } from "./tfc";
+import { TfcConnect } from "./TfcConnect";
 import { QuestionFields, unansweredRequired } from "@/components/QuestionFields";
 import type { useBooking, BasketItem } from "./booking";
 import type { AddonTemplate, LocalState } from "./FreelancerListingsApp";
@@ -84,6 +86,9 @@ export type ChildProfile = {
    *  said there are needs — an upload box on its own asks a question the
    *  parent hasn't been asked yet. */
   sendPlanId?: string; sendPlanName?: string;
+  /** Set once this child's HMRC Tax-Free Childcare account has been linked, so
+   *  a returning family goes straight to paying instead of linking again. */
+  tfcReference?: string;
   photoConsent?: boolean;
   /** Required when adding a child; optional on the type because children saved
    *  before this was asked for don't have one. Those keep the neutral chip. */
@@ -281,7 +286,20 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
 
       {saved.length > 0 && (
         <div className="mt-1.5">
-          <div className="text-[11px]" style={{ color: tk.muted }}>Click to add child to dates.</div>
+          <div className="text-[11px]" style={{ color: tk.muted }}>
+            Click to add child to dates.
+            {/* State the range. Chips only said "out of age range", so a listing
+                whose ages were set wrong (4–4 rather than 4–11) looked like the
+                children were at fault, with no way to see why from this screen. */}
+            {(() => {
+              const from = parseInt(d.ageFrom, 10), to = parseInt(d.ageTo, 10);
+              if (!Number.isFinite(from) && !Number.isFinite(to)) return null;
+              const range = Number.isFinite(from) && Number.isFinite(to)
+                ? (from === to ? `age ${from}` : `ages ${from}–${to}`)
+                : Number.isFinite(from) ? `age ${from} and over` : `up to age ${to}`;
+              return <> This listing is for <b>{range}</b>{d.allowOutOfRange ? " — others can ask for a place." : "."}</>;
+            })()}
+          </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
             {/* Every saved child stays on the row whether they're coming or
                 not — one dropping out of sight because it hasn't been added
@@ -646,6 +664,23 @@ export function ChildrenPanel({ d, tk, saved, roster, setRoster, comingCount, on
     </>
   );
 }
+/**
+ * Is this checkout sitting on a dark background?
+ *
+ * The panel renders in two places with opposite palettes: the parent portal
+ * (white) and the operator's public storefront (their theme — "Midnight" and
+ * "Royal" are near-black). The Tax-Free Childcare green was one fixed mint,
+ * which read fine on navy and disappeared on white. So pick the green from the
+ * host background rather than picking one and hoping.
+ */
+function ckDarkBg(hex: string): boolean {
+  const m = /^#?([0-9a-f]{3}|[0-9a-f]{6})$/i.exec((hex ?? "").trim());
+  if (!m) return false;              // gradients / named colours → assume light
+  const h = m[1].length === 3 ? m[1].split("").map((c) => c + c).join("") : m[1];
+  const [r, g, bl] = [0, 2, 4].map((i) => parseInt(h.slice(i, i + 2), 16) / 255);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * bl < 0.5;
+}
+
 // A Setup payment-method label → the parent's payment rail [key, label]. Card/
 // bank/cash/tfc are fixed rails (card routes to Stripe); voucher is handled
 // separately because it only shows once a scheme has a reference to quote.
@@ -661,7 +696,7 @@ function parentMethodEntry(m: string): [string, string] | null {
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; tfc?: { amount: number; remainderVia: string; references: Record<string, string> }; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -699,6 +734,31 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // The parent's own payment reference per child (voucher/TFC), so the provider
   // can match the money in their bank. Forced before they can confirm.
   const [voucherRefs, setVoucherRefs] = useState<Record<string, string>>({});
+  // ── Tax-Free Childcare ───────────────────────────────────────────────────
+  // Linked accounts per child, how much of the total comes from HMRC, and how
+  // the remainder is settled. The HMRC calls themselves live behind ./tfc so
+  // the whole journey is here now and Amir swaps the stubs for the real API.
+  const [tfcLinked, setTfcLinked] = useState<Record<string, string>>({});   // child → reference
+  const [tfcConnecting, setTfcConnecting] = useState<string | null>(null);   // child whose GOV.UK hand-off is open
+  const [tfcFail, setTfcFail] = useState<TfcFailure | null>(null);
+  const [tfcAmount, setTfcAmount] = useState<string>("");                    // "" = the whole amount
+  // How the remainder is settled. Whatever the provider accepts — not a fixed
+  // card/bank pair — minus TFC itself, since that's the part being split off.
+  const [tfcRest, setTfcRest] = useState<string>("card");
+  const [tfcBalances, setTfcBalances] = useState<Record<string, TfcBalance>>({});   // child → account balance
+  // Read each linked account's balance, so the family can see whether it covers
+  // this booking before they promise to pay it.
+  useEffect(() => {
+    let stop = false;
+    (async () => {
+      for (const [child, ref] of Object.entries(tfcLinked)) {
+        if (tfcBalances[child] || !ref) continue;
+        const bal = await tfcBalance(ref);
+        if (!stop && bal) setTfcBalances((m) => ({ ...m, [child]: bal }));
+      }
+    })();
+    return () => { stop = true; };
+  }, [tfcLinked, tfcBalances]);
   // The earliest day anyone is actually booked in — what the deadline has to
   // respect. Nothing dated (free-text sessions) leaves it undefined, which
   // the window handles.
@@ -729,6 +789,15 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
   // after the choices that need thought.
   const ordered = [...addons].sort((m, n) => (m.type === "perday" ? 0 : 1) - (n.type === "perday" ? 0 : 1));
   const [saved, setSaved] = useState<ChildProfile[]>([]);
+  // A link belongs to the CHILD, not to this checkout. Anyone who linked on a
+  // previous booking comes back already connected — they shouldn't be sent to
+  // HMRC a second time to be told what they already told it.
+  useEffect(() => {
+    const known = Object.fromEntries(saved.filter((c) => (c.tfcReference ?? "").trim()).map((c) => [c.name, c.tfcReference!.trim()]));
+    if (!Object.keys(known).length) return;
+    setTfcLinked((m) => ({ ...known, ...m }));       // a fresh link this session wins
+    setVoucherRefs((m) => ({ ...known, ...m }));
+  }, [saved]);
   const { roster, setRoster } = b;
   // Store the EXCEPTIONS, not the assignments: who has been taken off which
   // day. A child is therefore on everything the moment they're added, with no
@@ -1906,6 +1975,344 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
           {/* Paying by voucher happens on the scheme's own website, so this
               has to hand over everything needed to do it: which scheme, the
               reference to quote, the amount, and by when. */}
+          {/* ── Tax-Free Childcare ─────────────────────────────────────────
+              The parent journey from the design: link each child's HMRC
+              account, choose how much comes from it, settle any remainder, and
+              promise to pay. The HMRC calls sit behind ./tfc — while they're
+              stubbed the link simulates success so the flow runs, and the
+              reference it mints is the one Reconciliation matches on. */}
+          {parentMode && method === "tfc" && (() => {
+            const linkedAll = roster.length > 0 && roster.every((c) => (tfcLinked[c.name] ?? "").trim());
+            const fromTfc = Math.min(amountDue, Math.max(0, parseFloat(tfcAmount || String(amountDue)) || 0));
+            const remainder = Math.max(0, amountDue - fromTfc);
+            // Siblings each have their own account, so what's payable from HMRC
+            // is the sum of the linked ones.
+            // Every method this provider takes, except TFC — that's the part
+            // being split off. A provider who accepts cash or vouchers should
+            // see them here; hard-coding card/bank hid half their own options.
+            const restOpts = parentOpts.filter(([k]) => k !== "tfc");
+            // The default was hardcoded "card", but a provider needn't accept
+            // card at all — this listing takes bank/cash/vouchers/HAF only, so
+            // the remainder was defaulting to a method not on offer. Fall back
+            // to the first one they DO take.
+            const restSel = restOpts.some(([k]) => k === tfcRest) ? tfcRest : (restOpts[0]?.[0] ?? "");
+            const bals = roster.map((c) => tfcBalances[c.name]).filter(Boolean) as TfcBalance[];
+            const available = bals.length ? bals.reduce((s2, b2) => s2 + b2.amount, 0) : null;
+            const simulatedBalance = bals.some((b2) => b2.simulated);
+            const cc = ckSettings.childcare ?? {};
+            const dark = ckDarkBg(tk.bg);
+            // Two greens, not one: a deep green that holds up on white, a bright
+            // one for dark storefront themes.
+            const TFC_GREEN = dark ? "#5fe3a8" : "#0a7a4a";
+            const TFC_BAR = dark
+              ? "linear-gradient(120deg,#0f9d6e,#5fe3a8)"
+              : "linear-gradient(120deg,#065f3c,#0f9d6e)";
+            const linkedCount = roster.filter((c) => (tfcLinked[c.name] ?? "").trim()).length;
+            // The share of the bill coming from HMRC, drawn rather than described.
+            const tfcPct = amountDue > 0 ? Math.min(1, Math.max(0, fromTfc / amountDue)) : 1;
+            const restLabel = (parentOpts.find(([k]) => k === restSel)?.[1] ?? restSel);
+            return (
+              <div className={`mt-3 overflow-hidden border ${tk.round}`} style={{ borderColor: `${tk.ink}26`, background: tk.inputBg }}>
+
+                {/* A solid green header instead of a heading + paragraph. The
+                    method dropdown directly above already says "Tax-Free
+                    Childcare", so restating it in prose was pure noise — and a
+                    block of colour anchors the panel the way a wall of 11px
+                    grey text never did. Always white-on-green, so it doesn't
+                    depend on the host theme at all. */}
+                <div className="flex items-center gap-2.5 px-3 py-2.5" style={{ background: TFC_BAR }}>
+                  <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg text-[13px] font-extrabold"
+                    style={{ background: "rgba(255,255,255,.22)", color: "#fff" }}>£</span>
+                  <div>
+                    <div className="text-[13px] font-extrabold leading-tight text-white">Pay from your HMRC account</div>
+                    <div className="text-[10.5px] leading-tight" style={{ color: "rgba(255,255,255,.8)" }}>Tax-Free Childcare</div>
+                  </div>
+                  <span className="ml-auto shrink-0 rounded-full px-2.5 py-1 text-[10.5px] font-extrabold"
+                    style={{ background: linkedAll ? "rgba(255,255,255,.95)" : "rgba(255,255,255,.2)", color: linkedAll ? "#065f3c" : "#fff" }}>
+                    {linkedAll ? "✓ Linked" : `${linkedCount}/${roster.length} linked`}
+                  </span>
+                </div>
+
+                <div className="p-3">
+                {/* One row per child — siblings each have their own account. */}
+                <div className="flex flex-col gap-2">
+                  {roster.map((c) => {
+                    const ref = tfcLinked[c.name] ?? "";
+                    const typed = (voucherRefs[c.name] ?? ref).trim().toUpperCase();
+                    // "usually" on purpose — the pattern holds for most references
+                    // but not all (a live one reads LHERB7808TFC, four surname
+                    // letters), so a mismatch warns and never blocks.
+                    const looksRight = new RegExp(`^${referencePrefix(c.name)}\\d{5}TFC$`).test(typed);
+                    return (
+                      <div key={c.name} className={`border p-2.5 ${tk.round}`}
+                        style={{ borderColor: ref ? `${TFC_GREEN}59` : `${tk.ink}26`, background: ref ? `${TFC_GREEN}0d` : "transparent" }}>
+                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                          <span className="text-[12.5px] font-bold" style={{ color: tk.ink }}>{c.name}</span>
+                          {ref
+                            ? <span className="text-[11px] font-bold" style={{ color: TFC_GREEN }}>✓ linked</span>
+                            : (
+                              <button type="button"
+                                onClick={() => { setTfcFail(null); setTfcConnecting(c.name); }}
+                                className={`ml-auto border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                                style={{ borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }}>
+                                Login with HMRC
+                              </button>
+                            )}
+                        </div>
+                        <div className="relative mt-1.5">
+                          <input value={voucherRefs[c.name] ?? ref}
+                            onChange={(e) => { setVoucherRefs((m) => ({ ...m, [c.name]: e.target.value.toUpperCase() })); }}
+                            placeholder={referenceHint(c.name)}
+                            aria-label={`Payment reference for ${c.name}`}
+                            className={`w-full border px-2.5 py-1.5 pr-8 text-[12.5px] font-semibold tracking-wide ${tk.round}`}
+                            style={{ borderColor: typed ? (looksRight ? `${TFC_GREEN}80` : "#e0a020") : `${tk.ink}33`, background: tk.inputBg, color: tk.ink }} />
+                          {typed && looksRight && (
+                            <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[12px] font-extrabold"
+                              style={{ color: TFC_GREEN }}>✓</span>
+                          )}
+                        </div>
+                        {/* The format guide earns its space only when it can still
+                            help: a reference that already matches doesn't need a
+                            paragraph telling it so. */}
+                        {!looksRight && (
+                          <div className="mt-1 text-[10.5px] leading-[1.45]" style={{ color: typed ? "#e0a020" : tk.muted }}>
+                            {typed ? "Double-check — " : "From your HMRC account · "}
+                            usually <b style={{ color: tk.ink }}>{referencePrefix(c.name)}</b> + 5 digits + <b style={{ color: tk.ink }}>TFC</b>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* HOW to add this provider inside HMRC. Folded shut, not cut:
+                    "(setting name) is not added to your HMRC account" is one of
+                    the designed payment failures and a parent can only avoid it
+                    if they're told what to search for — but most families have
+                    already done it, so it doesn't get to shout at all of them.
+                    Falls back to the provider's trading name when the childcare
+                    settings haven't been filled in (Reconciliation → ⚙ Settings),
+                    because saying nothing is what causes the failed payment. */}
+                {!linkedAll && (() => {
+                  const settingName = (cc.settingName ?? "").trim() || (ckSettings.providerName ?? "").trim();
+                  const rows = ([
+                    ["Setting name", settingName],
+                    ["Ofsted / registration number", cc.registrationNumber],
+                    ["Postcode", cc.postcode],
+                  ] as const).filter(([, v]) => (v ?? "").trim());
+                  return (
+                    <details className={`mt-2 border ${tk.round}`} style={{ borderColor: `${tk.ink}26` }}>
+                      <summary className="cursor-pointer px-2.5 py-2 text-[11.5px] font-bold" style={{ color: tk.ink }}>
+                        Not added this provider to your HMRC account yet?
+                      </summary>
+                      <div className="border-t px-2.5 py-2" style={{ borderColor: `${tk.ink}1a` }}>
+                        <ol className="flex list-decimal flex-col gap-1 pl-4 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
+                          <li>Sign in at <b style={{ color: tk.ink }}>gov.uk/sign-in-childcare-account</b> and add a childcare provider.</li>
+                          <li>Search for {settingName ? <b style={{ color: tk.ink }}>{settingName}</b> : "this provider"} and add them.</li>
+                          <li>Come back here and pay.</li>
+                        </ol>
+                        {rows.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 border-t pt-2" style={{ borderColor: `${tk.ink}1a` }}>
+                            {rows.map(([label, v]) => (
+                              <div key={label}>
+                                <div className="text-[10px]" style={{ color: tk.muted }}>{label}</div>
+                                <div className="text-[13px] font-extrabold" style={{ color: tk.ink }}>{v}</div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        {!settingName && (
+                          <div className="mt-2 text-[11px]" style={{ color: "#e0a020" }}>
+                            Your provider hasn&rsquo;t published the name HMRC holds them under — ask them before you pay.
+                          </div>
+                        )}
+                      </div>
+                    </details>
+                  );
+                })()}
+
+                {/* The split, drawn. This replaced three stacked paragraphs that
+                    each restated the same two numbers: what comes from HMRC and
+                    what's left. A bar and two rows say it at a glance. */}
+                <div className="mt-3 border-t pt-3" style={{ borderColor: `${tk.ink}1a` }}>
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[11px] font-bold uppercase tracking-wide" style={{ color: tk.muted }}>How you&rsquo;ll pay</span>
+                    <span className="text-[20px] font-extrabold tracking-[-0.01em]" style={{ color: tk.ink }}>{money(amountDue)}</span>
+                  </div>
+                  <div className="mt-2 flex h-3 w-full overflow-hidden rounded-full" style={{ background: `${tk.ink}14` }}>
+                    <div style={{ width: `${tfcPct * 100}%`, background: TFC_BAR }} />
+                    {remainder > 0 && <div style={{ width: `${(1 - tfcPct) * 100}%`, background: tk.accent }} />}
+                  </div>
+
+                  <div className="mt-2 flex items-center gap-2">
+                    <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: TFC_BAR }} />
+                    <span className="text-[12px] font-semibold" style={{ color: tk.ink }}>Tax-Free Childcare</span>
+                    <span className="ml-auto flex items-center gap-1">
+                      <span className="text-[12.5px] font-extrabold" style={{ color: tk.ink }}>£</span>
+                      <input inputMode="decimal" value={tfcAmount} onChange={(e) => setTfcAmount(e.target.value.replace(/[^0-9.]/g, ""))}
+                        placeholder={String(amountDue.toFixed(2))}
+                        aria-label="Amount from Tax-Free Childcare"
+                        className={`w-[86px] border px-2 py-1 text-right text-[12.5px] font-extrabold ${tk.round}`}
+                        style={{ borderColor: `${tk.ink}33`, background: tk.inputBg, color: tk.ink }} />
+                    </span>
+                  </div>
+                  {remainder > 0 && (
+                    <div className="mt-1.5 flex items-center gap-2">
+                      <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: tk.accent }} />
+                      <span className="text-[12px] font-semibold" style={{ color: tk.ink }}>{restLabel}</span>
+                      <span className="ml-auto text-[12.5px] font-extrabold" style={{ color: tk.ink }}>{money(remainder)}</span>
+                    </div>
+                  )}
+
+                  {/* What's actually in the account. */}
+                  {available !== null && fromTfc <= available && (
+                    <div className="mt-2 text-[11px]" style={{ color: tk.muted }}>
+                      Balance <b style={{ color: tk.ink }}>{money(available)}</b>
+                      {simulatedBalance && <span style={{ color: "#e0a020" }}> · example figure</span>}
+                    </div>
+                  )}
+
+                  {/* Short by X — the number that matters, and the one tap that
+                      fixes it. */}
+                  {available !== null && fromTfc > available && (
+                    <div className={`mt-2 flex flex-wrap items-center gap-2 border px-2.5 py-2 ${tk.round}`}
+                      style={{ borderColor: "#e0a02066", background: "#e0a0201a" }}>
+                      <span className="text-[11.5px]" style={{ color: tk.ink }}>
+                        <b>{money(fromTfc - available)} short</b> · balance {money(available)}
+                        {simulatedBalance && <span style={{ color: "#e0a020" }}> (example)</span>}
+                      </span>
+                      <button type="button"
+                        onClick={() => { setTfcAmount(available.toFixed(2)); if (restOpts[0]) setTfcRest(restOpts[0][0]); }}
+                        className={`ml-auto border-2 px-2.5 py-1 text-[11px] font-bold ${tk.round}`}
+                        style={{ borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }}>
+                        Split it
+                      </button>
+                      <span className="w-full text-[10.5px]" style={{ color: tk.muted }}>
+                        Or top up at <b style={{ color: tk.ink }}>gov.uk/sign-in-childcare-account</b>
+                      </span>
+                    </div>
+                  )}
+
+                  {remainder > 0 && (
+                    <div className="mt-2.5">
+                      <div className="text-[11px] font-bold uppercase tracking-wide" style={{ color: tk.muted }}>Pay the rest by</div>
+                      <div className="mt-1.5 flex flex-wrap gap-1.5">
+                        {restOpts.map(([k, label]) => (
+                          <button key={k} type="button" onClick={() => setTfcRest(k)}
+                            className={`border-2 px-3 py-1 text-[11.5px] font-bold ${tk.round}`}
+                            style={restSel === k
+                              ? { borderColor: tk.accent, background: `${tk.accent}26`, color: tk.ink }
+                              : { borderColor: `${tk.ink}40`, color: tk.muted }}>
+                            {label}
+                          </button>
+                        ))}
+                      </div>
+
+                      {/* A bank transfer is only payable if you're told WHERE to
+                          send it and WHAT to quote — otherwise the money arrives
+                          with nothing to match it to, which is the whole problem
+                          Reconciliation exists to clean up. */}
+                      {restSel === "voucher" && (
+                        <div className={`mt-2 border p-2.5 text-[11.5px] leading-[1.5] ${tk.round}`} style={{ borderColor: `${tk.ink}26`, color: tk.muted }}>
+                          You&rsquo;ll pay the {money(remainder)} balance through your voucher scheme
+                          {vouchers.length ? ` (${vouchers.slice(0, 3).map((v) => v.name).join(", ")}${vouchers.length > 3 ? " and others" : ""})` : ""}.
+                          Your provider will send you the details and the reference to quote.
+                        </div>
+                      )}
+                      {restSel === "cash" && (
+                        <div className={`mt-2 border p-2.5 text-[11.5px] leading-[1.5] ${tk.round}`} style={{ borderColor: `${tk.ink}26`, color: tk.muted }}>
+                          Bring the {money(remainder)} balance on the day — your provider will mark it paid.
+                        </div>
+                      )}
+                      {restSel === "bank" && (() => {
+                        const bank = ckSettings.billing ?? {};
+                        const rows = ([
+                          ["Account name", bank.accountName || bank.businessName],
+                          ["Sort code", bank.sortCode],
+                          ["Account number", bank.accountNumber],
+                          ["Bank", bank.bankName],
+                        ] as const).filter(([, v]) => (v ?? "").trim());
+                        return (
+                          <div className={`mt-2 border p-2.5 ${tk.round}`} style={{ borderColor: `${tk.ink}26` }}>
+                            {rows.length > 0 ? (
+                              <>
+                                <div className="text-[11px]" style={{ color: tk.muted }}>Send {money(remainder)} to</div>
+                                {rows.map(([label, v]) => (
+                                  <div key={label} className="mt-1 flex flex-wrap items-baseline gap-x-2">
+                                    <span className="text-[11px]" style={{ color: tk.muted }}>{label}</span>
+                                    <span className="text-[14px] font-extrabold" style={{ color: tk.ink }}>{v}</span>
+                                  </div>
+                                ))}
+                              </>
+                            ) : (
+                              <div className="text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
+                                Your provider will send you their bank details to pay the {money(remainder)} balance.
+                              </div>
+                            )}
+                            <div className="mt-2 text-[11.5px] leading-[1.5]" style={{ color: tk.muted }}>
+                              {/* The booking reference doesn't exist until the booking does, so
+                                  don't pretend to show it — say where it will be. */}
+                              Use your <b style={{ color: tk.ink }}>booking reference</b> as the payment reference — we&rsquo;ll
+                              show it the moment you&rsquo;ve booked and email it to you, so your provider can match the transfer.
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  )}
+                </div>
+
+                {/* Whatever HMRC says, the money arrives later — so this is a
+                    promise, and it says so. It used to be an amber box restating
+                    both figures the bar above already shows; one quiet line
+                    carries the only part that was actually news. */}
+                {!HMRC_CONNECTED && (
+                  <div className="mt-2.5 text-[10.5px] leading-[1.45]" style={{ color: tk.muted }}>
+                    Pay it from your HMRC account — we&rsquo;ll match it to this booking by reference.
+                  </div>
+                )}
+
+                {/* The GOV.UK consent + sign-in hand-off. */}
+                {tfcConnecting && (
+                  <TfcConnect
+                    childName={tfcConnecting}
+                    providerName={(ckSettings.providerName ?? "").trim() || "your provider"}
+                    onLinked={(reference) => {
+                      setTfcLinked((m) => ({ ...m, [tfcConnecting]: reference }));
+                      setVoucherRefs((m) => ({ ...m, [tfcConnecting]: reference }));
+                      // Save it against the child so the next booking starts linked.
+                      const child = saved.find((c) => c.name === tfcConnecting);
+                      if (child?.id) {
+                        void api(`/api/my/children/${encodeURIComponent(child.id)}`, {
+                          method: "PUT", body: JSON.stringify({ ...child, tfcReference: reference }),
+                        }).catch(() => { /* the booking still carries the reference */ });
+                        setSaved((cs) => cs.map((c) => (c.id === child.id ? { ...c, tfcReference: reference } : c)));
+                      }
+                    }}
+                    onClose={() => setTfcConnecting(null)}
+                  />
+                )}
+
+                {/* A real HMRC failure still gets a full red box — those are the
+                    designed error states and they have to be read. "Not linked
+                    yet" is not a failure: the header chip counts it and every
+                    unlinked row carries its own button, so a third telling was
+                    just noise dressed as an alarm. */}
+                {tfcFail ? (
+                  <div className={`mt-2 border p-2.5 text-[11.5px] leading-[1.5] ${tk.round}`} style={{ borderColor: "#d9534f66", background: "#d9534f1a", color: tk.ink }}>
+                    <b>{TFC_FAILURE_COPY[tfcFail].title}</b>
+                    <div className="mt-0.5" style={{ color: tk.muted }}>{TFC_FAILURE_COPY[tfcFail].detail}</div>
+                  </div>
+                ) : !linkedAll && (
+                  <div className="mt-2 text-[10.5px]" style={{ color: "#e0a020" }}>
+                    Link each child, or type the reference you pay under, to continue.
+                  </div>
+                )}
+                </div>
+              </div>
+            );
+          })()}
+
           {parentMode && method === "voucher" && (
             <div className={`mt-2 border px-3 py-2.5 ${tk.round}`} style={{ borderColor: tk.line }}>
               <div className="text-[12px] font-bold" style={{ color: tk.ink }}>Which scheme do you use?</div>
@@ -2063,7 +2470,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       )}
 
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && !phone.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || (parentMode && !phone.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
@@ -2084,9 +2491,20 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             method: submitMethod,
             // The scheme the parent picked — the backend keys the "Awaiting
             // voucher payment" state off this, not the method string.
-            voucherScheme: method === "voucher" ? chosenVoucher?.name : undefined,
+            // TFC rides the same rail: the server keys "Awaiting voucher
+            // payment" off voucherScheme, and Reconciliation buckets it as
+            // Tax-Free Childcare from the scheme name.
+            voucherScheme: method === "voucher" ? chosenVoucher?.name : method === "tfc" ? "HMRC Tax-Free Childcare" : undefined,
             // The parent's own payment reference per child (voucher/TFC matching).
-            voucherRefs: method === "voucher" ? voucherRefs : undefined,
+            voucherRefs: method === "voucher" || method === "tfc" ? voucherRefs : undefined,
+            // Split payment: how much comes from HMRC and how the rest is
+            // settled. `cardPaid` on the booking is the field that already
+            // exists for this; the server side is Amir's.
+            tfc: method === "tfc" ? {
+              amount: Math.min(amountDue, Math.max(0, parseFloat(tfcAmount || String(amountDue)) || 0)),
+              remainderVia: tfcRest,
+              references: voucherRefs,
+            } : undefined,
             discountCodes: appliedCodes.map((a) => a.code),
             // The parent's contact number (required above); lands on their
             // family record if it hasn't got one yet.

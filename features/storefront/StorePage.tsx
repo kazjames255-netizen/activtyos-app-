@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { apiPublic } from "@/lib/api";
+import { apiPublic, post as apiPost } from "@/lib/api";
 import { money } from "@/features/bookings/helpers";
-import { useTenantSettings } from "@/lib/settings";
+import { DEFAULT_SETTINGS, useTenantSettings } from "@/lib/settings";
+import { brandAccent, brandLogo } from "@/lib/brand-theme";
 import { CroppedImage, type ServerListing } from "@/features/listings/ListingWizard";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -24,7 +25,7 @@ export function StorePage({ tenantId }: { tenantId: string }) {
   const [error, setError] = useState<string | null>(null);
   // The provider's chosen public name (own name vs business name, set at
   // onboarding) — falls back to the tenant's business name on the listing.
-  const { settings } = useTenantSettings(tenantId);
+  const { settings, ready } = useTenantSettings(tenantId);
   // Same embed contract as BookPage: chromeless + height reports.
   const embedded = useSearchParams().has("embed");
 
@@ -33,6 +34,17 @@ export function StorePage({ tenantId }: { tenantId: string }) {
       .then(setListings)
       .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load this provider"));
   }, [tenantId]);
+  // Arriving here IS the link: a family sent this provider's booking link, or
+  // who found them and signed up, gets attached to that provider — so their
+  // portal resolves it, and the provider sees them in Families as a lead they
+  // can market to (consent not assumed — the record is created opted-out).
+  // Signed-out visitors are ignored; the call 401s harmlessly and is retried
+  // on their next visit once they have an account.
+  useEffect(() => {
+    if (embedded) return;                       // inside someone's website, not a visit
+    apiPost("/api/my/providers/follow", { tenantId }).catch(() => { /* not signed in yet */ });
+  }, [tenantId, embedded]);
+
   useEffect(() => {
     if (!embedded) return;
     const post = () =>
@@ -52,16 +64,29 @@ export function StorePage({ tenantId }: { tenantId: string }) {
     return <div className="flex min-h-[40vh] items-center justify-center bg-[#f4f7ff] text-[13px] text-[#8a86a3]">Loading…</div>;
 
   const provider = settings.providerName.trim() || listings[0]?.tenantName || "Our activities";
+  // The provider's own branding (Setup → Branding / Money): logo in the header,
+  // accent on the eyebrow, top rule and Book buttons. Unset (or the stock
+  // blue, which is what defaults fill in) = the page's own blues.
+  const accent = ready && settings.brandColor?.toLowerCase() !== DEFAULT_SETTINGS.brandColor?.toLowerCase() ? brandAccent(settings.brandColor) : null;
+  const logo = brandLogo(settings);
 
   return (
     <div className="min-h-screen bg-[#f4f7ff] pb-16">
+      {accent && <div className="h-1" style={{ background: accent.bg }} />}
       <div className="mx-auto max-w-[1080px] px-4 pt-6">
-        <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#2f6bd8]">
-          Book with {provider}
+        <div className="mb-4 flex items-center gap-3">
+          {logo && (
+            <img src={logo} alt={`${provider} logo`} className="h-12 w-12 flex-none rounded-xl border border-[#e8edf7] bg-white object-contain p-1" />
+          )}
+          <div className="min-w-0">
+            <div className="mb-1 text-[11px] font-extrabold uppercase tracking-[0.14em] text-[#2f6bd8]" style={accent ? { color: accent.text } : undefined}>
+              Book with {provider}
+            </div>
+            <h1 className="text-[26px] font-extrabold tracking-[-0.02em] text-[#171534]">
+              Camps, clubs &amp; activities
+            </h1>
+          </div>
         </div>
-        <h1 className="mb-4 text-[26px] font-extrabold tracking-[-0.02em] text-[#171534]">
-          Camps, clubs &amp; activities
-        </h1>
         {listings.length === 0 ? (
           <div className="rounded-2xl border border-[#e8edf7] bg-white p-8 text-center text-[13px] text-[#8a86a3]">
             Nothing is open for booking right now — check back soon.
@@ -88,13 +113,13 @@ export function StorePage({ tenantId }: { tenantId: string }) {
                     <div className="truncate text-[14.5px] font-extrabold text-[#171534]">{l.title || l.name}</div>
                     <div className="mt-0.5 text-[11.5px] text-[#8a86a3]">
                       {runFrom && runTo ? `${runFrom} – ${runTo}` : "Dates TBC"}
-                      {spotsLeft > 0 && <span className="text-[#1d3a8f]"> · places available</span>}
+                      {spotsLeft > 0 && <span className="text-[#1d3a8f]" style={accent ? { color: accent.text } : undefined}> · places available</span>}
                     </div>
                     <div className="mt-2 flex items-center justify-between">
                       <span className="text-[13px] font-extrabold text-[#171534]">
                         {from !== null ? `from ${money(from)}` : ""}
                       </span>
-                      <span className="rounded-full bg-[#3f78d8] px-3 py-1 text-[11.5px] font-bold text-white">
+                      <span className="rounded-full bg-[#3f78d8] px-3 py-1 text-[11.5px] font-bold text-white" style={accent ? { background: accent.bg, color: accent.ink } : undefined}>
                         Book →
                       </span>
                     </div>

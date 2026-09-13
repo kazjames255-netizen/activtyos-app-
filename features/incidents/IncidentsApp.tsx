@@ -45,6 +45,8 @@ interface Log {
   parentNotified: boolean; parentNotifiedAt?: string; parentNotifiedHow?: string; followUp?: string; shareWithParent?: boolean;
   recordedByName?: string; createdAt?: string; updatedAt?: string; acknowledgedAt?: string; acknowledgedBy?: string;
   notes?: Note[]; notifyParentOfEdit?: boolean; attachments?: string[];
+  /** Staff's own report about a colleague: the server sends its status only. */
+  restricted?: boolean; statusLabel?: string;
 }
 interface Note { by: string; role: string; text: string; at: string }
 
@@ -88,7 +90,7 @@ function LogForm({ kind, notifies, existing, initialChild, onSaved, onCancel }: 
     setUploading(true); setError(null);
     try {
       const urls: string[] = [];
-      for (const f of Array.from(files).slice(0, 10)) { const dataUrl = await readAsDataUrl(f); const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl }); urls.push(url); }
+      for (const f of Array.from(files).slice(0, 10)) { const dataUrl = await readAsDataUrl(f); const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl, purpose: "private" }); urls.push(url); }
       set({ attachments: [...(d.attachments ?? []), ...urls] });
     } catch { setError("Couldn’t upload a file — try a smaller image."); }
     finally { setUploading(false); }
@@ -355,7 +357,12 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
   const [ackFilter, setAckFilter] = useState("");
 
   const refresh = useCallback(() => {
-    apiGet<Log[]>(`/api/incidents?kind=${kind}`).then((l) => { setLogs(l); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Log[]>(`/api/incidents?kind=${kind}`).then((l) => { setLogs(l); setError(null); }).catch((e) => {
+      const m = e instanceof Error ? e.message : "Failed to load";
+      // A role at Incidents: None can't read the log, but logging one is never refused (s13-acc3).
+      if (/doesn.t have access/.test(m)) { setLogs([]); setError(`${m.split(". ")[0]}. You can still record one here — “＋ ${COPY[kind].add}” above.`); }
+      else setError(m);
+    });
   }, [kind]);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
@@ -491,13 +498,16 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
                       {l.followUp && <p className="mt-1 max-w-[640px] line-clamp-1 text-[11.5px] leading-snug"><span className="mr-1 rounded bg-[#fff6df] px-1.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide text-[#9a5a00]">Follow-up</span><span className="text-[var(--ink-2)]">{l.followUp}</span></p>}
                     </div>
                     <div className="flex flex-wrap items-center gap-1 sm:max-w-[46%] sm:justify-end">
-                      <Badge tone={{ bg: sev.bg, fg: sev.fg }}>{sev.label}</Badge>
+                      {l.restricted ? <Badge tone={{ bg: "#f3e8ff", fg: "#6d28d9" }}>🔒 {l.statusLabel ?? "With the safeguarding lead"}</Badge> : <Badge tone={{ bg: sev.bg, fg: sev.fg }}>{sev.label}</Badge>}
                       {kind === "incident" && (l.shareWithParent ? <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>📤 Shared</Badge> : <Badge tone={{ bg: "var(--panel)", fg: "var(--ink-3)" }}>🔒 Internal</Badge>)}
                       {(l.notes ?? []).some((n) => n.role === "parent") && <Badge tone={{ bg: "#eaf0fc", fg: "#1d3a8f" }}>💬 Parent replied</Badge>}
                       {l.acknowledgedAt && <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ Acknowledged</Badge>}
                       {l.updatedAt && <Badge tone={{ bg: "#eef4fd", fg: "#1d3a8f" }}>✏️ Updated</Badge>}
                     </div>
                   </div>
+                  {l.restricted ? (
+                    <p className="mt-2 border-t border-[var(--line)] pt-2 text-[11.5px] text-[var(--ink-3)]">You reported a concern about a member of staff. Only the safeguarding lead can see its details — speak to them if you have more to add.</p>
+                  ) : (<>
                   <div className="mt-2 flex flex-wrap gap-2 border-t border-[var(--line)] pt-2">
                     {(() => { const pr = (l.notes ?? []).filter((n) => n.role === "parent").length; return <Button sm variant={pr > 0 && openId !== l.id ? "solid" : undefined} onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? "Hide" : `💬 Details${(l.notes?.length ?? 0) ? ` & messages (${l.notes!.length})` : ""}`}</Button>; })()}
                     <Button sm variant="solid" onClick={() => { setEditing(l); setAdding(false); setOpenId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit</Button>
@@ -522,6 +532,7 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
                       <NotesThread id={l.id} notes={l.notes} side="staff" onAdded={refresh} />
                     </>
                   )}
+                  </>)}
                 </div>
               </Card>
             );

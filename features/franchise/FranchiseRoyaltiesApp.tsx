@@ -15,9 +15,11 @@ interface Payload { settings: Settings; count: number; revenue: number; collecte
 export function FranchiseRoyaltiesApp() {
   const [data, setData] = useState<Payload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  // The same periods head office's Split fees page offers, so the two agree.
+  const [period, setPeriod] = useState<"1m" | "3m" | "6m" | "12m" | "all">("all");
   useEffect(() => {
-    apiGet<Payload>("/api/splitfees/mine").then(setData).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load"));
-  }, []);
+    apiGet<Payload>(`/api/splitfees/mine?period=${period}`).then(setData).catch((e) => setError(e instanceof Error ? e.message : "Couldn't load"));
+  }, [period]);
 
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!data) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
@@ -32,6 +34,13 @@ export function FranchiseRoyaltiesApp() {
             Royalties
           </div>
           <p className="mt-1.5 text-[12.5px] leading-[1.5] text-white/85">What you owe your head office on your bookings — currently <b>{basisLabel}</b>.</p>
+        </div>
+
+        <div className="mb-3 inline-flex gap-1 rounded-xl border border-[var(--line)] bg-white p-1">
+          {([["1m", "Last month"], ["3m", "3 months"], ["6m", "6 months"], ["12m", "12 months"], ["all", "All time"]] as const).map(([k, label]) => (
+            <button key={k} type="button" onClick={() => setPeriod(k)} aria-pressed={period === k}
+              className="rounded-lg px-3 py-1.5 text-[12px] font-extrabold" style={period === k ? { background: "#1d3a8f", color: "#fff" } : { color: "#3b4668" }}>{label}</button>
+          ))}
         </div>
 
         <div className="mb-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">

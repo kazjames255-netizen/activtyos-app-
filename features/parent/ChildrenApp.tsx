@@ -232,21 +232,25 @@ function ChildModal({ child, tenantId, defaultCollectionPassword, onDone }: { ch
     e?.preventDefault();
     setError(null);
     setBusy(true);
+    // Editing sends every text field, blanks included — the server overlays
+    // what it's sent, so a blank left out meant "unchanged" and a parent could
+    // never clear an allergy or a medical note once saved. "" = remove it.
+    const blank = (v: string, k: string) => (v.trim() ? { [k]: v.trim() } : editing ? { [k]: "" } : {});
     const body = {
       name: name.trim(),
-      ...(dob.trim() ? { dob: dob.trim() } : {}),
+      ...blank(dob, "dob"),
       ...(sex ? { sex } : {}),
-      ...(school.trim() ? { school: school.trim() } : {}),
-      ...(allergies.trim() ? { allergies: allergies.trim() } : {}),
-      ...(medical.trim() ? { medical: medical.trim() } : {}),
-      ...(dietary.trim() ? { dietary: dietary.trim() } : {}),
-      ...(send.trim() ? { send: send.trim() } : {}),
-      ...(sendPlanId ? { sendPlanId, ...(sendPlanName ? { sendPlanName } : {}) } : {}),
-      ...(emergencyName.trim() ? { emergencyName: emergencyName.trim() } : {}),
-      ...(emergencyPhone.trim() ? { emergencyPhone: emergencyPhone.trim() } : {}),
-      ...(likes.trim() ? { likes: likes.trim() } : {}),
-      ...(dislikes.trim() ? { dislikes: dislikes.trim() } : {}),
-      ...(collectionPassword.trim() ? { collectionPassword: collectionPassword.trim() } : {}),
+      ...blank(school, "school"),
+      ...blank(allergies, "allergies"),
+      ...blank(medical, "medical"),
+      ...blank(dietary, "dietary"),
+      ...blank(send, "send"),
+      ...(sendPlanId ? { sendPlanId, ...(sendPlanName ? { sendPlanName } : {}) } : editing ? { sendPlanId: "", sendPlanName: "" } : {}),
+      ...blank(emergencyName, "emergencyName"),
+      ...blank(emergencyPhone, "emergencyPhone"),
+      ...blank(likes, "likes"),
+      ...blank(dislikes, "dislikes"),
+      ...blank(collectionPassword, "collectionPassword"),
       ...(Object.keys(answers).length ? { answers } : {}),
       photoConsent,
       ...(photo ? { photo } : {}),

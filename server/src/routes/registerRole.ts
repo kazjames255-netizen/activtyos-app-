@@ -146,15 +146,21 @@ registerRole.post("/", async (req, res) => {
 // Match an OPEN lead (not already won/lost) to a fresh signup by email OR
 // phone OR business name. Phones compare as digits only, and only when both
 // sides have at least 7 of them (short fragments would false-positive);
-// names compare case-insensitively after trimming. Full-collection scan is
-// fine — the pipeline is hundreds of leads, and this runs once per signup.
+// names compare case-insensitively after trimming. Only the Sales-board leads
+// (hundreds) are scanned, plus an exact-email lookup across researched prospects.
 const phoneDigits = (v: string | null | undefined) => (v ?? "").replace(/\D/g, "");
 async function convertMatchingLead(tenantId: string, tenantName: string, email: string | null, phone: string | null) {
   const wantEmail = (email ?? "").trim().toLowerCase();
   const wantPhone = phoneDigits(phone);
   const wantName = tenantName.trim().toLowerCase();
-  const snap = await db.collection("leads").get();
-  for (const d of snap.docs) {
+  // Leads being worked on the Sales board, plus any researched prospect with this
+  // exact email — not a read of every prospect in the collection.
+  const [pipe, byEmail] = await Promise.all([
+    db.collection("leads").where("inPipeline", "==", true).get(),
+    wantEmail ? db.collection("leads").where("email", "==", wantEmail).get() : Promise.resolve(null),
+  ]);
+  const docs = new Map([...pipe.docs, ...(byEmail?.docs ?? [])].map((d) => [d.id, d]));
+  for (const d of docs.values()) {
     const l = d.data() as { stage?: string; email?: string; phone?: string; business?: string; activities?: unknown[] };
     if (l.stage === "won" || l.stage === "lost") continue;
     const leadPhone = phoneDigits(l.phone);

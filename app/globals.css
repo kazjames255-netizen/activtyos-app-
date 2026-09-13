@@ -87,6 +87,13 @@
   --side-hover: rgba(255, 255, 255, 0.12);
   --side-active: #ffffff;
   --side-aink: #1d3a8f;
+  /* The active item is a notch cut out of the rail, so it has to be the colour
+     of the PAGE beside it, not white — #f5f8fd is what LIGHT_PALETTE puts on
+     <main> in every operator portal. `--bg` can't be used here: inside the rail
+     that still resolves to the :root dark value, since the light palette is
+     applied to the right-hand column only. */
+  --side-active-bg: #f5f8fd;
+  --side-notch: 20px;
   --side-ring: color-mix(in srgb, #ffffff 45%, transparent);
   --side-ct-bg: #f5b81f;
   --side-ct-ink: #3a2c00;
@@ -269,4 +276,39 @@ h4 {
    other portal keep their normal blue/themed heroes. */
 html[data-ho-office="1"] .op-hero {
   background-image: radial-gradient(rgba(255, 255, 255, 0.10) 1px, transparent 1.6px), var(--hero-grad) !important;
+}
+
+/* ── Sidebar: the active item as a notch cut out of the rail ─────────────────
+   The selected item is the PAGE colour, flush to the rail's right edge, so it
+   reads as continuous with the content beside it. The two fillets are squares
+   of that same colour with a quarter-disc masked out, which lets the rail's
+   gradient show through as a rounded corner above and below — so this works on
+   the blue gradient, the head-office black and anything else --side-bg becomes,
+   without repainting the gradient into a pseudo-element (which would seam). */
+.side-active {
+  position: relative;
+  background: var(--side-active-bg);
+  color: var(--side-aink);
+  border-radius: 999px 0 0 999px;
+  margin-right: 0;
+}
+.side-active::before,
+.side-active::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  width: var(--side-notch);
+  height: var(--side-notch);
+  background: var(--side-active-bg);
+  pointer-events: none;
+}
+.side-active::before {
+  top: calc(-1 * var(--side-notch));
+  -webkit-mask-image: radial-gradient(circle var(--side-notch) at 0 0, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
+          mask-image: radial-gradient(circle var(--side-notch) at 0 0, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
+}
+.side-active::after {
+  bottom: calc(-1 * var(--side-notch));
+  -webkit-mask-image: radial-gradient(circle var(--side-notch) at 0 100%, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
+          mask-image: radial-gradient(circle var(--side-notch) at 0 100%, transparent 0 var(--side-notch), #000 calc(var(--side-notch) + 0.5px));
 }

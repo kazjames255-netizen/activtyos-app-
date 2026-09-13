@@ -254,7 +254,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
       if (partialMode && res === "changedate") {
         const moves = pickedSlots.map((s) => ({ childName: s.childName, childId: s.childId, from: s.date, to: moveTo[s.key] }));
         try {
-          await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend`, { moves, msg: msg.trim() || undefined });
+          await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend${booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : ""}`, { moves, msg: msg.trim() || undefined });
         } catch (e) {
           // Amend endpoint isn't live yet (§U) — record the intent locally so
           // it still shows as pending. Any other error is real.
@@ -265,7 +265,7 @@ function CancelRequest({ booking, listing, hasPendingMove, onDone }: { booking: 
         return;
       }
       // Refund / wallet / whole cancel — the cancel endpoint (releases days).
-      await apiPost<Booking>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/cancel`, {
+      await apiPost<Booking>(`/api/my/bookings/${encodeURIComponent(booking.ref)}/cancel${booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : ""}`, {
         reason: effReason || undefined,
         msg: [effReason, msg.trim()].filter(Boolean).join(" — ") || undefined,
         refundPref,
@@ -590,7 +590,7 @@ function AmendModal({ booking, listing, onDone }: { booking: Booking; listing: A
     setBusy(true);
     setError(null);
     try {
-      await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend`, {
+      await apiPost(`/api/my/bookings/${encodeURIComponent(booking.ref)}/amend${booking.tenantId ? `?tenantId=${encodeURIComponent(booking.tenantId)}` : ""}`, {
         // Per-child moves carry the child's name; a whole-booking change sends
         // the plain oldISO→newISO map.
         moves: who ? Object.entries(moves).map(([from, to]) => ({ from, to, childName: who })) : moves,
@@ -847,7 +847,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
   async function withdrawMove() {
     setWithdrawing(true);
     try {
-      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/amend/withdraw`, {});
+      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/amend/withdraw${b.tenantId ? `?tenantId=${encodeURIComponent(b.tenantId)}` : ""}`, {});
       try { localStorage.removeItem(`aos.pendingMove.${b.ref}`); } catch { /* ignore */ }
       refresh();
     } catch (e) { alert(e instanceof Error ? e.message : t("parent.errCancelDateChange")); }
@@ -856,7 +856,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
   const answerOffer = async (action: "accept-offer" | "decline-offer") => {
     setOfferBusy(true);
     try {
-      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/${action}`, {});
+      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/${action}${b.tenantId ? `?tenantId=${encodeURIComponent(b.tenantId)}` : ""}`, {});
       refresh();
     } catch (e) {
       alert(e instanceof Error ? e.message : t("parent.errSomethingWrong"));
@@ -1055,7 +1055,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
         </div>
       )}
 
-      {paying && <PayModal refs={[b.ref]} onClose={() => setPaying(false)} onPaid={refresh} />}
+      {paying && <PayModal refs={[b.ref]} tenantId={b.tenantId} onClose={() => setPaying(false)} onPaid={refresh} />}
 
       {expanded && (
         <div className="mt-2">
@@ -1168,7 +1168,7 @@ function WaitlistCard({ b, refresh }: { b: Booking; refresh: () => void }) {
     if (!confirm(t("parent.leaveWaitlistConfirm", { listing: b.listing }))) return;
     setBusy(true);
     try {
-      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/cancel`, {});
+      await apiPost(`/api/my/bookings/${encodeURIComponent(b.ref)}/cancel${b.tenantId ? `?tenantId=${encodeURIComponent(b.tenantId)}` : ""}`, {});
       refresh();
     } catch (e) {
       alert(e instanceof Error ? e.message : t("parent.errLeaveWaitlist"));

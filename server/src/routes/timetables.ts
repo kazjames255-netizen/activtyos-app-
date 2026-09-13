@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite, type Role } from "../middleware/role";
+import { customerAreaOn } from "../lib/customerArea";
 
 // Activity timetable (the builder). One doc per tenant per run: the
 // operator's DRAFT (setup + built plan), plus — once published — a frozen
@@ -222,7 +223,9 @@ timetables.get("/published", async (req, res) => {
     for (const k of b.kids ?? []) for (const day of k.dates ?? []) set.add(day);
     daysByTenant.set(b.tenantId, set);
   }
-  const tenantIds = [...daysByTenant.keys()].slice(0, 10);
+  // Not from a provider that switched the timetable off (Setup → Features / Customer area).
+  const onFlags = await Promise.all([...daysByTenant.keys()].map((t) => customerAreaOn(t, "timetable")));
+  const tenantIds = [...daysByTenant.keys()].filter((_, i) => onFlags[i]).slice(0, 10);
   if (!tenantIds.length) { res.json([]); return; }
   const [snaps, tenantSnaps] = await Promise.all([
     Promise.all(tenantIds.map((tid) => col.where("tenantId", "==", tid).get())),

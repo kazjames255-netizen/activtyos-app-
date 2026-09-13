@@ -430,3 +430,45 @@ platform.get("/analytics", async (req, res) => {
     topProviders: topProviders.slice(0, 8),
   });
 });
+
+// ── GET /inbox — the newest provider mail, network-wide ─────────────────────
+// HQ has no mailbox of its own (inbound mail always files against a provider
+// tenant — see resolveInboundTenant in routes/emails.ts), so the dashboard's
+// email card shows what's landing across the providers instead: newest first,
+// with the provider each message belongs to. Read-only — opening one is the
+// provider's own Inbox, reached by "open account".
+//
+// Scanning every stored message would grow with mail history, so this reads a
+// fixed recent window and reports the unread within it, not since the dawn of
+// time.
+const INBOX_WINDOW = 60;
+platform.get("/inbox", async (req, res) => {
+  if (req.auth!.role !== "platform") { res.status(403).json({ error: "Requires the platform role" }); return; }
+  const [snap, tenantsSnap] = await Promise.all([
+    db.collection("emailMessages").orderBy("at", "desc").limit(INBOX_WINDOW).get(),
+    db.collection("tenants").get(),
+  ]);
+  const tenantName = new Map(tenantsSnap.docs.map((d) => [d.id, (d.data().name as string) ?? d.id]));
+  const items = snap.docs
+    .map((d) => {
+      const m = d.data() as { tenantId?: string; from?: string; fromEmail?: string; subject?: string; body?: string; folder?: string; unread?: boolean; at?: string };
+      return {
+        // Filed mail (archived, spam, trash) has been dealt with by the
+        // provider — kept here only so it can be filtered out below.
+        folder: m.folder ?? "inbox",
+        id: d.id,
+        tenantId: m.tenantId ?? "",
+        providerName: m.tenantId ? tenantName.get(m.tenantId) ?? m.tenantId : "Unknown provider",
+        from: m.from ?? m.fromEmail ?? "Unknown sender",
+        fromEmail: m.fromEmail ?? "",
+        subject: m.subject ?? "(no subject)",
+        // A one-line taste only — the card never renders the whole message.
+        preview: `${m.body ?? ""}`.replace(/\s+/g, " ").trim().slice(0, 140),
+        unread: !!m.unread,
+        at: m.at ?? "",
+      };
+    })
+    .filter((m) => m.folder === "inbox")
+    .map(({ folder, ...m }) => m);
+  res.json({ items, unread: items.filter((m) => m.unread).length, window: INBOX_WINDOW });
+});

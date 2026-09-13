@@ -102,7 +102,7 @@ customers.get("/", async (req, res) => {
   // we can also pull in booking-only families below: "" = no scope (whole tenant,
   // don't add), "__ho__" = head-office-direct, else a franchiseId.
   let scopeFid = "";
-  if (scope.role === "franchise" && scope.franchiseId && scope.tenantId) {
+  if ((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId && scope.tenantId) {
     scopeFid = scope.franchiseId;
     const fam = await franchiseFamilyEmails(scope.tenantId, scope.franchiseId);
     list = list.filter((c) => !!c.email && fam.has(c.email.toLowerCase()));

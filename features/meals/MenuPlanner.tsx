@@ -513,6 +513,14 @@ function SavedPlanCard({ listing, days, seasonName, current, defaultCutoff, onEd
           </Select>
           {every !== "off" && <><span>{t("meals.atWord")}</span><Input type="time" value={cfg.catererAt ?? "07:00"} onChange={(e) => save({ ...cfg, catererAt: e.target.value })} className="!py-1.5 !text-[12px]" /></>}
         </div>
+        {/* No sweep sends this yet. Left unsaid, a provider sets an address and a
+            07:00 send and believes the kitchen has the orders — including the
+            allergens. That is the wrong thing to be quietly wrong about. */}
+        {every !== "off" && (
+          <div className="mt-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.55] text-[#7a5b06]">
+            {t("meals.catererNotSending")}
+          </div>
+        )}
       </div>
 
       {/* b) Order cut-off — pre-filled from the Settings default, editable here */}

@@ -1,4 +1,5 @@
 import { db } from "../firebase";
+import { loadSettings } from "./tenantLibrary";
 
 // Settings → Staff & workforce, enforced. The certifications register
 // (Documents & compliance) is matched by STAFF NAME — certs carry no staff
@@ -14,10 +15,11 @@ export interface StaffPolicy {
 
 const DEFAULTS: StaffPolicy = { assignByLeads: false, requireDBS: true, requireCompliance: true, defaultRatioTarget: 8, inviteMessage: "" };
 
-export async function staffPolicy(tenantId: string): Promise<StaffPolicy> {
+/** Pass the franchiseId when the rota being built is a franchise's — it keeps
+ *  its own Setup → Staff & workforce, and the compliance gate must be its. */
+export async function staffPolicy(tenantId: string, franchiseId?: string | null): Promise<StaffPolicy> {
   try {
-    const lib = await db.collection("libraries").doc(tenantId).get();
-    const raw = ((lib.data()?.settings as { staff?: Partial<StaffPolicy> } | undefined)?.staff ?? {});
+    const raw = (((await loadSettings(tenantId, franchiseId)) as { staff?: Partial<StaffPolicy> }).staff ?? {});
     return { ...DEFAULTS, ...raw };
   } catch {
     return { ...DEFAULTS };
@@ -32,8 +34,28 @@ const KEY_CERTS = ["first aid", "safeguarding"];
 /** Why this person can't be rostered right now — or null when they can.
  *  A tenant not using the compliance register (no certs at all, requireDBS
  *  off) is never blocked. */
-export async function staffRosterBlock(tenantId: string, staffName: string): Promise<string | null> {
-  const policy = await staffPolicy(tenantId);
+/** A returned reference that raised a safeguarding concern nobody has
+ *  reviewed yet. Safer recruitment: until a named person has looked at it,
+ *  the candidate can't be cleared to start or rostered — whatever the
+ *  DBS/compliance settings say. (It used to be a disabled button on one screen;
+ *  the API let a manager clear them and put them on the rota.) */
+export async function unresolvedReferenceConcern(tenantId: string, staffName: string): Promise<boolean> {
+  const name = staffName.trim().toLowerCase();
+  if (!name) return false;
+  const snap = await db.collection("references").where("tenantId", "==", tenantId).get();
+  return snap.docs.some((d) => String(d.get("staffName") ?? "").trim().toLowerCase() === name && d.get("concern") === true && !d.get("concernResolved"));
+}
+
+export async function staffRosterBlock(tenantId: string, staffName: string, franchiseId?: string | null): Promise<string | null> {
+  // Someone whose account has been switched off has left the team — they
+  // can't be put on new shifts (acceptance test d16s6).
+  const people = await db.collection("users").where("tenantId", "==", tenantId).get();
+  const who = staffName.trim().toLowerCase();
+  if (people.docs.some((u) => String(u.get("name") ?? "").trim().toLowerCase() === who && (u.get("disabled") === true || u.get("deactivatedAt"))))
+    return `${staffName}'s account is switched off — they're no longer on the team. Switch them back on in Team & invites to roster them.`;
+  if (await unresolvedReferenceConcern(tenantId, staffName))
+    return `${staffName} has a reference that raised a safeguarding concern nobody has reviewed yet — a named person must review it in Team → References before they can be rostered.`;
+  const policy = await staffPolicy(tenantId, franchiseId);
   if (!policy.requireDBS && !policy.requireCompliance) return null;
 
   const name = staffName.trim().toLowerCase();

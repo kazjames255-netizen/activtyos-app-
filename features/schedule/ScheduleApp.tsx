@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { get as apiGet, isDemoMode } from "@/lib/api";
+import { ApiError, get as apiGet, put as apiPut, isDemoMode } from "@/lib/api";
 import { useTenantSettings } from "@/lib/settings";
 import { useT } from "@/lib/i18n/provider";
 import { SchedulingSettingsForm } from "./SchedulingSettings";
 import { AvailabilityRequestsPanel } from "./AvailabilityRequestsPanel";
 import { StaffAttendanceBoard } from "./StaffAttendanceBoard";
+import { fetchDeployment, resolveDeployment, deployedAt, type DeploymentRaw } from "@/features/locations/locStaff";
+import { useTeam } from "@/features/team/useTeam";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { PageHero, LIGHT_PALETTE } from "@/components/OperatorPage";
 
@@ -60,8 +62,44 @@ const roleCol = (r: string) => ROLE_COL[r] ?? "#64748b";
 const ROLES = ["Lead Coach", "Coach", "Activity Instructor", "Lifeguard", "First Aider", "Activity Assistant"];
 
 interface Template { id: string; name: string; items: { dayOffset: number; site: string; role: string; listing?: string; season?: string; staffId: string | null; start: string; end: string }[] }
+// The rota is saved on the SERVER (PUT /api/rota — shared by every manager's
+// device, and checked against the DBS/compliance policy on every new
+// assignment). This key is now only a same-device cache: the staff portal,
+// clock, payroll and holiday screens still read it.
 const KEY = "aos.rota.v5";
 const TKEY = "aos.rota.templates.v1";
+const cacheLocal = (s: Store) => { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
+// Save state (one rota screen at a time): the last version the SERVER accepted
+// (never something it didn't), its version stamp, and a queue so two saves
+// never overlap.
+const rotaSave: { timer: ReturnType<typeof setTimeout> | null; last: Store | null; updatedAt: string | null; inflight: boolean; pending: Store | null } =
+  { timer: null, last: null, updatedAt: null, inflight: false, pending: null };
+const markRotaSaved = (s: Store, updatedAt: string | null) => { rotaSave.last = s; rotaSave.updatedAt = updatedAt; };
+type SaveFail = { kind: "blocked" | "conflict" | "other"; back: Store | null; msg: string };
+/** Debounced, queued PUT of the whole store (with the version it started from). */
+function queueRotaSave(s: Store, ok: () => void, fail: (f: SaveFail) => void) {
+  if (rotaSave.timer) clearTimeout(rotaSave.timer);
+  rotaSave.timer = setTimeout(() => sendRota(s, ok, fail), 700);
+}
+function sendRota(s: Store, ok: () => void, fail: (f: SaveFail) => void) {
+  if (rotaSave.inflight) { rotaSave.pending = s; return; }
+  rotaSave.inflight = true;
+  apiPut<{ updatedAt: string }>("/api/rota", { staff: s.staff, shifts: s.shifts, sites: s.sites, baseUpdatedAt: rotaSave.updatedAt })
+    .then((r) => { markRotaSaved(s, r.updatedAt); ok(); })
+    .catch((e) => {
+      const status = e instanceof ApiError ? e.status : 0;
+      const msg = e instanceof Error ? e.message : "Couldn't save the rota";
+      // 409 = a compliance refusal (roll back to what the server has);
+      // 412 = someone else saved first (reload theirs); anything else — a
+      // network blip, a 500 — keeps what's on screen and says it isn't saved.
+      fail({ kind: status === 409 ? "blocked" : status === 412 ? "conflict" : "other", back: rotaSave.last, msg: status === 409 || status === 412 ? msg : `Not saved yet — ${msg}. Your changes are still on screen; the next change will try again.` });
+    })
+    .finally(() => {
+      rotaSave.inflight = false;
+      const next = rotaSave.pending; rotaSave.pending = null;
+      if (next) sendRota(next, ok, fail);
+    });
+}
 const loadTpl = (): Template[] => { try { return JSON.parse(localStorage.getItem(TKEY) || "[]"); } catch { return []; } };
 // Real-data only: the rota starts empty. Locations come from the library, listings
 // & seasons from the operator's real data; shifts + staff are built here / wired.
@@ -71,6 +109,24 @@ const empty = (): Store => ({ staff: [], shifts: [], sites: [] });
 // that shape isn't a real schedule and would crash here. Fall back to empty().
 const load = (): Store => { try { const v = JSON.parse(localStorage.getItem(KEY) || "null"); if (!v || !v.shifts || v.demo) return empty(); // Stored staff may pre-date the `rate` field (or arrive partial) — normalise so downstream `st.rate.toFixed()`/pay maths never hit `undefined`.
     return { ...v, staff: (v.staff ?? []).map((s: Staff) => ({ ...s, rate: typeof s.rate === "number" && isFinite(s.rate) ? s.rate : 0 })) }; } catch { return empty(); } };
+
+// The REAL team (joined staff accounts — this head office's or franchise's
+// own, features/team/useTeam) belongs on the rota's staff list. It used to be
+// filled only by the sample seeder (four made-up people), so real staff could
+// never be rostered — and the staff portal, clock and payroll match the rota
+// by name (acceptance d16s1). Anyone joined but missing is added, matched by
+// name, with a stable id; the Deployment filter in Assign staff still applies.
+function withTeam(s: Store, team: { name: string; role: string }[]): Store {
+  const have = new Set(s.staff.map((x) => x.name.trim().toLowerCase()));
+  const ids = new Set(s.staff.map((x) => x.id));
+  const add = team.filter((m) => m.name.trim() && !have.has(m.name.trim().toLowerCase())).map((m): Staff => {
+    const base = `team-${m.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 70) || "member"}`;
+    let id = base; for (let n = 2; ids.has(id); n++) id = `${base}-${n}`;
+    ids.add(id); have.add(m.name.trim().toLowerCase());
+    return { id, name: m.name.trim(), role: m.role, rate: 0, avail: "notsubmitted" };
+  });
+  return add.length ? { ...s, staff: [...s.staff, ...add] } : s;
+}
 
 // Approved holiday/absence pulled from the Holiday planner (aos.holiday.absences.v1)
 // → a Set of `${nameLower}|${date}` so a person on leave can't be rostered.
@@ -113,7 +169,7 @@ function TimeSel({ value, onChange }: { value: string; onChange: (v: string) => 
 
 export function ScheduleApp() {
   const t = useT();
-  const [store, setStore] = useState<Store>(empty);
+  const [rawStore, setStore] = useState<Store>(empty);
   const [anchor, setAnchor] = useState(() => iso(new Date()));
   const [span, setSpan] = useState<Span>("week");
   const [group, setGroup] = useState<Group>("area");
@@ -124,6 +180,10 @@ export function ScheduleApp() {
   const [q, setQ] = useState("");
   const [help, setHelp] = useState(false);
   const [canManage, setCanManage] = useState(true);
+  // What's on screen = the saved rota + any of the REAL team not on it yet
+  // (withTeam) — saved along with the next real change.
+  const team = useTeam();
+  const store = useMemo(() => (isDemoMode() || !canManage ? rawStore : withTeam(rawStore, team)), [rawStore, team, canManage]);
   const [draft, setDraft] = useState<Draft | null>(null);
   const [autoMenu, setAutoMenu] = useState(false);
   const [showAlerts, setShowAlerts] = useState(false);
@@ -151,8 +211,29 @@ export function ScheduleApp() {
   const addMins = (t: string, m: number) => { const [h, mm] = t.split(":").map(Number); const tot = h * 60 + mm + m; return `${String(Math.floor(tot / 60) % 24).padStart(2, "0")}:${String(tot % 60).padStart(2, "0")}`; };
   const addRole = (siteName: string, role: string) => { setExtraRoles((p) => ({ ...p, [siteName]: [...new Set([...(p[siteName] ?? []), role])] })); setRoleMenu(null); };
   const [toast, setToast] = useState<string | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [localOnly, setLocalOnly] = useState<Store | null>(null);
+  const loadServerRota = async () => {
+    try {
+      const srv = await apiGet<Store & { updatedAt?: string | null }>("/api/rota");
+      const srvStore: Store = { staff: (srv.staff ?? []).map((x) => ({ ...x, rate: typeof x.rate === "number" && isFinite(x.rate) ? x.rate : 0 })), shifts: srv.shifts ?? [], sites: srv.sites ?? [] };
+      const local = load();
+      if (!srvStore.staff.length && !srvStore.shifts.length && (local.staff.length || local.shifts.length)) {
+        try { localStorage.setItem(`${KEY}.local-backup`, JSON.stringify(local)); } catch { /* ignore */ }
+        setLocalOnly(local);
+      }
+      markRotaSaved(srvStore, srv.updatedAt ?? null); setStore(srvStore); cacheLocal(srvStore);
+    } catch { /* offline — this device's copy stands */ }
+  };
+  const importLocalRota = () => {
+    const local = localOnly; if (!local) return;
+    sendRota(local, () => { setStore(local); cacheLocal(local); setLocalOnly(null); try { localStorage.removeItem(`${KEY}.local-backup`); } catch { /* ignore */ } setSaveError(null); flash("Rota imported into this account"); },
+      (f) => setSaveError(`Couldn't import it: ${f.msg}`));
+  };
   const [venuesR, setVenuesR] = useState<{ id: string; name: string }[]>([]);
-  const [listingsR, setListingsR] = useState<{ title: string; seasonId?: string | null; venueId?: string | null }[]>([]);
+  const [listingsR, setListingsR] = useState<{ id: string; title: string; seasonId?: string | null; venueId?: string | null }[]>([]);
+  const [deployRaw, setDeployRaw] = useState<DeploymentRaw | null>(null);
+  const [showAllStaff, setShowAllStaff] = useState(false);
   const [schedView, setSchedView] = useState<"rota" | "attendance" | "availability" | "settings">("rota");
   const [copyMenu, setCopyMenu] = useState(false);
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -163,9 +244,16 @@ export function ScheduleApp() {
 
   useEffect(() => {
     setStore(load()); setTemplates(loadTpl());
+    // The server's rota wins. A rota that exists only in this browser (built
+    // before it moved server-side) is NOT uploaded automatically — the browser
+    // isn't tied to one account, and an HQ user viewing several would push one
+    // provider's staff and pay rates into another's. It's set aside and offered.
+    if (!isDemoMode()) void loadServerRota();
     apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {});
     apiGet<{ venues?: { id: string; name: string }[] }>("/api/library").then((lib) => setVenuesR(lib.venues ?? [])).catch(() => {});
-    apiGet<{ title?: string; name?: string; seasonId?: string | null; venueId?: string | null }[]>("/api/listings?mine=1").then((rows) => setListingsR(rows.map((r) => ({ title: r.title || r.name || "", seasonId: r.seasonId ?? null, venueId: r.venueId ?? null })).filter((r) => r.title))).catch(() => {});
+    apiGet<{ id: string; title?: string; name?: string; seasonId?: string | null; venueId?: string | null }[]>("/api/listings?mine=1").then((rows) => setListingsR(rows.map((r) => ({ id: r.id, title: r.title || r.name || "", seasonId: r.seasonId ?? null, venueId: r.venueId ?? null })).filter((r) => r.title))).catch(() => {});
+    // Who works where (Team → Deployment). Managers only — staff just don't filter.
+    if (!isDemoMode()) fetchDeployment().then(setDeployRaw).catch(() => {});
   }, []);
   // Real data drives the filters. Season is picked FIRST: it scopes which locations
   // and listings you then see (a listing carries its venueId + seasonId).
@@ -175,7 +263,18 @@ export function ScheduleApp() {
   const scopedVenueIds = useMemo(() => new Set(scopedListings.map((l) => l.venueId).filter(Boolean) as string[]), [scopedListings]);
   const sites = useMemo(() => (seasonSel.length ? venuesR.filter((v) => scopedVenueIds.has(v.id)) : venuesR).map((v) => v.name), [venuesR, seasonSel, scopedVenueIds]);
   const persistTpl = (next: Template[]) => { setTemplates(next); try { localStorage.setItem(TKEY, JSON.stringify(next)); } catch { /* ignore */ } };
-  const persist = (s: Store) => { setStore(s); try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* ignore */ } };
+  // Optimistic: the screen changes at once, the save follows (debounced). A
+  // refused save — e.g. rostering someone with no DBS on file — puts the rota
+  // back to the last version the server accepted and says why.
+  const persist = (s: Store) => {
+    setStore(s); cacheLocal(s);
+    if (isDemoMode()) return;
+    queueRotaSave(s, () => setSaveError(null), (f) => {
+      if (f.kind === "blocked" && f.back) { setStore(f.back); cacheLocal(f.back); }
+      if (f.kind === "conflict") void loadServerRota();
+      setSaveError(f.msg);
+    });
+  };
 
   // Period dates for the current span/anchor
   const dates = useMemo(() => {
@@ -204,6 +303,11 @@ export function ScheduleApp() {
   // approved leave from the Holiday planner (recomputed when the assign panel opens / period changes)
   const onLeaveSet = useMemo(() => loadApprovedLeave(), [assignOpen, anchor, span]);
   const onLeave = (name: string, date: string) => onLeaveSet.has(`${name.trim().toLowerCase()}|${date}`);
+  // Deployment: someone deployed only at other locations isn't offered for — or
+  // auto-filled into — this location's shifts (false). null = no rule for them
+  // (not placed in Deployment, or the shift's location isn't a known venue).
+  const deploy = useMemo(() => (deployRaw ? resolveDeployment(deployRaw, venuesR.map((v) => v.id), listingsR) : null), [deployRaw, venuesR, listingsR]);
+  const deployedFor = (name: string, sh: { site: string; listing?: string }) => deployedAt(deploy, name, venuesR.find((v) => v.name === sh.site)?.id, sh.listing ? listingsR.find((l) => l.title === sh.listing)?.id : undefined, (id) => listingsR.find((l) => l.id === id)?.venueId);
   const inPeriod = (s: Shift) => dateSet.has(s.date) && (site === "all" || s.site === site) && (listingF === "all" || s.listing === listingF) && inSeason(s.season);
   const periodShifts = useMemo(() => store.shifts.filter(inPeriod), [store.shifts, dateSet, site, listingF, seasonSel]);
   const listingOpts = useMemo(() => [...new Set(scopedListings.map((l) => l.title))].sort(), [scopedListings]);
@@ -313,7 +417,7 @@ export function ScheduleApp() {
     const taken = new Set(draft.slots.filter(Boolean) as string[]);
     const busy = (sid: string) => store.shifts.some((s) => s.staffId === sid && s.date === draft.date && !draft.groupIds.includes(s.id));
     const pool = store.staff
-      .filter((s) => !taken.has(s.id) && !busy(s.id) && !onLeave(s.name, draft.date) && dayAvail(s, draft.date).ok)
+      .filter((s) => !taken.has(s.id) && !busy(s.id) && !onLeave(s.name, draft.date) && dayAvail(s, draft.date).ok && deployedFor(s.name, draft) !== false)
       .sort((a, b) => Number(b.role === draft.role) - Number(a.role === draft.role));
     const slots = draft.slots.slice(); let pi = 0;
     for (let i = 0; i < slots.length && pi < pool.length; i++) if (!slots[i]) { slots[i] = pool[pi++].id; }
@@ -334,7 +438,7 @@ export function ScheduleApp() {
     const next = store.shifts.map((s) => ({ ...s })); let filled = 0;
     for (const u of next.filter((s) => inPeriod(s) && !s.staffId)) {
       const busy = (sid: string) => next.some((x) => x.staffId === sid && x.date === u.date && overlaps(x, u));
-      const cand = [...confirmed].sort((a, b) => Number(b.role === u.role) - Number(a.role === u.role)).find((c) => !busy(c.id) && !onLeave(c.name, u.date));
+      const cand = [...confirmed].sort((a, b) => Number(b.role === u.role) - Number(a.role === u.role)).find((c) => !busy(c.id) && !onLeave(c.name, u.date) && deployedFor(c.name, u) !== false);
       if (cand) { u.staffId = cand.id; filled++; }
     }
     persist({ ...store, shifts: next });
@@ -433,7 +537,9 @@ export function ScheduleApp() {
       { id: "demo-d", name: "Priya Shah", role: "Play Leader", rate: 13.0, avail: "notsubmitted", week: allWeek },
     ];
     const ls = (gridListings.length ? gridListings : scopedListings).slice(0, 2);
-    if (!ls.length) { persist({ ...store, staff: demoStaff }); flash(t("schedule.addedSampleStaff")); return; }
+    // Sample people join the real team, never replace it.
+    const withDemo = [...store.staff.filter((s) => !s.id.startsWith("demo-")), ...demoStaff];
+    if (!ls.length) { persist({ ...store, staff: withDemo }); flash(t("schedule.addedSampleStaff")); return; }
     const roles = ["First Aider", "Play Leader"];
     const shifts: Shift[] = [];
     ls.forEach((l, li) => {
@@ -451,7 +557,7 @@ export function ScheduleApp() {
         });
       });
     });
-    persist({ ...store, staff: demoStaff, shifts: [...store.shifts.filter((s) => !s.id.startsWith("demo-")), ...shifts] });
+    persist({ ...store, staff: withDemo, shifts: [...store.shifts.filter((s) => !s.id.startsWith("demo-")), ...shifts] });
     flash(t("schedule.addedSampleShifts", { count: shifts.length }));
   };
   const clearDemo = () => { persist({ ...store, staff: store.staff.filter((s) => !s.id.startsWith("demo-")), shifts: store.shifts.filter((s) => !s.id.startsWith("demo-")) }); flash(t("schedule.clearedSampleShifts")); };
@@ -542,7 +648,7 @@ export function ScheduleApp() {
               <button type="button" onClick={() => setAutoMenu((v) => !v)} className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">✨ {t("schedule.autoSchedule")} ▾</button>
               {autoMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg"><button type="button" onClick={autoFill} className="block w-full px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[var(--ink)] hover:bg-[var(--panel)]">{t("schedule.fillOpenShifts")}</button><button type="button" onClick={clearPeriod} className="block w-full border-t border-[var(--line-2,#eef2f8)] px-3.5 py-2.5 text-left text-[12.5px] font-semibold text-[#c0392b] hover:bg-[#fdebec]">{t("schedule.clearAllShiftsShown")}</button></div>}
             </div>
-            <button type="button" onClick={() => { setStore(load()); flash(t("schedule.refreshed")); }} title={t("schedule.refresh")} className="grid h-[34px] w-[34px] place-items-center rounded-full bg-white text-[13px] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">↻</button>
+            <button type="button" onClick={() => { if (isDemoMode()) setStore(load()); else void loadServerRota(); flash(t("schedule.refreshed")); }} title={t("schedule.refresh")} className="grid h-[34px] w-[34px] place-items-center rounded-full bg-white text-[13px] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">↻</button>
             <div className="relative">
               <button type="button" onClick={() => setCopyMenu((v) => !v)} title={t("schedule.copyScheduleTemplates")} className="rounded-full bg-white px-3.5 py-1.5 text-[13px] font-bold text-[#1d3a8f] shadow-[0_1px_3px_rgba(16,24,64,0.08)] ring-1 ring-black/[0.04] transition hover:shadow-md">⧉ {t("schedule.copy")} ▾</button>
               {copyMenu && <div className="absolute right-0 top-[38px] z-20 w-[240px] overflow-hidden rounded-xl border border-[var(--line)] bg-white shadow-lg">
@@ -619,7 +725,8 @@ export function ScheduleApp() {
             <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded" style={{ background: "#fff1f2", boxShadow: "inset 0 0 0 1px #f4a6ae" }} />{t("schedule.notAssigned")}</span>
             <span className="inline-flex items-center gap-1.5"><span className="h-3 w-3 rounded bg-[var(--panel)] ring-1 ring-inset ring-[var(--line)]" />{t("schedule.noShift")}</span>
             {canManage && <span className="ml-auto flex items-center gap-2">
-              <button type="button" onClick={seedDemo} className="rounded-full bg-[#eef4fd] px-3 py-1 text-[11.5px] font-extrabold text-[#1d3a8f] ring-1 ring-[#bcd0f5] hover:bg-[#e2ecfb]">🎨 {t("schedule.addSampleShifts")}</button>
+              {/* Made-up people are for the demo only — a real account rosters its real team. */}
+              {isDemoMode() && <button type="button" onClick={seedDemo} className="rounded-full bg-[#eef4fd] px-3 py-1 text-[11.5px] font-extrabold text-[#1d3a8f] ring-1 ring-[#bcd0f5] hover:bg-[#e2ecfb]">🎨 {t("schedule.addSampleShifts")}</button>}
               {hasDemo && <button type="button" onClick={clearDemo} className="rounded-full px-2.5 py-1 text-[11.5px] font-bold text-[#c0392b] hover:bg-[#fdebec]">{t("schedule.clearSamples")}</button>}
             </span>}
           </div>
@@ -851,11 +958,13 @@ export function ScheduleApp() {
               <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">{t("schedule.noDoubleBook")}</p>
               <div className="flex max-h-[46vh] flex-col divide-y divide-[var(--line-2,#eef2f8)] overflow-y-auto">
                 {[...store.staff]
-                  .map((st) => ({ st, on: draft.slots.includes(st.id), av: dayAvail(st, draft.date), busy: store.shifts.some((s) => s.staffId === st.id && s.date === draft.date && !draft.groupIds.includes(s.id)), leave: onLeave(st.name, draft.date) }))
-                  .sort((a, b) => Number(b.on) - Number(a.on) || Number(a.leave) - Number(b.leave) || Number(b.av.ok) - Number(a.av.ok) || Number(a.busy) - Number(b.busy))
-                  .map(({ st, on, av, busy, leave }) => {
+                  .map((st) => ({ st, on: draft.slots.includes(st.id), av: dayAvail(st, draft.date), busy: store.shifts.some((s) => s.staffId === st.id && s.date === draft.date && !draft.groupIds.includes(s.id)), leave: onLeave(st.name, draft.date), dep: deployedFor(st.name, draft) }))
+                  // Only the people deployed here — unless you ask for everyone.
+                  .filter((x) => x.on || showAllStaff || x.dep !== false)
+                  .sort((a, b) => Number(b.on) - Number(a.on) || Number(a.leave) - Number(b.leave) || Number(b.dep === true) - Number(a.dep === true) || Number(b.av.ok) - Number(a.av.ok) || Number(a.busy) - Number(b.busy))
+                  .map(({ st, on, av, busy, leave, dep }) => {
                     const blocked = (busy || leave) && !on;
-                    const sub = leave ? `🏖 ${t("schedule.onApprovedLeave")}` : busy ? t("schedule.onAnotherShift") : av.label;
+                    const sub = leave ? `🏖 ${t("schedule.onApprovedLeave")}` : busy ? t("schedule.onAnotherShift") : dep === false ? `📍 ${t("schedule.notDeployedHere")}` : av.label;
                     return (
                     <button key={st.id} type="button" disabled={blocked} onClick={() => toggleAssign(st.id)}
                       className={"flex items-center gap-3 py-2.5 text-left transition-colors " + (on ? "bg-[#eef4fd]" : "enabled:hover:bg-[var(--panel)]") + (blocked ? " opacity-45" : "")}>
@@ -865,6 +974,9 @@ export function ScheduleApp() {
                     </button>
                   ); })}
               </div>
+              {(() => { const away = store.staff.filter((st) => !draft.slots.includes(st.id) && deployedFor(st.name, draft) === false).length; return away > 0 && (
+                <button type="button" onClick={() => setShowAllStaff((v) => !v)} className="mt-2 text-[12px] font-bold text-[#1d3a8f] hover:underline">{showAllStaff ? t("schedule.hideNotDeployed") : t("schedule.showNotDeployed", { n: away })}</button>
+              ); })()}
               <div className="mt-3 flex justify-end"><button type="button" onClick={() => setAssignOpen(false)} className="rounded-xl bg-[#0f7a43] px-6 py-2 text-[14px] font-extrabold text-white hover:brightness-105">{t("schedule.done")}</button></div>
             </div>
             ) : (
@@ -1017,6 +1129,19 @@ export function ScheduleApp() {
       )}
 
       {toast && <div className="fixed bottom-5 left-1/2 z-[140] -translate-x-1/2 rounded-full bg-[#16306e] px-4 py-2.5 text-[12.5px] font-bold text-white shadow-lg">{toast}</div>}
+      {localOnly && (
+        <div className="fixed bottom-28 left-1/2 z-[141] flex max-w-[92vw] -translate-x-1/2 flex-wrap items-center gap-2 rounded-2xl border border-[#f0d9a8] bg-[#fdf6e6] px-4 py-3 text-[12.5px] text-[#7a5b06] shadow-lg">
+          <span className="min-w-0 flex-1"><b>This browser has a rota that is not in your account</b> ({localOnly.shifts.length} shifts, {localOnly.staff.length} staff) — from before the rota was saved online. Import it only if it belongs to <b>this</b> account.</span>
+          <Button variant="primary" onClick={importLocalRota}>Import</Button>
+          <Button onClick={() => { if (window.confirm("Discard the rota saved only in this browser? (A backup copy is kept on this device.)")) setLocalOnly(null); }}>Not now</Button>
+        </div>
+      )}
+      {saveError && (
+        <div role="alert" className="fixed bottom-16 left-1/2 z-[141] flex max-w-[92vw] -translate-x-1/2 items-start gap-3 rounded-2xl border border-[#f6c9cc] bg-[#fdebec] px-4 py-3 text-[12.5px] font-semibold text-[#c02636] shadow-lg">
+          <span>⚠ {saveError}</span>
+          <button type="button" onClick={() => setSaveError(null)} className="flex-none font-extrabold" aria-label="Dismiss">✕</button>
+        </div>
+      )}
     </div>
   );
 }

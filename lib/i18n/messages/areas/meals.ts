@@ -74,6 +74,10 @@ const meals = {
     edit: "Edit",
     editPlan: "Edit plan →",
     emailCaterer: "Email the caterer the orders",
+    // en-only on purpose: translate() falls back to English for missing keys,
+    // and a temporary warning isn't worth 11 translations. Delete the key with
+    // the warning when the digest sweep ships.
+    catererNotSending: "⚠ Not sending yet. The address and schedule are saved, but the digest isn't built — the kitchen won't receive these orders or their allergens automatically. Send them the printed plan until it is.",
     eraseDay: "Erase a day",
     erasing: "✓ Erasing",
     everyDay: "every day",

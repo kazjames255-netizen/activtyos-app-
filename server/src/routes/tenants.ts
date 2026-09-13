@@ -1,5 +1,7 @@
 import { Router } from "express";
 import { db } from "../firebase";
+import { syncAccountEmail } from "../lib/emailSync";
+import { capsFor } from "../middleware/access";
 
 export const tenants = Router();
 
@@ -23,7 +25,11 @@ export const me = Router();
 
 me.get("/", async (req, res) => {
   const auth = req.auth!;
+  // First load after a verified sign-in email change: move the records keyed
+  // on the old address across (lib/emailSync; a no-op otherwise).
+  await syncAccountEmail(req).catch((e) => console.error("[me] email sync failed:", (e as Error).message));
   let tenantName: string | null = null;
+  let displayName: string | null = null;
   let logoUrl: string | null = null;
   let brandColor: string | null = null;
   let tenantPlan: string | null = null;
@@ -36,6 +42,9 @@ me.get("/", async (req, res) => {
     // over the tenant doc's name, so editing it updates the portal brand immediately.
     const libSettings = (lib.data()?.settings as { billing?: { businessName?: string }; providerName?: string } | undefined);
     tenantName = (libSettings?.billing?.businessName || (t.exists ? t.data()!.name : null)) ?? null;
+    // What families see the provider called (Setup → Display name / "Show your
+    // name as") — the portal brand follows it too (acceptance d1s4).
+    displayName = (libSettings?.providerName?.trim() || tenantName) ?? null;
     tenantPlan = ((t.data()?.subscription as { plan?: string } | undefined)?.plan) ?? null;
     // The operator's own logo, so their portal chrome (sidebar) wears their
     // brand — not just their customer emails/pages.
@@ -72,11 +81,20 @@ me.get("/", async (req, res) => {
     role: auth.role,
     tenantId: auth.tenantId,
     tenantName,
+    displayName,
     logoUrl,
     brandColor,
     postcode,
     welcomed,
     franchiseId: auth.franchiseId,
+    lead: auth.lead === true,
+    // Staff: their Roles & permissions role and what it allows per area (null =
+    // not restricted) — the portal hides/refuses what the API refuses.
+    ...(auth.role === "staff" ? { permRole: auth.permRole ?? null, caps: await capsFor(req).catch(() => null) } : {}),
+    // The person's other sign-ins — "Me" in the task manager covers them too.
+    alsoMe: ((userSnap.data()?.alsoMe as string[] | undefined) ?? []).filter((x) => typeof x === "string").slice(0, 10),
+    // Staff: the job title from their invite — pre-fills their onboarding.
+    jobTitle: ((userSnap.data()?.jobTitle as string | undefined) || (userSnap.data()?.staffRole as string | undefined)) ?? null,
     franchiseName,
     franchiseArea,
     hasFranchises,

@@ -1,8 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { SupportInboxCard, PlatformNotificationsCard, NetworkInboxCard } from "@/features/platform/PlatformCommsCards";
+import { PipelineSummaryCard } from "@/features/platform/PipelineSummaryCard";
+import { FalloffCard } from "@/features/platform/FalloffCard";
 
 interface Analytics {
   summary: { mrr: number; arr: number; mrrPaying: number; mrrTrial: number; arrPaying: number; totalProviders: number; active: number; trialing: number; canceling: number; canceled: number; avgTenureDays: number; churnRate: number; trialConversion: number; newThisMonth: number; gmvBooked: number; gmvPaid: number };
@@ -90,6 +94,11 @@ export function PlatformAnalyticsApp() {
     };
   }, [d, months, mode]);
 
+  // The same screen is both the platform's landing page (/platform/dash, where
+  // the sidebar just says "Dashboard") and the Analytics nav item. It's HQ's own
+  // dashboard in the first case, so don't head it "Provider analytics" there.
+  const isDash = (usePathname() ?? "").split("/")[2] !== "analytics";
+
   if (error) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
   if (!d || !view) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading analytics…</div>;
   const s = d.summary;
@@ -100,8 +109,12 @@ export function PlatformAnalyticsApp() {
         <div className="flex flex-wrap items-end justify-between gap-3 px-6 py-5">
           <div>
             <div className="text-[11px] font-extrabold uppercase tracking-[0.12em]" style={{ color: "#ffd23f" }}>Platform · Head office</div>
-            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>📈 Provider analytics</h2>
-            <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">Recurring revenue, growth, churn and where it&rsquo;s heading — plus the money flowing through your providers.</p>
+            <h2 className="mt-0.5 text-[25px] font-extrabold" style={{ fontFamily: "var(--ff-display)", color: "#fff" }}>{isDash ? "🏠 Dashboard" : "📈 Provider analytics"}</h2>
+            <p className="mt-1 max-w-[620px] text-[12.5px] leading-snug text-white/85">
+              {isDash
+                ? <>What&rsquo;s waiting on you, then the numbers — recurring revenue, growth, churn and the money flowing through your providers.</>
+                : <>Recurring revenue, growth, churn and where it&rsquo;s heading — plus the money flowing through your providers.</>}
+            </p>
           </div>
           <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold" title="Applies to the money figures — includes or excludes providers still on their free trial">
             {([["incl", "Incl. trials"], ["paying", "Paying only"]] as const).map(([m, label]) => (
@@ -111,8 +124,19 @@ export function PlatformAnalyticsApp() {
         </div>
       </div>
 
+      {/* What's come in — the same row the provider dashboards carry, with the
+          two feeds a platform account actually has behind it. */}
+      <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <SupportInboxCard /><NetworkInboxCard /><PlatformNotificationsCard />
+      </div>
+
+      {/* How sales is actually going, straight off the Sales board — then what
+          happens to the providers it wins. */}
+      <div className="mt-3"><PipelineSummaryCard /></div>
+      <div className="mt-3"><FalloffCard /></div>
+
       {/* KPI tiles */}
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <Tile label="Monthly recurring" icon="💷" grad={GRAD.blue}
           value={money(mode === "paying" ? s.mrrPaying : s.mrr)}
           sub={`${money(mode === "paying" ? s.arrPaying : s.arr)}/yr · ${mode === "paying" ? "paying only" : "incl. trials"}`}>

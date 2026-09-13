@@ -32,6 +32,7 @@ import { get as apiGet } from "@/lib/api";
 import { useUnreadMessages, useCouponCount } from "@/lib/use-unread";
 import { useCustomerArea, useOperatorFeatures, useMoneyShow, MONEY_OUTGOING_VIEWS, MONEY_INCOMING_VIEWS, SIMPLE_ALLOWED, CORE_VIEWS, featureOff, type CustomerArea } from "@/lib/use-customer-area";
 import type { Me } from "@/lib/roles";
+import { capAreaForView, capLevel, featureKeysForView, firstOff } from "@/lib/accessMap";
 
 function Icon({ icon }: { icon: NavIcon | null }) {
   if (!icon) return <span className="w-4 flex-none" />;
@@ -88,10 +89,10 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
       <Link
         href={`/${portal}/${item.view}`}
         title={pluralLabel(item.label, portal, multiChild)}
-        className="relative mx-2 flex items-center justify-center rounded-lg py-2 no-underline hover:bg-[var(--side-hover)]"
+        className={`relative mx-2 flex items-center justify-center rounded-lg py-2 no-underline hover:bg-[var(--side-hover)]${active ? " side-active" : ""}`}
         style={
           active
-            ? { background: "rgba(255,255,255,0.16)", color: "#ffffff", boxShadow: "inset 3px 0 0 var(--side-ct-bg)" }
+            ? {}
             : item.highlight
               ? { color: "#ffffff", background: "rgba(255,255,255,0.06)", boxShadow: "inset 3px 0 0 rgba(255,255,255,0.6)" }
               : { color: "var(--side-nav)", opacity: faded ? 0.55 : 1 }
@@ -123,10 +124,15 @@ function NavLink({ item, portal, active, multiChild, unread, coupons, faded, col
   return (
     <Link
       href={`/${portal}/${item.view}`}
-      className={itemCls}
+      // The active item is a notch cut out of the rail (see .side-active in
+      // globals.css) — page-coloured, flush to the right edge, with the rail
+      // curving around it above and below. Colours all come from the --side-*
+      // tokens, so the head-office black theme and any future rail colour get
+      // the same shape for free.
+      className={active ? `${itemCls} side-active` : itemCls}
       style={
         active
-          ? { background: "rgba(255,255,255,0.16)", color: "#ffffff", fontWeight: 700, boxShadow: "inset 3px 0 0 var(--side-ct-bg)" }
+          ? { fontWeight: 700 }
           : item.highlight
             ? { color: "#ffffff", background: "rgba(255,255,255,0.06)", boxShadow: "inset 3px 0 0 rgba(255,255,255,0.6)" }
             : { color: "var(--side-nav)" }
@@ -225,28 +231,36 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
   // that moves to the footer. For an operator that's their tenant (business)
   // name; for a parent (no tenant) it's the provider they're linked to.
   const [brand, setBrand] = useState<string | null>(null);
+  // The provider's uploaded logo (Setup → Money, billing.logoUrl), shown in
+  // place of the initial when there is one.
+  const [logo, setLogo] = useState<string | null>(null);
   // Franchise identity — head-office-granted business name + territory, badged under the brand.
   const [fr, setFr] = useState<{ name: string | null; area: string | null } | null>(null);
   // Head office only sees franchisor tools once it has ≥1 franchise. Start hidden to avoid a flash.
   const [hasFranchises, setHasFranchises] = useState(() => peekMe()?.role === "company" && !!peekMe()?.hasFranchises);
+  // Staff: what their Roles & permissions role allows (null = not restricted).
+  const [caps, setCaps] = useState<Me["caps"]>(() => peekMe()?.caps ?? null);
   // The HO scope switcher — null = "Whole business (all)" (slim oversight nav).
   const hoScope = useHoScope();
   useEffect(() => {
     getMe()
       .then((m) => {
         if (m.role === "company") setHasFranchises(!!m.hasFranchises);
+        if (m.role === "staff") setCaps(m.caps ?? null);
         if (m.role === "franchise") setFr({ name: m.franchiseName ?? null, area: m.franchiseArea ?? null });
         if (m.tenantName) {
+          setLogo(m.logoUrl || null);
           // A named franchise brands with its own business name; else the tenant (head office) name.
-          setBrand((m.role === "franchise" && m.franchiseName) || m.tenantName);
+          setBrand((m.role === "franchise" && m.franchiseName) || m.displayName || m.tenantName);
           return;
         }
         // Parent side: brand with their provider (Phase 1 is single-provider) —
         // their customer-facing display name.
-        apiGet<{ name: string }[]>("/api/my/providers")
+        apiGet<{ name: string; logoUrl?: string | null }[]>("/api/my/providers")
           .then((ps) => {
             const p = ps?.[0];
             if (p?.name) setBrand(p.name);
+            if (p?.logoUrl) setLogo(p.logoUrl);
           })
           .catch(() => {});
       })
@@ -308,7 +322,14 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
     const empty = new Set<string>([...emptySections, ...(hasTimetable ? [] : ["timetable"])]);
     for (const v of empty) if (FADE_VIEWS.has(v) && !caHidden.has(v)) faded.add(v);
   } else {
-    for (const v of groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v))) caHidden.add(v);
+    if (portal !== "staff") for (const v of groups.flatMap((g) => g.items.map((i) => i.view)).filter((v) => !CORE_VIEWS.has(v) && featureOff(features, v))) caHidden.add(v);
+    // Staff views map onto the operator's switches (a staff "Expenses" claim
+    // isn't the operator's Money out) and their role's None areas — the same
+    // table the API and the view gate use (lib/accessMap.ts).
+    if (portal === "staff") for (const v of groups.flatMap((g) => g.items.map((i) => i.view))) {
+      const area = capAreaForView(portal, v);
+      if (firstOff(features, featureKeysForView(portal, v)) || (area && capLevel(caps, area) === "none")) caHidden.add(v);
+    }
     for (const v of moneyHidden) caHidden.add(v);
     // Franchisor-only tools stay hidden until a head office actually has a franchise.
     if (portal === "company" && !hasFranchises) { caHidden.add("splitfees"); caHidden.add("territories"); }
@@ -379,9 +400,12 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
       }}
     >
       <div className={`flex items-center pb-4 ${collapsed ? "justify-center px-2" : "gap-2 px-4"}`}>
-        {/* Text name only — no logo in the portal chrome. */}
+        {/* The provider's logo when uploaded (else their initial, collapsed only). */}
+        {logo && (
+          <img src={logo} alt={`${brandName} logo`} className="h-8 w-8 flex-none rounded-md bg-white object-contain p-0.5" />
+        )}
         {collapsed ? (
-          <span className="grid h-8 w-8 place-items-center rounded-md text-[15px] font-extrabold" style={{ background: "rgba(255,255,255,0.12)", color: "var(--side-ink)" }}>{brandName.slice(0, 1)}</span>
+          !logo && <span className="grid h-8 w-8 place-items-center rounded-md text-[15px] font-extrabold" style={{ background: "rgba(255,255,255,0.12)", color: "var(--side-ink)" }}>{brandName.slice(0, 1)}</span>
         ) : (
           <span className="block min-w-0 flex-1">
             <span

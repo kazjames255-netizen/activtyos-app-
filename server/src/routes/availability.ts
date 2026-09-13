@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseTeam } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { notifyTenantMember } from "../lib/notify";
 
@@ -58,6 +59,7 @@ availability.post("/requests", async (req, res) => {
   const tenantName = (await db.collection("tenants").doc(auth.tenantId).get()).data()?.name as string | undefined;
   const doc = {
     tenantId: auth.tenantId,
+    franchiseId: auth.role === "franchise" ? auth.franchiseId : null,
     staffEmail: lc(p.data.staffEmail),
     staffName: p.data.staffName ?? null,
     window: p.data.window,
@@ -86,7 +88,12 @@ availability.get("/requests", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
   const snap = await reqs.where("tenantId", "==", auth.tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
+  // A franchise sees requests to its own people (or that it sent) — not head
+  // office's or a sibling's staff and their availability.
+  const team = auth.role === "franchise" && auth.franchiseId ? await franchiseTeam(auth.tenantId, auth.franchiseId) : null;
+  const list = snap.docs
+    .filter((d) => !team || d.get("franchiseId") === auth.franchiseId || team.emails.has(String(d.get("staffEmail") ?? "").toLowerCase()) || team.emails.has(String(d.get("createdBy") ?? "").toLowerCase()))
+    .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
     .sort((a, b) => (`${(a as { createdAt?: string }).createdAt}` < `${(b as { createdAt?: string }).createdAt}` ? 1 : -1));
   res.json(list);
 });

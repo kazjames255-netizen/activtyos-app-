@@ -1,11 +1,13 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { librarySnap } from "../lib/tenantLibrary";
 import { canWrite } from "../middleware/role";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
-import { desiredRuns, syncListingBlocks } from "../lib/listingRuns";
+import { desiredRuns, syncListingBlocks, bookedDatesDropped } from "../lib/listingRuns";
 import { resolveBundlePricing, type BundleDoc, type PassDoc, type PeriodDoc } from "../lib/bundlePricing";
 import { mealDayPlan } from "../lib/mealPlan";
+import { ukToday } from "../lib/ukDate";
 
 export const listings = Router();
 
@@ -83,6 +85,13 @@ const baseListingSchema = z
     maxAttendees: z.string().max(10).optional(),
     capacityScope: z.enum(["day", "listing"]).optional(),
     showSpaces: z.boolean().optional(),
+    // Per-age-group daily caps on top of maxAttendees (Setup → Age groups id →
+    // places; 0 = closed to that age). They were stripped here, so the wizard's
+    // caps vanished on save (acceptance d2s8). Stored + shown; NOT yet enforced
+    // at booking (§S).
+    ageCaps: z.record(z.string().max(60), z.number().int().min(0).max(10_000))
+      .refine((r) => Object.keys(r).length <= 50, "Too many age caps").optional(),
+    ageCapsOn: z.boolean().optional(),
     // content
     headings: z.record(z.string().max(60), z.string().max(200)).optional(),
     descriptionSection: z.string().max(200).optional(),
@@ -150,6 +159,10 @@ const baseListingSchema = z
     // policy
     visibility: z.enum(["public", "hidden"]).optional(),
     opensAt: z.string().max(25).optional(), // local datetime; blank = open now
+    // Stop taking family bookings N hours before each session starts (blank =
+    // up to the day itself). Enforced in POST /api/my/bookings; an operator
+    // taking a booking by hand may still add a late place.
+    bookingCutoffHours: z.string().trim().regex(/^\d{0,4}$/, "Cut-off must be a whole number of hours").optional(),
     bookingType: z.enum(["auto", "manual"]).optional(),
     waitlist: z.boolean().optional(),
     // "manual": the operator offers places. "auto": a freed seat is offered
@@ -158,6 +171,10 @@ const baseListingSchema = z
     waitlistSize: z.string().max(10).optional(),
     cancellation: z.string().max(2_000).optional(),
     discounts: z.array(discountRuleSchema).max(30).optional(),
+    // Which Setup cancellation policy this listing uses — shown to parents and
+    // applied on cancel. It was stripped here, so every cancel fell back to the
+    // first policy whatever the parent had been shown (acceptance d4s6).
+    cancellationPolicyId: z.string().trim().max(60).optional(),
     // presentation & lifecycle
     pageStyle: z.enum(["playful", "sport", "emerald", "teal", "royal", "aubergine", "burgundy", "terracotta", "slate", "crimson", "navy"]).optional(),
     status: z.enum(["draft", "live"]).optional(),
@@ -309,6 +326,7 @@ listings.get("/", async (req, res) => {
   const venueById = new Map<string, Map<string, { name: string; address?: string; city?: string; lat?: number; lng?: number }>>();
   const seasonNames = new Map<string, Map<string, string>>(); // tenant → seasonId → name
   const payMethodsByTenant = new Map<string, string[]>();     // tenant → accepted payment methods
+  const displayNameByTenant = new Map<string, string>();      // tenant → the name families see (Setup → Display name)
   libs.forEach((snap, i) => {
     const data = snap.data() ?? {};
     const cats = (data.categories ?? []) as { id: string; name: string }[];
@@ -318,6 +336,7 @@ listings.get("/", async (req, res) => {
     venueById.set(tenantIds[i], new Map(venues.map((v) => [v.id, { name: v.name, address: v.address, city: v.city, lat: v.lat, lng: v.lng }])));
     seasonNames.set(tenantIds[i], new Map((settings.seasons ?? []).map((s) => [s.id, s.name])));
     payMethodsByTenant.set(tenantIds[i], settings.payMethods ?? []);
+    if (typeof (settings as { providerName?: string }).providerName === "string" && (settings as { providerName?: string }).providerName!.trim()) displayNameByTenant.set(tenantIds[i], (settings as { providerName?: string }).providerName!.trim());
   });
 
   // Advertisable discounts live on the listing itself (`discounts` = the rules the
@@ -353,7 +372,7 @@ listings.get("/", async (req, res) => {
   // A listing only reaches the marketplace while it still has a run that hasn't
   // finished. Past-only listings (every block ended) have nothing to book, so
   // they drop out of Browse automatically — no manual un-publishing needed.
-  const todayYmd = new Date().toISOString().slice(0, 10);
+  const todayYmd = ukToday();
   const hasUpcomingBlock = (blocks: unknown[]) =>
     (blocks as { endDate?: string }[]).some((b) => (b.endDate ?? "") >= todayYmd);
   const list = (await withBlocks(visible.map((d) => ({ id: d.id, data: d.data() }))))
@@ -377,14 +396,18 @@ listings.get("/", async (req, res) => {
       const season = l.seasonId ? (seasonNames.get(l.tenantId as string)?.get(l.seasonId as string) ?? null) : null;
       // Advertisable discounts on this listing, best % first so the top chip
       // always matches the "SAVE %" ribbon.
-      const rules = ((l.discounts as Rule[] | undefined) ?? []).filter((r) => r.enabled !== false);
+      // An early-bird whose book-by date has passed isn't a saving on offer —
+      // checkout won't give it, so don't advertise it (acceptance d4s2).
+      const rules = ((l.discounts as Rule[] | undefined) ?? []).filter((r) => r.enabled !== false && !(r.kind === "early" && r.beforeDate && r.beforeDate < ukToday()));
       const offers = rules.map(ruleOffer).sort((a, b) => (b.percent ?? 0) - (a.percent ?? 0));
       const bestOfferPercent = offers.reduce((m, o) => (o.percent && o.percent > m ? o.percent : m), 0) || null;
       const pm = payMethodsByTenant.get(l.tenantId as string) ?? [];
       const acceptsTFC = pm.includes("Tax-Free Childcare");
       const acceptsVouchers = pm.includes("Childcare vouchers");
       const timings = timingsFor(l.blockId as string | undefined);
-      return { ...l, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
+      // The provider's current display name, not the one frozen on the listing
+      // when it was created (acceptance d1s4).
+      return { ...l, tenantName: displayNameByTenant.get(l.tenantId as string) ?? l.tenantName, title, categories, season, offers, bestOfferPercent, acceptsTFC, acceptsVouchers, timings, location: venue?.name ?? null, address: venue?.address ?? null, city: venue?.city ?? null, lat: venue?.lat ?? null, lng: venue?.lng ?? null };
     }),
   );
 });
@@ -449,7 +472,9 @@ listings.get("/:id", async (req, res) => {
   }
 
   // The slice of the tenant's library this listing references.
-  const libSnap = await db.collection("libraries").doc(l.tenantId).get();
+  // A franchise's listing shows ITS venues, add-ons and staff — the franchise
+  // keeps its own library; reading head office's lost everything it added.
+  const libSnap = await librarySnap(l.tenantId, (l.franchiseId as string | null | undefined) ?? null);
   const libData = libSnap.exists ? (libSnap.data() as Record<string, unknown>) : {};
   const lib = libData as Record<string, { id: string }[]>;
   const pick = (arr: { id: string }[] | undefined, ids: string[] | undefined) =>
@@ -591,8 +616,21 @@ listings.put("/:id", async (req, res) => {
   if ("categoryIds" in data) {
     patch.categoryNames = await categoryNamesFor(own.snap.data()!.tenantId as string, data.categoryIds);
   }
-  await own.snap.ref.update(patch);
   const merged = { ...own.snap.data()!, ...patch };
+  // Refuse — BEFORE anything is written — an edit that would take a date off
+  // while children are booked on it (lib/listingRuns bookedDatesDropped).
+  if (RUN_FIELDS.some((f) => f in data)) {
+    const dropped = await bookedDatesDropped(own.snap.id, req.auth!.tenantId!, runRecipeOf(merged));
+    if (dropped.length) {
+      const list = dropped.slice(0, 6).map((d) => `${d.date} (${d.booked} booked)`).join(", ");
+      res.status(409).json({
+        error: `This change removes ${dropped.length === 1 ? "a date" : "dates"} that children are booked on: ${list}${dropped.length > 6 ? "…" : ""}. Move or cancel those bookings first — removing the date would delete that day's register.`,
+        droppedDates: dropped,
+      });
+      return;
+    }
+  }
+  await own.snap.ref.update(patch);
   if (RUN_FIELDS.some((f) => f in data)) {
     await syncListingBlocks(own.snap.id, req.auth!.tenantId!, runRecipeOf(merged));
   }

@@ -176,6 +176,9 @@ function SignupForm() {
   function stepProblem(id: StepId): string | null {
     if (id === "business") {
       if (businessName.trim().length < 2) return "Enter your business name.";
+      // The server caps it at 80 (register-role) — and the login account is
+      // created before that call, so an over-long name must stop here.
+      if (businessName.trim().length > 80) return "Keep your business name to 80 characters or fewer.";
       if (address.trim().length < 2) return "Tell us where you’re based.";
       if (postcode.trim().length < 2) return "Add your postcode.";
     }
@@ -458,7 +461,7 @@ function SignupForm() {
 
         {current === "business" && (
           <div className="flex flex-col gap-4">
-            <div><FieldLabel htmlFor="b-name">Business name</FieldLabel><Input id="b-name" required value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="e.g. APF Activity Camps" className="w-full" /></div>
+            <div><FieldLabel htmlFor="b-name">Business name</FieldLabel><Input id="b-name" required maxLength={80} value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="e.g. APF Activity Camps" className="w-full" /></div>
             <div>
               <FieldLabel>What do you run? <span className="font-normal text-[var(--ink-3)]">— pick any</span></FieldLabel>
               <div className="mt-1 flex flex-wrap gap-2">
@@ -511,7 +514,7 @@ function SignupForm() {
               </div>
             </div>
             {providerNameMode === "person" && (
-              <div><FieldLabel htmlFor="i-name">Your name</FieldLabel><Input id="i-name" autoComplete="name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam Taylor" className="w-full" /></div>
+              <div><FieldLabel htmlFor="i-name">Your name</FieldLabel><Input id="i-name" autoComplete="name" maxLength={80} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Sam Taylor" className="w-full" /></div>
             )}
             <div>
               <FieldLabel>Logo <span className="font-normal text-[var(--ink-3)]">— optional, shows on invoices & your page</span></FieldLabel>

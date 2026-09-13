@@ -115,6 +115,18 @@ export function PublishPanel() {
               <ToggleRow small on={notifyEmail} onClick={() => setNotify({ email: !notifyEmail })} title="✉️ Email" desc="A short email with the published week." />
               <ToggleRow small on={notifyPush} onClick={() => setNotify({ push: !notifyPush })} title="🔔 In-app notification" desc="A bell alert in their dashboard." />
             </div>
+            {/* The publish endpoint accepts these two flags and does nothing with
+                them yet (explicit TODO in routes/timetables.ts). Saying so here is
+                the difference between "I told the families" and "I believed I
+                had" — the timetable is the one thing a parent plans their week
+                around. Remove this the moment the send lands. */}
+            {(notifyEmail || notifyPush) && (
+              <div className="mt-2 rounded-lg border border-[#f0d9a8] bg-[#fdf6e6] px-3 py-2 text-[11.5px] leading-[1.55] text-[#7a5b06]">
+                ⚠ <b>Not sending yet.</b> Your choice is saved with the timetable, but the email and
+                bell alert aren&rsquo;t built — publishing won&rsquo;t reach families on its own. Until
+                then, tell them through <b>Newsfeed</b> or <b>Email</b>.
+              </div>
+            )}
           </>
         )}
 

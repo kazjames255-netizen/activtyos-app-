@@ -15,6 +15,7 @@
 //     email that's suppressed.
 
 import { db } from "../firebase";
+import { loadSettings } from "./tenantLibrary";
 import { sendMail, type MailAttachment } from "./mailer";
 import { webUrl } from "./stripe";
 
@@ -43,7 +44,9 @@ export type NotifyCategory =
   | "moment"
   | "register"
   | "billing"
-  | "task";
+  | "task"
+  /** Leave requests / decisions — manager-facing (never on a colleague's bell). */
+  | "leave";
 
 export interface NotificationDoc {
   tenantId: string;
@@ -61,6 +64,13 @@ export interface NotificationDoc {
   /** The record this is about, so a client can jump straight to it. */
   ref?: string;
   readAt: string | null;
+  /** Per-person read state for everyone but the account owner (staff,
+   *  franchises). One shared readAt meant a coach opening the bell marked
+   *  the owner's alerts read too. */
+  readBy?: Record<string, string>;
+  /** The franchise this alert is about (null = head office / whole tenant).
+   *  A franchise's bell shows only its own. */
+  franchiseId?: string | null;
   at: string;
 }
 
@@ -195,10 +205,67 @@ export interface NotifyInput {
   attachments?: MailAttachment[];
   /** Bell only — no email regardless of mute (e.g. low-value chatter). */
   bellOnly?: boolean;
+  /** Safety-critical — email even if the family muted this category (a
+   *  missed medication dose; muting was for the routine "dose given" ones). */
+  ignoreMute?: boolean;
   /** Stable notification type (see PROVIDER_NOTIFICATIONS). For tenant-audience
    *  alerts, if the provider has switched this key off in Setup → Notifications
    *  (`settings.notifications[key] === false`), the whole alert is skipped. */
   key?: string;
+  /** The franchise the alert belongs to. Omit to have it worked out from the
+   *  record in `ref` (a booking, medication, incident or trip). */
+  franchiseId?: string | null;
+}
+
+/** Which franchise a tenant alert is about, from the record it points at. The
+ *  bell used to obey none of the scoping the routes enforce: every franchise
+ *  (and every staff member) saw every alert in the company. */
+async function franchiseOfAlert(input: NotifyInput): Promise<string | null> {
+  if (input.franchiseId !== undefined) return input.franchiseId;
+  if (!input.ref) return null;
+  try {
+    const t = input.tenantId;
+    const childFranchise = async (childId?: string) => {
+      if (!childId) return null;
+      const bs = await db.collection("bookings").where("tenantId", "==", t).where("childId", "==", childId).get();
+      return (bs.docs.map((d) => d.get("franchiseId") as string | undefined).find(Boolean)) ?? null;
+    };
+    switch (input.category) {
+      case "booking": {
+        const b = await db.collection("bookings").doc(`${t}_${input.ref}`).get();
+        return (b.get("franchiseId") as string | undefined) ?? null;
+      }
+      case "medication": {
+        const m = await db.collection("medications").doc(input.ref).get();
+        return m.exists ? childFranchise(m.get("childId") as string | undefined) : null;
+      }
+      case "accident":
+      case "incident": {
+        const r = await db.collection("incidents").doc(input.ref).get();
+        return r.exists ? childFranchise(r.get("childId") as string | undefined) : null;
+      }
+      case "trip": {
+        const tr = await db.collection("trips").doc(input.ref).get();
+        return (tr.get("franchiseId") as string | undefined) ?? null;
+      }
+      default:
+        return null;
+    }
+  } catch {
+    return null;
+  }
+}
+
+/** The franchise account's own address, for its alert emails. */
+async function franchiseEmail(tenantId: string, franchiseId: string): Promise<string | undefined> {
+  try {
+    const u = await db.collection("users").doc(franchiseId).get();
+    if (u.exists && u.get("tenantId") === tenantId && u.get("role") === "franchise") return (u.get("email") as string | undefined) ?? undefined;
+    const q = await db.collection("users").where("tenantId", "==", tenantId).where("franchiseId", "==", franchiseId).where("role", "==", "franchise").limit(1).get();
+    return q.empty ? undefined : ((q.docs[0].get("email") as string | undefined) ?? undefined);
+  } catch {
+    return undefined;
+  }
 }
 
 /** Raise the bell and send the email. Fire-and-forget: a notification must
@@ -215,9 +282,11 @@ export async function notify(input: NotifyInput): Promise<void> {
     // Both apply only to tenant-audience alerts, and only when explicitly set
     // false (an absent key stays on).
     let tenantEmailOff = false;
+    // Which franchise the alert is about — decides whose bell, whose Setup →
+    // Notifications applies, and whose inbox gets the email.
+    const franchiseId = input.to.kind === "tenant" ? await franchiseOfAlert(input) : null;
     if (input.to.kind === "tenant") {
-      const notifs = (await db.collection("libraries").doc(input.tenantId).get()).data()
-        ?.settings?.notifications as Record<string, boolean | "bell"> | undefined;
+      const notifs = (await loadSettings(input.tenantId, franchiseId)).notifications as Record<string, boolean | "bell"> | undefined;
       if (input.key) {
         const pref = notifs?.[input.key];
         // Explicitly off → skip. Absent → skip only for default-off keys.
@@ -242,6 +311,7 @@ export async function notify(input: NotifyInput): Promise<void> {
     await col().add({
       tenantId: input.tenantId,
       audience: input.to.kind,
+      ...(franchiseId ? { franchiseId } : {}),
       ...(parentEmail ? { email: parentEmail } : {}),
       category: input.category,
       title: input.title,
@@ -257,11 +327,12 @@ export async function notify(input: NotifyInput): Promise<void> {
     let to: string | undefined;
     let footer: string | undefined;
     if (parentEmail) {
-      if (await isMuted(parentEmail, input.category)) return; // bell yes, email no
+      if (!input.ignoreMute && (await isMuted(parentEmail, input.category))) return; // bell yes, email no
       to = parentEmail;
       footer = `You're receiving this because your child attends with ${provider.name}. You can turn these off in your account.`;
     } else {
-      to = provider.email;
+      // A franchise's alert goes to the FRANCHISE's inbox, not head office's.
+      to = (franchiseId ? await franchiseEmail(input.tenantId, franchiseId) : undefined) ?? provider.email;
       footer = "You're receiving this because you're on this provider's team on ActivityOS.";
     }
     if (!to?.includes("@")) return;
@@ -317,13 +388,37 @@ export async function notificationsForParent(email: string, limit = 100) {
 
 /** A provider team's bell, newest first. Parent-addressed notifications carry
  *  the same tenantId but are the family's business, not the team's. */
-export async function notificationsForTenant(tenantId: string, limit = 100, viewerEmail?: string) {
+/** Who is reading a team bell — decides which alerts they may see and whose
+ *  read state they get. */
+export interface BellViewer { role?: string; franchiseId?: string | null }
+
+/** What STAFF see untargeted: the day-to-day. Not billing or bookings (money),
+ *  and not incidents — that category carries safeguarding concerns, which may
+ *  be about a colleague. Anything aimed at them by name always shows. */
+const STAFF_CATEGORIES = new Set<NotifyCategory>(["accident", "medication", "trip", "calendar", "moment", "register", "task"]);
+
+/** Firestore field paths can't hold dots — an email as a map key stores "." as ",". */
+const readKey = (email: string) => email.replace(/\./g, ",");
+
+export async function notificationsForTenant(tenantId: string, limit = 100, viewerEmail?: string, viewer: BellViewer = {}) {
   const snap = await col().where("tenantId", "==", tenantId).where("audience", "==", "tenant").get();
   const ve = viewerEmail ? viewerEmail.trim().toLowerCase() : undefined;
+  const isOwner = viewer.role === undefined || viewer.role === "company" || viewer.role === "freelancer" || viewer.role === "platform";
+  const fid = viewer.franchiseId ?? null;
   return snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as NotificationDoc) }))
     // Untargeted tenant alerts go to everyone; a `toEmail` alert only to that person.
     .filter((n) => !n.toEmail || n.toEmail === ve)
+    .filter((n) => {
+      if (n.toEmail) return true;
+      // A franchise (or its staff) sees its OWN alerts — never head office's
+      // or a sibling's. Untagged alerts predate tagging and aren't shown.
+      if (fid && (viewer.role === "franchise" || viewer.role === "staff") && (n.franchiseId ?? null) !== fid) return false;
+      if (viewer.role === "staff" && !STAFF_CATEGORIES.has(n.category)) return false;
+      return true;
+    })
+    // The owner keeps the shared readAt; everyone else has their own.
+    .map((n) => (isOwner || !ve ? n : { ...n, readAt: n.readBy?.[readKey(ve)] ?? null }))
     .sort((a, b) => b.at.localeCompare(a.at))
     .slice(0, limit);
 }
@@ -364,7 +459,7 @@ export async function notifyTenantMember(
       await sendMail(
         email.trim(),
         n.title,
-        `<p>${n.body}</p>${n.href ? `<p><a href="${webUrl}${n.href}">Open it in ${provider.name || "your portal"}</a></p>` : ""}`,
+        `<p>${escapeHtml(n.body)}</p>${n.href ? `<p><a href="${webUrl}${n.href}">Open it in ${escapeHtml(provider.name || "your portal")}</a></p>` : ""}`,
       );
     }
   } catch { /* best-effort */ }
@@ -372,19 +467,21 @@ export async function notifyTenantMember(
 
 /** Mark specific notifications read, or every one the caller can see. */
 export async function markRead(
-  scope: { email?: string; tenantId?: string; memberEmail?: string },
+  scope: { email?: string; tenantId?: string; memberEmail?: string; viewer?: BellViewer },
   ids?: string[],
 ): Promise<number> {
   const mine = scope.email
     ? await notificationsForParent(scope.email, 500)
     : scope.tenantId
-      ? await notificationsForTenant(scope.tenantId, 500, scope.memberEmail)
+      ? await notificationsForTenant(scope.tenantId, 500, scope.memberEmail, scope.viewer)
       : [];
   const targets = mine.filter((n) => !n.readAt && (!ids?.length || ids.includes(n.id)));
   if (!targets.length) return 0;
   const at = new Date().toISOString();
+  const role = scope.viewer?.role;
+  const perPerson = !!scope.tenantId && !!scope.memberEmail && !!role && !["company", "freelancer", "platform"].includes(role);
   const batch = db.batch();
-  for (const n of targets) batch.update(col().doc(n.id), { readAt: at });
+  for (const n of targets) batch.update(col().doc(n.id), perPerson ? { [`readBy.${readKey(scope.memberEmail!)}`]: at } : { readAt: at });
   await batch.commit();
   return targets.length;
 }

@@ -1,13 +1,17 @@
 import { Router, type Request } from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
+import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
+import { paidSoFar } from "../../../features/bookings/helpers";
+import type { Booking } from "../../../features/bookings/types";
 import { sendMail } from "../lib/mailer";
 import { tenantSender } from "../lib/sender";
 import { renderMoneyDoc } from "../lib/moneyDoc";
 import { platformFallback, stripe, toPence } from "../lib/stripe";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
+import { ukToday } from "../lib/ukDate";
 
 const WEB_URL = process.env.PUBLIC_WEB_URL || process.env.APP_URL || "http://localhost:3000";
 
@@ -76,7 +80,7 @@ invoices.get("/", async (req, res) => {
   const tenantId = scope(req, res);
   if (!tenantId) return;
   const snap = await col.where("tenantId", "==", tenantId).get();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
   const thisYear = today.slice(0, 4);
   let list = snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { date?: string; dueDate?: string; amount?: number; status?: string; franchiseId?: string | null })
@@ -97,8 +101,49 @@ invoices.post("/", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const doc = { ...parsed.data, amount: grandTotal(parsed.data.lineItems, parsed.data.amount, parsed.data.taxRate), payToken: randomUUID(), tenantId: auth.tenantId, franchiseId: auth.role === "franchise" ? auth.franchiseId : null, createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
   const ref = await col.add(doc);
+  // Raised already paid (cash taken on the spot) — settle its booking now,
+  // exactly as marking it paid later does (acceptance d4s7 side finding).
+  if (doc.status === "paid")
+    await settleInvoiceBooking(ref.id, { via: "manual" }).catch((e) => console.error("[invoices] settle booking:", (e as Error).message));
   res.status(201).json({ id: ref.id, ...doc });
 });
+
+/**
+ * An invoice raised for a booking settles THAT booking when it's paid. It
+ * didn't: the invoice flipped to paid and the booking still said Unpaid, so
+ * the family could be chased (and pay) again, and Money-in counted the money
+ * twice — once as an invoice, once when the booking was paid.
+ *
+ * Idempotent: the invoice is stamped bookingSettledAt, so a repeated confirm
+ * or a re-save of "paid" never adds the money to the booking twice.
+ */
+async function settleInvoiceBooking(invId: string, extra: { paymentIntentId?: string; via: string }): Promise<void> {
+  const invRef = col.doc(invId);
+  await db.runTransaction(async (tx) => {
+    const inv = (await tx.get(invRef)).data();
+    if (!inv || inv.status !== "paid" || inv.bookingSettledAt || !inv.bookingRef || !inv.tenantId) return;
+    const bRef = db.collection("bookings").doc(`${inv.tenantId}_${String(inv.bookingRef).trim()}`);
+    const bSnap = await tx.get(bRef);
+    if (!bSnap.exists) return; // free-text ref that isn't one of ours — nothing to settle
+    const b = bSnap.data() as Booking;
+    if (b.status === "Cancelled") return;
+    // Cash already in, counted the way refunds count it (a legacy "Paid" row
+    // with no amountPaid was paid in full) — so a top-up invoice on a paid
+    // booking can't knock it back to "Partially paid".
+    const cashBefore = paidSoFar(b) - Math.max(0, b.walletApplied ?? 0);
+    const paid = Math.round((cashBefore + Number(inv.amount ?? 0)) * 100) / 100;
+    tx.set(bRef, {
+      amountPaid: paid,
+      pay: paid + Math.max(0, b.walletApplied ?? 0) >= (b.amount ?? 0) - 0.005 ? "Paid" : "Partially paid",
+      paidAt: new Date().toISOString(),
+      settledByInvoice: invId,
+      // The booking's own card payment (paymentIntentId + stripeAccount) is
+      // what a refund goes back to — keep it; the invoice's is recorded beside.
+      ...(extra.paymentIntentId ? { invoicePaymentIntentIds: FieldValue.arrayUnion(extra.paymentIntentId) } : {}),
+    }, { merge: true });
+    tx.set(invRef, { bookingSettledAt: new Date().toISOString(), bookingSettledVia: extra.via }, { merge: true });
+  });
+}
 
 async function own(req: Request, id: string) {
   const auth = req.auth!;
@@ -117,6 +162,8 @@ invoices.put("/:id", async (req, res) => {
   const p = parsed.data;
   const patch = { ...p, ...(p.lineItems !== undefined ? { amount: grandTotal(p.lineItems, p.amount, p.taxRate) } : p.amount !== undefined ? { amount: round2(p.amount) } : {}) };
   await o.snap.ref.set(patch, { merge: true });
+  if (p.status === "paid" && o.snap.data()!.status !== "paid")
+    await settleInvoiceBooking(o.snap.id, { via: "manual" }).catch((e) => console.error("[invoices] settle booking:", (e as Error).message));
   const after = await o.snap.ref.get();
   res.json({ id: after.id, ...after.data() });
 });
@@ -152,6 +199,18 @@ invoices.delete("/:id", async (req, res) => {
 });
 
 // ── Public pay page (no auth; found by unguessable token) ──────────────────
+// A pay link doesn't live for ever: it closes LINK_DAYS after the latest of the
+// invoice's due date, issue date, last send and payment — so re-sending an
+// overdue invoice (or moving its due date) gives the family a working link
+// again, and an old link in an inbox stops showing who owed what.
+const LINK_DAYS = 90;
+function linkExpiresOn(inv: Record<string, unknown>): string {
+  const day = (v: unknown) => (typeof v === "string" && /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : "");
+  const base = [inv.dueDate, inv.date, inv.emailedAt, inv.paidAt, inv.createdAt].map(day).filter(Boolean).sort().pop() ?? ukToday();
+  return new Date(Date.parse(`${base}T00:00:00Z`) + LINK_DAYS * 86_400_000).toISOString().slice(0, 10);
+}
+const linkExpired = (inv: Record<string, unknown>) => ukToday() > linkExpiresOn(inv);
+
 invoicePublic.get("/:token", async (req, res) => {
   const snap = await col.where("payToken", "==", req.params.token).limit(1).get();
   if (snap.empty) { res.status(404).json({ error: "This payment link isn’t valid." }); return; }
@@ -159,8 +218,23 @@ invoicePublic.get("/:token", async (req, res) => {
   const tenant = await db.collection("tenants").doc(inv.tenantId as string).get();
   const settings = (tenant.exists && (tenant.data()!.settings as Record<string, unknown>)) || {};
   const provider = (settings.providerName as string) || (tenant.data()?.name as string) || "Your provider";
+  const status = (inv.status as string) ?? "sent";
+  if (linkExpired(inv)) {
+    res.status(410).json({ error: "This payment link has expired.", code: "link_expired", provider, status: status === "paid" || status === "cancelled" ? status : "expired" });
+    return;
+  }
+  // Paid or cancelled: the link shows that and nothing to pay with. A paid one
+  // keeps its receipt details (what, how much, when) until the link expires.
+  if (status === "paid" || status === "cancelled") {
+    res.json({
+      provider, status, closed: true, amount: inv.amount ?? 0, description: inv.description ?? null, reference: inv.bookingRef ?? null,
+      paidAt: status === "paid" ? (inv.paidAt ?? null) : null, dueDate: null, customerName: null, payMethods: [], cardEnabled: false,
+    });
+    return;
+  }
   const payMethods = Array.isArray(settings.payMethods) && settings.payMethods.length ? settings.payMethods : ["Bank transfer", "Tax-Free Childcare", "Childcare vouchers"];
   res.json({
+    expiresOn: linkExpiresOn(inv),
     provider, amount: inv.amount ?? 0, description: inv.description ?? null, reference: inv.bookingRef ?? null,
     status: inv.status ?? "sent", dueDate: inv.dueDate ?? null, customerName: inv.customerName ?? null,
     payMethods,
@@ -183,7 +257,8 @@ invoicePublic.post("/:token/checkout", async (req, res) => {
   const inv = doc.data() as Record<string, unknown>;
   if (inv.status === "paid") { res.status(409).json({ error: "This invoice is already paid" }); return; }
   if (inv.status === "cancelled") { res.status(409).json({ error: "This invoice was cancelled" }); return; }
-  const amount = Math.round(Number(inv.amount ?? 0) * 100) / 100;
+  if (linkExpired(inv)) { res.status(410).json({ error: "This payment link has expired — ask your provider to send it again.", code: "link_expired" }); return; }
+  const amount =Math.round(Number(inv.amount ?? 0) * 100) / 100;
   if (!(amount > 0)) { res.status(409).json({ error: "Nothing to pay" }); return; }
 
   const tenant = await db.collection("tenants").doc(inv.tenantId as string).get();
@@ -259,5 +334,6 @@ invoicePublic.post("/:token/confirm/:paymentId", async (req, res) => {
     batch.update(paySnap.ref, { status: "succeeded", paidAt });
     await batch.commit();
   }
+  await settleInvoiceBooking(invDoc.id, { paymentIntentId: rec.paymentIntentId, via: "link" }).catch((e) => console.error("[invoices] settle booking:", (e as Error).message));
   res.json({ status: "succeeded", paid: true });
 });

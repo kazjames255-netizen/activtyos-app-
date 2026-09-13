@@ -24,8 +24,17 @@ feedback.post("/", async (req, res) => {
   if (!email) { res.status(403).json({ error: "Sign in to leave feedback" }); return; }
   const p = schema.safeParse(req.body);
   if (!p.success) { res.status(400).json({ error: p.error.issues }); return; }
+  // Only a family that has booked with the provider can review it, and the
+  // review is pinned to the franchise that ran the booking — so it lands with
+  // the right franchise even when two run a listing with the same name (d22s4).
+  const mine = (await Promise.all([...new Set([email, (req.user?.email ?? "").trim()])].filter(Boolean)
+    .map((e) => db.collection("bookings").where("tenantId", "==", p.data.tenantId).where("email", "==", e).get()))).flatMap((q) => q.docs);
+  if (!mine.length) { res.status(403).json({ error: "You can review a provider once you've booked with them" }); return; }
+  const booking = (p.data.ref ? mine.find((d) => d.get("ref") === p.data.ref) : undefined)
+    ?? (p.data.listing ? mine.find((d) => d.get("listing") === p.data.listing) : undefined);
   const doc = {
     tenantId: p.data.tenantId,
+    ...(booking ? { franchiseId: (booking.get("franchiseId") as string | undefined) ?? null, listingId: (booking.get("listingId") as string | undefined) ?? null } : {}),
     email,
     name: req.user?.name ?? null,
     rating: p.data.rating,

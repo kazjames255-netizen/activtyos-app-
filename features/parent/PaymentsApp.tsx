@@ -72,6 +72,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
   const [bookings, setBookings] = useState<Booking[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [paying, setPaying] = useState<string[] | null>(null); // refs being paid
+  const [payingTenant, setPayingTenant] = useState<string | undefined>(undefined);
   const [providerByTenant, setProviderByTenant] = useState<Record<string, string>>({});
   const [venueByListing, setVenueByListing] = useState<Record<string, { location?: string | null; address?: string | null }>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -231,7 +232,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
       {owed.length > 0 && (
         <Card className="mb-3 p-4" style={{ borderLeftWidth: "4px", borderLeftColor: "var(--red,#e21d27)" }}>
           <div className="mb-1.5 text-[13px] font-extrabold">{tr("parent.waitingOnPayment")}</div>
-          {owed.map((b) => <Row key={b.ref} b={b} action onPay={() => setPaying([b.ref])} />)}
+          {owed.map((b) => <Row key={b.ref} b={b} action onPay={() => { setPayingTenant(b.tenantId); setPaying([b.ref]); }} />)}
         </Card>
       )}
 
@@ -286,7 +287,7 @@ export function PaymentsApp({ hideHeader = false }: { hideHeader?: boolean }) {
         </Card>
       )}
 
-      {paying && <PayModal refs={paying} onClose={() => setPaying(null)} onPaid={refresh} />}
+      {paying && <PayModal refs={paying} tenantId={payingTenant} onClose={() => setPaying(null)} onPaid={refresh} />}
     </div>
   );
 }

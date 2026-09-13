@@ -4,35 +4,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { collectedNet, refundedGross, owedOf } from "@/features/bookings/helpers";
+import { collectedNet, owedNow } from "@/features/bookings/helpers";
 import type { Booking } from "@/features/bookings/types";
 import { CollapsibleStats, LIGHT_PALETTE, PageHero, TabStrip } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
 import { SeasonPicker } from "@/components/SeasonPicker";
+import { csvCell } from "@/lib/csv";
 import {
-  GRAD, ACT_C, money, compactMoney, colorFor,
+  GRAD, ACT_C, money, compactMoney,
   Tile, Ring, Donut, Breakdown, Panel, Legend, Empty, Info, TrendChart,
 } from "./finance-kit";
+import { financeFigures, isCancelled, isCardPayment, learnerNames, mKey, monthOf, payIndex, type PaymentRecord } from "./financeFigures";
 
 // ── Types for the extra ledgers we fold in (subset of each route's shape) ──
 interface Invoice { id: string; customerName: string; amount: number; date: string; dueDate?: string; status: string; overdue?: boolean }
 interface InvPayload { items: Invoice[]; summary: { count: number; outstanding: number; collected: number; overdue: number } }
-interface PaymentRecord { id: string; refs?: string[]; email?: string; method?: string; amount: number; type?: string; status: string; createdAt: string }
 interface PayStatus { connected: boolean; payoutsEnabled?: boolean; chargesEnabled?: boolean; detailsSubmitted?: boolean }
 
 const BLUE = "#1d3a8f", LIGHTB = "#3f78d8", GREEN = "#0f7a43", GOLD = "#f0b100", PINK = "#e2225f";
-const mKey = (d: Date) => `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-const isCancelled = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
-const monthOf = (b: Booking): string | null => { const s = b.createdAt || b.days?.[0] || ""; const m = s.slice(0, 7); return /^\d{4}-\d{2}$/.test(m) ? m : null; };
-const bookerKey = (b: Booking) => (b.email || b.booker || "").trim().toLowerCase();
-const learnerNames = (b: Booking): string[] => (b.kids?.length ? b.kids.map((k) => k.name).filter(Boolean) : b.child ? [b.child] : []) as string[];
-const bookingAges = (b: Booking): number[] => {
-  const fromKids = (b.kids ?? []).map((k) => Number((k as { age?: number }).age)).filter((n) => Number.isFinite(n) && n > 0);
-  if (fromKids.length) return fromKids;
-  return Number.isFinite(Number(b.age)) && Number(b.age) > 0 ? [Number(b.age)] : [];
-};
-const SOURCE_OF = (b: Booking) => (b.pay === "Funded" ? "Childcare / voucher" : b.method || "Card");
-const AGE_BUCKETS: [string, number, number][] = [["Under 5", 0, 4], ["5–7", 5, 7], ["8–10", 8, 10], ["11–13", 11, 13], ["14+", 14, 200]];
 const VALUE_BANDS: [string, number, number][] = [["£0–25", 0, 25], ["£25–50", 25, 50], ["£50–100", 50, 100], ["£100–200", 100, 200], ["£200+", 200, Infinity]];
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -121,119 +110,13 @@ export function FinanceAnalyticsApp() {
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t open Stripe"); setConnecting(false); }
   }
 
-  const a = useMemo(() => {
-    // Waitlisted places have paid nothing and hold no seat, so they're neither
-    // revenue nor an attendee — exclude them (alongside Declined). Cancelled
-    // stays IN so its retained/refunded money still nets out below.
-    const all = (bookings ?? []).filter((b) =>
-      b.status !== "Declined" && b.status !== "Waitlisted"
-      && (!season || listingSeason[b.listingId ?? ""] === season)
-      && (!venue || listingVenueId[b.listingId ?? ""] === venue));
-    const now = new Date(nowMs);
-    const keys: string[] = [];
-    for (let i = months - 1; i >= 0; i--) keys.push(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
-    const inWindow = new Set(keys);
-    const windowStart = `${keys[0]}-01`;
-    // The equal-length window immediately before, for period-on-period deltas.
-    const prevKeys = new Set<string>();
-    for (let i = 2 * months - 1; i >= months; i--) prevKeys.add(mKey(new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1))));
-
-    // First-seen (all time) so we can split new vs returning customers/learners.
-    const firstBooker = new Map<string, string>();
-    const firstLearner = new Map<string, string>();
-    for (const b of all) {
-      const when = b.createdAt || b.days?.[0] || "";
-      const bk = bookerKey(b);
-      if (bk && (!firstBooker.has(bk) || when < firstBooker.get(bk)!)) firstBooker.set(bk, when);
-      for (const ln of learnerNames(b)) { const k = ln.toLowerCase(); if (!firstLearner.has(k) || when < firstLearner.get(k)!) firstLearner.set(k, when); }
-    }
-
-    const bookedByMonth = keys.map((k) => ({ label: k, value: 0 }));
-    const collectedByMonth = keys.map((k) => ({ label: k, value: 0 }));
-    const bySource = new Map<string, number>();
-    // Keyed by listingId so same-named listings don't merge; carries venue.
-    const byListing = new Map<string, { name: string; venue?: string; value: number }>();
-    const byBooker = new Map<string, { name: string; value: number }>();
-    const bookersInWin = new Set<string>();
-    const learnersInWin = new Set<string>();
-    const ages: number[] = [];
-    const owing: { ref: string; name: string; listing: string; owed: number; when: string }[] = [];
-    let booked = 0, collected = 0, refunds = 0, owed = 0, paidBookings = 0, paidSessions = 0, freeSessions = 0;
-    let prevCollected = 0, prevBooked = 0;
-    let newBookers = 0, returningBookers = 0, newLearners = 0, returningLearners = 0;
-    const seenBooker = new Set<string>(), seenLearner = new Set<string>();
-
-    for (const b of all) {
-      const m = monthOf(b);
-      if (m && prevKeys.has(m)) { prevCollected += collectedNet(b); if (!isCancelled(b)) prevBooked += b.amount; }
-      if (!m || !inWindow.has(m)) continue;
-      const i = keys.indexOf(m);
-      const col = collectedNet(b);
-      if (!isCancelled(b)) { bookedByMonth[i].value += b.amount; booked += b.amount; }
-      collectedByMonth[i].value += col; collected += col;
-      refunds += refundedGross(b);
-      if (!isCancelled(b)) { const o = owedOf(b); owed += o; if (o > 0) owing.push({ ref: b.ref, name: b.booker || b.email || "—", listing: b.listing || "", owed: o, when: b.createdAt || b.days?.[0] || "" }); }
-      if (col > 0) { paidBookings++; bySource.set(SOURCE_OF(b), (bySource.get(SOURCE_OF(b)) ?? 0) + col); }
-      if (!isCancelled(b) && (b.listingId || b.listing)) {
-        const key = b.listingId || b.listing!;
-        const cur = byListing.get(key) ?? { name: b.listing || "—", venue: b.listingId ? listingVenue[b.listingId] : undefined, value: 0 };
-        cur.value += col; byListing.set(key, cur);
-      }
-      if (col > 0) { const cur = byBooker.get(bookerKey(b)) ?? { name: b.booker || b.email || "—", value: 0 }; cur.value += col; byBooker.set(bookerKey(b), cur); }
-      const sess = b.sessions?.length || b.seats || 1;
-      if (!isCancelled(b)) { if (b.amount > 0) paidSessions += sess; else freeSessions += sess; }
-
-      const bk = bookerKey(b);
-      if (bk && !bookersInWin.has(bk)) {
-        bookersInWin.add(bk);
-        if ((firstBooker.get(bk) ?? "") >= windowStart) newBookers++; else returningBookers++;
-      }
-      if (bk && !seenBooker.has(bk)) seenBooker.add(bk);
-      for (const ln of learnerNames(b)) {
-        const k = ln.toLowerCase();
-        if (!learnersInWin.has(k)) { learnersInWin.add(k); if ((firstLearner.get(k) ?? "") >= windowStart) newLearners++; else returningLearners++; }
-        if (!seenLearner.has(k)) seenLearner.add(k);
-      }
-      if (!isCancelled(b)) ages.push(...bookingAges(b));
-    }
-
-    const feeEst = (list: Booking[]) => list.filter((b) => collectedNet(b) > 0).reduce((s, b) => s + collectedNet(b) * 0.014 + 0.2, 0);
-    const fees = feeEst(all.filter((b) => { const m = monthOf(b); return m != null && inWindow.has(m); }));
-
-    // Expected payout split: settled (older than 7 days) vs on-the-way (last 7 days).
-    const weekAgo = nowMs - 7 * 86400000;
-    let inTransit = 0, inBank = 0;
-    for (const b of all) {
-      if (collectedNet(b) <= 0) continue;
-      const t = Date.parse((b.createdAt || "").length === 10 ? `${b.createdAt}T00:00:00Z` : b.createdAt || "");
-      if (Number.isNaN(t)) continue;
-      const net = collectedNet(b) * (1 - 0.014) - 0.2;
-      if (t >= weekAgo) inTransit += Math.max(0, net); else inBank += Math.max(0, net);
-    }
-
-    const ageDist = AGE_BUCKETS.map(([label, lo, hi], i) => ({ label, value: ages.filter((n) => n >= lo && n <= hi).length, sub: String(ages.filter((n) => n >= lo && n <= hi).length), color: ACT_C[i % ACT_C.length] }));
-    const topListings = [...byListing.values()].sort((x, y) => y.value - x.value).slice(0, 8).map((v, i) => ({ label: v.name, venue: v.venue, value: v.value, sub: money(v.value), color: ACT_C[i % ACT_C.length] }));
-    const topCustomers = [...byBooker.values()].sort((x, y) => y.value - x.value).slice(0, 8).map((v, i) => ({ label: v.name, value: v.value, sub: money(v.value), color: ACT_C[i % ACT_C.length] }));
-    const sourceRows = [...bySource.entries()].sort((x, y) => y[1] - x[1]);
-    // Period-on-period change (this window vs the one before it).
-    const pctChange = (cur: number, prev: number) => (prev > 0 ? Math.round(((cur - prev) / prev) * 100) : null);
-
-    return {
-      keys, windowStart,
-      bookedByMonth, collectedByMonth,
-      booked, collected, refunds, owed, net: collected - fees, fees,
-      prevCollected, prevBooked, collectedDelta: pctChange(collected, prevCollected), bookedDelta: pctChange(booked, prevBooked),
-      inTransit, inBank,
-      source: sourceRows.map(([label, value]) => ({ label, value, color: label.startsWith("Childcare") ? GREEN : label === "Card" ? BLUE : colorFor(label) })),
-      topListings, topCustomers,
-      owing: owing.sort((x, y) => y.owed - x.owed),
-      totalBookers: bookersInWin.size, totalLearners: learnersInWin.size,
-      newBookers, returningBookers, newLearners, returningLearners,
-      paidSessions, freeSessions,
-      spendPerCustomer: bookersInWin.size ? collected / bookersInWin.size : 0,
-      ageDist, paidBookings,
-    };
-  }, [bookings, months, nowMs, season, venue, listingSeason, listingVenue, listingVenueId]);
+  // The figures themselves live in ./financeFigures (plain functions, so the
+  // page's maths can be checked against the Dashboard's on its own).
+  const payIdx = useMemo(() => payIndex(bookings ?? [], payments), [bookings, payments]);
+  const a = useMemo(
+    () => financeFigures({ bookings: bookings ?? [], payIdx, months, nowMs, season, venue, listingSeason, listingVenue, listingVenueId }),
+    [bookings, payIdx, months, nowMs, season, venue, listingSeason, listingVenue, listingVenueId],
+  );
 
   // Add-ons · value · pass · gender · day-of-week — the extra comparisons, same
   // filters/window as `a`, kept separate to keep each concern legible.
@@ -296,14 +179,14 @@ export function FinanceAnalyticsApp() {
   // Export the filtered, in-window bookings an accountant would want — one row
   // per booking with the money broken out. Honours the Season/Location filters.
   function exportCSV() {
-    const cell = (v: unknown) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+    const cell = csvCell; // formula-safe: Family is the parent-typed booker name
     const rows = (bookings ?? []).filter((b) =>
       b.status !== "Declined" && b.status !== "Waitlisted"
       && (!season || listingSeason[b.listingId ?? ""] === season)
       && (!venue || listingVenueId[b.listingId ?? ""] === venue)
       && (() => { const m = monthOf(b); return m != null && a.keys.includes(m); })());
     const header = ["Ref", "Date", "Family", "Email", "Listing", "Location", "Status", "Method", "Booked", "Collected", "Owed"];
-    const body = rows.map((b) => [b.ref, (b.createdAt || b.days?.[0] || "").slice(0, 10), b.booker, b.email, b.listing, (b.listingId ? listingVenue[b.listingId] : "") || "", b.status, b.method || "", b.amount, collectedNet(b), owedOf(b)].map(cell).join(","));
+    const body = rows.map((b) => [b.ref, (b.createdAt || b.days?.[0] || "").slice(0, 10), b.booker, b.email, b.listing, (b.listingId ? listingVenue[b.listingId] : "") || "", b.status, b.method || "", b.amount, collectedNet(b), owedNow(b)].map(cell).join(","));
     const blob = new Blob([[header.join(","), ...body].join("\n")], { type: "text/csv" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -377,9 +260,9 @@ export function FinanceAnalyticsApp() {
           <CollapsibleStats id="finance-overview">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Revenue collected" icon="💰" grad={GRAD.green} value={money(a.collected)} sub={<>of {money(a.booked)} booked<Delta pct={a.collectedDelta} /></>} aside={<Ring pct={a.booked ? (a.collected / a.booked) * 100 : 0} label={`${a.booked ? Math.round((a.collected / a.booked) * 100) : 0}%`} />} />
-            <Tile label="Owed to you" icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={a.owed > 0 ? "unpaid / invoiced" : "all settled"} />
-            <Tile label="Refunds" icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={`last ${months} months`} />
-            <Tile label="Est. net to bank" icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={`after ~${money(a.fees)} fees`} />
+            <Tile label="Owed to you" icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub={a.owed > 0 ? "owed now · any period" : "all settled"} />
+            <Tile label="Refunds" icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub={`given in the last ${months} months`} />
+            <Tile label="Est. net after fees" icon="🏦" grad={GRAD.blue} value={money(a.net)} sub={`after ~${money(a.fees)} card fees`} />
           </div>
           </CollapsibleStats>
           <div className="grid gap-4 lg:grid-cols-3">
@@ -407,11 +290,12 @@ export function FinanceAnalyticsApp() {
           <CollapsibleStats id="finance-revenue">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
             <Tile label="Total booked" icon="🎫" grad={GRAD.blue} value={money(a.booked)} sub={<><span>{months}-month value</span><Delta pct={a.bookedDelta} /></>} />
-            <Tile label="Collected" icon="✅" grad={GRAD.green} value={money(a.collected)} sub={<><span>paid &amp; funded</span><Delta pct={a.collectedDelta} /></>} />
-            <Tile label="Outstanding" icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.teal} value={money(a.owed)} sub="not yet paid" />
+            <Tile label="Collected" icon="✅" grad={GRAD.green} value={money(a.collected)} sub={<><span>by date paid</span><Delta pct={a.collectedDelta} /></>} />
+            <Tile label="Outstanding" icon="⏳" grad={a.owed > 0 ? GRAD.pink : GRAD.teal} value={money(a.owed)} sub="owed now · any period" />
             <Tile label="Refunds" icon="↩️" grad={GRAD.amber} value={money(a.refunds)} sub="issued in period" />
           </div>
           </CollapsibleStats>
+          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">Booking revenue only — booked by the month it was booked, collected by the month it was paid. Standalone invoices and income you log by hand are in Money in.</div>
           <Panel title="Booked vs collected by month" right={<Legend items={[["Booked", LIGHTB], ["Collected", GREEN]]} />}>
             <TrendChart series={a.bookedByMonth} series2={a.collectedByMonth} fmt={compactMoney} color={LIGHTB} color2={GREEN} />
           </Panel>
@@ -446,20 +330,20 @@ export function FinanceAnalyticsApp() {
           )}
           <CollapsibleStats id="finance-payouts">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="On the way (est.)" icon="🚚" grad={GRAD.amber} value={money(a.inTransit)} sub="collected in last 7 days" />
-            <Tile label="In your bank (est.)" icon="🏦" grad={GRAD.green} value={money(a.inBank)} sub="settled earlier" />
-            <Tile label="Est. fees" icon="✂️" grad={GRAD.violet} value={money(a.fees)} sub="~1.4% + 20p / payment" />
-            <Tile label="Est. net (period)" icon="💷" grad={GRAD.blue} value={money(a.net)} sub="collected − fees" />
+            <Tile label="On the way (est.)" icon="🚚" grad={GRAD.amber} value={money(a.inTransit)} sub="card payments, last 7 days" />
+            <Tile label="In your bank (est.)" icon="🏦" grad={GRAD.green} value={money(a.inBank)} sub="card payments, settled earlier" />
+            <Tile label="Est. fees" icon="✂️" grad={GRAD.violet} value={money(a.fees)} sub="~1.4% + 20p / card payment" />
+            <Tile label="Est. net (period)" icon="💷" grad={GRAD.blue} value={money(a.net)} sub="collected − card fees" />
           </div>
           </CollapsibleStats>
-          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">These payout figures are ActivityOS estimates from your paid bookings. Exact balances appear once your payment provider is fully connected.</div>
+          <div className="rounded-lg bg-[#eef2fb] px-3 py-2 text-[11px] text-[#1d3a8f]">These payout figures are ActivityOS estimates from your card payments only. Cash, bank transfers, vouchers and Tax-Free Childcare reach you directly, so they never show here as a payout. Exact balances appear once your payment provider is fully connected.</div>
           <Panel title="Payout transactions">
-            {payments.filter((p) => p.type !== "refund").length ? (
+            {payments.filter(isCardPayment).length ? (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[640px] text-[12.5px]">
                   <thead><tr className="border-b border-[var(--line)] text-left text-[10.5px] uppercase tracking-wide text-[var(--ink-3)]"><th className="py-2 font-bold">Date</th><th className="font-bold">Paid by</th><th className="font-bold">Method</th><th className="font-bold">Reference</th><th className="font-bold">Status</th><th className="py-2 text-right font-bold">Amount</th></tr></thead>
                   <tbody>
-                    {payments.filter((p) => p.type !== "refund").slice(0, 40).map((p) => (
+                    {payments.filter(isCardPayment).slice(0, 40).map((p) => (
                       <tr key={p.id} className="border-b border-[var(--line)]">
                         <td className="py-2 text-[var(--ink-2)]">{new Date(p.createdAt).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" })}</td>
                         <td className="font-semibold text-[var(--ink)]">{payerName(p)}</td>
@@ -479,10 +363,10 @@ export function FinanceAnalyticsApp() {
         <div className="flex flex-col gap-4">
           <CollapsibleStats id="finance-debts">
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-            <Tile label="Owed by families" icon="🧾" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub="unpaid bookings" />
+            <Tile label="Owed by families" icon="🧾" grad={a.owed > 0 ? GRAD.pink : GRAD.green} value={money(a.owed)} sub="owed now · whenever booked" />
             <Tile label="Unpaid invoices" icon="📄" grad={GRAD.amber} value={money(invoices?.summary.outstanding ?? 0)} sub={`${invoices?.items.filter((i) => i.status !== "paid").length ?? 0} open`} />
             <Tile label="Overdue invoices" icon="⏰" grad={GRAD.pink} value={money(invoices?.summary.overdue ?? 0)} sub={`${invoices?.items.filter((i) => i.overdue).length ?? 0} past due`} />
-            <Tile label="Refunds issued" icon="↩️" grad={GRAD.violet} value={money(a.refunds)} sub={`last ${months} months`} />
+            <Tile label="Refunds issued" icon="↩️" grad={GRAD.violet} value={money(a.refunds)} sub={`given in the last ${months} months`} />
           </div>
           </CollapsibleStats>
           <Panel title="Who owes you" right={<span className="text-[11px] font-bold text-[var(--ink-3)]">{a.owing.length} booking{a.owing.length === 1 ? "" : "s"} · {money(a.owed)}</span>}>

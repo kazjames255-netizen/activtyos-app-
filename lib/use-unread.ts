@@ -5,7 +5,17 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PortalKey } from "@/lib/nav/config";
 
-interface UnreadThread {
+// Just the thread fields the badge and the dashboard card need — the full
+// model lives in features/messages.
+export interface ThreadSummary {
+  id: string;
+  parentName?: string;
+  parentEmail?: string;
+  tenantName?: string;
+  subject?: string;
+  lastBody?: string;
+  lastFrom?: "operator" | "parent";
+  lastAt?: string;
   operatorUnread?: number;
   parentUnread?: number;
 }
@@ -17,14 +27,14 @@ interface UnreadThread {
 // and it's just good hygiene regardless. In-flight requests are shared; a short
 // TTL absorbs the mount burst; realtime events force a fresh read.
 const TTL_MS = 4000;
-let cached: UnreadThread[] | null = null;
+let cached: ThreadSummary[] | null = null;
 let cachedAt = 0;
-let inflight: Promise<UnreadThread[]> | null = null;
+let inflight: Promise<ThreadSummary[]> | null = null;
 
-function loadThreadsShared(force: boolean): Promise<UnreadThread[]> {
+function loadThreadsShared(force: boolean): Promise<ThreadSummary[]> {
   if (!force && cached && Date.now() - cachedAt < TTL_MS) return Promise.resolve(cached);
   if (inflight) return inflight;
-  inflight = apiGet<UnreadThread[]>("/api/messages/threads")
+  inflight = apiGet<ThreadSummary[]>("/api/messages/threads")
     .then((ts) => {
       cached = ts;
       cachedAt = Date.now();
@@ -46,7 +56,7 @@ export function useUnreadMessages(portal: PortalKey): number {
   const [count, setCount] = useState(0);
 
   const apply = useCallback(
-    (ts: UnreadThread[]) =>
+    (ts: ThreadSummary[]) =>
       setCount(ts.reduce((sum, t) => sum + ((portal === "custdash" ? t.parentUnread : t.operatorUnread) ?? 0), 0)),
     [portal],
   );
@@ -59,6 +69,24 @@ export function useUnreadMessages(portal: PortalKey): number {
   // Realtime updates must reflect a genuine change, so bypass the TTL cache.
   useRealtime(["threads", "messages"], () => load(true));
   return count;
+}
+
+/**
+ * The thread list itself, newest reply first — for surfaces that show WHO is
+ * waiting, not just how many (the dashboard's Messages card). Shares the cache
+ * above, so it rides along on the sidebar badge's request instead of adding
+ * one. `null` until the first load lands.
+ */
+export function useThreadSummaries(): ThreadSummary[] | null {
+  const [threads, setThreads] = useState<ThreadSummary[] | null>(null);
+  const load = useCallback((force: boolean) => {
+    loadThreadsShared(force)
+      .then((ts) => setThreads([...ts].sort((a, b) => `${b.lastAt ?? ""}`.localeCompare(`${a.lastAt ?? ""}`))))
+      .catch(() => setThreads([]));
+  }, []);
+  useEffect(() => { load(false); }, [load]);
+  useRealtime(["threads", "messages"], () => load(true));
+  return threads;
 }
 
 // Shared count of usable discount codes for the signed-in parent — powers the

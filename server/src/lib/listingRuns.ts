@@ -127,6 +127,59 @@ export async function sessionTimes(tenantId: string, bundleId?: string | null): 
   return { start: base.start, end: base.finish };
 }
 
+/** Pair each desired run with the existing auto block it continues: the block
+ *  sharing the most session dates (so taking out a week's FIRST day, which
+ *  moves its start date, still finds the same block), else one with the same
+ *  start date. Matching by start date alone closed the booked block and opened
+ *  an identical empty one — the same days sold twice (acceptance d6s8/d6s12). */
+function matchRuns<T extends { id: string; data(): FirebaseFirestore.DocumentData }>(existing: T[], desired: { startDate: string; sessions: { date: string }[] }[]): Map<number, T> {
+  const used = new Set<string>();
+  const out = new Map<number, T>();
+  desired.forEach((run, i) => {
+    const want = new Set(run.sessions.map((x) => x.date));
+    let best: T | undefined, bestN = 0;
+    for (const d of existing) {
+      if (used.has(d.id)) continue;
+      const n = ((d.data().sessions ?? []) as { date: string }[]).filter((x) => want.has(x.date)).length;
+      if (n > bestN) { best = d; bestN = n; }
+    }
+    best ??= existing.find((d) => !used.has(d.id) && d.data().startDate === run.startDate);
+    if (best) { used.add(best.id); out.set(i, best); }
+  });
+  return out;
+}
+
+/** Dates a re-save would take off a block while children are booked on them.
+ *  Saving used to replace the block's sessions outright: that day's register
+ *  vanished (and its attendance marks with it — the record of who was in your
+ *  care), while the bookings still listed the date. The caller refuses the
+ *  save with this list, so the operator moves or cancels those bookings first. */
+export async function bookedDatesDropped(
+  listingId: string,
+  tenantId: string,
+  recipe: RunRecipe,
+): Promise<{ date: string; booked: number }[]> {
+  const times = await sessionTimes(tenantId, recipe.blockId);
+  const desired = desiredRuns(recipe, times);
+  const snap = await db.collection("blocks").where("listingId", "==", listingId).where("tenantId", "==", tenantId).get();
+  const auto = snap.docs.filter((d) => d.data().auto === true);
+  const matched = matchRuns(auto, desired);
+  const keepOf = new Map<string, Set<string>>();
+  for (const [i, d] of matched) keepOf.set(d.id, new Set(desired[i].sessions.map((x) => x.date)));
+  const out: { date: string; booked: number }[] = [];
+  for (const d of auto) {
+    const b = d.data() as BlockDoc & { auto?: boolean };
+    // A booked block left with no run would be closed while a new, empty block
+    // sells its days again — so every booked date on it counts as dropped.
+    const keep = keepOf.get(d.id) ?? new Set<string>();
+    for (const s of b.sessions ?? []) {
+      const n = Number((b.dayCounts ?? {})[s.date] ?? 0);
+      if (n > 0 && !keep.has(s.date)) out.push({ date: s.date, booked: n });
+    }
+  }
+  return out.sort((x, y) => (x.date < y.date ? -1 : 1));
+}
+
 /** Bring the listing's auto blocks in line with its recipe. */
 export async function syncListingBlocks(
   listingId: string,
@@ -142,16 +195,17 @@ export async function syncListingBlocks(
     .where("tenantId", "==", tenantId)
     .get();
   const existingAuto = existingSnap.docs.filter((d) => d.data().auto === true);
-  const byStart = new Map(existingAuto.map((d) => [d.data().startDate as string, d]));
+  const matched = matchRuns(existingAuto, desired);
 
   const batch = db.batch();
   const seen = new Set<string>();
-  for (const run of desired) {
-    const match = byStart.get(run.startDate);
+  for (const [i, run] of desired.entries()) {
+    const match = matched.get(i);
     if (match) {
       seen.add(match.id);
       batch.update(match.ref, {
         name: run.name,
+        startDate: run.startDate,
         endDate: run.endDate,
         capacity: run.capacity,
         capacityScope: recipe.capacityScope ?? "listing",

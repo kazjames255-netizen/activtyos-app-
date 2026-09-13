@@ -34,7 +34,19 @@ async function franchisesOf(tenantId: string): Promise<{ franchiseId: string; na
 async function listingOwnerByName(tenantId: string): Promise<Map<string, string | null>> {
   const snap = await db.collection("listings").where("tenantId", "==", tenantId).get();
   const m = new Map<string, string | null>();
-  for (const d of snap.docs) { const l = d.data(); if (l.name) m.set(String(l.name), (l.franchiseId as string) ?? null); }
+  // Two franchises can run a listing with the same name ("Holiday Club"): a
+  // name shared by different owners proves nothing, so it attributes to no
+  // franchise rather than to whichever was read last (acceptance test d22s4).
+  const clash = new Set<string>();
+  for (const d of snap.docs) {
+    const l = d.data();
+    const n = String(l.title || l.name || "").trim();
+    if (!n) continue;
+    const owner = (l.franchiseId as string) ?? null;
+    if (m.has(n) && m.get(n) !== owner) clash.add(n);
+    m.set(n, owner);
+  }
+  for (const n of clash) m.set(n, null);
   return m;
 }
 
@@ -78,9 +90,11 @@ async function tenantReviewCfg(tenantId: string) {
 async function inhouseReviews(tenantId: string): Promise<NormReview[]> {
   const snap = await db.collection("feedback").where("tenantId", "==", tenantId).get();
   return snap.docs.map((d) => {
-    const f = d.data() as { rating?: number; comment?: string; name?: string | null; email?: string; listing?: string | null; createdAt?: string; reply?: { text: string; at: string } };
+    const f = d.data() as { rating?: number; comment?: string; name?: string | null; email?: string; listing?: string | null; createdAt?: string; reply?: { text: string; at: string }; franchiseId?: string | null };
     const author = f.name?.trim() || (f.email ? `${f.email.split("@")[0]}` : "A parent");
-    return { source: "inhouse" as const, rating: Number(f.rating) || 0, author, text: f.comment ?? "", postedAt: f.createdAt ?? "", listing: f.listing ?? null, verified: true, reply: f.reply ?? null, id: d.id };
+    // Newer feedback carries the booking's franchise (stamped when it was left);
+    // older feedback is attributed by listing name below.
+    return { source: "inhouse" as const, rating: Number(f.rating) || 0, author, text: f.comment ?? "", postedAt: f.createdAt ?? "", listing: f.listing ?? null, verified: true, reply: f.reply ?? null, id: d.id, ...("franchiseId" in f ? { franchiseId: f.franchiseId ?? null } : {}) };
   }).sort((a, b) => (a.postedAt < b.postedAt ? 1 : -1));
 }
 
@@ -146,7 +160,7 @@ async function buildSummary(tenantId: string, opts?: { isHeadOffice?: boolean; f
   if (opts?.isHeadOffice) {
     const ownerByName = await listingOwnerByName(tenantId);
     // Attribute any REAL in-house reviews to a franchise via their listing name.
-    inhouse = inhouse.map((r) => ({ ...r, franchiseId: r.listing ? (ownerByName.get(r.listing) ?? null) : null }));
+    inhouse = inhouse.map((r) => ({ ...r, franchiseId: r.franchiseId !== undefined ? r.franchiseId : r.listing ? (ownerByName.get(r.listing) ?? null) : null }));
     if (inhouse.length < 3) {
       const ownListings = [...ownerByName.entries()].filter(([, fid]) => fid == null).map(([n]) => n);
       inhouse = [...inhouse, ...demoReviews(ownListings, franchises, ownerByName)];
@@ -158,7 +172,7 @@ async function buildSummary(tenantId: string, opts?: { isHeadOffice?: boolean; f
     // text included, and could publicly reply to a sibling's.
     const ownerByName = await listingOwnerByName(tenantId);
     inhouse = inhouse
-      .map((r) => ({ ...r, franchiseId: r.listing ? (ownerByName.get(r.listing) ?? null) : null }))
+      .map((r) => ({ ...r, franchiseId: r.franchiseId !== undefined ? r.franchiseId : r.listing ? (ownerByName.get(r.listing) ?? null) : null }))
       .filter((r) => r.franchiseId === opts.franchiseId);
   }
   const inAvg = inhouse.length ? inhouse.reduce((n, r) => n + r.rating, 0) / inhouse.length : null;

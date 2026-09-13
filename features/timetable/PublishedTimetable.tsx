@@ -5,6 +5,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { OperatorPage } from "@/components/OperatorPage";
 import type { DayInfo, PlanRow } from "./types";
+import { useI18n } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Read-only rendering of a PUBLISHED timetable (GET /api/timetables/published)
@@ -25,9 +26,24 @@ export interface PublishedWeek {
   plan: PlanRow[][];
 }
 
+// Weekday label in the viewer's language. The published snapshot stores an
+// English short weekday ("Mon"), so derive it from the ISO date instead — or,
+// for undated plans, from the English name itself.
+const WD_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+export function localDayName(d: DayInfo, loc = "en-GB"): string {
+  let dt = new Date(d.iso + "T00:00:00");
+  if (isNaN(dt.getTime())) {
+    const i = WD_EN.indexOf(d.n);
+    if (i < 0) return d.n;
+    dt = new Date(2024, 0, 7 + i); // 7 Jan 2024 was a Sunday
+  }
+  return dt.toLocaleDateString(loc, { weekday: "short" });
+}
+
 function Banner({ row }: { row: PlanRow }) {
+  const { t } = useI18n();
   const lab =
-    row.type === "signin" ? "Sign-in" : row.type === "signout" ? "Sign-out" : row.type === "lunch" ? "Lunch" : "Break";
+    row.type === "signin" ? t("feed.signIn") : row.type === "signout" ? t("feed.signOut") : row.type === "lunch" ? t("feed.lunch") : t("feed.breakRow");
   const tm = row.times ? row.times.join("  ·  ") : row.time;
   const tone =
     row.type === "break" ? "bg-[var(--panel)] text-[var(--ink-3)]" : "bg-[var(--brand-soft)] text-[var(--brand-strong)]";
@@ -41,6 +57,7 @@ function Banner({ row }: { row: PlanRow }) {
 
 /** One day of a published plan, read-only. */
 export function PublishedDayGrid({ rows, groups, dayLabel }: { rows: PlanRow[]; groups: string[]; dayLabel: string }) {
+  const { t } = useI18n();
   const n = Math.max(1, groups.length);
   return (
     <div className="grid gap-1 overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-1" style={{ gridTemplateColumns: `74px repeat(${n}, 1fr)` }}>
@@ -65,7 +82,7 @@ export function PublishedDayGrid({ rows, groups, dayLabel }: { rows: PlanRow[]; 
                 <div className="flex flex-col justify-center rounded-lg px-2.5 py-2 text-[11.5px] font-bold text-white" style={{ background: r.whole.color || "#64748B", textShadow: "0 1px 2px rgba(0,0,0,.3)" }}>
                   <span className="text-[9px] font-bold uppercase tracking-wide opacity-90">{r.whole.cat}</span>
                   <span>{r.whole.name}</span>
-                  <span className="text-[9.5px] font-semibold opacity-90">Whole camp · {r.whole.place || "all groups"}</span>
+                  <span className="text-[9.5px] font-semibold opacity-90">{t("feed.wholeCamp", { place: r.whole.place || t("feed.allGroups") })}</span>
                 </div>
               </div>
             </div>
@@ -97,6 +114,9 @@ export function PublishedDayGrid({ rows, groups, dayLabel }: { rows: PlanRow[]; 
 
 /** staff/timetable — the weeks the operator has published to the team. */
 export function StaffTimetableApp() {
+  const { t, locale } = useI18n();
+  // Plain "en" would format US-style; English users keep the UK date format.
+  const dateLoc = locale === "en" ? "en-GB" : locale;
   const [weeks, setWeeks] = useState<PublishedWeek[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [wi, setWi] = useState(0);
@@ -105,7 +125,7 @@ export function StaffTimetableApp() {
   const refresh = useCallback(() => {
     apiGet<PublishedWeek[]>("/api/timetables/published")
       .then((w) => { setWeeks(w); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load the timetable"));
+      .catch((e) => setError(e instanceof Error ? e.message : ""));
   }, []);
   useEffect(refresh, [refresh]);
   useRealtime(["timetables"], refresh);
@@ -124,12 +144,12 @@ export function StaffTimetableApp() {
   const week = weeks?.[Math.min(wi, (weeks?.length ?? 1) - 1)];
 
   return (
-    <OperatorPage title="Timetable" lede="The day plans your organiser has published" icon="▦">
-      {error && <div className="text-[13px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
-      {!error && weeks === null && <div className="text-[13px] text-[var(--ink-3)]">Loading…</div>}
-      {!error && weeks !== null && !weeks.length && (
+    <OperatorPage title={t("feed.staffTtTitle")} lede={t("feed.staffTtLede")} icon="▦">
+      {error !== null && <div className="text-[13px] font-bold text-[var(--red,#e21d27)]">{error || t("feed.ttLoadFailed")}</div>}
+      {error === null && weeks === null && <div className="text-[13px] text-[var(--ink-3)]">{t("feed.loading")}</div>}
+      {error === null && weeks !== null && !weeks.length && (
         <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 text-[13px] text-[var(--ink-2)]">
-          Nothing published yet — when the organiser publishes a week from the Activity timetable builder it appears here.
+          {t("feed.staffTtEmpty")}
         </div>
       )}
 
@@ -147,7 +167,7 @@ export function StaffTimetableApp() {
           <div className="mb-3 flex flex-wrap gap-1.5">
             {week.dayList.map((d, i) => (
               <button key={i} onClick={() => setDi(i)} className={`rounded-lg border px-2.5 py-1.5 text-[12px] font-bold ${i === di ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"}`}>
-                {d.n}
+                {localDayName(d, dateLoc)}
                 {d.d && <span className="ml-1 font-semibold opacity-70">{d.d.split(" ")[0]}</span>}
               </button>
             ))}
@@ -156,11 +176,11 @@ export function StaffTimetableApp() {
             <PublishedDayGrid
               rows={week.plan[Math.min(di, week.plan.length - 1)]}
               groups={week.config.groups}
-              dayLabel={week.dayList[Math.min(di, week.dayList.length - 1)]?.n ?? ""}
+              dayLabel={week.dayList[Math.min(di, week.dayList.length - 1)] ? localDayName(week.dayList[Math.min(di, week.dayList.length - 1)], dateLoc) : ""}
             />
           )}
           <div className="mt-2 text-[11.5px] text-[var(--ink-3)]">
-            {week.name} · published {new Date(week.at).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+            {t("feed.publishedAt", { name: week.name, when: new Date(week.at).toLocaleString(dateLoc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) })}
           </div>
         </>
       )}

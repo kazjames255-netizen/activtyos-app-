@@ -1,0 +1,1112 @@
+{
+  "d1s1": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "Round 3 (in-process, throwaway): POST /api/register-role {role:freelancer} → 201, tenant type=freelancer subscription.status=none, users doc role=freelancer + tenantId; GET /api/me → 200 role=freelancer. No staging URL, so 'over HTTPS on staging' still can't be exercised.",
+    "notes": "Still blocked on prereq p1 (staging) + tests may not create Firebase Auth accounts. Server half passes unchanged.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:14:36Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "blocked",
+        "actual": "No staging environment exists (backlog b32), so 'over HTTPS on the staging url' cannot be exercised. Server half run in-process: POST /api/register-role {role:freelancer,...} → 201, tenant created (type=freelancer, subscription.status=none), users doc role=freelancer tenantId set=true. /api/me then returns role=freelancer (→ ROLE_HOME /freelancer/bookings).",
+        "notes": "Firebase Auth account creation (createUserWithEmailAndPassword) and the landing/redirect were not exercised — no real auth accounts may be created and no browser. Blocked on prereq p1 (staging).",
+        "at": "2026-09-12T18:21:48.867Z"
+      },
+      {
+        "verdict": "blocked",
+        "actual": "Re-run 13 Sept (in-process, throwaway): POST /api/register-role {role:freelancer} → 201, tenant created type=freelancer subscription.status=none, users doc role=freelancer tenantId set; GET /api/me → role=freelancer (ROLE_HOME /freelancer/bookings). Still no staging URL (b32), so 'over HTTPS on staging' can't be exercised.",
+        "notes": "Still blocked on prereq p1 (staging) + no real Firebase Auth account may be created. Server half passes unchanged.",
+        "at": "2026-09-12T23:49:23Z"
+      }
+    ]
+  },
+  "d1s2": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "Not testable: mail is off (MAIL_LIVE unset) and no real inbox. Code re-read round 3: still no sendEmailVerification anywhere in app/features/lib/components and registerRole.ts sends no welcome mail.",
+    "notes": "Blocked on p2. When p2 lands this will FAIL until a verification or welcome email is added to signup.",
+    "evidence": "app/signup/page.tsx; server/src/routes/registerRole.ts",
+    "at": "2026-09-13T07:14:41Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "blocked",
+        "actual": "Cannot be proven here: mail is off (server/src/lib/mailer.ts:~80-122 — not MAIL_LIVE, only MAIL_ALLOWLIST addresses receive; a skipped send returns success). Also, reading app/signup/page.tsx:267-316 the signup flow never calls sendEmailVerification and server/src/routes/registerRole.ts sends no welcome email — there is NO welcome/verification email in the signup path at all, so even with mail on nothing would arrive.",
+        "notes": "Blocked on prereq p2 (mail on + real inbox). Note for Amir/main session: even with p2 done this step would FAIL — no verification or welcome email is sent on signup (grep: no sendEmailVerification in app/, no welcome mail in registerRole.ts). Suggested fix: call sendEmailVerification(cred.user) after createUserWithEmailAndPassword and/or send a welcome email from register-role.",
+        "at": "2026-09-12T18:21:48.869Z"
+      },
+      {
+        "verdict": "blocked",
+        "actual": "Not testable: mail is off (MAIL_LIVE unset; only the allowlisted address receives) and no real inbox. Re-read the code: app/signup/page.tsx still never calls sendEmailVerification (no match) and server/src/routes/registerRole.ts still sends no welcome email — so even with p2 done nothing would arrive.",
+        "notes": "Blocked on p2. Unchanged since 12 Sept: when p2 lands this step will FAIL until a verification or welcome email is added to signup (grep sendEmailVerification app/ → none; registerRole.ts has no mail).",
+        "at": "2026-09-12T23:49:23Z"
+      }
+    ]
+  },
+  "d1s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Server: register-role refuses '' / ' x ' / 81 chars → 400 each, refused attempt provisions nothing (no chosen, no tenantId); a second register-role on a set account → 409. Client still guards before the Firebase account is made: stepProblem refuses >80 (signup/page.tsx:181), b-name maxLength={80} (:464), i-name maxLength={80} (:517).",
+    "notes": "No change needed. Wizard not clicked in a browser (can't sign in); client guard verified by code read.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out; app/signup/page.tsx:181,464,517",
+    "at": "2026-09-13T07:14:46Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Server: register-role with businessName \"\" → 400, \" x \" (1 char after trim) → 400; no role/tenant provisioned for the refused attempt (users.chosen=false, tenantId=none); a second register-role on an account already set → 409 (\"Account type already set\"). Client: app/signup/page.tsx stepProblem() (l.176-190) blocks Next on business (name/address/postcode <2 chars), identity (own-name mode needs a name), hear (must pick one) and login (email regex, password ≥6); login also requires the Terms tick (l.215). 81-char business name → 400.",
+        "notes": "Wizard is client state until the login step — it does not 'save each step' server-side; everything is submitted once by register-role (no account exists before that, so that's reasonable). RISK found: the Firebase Auth account is created BEFORE register-role (l.271 then l.286). Any register-role 400 (e.g. an 81+ char business name — the input has no maxLength; server max is 80) leaves an auth account with no role; retrying says 'email already has an account', and signing in then provisions it as a PARENT (attachRole creates role:parent for an unknown user). Suggested fix: add maxLength={80} to the business-name input and call register-role validation before createUserWithEmailAndPassword (or retry register-role on sign-in when users.chosen is missing).",
+        "at": "2026-09-12T18:21:52.463Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "register-role: businessName '' → 400, ' x ' → 400, 81 chars → 400, and the refused account got nothing (chosen=false, tenantId none); a second register-role on a set account → 409 'Account type already set'. Client stepProblem() gating unchanged (not clicked).",
+        "notes": "Same result as 12 Sept. The earlier RISK still stands: the business-name input still has no maxLength (grep maxLength app/signup/page.tsx → none) and the Firebase account is created before register-role, so an 81+ char name leaves an auth account with no role.",
+        "at": "2026-09-12T23:49:23Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Server unchanged (register-role refuses '' / ' x ' / 81 chars → 400). The RISK is closed on the client: the business-name input now has maxLength 80 and stepProblem('business') refuses a name over 80 before the Firebase account is ever created; the 'Your name' input (sent as providerName, max 80) also has maxLength 80.",
+        "notes": "FIXED 13 Sept (wave 5): app/signup/page.tsx:181 (stepProblem >80), :464 (b-name maxLength={80}), :517 (i-name maxLength={80}). Server schema already max(80) at registerRole.ts:22. Screen not visually checked (can't sign in to the browser); verified by code + type-check.",
+        "at": "2026-09-13T01:27:37Z"
+      }
+    ]
+  },
+  "d1s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT /api/library providerNameMode person → 200; public /api/public/library providerName 'zz-rta-… Kicks Ltd' → 'Jo Tester'; /api/me displayName 'Jo Tester' (tenantName stays legal name); back to business → business name again.",
+    "notes": "Unchanged. Sidebar not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:14:51Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "Switching Setup's 'Show your name as' between business and person changes ONLY the stored providerNameMode label: customer-facing providerName via GET /api/public/library/:tenant stayed \"zz-selftest-A-1789237305031 Kicks Ltd\" → \"Jo Tester\". The sidebar reads /api/me tenantName, which stayed \"zz-selftest-A-1789237305031 Kicks Ltd\" → \"zz-selftest-A-1789237305031 Kicks Ltd\" in both modes and even after editing the Display name to \"Jo T. Renamed\" (customer page then showed \"Jo T. Renamed\", sidebar still \"zz-selftest-A-1789237305031 Kicks Ltd\"). /api/me derives tenantName from settings.billing.businessName || tenant.name and never looks at providerName.",
+        "notes": "Nothing reads providerNameMode to choose a name (grep: only signup, Setup's select, and HQ/Account display labels). Customer pages (StorePage.tsx:65, listings.ts:485) DO follow the free-text Display name. Also the public feed GET /api/listings?tenantId= returns the tenantName frozen on each listing at creation (listings.ts:536), not providerName. Suggested fix: when the mode changes, set providerName to the person's name / billing.businessName, and have the Sidebar brand use providerName (or state clearly in Setup that the sidebar shows the business name).",
+        "at": "2026-09-12T18:21:57.476Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested after fix: switching 'Show your name as' now changes the name families see — the public library's providerName went 'Kicks Ltd' → 'Jo Tester' when the mode moved from business to own name (was unchanged). Setup fills the display name when you switch (one save), and the server does the same if only the mode changes. /api/me now returns displayName (= Display name) and the portal sidebar brands with it; the public listings feed uses the current display name rather than the one frozen on each listing. The test still asserts on /api/me tenantName (the legal business name, left as is), hence its own 'fail' line.",
+        "notes": "Fixed 12 Sept: library.ts PUT, SetupApp mode switch, tenants.ts displayName, Sidebar.tsx, listings.ts feed.",
+        "at": "2026-09-12T18:24:59Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Library PUT providerNameMode business→person (display name not edited) → public /api/public/library providerName 'zz-rta-… Kicks Ltd' → 'Jo Tester'; /api/me displayName 'Jo Tester' (tenantName stays the legal name); switching back → business name again.",
+        "notes": "12 Sept fix holds (library.ts PUT fills the name; tenants.ts displayName). Sidebar not rendered.",
+        "at": "2026-09-12T23:49:23Z"
+      }
+    ]
+  },
+  "d1s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "brandColor #dc2626 + billing.logoUrl (with bank details) saved → 200; public library returns brandColor + logoUrl and no billing/bank fields; operator /api/me brandColor + logoUrl; parent path (/api/me no tenant → /api/my/providers → tenant A logo → public brandColor #dc2626) correct.",
+    "notes": "Unchanged. Storefront/portal not viewed in a browser.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:14:54Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "Saved brandColor #dc2626 + billing.logoUrl. Operator GET /api/me → brandColor=#dc2626, logoUrl=set. A parent's GET /api/me → brandColor=null (parents have no tenantId, so tenants.ts:29-45 never loads a library) — ParentBrandTheme.tsx, the only thing that paints the colour on customer surfaces, reads exactly that field, so the parent portal/checkout never wear the brand. Public GET /api/public/library/:tenant settings keys: [providerName,cancelReasons] — no brandColor and no logo. StorePage.tsx / BookPage.tsx have hard-coded colours and never render a logo; the operator Sidebar shows the first initial, not the logo (Sidebar.tsx:389).",
+        "notes": "Both are SAVED correctly, but neither appears on customer pages (logo only appears on invoices/emails/receipts/newsletters). Suggested fix: add brandColor + billing.logoUrl to PUBLIC_SETTINGS_KEYS (library.ts) / the /api/listings/:id payload, have StorePage/BookPage/ParentBrandTheme read them from the provider's public settings (parents: from /api/my/providers[0]), and show the logo in the Sidebar.",
+        "at": "2026-09-12T18:22:01.080Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Fixed (code-level): the public library now returns the provider's brand colour and logo (only billing.logoUrl — bank details stay private); the storefront and booking page show the logo in their header and use the brand colour for the accent band and Book buttons (white text only on dark colours); the parent portal takes the colour from its provider's public settings (parents have no tenant on /api/me); the operator sidebar shows the logo instead of an initial.",
+        "notes": "Fixed 12 Sept: server/src/routes/library.ts, StorePage/BookPage (+ ListingWizard header), lib/brand-theme.ts, ParentBrandTheme, Sidebar. Not viewed in a browser.",
+        "at": "2026-09-12T18:41:53Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Saved brandColor #dc2626 + billing.logoUrl (with bank details): public library returns brandColor + logoUrl and NO billing/bank fields; operator /api/me brandColor + logoUrl; parent path used by ParentBrandTheme (parent /api/me has no tenant → /api/my/providers → tenant A with logoUrl → public library brandColor #dc2626) all correct.",
+        "notes": "Data paths verified; storefront/portal not viewed in a browser.",
+        "at": "2026-09-12T23:49:23Z"
+      }
+    ]
+  },
+  "d1s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Company signup → 201, tenant distinct, type=company. B: GET /api/listings?mine=1 → 0; GET/PUT/DELETE A's draft → 404/404/404; B's /api/library is B's own.",
+    "notes": "Unchanged. Staging part N/A.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:14:57Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Company signup → 201, new tenant id distinct from A (true), type=company. B's GET /api/listings?mine=1 → 0 listings (A has 1); B GET A's draft → 404; B PUT → 404; B DELETE → 404; B's /api/library carries B's own settings (providerName \"zz-selftest-A-1789237305031 Company B\").",
+        "notes": "Server side verified with the real register-role/listings/library routes and the real attachRole; the staging URL part is not available (no staging).",
+        "at": "2026-09-12T18:22:09.285Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Company signup → 201, tenant distinct from A, type=company. B: GET /api/listings?mine=1 → 0; GET/PUT/DELETE A's draft → 404/404/404; B's /api/library is B's own (providerName 'zz-rta-… Company B').",
+        "notes": "Real register-role/listings/library routes + attachRole. Staging part N/A.",
+        "at": "2026-09-12T23:49:23Z"
+      }
+    ]
+  },
+  "d1s7": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "Still needs two real Firebase Auth sessions in a browser to grab tokens; tests may not create auth accounts. Token-based cross-tenant attack exercised in-process instead (d6s9).",
+    "notes": "Blocked on p5/p7 (real accounts + browser).",
+    "evidence": "server/src/middleware/auth.ts",
+    "at": "2026-09-13T07:15:01Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "blocked",
+        "actual": "Needs two real Firebase Auth sessions in a browser (localStorage firebase:authUser… accessToken). This run may not create Firebase Auth accounts or use the browser, so no bearer tokens can be minted. Downstream token-based attacks (d6s9 etc.) are instead exercised in-process with the real attachRole reading the users doc.",
+        "notes": "Blocked: needs real accounts + browser (prereq p5/p7). Confirmed the API really does require the token: GET http://localhost:4000/api/bookings with no Authorization → 401 'Missing Authorization bearer token' (server/src/middleware/auth.ts:11-17).",
+        "at": "2026-09-12T18:22:09.290Z"
+      },
+      {
+        "verdict": "blocked",
+        "actual": "Still needs two real Firebase Auth sessions in a browser to grab tokens; tests may not create auth accounts. Token-based attacks are exercised in-process instead (d6s9).",
+        "notes": "Blocked on p5/p7 (real accounts + browser).",
+        "at": "2026-09-12T23:49:24Z"
+      }
+    ]
+  },
+  "d1s9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Fresh GET /api/me: A → role freelancer, tenantId matches; B → role company, tenantId matches. A's setup persisted (brandColor #dc2626, providerNameMode business).",
+    "notes": "Server half + ROLE_HOME; Firebase sign-out/in itself not exercised.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:15:04Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Fresh GET /api/me (what login's fetchRoleHome() reads) for A → role=freelancer, tenantId matches=true (ROLE_HOME → /freelancer/bookings); for B → role=company, tenantId matches=true (→ /company/bookings; hasFranchises=false). A's library settings persisted server-side (brandColor #dc2626, providerName \"Jo T. Renamed\").",
+        "notes": "Server half + routing table verified (lib/roles.ts:27-34 ROLE_HOME, app/login/page.tsx:45-50). The Firebase sign-out/sign-in itself was not exercised (no real auth accounts / browser).",
+        "at": "2026-09-12T18:22:11.862Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Fresh GET /api/me: A → role freelancer, tenantId matches (→ /freelancer/bookings); B → role company, tenantId matches (→ /company/bookings). A's library settings persisted (brandColor #dc2626, providerNameMode business).",
+        "notes": "Server half + ROLE_HOME table; the Firebase sign-out/in itself not exercised.",
+        "at": "2026-09-12T23:49:24Z"
+      }
+    ]
+  },
+  "d1s8": {
+    "verdict": "pass",
+    "method": "live-read",
+    "actual": "Read-only curl of the local dev server (round 3): /company/nonsense → 200 (first try timed out at 120s while the dev server compiled under load; retry 8s) rendering app/not-found.tsx ('We couldn’t find that page' + 'Go to the home page'); /freelancer/xyz → 200 same page; /totally-missing-page → 404 same page; /company/nonsense/deeper → 404 same page. No white screen, no raw error.",
+    "notes": "Unchanged minor: inside a portal the status is a soft 200 (layout already streamed). Localhost, not staging; not viewed in a browser.",
+    "evidence": "curl http://localhost:3000/… ; app/not-found.tsx",
+    "at": "2026-09-13T07:23:47Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "GET http://localhost:3000/company/nonsense (local dev server, read-only curl) → renders app/not-found.tsx: 'We couldn’t find that page … Nothing’s wrong with your account' with a 'Go to the home page' button — no white screen, no raw error. Also checked /totally-missing-page → 404 same page, /company/nonsense/deeper → 404 same page, /freelancer/xyz → same page. app/[portal]/[view]/page.tsx:20 calls notFound() for an unregistered view.",
+        "notes": "Minor: inside a portal (/company/<unknown>) the HTTP status is 200, not 404 (soft 404 — the [portal] layout has already streamed when notFound() fires). Top-level unknown URLs return a real 404. Checked on localhost dev, not staging (none exists); not viewed in a browser.",
+        "at": "2026-09-12T12:37:35.736Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Read-only curl of the local dev server: /company/nonsense → 200 rendering app/not-found.tsx ('We couldn’t find that page…' + 'Go to the home page'); /freelancer/xyz → 200 same page; /totally-missing-page → 404 same page; /company/nonsense/deeper → 404 same page. No white screen, no raw error.",
+        "notes": "Unchanged minor: inside a portal the status is a soft 200 (layout already streamed). Localhost, not staging; not viewed in a browser.",
+        "at": "2026-09-12T23:49:51Z"
+      }
+    ]
+  },
+  "d2s1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT /api/library features {meals,trips,tasks:false} → 200; GET + public slice carry them false; firstOff(features, featureKeysForView('company', view)) hides all three; back on → all true, nothing hidden.",
+    "notes": "Rule from lib/accessMap.ts (Sidebar + ViewGate); sidebar not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:15:08Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "PUT /api/library settings.features {meals,trips,tasks:false} → 200; GET /api/library then returns {\"meals\":false,\"trips\":false,\"tasks\":false} (and the public slice carries them too, so the family app hides them); switched back on → {\"meals\":true,\"trips\":true,\"tasks\":true}. Client: Sidebar.tsx:294-316 hides any non-CORE view whose features[view]===false via useOperatorFeatures(), which re-fetches on the 'library' realtime topic (lib/use-customer-area.ts:73-86; server/src/routes/events.ts:122 streams libraries for the tenant) — so it vanishes/returns without a reload.",
+        "notes": "Data + nav-hiding code path verified; the sidebar itself was not rendered (no browser). CORE views (dashboard, bookings, listings, blocks, locations, customers, finance, setup…) cannot be switched off by design.",
+        "at": "2026-09-12T12:41:46.834Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "PUT /api/library features {meals,trips,tasks:false} → 200; GET returns them false and the public slice carries them; the sidebar/ViewGate rule firstOff(features, featureKeysForView('company', view)) hides all three; back on → all true, nothing hidden.",
+        "notes": "Rule run from lib/accessMap.ts (shared by Sidebar + ViewGate); sidebar not rendered.",
+        "at": "2026-09-12T23:49:51Z"
+      }
+    ]
+  },
+  "d2s2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Meals OFF: owner GET /api/meals, GET/POST /api/meal-menus, GET /api/meal-options, GET /api/meal-orders, PUT /api/meals/<date> and staff GET /api/meals → 403 feature_off each; bookings + registers 200; ViewGate rule refuses /company/meals; back on → GET /api/meal-menus 200 next request.",
+    "notes": "s13-acc1 holds. Screen not visually checked.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:15:11Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Throwaway tenant, owner PUT /api/library features {meals:false,trips:false,tasks:false}: owner GET /api/meals, GET/POST /api/meal-menus, GET /api/meal-options, GET /api/meal-orders, PUT /api/meals/<date> all 403 {code:'feature_off', 'Meals is turned off for this account. You can turn it back on in Setup → Features.'}; staff GET /api/meals 403 ('Ask a manager to…'); /api/trips + /api/tasks 403 for owner and staff. Bookings, registers, incidents still 200. Meals switched back on → GET /api/meal-menus 200 on the very next request (cache cleared on save). Typed URL: app/[portal]/[view]/page.tsx now wraps every view in ViewGate, which renders 'Meals is turned off' (+ Open Setup → Features for owners) instead of the screen when features.meals===false. The screen itself was not visually checked (can't sign in to the browser) — verified by code + root/server tsc.",
+        "notes": "New server/src/middleware/access.ts (enforceAccess, mounted in index.ts after enforceSubscription and on the /api/listings mount; franchise-aware via tenantLibrary.loadSettings, 10s cache cleared by library.ts PUT). Shared table lib/accessMap.ts (FEATURE_API: meals x4, trips, calendar-events, timetables, tasks, discounts, referrals, reviews, purchasing, reconciliation, inventory, documents, moments; featureKeysForView). components/auth/ViewGate.tsx + app/[portal]/[view]/page.tsx. Staff sidebar now follows the operator's switches (Sidebar.tsx, use-customer-area.ts useOperatorFeatures active for staff). Deliberately NOT refused: safeguarding (incidents/medication/first aid) + registers; APIs other pages read (comms, rota/leave/clock, expenses, splitfees, ratios, ai) — their pages are refused by URL but the APIs still answer (backlog s13-acc5).",
+        "at": "2026-09-12T22:51:42Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Throwaway tenant, owner PUT /api/library features {meals:false,trips:false,tasks:false}: owner GET /api/meals, GET/POST /api/meal-menus, GET /api/meal-options, GET /api/meal-orders, PUT /api/meals/<date> all 403 {code:'feature_off', 'Meals is turned off for this account. You can turn it back on in Setup → Features.'}; staff GET /api/meals 403 ('Ask a manager to…'); /api/trips + /api/tasks 403 for owner and staff. Bookings, registers, incidents still 200. Meals switched back on → GET /api/meal-menus 200 on the very next request (cache cleared on save). Typed URL: app/[portal]/[view]/page.tsx now wraps every view in ViewGate, which renders 'Meals is turned off' (+ Open Setup → Features for owners) instead of the screen when features.meals===false. The screen itself was not visually checked (can't sign in to the browser) — verified by code + root/server tsc. RE-RUN 13 Sept (access2): the same suite still 45/45 PASS. Extended (access2 suite 70/70): with Newsfeed/Email/AI/Schedule/Leave/Split fees/Ratios OFF, their WRITES are refused 403 feature_off (POST /api/posts, POST /api/emails/send, POST /api/ai/chat, PUT /api/rota, POST /api/availability/requests, staff POST /api/leave/absences, PUT /api/splitfees/settings, PUT /api/ratios/board) while their reads still answer 200 for the dashboards; post react, email suppress (PECR opt-out) and rota/clock stay open. Parents: with Meals/Trips/Moments/Newsfeed/Timetable OFF, GET /api/meal-options 403 area_off, POST /api/meal-orders 403, cancel 403, trip consent 403 area_off ('please contact them directly'), moment comment 403; /api/my/meal-days, /api/meal-orders, /api/my/trips, parent /api/moments, /api/posts, /api/timetables/published return nothing from that provider; bookings unaffected; back on → next request. Customer area → Meals off alone refuses the same way.",
+        "notes": "New server/src/middleware/access.ts (enforceAccess, mounted in index.ts after enforceSubscription and on the /api/listings mount; franchise-aware via tenantLibrary.loadSettings, 10s cache cleared by library.ts PUT). Shared table lib/accessMap.ts (FEATURE_API: meals x4, trips, calendar-events, timetables, tasks, discounts, referrals, reviews, purchasing, reconciliation, inventory, documents, moments; featureKeysForView). components/auth/ViewGate.tsx + app/[portal]/[view]/page.tsx. Staff sidebar now follows the operator's switches (Sidebar.tsx, use-customer-area.ts useOperatorFeatures active for staff). Deliberately NOT refused: safeguarding (incidents/medication/first aid) + registers; APIs other pages read (comms, rota/leave/clock, expenses, splitfees, ratios, ai) — their pages are refused by URL but the APIs still answer (backlog s13-acc5). | 13 Sept access2 extended it (s13-acc5): lib/accessMap.ts FEATURE_WRITE_API (writes-only gate: posts, emails except /suppress, ai/chat, rota except /clock, shifts, availability, leave, splitfees, ratios) + featureForApi(path, method) used by middleware/access.ts; CA_FEATURES table (customer-area key → operator feature) shared by lib/use-customer-area.ts (nav now also hides Trips + Timetable for families when switched off — not visually checked, no browser sign-in) and server/src/lib/customerArea.ts (customerAreaOn now folds Setup → Features in, optional franchiseId, uses the access gate's cache so a save applies next request). Parent gates: mealsShop.ts (options/orders/cancel/change/request), my.ts (meal-days filter, trip consent — two small local edits), moments.ts, posts.ts, timetables.ts. Deliberately NOT write-gated: /api/messages (register nudges, Bookings 'email families', booking 'Message family', shared templates), /api/timeclock + rota/clock (fire-and-forget staff clock-ins; Payroll edits), /api/expenses (HO Finance Money out + Purchasing), /api/ai/compose (drafting in Email/newsletter/Learning).",
+        "at": "2026-09-12T23:28:03Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Meals OFF: owner GET /api/meals, GET/POST /api/meal-menus, GET /api/meal-options, GET /api/meal-orders, PUT /api/meals/<date> and staff GET /api/meals all → 403 feature_off; bookings + registers still 200; ViewGate's rule refuses /company/meals by URL (firstOff → 'meals'); switched back on → GET /api/meal-menus 200 on the very next request.",
+        "notes": "s13-acc1 fix holds (middleware/access.ts + ViewGate). Screen not visually checked.",
+        "at": "2026-09-12T23:49:51Z"
+      }
+    ]
+  },
+  "d2s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT /api/library safeguarding {dslTitle, dslName 'Dana Lead', dslEmail, deputyDslName 'Dee Deputy', deputyDslEmail} → 200; staff GET /api/library (concern form) → dslName/dslTitle/dslEmail; owner reads back dslEmail + deputy name + deputy email. Setup has the 'DSL's email' and 'Deputy DSL (optional)' rows (SetupApp.tsx:1939,1942).",
+    "notes": "DSL/deputy alert routing itself tested by fix-decisions (not re-run here). Form + Setup not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out; features/setup/SetupApp.tsx:1939-1942",
+    "at": "2026-09-13T07:15:14Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Saved safeguarding {dslTitle 'Safeguarding Lead', dslName 'Dana Lead', dslEmail} → 200; a STAFF account's GET /api/library (what the concern form reads) returns all three. SafeguardingApp.tsx still labels the form 'routed to your Safeguarding Lead · Dana Lead'.",
+        "notes": "Form not rendered. Still open from 12 Sept: POST /api/incidents never alerts the DSL (incidents.ts ~273 'A team model would notify the DSL here') — dslEmail is stored and unused.",
+        "at": "2026-09-12T23:49:51Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Unchanged pass (Setup saves dslTitle/dslName/dslEmail; staff read them for the form). The open side finding is now fixed: with dslEmail set, a staff-logged concern bells the DSL's own account and attempts an email to that address (logged SUPPRESSED — mail not live); blank dslEmail falls back to the account holder, as the setting documents.",
+        "notes": "FIXED 13 Sept (wave 5): dslEmail is now used — server/src/lib/dslAlert.ts, called from incidents.ts:299. Details in agent-C d13s2. Form not rendered.",
+        "at": "2026-09-13T01:27:36Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-test 13 Sept: Setup → Safeguarding had NO input for the DSL email (it was only settable through the API) — now it has 'DSL's email' plus an optional 'Deputy DSL' name + sign-in email. Server: settings.safeguarding {dslName, dslEmail, deputyDslName, deputyDslEmail} saved via PUT /api/library and read by the DSL alert + access checks (tested in decisions.test.mts: concern → DSL + deputy bells/mail). The concern form still shows 'routed to your … · Dana Lead'.",
+        "notes": "features/setup/SetupApp.tsx (Safeguarding section), lib/settings.ts types. Form + Setup not rendered (no browser sign-in); server half by request.",
+        "at": "2026-09-13T05:52:38Z"
+      }
+    ]
+  },
+  "d2s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Authority 'Milton Keynes Council' (LADO 01908 111111, MASH 01908 222222, OOH 01908 333333) saved and returned to staff under safeguarding.contacts.authorities; ContactsBlock renders tel: links (SafeguardingApp.tsx:53).",
+    "notes": "Data via API; tel: rendering by code read.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out; features/incidents/SafeguardingApp.tsx:53",
+    "at": "2026-09-13T07:15:17Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Authority \"Milton Keynes Council\" with LADO 01908 111111, MASH 01908 222222, OOH 01908 333333 saved (→200) and returned to a staff account via GET /api/library (contacts.authorities[0] = {\"id\":\"a1\",\"name\":\"Milton Keynes Council\",\"ladoName\":\"Pat LADO\",\"ladoPhone\":\"01908 111111\",\"socialCarePhone\":\"01908 222222\",\"outOfHoursPhone\":\"01908 333333\"}). On the form: SafeguardingApp.tsx:159-166 offers the authority picker; referralLines() (l.44) builds 'LADO — Pat LADO', \"Children's social care (MASH)\", 'Out-of-hours / EDT'; LineRow (l.49) renders each as <a href=\"tel:01908111111\">.",
+        "notes": "Data verified via API; click-to-call rendering verified by reading SafeguardingApp.tsx:36-64 (not rendered in a browser). The contacts block only appears once a category is chosen (l.170-176).",
+        "at": "2026-09-12T12:41:50.873Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Authority 'Milton Keynes Council' (LADO 01908 111111, MASH 01908 222222, OOH 01908 333333) saved and returned to staff under safeguarding.contacts.authorities; the form's ContactsBlock renders them as tel: links (code read).",
+        "notes": "Data via API; click-to-call rendering read in SafeguardingApp.tsx (not rendered).",
+        "at": "2026-09-12T23:49:51Z"
+      }
+    ]
+  },
+  "d2s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Custom categories + protocol saved and returned to staff; the form's protocolFor() on that data → due 'Within 2 hours', ref 'Our policy v3', the provider's two ZZ steps (not the defaults); form lists sg.categories when set (SafeguardingApp.tsx:79).",
+    "notes": "Form not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:15:19Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Custom categories [\"ZZ Custom: worrying disclosure\",\"ZZ Custom: neglect signs\"] and protocol saved and returned to staff. Running the form's own protocolFor() (features/incidents/safeguarding.ts) on what staff receive → due=\"Within 2 hours\", ref=\"Our policy v3\", steps=[\"ZZ step one: write it down\",\"ZZ step two: phone Dana\"] — the provider's wording, not DEFAULT_PROTOCOL. The category <select> uses sg.categories when non-empty (SafeguardingApp.tsx:75,150).",
+        "notes": "Special categories (FGM, self-harm, exploitation, welfare, staff allegations) still prepend/replace the first step with legal wording by design (safeguarding.ts:66-72). Form itself not rendered.",
+        "at": "2026-09-12T12:41:50.902Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Custom categories + protocol saved and returned to staff; the form's own protocolFor() on that data → due 'Within 2 hours', ref 'Our policy v3', steps = the provider's two ZZ steps (not DEFAULT_PROTOCOL).",
+        "notes": "protocolFor run from features/incidents/safeguarding.ts; form not rendered.",
+        "at": "2026-09-12T23:49:51Z"
+      }
+    ]
+  },
+  "d2s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Matrix set (rolesSetAt) with coach at None: coach GET customers/incidents/listings/meals/bookings/registers/children/:id/medications → 403 no_access each; /api/me caps.customers=none; owner 200; registers at View → GET 200, mark 403 view_only. Kaz's decisions: coach at Medication: View records a dose → 201, edits the medicine → 403 view_only; leads-only doses → coach 403 'Doses are set to leads only…'; Medication: None → dose 403 no_access; Incidents: None → coach logs accident 201 + incident 201 + safeguarding concern 201, reading the log 403 no_access.",
+    "notes": "Unchanged since the DECIDED 13 Sept build (s13-acc3). Sidebar/ViewGate not visually checked.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:15:22Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Throwaway tenant, staff 'coach' (users.staffRole='coach', as Team & invites stores it). Matrix stored but never edited (no rolesSetAt) → GET /api/customers 200 (today's behaviour). Owner saves matrix with Coach + Lead = None everywhere (+ rolesSetAt, as the Roles tab now stamps): coach GET /api/customers, /api/incidents, /api/listings?mine=1, /api/meals, /api/bookings, /api/registers, /api/children/<id>, /api/medications → all 403 {code:'no_access', 'Your role doesn't have access to Families…'}. POST /api/incidents (raise a concern) still 201. /api/me returns permRole:'coach', caps.customers:'none'. Registers at View: GET 200, POST mark 403 {code:'view_only'}; at Edit: mark 200. Owner never gated. Sidebar hides None areas for staff and ViewGate refuses them by URL — not visually checked (can't sign in), verified by code + tsc.",
+        "notes": "role.ts: AuthContext.permRole (users.permRole ?? users.staffRole), .assignment, .caps via staffFields(). access.ts capsFor()/enforceAccess — CAP_API in lib/accessMap.ts (~35 prefixes → matrix areas; GET=view, writes=edit; never refused: POST /api/incidents, /api/messages/support, document read-confirm, post react/rsvp/ack). resolveCaps only binds once settings.rolesSetAt exists (SetupApp.tsx Roles onChange stamps it; lib/settings.ts type) because Setup saves the whole settings bag incl. default roles on any change. tenants.ts /api/me returns permRole+caps; lib/roles.ts Me type; Sidebar.tsx staff cap hiding; ViewGate. Open (backlog s13-acc3): no route yet to change a joined member's role (invites.ts, other agent's file).",
+        "at": "2026-09-12T22:51:42Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Matrix stored without rolesSetAt → coach GET /api/customers 200 (unchanged behaviour). With rolesSetAt + Coach=None: coach GET customers, incidents, listings?mine=1, meals, bookings, registers, children/<id>, medications → all 403 no_access; coach can still RAISE a concern (POST /api/incidents 201); /api/me permRole coach, caps.customers none; owner 200; registers at View → GET 200, mark 403 view_only.",
+        "notes": "s13-acc2 holds. Sidebar/ViewGate not visually checked. Note: on a first run the concern POST returned 403 child_not_yours once (booking/child present) — re-run minutes later → 201; looks like the concurrent access2 edit to childAccess/siteScope, not reproducible.",
+        "at": "2026-09-12T23:49:51Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-test 13 Sept after Kaz's decision (matrix on, Coach = Medication: View, Incidents: None): coach records a dose → 201 (the 'who can give doses' setting decides); coach still can't edit the medicine (PUT 403 view_only); role at Medication: None → dose 403 no_access; leads-only on → plain coach 403 'Doses are set to leads only', a lead at Medication: View → 201. At Incidents: None a coach logs an accident, an incident and a safeguarding concern → 201 each; reading the log → 403 no_access. Owner unaffected.",
+        "notes": "DECIDED 13 Sept by Kaz (s13-acc3): lib/accessMap.ts — POST /api/medications/:id/administer is a View-level write (the route's leadsOnly gate decides); logging (POST /api/incidents, any kind) never refused; the staff 'Accidents & first aid' page is no longer gated by the matrix (it's where an accident is logged) — IncidentsApp shows 'You can still record one here' when the list is refused. Rest of the matrix unchanged. Sidebar/ViewGate not visually checked.",
+        "at": "2026-09-13T05:52:10Z"
+      }
+    ]
+  },
+  "d2s7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "dslName cleared → staff GET /api/library sees ''; staff POST /api/incidents {kind:safeguarding} → 201 confidential=true. Setup red '⚠ No DSL is named. Concerns can still be logged…' (SetupApp.tsx:1930) and form '⚠ Nobody is named… You can still log this' (SafeguardingApp.tsx:134-137) render conditions unchanged.",
+    "notes": "Warnings verified by code read, not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out; features/setup/SetupApp.tsx:1930; features/incidents/SafeguardingApp.tsx:134-137",
+    "at": "2026-09-13T07:15:25Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Cleared dslName and saved; staff now receive dslName=\"\". A staff POST /api/incidents {kind:\"safeguarding\", …} → 201 (logged, confidential=true). Setup shows the red '⚠ No DSL is named. Concerns can still be logged…' banner when dslName is blank (SetupApp.tsx:1917-1921); the concern form shows '⚠ Nobody is named as your safeguarding lead … You can still log this' (SafeguardingApp.tsx:129-133) and never blocks save on it (save() only requires child, description, category — l.108-110).",
+        "notes": "Server acceptance verified via API; the two warnings verified by reading the render conditions (not rendered in a browser). reportedTo is stamped as just the title 'Safeguarding Lead' when no name is set.",
+        "at": "2026-09-12T12:41:54.980Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "dslName cleared → staff now receive ''; staff POST /api/incidents {kind:safeguarding} → 201 (confidential=true). Setup's red '⚠ No DSL is named. Concerns can still be logged…' (SetupApp.tsx:1930) and the form's 'Nobody is named… You can still log this' (SafeguardingApp.tsx:129-131) render conditions unchanged; save doesn't require a DSL.",
+        "notes": "First run gave 403 child_not_yours on the concern (during access2's childAccess/siteScope edits); re-run → 201 — recorded on the re-run. Warnings verified by reading render conditions, not rendered.",
+        "at": "2026-09-12T23:49:51Z"
+      }
+    ]
+  },
+  "d2s8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Season + age group saved → 200, staff see ['ZZ Autumn Half-term 2026'] / ['ZZ Juniors']; listing with seasonId → 201 keeps it; ageCaps {g-zz:10} + ageCapsOn:true stored exactly, GET /api/listings/:id returns ageCaps.",
+    "notes": "Wave-5 ageCaps fix holds (still not enforced at booking — §S). Wizard/Ratios not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-A/day12.out",
+    "at": "2026-09-13T07:15:28Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Saved one season (\"ZZ Autumn Half-term 2026\", 26–30 Oct) and one age group (\"ZZ Juniors\", 5–7, 1:8, room 16) → 200; both returned by GET /api/library to staff too. The listing wizard offers settings.seasons (ListingWizard.tsx:1470-1493) and settings.ratioGroups for per-group caps (l.1640); Ratios reads the same ratioGroups read-only (RatiosApp.tsx:134-169). A listing POSTed with seasonId keeps it (GET back → seasonId=zz-selftest-A-1789216898945-s1). BUT the per-age-group caps set in the wizard are discarded: POST with ageCaps {\"g-zz\":10} + ageCapsOn → stored ageCaps=undefined, ageCapsOn=undefined (zod strips unknown keys; listings.ts schema has no ageCaps).",
+        "notes": "Both are offered where expected, so pass on the step as written. Serious side finding: the age-group cap an operator sets in the wizard is thrown away on save (kept only in that browser's draft), so it is never enforced and is lost on another device — the operator believes a cap exists. ListingWizard.tsx:276-280 says enforcement is owed (handoff §S) but it isn't even stored. Same for cancellationPolicyId (WizardDraft l.327, not in the server schema). Suggested fix: add ageCaps/ageCapsOn/cancellationPolicyId to baseListingSchema in server/src/routes/listings.ts. capKept=false.",
+        "at": "2026-09-12T12:41:57.733Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Season 'ZZ Autumn Half-term 2026' + age group 'ZZ Juniors' saved (200) and returned to staff; a listing POSTed with seasonId keeps it. Wizard offers settings.seasons (ListingWizard.tsx:1474) and ratioGroups (l.1644); Ratios reads ratioGroups (RatiosApp.tsx:729).",
+        "notes": "Pass as written. Side finding still open: the wizard's per-age-group caps are thrown away — POST with ageCaps {g-zz:10}/ageCapsOn → stored ageCaps/ageCapsOn undefined (not in listings.ts baseListingSchema). (cancellationPolicyId from the same finding IS now stored — see d4s6.)",
+        "at": "2026-09-12T23:49:51Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Pass as before. Side finding FIXED: POST /api/listings with ageCaps {g-a:10, g-b:0} + ageCapsOn:true → 201, stored exactly; PUT {ageCaps {g-a:12}} → 200, stored; GET /api/listings/:id returns ageCaps (draftFromListing spreads it back into the wizard); -1 or 1.5 → 400; 'Turn off age caps' {ageCapsOn:false, ageCaps:{}} → stored {}.",
+        "notes": "server/src/routes/listings.ts:88-94 (ageCaps record 0–10000 ints, ≤50 entries + ageCapsOn in baseListingSchema; the wizard already sent them — zod was stripping them). NOT enforced at booking yet — there is no per-age cap logic anywhere server-side (§S, the wizard's 'Enforced once the backend is built' badge stays true). Wizard not rendered.",
+        "at": "2026-09-13T01:27:36Z"
+      }
+    ]
+  },
+  "d3s1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Periods/passes/bundle (master £150 Full week, Single day derived £30) + live holiday camp 19–23 Oct, ages 5–12, capacity 30 → 201. Signed-out GET /api/listings?tenantId= → runFrom 2026-10-19, runTo 2026-10-23, ages 5-12, location 'ZZ Main Leisure Centre', 1 block starting 19 Oct, spotsLeft 30, 5 sessions (19–23 Oct). Signed-out GET /api/listings/:id bundle passes [Full week £150, Single day £30].",
+    "notes": "Customer-page data via the real public routes; page not rendered. (Block summaries now carry a sessions array rather than a count — test adjusted.)",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:58Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Built periods/passes/bundle (master £150 'Full week' 5 days, 'Single day' derived) and POSTed a live holiday camp (19–23 Oct, ages 5–12, maxAttendees 30) → 201. Signed-out GET /api/listings?tenantId= → listing present with runFrom 2026-10-19, runTo 2026-10-23, ages 5–12, location \"ZZ Main Leisure Centre\", blocks [{\"start\":\"2026-10-19\",\"end\":\"2026-10-23\",\"spotsLeft\":30,\"sessions\":5}]. Signed-out GET /api/listings/:id bundle passes [[\"Full week\",150],[\"Single day\",30]].",
+        "notes": "Customer-page DATA verified via the real public routes (what StorePage/BookPage render); the page itself not rendered.",
+        "at": "2026-09-12T12:55:43.714Z"
+      }
+    ]
+  },
+  "d3s2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Weekly class Tuesdays 15 Sep → 20 Oct (days=[2]) → 201; generated 6 blocks: 2026-09-15/22/29, 10-06/13/20, each 16:00–17:00 from the bundle period. No other weekday.",
+    "notes": "Screen not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:58Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Weekly class runFrom 2026-09-15 → 2026-10-20, days=[Tue] → 201. Generated sessions (via real syncListingBlocks, read back signed-out): [\"2026-09-15 16:00-17:00\",\"2026-09-22 16:00-17:00\",\"2026-09-29 16:00-17:00\",\"2026-10-06 16:00-17:00\",\"2026-10-13 16:00-17:00\",\"2026-10-20 16:00-17:00\"] — 6 weekly blocks, one session each, times from the bundle's 16:00–17:00 period.",
+        "notes": "Exactly the six Tuesdays; no Monday/Wednesday bleed. Screen not rendered.",
+        "at": "2026-09-12T12:55:47.105Z"
+      }
+    ]
+  },
+  "d3s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Block (custom mode, Tuesdays 15 Sep–20 Oct, pass 'Block of 6' £54, 6 days) → feed: 1 block, 6 sessions, single £54 pass (one purchase). One-off trip Sat 10 Oct at venue v2 → feed location 'ZZ Farm Park', session 2026-10-10 09:30–16:00.",
+    "notes": "Customer-page data signed-out; not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:58Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Block (blockMode custom, Tuesdays 15 Sep–20 Oct, pass 'Block of 6' £54, 6 days) → 201: customer feed shows 1 block with 6 sessions and a single £54 pass (one purchase). One-off trip (Sat 10 Oct, venue v2) → 201: feed shows 1 block, session 2026-10-10 09:30–16:00, location \"ZZ Farm Park\" (Bedford) — the other venue.",
+        "notes": "Customer-page data verified signed-out; not rendered.",
+        "at": "2026-09-12T12:55:53.676Z"
+      }
+    ]
+  },
+  "d3s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Camp Mon 26–Fri 30 Oct 2026, 09:00–15:30 → 201. Sessions 2026-10-26…30 all 09:00–15:30; server sessionLabel 'Mon 26 Oct 2026 · 09:00 – 15:30' … 'Fri 30 Oct 2026 · 09:00 – 15:30'; client genDates+fmtDate under TZ=Europe/London → Mon 26 Oct … Fri 30 Oct.",
+    "notes": "Date-only ISO + HH:MM strings formatted in UTC, so the 25 Oct change can't shift them. Screen not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:59Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Camp Mon 26–Fri 30 Oct 2026, period 09:00–15:30 → 201. Sessions read back signed-out: [\"2026-10-26 09:00-15:30\",\"2026-10-27 09:00-15:30\",\"2026-10-28 09:00-15:30\",\"2026-10-29 09:00-15:30\",\"2026-10-30 09:00-15:30\"]. Server labels (sessionLabel, used on bookings/emails): [\"Mon 26 Oct 2026 · 09:00 – 15:30\",\"Tue 27 Oct 2026 · 09:00 – 15:30\",\"Wed 28 Oct 2026 · 09:00 – 15:30\",\"Thu 29 Oct 2026 · 09:00 – 15:30\",\"Fri 30 Oct 2026 · 09:00 – 15:30\"]. Client helpers features/listings/format.ts genDates+fmtDate run with TZ=Europe/London: [\"Mon 26 Oct\",\"Tue 27 Oct\",\"Wed 28 Oct\",\"Thu 29 Oct\",\"Fri 30 Oct\"].",
+        "notes": "Dates are date-only ISO strings and times are 'HH:MM' strings, all formatted with timeZone:'UTC', so the 25 Oct change cannot shift them. The UTC-'today' issue (backlog b35) is not exercised by building the listing — it bites the booking past-date gate (my.ts:888 'todayIso' = UTC date) and sweeps between 00:00–01:00 BST; that's d27s5. Screen not rendered.",
+        "at": "2026-09-12T12:55:59.045Z"
+      }
+    ]
+  },
+  "d3s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Listing with maxAttendees '2' (day scope) + bookingCutoffHours '48' → 201; stored on the listing, every block capacity 2/day. Junk cut-off 'abc' → 400. Parent booking the next day → 400 'Bookings for Mon 14 Sept have closed — … stops taking bookings 2 days before each session…'; +6 days → 201; operator booking on behalf for the next day → 201 (override).",
+    "notes": "s13-par2 fix holds (listings.ts bookingCutoffHours; my.ts cut-off gate). Wizard control + customer-page note not visually checked. Capacity 2 is attacked in d6s7.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:59Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "Capacity: maxAttendees \"2\" (day scope) → 201; generated block capacity=2, capacityScope=day — saved. Booking cut-off: there is no such setting. The listing wizard has only 'Booking opens at' (opensAt) and meal-order cut-offs; the server schema (listings.ts:59-166) has no cut-off field, so a cut-off sent with the listing is silently dropped (stored bookingCutoff=undefined). The only booking-time date gate is 'the date has already passed' (my.ts:913-916).",
+        "notes": "Half the step can't be done: nothing to set, so Day 6's cut-off attack has nothing to attack. Listing name for Day 6: '<RUN> Capacity Two' (test tenant; deleted after run). Suggested fix: add a per-listing 'stop taking bookings N hours before a session' (listing field + check next to the past-date gate in POST /api/my/bookings) — or drop the cut-off from the plan if it isn't a product requirement.",
+        "at": "2026-09-12T12:56:03.595Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Created a live listing on a throwaway tenant with capacity 10/day and bookingCutoffHours '48' → 201, saved on the listing doc and returned by parent GET /api/listings/:id; a junk cut-off 'abc' → 400. Blocks generated (sessions 09:00). As the parent: booking tomorrow → 400 'Bookings for Sun 13 Sept have closed — ZZ Cutoff Camp stops taking bookings 2 days before each session. Please pick a later date, or contact the provider.'; the day after (also inside 48h) → 400 same message; +6 days → 201. The operator booking tomorrow on behalf of the family → 201 (override). Clearing the cut-off → the parent can book inside the old window again (201). Capacity half unchanged from the first run (capacity saved, capacityScope day).",
+        "notes": "New listing field bookingCutoffHours (server/src/routes/listings.ts ~155, whole hours, blank = none); enforced per chosen day in POST /api/my/bookings next to the past-date gate (server/src/routes/my.ts ~903-944) against the day's session start (chosen timing's start, else the block session) on the UK wall clock — new server/src/lib/bookingCutoff.ts; skipped for onBehalfOf. Wizard: BookingCutoff control under 'Bookings open at' in the Policy step (features/listings/ListingWizard.tsx ~2575-2605); customer page note 'Bookings close N hours before each session starts' under Choose your dates (both styles). Wizard control + customer-page note NOT visually checked (no browser sign-in); days inside the cut-off aren't greyed in the calendar yet (server refuses them). Test used a placeholder venueId/blockId to satisfy the publish gate. Backlog s13-par2.",
+        "at": "2026-09-12T22:51:25Z"
+      }
+    ]
+  },
+  "d3s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Library staff ['Owner Person'] → PUT {staff:[]} → [] ; a later categories-only save leaves staff [] ; customer page (GET /api/listings/:id library.staff) → []. READ-ONLY live check: 43 libraries, 0 hold any of the six demo names.",
+    "notes": "Server + code path (FreelancerListingsApp.tsx isDemoStaff l.166-167/188/323, seedLocal l.136). Ratios → reload not clicked in a browser.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:59Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Server: library staff before = [\"Owner Person\"]; PUT {staff:[]} → GET returns [] ; a later partial library save (categories only) leaves staff=[]; the camp's customer page (GET /api/listings/:id library.staff) now shows []. Client (FreelancerListingsApp.tsx): seedLocal() staff = just you (l.155-161, the old seed spread DEMO_STAFF); isDemoStaff() drops any name+role match on load from server and cache (l.166-167,188,323); 'staff' is deliberately NOT in the recover-from-cache keys (l.326-327), so an emptied team is never refilled from this browser. Live READ-ONLY sweep of all 41 real libraries: 0 still hold the six demo names; 0 listings reference them.",
+        "notes": "Server + code-path verified, plus a read-only live check (demostaff.read.ts). The Ratios → reload flow was not clicked in a browser. Caveat: the customer page filters nothing server-side (listings.ts:458-463 picks lib.staff by staffIds) — safe today only because no library holds demo staff.",
+        "at": "2026-09-12T12:56:06.492Z"
+      }
+    ]
+  },
+  "d3s7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Add-on 'Camp T-shirt' (£8) with required choice 'T-shirt size' [S,M,L]: parent booking with no answer → 400 '\"Camp T-shirt\" needs an answer for T-shirt size (Zed Test)'; 'XXL' → 400 'isn't one of the options'; 'M' → 201; stored addons ['Camp T-shirt (T-shirt size: M) — £8.00'], amount £158.",
+    "notes": "Answer lands on the booking inside the add-on line (not a structured field). Checkout UI not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:59Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Add-on 'Camp T-shirt' (£8) with a REQUIRED choice question 'T-shirt size' [S,M,L] on the camp. Parent POST /api/my/bookings with the add-on and no answer → 400 \"\"Camp T-shirt\" needs an answer for T-shirt size (Zed Test)\"; with 'XXL' → 400 \"\"XXL\" isn't one of the options for T-shirt size\"; with 'M' → 201. Stored booking (as the operator reads it): addons=[\"Camp T-shirt (T-shirt size: M) — £8.00\"], amount £158 (150 + 8).",
+        "notes": "The only per-listing questions the wizard has are add-on questions (ListingWizard.tsx:2446, 'asked per child at checkout'); tenant-wide child questions (Setup) land on the child profile, not the booking. The answer lands on the booking as text inside the add-on line, not a structured field. Checkout UI not rendered; server enforcement verified.",
+        "at": "2026-09-12T12:56:11.529Z"
+      }
+    ]
+  },
+  "d3s8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Signed-out feed for the tenant lists exactly the 6 live public listings (Block of 6, Capacity Two, Farm Trip, Holiday Camp, Oct Half-term Camp, Tuesday Class) with right prices (camp £150/£30, class £9, trip £35); draft, hidden and archived absent. Direct link signed-out: draft 404, archived 404, hidden 200 (unlisted by design). Publishing a bare listing → 400 'Can't publish yet — … needs a venue, dates…, a block with passes.'",
+    "notes": "Screens not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:59Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Signed-out GET /api/listings?tenantId=: all 6 live public listings present (true); prices match the bundles (camp Full week £150, class £9, trip £35: true). Not in the feed: the draft, the hidden-link listing and the archived one (titles returned: [\"zz-selftest-A-1789217732913 Block of 6\",\"zz-selftest-A-1789217732913 Capacity Two\",\"zz-selftest-A-1789217732913 Farm Trip\",\"zz-selftest-A-1789217732913 Holiday Camp\",\"zz-selftest-A-1789217732913 Oct Half-term Camp\",\"zz-selftest-A-1789217732913 Tuesday Class\"]). Direct link signed-out: draft → 404, archived → 404, hidden (unlisted by design) → 200. Trying to POST status:live with no venue/dates/block → 400 \"Can't publish yet — this listing needs a venue, dates with at least one running day, a block with passes.\".",
+        "notes": "Data verified via the real public routes; screens not rendered. Note the draft's price (£1) never surfaced anywhere public.",
+        "at": "2026-09-12T12:56:19.209Z"
+      }
+    ]
+  },
+  "d4s1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/discounts: 20% → 201, £10 exclusive → 201, one-use-per-customer → 201; 120% → 400; same name again (case-insensitive) → 409. GET lists ZZPCT20 percent 20, ZZTENX amount 10 exclusive, ZZONCE amount 5 once.",
+    "notes": "Restrictions biting at checkout: d6s3 (20%) + d7s6 (other agent).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:59Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "POST /api/discounts: 20% code → 201 (stored as ZZPCT20, percent 20), £10 exclusive → 201 (exclusive=true), one-use-per-customer → 201 (perCustomerLimit=true). Guards: 120% → 400; same name again (case-insensitive) → 409 \"You already have a code with that name\". GET /api/discounts lists all three with their restrictions.",
+        "notes": "Save/restriction storage verified; the restrictions biting at checkout are exercised in d6s3/d7s6 (and here in d4s2's booking below is not needed).",
+        "at": "2026-09-12T16:33:09.116Z"
+      }
+    ]
+  },
+  "d4s2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Sibling 10% + early-bird £15 (book by 1 Oct) → signed-out feed offers ['Sibling 10% off','Early bird £15 off'], bestOfferPercent 10. Early-bird changed to one that EXPIRED 1 Sept → feed now offers only ['Sibling 10% off'] (was still advertised on 12 Sept), and a one-child Full-week booking is charged £150 (no £15).",
+    "notes": "Previous side-failure fixed: listings.ts feed filter drops kind 'early' rules whose beforeDate < ukToday(). The customer page's own discounts panel (ListingWizard ~'live') not re-checked visually.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:15:59Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Listing with a sibling rule (10% off, >1 child) and an early-bird (£15 off, book by 2026-10-01): the signed-out feed (what Browse shows) carries offers [\"Sibling 10% off\",\"Early bird £15 off\"] with bestOfferPercent=10 ('SAVE 10%' badge) — correct. BUT after changing the early-bird to one that EXPIRED on 2026-09-01, the feed still advertises [\"Sibling 10% off\"], while checkout correctly refuses to apply it (a one-child Full-week booking was charged £100, i.e. no £15 off).",
+        "notes": "The as-written case (future early-bird) shows correctly; failed because an expired early bird stays on the customer page as an 'available saving' that checkout won't honour. listings.ts:381 filters only enabled!==false. Suggested fix: in the feed's rules filter also drop kind==='early' rules whose beforeDate < today (and the same filter in the customer page's discounts panel, ListingWizard.tsx ~3854 'live').",
+        "at": "2026-09-12T16:33:17.358Z"
+      }
+    ]
+  },
+  "d4s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "settings.memberships {enabled, 3 tiers: free £0/5% off, credit £40→£50 wallet, 10% £10/mo} → 200; a parent who is a customer: GET /api/my/memberships?tenantId= → enabled=true with all 3 tiers; public library slice carries 3 tiers.",
+    "notes": "Parent Memberships page not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:16:00Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Saved settings.memberships {enabled, 3 tiers: free (£0, 5% off), credit (£40/mo → £50 wallet), percentage (£10/mo, 10% off)} → 200. A parent who is a customer of the provider: GET /api/my/memberships?tenantId= → enabled=true, tiers=[\"ZZ Friends (free)\",\"ZZ Credit Club\",\"ZZ Ten Percent\"]. The public library slice (which gates the Memberships nav for families) also carries all 3.",
+        "notes": "Parent Memberships page not rendered; data verified. A 'free' tier is modelled as a £0 tier with a benefit — there is no benefit-less tier type.",
+        "at": "2026-09-12T16:33:19.473Z"
+      }
+    ]
+  },
+  "d4s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Join credit tier → 200 creditAdded=true, wallet £50; same tier again → 409 'You're already a ZZ Credit Club member'; cancel + rejoin → creditAdded=false, wallet £50; cancel → % tier → back to credit → creditAdded=false, £50; cancel then two simultaneous joins → 200/200, creditAdded false/false, wallet £50; a never-booked parent joining → 400.",
+    "notes": "Wallet read from GET /api/my/wallet (server). Phase-1 caveat unchanged: no payment behind any tier yet (Stripe recurring owed by Amir).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:16:00Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Parent joins the credit tier → creditAdded=true, wallet £50. Join the SAME tier again while active → 409 \"You're already a ZZ Credit Club member\". Cancel → 200; re-join → 200 creditAdded=false, wallet still £50. Cancel → join % tier → switch back to credit → creditAdded=false, wallet £50. Cancel then two simultaneous joins → 200/200, creditAdded false/false, wallet £50. (P3, never booked/customer, joining → 400.)",
+        "notes": "Wallet balance read from GET /api/my/wallet (the server), not the screen message. The 'already added this month' message is what the bell/notify body says when creditAdded=false (memberships.ts:171-178). Phase-1 caveat: there is still no payment behind any tier (Stripe recurring owed by Amir), so the £50 credit is granted on first join with nothing charged.",
+        "at": "2026-09-12T16:33:36.661Z"
+      }
+    ]
+  },
+  "d4s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "settings.referral {enabled, amount, friendOff 10, referrerReward 15, minSpend 50} → 200; GET /api/referrals enabled=true friendOff=10 referrerReward=15; public slice friendOff=10.",
+    "notes": "Self-referral abuse is d7s8 (other agent).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:16:00Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "PUT settings.referral {enabled, amount, friend £10 off, referrer £15, min spend £50} → 200. Operator GET /api/referrals → enabled=true, friendOff=10, referrerReward=15; the family-facing public slice carries referral.friendOff=10.",
+        "notes": "Saves and reads back. The self-referral abuse case is d7s8 (another agent).",
+        "at": "2026-09-12T16:33:38.789Z"
+      }
+    ]
+  },
+  "d4s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Two Setup policies [Standard 100% ≥7d/50% ≥48h/0; 'ZZ 14-day' 100% ≥14d else 50%] (public slice carries both). Listing with cancellationPolicyId 'zz14' → stored 'zz14'; parent (no wallet) pays £100 in full, cancels 23 Sept (9 days out) → 200, recommended refund £50 'your policy gives 50%'. Control listing on 'standard' → £100 'full refund'. Customer page carries the listing's cancellation wording.",
+    "notes": "12 Sept side finding FIXED: cancellationPolicyId is now in listings.ts baseListingSchema, so the server applies the policy the parent was shown (not policies[0]). Note: the first attempt in day34 showed £75 only because the test over-stated amountPaid on a wallet-part-paid booking — re-run clean in d4s6.test.mts.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/d4s6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/d4s6.out; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day34.results.txt",
+    "at": "2026-09-13T00:22:59Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Saved policies [Standard, \"ZZ 14-day\" (100% ≥14 days, 50% after)] → 200; public slice has 2 policies. Listing saved with cancellationPolicyId \"zz14\" + the generated wording; the signed-out customer page shows cancellation=\"cancel at least 2 weeks before it starts for a full refund. After that, 50% is refunded.\" (shown=true). BUT the stored listing has cancellationPolicyId=\"zz14\" — the server schema strips it — so when the parent (paid £100, session 23 Sep = 11 days out) cancelled, the server applied policies[0] (Standard): recommended refund £50 (\"test cancel (Cancelled 10 days before it starts — your policy gives 50%.)\"). Under the 14-day policy the parent was shown, it should be £50.",
+        "notes": "What parents are SHOWN and what the server APPLIES disagree whenever the chosen policy isn't the first one in Setup. my.ts:1874/2131 read listing.cancellationPolicyId, which is never stored (not in baseListingSchema), and policyById() falls back to policies[0]. Suggested fix: add cancellationPolicyId: z.string().max(60).optional() to baseListingSchema in server/src/routes/listings.ts. (Also: checkout's 'before you pay' text is the listing's prose field, which does save.)",
+        "at": "2026-09-12T16:33:48.128Z"
+      }
+    ]
+  },
+  "d4s7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Pass as before (draft → Mark paid settles once). Side finding FIXED: POST /api/invoices created with status 'paid' £150 against a £150 booking → 201; booking Paid / amountPaid 150 / settledByInvoice = the invoice, invoice bookingSettledVia 'manual'; re-saving it paid → still £150. A draft invoice leaves the booking Unpaid; a £60 invoice raised paid on a £150 booking → Partially paid £60.",
+    "notes": "server/src/routes/invoices.ts:104-107 — POST now calls the same settleInvoiceBooking() the PUT uses (idempotent via bookingSettledAt). Surgical: nothing else in invoices.ts touched (fix4 owns pay-links).",
+    "evidence": "scratchpad/acceptance/fix-fix5/fix5.test.mts; scratchpad/acceptance/fix-fix5/run1.log",
+    "at": "2026-09-13T01:27:36Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Booking APF-10314 (£100, Unpaid). Invoice for £60 against that ref, PUT status paid → booking pay=\"Partially paid\", amountPaid=60. Re-saved as paid (200), then sent→paid again → amountPaid still 60 (bookingSettledAt makes it idempotent). A second invoice for the £40 balance marked paid → pay=\"Paid\", amountPaid=100. Edge: an invoice POSTed already status:\"paid\" against booking APF-10315 → that booking stays pay=\"Unpaid\", amountPaid=0.",
+        "notes": "The screen's flow (create as draft → 'Mark paid') settles correctly and only once. Side finding: POST /api/invoices never calls settleInvoiceBooking, so an invoice created directly as paid (the API accepts status on create; the Invoices editor currently always creates drafts) never settles its booking, and a later re-save as paid won't either (status didn't change). Suggested fix: call settleInvoiceBooking after the add in invoices.post when status===\"paid\".",
+        "at": "2026-09-12T16:33:59.347Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Operator booking APF-10317 £150 (unpaid). £60 invoice against the ref, PUT status paid → booking 'Partially paid', amountPaid 60. Re-saved paid, then sent→paid again → still Partially paid/£60 (once). Balance invoice £90 marked paid → 'Paid', amountPaid £150.",
+        "notes": "Screen flow (draft → Mark paid) settles correctly and once. Side finding unchanged: POST /api/invoices with status 'paid' on create still never calls settleInvoiceBooking (invoices.ts ~97-105).",
+        "at": "2026-09-13T00:16:00Z"
+      }
+    ]
+  },
+  "d5s4": {
+    "verdict": "pass",
+    "method": "live-read",
+    "actual": "Local API, read-only after the fix: q=zz → [] (other agents' ZZ test tenants swept); RateLimit-Limit: 120 still on /api/providers. In-process: rows carry id/name/town/outward postcode only; postcode matching is now outward-only (full-code probing no longer confirms the inward half — see d5s3).",
+    "notes": "FIXED 13 Sept (wave 5): providers.ts:139-153 outward-only matching; leftover zz test tenants deleted (fix5 cleanup-zz.mts: 2 tenants, 8 users, 6 walletEntries, 1 schedulerFired). Still localhost, not staging.",
+    "evidence": "curl http://localhost:4000/api/providers?q=zz; scratchpad/acceptance/fix-fix5/fix5.test.mts; scratchpad/acceptance/fix-fix5/run1.log",
+    "at": "2026-09-13T01:27:36Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "No staging API exists, so run against the local API (http://localhost:4000, no Authorization header, read-only GETs). q=a, q=b, q=c → [] each (the endpoint ignores queries under 2 characters, providers.ts:137-140), so also tried 2-letter queries: q=ap → 5 results, q=ca → 2, q=sp → 1, q=mk → 6, q=zz → 0. Every result has ONLY id/name/town/postcode; all postcodes are outward-only (MK10 …; none with an inward half); towns shown only where the address is comma-structured ('Milton Keynes'). Max observed 6 (cap MAX_RESULTS=8, providers.ts:28,160). Tenant ids DO come back on every row (as the plan notes — they are the storefront link). Response headers carry RateLimit-Limit: 120.",
+        "notes": "Localhost dev rather than staging. Side findings: (1) matching still runs on the FULL postcode (providers.ts:150-151, deliberate), so the inward half can be confirmed by probing — q='mk146bn' returns the provider if and only if that is its full postcode (shown in-process in day5.test.ts) — at 120 req/min the full postcode of a sole trader is recoverable; suggested fix: match on the outward code only. (2) one real tenant's stored postcode comes back as '13' (not a UK postcode) — data quality.",
+        "at": "2026-09-12T13:12:20.391Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Local API (no staging), no auth, read-only: q=a/b/c → [] (queries under 2 chars ignored); q=ap → 5, ca → 2, sp → 1, mk → 7, zz → 8 (= the MAX_RESULTS cap). Rows carry only id/name/town?/postcode?; every postcode is outward-only (MK10/MK14; one real tenant stores '13'); tenant ids come back on every row (storefront link, as the plan notes). RateLimit-Limit: 120 header present.",
+        "notes": "Side finding unchanged: matching still runs on the FULL postcode (providers.ts ~150), so the hidden inward half can be confirmed by probing (re-shown in-process in d5s3). q=zz returns other agents' ZZ test tenants (ZZ Money Test / ZZ Parent Test A,B / ZZ rtF A,B) — theirs to sweep.",
+        "at": "2026-09-12T23:55:17Z"
+      }
+    ]
+  },
+  "d5s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Unchanged pass for the step (found by two letters, town/outward only). Side finding FIXED: matching now uses the OUTWARD code only — tenant postcode 'ZZ9 9ZZ': q='zz9' → found; 'ZZ9 9ZZ' → found; wrong inward 'ZZ9 9ZY' → ALSO found (identical answer, so a guess confirms nothing); 'zz99' / 'zz9 9' → not found. Row shows postcode 'ZZ9'.",
+    "notes": "server/src/routes/providers.ts:139-153 — a typed full postcode is cut to its outward half before matching; partial input matches the outward code by prefix. (No per-provider 'hide address' flag exists — the directory has always shown outward-only for everyone, so the rule applies to all.) /parent not typed into.",
+    "evidence": "scratchpad/acceptance/fix-fix5/fix5.test.mts; scratchpad/acceptance/fix-fix5/run1.log",
+    "at": "2026-09-13T01:27:36Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Real GET /api/providers (as /parent → Create an account calls it, app/parent/page.tsx:58) with q=\"zq\" finds both test providers: [{\"id\":\"zz-selftest-A-1789218832714-pdir\",\"name\":\"Zqx Kickers Club\",\"town\":\"Milton Keynes\",\"postcode\":\"MK14\"},{\"id\":\"zz-selftest-A-1789218832714-pdir2\",\"name\":\"Zqx Tennis Tots\",\"postcode\":\"MK10\"}]. The comma-structured address \"12 Secret Street, Milton Keynes\" yields town \"Milton Keynes\" only; the unpunctuated \"7 Corris Court Broughton Milton Keynes MK10 9NR\" yields NO town (not a guess); postcodes are outward only (MK14, MK10). The raw response never contains the street or the inward code. Also findable by the registered name (q=\"zqx kickers ltd\" → false). The picker renders \"📍 town · postcode\" (page.tsx:200-202).",
+        "notes": "Server + render code verified; the /parent screen was not typed into (no browser; also /parent is currently a 500 in dev — see d5s2). Side finding for d5s4: probing the FULL postcode works — q=\"mk146bn\" matches this provider (yes) while q=\"mk146bz\" does not, so the hidden inward half is recoverable by trial.",
+        "at": "2026-09-12T13:13:59.135Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Real GET /api/providers (what /parent → Create an account calls) with q='zq' finds both test providers: {name 'Zqx Kickers Club', town 'Milton Keynes', postcode 'MK14'} (address '12 Secret Street, Milton Keynes') and {name 'Zqx Tennis Tots', postcode 'MK10', no town} (unpunctuated address → no guess). Raw response contains no street and no inward code; rows carry only id/name/town/postcode. Also found by its registered name (q='zqx kickers ltd').",
+        "notes": "Server + picker render code (app/parent/page.tsx '📍 town · postcode'); /parent not typed into. Side finding unchanged: full-postcode probing still works — q=mk146bn matches, q=mk146bz doesn't (providers.ts matches on the full code).",
+        "at": "2026-09-13T00:34:50Z"
+      }
+    ]
+  },
+  "d5s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Unchanged pass for /api/providers (120/min). The other public routes now carry the same limiter: /api/events 120, /api/images 600, /api/emails/open 1000, /api/emails/inbound 300, /api/geo/tiles 1200, and signed-out /api/listings + /api/public/library 300 each. Batched in-process: 640 anonymous /api/listings calls → 300 served then 429 (first at #301); /api/public/library same; /api/images 600 then 429 (#601). A signed-in call to /api/listings after exhaustion carries no limiter (404 for a missing id, not 429). Live :4000 now returns RateLimit-Limit 600 on /api/images.",
+    "notes": "server/src/index.ts:142-173 (anonOnly() wraps the listings/library limiters so operators saving listings aren't throttled; a bad token is a 401 anyway). Webhooks (Stripe, Resend inbound) left unlimited — signature-verified, and a 429 would drop real events. Caveats unchanged: in-memory per instance; keyed on req.ip.",
+    "evidence": "scratchpad/acceptance/fix-fix5/rl.test.mts; scratchpad/acceptance/fix-fix5/rl.log; scratchpad/acceptance/fix-fix5/fix5.test.mts; scratchpad/acceptance/fix-fix5/run1.log",
+    "at": "2026-09-13T01:27:36Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "The real limiter + directory router, mounted exactly as index.ts:175 (rateLimit(\"providers\", 120)), hit 200 times from one address: 116 × 200 then 84 × 429 \"Too many requests\" — first refusal on request #117 (earlier d5s3 calls count too), Retry-After 58s.",
+        "notes": "Run in-process rather than looping the user's localhost:4000 (would lock the other session's browser out of provider search for a minute). The live server does send RateLimit-Limit: 120 on this route (seen in d5s4). Caveats: in-memory per process (per instance once scaled out — lib/rateLimit.ts:8-10); keyed on req.ip, which is only the real client if TRUST_PROXY matches the host's hop count. Still UNLIMITED public endpoints: GET /api/listings (the browse feed — reads the WHOLE listings collection on every call, listings.ts:270), /api/public/library/:tenantId, /api/images/:id, /api/emails/open. Suggested: add rateLimit to /api/listings at least.",
+        "at": "2026-09-12T13:14:00.684Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Real limiter + directory router mounted as index.ts (rateLimit('providers',120)), 200 requests from one address: 116 × 200 then 84 × 429, first refusal at #117 (earlier d5s3 calls count), Retry-After 57s.",
+        "notes": "In-process (not hammering the shared localhost:4000). Caveats unchanged: in-memory per instance; keyed on req.ip (TRUST_PROXY must match hops); GET /api/listings, /api/public/library/:id, /api/images/:id, /api/emails/open still have no limiter.",
+        "at": "2026-09-13T00:34:50Z"
+      }
+    ]
+  },
+  "d5s7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Anonymous GET /api/images/:id: a listing/public image → 200 (by design); a PRIVATE image (how moments/accident/safeguarding photos upload) by bare id → 403 'This link has expired — reopen the page to get a fresh one.'; with the server-issued signed link → 200; tampered signature → 403; expiry rewound → 403; freshly re-signed → 200. READ-ONLY live check: 7 images referenced by real moments/incidents, all 7 flagged private — 0 reachable by bare id.",
+    "notes": "Judged on the regression the step exists for (child/injury photos). The literal wording ('image from a LISTING … refused') can't hold — listing photos are public by design; suggest rewording to a Moments/accident photo.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day5.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day5.results.txt",
+    "at": "2026-09-13T00:34:50Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Anonymous GET /api/images/:id — a LISTING/logo image (uploaded with the default purpose 'public') → 200 (renders, by design). A PRIVATE image (how moments, accident photos and safeguarding attachments now upload: MomentsApp.tsx:127, IncidentsApp.tsx:91, SafeguardingApp.tsx:100) by bare id → 403 \"This link has expired — reopen the page to get a fresh one.\"; with the server-issued signed link → 200; signature tampered → 403; expiry rewound → 403. READ-ONLY live check (images.read.ts, same logic as backfillPrivateImages.ts dry run): all 7 images referenced by real moments/incidents are flagged private — 0 still reachable by bare id.",
+        "notes": "Verdict judged on the regression this step exists for (child/injury photos — d13s7/d20s7/d25s8). The step's literal wording ('open an image from a LISTING … Refused') cannot and should not hold: listing photos are shown to signed-out visitors on the customer page, so they are public by design (uploads.ts:33-37). Suggest rewording the step to use a Moments/accident photo URL. Child avatar photos are stored inline on the child record, not on /api/images.",
+        "at": "2026-09-12T13:14:04.766Z"
+      }
+    ]
+  },
+  "d5s8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Public POST /api/leads (what /demo sends; every /v2 'Book a demo' links to /demo) → 200. HQ (platform) GET /api/leads — the HQ → Leads page — lists it (status 'new', business 'zz-rta-… Demo Club', among 25,740 leads); it's in the Sales pipeline feed /api/platform/leads and the HQ bell (/api/platform/notifications has lead_<id>, 200). A provider asking for /api/leads → 403; malformed email → 400.",
+    "notes": "Harness now calls warmLeads() like index.ts does at listen (the list is cache-backed; without it GET returns 202 warming for >90s under load — first attempt recorded that, not a product fault). Lead DELETED after the check (hygiene) — Day 28 needs a fresh one. /demo page not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/d5s8.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/d5s8.out",
+    "at": "2026-09-13T00:45:03Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Public POST /api/leads (what app/demo/page.tsx:36 sends; all /v2 'Book a demo' buttons link to /demo) → 200. HQ (platform role) GET /api/leads — the HQ → Leads page (LeadsApp.tsx:46) — lists it with status \"new\", business \"zz-selftest-A-1789218832714 Demo Club\"; it's also in the Sales pipeline feed /api/platform/leads (true) and the HQ bell (/api/platform/notifications has lead_ZkFTxTnUCYpGyMNfrtqn: true, status 200). A provider account asking for /api/leads → 403; malformed email → 400.",
+        "notes": "The lead was DELETED after the check (test hygiene), so Day 28 needs a fresh one. The /demo page itself wasn't rendered, and the leads endpoint is limited to 10/min per IP.",
+        "at": "2026-09-12T13:14:11.038Z"
+      }
+    ]
+  },
+  "d5s2": {
+    "verdict": "fail",
+    "method": "live-read",
+    "actual": "Read-only GET of /v2/parents.html, /v2/schools.html, /v2/safeguarding.html from the local Next server → 200 each; every internal link (8 / 22 / 22 distinct) → < 400, no 404s; no placeholder words (lorem/TODO/TBC/FIXME/coming soon/example.com/'ActivityOS'); no nav tab carries an active class or aria-current on any page. STILL each footer has 6 dead href=\"#\" links: 'Download on the App Store', 'Get it on Google Play' (ft-store) and Instagram / Facebook / LinkedIn / YouTube (ft-soc).",
+    "notes": "Unchanged — deliberately NOT fixed: whether to drop the store badges/social icons or point them at real profiles is Kaz's decision (marketing site not touched). Localhost dev, not staging; not viewed in a browser.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/d5s2.read.py; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/d5s2.out",
+    "at": "2026-09-12T23:55:17Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "GET (read-only) of /v2/parents.html, /v2/schools.html, /v2/safeguarding.html from the local Next server → 200 each. Every internal link on the three pages (10 / 26 / 24 distinct) returns < 400 — no 404s (incl. /parent, /parent?tab=up, /demo, /v2/terms|privacy|dpa|security|tour|pricing, /nametbc.html#platform). No placeholder text found (searched lorem/ipsum/TODO/TBC/FIXME/XXX/'coming soon'/[insert/example.com and the banned 'ActivityOS' brand). Header nav: no tab carries an active/highlighted class on any of the three pages, so nothing is wrongly highlighted. BUT each page's footer has 6 dead links, href=\"#\": 'Download on the App Store', 'Get it on Google Play', and the Instagram / Facebook / LinkedIn / YouTube icons — clicking them does nothing (and there is no app to download).",
+        "notes": "Failed on the footer: 6 placeholder '#' links per page (a parent tapping 'Download on the App Store' gets nothing). Suggested fix: remove the store badges until an app exists and either link the social icons to real profiles or drop them (public/v2/*.html footer, class ft-store / ft-soc). Note: at 17:10 today /parent was briefly a 500 (features/meals/allergens.ts had dropped UK_ALLERGENS, which SavedMenus.tsx imports — a concurrent edit); re-checked minutes later → 200. Also '/nametbc.html#platform' points at the old non-v2 page. Checked on localhost dev, not staging; not viewed in a browser.",
+        "at": "2026-09-12T13:15:19.429Z"
+      }
+    ]
+  },
+  "d5s1": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "Not exercised: needs the signed-out storefront rendered at phone width (375px) and interacted with; no real phone, and with ~10 agents on an 8 GB Mac a browser session wasn't started. The data behind browse/filters (signed-out /api/listings?tenantId= with location/season/offers/timings) re-verified in d3s1–d3s8/d4s2.",
+    "notes": "Still blocked on a mobile browser session. When unblocked: /store/<tenant> and /custdash/browse at 375px — no horizontal scroll, filter chips wrap, booking panel fits.",
+    "evidence": "features/storefront/StorePage.tsx; features/parent/BrowseApp.tsx",
+    "at": "2026-09-12T23:55:17Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "blocked",
+        "actual": "Not exercisable here: needs the customer booking page rendered on a phone-sized viewport and interacted with (browse + filters), and the Browser/Chrome tools are reserved for another session; no real device either (prereq: no second device). The data behind browse/filters (signed-out GET /api/listings?tenantId= with categories/location/season/offers/timings) is verified in d3s1–d3s8/d4s2.",
+        "notes": "Blocked: needs a mobile browser session (preview resize to 375×812 would do). What to check when unblocked: /store/<tenant> and /custdash/browse at 375px — no horizontal scroll, filter chips wrap, the booking panel fits.",
+        "at": "2026-09-12T13:15:37.108Z"
+      }
+    ]
+  },
+  "d5s6": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "No production-mode deployment to test. Locally (dev): GET /openapi.json → 200, /docs/ → 200, as designed. The gate in server/src/index.ts:133-136 still mounts both only when NODE_ENV !== 'production' || PUBLIC_API_DOCS === '1'.",
+    "notes": "Blocked on p1 (staging). Code gate correct; remaining proof is staging really runs NODE_ENV=production without PUBLIC_API_DOCS=1.",
+    "evidence": "server/src/index.ts:130-136",
+    "at": "2026-09-12T23:55:18Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "blocked",
+        "actual": "No staging (production-mode) deployment exists to test against. Locally (dev, NODE_ENV not 'production'): GET http://localhost:4000/openapi.json → 200 and /docs/ → 200, exactly as designed. The gate is server/src/index.ts:127-131: /openapi.json and /docs are only mounted when NODE_ENV !== 'production' || PUBLIC_API_DOCS === '1', so in production neither route exists (falls through → 404 from Express).",
+        "notes": "Blocked on prereq p1 (staging). The code gate is correct; what remains is proving staging really runs with NODE_ENV=production and without PUBLIC_API_DOCS=1 — a 200 there means it doesn't. (Not re-run by importing index.ts, which would start listeners and sweeps.)",
+        "at": "2026-09-12T13:15:40.860Z"
+      }
+    ]
+  },
+  "d6s1": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "Add child → 201 (age from DOB); book one session → 201, booking APF-10312 'Approval needed'/'Unpaid' £20, childId stamped. Paying: POST /api/payments/checkout → 503 \"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\".",
+    "notes": "Still blocked on prereq p3 (Stripe test keys). Everything up to the charge works server-side.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt",
+    "at": "2026-09-13T00:52:41Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "blocked",
+        "actual": "Add child: POST /api/my/children → 201 (age 8 from DOB). Book one session: POST /api/my/bookings (Day pass, Tue 20 Oct, childId) → 201; booking APF-10312 status=\"Approval needed\", pay=\"Unpaid\", amount £20, childId stamped=true; the response total £20. Paying: POST /api/payments/checkout {refs:[APF-10312]} → 503 \"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\".",
+        "notes": "Blocked on prereq p3 — no Stripe key on this server, so no card can be charged and no receipt produced. Everything up to the charge works server-side (child, booking, server-priced amount). When keys exist: check the PaymentIntent amount equals the booking total (payments.ts:280-314 builds it from the stored booking amounts).",
+        "at": "2026-09-12T16:19:03.738Z"
+      }
+    ]
+  },
+  "d6s2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Two siblings on Full week £99.99 with a 10% sibling rule + £5/day add-on for one: the checkout's own engine (applyDiscounts) quotes passes £179.98 + add-on £25 = £204.98; server POST /api/my/bookings → 201 total £204.98; stored booking amounts sum £204.98 → PaymentIntent built from them = 20498p.",
+    "notes": "Quote = server total = charge basis, to the penny. The Stripe charge itself not made (no keys) — PI amount read from payments.ts, not observed at Stripe.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt",
+    "at": "2026-09-13T00:52:41Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Awkward basket: two siblings on Full week at £99.99 with a 10% sibling rule, plus a £5/day add-on for one child. The checkout's own engine (features/listings/discounts.ts applyDiscounts, as booking.ts:263 calls it) quotes pass £179.98 + add-on £25 = £204.98. Server POST /api/my/bookings → 201, total £204.98; stored booking amounts sum £204.98 ([[\"APF-10313\",204.98]]). The card charge is built from exactly those stored amounts — toPence(sum) = 20498p (payments.ts:280-314).",
+        "notes": "Quote, server total and the PaymentIntent amount agree to the penny. The Stripe charge itself was not made (no keys) — the PI amount is derived by the same code path read in payments.ts, not observed at Stripe.",
+        "at": "2026-09-12T16:19:05.899Z"
+      }
+    ]
+  },
+  "d6s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Day pass £20 + Early drop-off £5 + Pasta bake £3.50 (Wed 21 Oct) + 20% code: POST /api/discounts/validate {subtotal £20} → valid, off £4; preview 20−4+5+3.50 = £24.50; server booking → 201 amount £24.50, lines ['Early drop-off × 1 — £5.00','🍽 Pasta bake · Wed 21 Oct — £3.50']. (20% of the whole £28.50 would be £22.80.)",
+    "notes": "Code comes off the session price only; quoted total = booked total. Card charge not made (no keys).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt",
+    "at": "2026-09-13T00:52:41Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Day pass £20 + Early drop-off £5 + Pasta bake £3.50 (Wed 21 Oct) with a 20% code. The checkout preview's call POST /api/discounts/validate {subtotal: b.total=£20} → valid=true, off=£4; preview = 20 − 4 + 5 + 3.50 = £24.5. Server booking → 201, amount £24.5, lines [\"Early drop-off × 1 — £5.00\",\"🍽 Pasta bake · Wed 21 Oct — £3.50\"], code ZZTWENTY. 20% of the whole £28.50 would have been £5.70 off (→ £22.80); it took £4 (session only).",
+        "notes": "Quoted total is what the booking asks for. Card charge not made (no Stripe keys); amounts verified server-side.",
+        "at": "2026-09-12T16:19:09.596Z"
+      }
+    ]
+  },
+  "d6s4": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "Can't run (no Stripe keys, needsBackend). Code re-read: still no payment_intent.succeeded handler (grep 'payment_intent' in server/src/routes → only the refund call in bookings.ts); a booking only flips to Paid via POST /api/payments/checkout/:id/confirm called by the parent's browser — a closed tab would leave it Unpaid.",
+    "notes": "Blocked on Stripe keys + Amir's Connect webhook (b7). Expected FAIL when run until the webhook lands.",
+    "evidence": "server/src/routes/stripeWebhook.ts; server/src/routes/payments.ts",
+    "at": "2026-09-13T00:52:41Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "blocked",
+        "actual": "Cannot run: no Stripe keys (p3), and it's a needsBackend step. Code shows it WOULD fail today: a booking only flips to Paid in POST /api/payments/checkout/:id/confirm (payments.ts:363-422), which the parent's browser calls after Stripe confirms. The only webhook (routes/stripeWebhook.ts) handles Billing events — customer.subscription.*, invoice.payment_succeeded/failed — and has no payment_intent.succeeded handler, so a closed tab leaves the booking Unpaid while the card was charged.",
+        "notes": "Blocked on Stripe keys + Amir's Connect webhook (backlog b7). Expected result when run: FAIL until a payment_intent.succeeded (Connect, per connected account) handler marks the bookings in metadata.refs as Paid, idempotently with the confirm route.",
+        "at": "2026-09-12T16:19:09.598Z"
+      }
+    ]
+  },
+  "d6s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Parent booking (Ava One, Thu 22 Oct, £20): operator GET /api/bookings row child 'Ava One' £20; GET /api/registers?date=2026-10-22 has Ava with her allergy; GET /api/customers family row with Ava. Dashboard: live +1, occupancy +1, outstanding +£0 while the booking is 'Approval needed'; once the operator approves it (→ Confirmed) outstanding is +£20 exactly (clean follow-up run).",
+    "notes": "Outstanding no longer moves on an UNAPPROVED booking — deliberate since tonight's s13-mon1 (owedNow: nothing owed while awaiting approval), not a regression; on 12 Sept it moved +£20 immediately. 'Taken this week' can only move once a card payment records (Stripe blocked). Screens not rendered.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6b.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6b.out",
+    "at": "2026-09-13T00:54:58Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Parent booking APF-10316 (Eve One, Day pass Thu 22 Oct, £20). Operator GET /api/bookings → present, child \"Eve One\", amount £20, childId linked. GET /api/registers?date=2026-10-22 → Eve One on the register (true; allergy carried: true). GET /api/customers → family row for the parent present with Eve One (true). Dashboard before→after: bookings.live +1, occupancy.booked +1, money.outstanding +£20 (it's unpaid, so it lands in 'outstanding').",
+        "notes": "All four surfaces' APIs verified; screens not rendered. 'Taken this week' can only move once a card payment records (Stripe blocked), so the money check uses outstanding.",
+        "at": "2026-09-12T16:19:16.860Z"
+      }
+    ]
+  },
+  "d6s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Operator POST /api/my/bookings with onBehalfOf {customerId: the family's row from GET /api/customers} → 201, APF-10317 'Confirmed'/'Invoice sent'; the PARENT's GET /api/my/bookings includes it, resolved to the family's saved child record (childId = Ava's).",
+    "notes": "Firebase Auth lookup stubbed (no auth account created); rest is the real route. Side finding from 12 Sept (operator 'Override the total' never sent) not re-checked.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt",
+    "at": "2026-09-13T00:52:41Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Operator POST /api/my/bookings with onBehalfOf {customerId: the family's record} (what Bookings → Take a booking sends, TakeBookingModal.tsx:83-105) → 201; booking APF-10317 \"Confirmed\", pay \"Invoice sent\", £20. The PARENT's GET /api/my/bookings then includes it (true) — status Confirmed, and it resolved to the family's saved child record (childId matches Ava One: true).",
+        "notes": "Firebase Auth lookup is stubbed in the test (getUserByEmail → the fake parent) so no Auth account could be created; everything else is the real route. Side finding: the operator checkout shows 'Override the total' (checkout.tsx:1606-1614) and per-line price edits, but TakeBookingModal never sends them and the server prices every booking itself — an operator who types £50 gets a booking at the full price with no warning. Either remove the override in operator mode or send it (and accept it server-side for canWrite roles).",
+        "at": "2026-09-12T16:19:19.723Z"
+      }
+    ]
+  },
+  "d6s7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Listing capacity 2 (day scope), waitlist off, one place taken (201). Two parents POSTed simultaneously → 409 'Wed 28 Oct is full and the waitlist is off' / 201. Day count afterwards 2/2; place-holding bookings on the block: 2.",
+    "notes": "Capacity check+increment in one Firestore transaction. Two concurrent HTTP requests, not two browsers.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt",
+    "at": "2026-09-13T00:52:42Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Listing capacity 2, waitlist off; one place taken (→ 201). Two parents then POSTed simultaneously (Promise.all against the real route): 409 \"This block is full and the waitlist is off\" / 201 (booked). Block afterwards: bookedCount=2/2; place-holding bookings on the block (Confirmed/Approval needed): 2.",
+        "notes": "Capacity is checked and incremented inside one Firestore transaction (my.ts:1103-1392), which serialises the two checkouts. Two real browsers weren't used; two concurrent HTTP requests were.",
+        "at": "2026-09-12T16:19:31.009Z"
+      }
+    ]
+  },
+  "d6s8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "(a) datesOff Wed 21 Oct (3 booked) → 409 'This change removes a date that children are booked on: 2026-10-21 (3 booked). Move or cancel those bookings first — removing the date would delete that day's register.' (b) datesOff Mon 19 Oct — the week's FIRST day, booked → 409. (c) shifting the whole run a week later → 409 naming all 5 booked dates. Nothing written: afterwards still ONE open block starting 19 Oct with 5 sessions, datesOff [], runFrom 2026-10-19. A harmless re-save → 200.",
+    "notes": "Now also refused for (b)/(c) — the 12 Sept notes' first-day/shift gap is closed: lib/listingRuns.ts matchRuns() pairs blocks by shared session dates, so bookedDatesDropped catches them and no duplicate block is opened.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt; server/src/lib/listingRuns.ts:128-190",
+    "at": "2026-09-13T00:52:42Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "(a) Removing Wed 21 Oct (1 booked) via datesOff → 409 \"This change removes a date that children are booked on: 2026-10-21 (1 booked). Move or cancel those bookings first — removing the date would delete that day's register.\"; nothing written (block sessions unchanged, listing datesOff unchanged: true). (b) Removing Mon 19 Oct — the FIRST day of the week, 1 booked — → 409 \"This change removes a date that children are booked on: 2026-10-19 (1 booked). Move or cancel those bookings first — removing the date would delete that day's register.\". Afterwards the listing has 1 blocks: [{\"start\":\"2026-10-19\",\"open\":true,\"booked\":2,\"sessions\":5}]; Wed 21 Oct now sits on 1 blocks ([{\"open\":true,\"dayCounts\":{\"2026-10-21\":1,\"2026-10-19\":1}}]); the public feed offers [{\"start\":\"2026-10-19\",\"spotsLeft\":28}]; the Wed register shows 1 session rows for this listing. (c) Moving a whole run a week later (every booked day gone) → 409 \"This change removes a date that children are booked on: 2026-10-20 (1 booked). Move or cancel those bookings first — removing the date would delete that day's register.\"; blocks after: [{\"start\":\"2026-10-19\",\"open\":true,\"booked\":1}].",
+        "notes": "Mid-week removal is correctly refused before any write (b23 fix holds for that case). Fails for (b)/(c). lib/listingRuns.ts bookedDatesDropped() matches existing blocks to the new recipe BY startDate and skips any block with no match ('A block whose run disappears entirely is closed, not deleted' — l.141-145). Taking out the first day of a week, or shifting the dates, changes the startDate, so the booked block is unmatched → no refusal → syncListingBlocks closes it and creates a NEW block for the remaining days with dayCounts {} (l.186-213). Result: the existing bookings stay on a closed block while an identical open block sells the same days again from zero — double capacity (oversell) and duplicate register rows. Suggested fix: in bookedDatesDropped, for unmatched auto blocks, report every session date with dayCounts>0 that isn't in ANY desired run (compare by date across all desired runs, not by startDate); and in syncListingBlocks, match blocks by overlapping dates, carrying dayCounts over. Registers/marks aren't deleted (the closed block keeps its sessions), but no warning is given and capacity is duplicated.",
+        "at": "2026-09-12T16:19:49.867Z"
+      }
+    ]
+  },
+  "d6s12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Same PUT the autosave sends: all three removals (mid-week, first day, date shift) → 409 before any write, body names the dates and counts (droppedDates [{2026-10-19, 3}] / five dates × 3 booked). Client: on a 409 containing 'children are booked on' the autosave shows the server's message even though other autosave errors are silent (ListingWizard.tsx ~1007-1013 — code read).",
+    "notes": "Server verified; the autosave banner not seen in a browser.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt; features/listings/ListingWizard.tsx",
+    "at": "2026-09-13T00:52:42Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Same server path as d6s8 (autosave sends the same PUT /api/listings/:id). (a) Removing Wed 21 Oct (1 booked) via datesOff → 409 \"This change removes a date that children are booked on: 2026-10-21 (1 booked). Move or cancel those bookings first — removing the date would delete that day's register.\"; nothing written (block sessions unchanged, listing datesOff unchanged: true). (b) Removing Mon 19 Oct — the FIRST day of the week, 1 booked — → 409 \"This change removes a date that children are booked on: 2026-10-19 (1 booked). Move or cancel those bookings first — removing the date would delete that day's register.\". Afterwards the listing has 1 blocks: [{\"start\":\"2026-10-19\",\"open\":true,\"booked\":2,\"sessions\":5}]; Wed 21 Oct now sits on 1 blocks ([{\"open\":true,\"dayCounts\":{\"2026-10-21\":1,\"2026-10-19\":1}}]); the public feed offers [{\"start\":\"2026-10-19\",\"spotsLeft\":28}]; the Wed register shows 1 session rows for this listing. (c) Moving a whole run a week later (every booked day gone) → 409 \"This change removes a date that children are booked on: 2026-10-20 (1 booked). Move or cancel those bookings first — removing the date would delete that day's register.\"; blocks after: [{\"start\":\"2026-10-19\",\"open\":true,\"booked\":1}]. Client: on a 409 whose message contains 'children are booked on', the autosave shows the server's message even though autosave errors are otherwise silent (ListingWizard.tsx:1007-1013) — so case (a) is surfaced; cases (b)/(c) are never refused, so nothing is shown.",
+        "notes": "Fails for a first-day removal or a date shift. lib/listingRuns.ts bookedDatesDropped() matches existing blocks to the new recipe BY startDate and skips any block with no match ('A block whose run disappears entirely is closed, not deleted' — l.141-145). Taking out the first day of a week, or shifting the dates, changes the startDate, so the booked block is unmatched → no refusal → syncListingBlocks closes it and creates a NEW block for the remaining days with dayCounts {} (l.186-213). Result: the existing bookings stay on a closed block while an identical open block sells the same days again from zero — double capacity (oversell) and duplicate register rows. Suggested fix: in bookedDatesDropped, for unmatched auto blocks, report every session date with dayCounts>0 that isn't in ANY desired run (compare by date across all desired runs, not by startDate); and in syncListingBlocks, match blocks by overlapping dates, carrying dayCounts over.",
+        "at": "2026-09-12T16:19:49.877Z"
+      }
+    ]
+  },
+  "d6s9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Tenant A's owner (real attachRole): GET /api/bookings/APF-77001?tenantId=<B> → 404; GET /api/bookings?tenantId=<B> → 200 with no B booking; POST …/APF-77001/actions?tenantId=<B> {type:paid} → 404 and B's booking still 'Unpaid'; GET /api/dashboard?tenantId=<B> → 200 with A's own figures only. B's own owner reading the ref → 200.",
+    "notes": "Only platform may use ?tenantId. Token grab not used (no real accounts) — identity injected, then the real middleware + routes.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt",
+    "at": "2026-09-13T00:52:42Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Tenant B booking APF-77001. With tenant A's identity (real attachRole reading A's owner user doc): GET /api/bookings/APF-77001?tenantId=<B> → 404 \"Booking not found\"; GET /api/bookings?tenantId=<B> → 200, contains any B booking: false; POST /api/bookings/APF-77001/actions?tenantId=<B> {type:\"paid\"} → 404, and B's booking is still pay=\"Unpaid\"; GET /api/dashboard?tenantId=<B> → 200 with A's own figures only (no B listing in it). B's own owner reading the same ref → 200.",
+        "notes": "Only the platform role may use ?tenantId (bookings.ts:240, dashboard.ts:27); everyone else is pinned to req.auth.tenantId. B's refs were started at 77001 so A has no booking with the same ref number (A's refs start 10312). Token grab not used (no real accounts) — identity injected, then the real middleware + route.",
+        "at": "2026-09-12T16:19:58.669Z"
+      }
+    ]
+  },
+  "d6s10": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Wrote a booking doc with only {tenantId, ref, status, pay, createdAt} into tenant A. Operator GET /api/bookings → 200 (9 rows incl. it). Every helper the Bookings list uses per row (bookingKids, attendeeCount, the lead-initial expression, matchesFilter × all tabs, matchesSearch, payLabelFor, payMethodLabel, pendingPayWords, sessionCount, bookingDateSummary, bookedOn, runsOn, owedNow, byNewest sort) over all rows → 0 throws; the bare row's initial renders '—'. GET /api/dashboard → 200.",
+    "notes": "List's own helpers run in-process; React list not mounted in a browser.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6.results.txt",
+    "at": "2026-09-13T00:52:42Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Wrote a booking doc with only {tenantId, ref, status, pay, createdAt} — no booker, no child, no kids[] — into tenant A. Operator GET /api/bookings → 200 with 11 rows including it. Then ran every helper the Bookings list calls per row (features/bookings/helpers.ts: bookingKids, attendeeCount, the lead-initial expression from BookingsList.tsx:394/419, matchesFilter for all 9 tabs, matchesSearch, payLabelFor, payMethodLabel, pendingPayWords, sessionCount, bookingDateSummary, bookedOn, runsOn, byNewest sort) over ALL rows: 0 throws. The bare row's avatar initial renders as \"—\". GET /api/dashboard with it present → 200.",
+        "notes": "Data + row-rendering logic verified with the list's own helpers; the React list wasn't mounted in a browser (BookingsList's JSX also uses optional chaining for booker/child).",
+        "at": "2026-09-12T16:19:59.720Z"
+      }
+    ]
+  },
+  "d6s11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Paid £20 booking, parent cancels asking for wallet credit (200, recommended £20). Operator refund-approve → 200; replayed → 409 'This refund has already been approved'; wallet £0 → £20 (once). Double-click: two approvals at the same instant on another booking → 200/409, wallet → £40 (+£20 once); 2 wallet-refund ledger rows. A card-paid booking (paymentIntentId set) with Stripe not connected → 502 'The refund didn't go through: Card payments aren't connected. Nothing was marked refunded…', refund left 'full', pay 'Paid' (retryable, not doubled).",
+    "notes": "First day6 run's d6s11 was a test error (re-booked a child already on those days → booking refused, ref undefined); re-run on a clean family in day6b. 'One Stripe refund' can't be observed without keys (code sends an idempotency key).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6b.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-A/day6b.out",
+    "at": "2026-09-13T00:54:58Z",
+    "agent": "A",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "(1) Booking APF-10323 paid £99.99 (settled via invoice), parent cancels asking for wallet credit (200, recommended refund £99.99). Operator refund-approve → 200; replayed → 409 \"This refund has already been approved\". Wallet £0 → £99.99 (+£99.99, exactly once). (2) Double-click: two refund-approve POSTs at the same instant on APF-10324 → 200 / 409; wallet +£20 (once). (3) A card-paid booking (paymentIntentId set) with Stripe not connected: approve → 502 \"The refund didn't go through: Card payments aren't connected. Nothing was marked refunded — try again, or refund it in Stripe directly.\", and the booking's refund went back to \"full\" (not approved; pay \"Paid\") so it can be retried without doubling.",
+        "notes": "The 'one Stripe refund' half can't be observed without Stripe keys; code sends it with an idempotency key (bookings.ts:1134-1153). The wallet half and the 409 on replay are verified against the real route.",
+        "at": "2026-09-12T16:20:22.897Z"
+      }
+    ]
+  }
+}

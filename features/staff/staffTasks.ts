@@ -6,6 +6,8 @@
 // Amir's. Demo "me" = Marcus Bell, matching the other staff areas.
 import { DOCS_KEY, seedDocs, type DocItem } from "@/features/documents/DocumentsApp";
 import { DEFAULT_FIELDS, fieldApplies, satisfied, type OnboardRecord } from "@/features/team/OnboardingApp";
+import { isDemoMode } from "@/lib/api";
+import { rolesCover, withoutDemoAssignments } from "@/features/learning/courseCompletions";
 
 export const ME = "Marcus Bell";
 const ME_ROLE = "Lead";
@@ -19,7 +21,9 @@ const read = <T,>(key: string, fallback: T): T => {
   try { const v = JSON.parse(localStorage.getItem(key) || "null"); return v ?? fallback; } catch { return fallback; }
 };
 const rmatch = (list: string[], me: string) => list.some((r) => { const rl = r.toLowerCase(), m = me.toLowerCase(); return rl.includes(m) || m.includes(rl.split(/[ /]/)[0]); });
-const courseRoleMatch = (roles: string[]) => roles.some((r) => { const rl = r.toLowerCase(); return rl.includes("lead") || rl.includes("manager") || rl.includes(ME_ROLE.toLowerCase()); });
+// "Lead / manager" used to match every role. This device doesn't know a real
+// staffer's role here, so outside the demo only all-staff / named courses count.
+const courseRoleMatch = (roles: string[]) => rolesCover(roles, isDemoMode() ? ME_ROLE : "");
 
 /** Availability is "done" once the staffer has submitted at least one working day. */
 export function availabilityDone(): boolean {
@@ -31,10 +35,12 @@ export function availabilityDone(): boolean {
 /** Compliance (onboarding) progress across the required fields the staffer fills. */
 export function complianceProgress(): { done: number; total: number } {
   const all = read<OnboardRecord[]>("aos.team.onboardrecords.v1", []);
-  const rec = (Array.isArray(all) ? all : []).find((r) => r.staff === ME);
+  const list = Array.isArray(all) ? all : [];
+  // For a real member of staff the server hands back only their own record.
+  const rec = list.find((r) => r.staff === ME) ?? (isDemoMode() ? undefined : list[0]);
   const values = rec?.values ?? {};
   const extra = rec?.extra ?? [];
-  const req = DEFAULT_FIELDS.filter((f) => f.required && STAFF_EDITABLE.has(f.type) && fieldApplies(f, ME, undefined, extra));
+  const req = DEFAULT_FIELDS.filter((f) => f.required && STAFF_EDITABLE.has(f.type) && fieldApplies(f, rec?.staff ?? ME, undefined, extra));
   const done = req.filter((f) => satisfied(f, values[f.id])).length;
   return { done, total: req.length };
 }
@@ -51,7 +57,7 @@ export function outstandingDocs(): number {
 
 /** Courses assigned to me that I haven't passed yet. */
 export function outstandingCourses(): number {
-  const asns = read<{ assignments?: { kind: string; roles: string[]; staff: string[]; course: string }[] }>("aos.learn.lcm.v2", {}).assignments ?? [];
+  const asns = withoutDemoAssignments(read<{ assignments?: { kind: string; roles: string[]; staff: string[]; course: string; due?: string }[] }>("aos.learn.lcm.v2", {}).assignments ?? []);
   const progress = read<Record<string, { passed?: boolean }>>("aos.learn.progress.v1", {});
   const mine = asns.filter((a) => a.kind === "all" || (a.kind === "roles" && courseRoleMatch(a.roles)) || (a.kind === "staff" && a.staff.includes(ME)));
   return mine.filter((a) => !progress[a.course]?.passed).length;

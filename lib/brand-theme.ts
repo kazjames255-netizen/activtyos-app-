@@ -25,6 +25,39 @@ const mix = (c: RGB, target: 0 | 255, amount: number): RGB => ({
 const lighten = (c: RGB, amt: number) => mix(c, 255, amt);
 const darken = (c: RGB, amt: number) => mix(c, 0, amt);
 
+// WCAG relative luminance + contrast ratio, so text laid on a provider's colour
+// stays legible whatever they pick (a pale yellow needs dark text, navy white).
+const lum = ({ r, g, b }: RGB) => {
+  const ch = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+  return 0.2126 * ch(r) + 0.7152 * ch(g) + 0.0722 * ch(b);
+};
+const contrast = (a: RGB, b: RGB) => {
+  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+const WHITE: RGB = { r: 255, g: 255, b: 255 };
+const DARK_INK = "#171534";
+
+/** A picked accent resolved for direct use on customer pages (the storefront
+ *  isn't under ParentBrandTheme): `bg` fills buttons/header tints, `ink` is the
+ *  text on it (white only when the colour is dark enough), `text` is the colour
+ *  as text on a light ground (deepened if it's too pale to read). Null for a
+ *  bad/missing hex, so callers keep their own default colours. */
+export function brandAccent(hex: string | null | undefined): { bg: string; ink: string; text: string } | null {
+  const base = hex ? hexToRgb(hex) : null;
+  if (!base) return null;
+  const ink = contrast(base, WHITE) >= contrast(base, hexToRgb(DARK_INK)!) ? "#ffffff" : DARK_INK;
+  let t = base;
+  for (let i = 0; i < 6 && contrast(t, WHITE) < 4.5; i++) t = darken(t, 0.15);
+  return { bg: toHex(base), ink, text: toHex(t) };
+}
+
+/** The provider's logo from a settings blob — the public library exposes it as
+ *  a top-level `logoUrl`; a signed-in operator's own library has it in billing. */
+export function brandLogo(s: { logoUrl?: string; billing?: { logoUrl?: string } } | null | undefined): string | null {
+  return (s?.logoUrl || s?.billing?.logoUrl || "").trim() || null;
+}
+
 /** The `--brand-*` variables for a picked accent hex. Returns {} for a bad hex
  *  so callers safely fall back to the globals.css defaults. */
 export function brandVars(hex: string | null | undefined): Record<string, string> {

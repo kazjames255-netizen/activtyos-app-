@@ -12,19 +12,20 @@ import { useRouter, usePathname } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { DEFAULT_FIELDS, SECTIONS, fieldApplies, satisfied, type OnboardField, type OnboardValue, type OnboardRecord } from "@/features/team/OnboardingApp";
+import { get as apiGet, isDemoMode } from "@/lib/api";
+import { fetchOnboarding, hydrateFiles, saveOnboardRecord } from "@/features/team/onboardStore";
 import { useCredentials, credStatus, CredBadge, appliesTo, seedRecords, blankRecord, openCredFile, DEFAULT_CRED_TYPES, CRED_TKEY, CRED_RKEY, fmtDate, type CredType, type CredRecord } from "@/features/learning/credentials";
 
-const ME = "Marcus Bell";
-const FKEY = "aos.team.onboardfields.v1";
-const RKEY = "aos.team.onboardrecords.v1";
-// The details the provider entered when they sent the invite. These pre-fill the
-// matching fields and stay EDITABLE, so the new starter confirms or corrects them
-// rather than typing from scratch. In production these come from the real invite
-// record (backend); demo values here. Keyed to the fields flagged `fromInvite`.
-const INVITE: Record<string, string> = { fullName: "Marcus Bell", email: "marcus.bell@gmail.com", jobTitle: "Lead Coach" };
-// staff role used to resolve which qualifications the provider requires (demo)
-const ME_ROLE = "Lead";
-const CRED_SEED = [{ name: ME, dbs: "Valid", pfa: "Expiring" }];
+const DEMO_ME = "Marcus Bell";
+// Who is onboarding: the signed-in member of staff, set from /api/me before the
+// form loads (the demo person only in demo mode — every real member of staff
+// used to be filling in "Marcus Bell's" record). `invite` holds the details the
+// provider entered on the invite; they pre-fill the matching fields (flagged
+// `fromInvite`) and stay EDITABLE, so the new starter confirms or corrects them.
+const WHO: { name: string; role: string; invite: Record<string, string> } = {
+  name: DEMO_ME, role: "Lead", invite: { fullName: DEMO_ME, email: "marcus.bell@gmail.com", jobTitle: "Lead Coach" },
+};
+const CRED_SEED = [{ name: DEMO_ME, dbs: "Valid", pfa: "Expiring" }];
 // Are the qualifications the provider made compulsory FOR THIS ROLE all provided?
 // Reads the same credential store as Setup (provider) + My certificates (staff).
 function roleQualsCovered(): boolean {
@@ -34,9 +35,9 @@ function roleQualsCovered(): boolean {
   // mirror useCredentials: fall back to the in-memory demo seed when nothing's saved
   let records: CredRecord[] = seedRecords(CRED_SEED);
   try { const r = JSON.parse(localStorage.getItem(CRED_RKEY) || "null"); if (Array.isArray(r)) records = r; } catch { /* ignore */ }
-  const required = types.filter((t) => !t.dbs && t.required && appliesTo(t, ME, ME_ROLE)); // DBS handled in its own section
+  const required = types.filter((t) => !t.dbs && t.required && appliesTo(t, WHO.name, WHO.role)); // DBS handled in its own section
   if (!required.length) return true;
-  const recFor = (id: string) => records.find((r) => r.staff === ME && r.typeId === id);
+  const recFor = (id: string) => records.find((r) => r.staff === WHO.name && r.typeId === id);
   return required.every((t) => ["Valid", "Expiring", "Pending"].includes(credStatus(recFor(t.id)))); // uploaded (verification is the manager's job)
 }
 // Types the staffer fills in themselves. Everything else (check/gate, pay, certs,
@@ -131,12 +132,12 @@ const addMonthsIso = (iso: string, months: number): string | undefined => { cons
 // reads the SAME store as My certificates, so uploads sync across both.
 function RoleQualifications({ onUploaded }: { onUploaded: () => void }) {
   const cred = useCredentials(CRED_SEED);
-  const recFor = (id: string) => cred.recordFor(ME, id);
+  const recFor = (id: string) => cred.recordFor(WHO.name, id);
   const [added, setAdded] = useState<string[]>([]);
   const [showOther, setShowOther] = useState(false);
   const [otherName, setOtherName] = useState("");
   // DBS is captured in its own "DBS check" section — exclude it here to avoid duplication
-  const required = cred.types.filter((t) => !t.dbs && t.required && appliesTo(t, ME, ME_ROLE));
+  const required = cred.types.filter((t) => !t.dbs && t.required && appliesTo(t, WHO.name, WHO.role));
   const reqIds = new Set(required.map((t) => t.id));
   // anything the person holds or has just added (incl. certs compulsory for OTHER roles)
   const optionalTypes = cred.types.filter((t) => !t.dbs && !reqIds.has(t.id) && (recFor(t.id) || added.includes(t.id)));
@@ -146,13 +147,13 @@ function RoleQualifications({ onUploaded }: { onUploaded: () => void }) {
 
   const upload = (typeId: string, file: File) => {
     const r = new FileReader();
-    r.onload = () => { const ex = recFor(typeId); cred.upsertRecord({ ...(ex ?? blankRecord(ME, typeId)), fileData: String(r.result), fileName: file.name, verified: "pending" }); onUploaded(); };
+    r.onload = () => { const ex = recFor(typeId); cred.upsertRecord({ ...(ex ?? blankRecord(WHO.name, typeId)), fileData: String(r.result), fileName: file.name, verified: "pending" }); onUploaded(); };
     r.readAsDataURL(file);
   };
   const setIssue = (typeId: string, date: string) => {
     const ex = recFor(typeId); const rm = cred.types.find((x) => x.id === typeId)?.renewMonths;
     const expiry = date && rm ? addMonthsIso(date, rm) : undefined;
-    cred.upsertRecord({ ...(ex ?? blankRecord(ME, typeId)), issue: date || undefined, expiry });
+    cred.upsertRecord({ ...(ex ?? blankRecord(WHO.name, typeId)), issue: date || undefined, expiry });
     onUploaded();
   };
   const clear = (typeId: string) => { const ex = recFor(typeId); if (ex) cred.deleteRecord(ex.id); onUploaded(); };
@@ -248,8 +249,8 @@ const staffRequired = (f: OnboardField, values: Record<string, OnboardValue>) =>
 };
 const staffSat = (f: OnboardField, values: Record<string, OnboardValue>) => {
   if (f.id === "addrHistory") return historyCovered(values.movedIn?.v, parseAddr(values.addrHistory?.v));
-  if (f.id === "rtwEvidence") return !!(values.shareCode?.v && values.shareCode.v.trim()) || !!values.rtwEvidence?.fileData;
-  if (f.id === "addrProof") return !!values.addrProof?.fileData; // DBS needs a separate proof of CURRENT ADDRESS
+  if (f.id === "rtwEvidence") return !!(values.shareCode?.v && values.shareCode.v.trim()) || !!(values.rtwEvidence?.fileData || values.rtwEvidence?.fileId);
+  if (f.id === "addrProof") return !!(values.addrProof?.fileData || values.addrProof?.fileId); // DBS needs a separate proof of CURRENT ADDRESS
   if (f.id === "roleCerts") return roleQualsCovered(); // the provider's role-required qualifications
   return satisfied(f, values[f.id]);
 };
@@ -258,33 +259,47 @@ export function StaffOnboardingApp() {
   const router = useRouter();
   const portal = (usePathname() || "/staff").split("/")[1] || "staff";
   const [fields, setFields] = useState<OnboardField[]>(DEFAULT_FIELDS);
-  const [rec, setRec] = useState<OnboardRecord>({ staff: ME, values: {}, extra: [] });
+  const [rec, setRec] = useState<OnboardRecord>(() => ({ staff: isDemoMode() ? DEMO_ME : "", values: {}, extra: [] }));
   const [saved, setSaved] = useState(false);
   const [submitted, setSubmitted] = useState<{ at: string; outstanding: string[] } | null>(null);
   const [, forceCred] = useState(0); // re-render after an inline cert upload so progress refreshes
   const [slide, setSlide] = useState(0); // onboarding runs as big one-section-per-slide steps
 
+  const [err, setErr] = useState<string | null>(null);
   useEffect(() => {
-    try { const f = JSON.parse(localStorage.getItem(FKEY) || "null"); if (Array.isArray(f) && f.length) setFields(f); } catch { /* ignore */ }
-    try {
-      const all = JSON.parse(localStorage.getItem(RKEY) || "[]") as OnboardRecord[];
-      const mine = Array.isArray(all) ? all.find((r) => r.staff === ME) : null;
-      const values: Record<string, OnboardValue> = { ...(mine?.values || {}) };
+    let off = false;
+    (async () => {
+      if (!isDemoMode()) {
+        const me = await apiGet<{ name?: string; email?: string | null; jobTitle?: string | null }>("/api/me");
+        WHO.name = (me.name || me.email || "").trim();
+        WHO.role = me.jobTitle || "";
+        WHO.invite = { ...(WHO.name ? { fullName: WHO.name } : {}), ...(me.email ? { email: me.email } : {}), ...(me.jobTitle ? { jobTitle: me.jobTitle } : {}) };
+      }
+      // On the server since 12 Sept (features/team/onboardStore) — it used to
+      // be this phone's localStorage, and never reached the employer.
+      const r = await fetchOnboarding<OnboardField>();
+      if (off) return;
+      if (r.fields?.length) setFields(r.fields);
+      const found = r.records.find((x) => x.staff.toLowerCase() === WHO.name.toLowerCase()) ?? (isDemoMode() ? undefined : r.records[0]);
+      const mine = found ? await hydrateFiles(found) : undefined;
+      if (off) return;
+      const values: Record<string, OnboardValue> = { ...((mine?.values as Record<string, OnboardValue>) || {}) };
       // pre-fill the invite/provider-entered details (editable) if not already set
-      for (const [id, v] of Object.entries(INVITE)) if (values[id]?.v == null) values[id] = { v };
+      for (const [id, v] of Object.entries(WHO.invite)) if (values[id]?.v == null) values[id] = { v };
       // preserve submission state so returning staff see their filled-in, submitted form
-      setRec({ staff: ME, values, extra: mine?.extra || [], submittedAt: mine?.submittedAt, outstanding: mine?.outstanding, lastEditedAt: mine?.lastEditedAt });
+      setRec({ staff: mine?.staff || WHO.name, values, extra: mine?.extra || [], submittedAt: mine?.submittedAt, outstanding: mine?.outstanding, lastEditedAt: mine?.lastEditedAt });
       setSaved(true);
-    } catch { /* ignore */ }
+    })().catch((e) => setErr(e instanceof Error ? e.message : "Couldn't load your onboarding"));
+    return () => { off = true; };
   }, []);
 
   const set = (id: string, patch: Partial<OnboardValue>) => { setSaved(false); setSubmitted(null); setRec((r) => ({ ...r, values: { ...r.values, [id]: { ...r.values[id], ...patch, at: nowIso() } } })); };
   const writeRecord = (r: OnboardRecord) => {
-    try {
-      const all = JSON.parse(localStorage.getItem(RKEY) || "[]") as OnboardRecord[];
-      const list = Array.isArray(all) ? all.filter((x) => x.staff !== ME) : [];
-      list.push(r); localStorage.setItem(RKEY, JSON.stringify(list));
-    } catch { /* ignore */ }
+    if (!r.staff) { setSaved(false); setErr("Still loading your details — try again in a moment."); return; }
+    setErr(null);
+    saveOnboardRecord(r)
+      .then((saved) => setRec((cur) => ({ ...cur, values: Object.fromEntries(Object.entries(cur.values).map(([k, v]) => [k, saved.values[k]?.fileId && v?.fileData === saved.values[k]?.fileData ? { ...v, fileId: saved.values[k].fileId } : v])) })))
+      .catch((e) => { setSaved(false); setErr(e instanceof Error ? e.message : "Couldn't save — check your connection and try again"); });
   };
   const persist = () => {
     // saving a change AFTER submission flags the provider that the record was updated
@@ -302,7 +317,7 @@ export function StaffOnboardingApp() {
   const pensionOptOut = (rec.values.pension?.v || "").startsWith("Opt out");
   const PENSION_OPTOUT_FIELDS = ["pensionOptOut1", "pensionOptOut2", "pensionOptOut3", "pensionSign", "pensionSignDate"];
   const myFields = useMemo(() => fields
-    .filter((f) => fieldApplies(f, ME, undefined, rec.extra))
+    .filter((f) => fieldApplies(f, WHO.name, undefined, rec.extra))
     .filter((f) => !HIDE_SECTIONS.has(f.section))                     // availability + policies are post-onboarding
     .filter((f) => !HIDE_FROM_STAFF.has(f.id))                        // operator-only compliance items
     .filter((f) => !(DBS_CERT_FIELDS.has(f.id) && !dbsYes))          // DBS cert detail only when they have one
@@ -331,7 +346,7 @@ export function StaffOnboardingApp() {
 
   const onFile = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]; if (!file) return;
-    const r = new FileReader(); r.onload = () => set(id, { fileData: String(r.result), fileName: file.name }); r.readAsDataURL(file);
+    const r = new FileReader(); r.onload = () => set(id, { fileData: String(r.result), fileId: undefined, fileName: file.name }); r.readAsDataURL(file);
   };
 
   // ── Slide wizard: one section per big slide, then a final review/submit step ──
@@ -411,6 +426,13 @@ export function StaffOnboardingApp() {
     const rest = fs.filter((f) => !refIds.has(f.id));
     return (
       <div className="space-y-3 p-4">
+        {/* Set expectations: the referee gets an email out of the blue, and the
+            thing most likely to stall a start date is a referee who ignores it. */}
+        <div className="rounded-xl border border-[#f3cfa6] bg-[#fdf3e0] px-3.5 py-2.5 text-[12px] leading-snug text-[#8a4b09]">
+          <b>We&rsquo;ll email your referees a short form.</b> Please give them a heads-up so it doesn&rsquo;t
+          go to junk — it&rsquo;s usually the last thing holding up a start date. Double-check the email
+          addresses below are ones they actually read.
+        </div>
         {REF_GROUPS.map(([title, ids]) => {
           const gfields = ids.map((id) => fs.find((f) => f.id === id)).filter(Boolean) as OnboardField[];
           if (!gfields.length) return null;
@@ -429,10 +451,11 @@ export function StaffOnboardingApp() {
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="My onboarding" icon="🪪" lede="Complete your joining details so we can get you cleared to start. Save as you go — you don't have to do it all at once." actions={<Button variant="primary" onClick={persist}>{saved ? "Saved ✓" : "Save"}</Button>} />
+      {err && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c0392b]">{err}</div>}
 
-      {INVITE.jobTitle && (
+      {WHO.invite.jobTitle && (
         <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-[var(--line)] bg-white px-3.5 py-1.5 text-[12.5px] font-bold text-[var(--ink-2)] shadow-sm">
-          <span className="text-[14px]">🎽</span>You're joining as <span className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-extrabold text-[#1d3a8f]">{INVITE.jobTitle}</span><span className="font-semibold text-[var(--ink-3)]">— the qualifications below are set for this role</span>
+          <span className="text-[14px]">🎽</span>You're joining as <span className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-extrabold text-[#1d3a8f]">{WHO.invite.jobTitle}</span><span className="font-semibold text-[var(--ink-3)]">— the qualifications below are set for this role</span>
         </div>
       )}
 

@@ -10,16 +10,17 @@
 // logged-in person. Demo "me" = Marcus Bell; in production this is scoped
 // server-side (per-user identity + deployment = Amir).
 import { useEffect, useMemo, useState } from "react";
-import { get as apiGet } from "@/lib/api";
+import { get as apiGet, isDemoMode } from "@/lib/api";
+import { getMe, peekMe } from "@/components/auth/PortalGuard";
 import { useT } from "@/lib/i18n/provider";
 import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
-import { type ClockRecord, loadClock, slug, clockIn, clockOut, startBreak, endBreak, workedMs, fmtDur, fmtDurSec, hhmm } from "@/features/timeclock/data";
+import { type ClockRecord, loadClock, slug, clockIn, clockOut, startBreak, endBreak, workedMs, fmtDur, fmtDurSec, hhmm, useClockRefresh } from "@/features/timeclock/data";
 
-const ME = "Marcus Bell";
-const ME_ROLE = "Lead Coach"; // demo role (per-user identity is Amir's)
-const ME_ID = slug(ME);
+// Only for the guided-tour demo (fixtures, no signed-in person). A real
+// session uses the account's own name — the rota matches people by name.
+const DEMO_ME = "Marcus Bell";
 const AVAIL_ID = "me-avail"; // staffId for my real assigned camp days
 const ROTA_KEY = "aos.rota.v5";
 interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; date: string; start: string; end: string; in?: string; out?: string; note?: string; rate?: number; address?: string }
@@ -52,6 +53,11 @@ const addDaysISO = (iso: string, n: number) => { const d = dt(iso); d.setDate(d.
 type Tab = "upcoming" | "clock" | "team" | "timesheet";
 
 export function MyScheduleApp() {
+  // Who "me" is: this account's name (the rota and the clock both key on it).
+  // It used to be a hardcoded "Marcus Bell" for every staff member.
+  const [ME, setME] = useState<string>(() => (isDemoMode() ? DEMO_ME : (peekMe() as { name?: string } | null)?.name?.trim() || ""));
+  const ME_ID = slug(ME || "me");
+  const [rotaTick, setRotaTick] = useState(0);
   const t = useT();
   const { settings } = useSettings();
   const [shifts, setShifts] = useState<Shift[]>([]);      // mine
@@ -64,17 +70,33 @@ export function MyScheduleApp() {
     return (["upcoming", "clock", "team", "timesheet"] as const).includes(q as Tab) ? (q as Tab) : "upcoming";
   });
   const [clock, setClock] = useState<Record<string, ClockRecord> | null>(null);
+  useClockRefresh(setClock);
   const [, tick] = useState(0);
   const [weekOff, setWeekOff] = useState(0); // Who's-on week stepper
   // Real shifts assigned to ME from the availability store (backend), turned into
   // schedule entries so they show alongside the demo rota.
   const [assignedShifts, setAssignedShifts] = useState<Shift[]>([]);
 
+  // The rota is on the server now; this device's copy is only a cache (and is
+  // empty on a staff member's own phone). Fetch it, refresh the cache, re-read.
+  useEffect(() => {
+    if (isDemoMode()) return;
+    getMe().then((m) => { const n = (m as { name?: string }).name?.trim(); if (n) setME(n); }).catch(() => {});
+    apiGet<{ staff?: Staff[]; shifts?: Shift[]; sites?: string[] }>("/api/rota")
+      .then((r) => {
+        // Don't replace a rota only this device has with the server's empty one.
+        if (!(r.staff?.length) && !(r.shifts?.length)) return;
+        try { localStorage.setItem(ROTA_KEY, JSON.stringify({ staff: r.staff ?? [], shifts: r.shifts ?? [], sites: r.sites ?? [] })); } catch { /* ignore */ }
+        setRotaTick((n) => n + 1);
+      })
+      .catch(() => {});
+  }, []);
+
   useEffect(() => {
     try {
       const s = JSON.parse(localStorage.getItem(ROTA_KEY) || "null") as { staff?: Staff[]; shifts?: Shift[] } | null;
       const staff = s?.staff || [];
-      const id = staff.find((x) => x.name === ME)?.id ?? null;
+      const id = staff.find((x) => x.name.trim().toLowerCase() === ME.trim().toLowerCase())?.id ?? null;
       const all = s?.shifts || [];
       setMyId(id);
       setStaffById(Object.fromEntries(staff.map((x) => [x.id, x.name])));
@@ -97,7 +119,8 @@ export function MyScheduleApp() {
         setAssignedShifts(out);
       })
       .catch(() => {});
-  }, []);
+  // Re-read once the server rota lands (rotaTick) and once we know who "me" is.
+  }, [ME, rotaTick]);
   useEffect(() => { const t = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(t); }, []);
 
   const today = todayISO();
@@ -117,7 +140,7 @@ export function MyScheduleApp() {
 
   // ── Who's on: gating + scope ──────────────────────────────────────────────
   const vis = settings.scheduling?.coworkerVisibility ?? "all";
-  const iAmLead = /lead|manager|owner/i.test(ME_ROLE) || mine.some((s) => /lead|manager|owner/i.test(s.role || ""));
+  const iAmLead = mine.some((s) => /lead|manager|owner/i.test(s.role || ""));
   const teamVisible = vis !== "none" && (vis !== "leads" || iAmLead);
   const myListings = useMemo(() => new Set(mine.map((s) => s.listing || s.site).filter(Boolean)), [mine]);
   const inScope = (s: Shift) => vis === "team" ? myListings.has(s.listing || s.site) : true; // all/leads → everyone

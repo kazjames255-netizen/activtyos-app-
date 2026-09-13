@@ -1,4 +1,5 @@
 import { db } from "../firebase";
+import { esc } from "./html";
 import { fireOnce, sweep, toMinutes, ukNow } from "./scheduler";
 import { notify, parentEmailForChild, channelFor, notifyTenantMember} from "./notify";
 import { expireOffers } from "./waitlist";
@@ -7,6 +8,8 @@ import { syncFromStripe, updateMeteredQuantities } from "./billing";
 import { clearSubscriptionCache } from "../middleware/subscription";
 import { AUTO_EMAIL_DEFAULTS, type AutoEmailPrefs } from "./autoEmails";
 import { performEmailSend } from "./emailSend";
+import { bookingRefOfKey, entryFor, registerRows } from "./registerRows";
+import type { Booking } from "../../../features/bookings/types";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Every time-based behaviour in the platform, as scheduler sweeps (see
@@ -77,6 +80,7 @@ async function calendarReminders(): Promise<void> {
         to: { kind: "tenant" },
         category: "calendar",
         key: "calendar-reminder",
+        franchiseId: (e as { franchiseId?: string | null }).franchiseId ?? null,
         title: `Coming up at ${e.start}: ${e.title ?? "Calendar event"}`,
         body: e.category ? `${e.category} — starts at ${e.start}.` : `Starts at ${e.start}.`,
         href: "/company/calendar",
@@ -140,6 +144,9 @@ async function medicationDue(): Promise<void> {
         title: `Medication due: ${m.name ?? "medicine"} for ${m.childName ?? "a child"}`,
         body: `Scheduled for ${at![1]} today. Log the dose once given.`,
         href: "/company/medication",
+        // The record, so the alert lands on the franchise that has the child
+        // (and in its inbox) — untagged, a franchise never saw "medication due".
+        ref: d.id,
       }),
     ).catch((err) => console.error(`[sweeps] medication due ${d.id}:`, (err as Error).message));
   }
@@ -397,9 +404,9 @@ async function sessionReminders(): Promise<void> {
             body: `${kidNames(b)} is booked in ${s.start}–${s.end}${venue ? ` at ${venue}` : ""}.`,
             subject: `Reminder: ${listingName} on ${niceDate(s.date)}`,
             emailHtml:
-              `<p><b>${kidNames(b)}</b> is booked in for <b>${listingName}</b> on <b>${niceDate(s.date)}</b>, ` +
-              `<b>${s.start}–${s.end}</b>${venue ? ` at <b>${venue}</b>` : ""}.</p>` +
-              (bring ? `<p><b>What to bring:</b> ${bring}</p>` : "") +
+              `<p><b>${esc(kidNames(b))}</b> is booked in for <b>${esc(listingName)}</b> on <b>${niceDate(s.date)}</b>, ` +
+              `<b>${esc(s.start)}–${esc(s.end)}</b>${venue ? ` at <b>${esc(venue)}</b>` : ""}.</p>` +
+              (bring ? `<p><b>What to bring:</b> ${esc(bring)}</p>` : "") +
               (owes ? `<p><b>Outstanding balance:</b> ${gbp(b.amount!)} — you can pay from My bookings.</p>` : ""),
             href: "/custdash/bookings",
             ref: b.ref,
@@ -517,7 +524,7 @@ async function reviewRequests(): Promise<void> {
         body: `${what[0].toUpperCase()}${what.slice(1)} was on ${niceDate(last)}. Tap to leave a quick star rating — it only takes a moment.`,
         subject: "How did we do? We'd love your feedback",
         emailHtml:
-          `<p>${what[0].toUpperCase()}${what.slice(1)} was on <b>${niceDate(last)}</b>.</p>` +
+          `<p>${esc(what[0].toUpperCase() + what.slice(1))} was on <b>${niceDate(last)}</b>.</p>` +
           `<p>If you have a minute, leave us a quick star rating and a few words — it genuinely helps a small provider.</p>`,
         href,
       }),
@@ -552,10 +559,23 @@ async function dayOfAlerts(): Promise<void> {
       (bk) => (bk.status === "Confirmed" || bk.status === "Approval needed") && bookedOn(bk, today),
     );
 
+  // The franchise each block's listing belongs to, so its register alerts
+  // reach that franchise's bell (lib/notify.ts scopes the bell by franchise).
+  const listingFranchise = new Map<string, string | null>();
+  const franchiseOfBlock = async (blk: SweepBlock) => {
+    if (!blk.listingId) return null;
+    if (!listingFranchise.has(blk.listingId)) {
+      const l = await db.collection("listings").doc(blk.listingId).get();
+      listingFranchise.set(blk.listingId, (l.get("franchiseId") as string | undefined) ?? null);
+    }
+    return listingFranchise.get(blk.listingId) ?? null;
+  };
+
   for (const b of blocks) {
     const lib = await libFor(b.tenantId);
     const prefs = autoEmailsOf(lib);
     const reg = registers.get(b.id);
+    const franchiseId = await franchiseOfBlock(b);
     const entries = reg?.entries ?? {};
 
     // Not arrived — expected children with no mark, once the session's begun.
@@ -565,14 +585,19 @@ async function dayOfAlerts(): Promise<void> {
       for (const s of b.todaySessions) {
         const start = toMinutes(s.start);
         if (start === null || now < start + NO_SHOW_GRACE || now >= start + NO_SHOW_STALE) continue;
-        const missing = (await expected(b)).filter((bk) => !entries[bk.ref]?.status);
+        // Per CHILD: a joint booking where one sibling is in and one isn't
+        // still has somebody missing (lib/registerRows.ts).
+        const missing = (await expected(b))
+          .flatMap((bk) => registerRows(bk as unknown as Booking, today))
+          .filter((r) => r.expected && !entryFor(entries, r)?.status);
         if (!missing.length) continue;
-        const names = missing.map(kidNames).slice(0, 6).join(", ");
+        const names = missing.map((r) => r.name).slice(0, 6).join(", ");
         await fireOnce(`noshow_${b.id}_${today}`, { tenantId: b.tenantId }, () =>
           notify({
             tenantId: b.tenantId,
             to: { kind: "tenant" },
             category: "register",
+            franchiseId,
             key: "register-missing",
             title: `${missing.length} expected ${missing.length === 1 ? "child hasn't" : "children haven't"} been signed in — ${b.name ?? "today's session"}`,
             body: `Not yet marked in: ${names}${missing.length > 6 ? "…" : ""}. Mark them present or absent so the day's numbers are right.`,
@@ -594,14 +619,18 @@ async function dayOfAlerts(): Promise<void> {
         if (end === null || now < end + threshold) continue;
         const inRefs = Object.entries(entries).filter(([, e]) => e.status === "in" && !e.collectedAt).map(([ref]) => ref);
         if (!inRefs.length) continue;
+        // Keys may be ref#child for siblings. Whether the booking is still
+        // "on" today doesn't matter here: a child signed in and never signed
+        // out is still in your care even if the office cancelled the booking.
         const byRef = new Map((await bookingsFor(b.id)).map((bk) => [bk.ref, bk]));
-        const uncollected = inRefs.filter((ref) => { const bk = byRef.get(ref); return bk && bookedOn(bk, today); });
+        const uncollected = inRefs.filter((key) => byRef.has(bookingRefOfKey(key)));
         if (!uncollected.length) continue;
         await fireOnce(`latecol_${b.id}_${today}_${s.end}`, { tenantId: b.tenantId }, () =>
           notify({
             tenantId: b.tenantId,
             to: { kind: "tenant" },
             category: "register",
+            franchiseId,
             key: "register-collect",
             title: `Children not collected yet — session ended ${s.end}`,
             body: `Some children are still signed in ${threshold}+ minutes after the session ended. Open the register to see who, contact the families, and log each collection.`,
@@ -678,6 +707,12 @@ async function subscriptionSync(): Promise<void> {
 // Two moments, each fired at most once per task per day by fireOnce:
 //   · due today  — at the task's time if it has one, else from 08:00 UK
 //   · overdue    — the morning after the due date passes, once
+// HQ's own tasks are filed under this sentinel instead of a tenant id (see
+// routes/tasks.ts). It is deliberately un-collidable, which also makes it an
+// invalid Firestore DOCUMENT id — ids matching __.*__ are reserved — so any
+// lookup keyed on it throws.
+const PLATFORM_TASK_BUCKET = "__platform__";
+
 async function taskReminders() {
   const { date, minutes: now } = ukNow();
   const snap = await db.collection("tasks").where("status", "in", ["backlog", "todo", "prog"]).get();
@@ -688,6 +723,12 @@ async function taskReminders() {
       who?: string; whoEmail?: string; createdBy?: string; archived?: boolean;
     };
     if (!t.tenantId || t.archived || !t.due) continue;
+    // Platform tasks have no tenant library to read notification prefs from.
+    // channelFor() would do libraries.doc("__platform__").get() and throw
+    // INVALID_ARGUMENT, which killed the WHOLE sweep every 5 minutes — so no
+    // task reminder reached anyone, on any tenant, for as long as one HQ task
+    // was open. HQ has its own bell; it doesn't need this chase.
+    if (t.tenantId === PLATFORM_TASK_BUCKET) continue;
 
     const overdue = t.due < date;
     const dueToday = t.due === date;
@@ -702,27 +743,35 @@ async function taskReminders() {
     }
 
     const key = overdue ? "task-overdue" : "task-due";
-    const ch = await channelFor(t.tenantId, key);
-    if (!ch.send) continue;
 
-    // Both the assignee and the creator, de-duplicated when they're the same
-    // person — which they usually are.
-    const to = [...new Set([t.whoEmail, t.createdBy].map((e) => (e ?? "").trim().toLowerCase()).filter(Boolean))];
-    if (!to.length) continue;
+    // Per-task isolation. This loop walks EVERY tenant's open tasks, so an
+    // unreadable settings doc or one malformed record used to abort the run and
+    // silently cancel the reminders of every tenant after it. Log and carry on.
+    try {
+      const ch = await channelFor(t.tenantId, key);
+      if (!ch.send) continue;
 
-    const title = overdue
-      ? `Overdue: ${t.t ?? "A task"}`
-      : `Due today: ${t.t ?? "A task"}`;
-    const body = overdue
-      ? `This was due ${t.due} and is still open.`
-      : `Due today${t.time ? ` at ${t.time}` : ""}${t.who ? ` · ${t.who}` : ""}.`;
+      // Both the assignee and the creator, de-duplicated when they're the same
+      // person — which they usually are.
+      const to = [...new Set([t.whoEmail, t.createdBy].map((e) => (e ?? "").trim().toLowerCase()).filter(Boolean))];
+      if (!to.length) continue;
 
-    for (const email of to) {
-      await fireOnce(`task_${overdue ? "over" : "due"}_${d.id}_${date}_${email}`, { tenantId: t.tenantId }, () =>
-        notifyTenantMember(t.tenantId!, email, {
-          category: "task", title, body, href: `/tasks?task=${d.id}`, key, sendEmail: ch.email,
-        }),
-      );
+      const title = overdue
+        ? `Overdue: ${t.t ?? "A task"}`
+        : `Due today: ${t.t ?? "A task"}`;
+      const body = overdue
+        ? `This was due ${t.due} and is still open.`
+        : `Due today${t.time ? ` at ${t.time}` : ""}${t.who ? ` · ${t.who}` : ""}.`;
+
+      for (const email of to) {
+        await fireOnce(`task_${overdue ? "over" : "due"}_${d.id}_${date}_${email}`, { tenantId: t.tenantId }, () =>
+          notifyTenantMember(t.tenantId!, email, {
+            category: "task", title, body, href: `/tasks?task=${d.id}`, key, sendEmail: ch.email,
+          }),
+        );
+      }
+    } catch (e) {
+      console.warn(`[sweep task-reminders] skipped task ${d.id} (tenant ${t.tenantId}):`, e instanceof Error ? e.message : e);
     }
   }
 }

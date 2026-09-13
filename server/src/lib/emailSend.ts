@@ -12,6 +12,8 @@ import { tenantSender } from "./sender";
 
 /** Where the API itself is reachable from an email client (the open pixel
  *  must resolve from the recipient's inbox, not from the web app). */
+import { sign, verify } from "./signing";
+
 export const apiUrl = process.env.API_URL || "http://localhost:4000";
 
 const esc = (s: string) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c] as string));
@@ -23,10 +25,29 @@ export const bodyHtml = (body: string) =>
 const pixel = (emailId: string, to: string) =>
   `<img src="${apiUrl}/api/emails/open/${emailId}?r=${encodeURIComponent(to)}" width="1" height="1" alt="" style="display:block;width:1px;height:1px;border:0">`;
 
-// A per-recipient, tamper-evident unsubscribe token (tenant:email, base64url).
-export const unsubToken = (tenantId: string, email: string) => Buffer.from(`${tenantId}:${email.toLowerCase()}`).toString("base64url");
-export const readUnsubToken = (tok: string): { tenantId: string; email: string } | null => {
-  try { const s = Buffer.from(tok, "base64url").toString("utf8"); const i = s.indexOf(":"); if (i < 0) return null; return { tenantId: s.slice(0, i), email: s.slice(i + 1) }; } catch { return null; }
+// A per-recipient unsubscribe token: base64url(tenant:email) + "." + HMAC.
+// It used to be the base64 alone — and tenant ids are public (the provider
+// directory returns them) — so anyone could unsubscribe any address from any
+// provider. The signature makes it tamper-evident, which the old comment
+// claimed and the code wasn't.
+export const unsubToken = (tenantId: string, email: string) => {
+  const body = `${tenantId}:${email.toLowerCase()}`;
+  return `${Buffer.from(body).toString("base64url")}.${sign(`unsub:${body}`)}`;
+};
+/** Unsigned tokens are already sitting in inboxes, and an unsubscribe has to be
+ *  honoured — so they're accepted until this date (30 days of sends), then
+ *  refused. */
+const LEGACY_UNSUB_UNTIL = "2026-10-12";
+export const readUnsubToken = (tok: string): { tenantId: string; email: string; legacy?: boolean } | null => {
+  try {
+    const [b64, sig] = tok.split(".", 2);
+    const s = Buffer.from(b64, "base64url").toString("utf8");
+    const i = s.indexOf(":");
+    if (i < 0) return null;
+    const out = { tenantId: s.slice(0, i), email: s.slice(i + 1) };
+    if (sig) return verify(`unsub:${s}`, sig) ? out : null;
+    return new Date().toISOString().slice(0, 10) < LEGACY_UNSUB_UNTIL ? { ...out, legacy: true } : null;
+  } catch { return null; }
 };
 // Every MARKETING email carries a one-click unsubscribe. Transactional mail (audience "one") doesn't.
 const unsubFooter = (tenantId: string, to: string) => {
@@ -54,10 +75,15 @@ const TOKEN_FALLBACK: Record<string, string> = {
   bookingref: "",
 };
 
-const applyTokens = (s: string, ctx: Record<string, string>): string =>
+// Merge values are PARENT-TYPED (their name, their child's name). Filled into
+// HTML they're escaped — a child named `<a href=…>` used to become a live link
+// in an email sent from the provider's own address. Subjects are plain text.
+const escMerge = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
+const applyTokens = (s: string, ctx: Record<string, string>, html = false): string =>
   s.replace(/\{([A-Za-z]+)\}/g, (raw, t: string) => {
     const key = t.toLowerCase();
-    return ctx[key] ?? TOKEN_FALLBACK[key] ?? raw;
+    const v = ctx[key] ?? TOKEN_FALLBACK[key];
+    return v === undefined ? raw : html ? escMerge(v) : v;
   });
 
 /** email → merge context, from each family's most relevant booking. */
@@ -183,7 +209,7 @@ export async function performEmailSend(input: EmailSendInput): Promise<{ id: str
     for (const to of input.recipients) {
       const ctx = ctxs?.get(to) ?? {};
       const subj = ctxs ? applyTokens(input.subject, ctx) : input.subject;
-      const content = ctxs ? applyTokens(html, ctx) : html;
+      const content = ctxs ? applyTokens(html, ctx, true) : html;
       const footer = input.audience === "all" ? unsubFooter(input.tenantId, to) : "";
       if (await sendMail(to, subj, content + footer + pixel(ref.id, to), sender)) delivered++;
     }

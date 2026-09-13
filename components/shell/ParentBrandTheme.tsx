@@ -13,13 +13,24 @@ export function ParentBrandTheme() {
   useEffect(() => {
     let applied: string[] = [];
     let cancelled = false;
-    apiGet<{ brandColor?: string | null }>("/api/me")
-      .then((me) => {
-        if (cancelled) return;
-        const vars = brandVars(me.brandColor);
-        const root = document.documentElement;
-        for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
-        applied = Object.keys(vars);
+    const apply = (hex: string | null | undefined) => {
+      if (cancelled) return;
+      const vars = brandVars(hex);
+      const root = document.documentElement;
+      for (const [k, v] of Object.entries(vars)) root.style.setProperty(k, v);
+      applied = Object.keys(vars);
+    };
+    apiGet<{ brandColor?: string | null; tenantId?: string | null }>("/api/me")
+      .then(async (me) => {
+        // An operator (viewing the parent portal) carries their own colour on /api/me.
+        if (me.tenantId || me.brandColor) return apply(me.brandColor);
+        // A parent has no tenant, so /api/me has no colour: use their provider's
+        // public settings (Phase 1 is single-provider — the first one).
+        const ps = await apiGet<{ tenantId: string }[]>("/api/my/providers");
+        const tid = ps?.[0]?.tenantId;
+        if (!tid) return;
+        const lib = await apiGet<{ settings?: { brandColor?: string } } | null>(`/api/public/library/${encodeURIComponent(tid)}`);
+        apply(lib?.settings?.brandColor);
       })
       .catch(() => {});
     return () => {

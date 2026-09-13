@@ -6,6 +6,8 @@ import { tenantSender } from "../lib/sender";
 import { renderMoneyDoc } from "../lib/moneyDoc";
 import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
+import { ukToday } from "../lib/ukDate";
+import { bareImageUrl, signImageUrl } from "../lib/signing";
 
 // Purchasing (Money) — purchase orders & supplier invoices: what's on order,
 // from whom, for how much, and where it is in the flow (draft → sent →
@@ -53,6 +55,10 @@ const poSchema = z.object({
   seriesId: z.string().trim().max(60).optional(),
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;
+// An uploaded bill/receipt is a PRIVATE file (photo or PDF): records store the
+// bare /api/images/<id> link and every response re-signs it (lib/signing.ts),
+// exactly like an expense receipt. Pasted outside links pass through untouched.
+const signDoc = <T extends object>(p: T): T => { const a = (p as { attachmentUrl?: unknown }).attachmentUrl; return a ? { ...p, attachmentUrl: signImageUrl(a) } : p; };
 type LineItem = z.infer<typeof lineItemSchema>;
 // Line items are the source of truth for the total when present.
 const totalOf = (lineItems: LineItem[] | undefined, fallback: number | undefined) =>
@@ -84,7 +90,7 @@ purchasing.get("/", async (req, res) => {
   const tenantId = scope(req, res);
   if (!tenantId) return;
   const snap = await col.where("tenantId", "==", tenantId).get();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
   let list = snap.docs
     .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { date?: string; dueDate?: string; amount?: number; status?: string; franchiseId?: string | null })
     .map((p) => ({ ...p, overdue: OUTSTANDING.has(p.status ?? "") && !!p.dueDate && (p.dueDate as string) < today }));
@@ -93,7 +99,7 @@ purchasing.get("/", async (req, res) => {
   list = applyHoNetFilter(list, auth.role, req.query.franchiseId); // head-office network scope
   list.sort((a, b) => (`${b.date ?? ""}` < `${a.date ?? ""}` ? -1 : 1));
   const outstanding = round2(list.filter((p) => OUTSTANDING.has(p.status ?? "")).reduce((s, p) => s + (p.amount ?? 0), 0));
-  res.json({ items: list, summary: { count: list.length, outstanding, overdue: list.filter((p) => p.overdue).length } });
+  res.json({ items: list.map(signDoc), summary: { count: list.length, outstanding, overdue: list.filter((p) => p.overdue).length } });
 });
 
 purchasing.post("/", async (req, res) => {
@@ -102,6 +108,7 @@ purchasing.post("/", async (req, res) => {
   const parsed = poSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const { repeat, repeatUntil, seriesId: _ignore, ...rest } = parsed.data;
+  if (rest.attachmentUrl) rest.attachmentUrl = bareImageUrl(rest.attachmentUrl);
   const meta = { tenantId: auth.tenantId, franchiseId: auth.role === "franchise" ? auth.franchiseId : null, createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
   const base = { ...rest, amount: totalOf(rest.lineItems, rest.amount), ...meta };
 
@@ -118,12 +125,12 @@ purchasing.post("/", async (req, res) => {
       return { id: ref.id, ...doc };
     });
     await batch.commit();
-    res.status(201).json({ created: items.length, seriesId: sid, items });
+    res.status(201).json({ created: items.length, seriesId: sid, items: items.map(signDoc) });
     return;
   }
 
   const ref = await col.add(base);
-  res.status(201).json({ id: ref.id, ...base });
+  res.status(201).json(signDoc({ id: ref.id, ...base }));
 });
 
 // Delete a whole recurring series in one go.
@@ -153,10 +160,11 @@ purchasing.put("/:id", async (req, res) => {
   const parsed = poSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const p = parsed.data;
+  if (p.attachmentUrl) p.attachmentUrl = bareImageUrl(p.attachmentUrl);
   const patch = { ...p, ...(p.lineItems !== undefined ? { amount: totalOf(p.lineItems, p.amount) } : p.amount !== undefined ? { amount: round2(p.amount) } : {}) };
   await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
-  res.json({ id: after.id, ...after.data() });
+  res.json(signDoc({ id: after.id, ...(after.data() as Record<string, unknown>) }));
 });
 
 purchasing.delete("/:id", async (req, res) => {

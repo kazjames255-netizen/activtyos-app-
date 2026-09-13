@@ -1,9 +1,16 @@
 "use client";
 
-// Appraisals demo store + seed + actions, and the "data-informed" signals that
+// Appraisals store + seed + actions, and the "data-informed" signals that
 // pull a person's real lateness / sickness / DBS from the other areas so a review
-// is evidence-based. Matched to people by name (demo). Backend owed.
+// is evidence-based. Matched to people by name.
+//
+// On the server since 13 Sept (/api/appraisals — server/src/routes/appraisals.ts):
+// the keys below are this device's cache of it. Reviews save one by one (only
+// what changed); templates / feedback / PIPs / 9-box save as a whole per part.
+// A member of staff's device only ever holds their own reviews. The seeded
+// reviews, notes, PIP and 9-box are the demo's only.
 import { DEMO_STAFF } from "@/features/learning/credentials";
+import { get as apiGet, post as apiPost, put as apiPut, isDemoMode } from "@/lib/api";
 import {
   type Review, type ReviewTemplate, type FeedbackNote, type PIP, type Talent, type Competency, type BoxDef,
   type ReviewKind, isoDate, bradford, NINEBOX,
@@ -14,6 +21,51 @@ const RK = "aos.appraisals.reviews.v1", TK = "aos.appraisals.templates.v1", FK =
 const read = <T,>(k: string): T | null => { try { return JSON.parse(localStorage.getItem(k) || "null"); } catch { return null; } };
 const write = (k: string, v: unknown) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* ignore */ } };
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "id" + Math.floor(performance.now() * 1000));
+
+// ── Server sync ─────────────────────────────────────────────────────────────
+/** Fired when the server copy lands (re-read the cache) or a save fails (detail.error). */
+export const APPRAISALS_EVENT = "aos:appraisals";
+const announce = (error?: string) => { if (typeof window !== "undefined") window.dispatchEvent(new CustomEvent(APPRAISALS_EVENT, { detail: error ? { error } : {} })); };
+/** JSON with keys in a fixed order (Firestore hands fields back in its own). */
+const stable = (v: unknown): string => {
+  if (Array.isArray(v)) return `[${v.map(stable).join(",")}]`;
+  if (v && typeof v === "object") return `{${Object.keys(v as object).filter((k) => (v as Record<string, unknown>)[k] !== undefined).sort().map((k) => `${JSON.stringify(k)}:${stable((v as Record<string, unknown>)[k])}`).join(",")}}`;
+  return JSON.stringify(v ?? null);
+};
+let serverReviews: Map<string, string> | null = null; // id → the server's copy — what a save is diffed against
+type ConfigPart = "templates" | "feedback" | "pips" | "talent" | "boxes";
+const CONFIG_KEY: Record<ConfigPart, string> = { templates: TK, feedback: FK, pips: PK, talent: LK, boxes: BK };
+const pendingConfig = new Map<ConfigPart, ReturnType<typeof setTimeout>>();
+/** Pull this team's appraisals into the cache. False = couldn't reach the server. */
+export async function syncAppraisals(): Promise<boolean> {
+  if (isDemoMode()) return true;
+  try {
+    const r = await apiGet<{ reviews: Review[]; templates: ReviewTemplate[] | null; feedback?: FeedbackNote[] | null; pips?: PIP[] | null; talent?: Talent[] | null; boxes?: Record<string, BoxDef> | null }>("/api/appraisals");
+    serverReviews = new Map((r.reviews ?? []).map((x) => [x.id, stable(x)]));
+    write(RK, r.reviews ?? []);
+    // A part still waiting to save keeps this device's newer copy.
+    const put = (part: ConfigPart, v: unknown) => { if (pendingConfig.has(part)) return; if (v == null) { try { localStorage.removeItem(CONFIG_KEY[part]); } catch { /* ignore */ } } else write(CONFIG_KEY[part], v); };
+    put("templates", r.templates);
+    // Staff get none of these — and a shared device drops any it was holding.
+    put("feedback", r.feedback ?? []); put("pips", r.pips ?? []); put("talent", r.talent ?? []); put("boxes", r.boxes ?? null);
+    announce();
+    return true;
+  } catch { return false; }
+}
+function saveConfig(part: ConfigPart, v: unknown) {
+  if (isDemoMode()) return;
+  const t = pendingConfig.get(part); if (t) clearTimeout(t);
+  // Templates and the 9-box categories save as you type — once you pause.
+  pendingConfig.set(part, setTimeout(() => {
+    pendingConfig.delete(part);
+    apiPut("/api/appraisals/config", { [part]: v }).catch((e) => announce(e instanceof Error ? e.message : "Couldn't save that change"));
+  }, 600));
+}
+/** Staff: send my self-assessment (only that part of the review changes). */
+export async function submitSelfAssessment(r: Review): Promise<void> {
+  await apiPost(`/api/appraisals/reviews/${encodeURIComponent(r.id)}/self`, { text: r.self.text, ratings: r.self.ratings });
+  await syncAppraisals();
+}
 
 // ── Templates ───────────────────────────────────────────────────────────────
 const COACH_COMPS: Competency[] = [
@@ -32,7 +84,7 @@ export function seedTemplates(): ReviewTemplate[] {
   ];
 }
 export const loadTemplates = (): ReviewTemplate[] => { const s = read<ReviewTemplate[]>(TK); return Array.isArray(s) && s.length ? s : seedTemplates(); };
-export const saveTemplates = (t: ReviewTemplate[]) => write(TK, t);
+export const saveTemplates = (t: ReviewTemplate[]) => { write(TK, t); saveConfig("templates", t); };
 export const templateFor = (role?: string) => loadTemplates().find((t) => t.role && role && t.role.toLowerCase() === role.toLowerCase()) || loadTemplates()[0];
 
 // ── Reviews ─────────────────────────────────────────────────────────────────
@@ -52,8 +104,22 @@ export function seedReviews(): Review[] {
     mk("Priya Khan", "probation", d(5), "scheduled", "You"),
   ];
 }
-export const loadReviews = (): Review[] => { const s = read<Review[]>(RK); return Array.isArray(s) ? s : seedReviews(); };
-export const saveReviews = (r: Review[]) => write(RK, r);
+export const loadReviews = (): Review[] => { const s = read<Review[]>(RK); return Array.isArray(s) ? s : isDemoMode() ? seedReviews() : []; };
+/** Save the list: the cache now, and each new or changed review to the server. */
+export const saveReviews = (r: Review[]) => {
+  write(RK, r);
+  if (isDemoMode()) return;
+  // Never diff against nothing — every cached review would read as new.
+  if (!serverReviews) { announce("Couldn't reach the server — that change isn't saved"); return; }
+  const changed = r.filter((x) => serverReviews!.get(x.id) !== stable(x));
+  if (!changed.length) return;
+  void Promise.allSettled(changed.map((x) => apiPut(`/api/appraisals/reviews/${encodeURIComponent(x.id)}`, x))).then((res) => {
+    const bad = res.find((x) => x.status === "rejected") as PromiseRejectedResult | undefined;
+    if (bad) announce(bad.reason instanceof Error ? bad.reason.message : "Couldn't save that change");
+    // Finish on the server's version — a refused change rolls back on screen.
+    return syncAppraisals();
+  });
+};
 
 // ── Feedback log ────────────────────────────────────────────────────────────
 export function seedFeedback(): FeedbackNote[] {
@@ -64,8 +130,8 @@ export function seedFeedback(): FeedbackNote[] {
     { id: uid(), staffId: slug("Priya Khan"), name: "Priya Khan", kind: "concern", text: "Second late arrival this month — flagged for the review.", at: ago(6), by: "You" },
   ];
 }
-export const loadFeedback = (): FeedbackNote[] => { const s = read<FeedbackNote[]>(FK); return Array.isArray(s) ? s : seedFeedback(); };
-export const saveFeedback = (f: FeedbackNote[]) => write(FK, f);
+export const loadFeedback = (): FeedbackNote[] => { const s = read<FeedbackNote[]>(FK); return Array.isArray(s) ? s : isDemoMode() ? seedFeedback() : []; };
+export const saveFeedback = (f: FeedbackNote[]) => { write(FK, f); saveConfig("feedback", f); };
 
 // ── PIPs ────────────────────────────────────────────────────────────────────
 export function seedPIPs(): PIP[] {
@@ -87,21 +153,21 @@ export function seedPIPs(): PIP[] {
   }];
 }
 const normalisePIP = (p: PIP): PIP => ({ ...p, targets: Array.isArray(p.targets) ? p.targets : [], checkIns: Array.isArray(p.checkIns) ? p.checkIns : [] });
-export const loadPIPs = (): PIP[] => { const s = read<PIP[]>(PK); return (Array.isArray(s) ? s : seedPIPs()).map(normalisePIP); };
-export const savePIPs = (p: PIP[]) => write(PK, p);
+export const loadPIPs = (): PIP[] => { const s = read<PIP[]>(PK); return (Array.isArray(s) ? s : isDemoMode() ? seedPIPs() : []).map(normalisePIP); };
+export const savePIPs = (p: PIP[]) => { write(PK, p); saveConfig("pips", p); };
 
 // ── Talent (9-box) ──────────────────────────────────────────────────────────
 export function seedTalent(): Talent[] {
   const map: Record<string, [1 | 2 | 3, 1 | 2 | 3]> = { "Marcus Bell": [3, 3], "Jess Patel": [2, 3], "Aisha Rahman": [3, 2], "Tom Lewis": [2, 2], "Priya Khan": [1, 2], "Dan Reed": [3, 1] };
   return DEMO_STAFF.map((s) => ({ staffId: slug(s.name), performance: (map[s.name]?.[0] ?? 2), potential: (map[s.name]?.[1] ?? 2) }));
 }
-export const loadTalent = (): Talent[] => { const s = read<Talent[]>(LK); return Array.isArray(s) && s.length ? s : seedTalent(); };
-export const saveTalent = (t: Talent[]) => write(LK, t);
+export const loadTalent = (): Talent[] => { const s = read<Talent[]>(LK); return Array.isArray(s) && s.length ? s : isDemoMode() ? seedTalent() : []; };
+export const saveTalent = (t: Talent[]) => { write(LK, t); saveConfig("talent", t); };
 
 // ── 9-box categories (editable) ─────────────────────────────────────────────
 export const loadBoxes = (): Record<string, BoxDef> => { const s = read<Record<string, BoxDef>>(BK); return s && Object.keys(s).length === 9 ? s : { ...NINEBOX }; };
-export const saveBoxes = (b: Record<string, BoxDef>) => write(BK, b);
-export const resetBoxes = () => write(BK, { ...NINEBOX });
+export const saveBoxes = (b: Record<string, BoxDef>) => { write(BK, b); saveConfig("boxes", b); };
+export const resetBoxes = () => saveBoxes({ ...NINEBOX });
 export const BOX_TONES = ["#0f7a43", "#12b76a", "#3f7ae0", "#64748b", "#f59e0b", "#c0392b"];
 
 // ── Data-informed signals (pulled from the other areas) ─────────────────────
@@ -117,7 +183,7 @@ export function signalsFor(name: string): Signals {
     out.sicknessSpells = mine.length; out.sicknessDays = mine.reduce((a, b) => a + (b.days || 0), 0);
     out.bradford = bradford(mine.map((m) => m.days || 1));
   } catch { /* ignore */ }
-  // DBS / first aid — from the shared roster
-  const s = DEMO_STAFF.find((x) => x.name.trim().toLowerCase() === nm); if (s) { out.dbs = s.dbs; out.pfa = s.pfa; }
+  // DBS / first aid — from the shared roster (the demo cast's, in the demo only)
+  const s = isDemoMode() ? DEMO_STAFF.find((x) => x.name.trim().toLowerCase() === nm) : undefined; if (s) { out.dbs = s.dbs; out.pfa = s.pfa; }
   return out;
 }

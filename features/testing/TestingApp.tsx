@@ -8,6 +8,39 @@ import {
   stepById, type Run, type Verdict, type Owner,
 } from "@/lib/testing/store";
 import { testLoggerOn, setTestLoggerOn } from "./TestLogger";
+import { AGENT_RESULTS, type AgentResult } from "@/lib/testing/agentResults";
+
+const METHOD_LABEL: Record<AgentResult["method"], string> = {
+  api: "real route code, run against a throwaway tenant",
+  "live-read": "read-only check against the running app/data",
+  code: "established by reading the code",
+  browser: "clicked through in the browser",
+};
+
+/** What Claude's test agents found for a step — shown beside your own verdict,
+ *  never instead of it. */
+function AgentLine({ a, onAdopt, adopted }: { a: AgentResult; onAdopt?: () => void; adopted: boolean }) {
+  const [open, setOpen] = useState(a.verdict === "fail");
+  return (
+    <div className="mt-3 rounded-[12px] border px-3 py-2" style={{ borderColor: a.verdict === "fail" ? "#f3c1cc" : a.verdict === "blocked" ? "#f3dfb4" : "#bfe6cf", background: a.verdict === "fail" ? "#fff6f8" : a.verdict === "blocked" ? "#fffaf0" : "#f3fbf6" }}>
+      <button type="button" onClick={() => setOpen((v) => !v)} className="flex w-full flex-wrap items-center gap-2 text-left">
+        <span className="text-[12px] font-extrabold text-[var(--ink)]">🤖 Checked by Claude</span>
+        <Chip bg={VERDICT[a.verdict].bg} fg={VERDICT[a.verdict].fg}>{VERDICT[a.verdict].label}</Chip>
+        <span className="text-[11px] text-[var(--ink-3)]">{METHOD_LABEL[a.method] ?? a.method}</span>
+        <span className="ml-auto text-[11px] font-bold text-[var(--ink-3)]">{open ? "▲" : "▼ details"}</span>
+      </button>
+      {open && (
+        <div className="mt-1.5 space-y-1 text-[12.5px] text-[var(--ink-2)]">
+          <div><b>What actually happened:</b> {a.actual}</div>
+          {a.notes && <div><b>Notes:</b> {a.notes}</div>}
+          {a.evidence && <div className="break-all text-[11.5px] text-[var(--ink-3)]"><b>Evidence:</b> {a.evidence}</div>}
+          <div className="text-[11px] text-[var(--ink-3)]">{new Date(a.at).toLocaleString("en-GB")}{a.agent ? ` · agent ${a.agent}` : ""}</div>
+          {onAdopt && !adopted && <button type="button" onClick={onAdopt} className="mt-1 rounded-full bg-[#16306e] px-3 py-1 text-[11.5px] font-extrabold text-white">Copy into my run</button>}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // The 25-day acceptance run, in the owner's own portal. The plan is fixed
 // (lib/testing/plan.ts); this is the place you work through it and the place
@@ -54,6 +87,7 @@ function StepRow({ day, step, result, onSave, onClear }: {
   onSave: (v: Verdict, owner: Owner, actual: string, notes: string) => void;
   onClear: () => void;
 }) {
+  const agent = AGENT_RESULTS[step.id];
   const [open, setOpen] = useState(false);
   const [actual, setActual] = useState(result?.actual ?? "");
   const [notes, setNotes] = useState(result?.notes ?? "");
@@ -98,6 +132,8 @@ function StepRow({ day, step, result, onSave, onClear }: {
             ))}
         </div>
       </div>
+
+      {agent && <AgentLine a={agent} adopted={!!result} onAdopt={() => onSave(agent.verdict, owner, agent.actual, `[Claude · ${agent.method}] ${agent.notes ?? ""}`.trim())} />}
 
       {open && pending && (
         <div className="mt-3 rounded-[12px] border border-[var(--line)] bg-[var(--panel)] p-3">
@@ -222,6 +258,31 @@ export function TestingApp() {
           <Chip bg="rgba(255,255,255,.16)" fg="#fff">{p.openForAmir} open for Amir</Chip>
           <Chip bg="rgba(255,255,255,.16)" fg="#fff">{p.openForTriage} to triage</Chip>
         </div>
+        {(() => {
+          const ag = Object.values(AGENT_RESULTS);
+          if (!ag.length) return null;
+          const n = (v: string) => ag.filter((a) => a.verdict === v).length;
+          const adoptable = Object.entries(AGENT_RESULTS).filter(([id]) => !run[id]);
+          return (
+            <div className="mt-3 flex flex-wrap items-center gap-2.5 rounded-[14px] bg-white/10 px-3 py-2 text-[12.5px] font-bold ring-1 ring-white/20">
+              <span>🤖 Claude has checked {ag.length}/{p.total}</span>
+              <Chip bg="#e4f7ed" fg="#0b7a52">{n("pass")} pass</Chip>
+              <Chip bg="#fdeaee" fg="#b3123c">{n("fail")} fail</Chip>
+              <Chip bg="#fdf1dc" fg="#a5760a">{n("blocked")} blocked</Chip>
+              {adoptable.length > 0 && (
+                <button type="button" onClick={() => {
+                  if (!confirm(`Copy Claude's result into your run for the ${adoptable.length} step(s) you haven't logged yourself? Your own results are never overwritten.`)) return;
+                  let r = run;
+                  for (const [id, a] of adoptable) {
+                    const st = PLAN.flatMap((d) => d.steps).find((x) => x.id === id);
+                    r = saveResult({ stepId: id, verdict: a.verdict, owner: st?.needsBackend ? "amir" : "triage", actual: a.actual, notes: `[Claude · ${a.method}] ${a.notes ?? ""}`.trim(), at: a.at });
+                  }
+                  setRun(r);
+                }} className="ml-auto rounded-full bg-[#f5b81f] px-3 py-1 text-[12px] font-extrabold text-[#12224e]">Copy into my run ({adoptable.length} not yet logged)</button>
+              )}
+            </div>
+          );
+        })()}
       </header>
 
       <nav className="mt-5 flex flex-wrap gap-2">

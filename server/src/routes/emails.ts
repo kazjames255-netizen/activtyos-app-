@@ -7,6 +7,7 @@ import { fromAddress, fromDomain, fromName } from "../lib/mailer";
 import { ukNow } from "../lib/scheduler";
 import { inboundAddress, inboundConfigured, inboundDomain, tenantSender } from "../lib/sender";
 import type { Role } from "../middleware/role";
+import { ukToday } from "../lib/ukDate";
 
 // Email (Communication) — the out-of-app channel. An operator emails their
 // families: everyone who's booked, or one address. Reuses the transactional
@@ -92,7 +93,7 @@ function opScope(req: Request, res: Response): string | null {
 // A franchise account is always locked to its own franchiseId, whatever it asks for.
 function netScope(req: Request): string | null | undefined {
   const auth = req.auth!;
-  if (auth.role === "franchise" && auth.franchiseId) return auth.franchiseId;
+  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) return auth.franchiseId;
   if (auth.role === "company") {
     const q = typeof req.query.franchiseId === "string" ? req.query.franchiseId.trim() : "";
     if (q === "__ho__") return null;
@@ -151,7 +152,7 @@ emails.get("/audiences", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const scope = netScope(req);
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
   const [bookings, customers] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("customers").where("tenantId", "==", tenantId).get(),
@@ -789,16 +790,35 @@ emailsOpen.get("/:id", async (req, res) => {
 // token) — mounted before auth. Adds the address to the suppression list and,
 // best-effort, flips the customer's marketing consent off.
 export const emailsUnsub = Router();
+const escHtml = (v: string) => v.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c] as string));
 const unsubPage = (title: string, msg: string) => `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title></head><body style="font-family:system-ui,-apple-system,Arial,sans-serif;background:#f4f7fc;margin:0;padding:44px 16px"><div style="max-width:440px;margin:0 auto;background:#fff;border-radius:18px;padding:30px;text-align:center;box-shadow:0 16px 44px -22px rgba(20,33,58,.5)"><div style="font-size:42px">✅</div><h1 style="font-size:21px;color:#16306e;margin:10px 0 8px">${title}</h1><p style="font-size:14px;color:#5b6472;line-height:1.55;margin:0">${msg}</p></div></body></html>`;
 emailsUnsub.get("/", async (req, res) => {
   const parsed = readUnsubToken(typeof req.query.u === "string" ? req.query.u : "");
   if (!parsed) { res.status(400).set("Content-Type", "text/html").send(unsubPage("Link not valid", "This unsubscribe link couldn't be read. Reply to the email and we'll take you off the list by hand.")); return; }
   const email = parsed.email.toLowerCase();
+  // An old unsigned link (sent before links were signed on 12 Sept) is still
+  // honoured until 12 Oct — but only where it could really have been sent: this
+  // provider sent marketing before then AND the address is one of its families.
+  // Otherwise anyone could forge one and unsubscribe any address (d20s5).
+  if (parsed.legacy) {
+    const [sent, cust, booked] = await Promise.all([
+      col.where("tenantId", "==", parsed.tenantId).select("createdAt", "audience").get(), // (a range on createdAt would need a composite index)
+      db.collection("customers").where("tenantId", "==", parsed.tenantId).where("email", "==", email).limit(1).get(),
+      db.collection("bookings").where("tenantId", "==", parsed.tenantId).where("email", "==", email).limit(1).get(),
+    ]);
+    const sentBefore = sent.docs.some((d) => d.get("audience") !== "one" && String(d.get("createdAt") ?? "") < "2026-09-12T12:00:00Z");
+    if (!sentBefore || (cust.empty && booked.empty)) {
+      res.status(400).set("Content-Type", "text/html").send(unsubPage("Link not valid", "This unsubscribe link couldn't be read. Reply to the email and we'll take you off the list by hand."));
+      return;
+    }
+  }
   try {
     const existing = await suppressCol.where("tenantId", "==", parsed.tenantId).where("email", "==", email).limit(1).get();
     if (existing.empty) await suppressCol.add({ tenantId: parsed.tenantId, email, at: new Date().toISOString() });
     const cust = await db.collection("customers").where("tenantId", "==", parsed.tenantId).where("email", "==", email).limit(1).get();
     if (!cust.empty) await cust.docs[0].ref.set({ marketingOptIn: false }, { merge: true });
   } catch (e) { console.error(`[unsubscribe] ${email}:`, (e as Error).message); }
-  res.set("Content-Type", "text/html").send(unsubPage("You're unsubscribed", `<b>${email}</b> won't get any more marketing emails from us. Booking confirmations and payment updates still come through — those aren't marketing.`));
+  if (parsed.legacy) console.warn(`[unsubscribe] legacy unsigned token honoured for ${parsed.tenantId}`);
+  // Escaped: this used to reflect the decoded address straight into the page.
+  res.set("Content-Type", "text/html").send(unsubPage("You're unsubscribed", `<b>${escHtml(email)}</b> won't get any more marketing emails from us. Booking confirmations and payment updates still come through — those aren't marketing.`));
 });

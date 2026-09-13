@@ -178,10 +178,14 @@ const STAFF_DASH: Fixtures = {
       ],
     },
   ],
+  // Real /api/tasks shape (t / status / prio / due). This used to be written as
+  // {title, done, priority, dueDate}, which the API has never sent — the staff
+  // dashboard read those same invented names, so fixture and bug agreed with
+  // each other and the tour looked healthy while the live page was blank.
   "/api/tasks": [
-    { id: "t1", title: "Set out the football cones before the 3:30 club", done: false, priority: "normal", dueDate: "Today" },
-    { id: "t2", title: "Sign off the morning register", done: false, priority: "high" },
-    { id: "t3", title: "Restock the first-aid kit — plasters running low", done: false },
+    { id: "t1", t: "Set out the football cones before the 3:30 club", status: "todo", prio: "med", due: DASH_TODAY },
+    { id: "t2", t: "Sign off the morning register", status: "todo", prio: "high", due: DASH_TODAY },
+    { id: "t3", t: "Restock the first-aid kit — plasters running low", status: "todo", prio: "low", due: null },
   ],
   "/api/timetables/published": [],
 };
@@ -235,6 +239,54 @@ const BLOCKS_TRIM: Fixtures = {
   ],
 };
 
+// ── Reconciliation ──────────────────────────────────────────────────────────
+const RECON_ROWS: [string, string, string, string, string, number, number, string, string | null, number][] = [
+  ["APF-2500", "Hannah Fletcher", "Ruby Fletcher", "Tax-Free Childcare", "Paid", 96, 96, "", "RFLE29104TFC", 21],
+  ["APF-2501", "Ada Okafor", "Theo Okafor", "Tax-Free Childcare", "Paid", 224, 224, "", "TOKA14387TFC", 18],
+  ["APF-2502", "Simran Kaur", "Nina Kaur", "Tax-Free Childcare", "Awaiting voucher payment", 72, 0, "", "NKAU55021TFC", 9],
+  ["APF-2503", "Paul Doyle", "Rowan Doyle", "Tax-Free Childcare", "Awaiting voucher payment", 48, 0, "", "Rowan", 6],
+  ["APF-2504", "Yasmin Iqbal", "Sana Iqbal", "Tax-Free Childcare", "Awaiting voucher payment", 120, 0, "", null, 4],
+  ["APF-2505", "Grant Wallace", "Otis Wallace", "Childcare voucher", "Paid", 60, 60, "Edenred", "EDN-88213", 27],
+  ["APF-2506", "Petra Novak", "Lena Novak", "Childcare voucher", "Awaiting voucher payment", 84, 0, "Fideliti", "FID-40192", 11],
+  // No scheme named — the common case in live data (59 of 59 on this instance),
+  // and what the "Which provider?" picker on the row exists to fix.
+  ["APF-2507", "Chris Bennett", "Arlo Bennett", "Childcare voucher", "Awaiting voucher payment", 36, 0, "", "C4-77310", 3],
+  ["APF-2508", "Dean Robinson", "Kai Robinson", "Cash", "Unpaid", 40, 0, "", null, 5],
+];
+const RECON_ITEMS = RECON_ROWS.map(([ref, booker, child, method, pay, amount, amountPaid, scheme, payRef, back]) => {
+  const d = new Date(Date.now() - back * 86_400_000).toISOString().slice(0, 10);
+  return {
+    ref, booker, email: `${booker.split(" ")[0].toLowerCase()}@example.com`, phone: "07700 900000",
+    listing: "APF Holiday Camp", listingId: "l-apf", child,
+    method, pay, amount, amountPaid, outstanding: Math.max(0, amount - amountPaid), cardPaid: 0,
+    reconciled: pay === "Paid" && amountPaid >= amount,
+    // One of each provenance, so all three badge states are visible: matched by
+    // the HMRC feed, ticked off by a person, and an older one with no stamp.
+    reconciledBy: pay === "Paid" && amountPaid >= amount
+      ? (ref === "APF-2500" ? { at: `${d}T11:02:00.000Z`, by: "HMRC EPP", auto: true }
+        : ref === "APF-2501" ? { at: `${d}T09:40:00.000Z`, by: "Kaz James", auto: false }
+        : null)
+      : null,
+    voucherScheme: scheme || null, voucherReceiveBy: null,
+    paymentRef: payRef, payRefs: null, reconNotes: [], nudges: 0, lastNudgedAt: null,
+    dates: d, sessions: [`${d} · 08:30 – 12:30`], date: d, createdAt: `${d}T09:30:00.000Z`, overdue: back > 20 && amountPaid === 0,
+  };
+});
+const RECON: Fixtures = {
+  "/api/reconciliation": {
+    items: RECON_ITEMS,
+    summary: {
+      count: RECON_ITEMS.filter((i) => !i.reconciled).length,
+      reconciledCount: RECON_ITEMS.filter((i) => i.reconciled).length,
+      outstanding: RECON_ITEMS.reduce((s, i) => s + i.outstanding, 0),
+      overdue: RECON_ITEMS.filter((i) => i.overdue).length,
+      awaitingVoucher: RECON_ITEMS.filter((i) => i.pay === "Awaiting voucher payment").length,
+      byMethod: {},
+    },
+  },
+  "/api/listings?mine=1": [{ id: "l-apf", title: "APF Holiday Camp" }],
+};
+
 export const TOUR_FIXTURES: Record<string, Fixtures> = {
   // Agent-authored fixtures for the other pages; the hand-tuned dashboard wins.
   ...GENERATED_FIXTURES,
@@ -244,6 +296,12 @@ export const TOUR_FIXTURES: Record<string, Fixtures> = {
   // Fewer periods/passes so the built block + calculator fit on screen.
   blocks: { ...LB_FIXTURES.blocks, ...BLOCKS_TRIM },
   dash: DASH,
+  // The Reconciliation ledger had no fixture at all, so its tour rendered an
+  // empty page. Mirrors GET /api/reconciliation: a mix of Tax-Free Childcare and
+  // voucher bookings, some matched to the bank and some not, plus one with a
+  // hand-typed junk reference and one with none — the two cases the childcare
+  // roll-up is there to surface. See docs/tfc-build-spec.md.
+  reconciliation: RECON,
   // Give the register tour a toilet-training question plus one child who isn't
   // trained, so the nappy tag and change log actually appear in the walkthrough.
   registers: (() => {

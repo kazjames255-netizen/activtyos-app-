@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { auth as fbAuth, db } from "../firebase";
+import { db } from "../firebase";
+import { verifyFresh } from "../middleware/auth";
 
 // Realtime invalidation stream (SSE) — the first slice of the product
 // spec's realtime layer. Each connected client gets Firestore listeners
@@ -23,13 +24,16 @@ events.get("/", async (req, res) => {
   }
   let decoded;
   try {
-    decoded = await fbAuth.verifyIdToken(token);
+    decoded = await verifyFresh(token);
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });
     return;
   }
   const userSnap = await db.collection("users").doc(decoded.uid).get();
   const u = userSnap.exists ? userSnap.data()! : {};
+  // A switched-off or closed account gets no live updates either — every other
+  // route already refuses it (middleware/role attachRole; acceptance d26s6).
+  if (u.disabled === true || u.deactivatedAt) { res.status(403).json({ error: "This account has been switched off.", code: "account_disabled" }); return; }
   const role: string = u.role === "provider" ? "freelancer" : (u.role ?? "parent");
   const tenantId: string | null = u.tenantId ?? null;
   const franchiseId: string | null = u.franchiseId ?? null;
@@ -103,13 +107,13 @@ events.get("/", async (req, res) => {
     listen(db.collection("bookings"), "bookings");
     listen(db.collection("listings"), "listings");
     listen(db.collection("blocks"), "blocks");
-    listen(db.collection("leads"), "leads"); // HQ sales pipeline
+    listen(db.collection("leads").where("inPipeline", "==", true), "leads"); // HQ sales pipeline (not the researched prospects)
     listen(db.collection("supportThreads"), "supportThreads"); // HQ inbox
   } else if (tenantId) {
     let bookingsQ: FirebaseFirestore.Query = db
       .collection("bookings")
       .where("tenantId", "==", tenantId);
-    if (role === "franchise" && franchiseId)
+    if ((role === "franchise" || role === "staff") && franchiseId)
       bookingsQ = bookingsQ.where("franchiseId", "==", franchiseId);
     listen(bookingsQ, "bookings");
     listen(db.collection("listings").where("tenantId", "==", tenantId), "listings");

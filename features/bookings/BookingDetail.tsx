@@ -10,7 +10,9 @@ import {
   kidActiveDays,
   money,
   payLabelFor,
+  pendingPayWords,
   payTone,
+  realPhone,
   refundedTotal,
   sessionCount,
   sessionIsoDates,
@@ -625,7 +627,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         </>
       )}
       {b.pay === "Awaiting voucher payment" && (
-        <Button variant="primary" onClick={() => act(b.ref, "paid")}>Mark voucher received</Button>
+        <Button variant="primary" onClick={() => act(b.ref, "paid")}>{pendingPayWords(b).action}</Button>
       )}
       {b.status !== "Cancelled" && b.status !== "Declined" && (
         b.past === true
@@ -808,7 +810,7 @@ export function BookingDetail({ booking }: { booking: Booking }) {
         <DefRow label="Name" value={b.booker} />
         <DefRow
           label="Phone"
-          value={<a href={`tel:${b.phone.replace(/ /g, "")}`}>{b.phone}</a>}
+          value={realPhone(b.phone) ? <a href={`tel:${realPhone(b.phone).replace(/ /g, "")}`}>{realPhone(b.phone)}</a> : <span className="text-[var(--ink-3)]">No phone on file</span>}
         />
         <DefRow label="Email" value={b.email} />
 

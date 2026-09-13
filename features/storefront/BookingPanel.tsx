@@ -198,7 +198,7 @@ export function BookingPanel({ listing, signedIn }: { listing: ServerListing; si
           </Link>
         </div>
         {paying && (
-          <PayModal refs={done.refs} onClose={() => setPaying(false)} onPaid={() => setPaid(true)} />
+          <PayModal refs={done.refs} tenantId={listing.tenantId} onClose={() => setPaying(false)} onPaid={() => setPaid(true)} />
         )}
       </div>
     );

@@ -1,8 +1,10 @@
 import { Router } from "express";
 import { db } from "../firebase";
-import { operatorScope } from "../middleware/role";
+import { operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import type { Booking } from "../../../features/bookings/types";
+import { ukToday } from "../lib/ukDate";
+import { realPhone, refundableSoFar } from "../../../features/bookings/helpers";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Reconciliation — "the admin job providers dread most" (the doc). What money
@@ -26,14 +28,68 @@ const isReconciled = (b: Booking) => (b.pay === "Paid" || b.pay === "Funded") &&
 // card is handled in the booking area instead), so it's kept off this ledger.
 const isCardMethod = (b: Booking) => /card/i.test(b.method || "") && !b.voucherScheme;
 // Payable off-platform bookings worth showing on the reconciliation ledger.
-const relevant = (b: Booking) => b.status !== "Cancelled" && b.status !== "Declined" && !isCardMethod(b) && ((b.amount ?? 0) > 0 || b.pay === "Funded" || !!b.voucherScheme);
+// Waitlisted / offered / approval-needed bookings have no place yet, so nothing
+// is owed on them — counting them inflated "outstanding" with money for places
+// that don't exist. Kept identical to isUnreconciled() in
+// features/bookings/helpers.ts, which powers the Bookings "Unreconciled" tab.
+const NO_PLACE_YET = ["Waitlisted", "Offered", "Approval needed"];
+const relevant = (b: Booking) => b.status !== "Cancelled" && b.status !== "Declined" && !NO_PLACE_YET.includes(b.status) && !isCardMethod(b) && ((b.amount ?? 0) > 0 || b.pay === "Funded" || !!b.voucherScheme);
+// Money that needs handing back or crediting (acceptance d8s7/d8s8):
+//  • overpaid — more logged than the booking costs (live bookings);
+//  • needsRefund — logged AFTER the booking was cancelled/declined, not yet
+//    refunded. It used to vanish: cancelled bookings drop off the ledger.
+// Both stay on the ledger (unreconciled) until someone deals with them.
+const overpaidOf = (b: Booking) => round2(Math.max(0, (b.amountPaid ?? 0) - (b.amount ?? 0)));
+const cancelledish = (b: Booking) => b.status === "Cancelled" || b.status === "Declined";
+const needsRefundOf = (b: Booking) => (cancelledish(b) && (b.receivedAfterCancel ?? 0) > 0 ? round2(Math.min(b.receivedAfterCancel ?? 0, refundableSoFar(b))) : 0);
 // The booking's date for the date-range filter — first session day, else booked date.
 const dateOf = (b: Booking) => b.days?.[0] || (b.createdAt ?? "").slice(0, 10) || "";
+
+// ── Refunds ──────────────────────────────────────────────────────────────
+// Every refund on the bookings list, dated, so a day's refunds can be totalled
+// against it (acceptance d9s7 — this route used to return none at all, and
+// refunded bookings drop out of `items` because they're cancelled). Read from
+// the booking itself — refundedApproved + refundLog, the same figures the
+// bookings list shows — so the two agree by construction, whichever way the
+// money went back (card, wallet credit, or offline).
+// Refund dates come in two shapes: ISO, or the en-GB "13/09/2026, 10:30"
+// that nowStr() writes. Anything else is left undated rather than guessed.
+function refundDay(v?: string | null): string | null {
+  if (!v) return null;
+  if (/^\d{4}-\d{2}-\d{2}T/.test(v)) { const t = new Date(v); return Number.isNaN(t.getTime()) ? null : ukToday(t); }
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})/.exec(v);
+  return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : null;
+}
+type RefundRow = {
+  ref: string; booker: string; listing: string; listingId: string | null; method: string;
+  /** Where the money went: "card", "wallet", "offline" (paid back by hand), or
+   *  null when the booking doesn't say (a provider-recorded day refund). */
+  via: "card" | "wallet" | "offline" | null;
+  kind: "cancellation" | "released";
+  label: string; amount: number; date: string | null;
+};
+function refundsOf(b: Booking): RefundRow[] {
+  const base = { ref: b.ref, booker: b.booker, listing: b.listing, listingId: b.listingId ?? null, method: b.voucherScheme ? `Voucher · ${b.voucherScheme}` : b.method };
+  const out: RefundRow[] = [];
+  // An APPROVED cancellation refund — refundedApproved is what actually moved
+  // (older bookings predate it: fall back to the approved cancel amount).
+  const c = b.cancel;
+  const approved = b.refundedApproved ?? (c?.refund === "approved" ? c.amount ?? 0 : 0);
+  if (approved > 0) out.push({ ...base, via: c?.refundVia ?? null, kind: "cancellation", label: c?.refundOnly ? "Refund" : "Cancellation refund", amount: round2(approved), date: refundDay(c?.refundedAt) ?? refundDay(c?.on) });
+  // Released days / children — each logged with its own date.
+  for (const e of b.refundLog ?? []) {
+    if (!(e.amount > 0)) continue;
+    out.push({ ...base, via: /wallet/i.test(`${e.source ?? ""} ${e.label ?? ""}`) ? "wallet" : null, kind: "released", label: e.label || "Refund", amount: round2(e.amount), date: refundDay(e.on) });
+  }
+  return out;
+}
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 // GET /api/reconciliation — the full payment ledger (reconciled + awaiting) with
 // per-booking fields so the client can filter by method, status, date, season & listing.
 reconciliation.get("/", async (req, res) => {
-  const scope = operatorScope(req, res);
+  const scope = managerScope(req, res);
   if (!scope) return;
 
   let q = db.collection("bookings") as FirebaseFirestore.Query;
@@ -42,14 +98,14 @@ reconciliation.get("/", async (req, res) => {
     if (t) q = q.where("tenantId", "==", t);
   } else {
     q = q.where("tenantId", "==", scope.tenantId);
-    if (scope.role === "franchise") q = q.where("franchiseId", "==", scope.franchiseId);
+    if ((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId) q = q.where("franchiseId", "==", scope.franchiseId);
   }
   const snap = await q.get();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
 
   const items = snap.docs
     .map((d) => fromDoc(d.data() as BookingDoc))
-    .filter(relevant)
+    .filter((b) => relevant(b) || needsRefundOf(b) > 0)
     .map((b) => ({
       ref: b.ref,
       booker: b.booker,
@@ -61,8 +117,12 @@ reconciliation.get("/", async (req, res) => {
       pay: b.pay,
       amount: b.amount ?? 0,
       amountPaid: b.amountPaid ?? 0,
-      outstanding: outstandingOf(b),
-      reconciled: isReconciled(b),
+      outstanding: cancelledish(b) ? 0 : outstandingOf(b),
+      reconciled: !cancelledish(b) && isReconciled(b) && overpaidOf(b) <= 0,
+      status: b.status,
+      overpaid: cancelledish(b) ? 0 : overpaidOf(b),
+      needsRefund: needsRefundOf(b),
+      reconciledBy: b.reconciledBy ?? null,
       voucherScheme: b.voucherScheme ?? null,
       voucherReceiveBy: b.voucherReceiveBy ?? null,
       paymentRef: b.paymentRef ?? null,
@@ -73,7 +133,7 @@ reconciliation.get("/", async (req, res) => {
       lastNudgedAt: b.lastNudgedAt ?? null,
       dates: b.dates ?? "",
       sessions: b.sessions ?? [],
-      phone: b.phone ?? "",
+      phone: realPhone(b.phone),
       date: dateOf(b),
       createdAt: b.createdAt ?? null,
       // A voucher whose money should have arrived by now — the provider needs
@@ -87,6 +147,18 @@ reconciliation.get("/", async (req, res) => {
       return (b.createdAt ?? "").localeCompare(a.createdAt ?? "");
     });
 
+  // Refunds across EVERY booking in scope — cancelled ones included.
+  const refunds = snap.docs
+    .flatMap((d) => refundsOf(fromDoc(d.data() as BookingDoc)))
+    .sort((a, b) => (b.date ?? "").localeCompare(a.date ?? ""));
+  const refundsToday = refunds.filter((r) => r.date === today);
+  const byVia: Record<string, { count: number; amount: number }> = {};
+  for (const r of refunds) {
+    const v = (byVia[r.via ?? "recorded"] ??= { count: 0, amount: 0 });
+    v.count += 1;
+    v.amount = round2(v.amount + r.amount);
+  }
+
   const awaiting = items.filter((i) => !i.reconciled && i.outstanding > 0);
   const byMethod: Record<string, { count: number; outstanding: number }> = {};
   for (const it of awaiting) {
@@ -97,6 +169,7 @@ reconciliation.get("/", async (req, res) => {
   }
   res.json({
     items,
+    refunds,
     summary: {
       count: awaiting.length,
       reconciledCount: items.filter((i) => i.reconciled).length,
@@ -104,6 +177,15 @@ reconciliation.get("/", async (req, res) => {
       overdue: items.filter((i) => i.overdue).length,
       awaitingVoucher: items.filter((i) => i.pay === "Awaiting voucher payment").length,
       byMethod,
+      overpaid: { count: items.filter((i) => i.overpaid > 0).length, total: round2(items.reduce((s, i) => s + i.overpaid, 0)) },
+      needsRefund: { count: items.filter((i) => i.needsRefund > 0).length, total: round2(items.reduce((s, i) => s + i.needsRefund, 0)) },
+      refunds: {
+        count: refunds.length,
+        total: round2(refunds.reduce((s, r) => s + r.amount, 0)),
+        todayCount: refundsToday.length,
+        today: round2(refundsToday.reduce((s, r) => s + r.amount, 0)),
+        byVia,
+      },
     },
   });
 });

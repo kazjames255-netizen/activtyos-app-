@@ -152,6 +152,16 @@ blocks.put("/:id", async (req, res) => {
     open: parsed.data.open,
     sessions: resolveSessions(parsed.data),
   };
+  // Same rule as a listing re-save: a date with children booked on it can't be
+  // edited out — that would delete the day's register from under them.
+  const keep = new Set(doc.sessions.map((x) => x.date));
+  const dropped = (existing.sessions ?? []).filter((x) => !keep.has(x.date) && Number((existing.dayCounts ?? {})[x.date] ?? 0) > 0);
+  if (dropped.length) {
+    res.status(409).json({
+      error: `Children are booked on ${dropped.map((x) => `${x.date} (${(existing.dayCounts ?? {})[x.date]} booked)`).join(", ")}. Move or cancel those bookings before removing ${dropped.length === 1 ? "that date" : "those dates"}.`,
+    });
+    return;
+  }
   await own.snap.ref.set(doc);
   res.json(blockSummary(own.snap.id, doc));
 });

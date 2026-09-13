@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db } from "../firebase";
-import { operatorScope } from "../middleware/role";
+import { operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
-import type { Booking } from "../../../features/bookings/types";
+import { owedNow, isMoneyIn } from "../../../features/bookings/helpers";
+import { ukToday } from "../lib/ukDate";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Dashboard — the operator's landing screen. Pure read: it aggregates data
@@ -13,16 +14,14 @@ import type { Booking } from "../../../features/bookings/types";
 // ─────────────────────────────────────────────────────────────────────────
 export const dashboard = Router();
 
-// Same rule reconciliation uses: a booking still owes while it holds a place,
-// isn't cancelled, and isn't fully paid / funded / refunded.
-const OWES = new Set(["Unpaid", "Invoice sent", "Awaiting voucher payment", "Partially paid"]);
-const outstandingOf = (b: Booking) => Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
-// Payment records that represent money IN (a refund carries type "refund").
-const RECEIVED = new Set(["recorded", "succeeded"]);
+// "Outstanding" and "taken" use the SAME rules as the Finance page —
+// owedNow() and isMoneyIn() in features/bookings/helpers.ts. This file had its
+// own copy (a pay-label list that counted waitlisted places and skipped "Pay
+// on the day"), and the two screens disagreed (acceptance d19s7).
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
 dashboard.get("/", async (req, res) => {
-  const scope = operatorScope(req, res);
+  const scope = managerScope(req, res);
   if (!scope) return;
   const tenantId = scope.role === "platform" && typeof req.query.tenantId === "string" ? req.query.tenantId : scope.tenantId;
   if (!tenantId) { res.status(400).json({ error: "No tenant in scope (platform: pass ?tenantId=)" }); return; }
@@ -35,7 +34,7 @@ dashboard.get("/", async (req, res) => {
   ]);
 
   const now = new Date();
-  const today = now.toISOString().slice(0, 10);
+  const today = ukToday(now);
   const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
 
   const title = new Map(listingsSnap.docs.map((d) => [d.id, (d.data() as { title?: string }).title ?? "Untitled"]));
@@ -47,7 +46,12 @@ dashboard.get("/", async (req, res) => {
   // Optional franchise lens: ?franchiseId= narrows every figure to the listings
   // OWNED by that franchise (head office "view as franchise X"). Combined with
   // the venue lens as an intersection of allowed listing ids.
-  const franchiseId = typeof req.query.franchiseId === "string" && req.query.franchiseId ? req.query.franchiseId : null;
+  //
+  // A FRANCHISE always gets its own lens — the query param was optional and a
+  // franchise that didn't send it (or sent another's id) got every figure in
+  // the company: head office's revenue and its siblings'. Same rule as growth.ts.
+  const franchiseId = scope.role === "franchise" ? (scope.franchiseId ?? "__no_franchise__")
+    : (typeof req.query.franchiseId === "string" && req.query.franchiseId ? req.query.franchiseId : null);
   // "__ho__" = the head office's OWN direct listings (no franchise owner).
   const ownOnly = franchiseId === "__ho__";
   const allowedIds: Set<string> | null = (venueId || franchiseId)
@@ -101,21 +105,32 @@ dashboard.get("/", async (req, res) => {
   // Payments only reference bookings by ref — a payment counts for the venue if
   // one of its refs belongs to a booking at that venue.
   const venueRefs = (venueId || franchiseId) ? new Set(bookings.map((b) => b.ref)) : null;
+  const priceOf = new Map(bookingsSnap.docs.map((d) => { const b = d.data() as { ref?: string; amount?: number }; return [String(b.ref ?? ""), Number(b.amount) || 0] as const; }));
+  const shareIn = (refs: string[]): number => {
+    if (!venueRefs || !refs.length) return 1;
+    const total = refs.reduce((n, r) => n + (priceOf.get(r) ?? 0), 0);
+    const mine = refs.filter((r) => venueRefs.has(r));
+    return total > 0 ? mine.reduce((n, r) => n + (priceOf.get(r) ?? 0), 0) / total : mine.length / refs.length;
+  };
   const live = bookings.filter((b) => b.status !== "Cancelled" && b.status !== "Declined");
   const waitlist = bookings.filter((b) => b.status === "Waitlisted").length;
   const newThisWeek = bookings.filter((b) => (b.createdAt ?? "") >= weekAgo).length;
-  const owing = live.filter((b) => OWES.has(b.pay) && outstandingOf(b) > 0);
-  const outstanding = round2(owing.reduce((s, b) => s + outstandingOf(b), 0));
+  const owing = bookings.filter((b) => owedNow(b) > 0);
+  const outstanding = round2(owing.reduce((s, b) => s + owedNow(b), 0));
   const overdueVouchers = owing.filter((b) => b.pay === "Awaiting voucher payment" && !!b.voucherReceiveBy && b.voucherReceiveBy < today).length;
   const awaitingVoucher = owing.filter((b) => b.pay === "Awaiting voucher payment").length;
 
   // ── Money in this week (payment records, refunds excluded) ──
   const takenThisWeek = round2(
     paymentsSnap.docs
-      .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string; refs?: string[] })
-      .filter((p) => p.type !== "refund" && RECEIVED.has(p.status ?? "") && (p.createdAt ?? "") >= weekAgo)
+      .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string; paidAt?: string; refs?: string[] })
+      // A card record is created when checkout STARTS; paidAt is when it paid.
+      .filter((p) => isMoneyIn(p) && (p.paidAt ?? p.createdAt ?? "") >= weekAgo)
       .filter((p) => !venueRefs || (p.refs ?? []).some((r) => venueRefs.has(r)))
-      .reduce((s, p) => s + (p.amount ?? 0), 0),
+      // One card checkout can pay for bookings at several sites: under a site
+      // lens, count only this site's share of it (by each booking's price) —
+      // it was counted in full at every site it touched (acceptance d23s6).
+      .reduce((s, p) => s + (p.amount ?? 0) * shareIn(p.refs ?? []), 0),
   );
 
   res.json({

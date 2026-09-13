@@ -2,6 +2,7 @@ import { createElement } from "react";
 import { notFound } from "next/navigation";
 import { PORTALS, type PortalKey } from "@/lib/nav/config";
 import { getRegisteredView } from "@/lib/view-registry";
+import { ViewGate } from "@/components/auth/ViewGate";
 
 export default async function ViewPage(props: PageProps<"/[portal]/[view]">) {
   const { portal, view } = await props.params;
@@ -18,9 +19,12 @@ export default async function ViewPage(props: PageProps<"/[portal]/[view]">) {
   // registered component 404s.
   const registeredView = getRegisteredView(portalKey, view);
   if (!registeredView) notFound();
+  // Registered isn't the same as reachable: a module switched off in Setup →
+  // Features, or an area a staff member's role can't see, is refused here too
+  // — not just hidden from the sidebar (components/auth/ViewGate.tsx).
   return (
     <div className="p-3 sm:p-5">
-      {createElement(registeredView)}
+      <ViewGate portal={portalKey} view={view}>{createElement(registeredView)}</ViewGate>
     </div>
   );
 }

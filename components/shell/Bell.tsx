@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import type { PortalKey } from "@/lib/nav/config";
+import { notificationHref } from "@/lib/notification-href";
 
 // ─────────────────────────────────────────────────────────────────────────
 // The notification bell — the in-app half of lib/notify.ts on the server.
@@ -35,6 +36,8 @@ const CATEGORY_GLYPH: Record<string, string> = {
   moment: "📸",
   register: "📋",
   billing: "💳",
+  task: "✅",
+  leave: "🏖️",
 };
 
 // "5m ago" / "3h ago" / "2d ago" — enough precision for a bell.
@@ -125,14 +128,7 @@ export function Bell({ portal }: { portal: PortalKey }) {
                 onClick={() => {
                   setOpen(false);
                   if (!n.href) return;
-                  // Notifications are written with a `/company/…` operator path;
-                  // rewrite the portal segment to wherever this recipient actually
-                  // is (a freelancer's pages live under /freelancer/…), leaving
-                  // parent (/custdash/…) links alone.
-                  const href = portal !== "custdash"
-                    ? n.href.replace(/^\/(company|franchise|freelancer|staff)\//, `/${portal}/`)
-                    : n.href;
-                  router.push(href);
+                  router.push(notificationHref(n.href, portal));
                 }}
                 className="flex w-full cursor-pointer items-start gap-2.5 border-b border-[var(--line-2)] px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-[var(--panel)]"
               >

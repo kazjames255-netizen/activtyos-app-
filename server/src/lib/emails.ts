@@ -335,7 +335,7 @@ export function emailBookingRequestReceived(b: Booking, providerName: string): v
     b, providerName, "bookings",
     `Booking request received — ${b.listing}`,
     "We've got your booking request",
-    `<p style="font-size:14px">Thanks ${b.booker} — your request is with ${providerName} for approval.
+    `<p style="font-size:14px">Thanks ${escapeHtml(b.booker)} — your request is with ${escapeHtml(providerName)} for approval.
      You'll get another email as soon as it's confirmed. Payment is collected after approval.</p>`,
     {}, // hero photo + venue location
   );
@@ -346,7 +346,7 @@ export function emailPaymentLink(b: Booking, providerName: string): void {
     b, providerName, "bookings",
     `Complete your booking — ${b.listing}`,
     "Your booking is reserved — payment inside",
-    `<p style="font-size:14px">Hi ${b.booker}, ${providerName} has reserved this booking for you.</p>
+    `<p style="font-size:14px">Hi ${escapeHtml(b.booker)}, ${escapeHtml(providerName)} has reserved this booking for you.</p>
      <p><a href="${webUrl}/custdash/bookings?pay=${encodeURIComponent(b.ref)}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(b.amount)} securely</a></p>
      <p style="color:#8a86a3;font-size:12px">Signing in from the link starts the card payment automatically.</p>`,
   );
@@ -357,7 +357,7 @@ export function emailBookingConfirmed(b: Booking, providerName: string): void {
     b, providerName, "bookings",
     `Booking confirmed — ${b.listing}`,
     "You're booked in ✓",
-    `<p style="font-size:14px">Great news ${b.booker} — ${providerName} has confirmed your booking. See you there!</p>`,
+    `<p style="font-size:14px">Great news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has confirmed your booking. See you there!</p>`,
     { whatIncluded: true, map: true }, // hero + location + what's included / to bring + venue map
   );
 }
@@ -366,7 +366,7 @@ export function emailBookingDeclined(b: Booking, providerName: string, reason?: 
   const note = reason?.trim()
     ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:14px 0;border-collapse:separate">
          <tr><td style="background:#fbf1f1;border-left:3px solid #d9736b;border-radius:6px;padding:11px 14px">
-           <div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#a1443c;margin-bottom:3px">Message from ${providerName}</div>
+           <div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#a1443c;margin-bottom:3px">Message from ${escapeHtml(providerName)}</div>
            <div style="font-size:14px;color:#4a2b28;white-space:pre-wrap">${escapeHtml(reason.trim())}</div>
          </td></tr>
        </table>`
@@ -375,7 +375,7 @@ export function emailBookingDeclined(b: Booking, providerName: string, reason?: 
     b, providerName, "bookings",
     `Booking update — ${b.listing}`,
     "Your booking request was declined",
-    `<p style="font-size:14px">Sorry ${b.booker} — ${providerName} couldn't take this booking.
+    `<p style="font-size:14px">Sorry ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} couldn't take this booking.
      Nothing has been charged. Feel free to browse other dates or activities.</p>${note}`,
   );
 }
@@ -413,12 +413,12 @@ export function emailDateChangeResolved(
     : "";
   const lead =
     opts.outcome === "declined"
-      ? `<p style="font-size:14px">Hi ${b.booker} — ${providerName} wasn't able to make the change you asked for on <b>${b.listing}</b>. Your original dates and times stay exactly as they were.</p>`
+      ? `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} wasn't able to make the change you asked for on <b>${escapeHtml(b.listing)}</b>. Your original dates and times stay exactly as they were.</p>`
       : opts.outcome === "partial"
-        ? `<p style="font-size:14px">Hi ${b.booker} — ${providerName} has reviewed your request on <b>${b.listing}</b>. Here's what was and wasn't approved:</p>`
-        : `<p style="font-size:14px">Good news ${b.booker} — ${providerName} approved your change on <b>${b.listing}</b>:</p>`;
+        ? `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has reviewed your request on <b>${escapeHtml(b.listing)}</b>. Here's what was and wasn't approved:</p>`
+        : `<p style="font-size:14px">Good news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved your change on <b>${escapeHtml(b.listing)}</b>:</p>`;
   const note = opts.reason?.trim()
-    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 2px;border-collapse:separate"><tr><td style="background:#f4f6fb;border-left:3px solid #1d3a8f;border-radius:6px;padding:10px 13px"><div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#3a4a86;margin-bottom:3px">Message from ${providerName}</div><div style="font-size:13.5px;color:#2b3350;white-space:pre-wrap">${escapeHtml(opts.reason.trim())}</div></td></tr></table>`
+    ? `<table role="presentation" cellpadding="0" cellspacing="0" style="margin:4px 0 2px;border-collapse:separate"><tr><td style="background:#f4f6fb;border-left:3px solid #1d3a8f;border-radius:6px;padding:10px 13px"><div style="font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:#3a4a86;margin-bottom:3px">Message from ${escapeHtml(providerName)}</div><div style="font-size:13.5px;color:#2b3350;white-space:pre-wrap">${escapeHtml(opts.reason.trim())}</div></td></tr></table>`
     : "";
   // "date change" / "time change" / "date & time change" — describe what they
   // actually asked to move, so the subject reads naturally (no bare ref).
@@ -447,9 +447,14 @@ export function emailRefundApproved(b: Booking, providerName: string): void {
     toWallet ? `Wallet credit added — ${b.listing}` : `Refund approved — ${b.listing}`,
     toWallet ? "Your wallet credit is ready" : "Your refund is on its way",
     toWallet
-      ? `<p style="font-size:14px">Hi ${b.booker} — ${providerName} approved your refund${amt ? ` of <b>${amt}</b>` : ""} as <b>wallet credit</b>.
+      ? `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved your refund${amt ? ` of <b>${amt}</b>` : ""} as <b>wallet credit</b>.
          It&rsquo;s <b>already in your wallet</b> and ready to spend on your next booking — nothing else to do.</p>`
-      : `<p style="font-size:14px">Hi ${b.booker} — ${providerName} approved the refund for this booking.
+      : b.cancel?.refundVia === "offline"
+        // A voucher / Tax-Free Childcare / cash booking: the app can't send it
+        // back, and it was never on a card — don't say it's going there.
+        ? `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking${amt ? ` (<b>${amt}</b>)` : ""}.
+           ${b.voucherScheme ? `It will be returned through <b>${escapeHtml(b.voucherScheme)}</b>, the way you paid.` : "They'll return it the way you paid."} If you have questions, reply to this email.</p>`
+        : `<p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} approved the refund for this booking.
          ${amt ? `Amount: <b>${amt}</b>. It should reach your original payment method within a few days.` : ""}</p>`,
   );
 }
@@ -462,7 +467,7 @@ export function emailPlaceOffered(b: Booking, providerName: string): void {
     b, providerName, "waitlist",
     `A place has opened up — ${b.listing}`,
     "A place is yours if you want it",
-    `<p style="font-size:14px">Good news ${b.booker} — a place has opened up on the dates you were
+    `<p style="font-size:14px">Good news ${escapeHtml(b.booker)} — a place has opened up on the dates you were
      waiting for, and it's being held for you <b>for 2 hours${until ? ` (until ${until})` : ""}</b>.</p>
      <p style="font-size:14px">Sign in to <b>My bookings</b> and accept the offer to take the place —
      if the hold runs out, it passes to the next family in the queue.</p>`,
@@ -542,17 +547,17 @@ export function emailTeamInvite(p: {
 }): void {
   const what =
     p.role === "franchise"
-      ? `run your own franchise area inside ${p.tenantName}`
-      : `join the ${p.tenantName} team as staff`;
+      ? `run your own franchise area inside ${escapeHtml(p.tenantName)}`
+      : `join the ${escapeHtml(p.tenantName)} team as staff`;
   sendAs(
     p.tenantId,
     p.tenantName,
     p.to,
     `${p.tenantName} — you're invited`,
     `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#171534">
-      <h2 style="font-size:19px;margin:0 0 10px">Join ${p.tenantName} on ActivityOS</h2>
+      <h2 style="font-size:19px;margin:0 0 10px">Join ${escapeHtml(p.tenantName)} on ActivityOS</h2>
       <p style="font-size:14px;line-height:1.55;margin:0 0 14px">
-        ${p.inviterName ? `${p.inviterName} has invited you` : "You've been invited"} to ${what}.
+        ${p.inviterName ? `${escapeHtml(p.inviterName)} has invited you` : "You've been invited"} to ${what}.
         The button below creates your account and links it to theirs — nothing to configure.
       </p>
       ${p.message ? `<blockquote style="border-left:3px solid #cdddf7;margin:0 0 14px;padding:6px 0 6px 14px;color:#4a4763;font-size:14px;line-height:1.55;white-space:pre-wrap">${escapeHtml(p.message)}</blockquote>` : ""}
@@ -561,6 +566,103 @@ export function emailTeamInvite(p: {
       </p>
       <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:0">
         The link works once. Not expecting this? Ignore it and nothing happens.
+      </p>
+    </div>`,
+  );
+}
+
+/** Employment-reference request — sent to the candidate's REFEREE, who has no
+ * account and no prior relationship with us. Two things earn the click: it says
+ * plainly who is asking and about whom, and it's short. The link is the secret
+ * and works once. */
+export function emailReferenceRequest(p: {
+  to: string;
+  refereeName: string;
+  tenantName: string;
+  candidateName: string;
+  jobTitle?: string | null;
+  link: string;
+  message?: string;
+  tenantId?: string;
+  /** A reminder rather than a first approach. */
+  chase?: boolean;
+}): void {
+  const role = p.jobTitle ? ` as ${escapeHtml(p.jobTitle)}` : "";
+  sendAs(
+    p.tenantId,
+    p.tenantName,
+    p.to,
+    p.chase
+      ? `Reminder — reference for ${p.candidateName}`
+      : `${p.tenantName} — reference request for ${p.candidateName}`,
+    `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#171534">
+      <h2 style="font-size:19px;margin:0 0 10px">${p.chase ? "A quick reminder" : `Could you give a reference for ${escapeHtml(p.candidateName)}?`}</h2>
+      <p style="font-size:14px;line-height:1.55;margin:0 0 14px">
+        Hello ${escapeHtml(p.refereeName)} — <b>${escapeHtml(p.tenantName)}</b> is considering
+        <b>${escapeHtml(p.candidateName)}</b> for a role working with children${role}, and they've given your
+        name as a referee.${p.chase ? " We sent this a little while ago and haven't heard back yet." : ""}
+      </p>
+      <p style="font-size:14px;line-height:1.55;margin:0 0 14px">
+        It's a short form — a few questions about how you know them and how they worked. It takes about
+        three minutes, and you can attach a reference on your own headed paper instead if you'd rather.
+      </p>
+      ${p.message ? `<blockquote style="border-left:3px solid #cdddf7;margin:0 0 14px;padding:6px 0 6px 14px;color:#4a4763;font-size:14px;line-height:1.55;white-space:pre-wrap">${escapeHtml(p.message)}</blockquote>` : ""}
+      <p style="margin:0 0 16px">
+        <a href="${p.link}" style="display:inline-block;background:#b45309;color:#fff;padding:11px 20px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Give the reference</a>
+      </p>
+      <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:0">
+        The link works once. Not the right person, or you'd rather not? Open it and choose
+        “I can't give this reference” — that closes the request and stops the reminders.
+      </p>
+    </div>`,
+  );
+}
+
+/** The reference came back (or the referee declined) — told to whoever asked
+ * for it. A flagged safeguarding concern says so in the subject line: it's the
+ * one thing that must not wait until someone next opens the onboarding tab. */
+export function emailReferenceReceived(p: {
+  to: string;
+  tenantName: string;
+  candidateName: string;
+  refereeName: string;
+  concern: boolean;
+  /** Set when the referee closed the request instead of completing it. */
+  declined?: string;
+  /** Which portal the person who asked for it works in — company / franchise /
+   *  freelancer all reach the record at <portal>/staff. */
+  portal?: string;
+  tenantId?: string;
+}): void {
+  const link = `${webUrl}/${p.portal || "company"}/staff`;
+  const subject = p.declined
+    ? `${p.refereeName} can't give a reference for ${p.candidateName}`
+    : p.concern
+      ? `⚠ Reference for ${p.candidateName} — concern flagged`
+      : `Reference received for ${p.candidateName}`;
+  sendAs(
+    p.tenantId,
+    p.tenantName,
+    p.to,
+    subject,
+    `<div style="font-family:system-ui,-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#171534">
+      <h2 style="font-size:19px;margin:0 0 10px">${p.declined ? "Reference declined" : "Reference received"}</h2>
+      <p style="font-size:14px;line-height:1.55;margin:0 0 14px">
+        <b>${escapeHtml(p.refereeName)}</b> ${p.declined ? "has closed the reference request for" : "has completed the reference for"}
+        <b>${escapeHtml(p.candidateName)}</b>.
+      </p>
+      ${p.declined ? `<blockquote style="border-left:3px solid #e2e5ee;margin:0 0 14px;padding:6px 0 6px 14px;color:#4a4763;font-size:14px;line-height:1.55">${escapeHtml(p.declined)}</blockquote>` : ""}
+      ${p.concern ? `<div style="background:#fdecec;border:1px solid #f3c2c2;border-radius:12px;padding:14px;margin:0 0 14px">
+        <b style="font-size:14px;color:#a32020">A safeguarding question was answered “yes”.</b>
+        <div style="font-size:13px;line-height:1.5;color:#6b2b2b;margin-top:4px">
+          Read the full reference before this person starts. They stay on hold until someone records what was done about it.
+        </div>
+      </div>` : ""}
+      <p style="margin:0 0 16px">
+        <a href="${link}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:11px 20px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Open the onboarding record</a>
+      </p>
+      <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:0">
+        The reference itself isn't in this email — it lives on ${escapeHtml(p.candidateName)}'s record where only your team can see it.
       </p>
     </div>`,
   );
@@ -590,16 +692,16 @@ export function emailFamilyBookingCreated(
     `
   <div style="font-family:system-ui,-apple-system,sans-serif;max-width:560px;margin:0 auto;color:#171534">
     <div style="padding:18px 0 10px;border-bottom:2px solid #1d3a8f">
-      <strong style="font-size:18px">${providerName}</strong>
+      <strong style="font-size:18px">${escapeHtml(providerName)}</strong>
       <span style="color:#8a86a3;font-size:12px"> · via ActivityOS</span>
     </div>
     <h2 style="font-size:19px;margin:18px 0 6px">Your booking is confirmed</h2>
-    <p style="font-size:14px">Hi ${b.booker} — ${providerName} has made this booking for you
+    <p style="font-size:14px">Hi ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has made this booking for you
       (you spoke to them, or they took it over the phone), and it now lives in your own
       ActivityOS account so you can see it, pay it, and manage it any time.</p>
     <table style="margin:14px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref${bookings.length > 1 ? "s" : ""}</td><td><b>${refs}</b></td></tr>
-      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Activity</td><td>${b.listing}</td></tr>
+      <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Activity</td><td>${escapeHtml(b.listing)}</td></tr>
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Dates</td><td>${b.dates}</td></tr>
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Total</td><td><b>${gbp(total)}</b></td></tr>
     </table>
@@ -614,7 +716,7 @@ export function emailFamilyBookingCreated(
     <p><a href="${payUrl}" style="display:inline-block;background:#15b364;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Pay ${gbp(total)}</a></p>`
       : `<p style="font-size:14px">There's nothing to pay for this booking.</p>`}
     <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">
-      You're receiving this because ${providerName} made a booking for this email address.
+      You're receiving this because ${escapeHtml(providerName)} made a booking for this email address.
       If that wasn't you, reply and tell them.</p>
   </div>`,
   );
@@ -646,13 +748,13 @@ export function emailVoucherInstructions(
     b, providerName, "payments",
     `Booking confirmed — pay with ${scheme.name} · ${b.listing}`,
     `You're booked in ✓ — pay with ${scheme.name}`,
-    `<p style="font-size:14px">Great news ${b.booker} — your booking with ${providerName} is confirmed.
+    `<p style="font-size:14px">Great news ${escapeHtml(b.booker)} — your booking with ${escapeHtml(providerName)} is confirmed.
       It's held as <b>awaiting voucher payment</b> until the money lands. Pay <b>${gbp(amount)}</b> through
       <b>${scheme.name}</b> on their own website, quoting:</p>
      <table style="margin:10px 0;border-collapse:collapse;font-size:13.5px" cellpadding="0">${refRows}
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Booking ref${opts.refs && opts.refs.length > 1 ? "s" : ""}</td><td><b>${refsLabel}</b></td></tr>
       <tr><td style="color:#8a86a3;padding:3px 14px 3px 0">Amount</td><td><b>${gbp(amount)}</b></td></tr></table>
-     ${sendBy ? `<p style="font-size:14px"><b>Please send it by ${sendBy}</b> so it reaches ${providerName} in time to keep the place.</p>` : ""}
+     ${sendBy ? `<p style="font-size:14px"><b>Please send it by ${sendBy}</b> so it reaches ${escapeHtml(providerName)} in time to keep the place.</p>` : ""}
      <p style="color:#8a86a3;font-size:12px">Voucher money takes a few working days to arrive — the provider will mark your place paid once it lands.</p>`,
     { whatIncluded: true, map: true },
   );
@@ -666,14 +768,16 @@ export function emailPaymentReceived(b: Booking, providerName: string, opts: { l
     b, providerName, "payments",
     `Payment received — ${b.listing}`,
     "Payment received ✓",
-    `<p style="font-size:14px">Thanks ${b.booker} — ${providerName} has received your <b>${escapeHtml(opts.label)}</b>
+    `<p style="font-size:14px">Thanks ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has received your <b>${escapeHtml(opts.label)}</b>
       payment of <b>${gbp(opts.amount)}</b>. Your booking is now fully paid. Thank you!</p>`,
     {}, // hero photo + venue location; the details table shows dates / who / total
   );
 }
 
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+// Quotes too: this is also used inside attribute values (alt="…").
+function escapeHtml(s: string) {
+  return String(s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+}
 
 // ── The provider's "new booking" email ────────────────────────────────────
 // A richly-presented, email-client-safe (tables + inline styles) notification
@@ -855,7 +959,10 @@ export function newBookingProviderEmail(a: NewBookingEmailArgs): string {
  * ingest is not built yet (handoff §JJ), so we don't invite email replies. */
 export function emailNewMessage(
   to: string,
-  opts: { providerName: string; senderName: string; body: string; deepLink: string; tenantId?: string },
+  // emailOnly: the provider has switched in-app messaging off for families, so
+  // this email IS the message — no "open it in the app" button, and replies go
+  // to the provider's own contact address.
+  opts: { providerName: string; senderName: string; body: string; deepLink: string; tenantId?: string; emailOnly?: boolean },
 ): void {
   sendAs(
     opts.tenantId,
@@ -870,10 +977,13 @@ export function emailNewMessage(
     </div>
     <h2 style="font-size:19px;margin:18px 0 6px">New message from ${escapeHtml(opts.senderName)}</h2>
     <blockquote style="border-left:3px solid #cdddf7;margin:12px 0;padding:6px 0 6px 14px;color:#4a4763;white-space:pre-wrap;font-size:14px">${escapeHtml(opts.body)}</blockquote>
-    <p><a href="${opts.deepLink}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Take me to the message</a></p>
-    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">You're receiving this because you have a conversation on ActivityOS.</p>
+    ${opts.emailOnly
+      ? `<p style="font-size:13.5px;color:#4a4763">To answer, just reply to this email — it goes to ${escapeHtml(opts.providerName)}.</p>`
+      : `<p><a href="${opts.deepLink}" style="display:inline-block;background:#1d3a8f;color:#fff;padding:10px 18px;border-radius:999px;text-decoration:none;font-weight:700;font-size:14px">Take me to the message</a></p>`}
+    <p style="color:#8a86a3;font-size:11.5px;margin-top:22px">${opts.emailOnly ? `You're receiving this because you've booked with ${escapeHtml(opts.providerName)}.` : "You're receiving this because you have a conversation on ActivityOS."}</p>
   </div>`,
-    // Reply-To stays free for §JJ's per-thread reply address.
-    { replyTo: false },
+    // Reply-To stays free for §JJ's per-thread reply address — except when
+    // this email is the only channel: then a reply reaches the provider.
+    { replyTo: opts.emailOnly === true },
   );
 }

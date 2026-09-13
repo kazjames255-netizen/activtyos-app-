@@ -5,7 +5,7 @@ import { loadStripe, type Stripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
 import { money } from "@/features/bookings/helpers";
 
-interface PublicInvoice { provider: string; amount: number; description: string | null; reference: string | null; status: string; dueDate: string | null; customerName: string | null; payMethods: string[]; cardEnabled: boolean }
+interface PublicInvoice { provider: string; amount: number; description: string | null; reference: string | null; status: string; dueDate: string | null; customerName: string | null; payMethods: string[]; cardEnabled: boolean; closed?: boolean; paidAt?: string | null }
 interface CheckoutInfo { paymentId: string; clientSecret: string; stripeAccount: string | null; amount: number }
 
 const API = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
@@ -60,7 +60,9 @@ function CardForm({ token, info, onPaid, onError }: { token: string; info: Check
 
 export function PayPage({ token }: { token: string }) {
   const [inv, setInv] = useState<PublicInvoice | null>(null);
-  const [state, setState] = useState<"loading" | "ok" | "notfound">("loading");
+  const [state, setState] = useState<"loading" | "ok" | "notfound" | "expired">("loading");
+  // An expired link still says whose it was (and whether it had been paid).
+  const [expired, setExpired] = useState<{ provider?: string; status?: string } | null>(null);
   const [info, setInfo] = useState<CheckoutInfo | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [starting, setStarting] = useState(false);
@@ -69,8 +71,12 @@ export function PayPage({ token }: { token: string }) {
 
   useEffect(() => {
     fetch(`${API}/api/public/invoice/${encodeURIComponent(token)}`)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("not found"))))
-      .then((d: PublicInvoice) => { setInv(d); setState("ok"); })
+      .then(async (r) => {
+        if (r.status === 410) { setExpired(await r.json().catch(() => ({}))); setState("expired"); return; }
+        if (!r.ok) throw new Error("not found");
+        setInv(await r.json() as PublicInvoice);
+        setState("ok");
+      })
       .catch(() => setState("notfound"));
   }, [token]);
 
@@ -100,6 +106,18 @@ export function PayPage({ token }: { token: string }) {
             <p className="mt-1 text-[13px] leading-[1.6] text-[#8a86a3]">It may have expired or been mistyped. Ask your provider to resend it.</p>
           </div>
         )}
+        {state === "expired" && (
+          <div className="rounded-2xl border border-[#ece6f1] bg-white p-8 text-center shadow-[0_10px_30px_-12px_rgba(29,58,143,.35)]">
+            <div className="text-[28px]">{expired?.status === "paid" ? "✓" : "⌛"}</div>
+            <div className="mt-1 text-[16px] font-extrabold">{expired?.status === "paid" ? "This invoice is paid" : "This payment link has expired"}</div>
+            <p className="mt-1 text-[13px] leading-[1.6] text-[#8a86a3]">
+              {expired?.status === "paid" ? "This link has now closed. " : expired?.status === "cancelled" ? "This invoice was cancelled and the link has closed. " : ""}
+              {expired?.status === "paid" || expired?.status === "cancelled"
+                ? `If you need a copy, ask ${expired?.provider || "your provider"}.`
+                : `If you still need to pay, ask ${expired?.provider || "your provider"} to send you a new link.`}
+            </p>
+          </div>
+        )}
         {state === "ok" && inv && (
           <div className="overflow-hidden rounded-2xl border border-[#ece6f1] bg-white shadow-[0_16px_40px_-16px_rgba(29,58,143,.45)]">
             <div className="p-5 text-white" style={{ background: "linear-gradient(120deg,#1d3a8f 0%,#3f78d8 100%)" }}>
@@ -108,7 +126,17 @@ export function PayPage({ token }: { token: string }) {
             </div>
             <div className="p-5">
               {inv.status === "paid" || justPaid ? (
-                <div className="rounded-xl bg-[#eaf0fc] p-4 text-center"><div className="text-[22px]">✓</div><div className="text-[15px] font-extrabold text-[#1d3a8f]">Paid — thank you!</div></div>
+                <div className="rounded-xl bg-[#eaf0fc] p-4 text-center">
+                  <div className="text-[22px]">✓</div>
+                  <div className="text-[15px] font-extrabold text-[#1d3a8f]">{justPaid ? "Paid — thank you!" : "This invoice is paid"}</div>
+                  <div className="mt-1 text-[12.5px] text-[#4a4763]">{money(inv.amount)}{inv.description ? ` · ${inv.description}` : ""}{inv.paidAt ? ` · paid ${fmtDay(inv.paidAt.slice(0, 10))}` : ""}</div>
+                  <div className="mt-1 text-[11.5px] text-[#8a86a3]">Nothing more to pay.</div>
+                </div>
+              ) : inv.status === "cancelled" ? (
+                <div className="rounded-xl bg-[#fbf8fc] p-4 text-center">
+                  <div className="text-[15px] font-extrabold">This invoice is closed</div>
+                  <div className="mt-1 text-[12.5px] text-[#8a86a3]">{inv.provider} cancelled it — there&rsquo;s nothing to pay. Contact them if you think that&rsquo;s wrong.</div>
+                </div>
               ) : (
                 <>
                   <div className="text-[12px] text-[#8a86a3]">Amount due</div>

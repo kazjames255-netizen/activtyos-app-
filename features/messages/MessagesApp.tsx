@@ -11,6 +11,9 @@ import { Badge, Button, Card, Input, Select } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
 import { useSurfaceTheme } from "@/lib/surfaceThemes";
 import { useHoScope, HO_OWN } from "@/components/franchise/HoScope";
+import { useI18n, useT } from "@/lib/i18n/provider";
+
+type Tr = ReturnType<typeof useT>;
 
 // Messages runs on the same light surface as the customer dashboard, whichever
 // portal it's in — so the operator inbox reads like the parent one instead of
@@ -55,33 +58,39 @@ interface Message { id: string; from: "operator" | "parent"; senderName?: string
 interface Provider { tenantId: string; name: string }
 interface Customer { id: string; name?: string; email?: string; locationName?: string; children?: { name?: string }[] }
 
-const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+// `loc` is a BCP-47 date locale (en-GB for English) so dates follow the chosen language.
+const when = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 // Tidy one-line subtitle for a family: who they parent, where, and their email.
-const familySub = (c: Customer) => {
+const familySub = (c: Customer, tr: Tr) => {
   const kids = (c.children ?? []).map((k) => k.name).filter(Boolean);
-  return [kids.length ? `Parent of ${kids.join(", ")}` : null, c.locationName ? `📍 ${c.locationName}` : null, c.email || null]
+  return [kids.length ? tr("comms.parentOfSub", { kids: kids.join(", ") }) : null, c.locationName ? `📍 ${c.locationName}` : null, c.email || null]
     .filter(Boolean)
     .join("  ·  ");
 };
-const shortWhen = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short" }) : "");
+const shortWhen = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleDateString(loc, { day: "numeric", month: "short" }) : "");
 
 // The discount-code details shown under a code message. No copy button — the
 // code is already waiting at checkout (tap-to-apply), so this just shows what it
 // is and where it works.
 function CouponChip({ coupon }: { coupon: { code: string; valueTxt?: string; scope?: string; expiry?: string | null } }) {
-  const meta = [coupon.valueTxt, coupon.scope, coupon.expiry ? `until ${coupon.expiry}` : "no end date"].filter(Boolean).join(" · ");
+  const t = useT();
+  const meta = [coupon.valueTxt, coupon.scope, coupon.expiry ? t("comms.couponUntil", { date: coupon.expiry }) : t("comms.couponNoEnd")].filter(Boolean).join(" · ");
   return (
     <div className="mt-1.5 rounded-xl bg-white/15 px-2.5 py-1.5 backdrop-blur-sm">
       <div className="flex items-center gap-2">
         <span className="font-mono text-[15px] font-extrabold tracking-wider text-white">{coupon.code}</span>
         <span className="min-w-0 flex-1 truncate text-[10.5px] text-white/80">{meta}</span>
       </div>
-      <div className="mt-0.5 text-[10.5px] text-white/70">✓ Ready at checkout — just tap it to apply.</div>
+      <div className="mt-0.5 text-[10.5px] text-white/70">{t("comms.couponReady")}</div>
     </div>
   );
 }
 
 export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
+  // `tr`, not `t` — `t` is the thread/template variable all through this file.
+  const { t: tr, locale } = useI18n();
+  // Plain "en" formats dates the American way (Sep 12) — UK English is en-GB.
+  const dateLoc = locale === "en" ? "en-GB" : locale;
   const searchParams = useSearchParams();
   // Deep-link from the Register (and elsewhere): ?compose=1&emails=a@b,c@d opens
   // the composer pre-addressed to those families. Operator only — a parent
@@ -98,8 +107,11 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   // provider with the subject filled, leaving the parent to type the message.
   const preParentCompose = mode === "parent" && searchParams.get("compose") != null;
   const preTenant = preParentCompose ? (searchParams.get("tenant") ?? "") : "";
+  // Deep-link from the dashboard's Messages card: ?thread=<id> lands with that
+  // conversation already open (and its messages marked read, as if clicked).
+  const seedThread = searchParams.get("thread");
   const [threads, setThreads] = useState<Thread[] | null>(null);
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(seedThread);
   const [messages, setMessages] = useState<Message[]>([]);
   const [draft, setDraft] = useState(preBody);
   const [error, setError] = useState<string | null>(null);
@@ -145,11 +157,14 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   useEffect(() => { if (hoScope) setNetFilter(hoScope); }, [hoScope]);
 
   const loadThreads = useCallback(() => {
-    apiGet<Thread[]>("/api/messages/threads").then((t) => { setThreads(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-  }, []);
+    apiGet<Thread[]>("/api/messages/threads").then((t) => { setThreads(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : tr("comms.loadFailed")));
+  }, [tr]);
   const loadThread = useCallback((id: string) => {
-    apiGet<{ thread: Thread; messages: Message[] }>(`/api/messages/threads/${encodeURIComponent(id)}`).then((r) => { setMessages(r.messages); loadThreads(); }).catch((e) => setError(e instanceof Error ? e.message : "Failed"));
-  }, [loadThreads]);
+    apiGet<{ thread: Thread; messages: Message[] }>(`/api/messages/threads/${encodeURIComponent(id)}`).then((r) => { setMessages(r.messages); loadThreads(); }).catch((e) => setError(e instanceof Error ? e.message : tr("comms.failed")));
+  }, [loadThreads, tr]);
+  // Pull the deep-linked conversation in once. Not `open()`: that also clears
+  // the composer, and the seed runs before the user has touched anything.
+  useEffect(() => { if (seedThread) loadThread(seedThread); }, [seedThread, loadThread]);
 
   // Folders are an operator-only way to file conversations (Resolved, etc.).
   const loadFolders = useCallback(() => {
@@ -197,6 +212,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   useRealtime(["threads", "messages"], () => { loadThreads(); if (openId) loadThread(openId); });
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages]);
 
+  // "1 family" / "N families" fragment for the sent toasts.
+  const famCount = (n: number) => (n === 1 ? tr("comms.oneFamily") : tr("comms.nFamilies", { n }));
+
   function open(id: string) { setComposing(false); setSubject(""); setOpenBroadcast(null); setOpenId(id); loadThread(id); }
   // Open the composer pre-addressed to a family/provider found via search.
   function startWith(value: string) {
@@ -205,56 +223,56 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   }
 
   async function createFolder() {
-    const name = window.prompt("New folder name (e.g. Resolved)")?.trim();
+    const name = window.prompt(tr("comms.newFolderPrompt"))?.trim();
     if (!name) return;
     try { await apiPost("/api/messages/folders", { name }); loadFolders(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t create folder"); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("comms.createFolderFailed")); }
   }
   async function renameFolder(f: Folder) {
-    const name = window.prompt("Rename folder", f.name)?.trim();
+    const name = window.prompt(tr("comms.renameFolderPrompt"), f.name)?.trim();
     if (!name || name === f.name) return;
     try { await api(`/api/messages/folders/${encodeURIComponent(f.id)}`, { method: "PUT", body: JSON.stringify({ name }) }); loadFolders(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t rename folder"); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("comms.renameFolderFailed")); }
   }
   async function deleteFolder(f: Folder) {
-    if (!window.confirm(`Delete “${f.name}”? Its conversations move back to the Inbox.`)) return;
+    if (!window.confirm(tr("comms.deleteFolderConfirm", { name: f.name }))) return;
     try {
       await api(`/api/messages/folders/${encodeURIComponent(f.id)}`, { method: "DELETE" });
       if (activeFolder === f.id) setActiveFolder("all");
       loadFolders(); loadThreads();
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t delete folder"); }
+    } catch (e) { setError(e instanceof Error ? e.message : tr("comms.deleteFolderFailed")); }
   }
   async function saveTemplate() {
-    if (!draft.trim()) { setError("Write a message first, then save it as a template."); return; }
-    const name = window.prompt("Template name (e.g. Welcome)")?.trim();
+    if (!draft.trim()) { setError(tr("comms.templateNeedsDraft")); return; }
+    const name = window.prompt(tr("comms.templateNamePrompt"))?.trim();
     if (!name) return;
     try { await apiPost("/api/messages/templates", { name, subject: subject.trim() || undefined, body: draft.trim() }); loadTemplates(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save template"); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("comms.saveTemplateFailed")); }
   }
   async function moveThread(threadId: string, folderId: string | null) {
     try { await api(`/api/messages/threads/${encodeURIComponent(threadId)}/folder`, { method: "PUT", body: JSON.stringify({ folderId }) }); loadThreads(); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t move conversation"); }
+    catch (e) { setError(e instanceof Error ? e.message : tr("comms.moveFailed")); }
   }
 
   async function send() {
     if (!draft.trim()) return;
     try {
       if (composing && composeMode === "group") {
-        if (listingTargets.length === 0) { setError("Choose at least one listing to message."); return; }
+        if (listingTargets.length === 0) { setError(tr("comms.chooseListingFirst")); return; }
         const res = await apiPost<{ sent: number }>("/api/messages/broadcast", { listings: listingTargets, excludeEmails: excludedEmails, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) });
         const nL = listingTargets.length;
         setDraft(""); setSubject(""); setComposing(false); setListingTargets([]); setExcludedEmails([]); setComposeMode("family");
-        setError(null); setNotice(`Sent to ${res.sent} ${res.sent === 1 ? "family" : "families"} across ${nL} ${nL === 1 ? "listing" : "listings"}.`);
+        setError(null); setNotice(tr("comms.sentToWhoAcross", { families: famCount(res.sent), listings: nL === 1 ? tr("comms.oneListing") : tr("comms.nListings", { n: nL }) }));
         loadThreads(); loadBroadcasts();
         return;
       }
       if (composing && mode === "operator") {
         // "Families" mode — one or many families at once.
-        if (familyTargets.length === 0) { setError("Choose at least one family."); return; }
+        if (familyTargets.length === 0) { setError(tr("comms.chooseFamilyFirst")); return; }
         if (familyTargets.length > 1) {
           const res = await apiPost<{ sent: number }>("/api/messages/broadcast", { emails: familyTargets, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) });
           setDraft(""); setSubject(""); setComposing(false); setFamilyTargets([]);
-          setError(null); setNotice(`Sent to ${res.sent} ${res.sent === 1 ? "family" : "families"}.`);
+          setError(null); setNotice(tr("comms.sentToWho", { families: famCount(res.sent) }));
           loadThreads(); loadBroadcasts();
           return;
         }
@@ -269,7 +287,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       if (composing) {
         // Parent side — message one provider (auto-picked when there's only one).
         const tid = target || (providers.length === 1 ? providers[0]?.tenantId ?? "" : "");
-        if (!tid) { setError("Choose who to message."); return; }
+        if (!tid) { setError(tr("comms.chooseWhoFirst")); return; }
         const payload = { tenantId: tid, body: draft, ...(subject.trim() ? { subject: subject.trim() } : {}) };
         const res = await apiPost<{ threadId: string }>("/api/messages", payload);
         setDraft(""); setComposing(false); setTarget(""); setSubject(""); loadThreads(); open(res.threadId);
@@ -288,7 +306,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
         await apiPost("/api/messages", payload);
         setDraft(""); loadThread(t.id);
       }
-    } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t send"); }
+    } catch (e) { setError(e instanceof Error ? e.message : tr("comms.sendFailed")); }
   }
 
   const active = threads?.find((t) => t.id === openId) ?? null;
@@ -300,10 +318,10 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const withParent = (name: string, email?: string) => {
     if (mode !== "operator") return name;
     const kids = email ? kidsByEmail.get(email.toLowerCase()) ?? [] : [];
-    return kids.length ? `${name} (parent of ${kids.join(", ")})` : name;
+    return kids.length ? tr("comms.parentOf", { name, kids: kids.join(", ") }) : name;
   };
   const other = (t: Thread) =>
-    mode === "operator" ? withParent(t.parentName || t.parentEmail, t.parentEmail) : t.tenantName || "Provider";
+    mode === "operator" ? withParent(t.parentName || t.parentEmail, t.parentEmail) : t.tenantName || tr("comms.provider");
   const unread = (t: Thread) => (mode === "operator" ? t.operatorUnread : t.parentUnread) ?? 0;
   // "Needs reply" = the last word was theirs, not yours — the ball's in your court.
   const needsReply = (t: Thread) => !!t.lastFrom && t.lastFrom !== mine;
@@ -333,9 +351,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
     return true;
   });
   const filterTabs: { key: "all" | "unread" | "reply"; label: string }[] = [
-    { key: "all", label: "All" },
-    { key: "reply", label: mode === "operator" ? "Needs reply" : "Awaiting you" },
-    { key: "unread", label: "New" },
+    { key: "all", label: tr("comms.all") },
+    { key: "reply", label: mode === "operator" ? tr("comms.needsReply") : tr("comms.awaitingYou") },
+    { key: "unread", label: tr("comms.newLabel") },
   ];
 
   // Search should also surface people you *haven't* messaged yet (the box says
@@ -383,27 +401,27 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const proBar = mode !== "operator" ? null : (
     <div className="flex flex-wrap items-center gap-1.5 border-t border-[var(--line)] px-2.5 pt-2">
       <div className="mr-1 flex gap-0.5 rounded-full border border-[var(--line)] p-0.5">
-        {([["simple", "Simple"], ["pro", "Pro ✦"]] as const).map(([m, label]) => {
+        {(["simple", "pro"] as const).map((m) => {
           const on = (m === "pro") === pro;
-          return <button key={m} type="button" onClick={() => setPro(m === "pro")} className="rounded-full px-2.5 py-0.5 text-[10.5px] font-bold" style={on ? { background: "var(--brand-2)", color: "#fff" } : { color: "var(--ink-3)" }}>{label}</button>;
+          return <button key={m} type="button" onClick={() => setPro(m === "pro")} className="rounded-full px-2.5 py-0.5 text-[10.5px] font-bold" style={on ? { background: "var(--brand-2)", color: "#fff" } : { color: "var(--ink-3)" }}>{tr(`comms.${m}`)}</button>;
         })}
       </div>
       {pro && (
         <>
           <Select value="" onChange={(e) => { const t = templates.find((x) => x.id === e.target.value); if (t) { setDraft(t.body); if (t.subject) setSubject(t.subject); } }} className="!py-1 text-[11px]">
-            <option value="">{templates.length ? "Insert template…" : "No templates yet"}</option>
-            {templates.map((t) => { const ok = templateUsable(t); return <option key={t.id} value={t.id} disabled={!ok}>{t.name}{ok ? "" : " · send from a booking"}</option>; })}
+            <option value="">{templates.length ? tr("comms.insertTemplate") : tr("comms.noTemplates")}</option>
+            {templates.map((t) => { const ok = templateUsable(t); return <option key={t.id} value={t.id} disabled={!ok}>{t.name}{ok ? "" : ` · ${tr("comms.sendFromBooking")}`}</option>; })}
           </Select>
           {mergeFieldsFor(composeCtx).map((f) => (
             <button key={f.token} type="button" title={`${f.token} — ${f.desc}`} onClick={() => setDraft((d) => (d ? `${d} ` : "") + f.token)}
               className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{f.token}</button>
           ))}
-          <button type="button" onClick={saveTemplate} className="rounded-full border border-dashed border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ Save as template</button>
-          <Link href={`/${portalSeg}/templates`} className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] no-underline hover:text-[var(--ink)]">⚙ Manage</Link>
+          <button type="button" onClick={saveTemplate} className="rounded-full border border-dashed border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">{tr("comms.saveAsTemplate")}</button>
+          <Link href={`/${portalSeg}/templates`} className="rounded-full border border-[var(--line)] px-2 py-0.5 text-[10.5px] font-bold text-[var(--ink-3)] no-underline hover:text-[var(--ink)]">{tr("comms.manage")}</Link>
           {hasTokens && draft.trim() && (
             <div className="mt-1.5 w-full rounded-lg border border-[var(--brand-line,#dbe6fb)] bg-[var(--brand-soft,#eef4ff)] px-3 py-2">
               <div className="text-[10px] font-extrabold uppercase tracking-wide text-[var(--brand-strong,#1d3a8f)]">
-                👀 Preview — {previewCust ? `how ${previewCust.name} will see it` : "example names"}
+                {tr("comms.previewTitle", { who: previewCust ? tr("comms.previewAs", { name: previewCust.name ?? "" }) : tr("comms.previewExample") })}
               </div>
               <div className="mt-0.5 whitespace-pre-wrap text-[12.5px] leading-[1.5] text-[var(--ink)]">{previewText}</div>
             </div>
@@ -431,24 +449,24 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
           <div>
             <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">✉️</span>
-              Messages
+              {tr("comms.title")}
             </div>
-            <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{mode === "operator" ? "Message one family or a whole listing at once — replies come back as normal 1:1 conversations. Switch on Pro for templates & merge fields." : "Message your activity provider — questions, changes or anything about your bookings."}</p>
+            <p className="mt-1.5 max-w-[560px] text-[12.5px] leading-[1.5] text-white/85">{mode === "operator" ? tr("comms.ledeOperator") : tr("comms.ledeParent")}</p>
           </div>
           <div className="flex flex-none flex-wrap items-center gap-2">
             {mode === "operator" && <TourLauncher view="messages" compact />}
             <SettingsLink />
             <button type="button" onClick={() => { setComposing(true); setOpenId(null); setOpenBroadcast(null); setMessages([]); setTarget(""); setSubject(""); setComposeMode("family"); setListingTargets([]); setExcludedEmails([]); setFamilyTargets([]); setNotice(null); }} className="rounded-full bg-white px-4 py-2 text-[13px] font-extrabold text-[#1d3a8f] shadow-md transition-transform hover:-translate-y-px">
-              ＋ {mode === "operator" ? "Message customers" : "New message"}
+              ＋ {mode === "operator" ? tr("comms.messageCustomers") : tr("comms.newMessage")}
             </button>
             {mode === "operator" && (
               <Link href={`/${portalSeg}/templates`}>
-                <button type="button" className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">📝 Templates</button>
+                <button type="button" className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">{tr("comms.templatesBtn")}</button>
               </Link>
             )}
             {((mode === "operator" && portalSeg !== "staff") || mode === "parent") && (
               <Link href={`/${portalSeg}/activityos`}>
-                <button type="button" className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">{mode === "parent" ? "Report a problem" : "✦ Message ActivityOS"}</button>
+                <button type="button" className="rounded-full border border-white/70 bg-white/10 px-4 py-2 text-[13px] font-bold text-white backdrop-blur-sm transition hover:bg-white/20">{mode === "parent" ? tr("comms.reportProblem") : tr("comms.messageActivityOS")}</button>
               </Link>
             )}
           </div>
@@ -460,8 +478,8 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
 
       <div className="grid gap-3 md:grid-cols-[320px_1fr]">
         <Card className="p-1.5">
-          {!threads ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">Loading…</div>
-          : threads.length === 0 ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">No conversations yet.</div>
+          {!threads ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">{tr("comms.loading")}</div>
+          : threads.length === 0 ? <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">{tr("comms.noConversations")}</div>
           : (
             <div className="flex flex-col">
               <div className="px-1 pb-1.5">
@@ -470,7 +488,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     <button type="button" onClick={() => setActiveFolder("all")}
                       className="rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors"
                       style={activeFolder === "all" ? { borderColor: "var(--brand)", background: "var(--brand)", color: "#fff" } : { borderColor: "var(--line)", background: "transparent", color: "var(--ink-3)" }}>
-                      All {allThreads.length}
+                      {tr("comms.all")} {allThreads.length}
                     </button>
                     {folders.map((f) => {
                       const on = activeFolder === f.id;
@@ -479,23 +497,23 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                           <button type="button" onClick={() => setActiveFolder(f.id)} className="py-1 pl-2.5 text-[11px] font-bold">📁 {f.name} {folderCount(f.id)}</button>
                           {on ? (
                             <>
-                              <button type="button" onClick={() => renameFolder(f)} title="Rename" className="px-1 text-[11px] leading-none">✎</button>
-                              <button type="button" onClick={() => deleteFolder(f)} title="Delete" className="pr-2 text-[13px] leading-none">×</button>
+                              <button type="button" onClick={() => renameFolder(f)} title={tr("comms.rename")} className="px-1 text-[11px] leading-none">✎</button>
+                              <button type="button" onClick={() => deleteFolder(f)} title={tr("comms.delete")} className="pr-2 text-[13px] leading-none">×</button>
                             </>
                           ) : <span className="pr-2.5" />}
                         </span>
                       );
                     })}
-                    <button type="button" onClick={createFolder} className="rounded-full border border-dashed border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">＋ Folder</button>
+                    <button type="button" onClick={createFolder} className="rounded-full border border-dashed border-[var(--line)] px-2.5 py-1 text-[11px] font-bold text-[var(--ink-3)] hover:text-[var(--ink)]">{tr("comms.addFolder")}</button>
                   </div>
                 )}
                 {isHo && (
                   <div className="mb-1.5 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-1.5">
-                    <div className="mb-1 px-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Filter by network</div>
+                    <div className="mb-1 px-1 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{tr("comms.filterByNetwork")}</div>
                     <div className="flex flex-wrap gap-1">
                       {[
-                        { id: "all", label: "🌐 All networks", n: allThreads.length },
-                        { id: HO_OWN, label: "🏛 Head office direct", n: allThreads.filter((t) => !t.franchiseId).length },
+                        { id: "all", label: tr("comms.allNetworks"), n: allThreads.length },
+                        { id: HO_OWN, label: tr("comms.hoDirect"), n: allThreads.filter((t) => !t.franchiseId).length },
                         ...franchises.map((f) => ({ id: f.franchiseId, label: f.name, n: allThreads.filter((t) => t.franchiseId === f.franchiseId).length })),
                       ].map((opt) => {
                         const on = netFilter === opt.id;
@@ -513,7 +531,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                 <Input
                   value={q}
                   onChange={(e) => setQ(e.target.value)}
-                  placeholder={mode === "operator" ? "Search families or messages…" : "Search providers or messages…"}
+                  placeholder={mode === "operator" ? tr("comms.searchOperator") : tr("comms.searchParent")}
                   className="w-full !py-1.5 text-[12.5px]"
                 />
                 <div className="mt-1.5 flex flex-wrap gap-1">
@@ -537,15 +555,15 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
               </div>
               {mode === "operator" && activeFolder === "all" && !q.trim() && broadcasts.length > 0 && (
                 <>
-                  <div className="px-2.5 pb-1 pt-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">📣 Sent to groups</div>
+                  <div className="px-2.5 pb-1 pt-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{tr("comms.sentToGroups")}</div>
                   {broadcasts.slice(0, 20).map((b) => (
                     <button key={b.id} type="button" onClick={() => { setOpenBroadcast(b); setOpenId(null); setComposing(false); }}
                       className={`flex items-start gap-2.5 rounded-xl px-2 py-2 text-left transition ${openBroadcast?.id === b.id ? "bg-[var(--panel)] ring-1 ring-[var(--line)]" : "hover:bg-[var(--panel)]"}`}>
                       <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-[14px]" style={{ background: "var(--brand-soft)" }}>📣</span>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-1.5">
-                          <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">Sent to {b.recipientCount ?? b.recipients?.length ?? 0} families</span>
-                          <span className="flex-none text-[10px] text-[var(--ink-3)]">{shortWhen(b.sentAt)}</span>
+                          <span className="min-w-0 flex-1 truncate text-[12.5px] font-bold">{tr("comms.sentToNFamilies", { n: b.recipientCount ?? b.recipients?.length ?? 0 })}</span>
+                          <span className="flex-none text-[10px] text-[var(--ink-3)]">{shortWhen(b.sentAt, dateLoc)}</span>
                         </div>
                         <div className="truncate text-[11.5px] text-[var(--ink-3)]">{b.subject ? `${b.subject} · ` : ""}{b.body}</div>
                       </div>
@@ -562,12 +580,12 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     <span className="mt-0.5 flex h-8 w-8 flex-none items-center justify-center rounded-full text-[12px] font-extrabold" style={{ background: "var(--brand-soft)", color: "var(--brand-strong)" }}>{initial}</span>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5">
-                        {isNew && <span className="h-2 w-2 flex-none rounded-full" style={{ background: "var(--brand-2)" }} aria-label="new" />}
+                        {isNew && <span className="h-2 w-2 flex-none rounded-full" style={{ background: "var(--brand-2)" }} aria-label={tr("comms.newAria")} />}
                         <span className={`min-w-0 flex-1 truncate text-[12.5px] ${isNew ? "font-extrabold text-[var(--ink)]" : "font-medium text-[var(--ink-2)]"}`}>{t.subject || other(t)}</span>
-                        <span className="flex-none text-[10px] text-[var(--ink-3)]">{shortWhen(t.lastAt)}</span>
+                        <span className="flex-none text-[10px] text-[var(--ink-3)]">{shortWhen(t.lastAt, dateLoc)}</span>
                         {isNew && <Badge tone={{ bg: "var(--brand)", fg: "#fff" }}>{unread(t)}</Badge>}
                       </div>
-                      <div className={`truncate text-[11.5px] ${isNew ? "font-semibold text-[var(--ink-2)]" : "text-[var(--ink-3)]"}`}>{t.subject ? `${other(t)} · ` : ""}{t.lastFrom === mine ? "You: " : ""}{t.lastBody}</div>
+                      <div className={`truncate text-[11.5px] ${isNew ? "font-semibold text-[var(--ink-2)]" : "text-[var(--ink-3)]"}`}>{t.subject ? `${other(t)} · ` : ""}{t.lastFrom === mine ? tr("comms.youPrefix") : ""}{t.lastBody}</div>
                     </div>
                   </button>
                 );
@@ -575,7 +593,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
               {startable.length > 0 && (
                 <>
                   <div className="px-2.5 pb-1 pt-2.5 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">
-                    Start a new conversation
+                    {tr("comms.startNew")}
                   </div>
                   {startable.map((s) => (
                     <button key={s.key} type="button" onClick={() => startWith(s.value)} className="flex flex-col gap-0.5 rounded-lg px-2.5 py-2 text-left transition hover:bg-[var(--panel)]">
@@ -587,7 +605,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
               )}
               {shownThreads.length === 0 && startable.length === 0 && (
                 <div className="p-4 text-center text-[12px] text-[var(--ink-3)]">
-                  {qv ? "No matches — check the spelling, or use ＋ New message." : "Nothing matches."}
+                  {qv ? tr("comms.noMatchesSearch") : tr("comms.nothingMatches")}
                 </div>
               )}
             </div>
@@ -599,14 +617,14 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
             <div className="flex flex-1 flex-col">
               <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3.5 py-2.5">
                 <div className="min-w-0">
-                  <div className="text-[13px] font-extrabold">📣 Broadcast · {openBroadcast.recipientCount ?? openBroadcast.recipients?.length ?? 0} families</div>
-                  <div className="text-[11px] text-[var(--ink-3)]">Sent {when(openBroadcast.sentAt)}{openBroadcast.subject ? ` · ${openBroadcast.subject}` : ""}</div>
+                  <div className="text-[13px] font-extrabold">{tr("comms.broadcastTitle", { n: openBroadcast.recipientCount ?? openBroadcast.recipients?.length ?? 0 })}</div>
+                  <div className="text-[11px] text-[var(--ink-3)]">{tr("comms.sentWhen", { when: when(openBroadcast.sentAt, dateLoc) })}{openBroadcast.subject ? ` · ${openBroadcast.subject}` : ""}</div>
                 </div>
-                <button type="button" onClick={() => setOpenBroadcast(null)} className="flex-none text-[11.5px] font-bold text-[var(--brand-2)]">Close</button>
+                <button type="button" onClick={() => setOpenBroadcast(null)} className="flex-none text-[11.5px] font-bold text-[var(--brand-2)]">{tr("comms.close")}</button>
               </div>
               <div className="flex-1 overflow-y-auto p-4">
                 <div className="mb-3 max-w-[80%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-[13px] text-white" style={{ background: "var(--brand)" }}>{openBroadcast.body}</div>
-                <div className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">Sent to</div>
+                <div className="mb-1 text-[10px] font-extrabold uppercase tracking-[0.06em] text-[var(--ink-3)]">{tr("comms.sentTo")}</div>
                 <div className="flex flex-col gap-1">
                   {(openBroadcast.recipients ?? []).map((r) => (
                     <div key={r.email} className="flex items-center justify-between gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[12px]">
@@ -615,7 +633,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     </div>
                   ))}
                 </div>
-                <div className="mt-3 text-[11px] text-[var(--ink-3)]">Any replies appear as individual conversations in your inbox.</div>
+                <div className="mt-3 text-[11px] text-[var(--ink-3)]">{tr("comms.repliesNote")}</div>
               </div>
             </div>
           ) : composing ? (
@@ -623,7 +641,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
               <div className="border-b border-[var(--line)] p-3">
                 {mode === "operator" && (
                   <div className="mb-2 flex gap-1">
-                    {([["family", "👤 Families"], ["group", "📋 Listings"]] as const).map(([m, label]) => {
+                    {([["family", tr("comms.tabFamilies")], ["group", tr("comms.tabListings")]] as const).map(([m, label]) => {
                       const on = composeMode === m;
                       return (
                         <button key={m} type="button" onClick={() => setComposeMode(m)}
@@ -636,12 +654,12 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                   </div>
                 )}
                 <div className="mb-1.5 text-[12px] font-bold text-[var(--ink-3)]">
-                  {mode === "parent" ? "Message a provider you’ve booked" : composeMode === "group" ? "Message everyone booked on the chosen listings" : "Message one or more families"}
+                  {mode === "parent" ? tr("comms.composeParent") : composeMode === "group" ? tr("comms.composeGroup") : tr("comms.composeFamilies")}
                 </div>
                 {mode === "operator" && composeMode === "group" ? (
                   <div className="rounded-lg border border-[var(--line)] p-2">
                     {listings.length === 0 ? (
-                      <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">No listings found.</div>
+                      <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">{tr("comms.noListings")}</div>
                     ) : (() => {
                       const lq = listingQuery.trim().toLowerCase();
                       const shown = listings.filter((l) => !lq || l.toLowerCase().includes(lq));
@@ -650,9 +668,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                           <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]">
                             <button type="button" onClick={() => setPickerOpen((o) => !o)} className="flex items-center gap-1 font-bold text-[var(--ink-2)]">
                               <span className={`inline-block transition-transform ${pickerOpen ? "" : "-rotate-90"}`}>▾</span>
-                              {listingTargets.length} selected · {pickerOpen ? "hide list" : "choose listings"}
+                              {tr("comms.nSelected", { n: listingTargets.length })} · {pickerOpen ? tr("comms.hideList") : tr("comms.chooseListings")}
                             </button>
-                            {listingTargets.length > 0 && <button type="button" onClick={() => setListingTargets([])} className="font-bold text-[var(--brand-2)]">Clear</button>}
+                            {listingTargets.length > 0 && <button type="button" onClick={() => setListingTargets([])} className="font-bold text-[var(--brand-2)]">{tr("comms.clear")}</button>}
                           </div>
                           {!pickerOpen && listingTargets.length > 0 && (
                             <div className="flex flex-wrap gap-1">
@@ -660,10 +678,10 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                             </div>
                           )}
                           {pickerOpen && (<>
-                          <Input value={listingQuery} onChange={(e) => setListingQuery(e.target.value)} placeholder="Search listings…" className="w-full !py-1.5 text-[12.5px]" />
+                          <Input value={listingQuery} onChange={(e) => setListingQuery(e.target.value)} placeholder={tr("comms.searchListings")} className="w-full !py-1.5 text-[12.5px]" />
                           <div className="mt-1.5 flex max-h-[34vh] flex-col gap-0.5 overflow-y-auto">
                             {shown.length === 0 ? (
-                              <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">No listings match.</div>
+                              <div className="p-2 text-center text-[12px] text-[var(--ink-3)]">{tr("comms.noListingsMatch")}</div>
                             ) : shown.map((l) => {
                               const on = listingTargets.includes(l);
                               return (
@@ -688,11 +706,11 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                 ) : mode === "parent" ? (
                   providers.length <= 1 ? (
                     <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] px-3 py-2 text-[13px] font-bold">
-                      {providers[0]?.name ?? "Your provider"}
+                      {providers[0]?.name ?? tr("comms.yourProvider")}
                     </div>
                   ) : (
                     <Select value={target} onChange={(e) => setTarget(e.target.value)} className="w-full">
-                      <option value="">Choose…</option>
+                      <option value="">{tr("comms.choose")}</option>
                       {providers.map((p) => <option key={p.tenantId} value={p.tenantId}>{p.name}</option>)}
                     </Select>
                   )
@@ -705,9 +723,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                       <div className="mb-1.5 flex items-center justify-between text-[11px] text-[var(--ink-3)]">
                         <button type="button" onClick={() => setPickerOpen((o) => !o)} className="flex items-center gap-1 font-bold text-[var(--ink-2)]">
                           <span className={`inline-block transition-transform ${pickerOpen ? "" : "-rotate-90"}`}>▾</span>
-                          {familyTargets.length} selected · {pickerOpen ? "hide list" : "choose families"}
+                          {tr("comms.nSelected", { n: familyTargets.length })} · {pickerOpen ? tr("comms.hideList") : tr("comms.chooseFamilies")}
                         </button>
-                        {familyTargets.length > 0 && <button type="button" onClick={() => setFamilyTargets([])} className="font-bold text-[var(--brand-2)]">Clear</button>}
+                        {familyTargets.length > 0 && <button type="button" onClick={() => setFamilyTargets([])} className="font-bold text-[var(--brand-2)]">{tr("comms.clear")}</button>}
                       </div>
                       {!pickerOpen && familyTargets.length > 0 && (
                         <div className="flex flex-wrap gap-1">
@@ -715,10 +733,10 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                         </div>
                       )}
                       {pickerOpen && (<>
-                      <Input value={familyQuery} onChange={(e) => setFamilyQuery(e.target.value)} placeholder="Search families by name, place or email…" className="w-full !py-1.5 text-[12.5px]" />
+                      <Input value={familyQuery} onChange={(e) => setFamilyQuery(e.target.value)} placeholder={tr("comms.searchFamilies")} className="w-full !py-1.5 text-[12.5px]" />
                       <div className="mt-1.5 flex max-h-[38vh] min-h-[120px] flex-col gap-0.5 overflow-y-auto">
                         {matches.length === 0 ? (
-                          <div className="p-3 text-center text-[12px] text-[var(--ink-3)]">No families match.</div>
+                          <div className="p-3 text-center text-[12px] text-[var(--ink-3)]">{tr("comms.noFamiliesMatch")}</div>
                         ) : matches.slice(0, 120).map((c) => {
                           const email = c.email || "";
                           const on = familyTargets.includes(email);
@@ -736,7 +754,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                               </span>
                               <div className="min-w-0 flex-1">
                                 <div className="truncate text-[12.5px] font-bold" style={{ color: on ? "var(--brand-strong)" : "var(--ink)" }}>{c.name || c.email}</div>
-                                <div className="truncate text-[11px] text-[var(--ink-3)]">{familySub(c)}</div>
+                                <div className="truncate text-[11px] text-[var(--ink-3)]">{familySub(c, tr)}</div>
                               </div>
                             </button>
                           );
@@ -748,10 +766,12 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                 })()}
                 {composeMode === "group" && listingTargets.length > 0 && listingRecipients.length > 0 && (() => {
                   const included = listingRecipients.filter((r) => !excludedEmails.includes(r.email));
+                  // {n} is left in the string and split on, so the count can stay bold.
+                  const [goPre, goPost = ""] = tr("comms.goingTo", { total: listingRecipients.length }).split("{n}");
                   return (
                     <details className="mt-2 rounded-lg border border-[var(--line)] p-2" open>
                       <summary className="cursor-pointer text-[11.5px] font-bold text-[var(--ink-2)]">
-                        Going to <b className="text-[var(--brand-strong)]">{included.length}</b> of {listingRecipients.length} families — click to review / un-tick
+                        {goPre}<b className="text-[var(--brand-strong)]">{included.length}</b>{goPost}
                       </summary>
                       <div className="mt-1.5 flex max-h-[30vh] flex-col gap-0.5 overflow-y-auto">
                         {listingRecipients.map((r) => {
@@ -774,19 +794,19 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                 <Input
                   value={subject}
                   onChange={(e) => setSubject(e.target.value)}
-                  placeholder="Subject (optional)"
+                  placeholder={tr("comms.subjectPh")}
                   maxLength={80}
                   className="mt-2 w-full !py-1.5 text-[12.5px]"
                 />
                 {composeMode === "group" && (
-                  <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Sends one message to each ticked family booked on the chosen listings.</div>
+                  <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{tr("comms.groupHint")}</div>
                 )}
               </div>
               {proBar}
               <Composer draft={draft} setDraft={setDraft} onSend={send} big />
             </div>
           ) : !active ? (
-            <div className="flex flex-1 items-center justify-center text-[12.5px] text-[var(--ink-3)]">Pick a conversation, or start a new one.</div>
+            <div className="flex flex-1 items-center justify-center text-[12.5px] text-[var(--ink-3)]">{tr("comms.pickConversation")}</div>
           ) : (
             <div className="flex flex-1 flex-col">
               <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3.5 py-2.5">
@@ -796,48 +816,48 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                 </div>
                 {mode === "operator" && (
                   <label className="flex flex-none items-center gap-1 text-[11px] font-bold text-[var(--ink-3)]">
-                    Move to
+                    {tr("comms.moveTo")}
                     <Select
                       value={active.folderId ?? ""}
                       onChange={async (e) => {
                         const v = e.target.value;
                         if (v === "__new") {
-                          const name = window.prompt("New folder name (e.g. Resolved)")?.trim();
+                          const name = window.prompt(tr("comms.newFolderPrompt"))?.trim();
                           if (!name) return;
                           try {
                             const f = await apiPost<{ id: string }>("/api/messages/folders", { name });
                             loadFolders();
                             moveThread(active.id, f.id);
-                          } catch (err) { setError(err instanceof Error ? err.message : "Couldn’t create folder"); }
+                          } catch (err) { setError(err instanceof Error ? err.message : tr("comms.createFolderFailed")); }
                           return;
                         }
                         moveThread(active.id, v || null);
                       }}
                       className="!py-1 text-[11.5px]"
                     >
-                      <option value="">🗂 No folder</option>
+                      <option value="">{tr("comms.noFolder")}</option>
                       {folders.map((f) => <option key={f.id} value={f.id}>📁 {f.name}</option>)}
                       <option disabled>──────────</option>
-                      <option value="__new">＋ New folder…</option>
+                      <option value="__new">{tr("comms.newFolderOpt")}</option>
                     </Select>
                   </label>
                 )}
               </div>
               {/* Legend — blue is you, pink is the other side, at a glance. */}
               <div className="flex items-center gap-3 border-b border-[var(--line)] px-3.5 py-1.5 text-[10px] font-bold text-[var(--ink-3)]">
-                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--brand)" }} /> You</span>
-                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#ee1f63" }} /> {mine === "operator" ? "Customer" : "Provider"}</span>
+                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "var(--brand)" }} /> {tr("comms.you")}</span>
+                <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-full" style={{ background: "#ee1f63" }} /> {mine === "operator" ? tr("comms.customer") : tr("comms.provider")}</span>
               </div>
               <div className="flex-1 overflow-y-auto p-3.5">
                 <div className="flex flex-col gap-2">
                   {messages.map((m) => {
                     const isMine = m.from === mine;
-                    const label = isMine ? "You" : (m.senderName || (mine === "operator" ? "Customer" : "Provider"));
+                    const label = isMine ? tr("comms.you") : (m.senderName || (mine === "operator" ? tr("comms.customer") : tr("comms.provider")));
                     return (
                       <div key={m.id} className={`max-w-[80%] rounded-2xl px-3 py-1.5 text-[13px] text-white ${isMine ? "self-end" : "self-start"}`} style={{ background: isMine ? "var(--brand)" : "#ee1f63" }}>
                         <div className="whitespace-pre-wrap">{m.body}</div>
                         {m.coupon && <CouponChip coupon={m.coupon} />}
-                        <div className="mt-0.5 text-[10px] text-white/75">{label} · {when(m.createdAt)}</div>
+                        <div className="mt-0.5 text-[10px] text-white/75">{label} · {when(m.createdAt, dateLoc)}</div>
                       </div>
                     );
                   })}
@@ -855,6 +875,7 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
 }
 
 function Composer({ draft, setDraft, onSend, big }: { draft: string; setDraft: (v: string) => void; onSend: () => void; big?: boolean }) {
+  const t = useT();
   const lines = draft.split("\n").length;
   return (
     <div className="flex items-end gap-2 border-t border-[var(--line)] p-2.5">
@@ -862,11 +883,11 @@ function Composer({ draft, setDraft, onSend, big }: { draft: string; setDraft: (
         value={draft}
         onChange={(e) => setDraft(e.target.value)}
         onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); onSend(); } }}
-        placeholder="Write a message…  (Enter to send · Shift+Enter for a new line)"
+        placeholder={t("comms.composerPh")}
         rows={big ? Math.min(16, Math.max(7, lines)) : Math.min(10, Math.max(2, lines))}
         className={`flex-1 resize-y rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[13px] leading-[1.5] text-[var(--ink)] outline-none focus:border-[var(--brand-2)] ${big ? "max-h-[440px] min-h-[200px]" : "max-h-[240px] min-h-[44px]"}`}
       />
-      <Button variant="primary" onClick={onSend} disabled={!draft.trim()}>Send</Button>
+      <Button variant="primary" onClick={onSend} disabled={!draft.trim()}>{t("comms.send")}</Button>
     </div>
   );
 }

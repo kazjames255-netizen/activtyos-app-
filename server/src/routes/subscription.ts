@@ -5,9 +5,9 @@ import type { Role } from "../middleware/role";
 import { stripe } from "../lib/stripe";
 import {
   ensureCustomer, ensureProduct, priceData, saveSub, subOf, syncFromStripe,
-  staffCount, locationCount, updateMeteredQuantities, type SubRecord,
+  staffCount, pendingStaffInvites, locationCount, updateMeteredQuantities, type SubRecord,
 } from "../lib/billing";
-import { clearSubscriptionCache } from "../middleware/subscription";
+import { accessFor, clearSubscriptionCache, subscriptionState } from "../middleware/subscription";
 
 // Subscription (Money) — which plan the provider is on. There is no billing
 // integration yet (no Stripe Billing), so this records the chosen plan on the
@@ -192,13 +192,19 @@ subscription.get("/", async (req, res) => {
   const franchiseCount = isCompany ? await franchiseSeatCount(tenantId) : null;
   const ownLocations = franchiseCount != null ? await ownLocationCount(tenantId) : 0;
   const franchise = franchiseCount != null ? { ...franchiseBilling(plans, franchiseCount), ownLocations } : null;
+  // Live headcount — the stored staffUsed only moved on invite accept / the
+  // sync sweep, so the meter read "— / 10" (acceptance test d19s6).
+  const [staffUsed, staffPending] = await Promise.all([staffCount(tenantId), pendingStaffInvites(tenantId)]);
   res.json({
     current: {
       plan: planId, status, band: sub?.band ?? null, cadence: (sub?.cadence as string) ?? "month",
       since: sub?.since ?? null, trialEndsAt: sub?.trialEndsAt ?? null, currentPeriodEnd: sub?.currentPeriodEnd ?? null, cancelAt: sub?.cancelAt ?? null,
       // Existing customers keep their snapshot; new/preview reads fall back to live config.
       price: sub?.price ?? lim.price, staffLimit: sub?.staffLimit ?? lim.staffLimit, locationLimit: sub?.locationLimit ?? lim.locationLimit,
-      staffUsed: sub?.staffUsed ?? null, locationsUsed: sub?.locationsUsed ?? null,
+      staffUsed, staffPending, locationsUsed: sub?.locationsUsed ?? null,
+      // The grace model (middleware/subscription.ts): full / grace / readonly / locked.
+      access: accessFor({ status, cancelAt: (sub?.cancelAt as string | null) ?? null, pastDueSince: (sub as SubRecord | null)?.pastDueSince ?? null }),
+      pastDueSince: (sub as SubRecord | null)?.pastDueSince ?? null,
       cardLast4: (sub as SubRecord | null)?.cardLast4 ?? null, cardBrand: (sub as SubRecord | null)?.cardBrand ?? null,
       details: plans.find((p) => p.id === planId) ?? plans[0],
     },
@@ -211,6 +217,20 @@ subscription.get("/", async (req, res) => {
     // checkout) starting a trial records intent only.
     billingConfigured: !!stripe,
   });
+});
+
+// GET /api/subscription/access — what the tenant's billing state allows, for
+// EVERY member of the team (the plan page above is owner-only). The portal
+// shell uses it for the payment-failed banner and the read-only / locked
+// screens, so staff and franchises see why a save was refused.
+subscription.get("/access", async (req, res) => {
+  const auth = req.auth!;
+  if (!auth.tenantId || !["company", "freelancer", "franchise", "staff"].includes(auth.role)) {
+    res.json({ mode: "full", status: "active", graceEndsAt: null, owner: false });
+    return;
+  }
+  const state = await subscriptionState(auth.tenantId);
+  res.json({ ...accessFor(state), status: state.status, pastDueSince: state.status === "past_due" ? state.pastDueSince : null, owner: canManage(auth.role) });
 });
 
 // ── Stripe Billing: card capture + real subscription ─────────────────────

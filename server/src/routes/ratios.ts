@@ -1,11 +1,15 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
-import type { Role } from "../middleware/role";
-import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
+import { isPlainStaff, type Role } from "../middleware/role";
+import type { BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
+import { entryFor, onSite, registerRows } from "../lib/registerRows";
+import { franchiseListingIds } from "../lib/franchiseScope";
+import { staffSiteScope, type SiteScope } from "../lib/siteScope";
 import { DEFAULT_BANDS, bandFor, requiredStaff } from "../lib/ratios";
 import { staffPolicy } from "../lib/staffPolicy";
+import { ukToday } from "../lib/ukDate";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Ratios & groups — is a session safely staffed, and who's in which group?
@@ -22,7 +26,16 @@ export const ratios = Router();
 
 const canWriteRole = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 const groupId = (blockId: string, date: string) => `${blockId}_${date}`;
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => ukToday();
+
+/** Whole years old on `date` (YYYY-MM-DD) for a YYYY-MM-DD date of birth. */
+function ageOn(dob: string | undefined, date: string): number | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dob ?? ""), d = /^(\d{4})-(\d{2})-(\d{2})/.exec(date);
+  if (!m || !d) return null;
+  let age = Number(d[1]) - Number(m[1]);
+  if (d[2] + d[3] < m[2] + m[3]) age -= 1;
+  return age >= 0 && age < 120 ? age : null;
+}
 
 interface Group {
   id: string;
@@ -38,6 +51,8 @@ interface RatioDoc {
 }
 
 interface SessionChild {
+  present?: boolean; // signed in today and not yet collected
+  absent?: boolean;  // marked absent on today's register
   ref: string;
   childId: string | null;
   name: string;
@@ -69,8 +84,15 @@ ratios.get("/", async (req, res) => {
   const date = typeof req.query.date === "string" && req.query.date ? req.query.date : todayIso();
 
   const blocksSnap = await db.collection("blocks").where("tenantId", "==", tenantId).get();
+  // A franchise sees only its OWN sessions — this board names every child and
+  // flags their SEND and allergies, same as the register.
+  const franchiseListings = req.auth!.franchiseId ? await franchiseListingIds(tenantId, req.auth!.franchiseId) : null;
+  // Staff assigned to certain sites (a site lead) see only those sites' sessions.
+  const site = await staffSiteScope(auth);
   const todays = blocksSnap.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
+    .filter(({ block }) => !franchiseListings || franchiseListings.has(block.listingId))
+    .filter(({ block }) => !site || site.listings.has(block.listingId))
     .map(({ id, block }) => ({ id, block, session: block.sessions.find((s) => s.date === date) }))
     .filter((x): x is typeof x & { session: NonNullable<(typeof x)["session"]> } => !!x.session);
 
@@ -93,31 +115,43 @@ ratios.get("/", async (req, res) => {
   // Resolve SEND / allergies flags from child records (by id), one batch.
   const childIds = new Set<string>();
   for (const snap of bookingSnaps)
-    for (const d of snap.docs) {
-      const b = fromDoc(d.data() as BookingDoc);
-      if (b.childId) childIds.add(b.childId);
-    }
+    for (const d of snap.docs)
+      for (const r of registerRows(fromDoc(d.data() as BookingDoc), date)) if (r.childId) childIds.add(r.childId);
   const childDocs = childIds.size
     ? await db.getAll(...[...childIds].map((cid) => db.collection("children").doc(cid)))
     : [];
   const flagsById = new Map(
     childDocs.filter((d) => d.exists).map((d) => {
       const c = d.data() as Record<string, unknown>;
-      return [d.id, { send: !!(c.send || c.sendPlanId), allergies: !!c.allergies }];
+      return [d.id, { send: !!(c.send || c.sendPlanId), allergies: !!c.allergies, dob: typeof c.dob === "string" ? c.dob : "" }];
     }),
   );
 
+  // The day's register marks — for children still on site after a cancellation.
+  const regDocs = await db.getAll(...todays.map(({ id }) => db.collection("registers").doc(`${id}_${date}`)));
+  const regEntries = regDocs.map((r) => ((r.exists ? r.get("entries") : null) ?? {}) as Record<string, { status?: string; collectedAt?: string | null }>);
   const sessions = todays.map(({ id, block, session }, i) => {
+    // One row per CHILD: siblings on one booking are two heads against the
+    // ratio, not one (lib/registerRows.ts).
     const children: SessionChild[] = bookingSnaps[i].docs
-      .map((d) => fromDoc(d.data() as BookingDoc))
-      .filter((b) => countsTowardCapacity(b.status) && b.status !== "Offered" && (!b.days || b.days.includes(date)))
-      .map((b) => {
-        const f = b.childId ? flagsById.get(b.childId) : undefined;
+      .flatMap((d) => registerRows(fromDoc(d.data() as BookingDoc), date))
+      // Expected, OR still physically here: signed in and not collected (a
+      // booking cancelled while they're on site). A ratio counts every child
+      // present, and the kitchen needs their allergies either way.
+      .filter((r) => r.expected || onSite(regEntries[i], r))
+      .map((r) => {
+        const f = r.childId ? flagsById.get(r.childId) : undefined;
+        const e = entryFor(regEntries[i], r);
         return {
-          ref: b.ref,
-          childId: b.childId ?? null,
-          name: b.kids?.length ? b.kids[0].name : b.child,
-          age: b.age ?? 0,
+          // Today's register: "in" (and not collected) = here now; "absent" = not coming.
+          present: e?.status === "in" && !e.collectedAt,
+          absent: e?.status === "absent",
+          ref: r.key,
+          childId: r.childId ?? null,
+          name: r.name,
+          // Age ON THE SESSION DATE from the child's date of birth — the age
+          // stamped at checkout goes stale over a birthday (acceptance d11s5).
+          age: ageOn(f?.dob, date) ?? r.age ?? 0,
           send: f?.send ?? false,
           allergies: f?.allergies ?? false,
         };
@@ -129,10 +163,16 @@ ratios.get("/", async (req, res) => {
     const assignedStaff = new Set(groups.flatMap((g) => g.staffIds));
     const assignedChildIds = new Set(groups.flatMap((g) => g.childIds));
 
-    const required = requiredStaff(children.map((c) => c.age));
+    // Staff needed for who's actually here once the register has started (and
+    // never for children marked absent); before anyone's signed in, it plans
+    // off the booking list. It used to stay on the booking list all day, so
+    // sign-ins and absences never changed it (acceptance d11s1).
+    const started = children.some((c) => c.present);
+    const counted = started ? children.filter((c) => c.present) : children.filter((c) => !c.absent);
+    const required = requiredStaff(counted.map((c) => c.age));
     const perGroup = groups.map((g) => {
       const kids = children.filter((c) => g.childIds.includes(c.ref) || (c.childId && g.childIds.includes(c.childId)));
-      const req = requiredStaff(kids.map((c) => c.age));
+      const req = requiredStaff((started ? kids.filter((c) => c.present) : kids.filter((c) => !c.absent)).map((c) => c.age));
       return {
         id: g.id,
         name: g.name,
@@ -156,6 +196,10 @@ ratios.get("/", async (req, res) => {
       groups: perGroup,
       unassignedRefs: children.filter((c) => !assignedChildIds.has(c.ref) && !(c.childId && assignedChildIds.has(c.childId))).map((c) => c.ref),
       totalChildren: children.length,
+      // What the staffing figure is based on right now.
+      countedChildren: counted.length,
+      basis: started ? "signed-in" : "booked",
+      presentNow: children.filter((c) => c.present).length,
       sendCount: children.filter((c) => c.send).length,
       requiredStaff: required,
       staffAssigned: assignedStaff.size,
@@ -165,7 +209,7 @@ ratios.get("/", async (req, res) => {
   sessions.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : a.blockName < b.blockName ? -1 : 1));
   // The board's children-per-adult target seeds from Settings → Staff &
   // workforce (the front-end may still override per day).
-  const { defaultRatioTarget } = await staffPolicy(tenantId!);
+  const { defaultRatioTarget } = await staffPolicy(tenantId!, req.auth!.franchiseId);
   res.json({ date, bands: DEFAULT_BANDS, target: defaultRatioTarget, sessions });
 });
 
@@ -182,6 +226,20 @@ const boardSchema = z.object({
 const boardId = (tenantId: string, date: string) => `${tenantId}_${date}`;
 const validDate = (d: string) => /^\d{4}-\d{2}-\d{2}$/.test(d);
 
+/** The board keys (child id, else the row key — see RatiosApp's CoverBoard) of
+ *  the children booked at a site-scoped member of staff's sites that day. The
+ *  board is one per tenant per day, so their view and their saves are held to
+ *  these; other sites' child → group moves are neither shown nor touched. */
+async function siteBoardKeys(date: string, site: SiteScope): Promise<Set<string>> {
+  const snaps = await Promise.all([...site.blocks].map((b) => db.collection("bookings").where("blockId", "==", b).get()));
+  const keys = new Set<string>();
+  for (const s of snaps)
+    for (const d of s.docs)
+      for (const r of registerRows(fromDoc(d.data() as BookingDoc), date)) { keys.add(r.key); if (r.childId) keys.add(r.childId); }
+  return keys;
+}
+const pick = (o: Record<string, string>, keep: (k: string) => boolean) => Object.fromEntries(Object.entries(o).filter(([k]) => keep(k)));
+
 ratios.get("/board/:date", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !boardCanUse(auth.role)) {
@@ -191,7 +249,10 @@ ratios.get("/board/:date", async (req, res) => {
   if (!validDate(req.params.date)) { res.status(400).json({ error: "Bad date" }); return; }
   const snap = await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).get();
   const d = snap.data() ?? {};
-  res.json({ overrides: d.overrides ?? {}, groupStaff: d.groupStaff ?? {} });
+  const site = await staffSiteScope(auth);
+  const mine = site ? await siteBoardKeys(req.params.date, site) : null;
+  const overrides = (d.overrides ?? {}) as Record<string, string>;
+  res.json({ overrides: mine ? pick(overrides, (k) => mine.has(k)) : overrides, groupStaff: d.groupStaff ?? {} });
 });
 
 ratios.put("/board/:date", async (req, res) => {
@@ -205,17 +266,26 @@ ratios.put("/board/:date", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   // Settings → Staff & workforce "assignByLeads": staff can still run the day
   // (child → group moves), but changing WHO COVERS a group is management's.
-  if (auth.role === "staff" && (await staffPolicy(auth.tenantId)).assignByLeads) {
+  if (isPlainStaff(auth) && (await staffPolicy(auth.tenantId, auth.franchiseId)).assignByLeads) {
     const existing = (await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).get()).data();
     if (JSON.stringify(parsed.data.groupStaff) !== JSON.stringify(existing?.groupStaff ?? {})) {
       res.status(403).json({ error: "Assigning staff to groups is limited to leads/managers (Settings → Staff & workforce)" });
       return;
     }
   }
+  // A site-scoped member of staff moves only their own sites' children; every
+  // other site's moves on the shared board are kept as they were.
+  let overrides = parsed.data.overrides;
+  const site = await staffSiteScope(auth);
+  if (site) {
+    const mine = await siteBoardKeys(req.params.date, site);
+    const existing = ((await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).get()).get("overrides") ?? {}) as Record<string, string>;
+    overrides = { ...pick(existing, (k) => !mine.has(k)), ...pick(overrides, (k) => mine.has(k)) };
+  }
   await db.collection("ratioBoards").doc(boardId(auth.tenantId, req.params.date)).set({
     tenantId: auth.tenantId,
     date: req.params.date,
-    overrides: parsed.data.overrides,
+    overrides,
     groupStaff: parsed.data.groupStaff,
     updatedAt: new Date().toISOString(),
     updatedBy: req.user?.email ?? "unknown",

@@ -5,6 +5,10 @@ import urBase from "./ur";
 import arBase from "./ar";
 import frBase from "./fr";
 import esBase from "./es";
+import paBase from "./pa";
+import bnBase from "./bn";
+import ptBase from "./pt";
+import cyBase from "./cy";
 import type { LocaleCode } from "../config";
 
 // Per-area catalogues authored by the i18n migration (one file per feature area,
@@ -26,13 +30,16 @@ import workforce from "./areas/workforce";
 import listings from "./areas/listings";
 import care from "./areas/care";
 import franchise from "./areas/franchise";
+import account from "./areas/account";
+import feed from "./areas/feed";
+import staffp from "./areas/staffp";
 
 type Dict = Record<string, string>;
 type ByLocale = Partial<Record<LocaleCode, Dict>>;
 type Namespaces = Record<string, Dict>;
 
-// Base shell catalogues (common + header namespaces). Locales without an authored
-// base fall back to English; area namespaces still translate for all 11.
+// Base shell catalogues (common + header namespaces), authored for all 11 locales;
+// any key a locale lacks still falls back to English in the resolver.
 const BASE: Record<LocaleCode, Namespaces> = {
   en: enBase as unknown as Namespaces,
   pl: plBase as unknown as Namespaces,
@@ -41,14 +48,14 @@ const BASE: Record<LocaleCode, Namespaces> = {
   ar: arBase as unknown as Namespaces,
   fr: frBase as unknown as Namespaces,
   es: esBase as unknown as Namespaces,
-  pa: enBase as unknown as Namespaces,
-  bn: enBase as unknown as Namespaces,
-  pt: enBase as unknown as Namespaces,
-  cy: enBase as unknown as Namespaces,
+  pa: paBase as unknown as Namespaces,
+  bn: bnBase as unknown as Namespaces,
+  pt: ptBase as unknown as Namespaces,
+  cy: cyBase as unknown as Namespaces,
 };
 
 // area namespace -> its per-locale dictionaries.
-const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team, registers, schedule, tasks, money, marketing, comms, workforce, listings, care, franchise };
+const AREAS: Record<string, ByLocale> = { common, dashboard, parent, customers, meals, setup, team, registers, schedule, tasks, money, marketing, comms, workforce, listings, care, franchise, account, feed, staffp };
 
 const LOCALE_CODES: LocaleCode[] = ["en", "pl", "ro", "ur", "pa", "bn", "ar", "pt", "es", "fr", "cy"];
 

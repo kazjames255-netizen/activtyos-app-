@@ -168,11 +168,15 @@ splitfees.get("/mine", async (req, res) => {
   ]);
   const myListingIds = new Set(listingsSnap.docs.filter((d) => (d.data() as { franchiseId?: string }).franchiseId === auth.franchiseId).map((d) => d.id));
 
+  // Same ?period= / ?from= / ?to= window as head office's Split fees page, so
+  // both sides agree for any period, not only all-time (acceptance d22s10).
+  const range = parseRange(req);
   let count = 0, revenue = 0, collected = 0;
   for (const d of bookingsSnap.docs) {
     const b = fromDoc(d.data() as BookingDoc);
     if (!COUNTS(b.status)) continue;
-    const raw = d.data() as { franchiseId?: string; listingId?: string };
+    const raw = d.data() as { franchiseId?: string; listingId?: string; createdAt?: string };
+    if (!range.inRange(b.createdAt ?? raw.createdAt)) continue;
     const mine = raw.franchiseId === auth.franchiseId || (raw.listingId ? myListingIds.has(raw.listingId) : false);
     if (!mine) continue;
     count += 1;
@@ -180,7 +184,7 @@ splitfees.get("/mine", async (req, res) => {
     collected = round2(collected + (b.amountPaid ?? (b.pay === "Paid" ? (b.amount ?? 0) : 0)));
   }
   const fee = settings.basis === "perBooking" ? round2(count * (settings.perBookingFee ?? 0)) : round2(revenue * ((settings.rate ?? 0) / 100));
-  res.json({ settings, count, revenue, collected, fee });
+  res.json({ settings, count, revenue, collected, fee, period: range.period, from: range.from, to: range.to });
 });
 
 // PUT /api/splitfees/settings — the royalty basis + rate (company only).

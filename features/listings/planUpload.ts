@@ -28,6 +28,11 @@ async function sliceToB64(blob: Blob): Promise<string> {
 
 export type PlanRef = { id: string; name: string; bytes: number };
 
+/** iPhones hand over HEIC photos (and some browsers PDFs) with no MIME type —
+ *  the server only accepts known types, so read it off the extension. */
+export const BY_EXT: Record<string, string> = { pdf: "application/pdf", jpg: "image/jpeg", jpeg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif", heic: "image/heic", heif: "image/heif" };
+export const typeOf = (file: Blob & { name?: string }) => file.type || BY_EXT[((file.name ?? "").split(".").pop() ?? "").toLowerCase()] || "application/octet-stream";
+
 /**
  * Uploads a file and returns the reference to store on the child. `onProgress`
  * gets 0–1 as chunks land, because a 12MB scan on a phone is not instant and
@@ -42,7 +47,7 @@ export async function uploadPlan(file: File, onProgress?: (frac: number) => void
     method: "POST",
     body: JSON.stringify({
       name: file.name,
-      contentType: file.type || "application/octet-stream",
+      contentType: typeOf(file),
       bytes: file.size,
       total,
     }),

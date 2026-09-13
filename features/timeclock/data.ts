@@ -7,6 +7,9 @@
 // Real per-user identity, device kiosk + geofence, and payroll posting are Amir's
 // (docs/timeclock-handoff.md). Matched to people by name (demo).
 import { DEMO_STAFF } from "@/features/learning/credentials";
+import { useEffect } from "react";
+import { get as apiGet, isDemoMode, patch as apiPatch, post as apiPost } from "@/lib/api";
+import { ukShiftHours } from "@/features/payroll/payCalc";
 
 export type ClockStatus = "out" | "in" | "break";
 export interface ClockEvent { t: string; kind: "in" | "out" | "break-start" | "break-end"; loc?: string }
@@ -56,7 +59,7 @@ export const loadClockSettings = (): ClockSettings => ({ ...DEFAULT_CLOCK_SETTIN
 export const saveClockSettings = (s: ClockSettings) => write(CLOCK_SETTINGS_KEY, s);
 
 // ── Rota lookups (scheduled shift + rate for a person today) ────────────────
-interface RotaShift { staffId: string | null; date: string; start: string; end: string; in?: string; out?: string }
+interface RotaShift { staffId: string | null; date: string; start: string; end: string; in?: string; out?: string; clockedBreakMin?: number }
 interface RotaStaff { id: string; name: string; rate?: number }
 function rota(): { staff: RotaStaff[]; shifts: RotaShift[] } { const s = read<{ staff?: RotaStaff[]; shifts?: RotaShift[] }>(ROTA_KEY); return { staff: s?.staff || [], shifts: s?.shifts || [] }; }
 const mins = (t: string) => { const [h, m] = (t || "0:0").split(":").map(Number); return (h || 0) * 60 + (m || 0); };
@@ -67,14 +70,20 @@ export function shiftToday(name: string): RotaShift | undefined {
   return shifts.find((sh) => sh.staffId && ids.has(sh.staffId) && sh.date === day);
 }
 export function rateFor(name: string): number { const nm = name.trim().toLowerCase(); return rota().staff.find((s) => (s.name || "").trim().toLowerCase() === nm)?.rate ?? 0; }
-export function scheduledHoursToday(name: string): number { const sh = shiftToday(name); if (!sh) return 0; return Math.max(0, mins(sh.end) - mins(sh.start)) / 60; }
+// real hours, so the night the clocks change isn't capped an hour short (d16s7)
+export function scheduledHoursToday(name: string): number { const sh = shiftToday(name); if (!sh) return 0; return sh.date ? ukShiftHours(sh.date, sh.start, sh.end) : Math.max(0, mins(sh.end) - mins(sh.start)) / 60; }
 // stamp the person's rota shift in/out (so Schedule + payroll see the real time)
-function stampShift(name: string, field: "in" | "out", hm: string) {
+// — on the server (the rota lives there; this browser's copy is only a cache
+// that the next sync replaces), and in the cache so this screen sees it now.
+// On clock-out the break actually taken goes with it, so payroll pays the real
+// break, not the planned one (d16s3).
+function stampShift(name: string, field: "in" | "out", hm: string, breakMin?: number) {
+  if (!isDemoMode()) void apiPost("/api/rota/clock", { field, hm, date: todayISO(), name, ...(breakMin !== undefined ? { breakMin } : {}) }).catch(() => {});
   const store = read<{ staff?: RotaStaff[]; shifts?: RotaShift[] }>(ROTA_KEY); if (!store || !store.shifts) return;
   const day = todayISO(); const nm = name.trim().toLowerCase();
   const ids = new Set((store.staff || []).filter((s) => (s.name || "").trim().toLowerCase() === nm).map((s) => s.id));
   const sh = store.shifts.find((x) => x.staffId && ids.has(x.staffId) && x.date === day);
-  if (sh) { sh[field] = hm; write(ROTA_KEY, store); }
+  if (sh) { sh[field] = hm; if (breakMin !== undefined) sh.clockedBreakMin = breakMin; write(ROTA_KEY, store); }
 }
 
 // ── Who's off today (approved leave), from the Holiday planner ──────────────
@@ -119,7 +128,10 @@ function ensureDemoRota(recs: Record<string, ClockRecord>): void {
   const hm = (t: number) => `${pad(Math.floor((((t % 1440) + 1440) % 1440) / 60))}:${pad(((t % 60) + 60) % 60)}`;
   const staff: RotaStaff[] = []; const shifts: RotaShift[] = [];
   for (const r of Object.values(recs)) {
-    staff.push({ id: r.id, name: r.name });
+    // A rate so the pay-per-shift figures have something to show. Only ever
+    // written into our OWN demo rota (guarded above), never a real schedule —
+    // a real one carries the rates the operator set.
+    staff.push({ id: r.id, name: r.name, rate: /lead/i.test(r.role ?? "") ? 14.25 : 12.5 });
     const startMin = r.clockInAt ? mins(hhmm(r.clockInAt)) - demoLateFor(r) : mins("09:00");
     shifts.push({ staffId: r.id, date: day, start: hm(startMin), end: hm(startMin + 360) });
   }
@@ -135,15 +147,66 @@ export function lateMinutesToday(r: ClockRecord): number {
 }
 export const loadClock = (): Record<string, ClockRecord> => {
   const s = read<Record<string, ClockRecord>>(CLOCK_KEY);
-  const fresh = () => { const x = seed(); ensureDemoRota(x); return x; };
+  // Demo people (Marcus Bell & co.) and a demo rota are for the demo only — a
+  // real provider's board starts empty and fills from the server (syncClock).
+  const fresh = () => { if (!isDemoMode()) return {}; const x = seed(); ensureDemoRota(x); return x; };
   if (!s || typeof s !== "object") return fresh();
   // daily reset: if the stored day isn't today, start fresh (keeps demo sane)
   const anyDay = Object.values(s)[0]?.day;
   if (anyDay && anyDay !== todayISO()) return fresh();
-  ensureDemoRota(s);
+  if (isDemoMode()) ensureDemoRota(s);
   return s;
 };
 export const saveClock = (r: Record<string, ClockRecord>) => write(CLOCK_KEY, r);
+
+// ── Server sync ─────────────────────────────────────────────────────────────
+// Clock records live on the server (/api/timeclock); this browser's copy is a
+// cache so the screens can read it synchronously. Before, each device only
+// ever saw its own clockings — a phone clock-in never reached the manager's
+// board or the timesheets.
+export const CLOCK_EVENT = "aos:clock";
+let syncing: Promise<void> | null = null;
+export function syncClock(): Promise<void> {
+  if (typeof window === "undefined" || isDemoMode()) return Promise.resolve();
+  if (syncing) return syncing;
+  syncing = apiGet<ClockRecord[]>(`/api/timeclock?day=${todayISO()}`)
+    .then((list) => {
+      const map: Record<string, ClockRecord> = {};
+      for (const r of list) map[r.id] = { ...r, breakMs: r.breakMs ?? 0, events: r.events ?? [], day: r.day ?? todayISO() };
+      write(CLOCK_KEY, map);
+      window.dispatchEvent(new Event(CLOCK_EVENT));
+    })
+    .catch(() => {})
+    .finally(() => { syncing = null; });
+  return syncing;
+}
+let clockTimer: ReturnType<typeof setInterval> | null = null;
+/** Keep the cache fresh while the portal is open (PortalGuard starts it). */
+export function startClockSync(): void {
+  if (clockTimer || typeof window === "undefined" || isDemoMode()) return;
+  void syncClock();
+  clockTimer = setInterval(() => { if (document.visibilityState === "visible") void syncClock(); }, 30_000);
+}
+/** Re-read the cache whenever the server copy lands. */
+export function useClockRefresh(onChange: (all: Record<string, ClockRecord>) => void): void {
+  useEffect(() => {
+    const h = () => onChange(loadClock());
+    window.addEventListener(CLOCK_EVENT, h);
+    return () => window.removeEventListener(CLOCK_EVENT, h);
+  }, [onChange]);
+}
+function sendEvent(kind: ClockEvent["kind"], name: string, extra: { role?: string; loc?: string; lateMin?: number } = {}) {
+  if (isDemoMode()) return;
+  void apiPost("/api/timeclock/event", { kind, day: todayISO(), name, ...extra })
+    .then(() => syncClock())
+    // Say so — a clocking that only this phone knows about is the failure this
+    // whole store exists to prevent.
+    .catch((e: unknown) => { alert(`Your ${kind === "in" ? "clock-in" : kind === "out" ? "clock-out" : "break"} wasn't saved to the team board: ${e instanceof Error ? e.message : "no connection"}. Try again.`); });
+}
+function sendPatch(id: string, patch: Record<string, unknown>) {
+  if (isDemoMode()) return;
+  void apiPatch(`/api/timeclock/${encodeURIComponent(id)}?day=${todayISO()}`, patch).then(() => syncClock()).catch(() => {});
+}
 
 // mutate one person's record and persist; returns the new map
 function mutate(all: Record<string, ClockRecord>, id: string, fn: (r: ClockRecord) => void): Record<string, ClockRecord> {
@@ -156,19 +219,24 @@ export function clockIn(all: Record<string, ClockRecord>, id: string, name: stri
   const now = new Date(); const iso = now.toISOString(); const hm = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
   const sh = shiftToday(name); const late = sh ? Math.max(0, mins(hm) - mins(sh.start)) : 0;
   stampShift(name, "in", hm);
+  sendEvent("in", name, { role: all[id]?.role, loc, lateMin: late });
   return mutate(all, id, (r) => { r.status = "in"; r.clockInAt = iso; r.clockOutAt = undefined; r.breakMs = 0; r.breakStart = undefined; r.lateMin = late; r.loc = loc; r.day = todayISO(); r.events.push({ t: iso, kind: "in", loc }); });
 }
 export function clockOut(all: Record<string, ClockRecord>, id: string, name: string): Record<string, ClockRecord> {
   const now = new Date(); const iso = now.toISOString(); const hm = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
-  stampShift(name, "out", hm);
+  const cur = all[id]; const brMs = (cur?.breakMs ?? 0) + (cur?.status === "break" && cur.breakStart ? now.getTime() - new Date(cur.breakStart).getTime() : 0);
+  stampShift(name, "out", hm, Math.round(brMs / 60000));
+  sendEvent("out", name);
   return mutate(all, id, (r) => { if (r.status === "break" && r.breakStart) { r.breakMs += Date.now() - new Date(r.breakStart).getTime(); r.breakStart = undefined; } r.status = "out"; r.clockOutAt = iso; r.events.push({ t: iso, kind: "out" }); });
 }
 export function startBreak(all: Record<string, ClockRecord>, id: string): Record<string, ClockRecord> {
   const iso = new Date().toISOString();
+  sendEvent("break-start", all[id]?.name ?? id);
   return mutate(all, id, (r) => { if (r.status !== "in") return; r.status = "break"; r.breakStart = iso; r.events.push({ t: iso, kind: "break-start" }); });
 }
 export function endBreak(all: Record<string, ClockRecord>, id: string): Record<string, ClockRecord> {
   const iso = new Date().toISOString();
+  sendEvent("break-end", all[id]?.name ?? id);
   return mutate(all, id, (r) => { if (r.status !== "break" || !r.breakStart) return; r.breakMs += Date.now() - new Date(r.breakStart).getTime(); r.breakStart = undefined; r.status = "in"; r.events.push({ t: iso, kind: "break-end" }); });
 }
 
@@ -179,18 +247,35 @@ export function workedMs(r: ClockRecord, now = Date.now()): number {
   let br = r.breakMs; if (r.status === "break" && r.breakStart) br += now - new Date(r.breakStart).getTime();
   return Math.max(0, end - new Date(r.clockInAt).getTime() - br);
 }
-export const roundHours = (h: number, rounding: 0 | 5 | 15) => (rounding ? Math.round((h * 60) / rounding) * rounding / 60 : h);
-export function setApproved(all: Record<string, ClockRecord>, id: string, approved: boolean): Record<string, ClockRecord> { return mutate(all, id, (r) => { r.approved = approved; }); }
+// Hours to pay for: worked time, plus the break back when breaks are paid
+// (Setup → Scheduling → "Default break — paid or unpaid"; d16s3).
+export function paidMs(r: ClockRecord, breakPaid = false, now = Date.now()): number {
+  if (!breakPaid || !r.clockInAt) return workedMs(r, now);
+  return Math.max(0, (r.clockOutAt ? new Date(r.clockOutAt).getTime() : now) - new Date(r.clockInAt).getTime());
+}
+export const roundHours =(h: number, rounding: 0 | 5 | 15) => (rounding ? Math.round((h * 60) / rounding) * rounding / 60 : h);
+export function setApproved(all: Record<string, ClockRecord>, id: string, approved: boolean): Record<string, ClockRecord> { sendPatch(id, { approved }); return mutate(all, id, (r) => { r.approved = approved; }); }
 // Manager edit of a timesheet row (times / break / pay basis). Recomputes lateMin.
 export function editRecord(all: Record<string, ClockRecord>, id: string, patch: Partial<ClockRecord>): Record<string, ClockRecord> {
-  return mutate(all, id, (r) => {
+  const next = mutate(all, id, (r) => {
     Object.assign(r, patch);
     if (patch.clockInAt && r.clockInAt) { const sh = shiftToday(r.name); const hm = new Date(r.clockInAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }); r.lateMin = sh ? Math.max(0, mins(hm) - mins(sh.start)) : 0; }
   });
+  const r = next[id];
+  const keys = ["approved", "payBasis", "payHoursOverride", "editNote", "clockInAt", "clockOutAt", "breakMs", "lateMin"] as const;
+  const nullable = new Set<string>(["payBasis", "payHoursOverride", "clockOutAt"]);
+  const body: Record<string, unknown> = {};
+  for (const k of keys) {
+    if (!(k in patch) && !(k === "lateMin" && patch.clockInAt)) continue;
+    const v = r?.[k];
+    if (v !== undefined) body[k] = v; else if (nullable.has(k)) body[k] = null;
+  }
+  sendPatch(id, body);
+  return next;
 }
 // pay hours for an explicit per-row override (lateOverH = late minutes over grace, in hours)
-export function payHours(r: ClockRecord, rounding: 0 | 5 | 15, lateOverH = 0): number {
-  const worked = roundHours(workedMs(r) / 3600000, rounding);
+export function payHours(r: ClockRecord, rounding: 0 | 5 | 15, lateOverH = 0, breakPaid = false): number {
+  const worked = roundHours(paidMs(r, breakPaid) / 3600000, rounding);
   const sched = scheduledHoursToday(r.name);
   if (r.payBasis === "scheduled") return sched || worked;
   if (r.payBasis === "scheduled-less-late") return Math.max(0, (sched || worked) - lateOverH);

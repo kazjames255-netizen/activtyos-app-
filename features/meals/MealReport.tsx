@@ -15,7 +15,7 @@ import { fmtDate, mondayOf } from "@/features/listings/format";
 // bought at checkout, stored on bookings) and aggregates client-side.
 // ─────────────────────────────────────────────────────────────────────────
 
-interface Row { listingId: string | null; listingName: string; date: string; child: string; dish: string; price: number }
+interface Row { listingId: string | null; listingName: string; date: string; child: string; dish: string; price: number; allergies?: string; dietary?: string }
 interface Missing { listingId: string; listingName: string; date: string; child: string }
 interface MealReq { id: string; childName: string; date: string; listingId?: string; items?: { name: string }[]; changeRequest?: { name: string }; cancelRequest?: { at: string } }
 type View = "daily" | "weekly" | "total";
@@ -83,6 +83,9 @@ export function MealReport() {
     }
     return [...byDate.entries()].sort(([a], [b]) => (a < b ? -1 : 1)).map(([date, dm]) => {
       const total = [...dm.values()].reduce((s, e) => s + e.count, 0);
+      // Every allergy and diet the kitchen is feeding that day, per child (d14s3).
+      const care = new Map<string, { dish: string[]; allergies?: string; dietary?: string }>();
+      for (const r of filtered) if (r.date === date && (r.allergies || r.dietary)) { const c = care.get(r.child) ?? { dish: [], allergies: r.allergies, dietary: r.dietary }; c.dish.push(r.dish); care.set(r.child, c); }
       return (
         <div key={date} className="overflow-hidden rounded-2xl border border-[var(--line)] bg-white">
           <div className="flex items-center gap-2 px-3.5 py-2" style={{ background: "linear-gradient(120deg,#eef4fd,#e6fbf7)" }}>
@@ -95,6 +98,14 @@ export function MealReport() {
                 {showNames && <span className="text-[12px] text-[var(--ink-3)]">{e.children.join(", ")}</span>}
               </div>
             ))}
+            {care.size > 0 && (
+              <div className="mt-1 rounded-xl border border-[#f3c6c1] bg-[#fff5f4] px-3 py-2 text-[12px] leading-[1.55]">
+                <div className="mb-0.5 font-extrabold text-[#c02636]">⚠️ Allergies & diets</div>
+                {[...care.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([child, c]) => (
+                  <div key={child}><b className="text-[var(--ink)]">{child}</b>{c.allergies ? <span className="text-[#c02636]"> — allergy: {c.allergies}</span> : null}{c.dietary ? <span className="text-[#15803d]"> — diet: {c.dietary}</span> : null}<span className="text-[var(--ink-3)]"> · {[...new Set(c.dish)].join(", ")}</span></div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       );

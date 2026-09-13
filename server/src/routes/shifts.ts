@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { staffRosterBlock } from "../lib/staffPolicy";
+import { franchiseListingIds } from "../lib/franchiseScope";
 
 // Schedule & rota (Run the day) — staff shifts. Operators build the rota;
 // staff read it (they need to know when they're on). Tenant-scoped.
@@ -24,12 +25,25 @@ const shiftSchema = z.object({
   notes: z.string().trim().max(500).optional(),
 });
 
+/** A franchise's shift: stamped with its franchiseId since 12 Sept; older
+ *  shifts are claimed through the listing they cover. A shift with neither is
+ *  head office's. Without this a franchise read — and could edit — the whole
+ *  company's rota, names and hours included. */
+function shiftInFranchise(s: Record<string, unknown>, franchiseId: string, listings: Set<string>): boolean {
+  if (s.franchiseId) return s.franchiseId === franchiseId;
+  return typeof s.listingId === "string" && listings.has(s.listingId);
+}
+
 // GET /api/shifts?from=&to= — the rota (staff + operators read).
 shifts.get("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canRead(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
   const snap = await col.where("tenantId", "==", auth.tenantId).get();
   let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { date?: string; start?: string })[];
+  if (auth.franchiseId) {
+    const mine = await franchiseListingIds(auth.tenantId, auth.franchiseId);
+    list = list.filter((s) => shiftInFranchise(s, auth.franchiseId!, mine));
+  }
   const from = typeof req.query.from === "string" ? req.query.from : null;
   const to = typeof req.query.to === "string" ? req.query.to : null;
   if (from) list = list.filter((x) => `${x.date}` >= from);
@@ -43,9 +57,9 @@ shifts.post("/", async (req, res) => {
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = shiftSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const block = await staffRosterBlock(auth.tenantId, parsed.data.staffName);
+  const block = await staffRosterBlock(auth.tenantId, parsed.data.staffName, auth.franchiseId);
   if (block) { res.status(409).json({ error: block }); return; }
-  const doc = { ...parsed.data, tenantId: auth.tenantId, createdAt: new Date().toISOString() };
+  const doc = { ...parsed.data, tenantId: auth.tenantId, franchiseId: auth.franchiseId ?? null, createdAt: new Date().toISOString() };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -55,6 +69,8 @@ async function own(req: Request, id: string) {
   if (!auth.tenantId || !canManage(auth.role)) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (auth.franchiseId && !shiftInFranchise(snap.data()!, auth.franchiseId, await franchiseListingIds(auth.tenantId, auth.franchiseId)))
+    return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -66,7 +82,7 @@ shifts.put("/:id", async (req, res) => {
   // Re-rostering to a different person re-runs the compliance policy; edits
   // that just move times don't.
   if (parsed.data.staffName && parsed.data.staffName !== o.snap.data()!.staffName) {
-    const block = await staffRosterBlock(req.auth!.tenantId!, parsed.data.staffName);
+    const block = await staffRosterBlock(req.auth!.tenantId!, parsed.data.staffName, (o.snap.data()!.franchiseId as string | null | undefined) ?? req.auth!.franchiseId);
     if (block) { res.status(409).json({ error: block }); return; }
   }
   await o.snap.ref.set(parsed.data, { merge: true });

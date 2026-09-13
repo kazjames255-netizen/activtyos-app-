@@ -7,7 +7,7 @@ import { Header } from "@/components/shell/Header";
 import { ImpersonationBar } from "@/components/shell/ImpersonationBar";
 import { RequireAuth } from "@/components/auth/AuthProvider";
 import { PortalGuard } from "@/components/auth/PortalGuard";
-import { SubscriptionGate } from "@/components/auth/SubscriptionGate";
+import { SubscriptionGate, SubscriptionLock } from "@/components/auth/SubscriptionGate";
 import { PageTracker } from "@/components/analytics/PageTracker";
 import { CouponTicker } from "@/features/parent/CouponTicker";
 import { NewsflashBanner } from "@/features/parent/NewsflashBanner";
@@ -81,7 +81,7 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
             {/* The operator views each wrap themselves in the light palette, but
                 the main surface itself must be light too — otherwise the dark
                 --bg shows through as a black flash while a route loads. */}
-            <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]" style={light ? undefined : LIGHT_PALETTE}>{props.children}</main>
+            <main className="min-h-0 flex-1 overflow-auto bg-[var(--bg)] text-[var(--ink)]" style={light ? undefined : LIGHT_PALETTE}><SubscriptionLock portal={portalKey}>{props.children}</SubscriptionLock></main>
             {/* The 25-day acceptance-test logger. Renders nothing unless it's
                 been switched on from HQ → Testing, so providers never see it. */}
             <TestLogger />

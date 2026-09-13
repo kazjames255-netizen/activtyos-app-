@@ -6,6 +6,7 @@ import { useRealtime } from "@/lib/realtime";
 import { DEFAULT_POLICIES, type NamedPolicy } from "@/lib/cancellation";
 import type { WhenTooClose } from "@/lib/vouchers";
 import { defaultSeasonNames, type Season } from "@/lib/seasons";
+import type { RefSection } from "@/features/team/referenceQuestions";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Tenant settings — the store behind Setup & features.
@@ -379,12 +380,14 @@ export const PROVIDER_NOTIFICATIONS: { key: string; group: string; label: string
   { key: "booking-change", group: "Bookings & money", label: "Date or time change requested" },
   { key: "booking-release", group: "Bookings & money", label: "Days released (partial cancel)" },
   { key: "booking-cancel", group: "Bookings & money", label: "Cancellation request" },
+  { key: "meal-order", group: "Bookings & money", label: "Meal ordered, or a change / removal requested" },
   { key: "billing", group: "Bookings & money", label: "Subscription & billing (trial, payment failed, ended)" },
   { key: "trip-consent", group: "Care & safeguarding", label: "Trip consent given or declined" },
   { key: "incident-ack", group: "Care & safeguarding", label: "Parent acknowledged an accident / incident" },
   { key: "incident-reply", group: "Care & safeguarding", label: "Parent replied on an incident thread" },
   { key: "med-consent", group: "Care & safeguarding", label: "Parent authorised a medication" },
   { key: "med-note", group: "Care & safeguarding", label: "Parent left a note on a medication" },
+  { key: "leave-request", group: "Care & safeguarding", label: "A member of staff requested leave" },
   { key: "task-due", group: "Daily reminders", label: "A task of yours is due today" },
   { key: "task-overdue", group: "Daily reminders", label: "A task of yours is overdue" },
   { key: "calendar-reminder", group: "Daily reminders", label: "Calendar event reminders" },
@@ -782,7 +785,11 @@ export interface TenantSettings {
   meals?: {
     ordering?: boolean;           // parents can pre-order meals
     showAllergens?: boolean;      // show allergen info on the menu
-    orderCutoffHours?: number;    // hours before a session that ordering closes
+    /** @deprecated Superseded by cutoffWhen + cutoffTime, which is what the
+     *  meals pages actually enforce. Kept only so existing tenant documents
+     *  still parse; nothing reads it and no UI writes it. Do not reintroduce a
+     *  control for this — you'd have two cut-off rules and one of them silent. */
+    orderCutoffHours?: number;
     menuNote?: string;            // a note shown on the meals page
     allergenNote?: string;        // standard allergen disclaimer shown to parents
     changeApproval?: "review" | "auto"; // do parent meal changes/cancels need approval
@@ -823,6 +830,11 @@ export interface TenantSettings {
     dslTitle?: string;
     dslName?: string;
     dslEmail?: string;               // who to email; blank = the account holder
+    /** Optional deputy DSL — alerted alongside the DSL, and (like the DSL) has
+     *  full access to concerns + allegations even on a staff account. Matched
+     *  to their login by email. */
+    deputyDslName?: string;
+    deputyDslEmail?: string;
     /** Editable list of concern categories staff pick from. */
     categories?: string[];
     /** The editable default "What to do now" protocol shown on the form. */
@@ -1026,6 +1038,21 @@ export interface TenantSettings {
    *  task carrying it is deleted. */
   taskCategories?: string[];
 
+  /** Childcare payments — the provider identity a parent has to add inside their
+   *  HMRC Tax-Free Childcare account before they can pay us, plus the schemes we
+   *  accept. The setting name is what the parent searches for in HMRC, so it has
+   *  to match exactly; "provider not added to booker's HMRC account" is one of
+   *  the designed payment failures. See docs/tfc-build-spec.md.
+   *
+   *  HMRC ONLY. The voucher COMPANIES we accept are `voucherProviders` — that
+   *  list is what the parent picks from at checkout, so don't add a second one
+   *  here. */
+  childcare?: {
+    settingName?: string;
+    registrationNumber?: string;
+    postcode?: string;
+  };
+
   // ── People & safeguarding ──
   /** Every child needs a date of birth before the record can be saved. */
   requireDob: boolean;
@@ -1125,12 +1152,21 @@ export interface TenantSettings {
   /** Company/head-office roles & per-area access. Optional — the editor falls
    *  back to DEFAULT_ROLES when unset. */
   roles?: StaffRole[];
+  /** When the operator last edited the Roles & permissions matrix. The API
+   *  only enforces the matrix once this is set: Setup saves its whole settings
+   *  bag (default roles included) on any change, so a stored `roles` alone
+   *  doesn't mean anyone chose it (server/src/middleware/access.ts). */
+  rolesSetAt?: string;
   /** Job roles / positions the company rosters by (Lead Coach, Lifeguard…).
    *  Shared by the schedule role rows and the staff-invite Role picker.
    *  Falls back to DEFAULT_STAFF_ROLES when unset. */
   staffRoles?: string[];
   /** Company-wide scheduling defaults (location Scheduling tab). */
   scheduling?: SchedulingSettings;
+  /** What referees are asked (Team → Onboarding → References → ⚙). Unset means
+   *  the ActivityOS default set. Editing only affects NEW requests: each one
+   *  stores the questions it was sent under. */
+  referenceQuestions?: RefSection[];
   /** Ask the operator why, when they cancel. Off = don't make them answer. */
   askReasonOperator: boolean;
   /** Ask the parent why, when they cancel their own booking. */
@@ -1390,6 +1426,7 @@ export function withDefaults(stored: Partial<TenantSettings> | null | undefined)
     inventory: { ...DEFAULT_SETTINGS.inventory, ...(s.inventory ?? {}) },
     seasons: s.seasons ?? DEFAULT_SETTINGS.seasons,
     staffRoles: s.staffRoles?.length ? s.staffRoles : DEFAULT_SETTINGS.staffRoles,
+    referenceQuestions: s.referenceQuestions?.length ? s.referenceQuestions : undefined,
     scheduling: { ...DEFAULT_SCHEDULING, ...(s.scheduling ?? {}) },
     payMethods: (s.payMethods?.length ? s.payMethods : DEFAULT_SETTINGS.payMethods).filter((m) => m !== "Free place"),
     // Schemes held a single `reference` string before they held labelled

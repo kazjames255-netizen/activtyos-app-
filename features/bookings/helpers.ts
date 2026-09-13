@@ -1,4 +1,5 @@
 import type { Booking, BookingFilter, Kid } from "./types";
+import { csvCell } from "../../lib/csv"; // relative: the API server imports this file too
 
 /** How an operator records a parent paying. One list, shared by the Take
  *  booking modal and the checkout on a listing's view page — two lists is how
@@ -12,6 +13,7 @@ export const FILTER_TABS: [BookingFilter, string][] = [
   ["confirmed", "Confirmed"],
   ["waitlisted", "Waitlisted"],
   ["unpaid", "Unpaid / invoiced"],
+  ["unreconciled", "Unreconciled"],
   ["cancelled", "Cancelled"],
   ["requests", "Requests"],
   ["refunds", "Refunds"],
@@ -37,9 +39,7 @@ export function needsDecision(b: Booking): boolean {
  * beginning "=" is a spreadsheet running someone else's input.
  */
 function cell(v: unknown): string {
-  let s = v === null || v === undefined ? "" : String(v);
-  if (/^[=+\-@\t\r]/.test(s)) s = `'${s}`;
-  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  return csvCell(v); // the shared rule in lib/csv — every export uses it
 }
 
 /** A column of anything exportable — bookings, families, whatever comes next. */
@@ -270,6 +270,22 @@ export function money(n: number): string {
   return n === 0 ? "£0.00" : "—";
 }
 
+/** Reconciled = the money is in and fully accounted for. Mirrors the ledger. */
+/** Statuses where the child has no place yet — so no money is owed. A waitlisted
+ *  booking sitting in "unreconciled" reads as debt you're chasing, when there's
+ *  nothing to chase until it's confirmed. */
+const NO_PLACE_YET = ["Waitlisted", "Offered", "Approval needed"];
+
+export function isUnreconciled(b: Booking): boolean {
+  if (b.status === "Cancelled" || b.status === "Declined") return false;
+  if (NO_PLACE_YET.includes(b.status)) return false;
+  const isCard = /card/i.test(b.method ?? "") && !b.voucherScheme;
+  if (isCard) return false;                                   // settles via Stripe
+  const outstanding = Math.max(0, (b.amount ?? 0) - (b.amountPaid ?? 0));
+  const settled = (b.pay === "Paid" || b.pay === "Funded") && outstanding <= 0;
+  return !settled && ((b.amount ?? 0) > 0 || !!b.voucherScheme);
+}
+
 export function matchesFilter(b: Booking, f: BookingFilter): boolean {
   switch (f) {
     case "all":
@@ -282,6 +298,14 @@ export function matchesFilter(b: Booking, f: BookingFilter): boolean {
       return b.status === "Waitlisted";
     case "unpaid":
       return b.pay === "Unpaid" || b.pay === "Invoice sent" || b.pay === "Awaiting voucher payment";
+    case "unreconciled":
+      // Money that lands OFF-platform and hasn't been matched yet — vouchers,
+      // Tax-Free Childcare, cash, bank transfer. Deliberately the same rule the
+      // Reconciliation ledger uses (server/src/routes/reconciliation.ts): card
+      // settles through Stripe so it never needs matching, and a cancelled
+      // booking isn't owed. If those two ever disagree, an operator gets a
+      // different answer to "what's outstanding" depending which page they open.
+      return isUnreconciled(b);
     case "cancelled":
       return b.status === "Cancelled" || b.status === "Declined";
     case "requests":
@@ -356,9 +380,19 @@ export function payLabel(pay: string): string {
  * still tell how the money came in.
  */
 export function payLabelFor(b: { pay: string; voucherScheme?: string; method?: string }): string {
+  // Every off-platform route shares one status, so the words come from the method.
+  if (b.pay === "Awaiting voucher payment") return pendingPayWords(b).chip;
   const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
+  const isTfc = /tax.?free|tfc/i.test(b.method ?? "");
+  if (isTfc) {
+    // "TFC received" read as a state that ISN'T paid. Whatever the rail, a
+    // settled booking has to say Paid first; the method is the qualifier.
+    if (b.pay === "Paid") return "Paid · TFC";
+    if (b.pay === "Refunded" || b.pay === "Partially refunded") return `${payLabel(b.pay)} via HMRC`;
+    return payLabel(b.pay);
+  }
   if (!isVoucher) return payLabel(b.pay);
-  if (b.pay === "Paid") return "Voucher received";
+  if (b.pay === "Paid") return "Paid · voucher";
   // A voucher refund goes back through the scheme, not a card — say so.
   if (b.pay === "Refunded" || b.pay === "Partially refunded") return `${payLabel(b.pay)} via voucher`;
   return payLabel(b.pay);
@@ -377,6 +411,24 @@ export function payMethodLabel(b: { voucherScheme?: string; method?: string }): 
   if (/haf|funded/i.test(m)) return "HAF / funded";
   if (/card/i.test(m)) return "Card";
   return m;
+}
+
+/**
+ * The two labels an off-platform payment needs, derived from HOW it's being paid.
+ *
+ * `pay` is a single status — "Awaiting voucher payment" — used for every payment
+ * that lands outside the platform, so the UI said "Voucher pending" and "Mark
+ * voucher received" on a Tax-Free Childcare booking, a cash one and a bank
+ * transfer alike. The status is shared; the words shouldn't be.
+ */
+export function pendingPayWords(b: { voucherScheme?: string; method?: string }): { chip: string; action: string } {
+  const label = payMethodLabel(b);                       // "Edenred" / "Tax-Free Childcare" / "Cash" / …
+  if (/tax.?free/i.test(label)) return { chip: "TFC pending", action: "Mark Tax-Free Childcare received" };
+  if (/cash/i.test(label)) return { chip: "Cash pending", action: "Mark cash received" };
+  if (/bank|transfer/i.test(label)) return { chip: "Transfer pending", action: "Mark transfer received" };
+  if (label === "Voucher" || label === "—") return { chip: "Voucher pending", action: "Mark voucher received" };
+  // A named scheme — say which, so a row of pending payments is scannable.
+  return { chip: `${label} pending`, action: `Mark ${label} received` };
 }
 
 // Attendee helpers — a booking is either multi-kid (kids[]) or single child.
@@ -439,6 +491,29 @@ export const collectedNet = (b: Booking) => Math.max(0, receivedOf(b) - refunded
 /** Money still owed on a live (non-cancelled) booking = price − received. */
 export const owedOf = (b: Booking) => Math.max(0, (b.amount || 0) - receivedOf(b));
 
+/** Does this booking hold a place? Cancelled/declined don't, and nor does
+ *  anything still waiting for one (NO_PLACE_YET) — nothing is owed on those. */
+export const holdsPlace = (b: Pick<Booking, "status">) =>
+  b.status !== "Cancelled" && b.status !== "Declined" && !NO_PLACE_YET.includes(b.status);
+
+/**
+ * THE "still owed" rule — what a family owes on this booking right now. One
+ * rule for every money screen: the Dashboard's Outstanding card
+ * (server/src/routes/dashboard.ts) and Finance's Owed / Debts
+ * (features/money/FinanceAnalyticsApp.tsx) both sum this, so they can't
+ * disagree (acceptance d19s7). Keyed on the money, not the pay label: a
+ * waitlisted place owes nothing, and "Pay on the day" or a legacy placeholder
+ * owes its balance just like "Unpaid" does.
+ */
+export const owedNow = (b: Booking) => (holdsPlace(b) ? owedOf(b) : 0);
+
+/** A payment record that is money IN — a settled card payment or a recorded
+ *  offline one. Refunds, failed and unfinished ("created") card attempts
+ *  aren't. The Dashboard's "taken this week" and Finance's payment-date
+ *  bucketing both use this. */
+export const isMoneyIn = (p: { type?: string; status?: string }) =>
+  p.type !== "refund" && (p.status === "recorded" || p.status === "succeeded");
+
 export function nowStr(): string {
   return (
     new Date().toLocaleDateString("en-GB") + ", " + new Date().toTimeString().slice(0, 5)
@@ -470,3 +545,42 @@ export function altDates(k: Kid, block?: BlockAvail | null): { iso: string; labe
     .filter((s) => (block.capacityScope ?? "listing") !== "day" || s.spotsLeft > 0)
     .map((s) => ({ iso: s.date, label: sessionDayLabel(s.date) }));
 }
+
+/**
+ * What the family has actually handed over for this booking: card/cash/voucher
+ * money plus any wallet credit spent on it. Every refund is worked out from
+ * THIS, not from `amount`:
+ *  - a part-paid booking (£150 of £200) used to be quoted £0 back, because the
+ *    refund only counted `amount` when pay was exactly "Paid";
+ *  - `amount` is already net of wallet credit, so credit spent on a booking was
+ *    never counted — and never came back when it was cancelled.
+ * "Paid" takes the larger of amount/amountPaid: a joint sibling booking stores
+ * amountPaid 0 even once it's been paid in full.
+ */
+export function paidSoFar(b: Pick<Booking, "pay" | "amount" | "amountPaid" | "walletApplied">): number {
+  // "Refunded" / "Partially refunded" were paid before they were refunded —
+  // the refund is taken off separately (refundableSoFar), not by the status.
+  const settled = b.pay === "Paid" || b.pay === "Refunded" || b.pay === "Partially refunded";
+  const cash = settled ? Math.max(b.amount ?? 0, b.amountPaid ?? 0) : Math.max(0, b.amountPaid ?? 0);
+  return Math.round((cash + Math.max(0, b.walletApplied ?? 0)) * 100) / 100;
+}
+
+/**
+ * What can still be refunded: paid, minus every refund already given — the
+ * refund log (released days, wallet credit, provider day/child cancels) and
+ * the running total of approved cancellation refunds. Without this a family
+ * could release a day for £40, then cancel the lot and be refunded the full
+ * £200 again — £240 back on a £200 booking.
+ */
+export function refundableSoFar(b: Booking): number {
+  const given = refundedTotal(b) + Math.max(0, b.refundedApproved ?? 0);
+  return Math.round(Math.max(0, paidSoFar(b) - given) * 100) / 100;
+}
+
+/** A booking's phone as a real number, or "" — never the "—" placeholder that
+ *  older bookings were stamped with (acceptance d10s8). Read phones through
+ *  this so a placeholder can't win over the family's real number on file. */
+export const realPhone = (p?: string | null): string => {
+  const v = (p ?? "").trim();
+  return /^[—–-]*$/.test(v) ? "" : v;
+};

@@ -1,7 +1,9 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseTeam } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
+import { ukToday } from "../lib/ukDate";
 
 // Compliance (Documents & Compliance) — staff certifications and their expiry:
 // DBS, safeguarding, paediatric first aid, insurance… The whole point is the
@@ -46,12 +48,27 @@ function readScope(req: Request, res: Response): string | null {
 compliance.get("/", async (req, res) => {
   const tenantId = readScope(req, res);
   if (!tenantId) return;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
   const soon = new Date(Date.now() + EXPIRING_DAYS * 86_400_000).toISOString().slice(0, 10);
   const snap = await col.where("tenantId", "==", tenantId).get();
-  const items = snap.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { expiry?: string })
+  let items = snap.docs
+    .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Record<string, unknown> & { expiry?: string; staffName?: string })
     .map((c) => ({ ...c, status: statusOf(`${c.expiry ?? "9999"}`, today, soon) }));
+  // A staff member sees their OWN certificates — never a colleague's DBS
+  // number, certificate reference or expiry. Certificates carry only the
+  // person's name (no user id), so that's the match; no name, nothing shown.
+  if (req.auth!.role === "staff") {
+    // The name on the account (set by the manager) — never the token's display
+    // name, which the user can change themselves (acceptance test d24s5).
+    const me = req.user?.uid ? String((await db.collection("users").doc(req.user.uid).get()).get("name") ?? "").trim().toLowerCase() : "";
+    items = me ? items.filter((c) => (c.staffName ?? "").trim().toLowerCase() === me) : [];
+  } else if (req.auth!.role === "franchise" && req.auth!.franchiseId) {
+    // A franchise sees its OWN team's certificates — not head office's staff
+    // or a sibling franchise's DBS references. Certificates carry only a name,
+    // so: on the franchise's team or rota, or added by the franchise itself.
+    const team = await franchiseTeam(tenantId, req.auth!.franchiseId);
+    items = items.filter((c) => team.names.has((c.staffName ?? "").trim().toLowerCase()) || team.emails.has(String((c as { createdBy?: string }).createdBy ?? "").toLowerCase()));
+  }
   // Soonest to expire first — the ones needing action rise to the top.
   items.sort((a, b) => (`${a.expiry ?? "9999"}` < `${b.expiry ?? "9999"}` ? -1 : 1));
   const summary = {

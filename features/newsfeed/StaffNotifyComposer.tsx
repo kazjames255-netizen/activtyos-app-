@@ -11,7 +11,7 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui";
 import { get as apiGet } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
-import { addAnnouncement, loadAnnouncements, type Announcement } from "@/features/staff/announcements";
+import { fetchAnnouncements, postAnnouncement, type Announcement } from "@/features/staff/announcements";
 
 const BLUE = "#1d3a8f";
 
@@ -34,7 +34,7 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
   const isHo = franchises.length > 0;
   const frName = frTarget ? (franchises.find((f) => f.franchiseId === frTarget)?.name ?? "this franchise") : "";
 
-  useEffect(() => { setSent(loadAnnouncements()); }, []);
+  useEffect(() => { fetchAnnouncements().then(setSent).catch(() => {}); }, []);
   // Apply the composer defaults from Setup → Announcements on load.
   useEffect(() => {
     if (annCfg?.defaultImportant) setImportant(true);
@@ -45,12 +45,18 @@ export function StaffNotifyComposer({ listings, authorName }: { listings: { id: 
   const audienceLabel = isHo ? (frTarget ? `${frName} · ${baseAudience.toLowerCase()}` : `All franchises across the network · ${baseAudience.toLowerCase()}`) : baseAudience;
   const canSend = title.trim().length > 1 && body.trim().length > 1;
 
-  const send = () => {
+  const send = async () => {
     if (!canSend) return;
-    const next = addAnnouncement({ author: authorName?.trim() || "Head Office", role: "Manager", title: title.trim(), body: body.trim(), audienceLabel, important, pinned });
-    setSent(next);
-    setTitle(""); setBody(""); setImportant(false); setPinned(false); setScope("all"); setFrTarget("");
-    setFlash(`Sent to ${audienceLabel.toLowerCase()} — it’s on their Announcements board now.`);
+    try {
+      // Really sent now: stored server-side and belled to each member of staff
+      // in scope (a franchise target reaches only that franchise's team).
+      const made = await postAnnouncement({ author: authorName?.trim() || "Head Office", role: "Manager", title: title.trim(), body: body.trim(), audienceLabel, important, pinned, ...(frTarget ? { franchiseId: frTarget } : {}) });
+      setSent((p) => [made, ...p]);
+      setTitle(""); setBody(""); setImportant(false); setPinned(false); setScope("all"); setFrTarget("");
+      setFlash(`Sent to ${audienceLabel.toLowerCase()} — it’s on their Announcements board and bell now.`);
+    } catch (e) {
+      setFlash(e instanceof Error ? `Couldn’t send: ${e.message}` : "Couldn’t send it");
+    }
     setTimeout(() => setFlash(null), 4000);
   };
 

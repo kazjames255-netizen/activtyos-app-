@@ -61,7 +61,7 @@ function PayForm({ info, onPaid, onError }: { info: CheckoutInfo; onPaid: () => 
   );
 }
 
-export function PayModal({ refs = [], mealOrderIds, onClose, onPaid }: { refs?: string[]; mealOrderIds?: string[]; onClose: () => void; onPaid: () => void }) {
+export function PayModal({ refs = [], tenantId, mealOrderIds, onClose, onPaid }: { refs?: string[]; tenantId?: string; mealOrderIds?: string[]; onClose: () => void; onPaid: () => void }) {
   const [info, setInfo] = useState<CheckoutInfo | null>(null);
   const [stripePromise, setStripePromise] = useState<Promise<Stripe | null> | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,7 +71,7 @@ export function PayModal({ refs = [], mealOrderIds, onClose, onPaid }: { refs?: 
 
   useEffect(() => {
     let alive = true;
-    apiPost<CheckoutInfo>("/api/payments/checkout", meals ? { mealOrderIds } : { refs })
+    apiPost<CheckoutInfo>("/api/payments/checkout", meals ? { mealOrderIds } : { refs, ...(tenantId ? { tenantId } : {}) })
       .then((i) => {
         if (!alive) return;
         setInfo(i);

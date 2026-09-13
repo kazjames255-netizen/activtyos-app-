@@ -1,10 +1,14 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
+import { allergenHits } from "../../../features/meals/allergens";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { franchiseListingIds } from "../lib/franchiseScope";
-import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
+import { staffSiteScope } from "../lib/siteScope";
+import type { BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
+import { onSite, registerRows } from "../lib/registerRows";
+import { ukToday } from "../lib/ukDate";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Meals & allergies (Pupils). Two things that only matter together:
@@ -24,7 +28,7 @@ export const meals = Router();
 const menusCol = db.collection("menus");
 const menuId = (tenantId: string, date: string) => `${tenantId}_${date}`;
 const canWriteMenu = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => ukToday();
 
 // The 14 allergens UK food law requires to be declared.
 export const UK_ALLERGENS = [
@@ -36,31 +40,12 @@ export const UK_ALLERGENS = [
 // as "check" not "certain": a child's `allergies` is free text ("Nuts
 // (EpiPen), dairy"), so we surface a possible match for staff to verify, and
 // never suppress a warning.
-const SYNONYMS: Record<string, string[]> = {
-  milk: ["milk", "dairy", "lactose"],
-  gluten: ["gluten", "wheat", "coeliac", "celiac"],
-  nuts: ["nut", "almond", "cashew", "walnut", "hazelnut", "pistachio"],
-  peanuts: ["peanut"],
-  eggs: ["egg"],
-  fish: ["fish", "cod", "salmon", "tuna"],
-  crustaceans: ["prawn", "shrimp", "crab", "lobster", "crustacean"],
-  molluscs: ["mussel", "oyster", "squid", "mollusc"],
-  soya: ["soya", "soy"],
-  sesame: ["sesame"],
-  celery: ["celery"],
-  mustard: ["mustard"],
-  lupin: ["lupin"],
-  sulphites: ["sulphite", "sulphur"],
-};
 
+
+// The one shared list (features/meals/allergens.ts) — "nut allergy" now
+// flags peanut dishes too.
 function alertsFor(allergyText: string, menuAllergens: Set<string>): string[] {
-  const t = allergyText.toLowerCase();
-  const hits: string[] = [];
-  for (const allergen of menuAllergens) {
-    const terms = SYNONYMS[allergen] ?? [allergen];
-    if (terms.some((term) => t.includes(term))) hits.push(allergen);
-  }
-  return hits;
+  return allergenHits(allergyText, menuAllergens);
 }
 
 const tenantOf = (req: Request) => {
@@ -98,12 +83,15 @@ meals.get("/", async (req, res) => {
   const menuAllergens = new Set<string>(menu.flatMap((m) => m.allergens ?? []));
 
   // A franchise only sees its OWN children's dietary board — narrow to its listings.
-  const franchiseListings = auth.role === "franchise" && auth.franchiseId
+  const franchiseListings = (auth.role === "franchise" || auth.role === "staff") && auth.franchiseId
     ? await franchiseListingIds(tenantId, auth.franchiseId)
     : null;
+  // Staff assigned to certain sites (a site lead) see only those sites' children.
+  const site = await staffSiteScope(auth);
   const todays = blocksSnap.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
     .filter(({ block }) => !franchiseListings || franchiseListings.has(block.listingId))
+    .filter(({ block }) => !site || site.listings.has(block.listingId))
     .map(({ id, block }) => ({ id, block, session: block.sessions.find((s) => s.date === date) }))
     .filter((x): x is typeof x & { session: NonNullable<(typeof x)["session"]> } => !!x.session);
 
@@ -121,10 +109,8 @@ meals.get("/", async (req, res) => {
   // Resolve dietary data from child records (by id), one batch.
   const childIds = new Set<string>();
   for (const snap of bookingSnaps)
-    for (const d of snap.docs) {
-      const b = fromDoc(d.data() as BookingDoc);
-      if (b.childId) childIds.add(b.childId);
-    }
+    for (const d of snap.docs)
+      for (const r of registerRows(fromDoc(d.data() as BookingDoc), date)) if (r.childId) childIds.add(r.childId);
   const childDocs = childIds.size ? await db.getAll(...[...childIds].map((cid) => db.collection("children").doc(cid))) : [];
   const dietById = new Map(
     childDocs.filter((d) => d.exists).map((d) => {
@@ -136,20 +122,28 @@ meals.get("/", async (req, res) => {
   let totalChildren = 0;
   let withNeeds = 0;
   let totalAlerts = 0;
+  // The day's register marks — for children still on site after a cancellation.
+  const regDocs = await db.getAll(...todays.map(({ id }) => db.collection("registers").doc(`${id}_${date}`)));
+  const regEntries = regDocs.map((r) => ((r.exists ? r.get("entries") : null) ?? {}) as Record<string, { status?: string; collectedAt?: string | null }>);
   const sessions = todays.map(({ id, block, session }, i) => {
+    // One row per CHILD — a sibling's nut allergy used to be dropped because
+    // only the first child on a joint booking was ever looked up.
     const children = bookingSnaps[i].docs
-      .map((d) => fromDoc(d.data() as BookingDoc))
-      .filter((b) => countsTowardCapacity(b.status) && b.status !== "Offered" && (!b.days || b.days.includes(date)))
-      .map((b) => {
-        const diet = b.childId ? dietById.get(b.childId) : undefined;
+      .flatMap((d) => registerRows(fromDoc(d.data() as BookingDoc), date))
+      // Expected, OR still physically here: signed in and not collected (a
+      // booking cancelled while they're on site). A ratio counts every child
+      // present, and the kitchen needs their allergies either way.
+      .filter((r) => r.expected || onSite(regEntries[i], r))
+      .map((r) => {
+        const diet = r.childId ? dietById.get(r.childId) : undefined;
         const allergies = diet?.allergies ?? "";
         const alerts = allergies ? alertsFor(allergies, menuAllergens) : [];
         totalChildren++;
         if (allergies || diet?.dietary) withNeeds++;
         totalAlerts += alerts.length;
         return {
-          ref: b.ref,
-          name: b.kids?.length ? b.kids[0].name : b.child,
+          ref: r.key,
+          name: r.name,
           allergies,
           dietary: diet?.dietary ?? "",
           medical: diet?.medical ?? "",

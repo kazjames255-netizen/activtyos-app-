@@ -158,11 +158,17 @@ export const del = <T>(path: string) => api<T>(path, { method: "DELETE" });
 // blob URL. The caller decides when it's allowed to be seen; access is still
 // re-checked server-side on the fetch itself.
 export async function openFile(path: string): Promise<void> {
-  const user = await signedInUser();
-  const token = user ? await withTimeout(user.getIdToken(), "Getting your sign-in token") : null;
-  const res = await fetch(`${BASE}${path}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} });
-  if (!res.ok) throw new ApiError(res.status, res.status === 404 ? "That file isn't available." : `Couldn't open the file (${res.status}).`);
-  const url = URL.createObjectURL(await res.blob());
+  const url = URL.createObjectURL(await fetchBlob(path));
   window.open(url, "_blank", "noopener");
   setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
+/** An authenticated binary (a stored scan, a plan) as a Blob. Carries the
+ *  view-as header too — without it HQ viewing as a provider got a 404. */
+export async function fetchBlob(path: string): Promise<Blob> {
+  const user = await signedInUser();
+  const token = user ? await withTimeout(user.getIdToken(), "Getting your sign-in token") : null;
+  const res = await fetch(`${BASE}${path}`, { headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...actAsHeader() } });
+  if (!res.ok) throw new ApiError(res.status, res.status === 404 ? "That file isn't available." : `Couldn't open the file (${res.status}).`);
+  return res.blob();
 }

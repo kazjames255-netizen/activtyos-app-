@@ -5,10 +5,13 @@
 // (upload a new one → the old becomes a past version), a review/expiry date with
 // an in-date / expiring / expired status, and an assignment: All staff, specific
 // permission roles, specific job titles, and/or specific LISTINGS (so a risk
-// assessment can be scoped to one activity). Front-end demo store; real file
-// storage + the /api/documents wiring is Amir's (handoff). Feeds the onboarding
-// read-and-confirm docs.
+// assessment can be scoped to one activity). Stored on the server since 12 Sept
+// (library, files and read receipts — features/documents/docStore.ts); the
+// sample documents are only a starting point until the first save. Feeds the
+// onboarding read-and-confirm docs.
 import { useEffect, useState } from "react";
+import { isDemoMode, get as apiGet } from "@/lib/api";
+import { chaseUnread, fetchLibrary, openDocFile, saveLibrary, uploadDataUrl, uploadDocFile, type DocRead, type TeamMember } from "./docStore";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
@@ -18,17 +21,17 @@ import { DEMO_STAFF } from "@/features/learning/credentials";
 // Deployment after activation). Used to decide who a listing-scoped doc reaches.
 const DEMO_DEPLOY: Record<string, string[]> = { "Marcus Bell": ["After-School Football Club"], "Jess Patel": ["After-School Football Club", "Gymnastics Saturday Club"], "Aisha Rahman": ["Summer Holiday Club — Milton Keynes"] };
 const roleMatch = (list: string[], me?: string) => !!me && list.some((r) => { const rl = r.toLowerCase(), m = me.toLowerCase(); return rl.includes(m) || m.includes(rl.split(/[ /]/)[0]); });
-const docAppliesToStaff = (d: DocItem, staff: { name: string; role: string }) => d.all || roleMatch(d.roles, staff.role) || roleMatch(d.titles, staff.role) || d.listings.some((l) => (DEMO_DEPLOY[staff.name] ?? []).includes(l));
+const docAppliesToStaff = (d: DocItem, staff: { name: string; role: string; listings?: string[] }) => d.all || roleMatch(d.roles, staff.role) || roleMatch(d.titles, staff.role) || d.listings.some((l) => (staff.listings ?? DEMO_DEPLOY[staff.name] ?? []).includes(l));
 const READ_KEY = "aos.docs.read.v1";
 
 type DocCat = "Policy" | "Risk assessment" | "Handbook" | "Procedure" | "Insurance" | "Form" | "Certificate" | "Other";
 const CATS: DocCat[] = ["Policy", "Risk assessment", "Handbook", "Procedure", "Insurance", "Form", "Certificate", "Other"];
 const CAT_ICON: Record<DocCat, string> = { Policy: "📘", "Risk assessment": "⚠️", Handbook: "📗", Procedure: "🧭", Insurance: "🛡️", Form: "🗒️", Certificate: "🎖️", Other: "📄" };
 
-export interface DocVersion { version: number; fileName?: string; fileData?: string; at: string }
+export interface DocVersion { version: number; fileName?: string; fileData?: string; fileId?: string; at: string }
 export interface DocItem {
   id: string; title: string; category: DocCat;
-  fileName?: string; fileData?: string; version: number; uploadedAt: string; expiry?: string;
+  fileName?: string; fileData?: string; fileId?: string; version: number; uploadedAt: string; expiry?: string;
   all: boolean; roles: string[]; titles: string[]; listings: string[];
   history: DocVersion[]; seededBody?: string;
 }
@@ -68,15 +71,56 @@ function seed(): DocItem[] {
 
 function useDocs() {
   const [docs, setDocs] = useState<DocItem[]>(seed);
-  useEffect(() => { try { const s = JSON.parse(localStorage.getItem(DOCS_KEY) || "null"); if (Array.isArray(s) && s.length) setDocs(s); } catch { /* ignore */ } }, []);
-  const save = (d: DocItem[]) => { setDocs(d); try { localStorage.setItem(DOCS_KEY, JSON.stringify(d)); } catch { /* ignore */ } };
+  const [reads, setReads] = useState<DocRead[]>([]);
+  const [team, setTeam] = useState<TeamMember[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  // Saving is refused until the server's library has loaded — otherwise an
+  // early save (or a failed load) replaced the real library with the samples.
+  const [loaded, setLoaded] = useState(false);
+  // A library that exists only in this browser (from before documents were
+  // saved online). Offered for import — never uploaded on its own, because a
+  // browser isn't tied to one account.
+  const [localOnly, setLocalOnly] = useState<DocItem[] | null>(null);
+  const refresh = () => fetchLibrary<DocItem>().then((r) => { if (r.docs?.length) setDocs(r.docs); setReads(r.reads ?? []); setTeam(r.team ?? []); setLoaded(true); return r; });
+  useEffect(() => {
+    if (isDemoMode()) { try { const s = JSON.parse(localStorage.getItem(DOCS_KEY) || "null"); if (Array.isArray(s) && s.length) setDocs(s); } catch { /* ignore */ } setLoaded(true); return; }
+    refresh().then((r) => {
+      if (r.docs?.length) return;
+      try { const s = JSON.parse(localStorage.getItem(DOCS_KEY) || "null"); if (Array.isArray(s) && s.length) setLocalOnly(s); } catch { /* ignore */ }
+    }).catch((e) => setError(e instanceof Error ? `Couldn't load your documents — ${e.message}. Changes are paused until they load.` : "Couldn't load documents"));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  const importLocal = async () => {
+    if (!localOnly) return;
+    const up: DocItem[] = [];
+    let failed = 0;
+    for (const d of localOnly) {
+      // The current file AND every past version's file come up with it.
+      const up1 = async (data?: string, name?: string, id?: string) => (data ? uploadDataUrl(data, name || d.title).catch(() => { failed++; return undefined; }) : id);
+      const fileId = await up1(d.fileData, d.fileName, d.fileId);
+      const history = await Promise.all(d.history.map(async (h) => ({ ...h, fileData: undefined, fileId: await up1(h.fileData, h.fileName, h.fileId) })));
+      up.push({ ...d, fileData: undefined, fileId, history });
+    }
+    try { await saveLibrary(up); } catch (e) { setError(e instanceof Error ? e.message : "Couldn't import"); return; }
+    setDocs(up); setLocalOnly(null); setLoaded(true);
+    // The browser copy is kept if any file didn't make it — nothing is lost.
+    if (!failed) { try { localStorage.removeItem(DOCS_KEY); } catch { /* ignore */ } }
+    else setError(`${failed} file${failed === 1 ? "" : "s"} couldn't be uploaded (only PDFs and photos are accepted) — the copy in this browser has been kept.`);
+  };
+  const save = (d: DocItem[]) => {
+    if (isDemoMode()) { setDocs(d); try { localStorage.setItem(DOCS_KEY, JSON.stringify(d)); } catch { /* ignore */ } return; }
+    if (!loaded) { setError("Your documents haven't loaded yet — nothing was saved. Try again in a moment."); return; }
+    setDocs(d);
+    saveLibrary(d).then(() => setError(null)).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save the library"));
+  };
   const upsert = (d: DocItem) => save(docs.some((x) => x.id === d.id) ? docs.map((x) => (x.id === d.id ? d : x)) : [...docs, d]);
   const remove = (id: string) => save(docs.filter((x) => x.id !== id));
-  return { docs, upsert, remove };
+  return { docs, upsert, remove, reads, team, error, refresh, localOnly, importLocal, dismissLocal: () => setLocalOnly(null) };
 }
 
 export const openDoc = (d: DocItem) => {
   if (typeof window === "undefined") return;
+  if (d.fileId) { void openDocFile(d.fileId); return; }
   if (d.fileData) { const w = window.open(); if (w) w.document.write(`<iframe src="${d.fileData}" style="border:0;width:100vw;height:100vh"></iframe>`); return; }
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>${esc(d.title)}</title><style>body{font-family:'Times New Roman',Georgia,serif;color:#1a1c2b;max-width:720px;margin:0 auto;padding:54px 40px;line-height:1.6}.ey{font-family:-apple-system,Arial;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#3f7ae0;font-weight:800}h1{font-size:26px;margin:.1em 0 .1em}.meta{font-family:-apple-system,Arial;color:#6b7086;font-size:12px;border-bottom:1px solid #e5e7f0;padding-bottom:12px;margin-bottom:18px}pre{white-space:pre-wrap;font-family:inherit;font-size:15px}.wm{position:fixed;top:44%;left:0;right:0;text-align:center;font-family:-apple-system,Arial;font-size:60px;color:#eef1f6;font-weight:800;transform:rotate(-18deg);z-index:-1}</style></head><body><div class="wm">SAMPLE</div><div class="ey">${esc(d.category)}</div><h1>${esc(d.title)}</h1><div class="meta">Version ${d.version} · Uploaded ${fmt(d.uploadedAt)}${d.expiry ? " · Review by " + fmt(d.expiry) : ""}</div><pre>${esc(d.seededBody || "")}</pre><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
   const w = window.open(); if (w) { w.document.write(html); w.document.close(); }
@@ -92,7 +136,7 @@ export function statusOf(d: DocItem): { label: string; tone: string } {
 
 export function DocumentsApp() {
   const { settings } = useSettings();
-  const { docs, upsert, remove } = useDocs();
+  const { docs, upsert, remove, reads: serverReads, team, error: libError, localOnly, importLocal, dismissLocal } = useDocs();
   const roles = (settings.roles ?? []).map((r) => r.name).filter(Boolean);
   const titles = (settings.staffRoles ?? []).filter(Boolean);
   const [cat, setCat] = useState<DocCat | "all">("all");
@@ -100,9 +144,14 @@ export function DocumentsApp() {
   const [statusFilter, setStatusFilter] = useState<"all" | "expiring" | "expired">("all");
   const [edit, setEdit] = useState<DocItem | null>(null);
   const [mode, setMode] = useState<"library" | "receipts">("library");
-  const [reads, setReads] = useState<Record<string, Record<string, string>>>({});
+  // Confirmations of the CURRENT version only: publishing v2 makes everyone's
+  // v1 tick stop counting (it used to carry over).
+  const readAt = (email: string, name: string, d: DocItem) => serverReads.find((r) => r.docId === d.id && r.version === d.version && (r.staffEmail === email || (!email && r.staffName === name)))?.at;
+  const people: { name: string; email: string; role: string; listings?: string[] }[] = isDemoMode() || !team ? DEMO_STAFF.map((s) => ({ name: s.name, email: "", role: s.role })) : team;
+  const [listingTitles, setListingTitles] = useState<string[]>(DEMO_LISTINGS);
+  useEffect(() => { if (!isDemoMode()) apiGet<{ title?: string; name?: string }[]>("/api/listings?mine=1").then((l) => setListingTitles(l.map((x) => x.title || x.name || "").filter(Boolean))).catch(() => {}); }, []);
   const [toast, setToast] = useState<string | null>(null);
-  useEffect(() => { try { const r = JSON.parse(localStorage.getItem(READ_KEY) || "null"); if (r && typeof r === "object") setReads(r); } catch { /* ignore */ } }, [mode]);
+
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2600); };
 
   const expiring = docs.filter((d) => { const dl = daysUntil(d.expiry); return dl != null && dl >= 0 && dl <= 60; }).length;
@@ -114,6 +163,13 @@ export function DocumentsApp() {
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Documents" icon="📁" lede="Your policies, risk assessments, handbooks and insurance — versioned, with review dates, assigned to roles, job titles or specific listings." />
+      {localOnly && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] px-4 py-3 text-[12.5px] text-[#7a5b06]">
+          <span className="min-w-0 flex-1"><b>This browser has {localOnly.length} document{localOnly.length === 1 ? "" : "s"} that are not in your account</b> (from before documents were saved online). Import them only if they belong to <b>this</b> account.</span>
+          <Button variant="primary" onClick={() => void importLocal()}>Import</Button>
+          <Button onClick={dismissLocal}>Not now</Button>
+        </div>
+      )}
 
       <div className="mb-3 inline-flex gap-0.5 rounded-full border border-[var(--line)] bg-[var(--panel)] p-0.5">
         {([["library", "📁 Library"], ["receipts", "✅ Read receipts"]] as const).map(([k, l]) => (
@@ -124,20 +180,20 @@ export function DocumentsApp() {
       {mode === "receipts" ? (
         <Card className="p-4">
           {(() => {
-            const cells = DEMO_STAFF.flatMap((s) => docs.filter((d) => docAppliesToStaff(d, s)).map((d) => ({ read: !!reads[s.name]?.[d.id] })));
+            const cells = people.flatMap((s) => docs.filter((d) => docAppliesToStaff(d, s)).map((d) => ({ read: !!readAt(s.email, s.name, d) })));
             const unread = cells.filter((c) => !c.read).length;
             return (<>
               <div className="mb-3 flex flex-wrap items-center gap-2">
                 <div><div className="text-[14px] font-extrabold text-[var(--ink)]">Who has read what</div><div className="text-[12px] text-[var(--ink-3)]">{cells.length - unread} of {cells.length} confirmations across the team · <b className="text-[#c0392b]">{unread}</b> outstanding</div></div>
-                <Button variant="primary" className="ml-auto" disabled={!unread} onClick={() => flash(`🔔 Reminder sent to staff with unread documents`)}>Chase unread</Button>
+                <Button variant="primary" className="ml-auto" disabled={!unread} onClick={() => { if (isDemoMode()) { flash("🔔 Reminder sent to staff with unread documents"); return; } chaseUnread().then((r) => flash(r.people ? `🔔 Reminder sent to ${r.people} ${r.people === 1 ? "person" : "people"}` : "Nobody with an account has anything unread")).catch((e) => flash(e instanceof Error ? e.message : "Couldn't send reminders")); }}>Chase unread</Button>
               </div>
               <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
                 <table className="w-full text-[12.5px]">
                   <thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">Staff</th>{docs.map((d) => <th key={d.id} title={d.title} className="px-2 py-2.5 font-extrabold"><div className="w-[64px] truncate">{d.title}</div></th>)}</tr></thead>
-                  <tbody>{DEMO_STAFF.map((s) => (
+                  <tbody>{people.map((s) => (
                     <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]">
                       <td className="whitespace-nowrap px-3 py-2.5 font-bold text-[var(--ink)]">{s.name}<span className="ml-1 text-[10.5px] font-normal text-[var(--ink-3)]">{s.role}</span></td>
-                      {docs.map((d) => { const applies = docAppliesToStaff(d, s); const at = reads[s.name]?.[d.id]; if (!applies) return <td key={d.id} className="px-2 py-2 text-center text-[var(--ink-3)]" title="Not assigned to this person">—</td>; return <td key={d.id} className="px-2 py-2 text-center">{at ? <span title={`Confirmed ${docFmt(at.slice(0, 10))}`} className="inline-block rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-bold text-[#0f7a43]">✓ {docFmt(at.slice(0, 10)).replace(/ \d{4}$/, "")}</span> : <span className="inline-block rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[10px] font-bold text-[#c0392b]">Unread</span>}</td>; })}
+                      {docs.map((d) => { const applies = docAppliesToStaff(d, s); const at = readAt(s.email, s.name, d); if (!applies) return <td key={d.id} className="px-2 py-2 text-center text-[var(--ink-3)]" title="Not assigned to this person">—</td>; return <td key={d.id} className="px-2 py-2 text-center">{at ? <span title={`Confirmed ${docFmt(at.slice(0, 10))}`} className="inline-block rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-bold text-[#0f7a43]">✓ {docFmt(at.slice(0, 10)).replace(/ \d{4}$/, "")}</span> : <span className="inline-block rounded-full bg-[#fdecec] px-1.5 py-0.5 text-[10px] font-bold text-[#c0392b]">Unread</span>}</td>; })}
                     </tr>
                   ))}</tbody>
                 </table>
@@ -184,16 +240,33 @@ export function DocumentsApp() {
       </Card>
       </>)}
 
-      {edit && <DocEditor doc={edit} roles={roles} titles={titles} onSave={(d) => { upsert(d); setEdit(null); }} onClose={() => setEdit(null)} />}
+      {libError && <div className="fixed bottom-16 left-1/2 z-[150] -translate-x-1/2 rounded-2xl border border-[#f6c9cc] bg-[#fdebec] px-4 py-2.5 text-[12.5px] font-semibold text-[#c02636] shadow-lg">⚠ {libError}</div>}
+      {edit && <DocEditor doc={edit} roles={roles} titles={titles} listingTitles={listingTitles} onSave={(d) => { upsert(d); setEdit(null); }} onClose={() => setEdit(null)} />}
       {toast && <div className="fixed bottom-5 left-1/2 z-[150] -translate-x-1/2 rounded-full bg-[#111634] px-4 py-2 text-[12.5px] font-bold text-white shadow-xl">{toast}</div>}
     </div>
   );
 }
 
-function DocEditor({ doc, roles, titles, onSave, onClose }: { doc: DocItem; roles: string[]; titles: string[]; onSave: (d: DocItem) => void; onClose: () => void }) {
+function DocEditor({ doc, roles, titles, listingTitles, onSave, onClose }: { doc: DocItem; roles: string[]; titles: string[]; listingTitles: string[]; onSave: (d: DocItem) => void; onClose: () => void }) {
   const [d, setD] = useState<DocItem>(doc);
+  const [uploading, setUploading] = useState(false);
+  const [upErr, setUpErr] = useState<string | null>(null);
   const toggle = (key: "roles" | "titles" | "listings", v: string) => setD((p) => ({ ...p, [key]: p[key].includes(v) ? p[key].filter((x) => x !== v) : [...p[key], v] }));
-  const uploadNew = (file: File) => { const r = new FileReader(); r.onload = () => setD((p) => ({ ...p, history: p.fileData || p.version > 1 ? [...p.history, { version: p.version, fileName: p.fileName, fileData: p.fileData, at: p.uploadedAt }] : p.history, version: p.fileData ? p.version + 1 : p.version, fileData: String(r.result), fileName: file.name, uploadedAt: iso(new Date()) })); r.readAsDataURL(file); };
+  // The file goes to the server's document store; the library keeps its id.
+  // A new file on a document that already had one is a new VERSION — the old
+  // one is kept, and everyone's confirmation has to be given again.
+  const uploadNew = async (file: File) => {
+    setUploading(true); setUpErr(null);
+    try {
+      const fileId = isDemoMode() ? undefined : await uploadDocFile(file);
+      const dataUrl = isDemoMode() ? await new Promise<string>((res) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsDataURL(file); }) : undefined;
+      setD((p) => {
+        const had = !!(p.fileId || p.fileData);
+        return { ...p, history: had || p.version > 1 ? [...p.history, { version: p.version, fileName: p.fileName, fileId: p.fileId, at: p.uploadedAt }] : p.history, version: had ? p.version + 1 : p.version, fileId, fileData: dataUrl, fileName: file.name, uploadedAt: iso(new Date()) };
+      });
+    } catch (e) { setUpErr(e instanceof Error ? e.message : "Upload failed"); }
+    setUploading(false);
+  };
   const chip = (on: boolean, onClick: () => void, label: string) => <button type="button" onClick={onClick} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{label}</button>;
 
   return (
@@ -210,9 +283,10 @@ function DocEditor({ doc, roles, titles, onSave, onClose }: { doc: DocItem; role
           <div>
             <span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Document file</span>
             <div className="flex flex-wrap items-center gap-2">
-              <label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {d.fileData ? "Upload new version" : "Upload PDF"}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadNew(f); e.target.value = ""; }} /></label>
+              <label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">⬆ {uploading ? "Uploading…" : d.fileData || d.fileId ? "Upload new version" : "Upload PDF"}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) uploadNew(f); e.target.value = ""; }} /></label>
               {d.fileName ? <span className="text-[12px] font-semibold text-[var(--ink-2)]">📎 {d.fileName} (v{d.version})</span> : <span className="text-[12px] text-[var(--ink-3)]">Sample placeholder in use</span>}
             </div>
+            {upErr && <div className="mt-1.5 text-[11px] font-semibold text-[#c02636]">{upErr}</div>}
             {d.history.length > 0 && <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Past versions: {d.history.map((h) => `v${h.version}`).join(", ")} (kept)</div>}
           </div>
 
@@ -222,7 +296,7 @@ function DocEditor({ doc, roles, titles, onSave, onClose }: { doc: DocItem; role
               <div className="mt-2 space-y-2">
                 <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">🔑 Permission roles</div><div className="flex flex-wrap gap-1.5">{roles.length ? roles.map((r) => chip(d.roles.includes(r), () => toggle("roles", r), r)) : <span className="text-[11px] text-[var(--ink-3)]">Add roles in Setup → Roles &amp; permissions.</span>}</div></div>
                 <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">🧑‍🏫 Job titles</div><div className="flex flex-wrap gap-1.5">{titles.length ? titles.map((t) => chip(d.titles.includes(t), () => toggle("titles", t), t)) : <span className="text-[11px] text-[var(--ink-3)]">Add job titles in Setup → Staff roles.</span>}</div></div>
-                <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">📋 Specific listings</div><div className="flex flex-wrap gap-1.5">{DEMO_LISTINGS.map((l) => chip(d.listings.includes(l), () => toggle("listings", l), l))}</div><div className="mt-1 text-[10px] text-[var(--ink-3)]">Use this for a risk assessment that applies to one activity only.</div></div>
+                <div><div className="mb-1 text-[10.5px] font-extrabold uppercase text-[var(--ink-3)]">📋 Specific listings</div><div className="flex flex-wrap gap-1.5">{listingTitles.map((l) => chip(d.listings.includes(l), () => toggle("listings", l), l))}</div><div className="mt-1 text-[10px] text-[var(--ink-3)]">Use this for a risk assessment that applies to one activity only.</div></div>
               </div>
             )}
             <div className="mt-2 rounded-lg border border-[#cfe0f5] bg-[#eef4fd] px-3 py-2 text-[11px] leading-relaxed text-[#1d3a8f]">
@@ -232,7 +306,7 @@ function DocEditor({ doc, roles, titles, onSave, onClose }: { doc: DocItem; role
             </div>
           </div>
         </div>
-        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ml-auto" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!d.title.trim()} onClick={() => onSave(d)}>Save document</Button></div>
+        <div className="flex flex-none items-center gap-2 border-t border-[var(--line)] px-5 py-3"><Button className="ml-auto" onClick={onClose}>Cancel</Button><Button variant="primary" disabled={!d.title.trim() || uploading} onClick={() => onSave(d)}>Save document</Button></div>
       </div>
     </div>
   );

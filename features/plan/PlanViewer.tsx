@@ -18,6 +18,7 @@ export function PlanViewer({ id }: { id: string }) {
   const [state, setState] = useState<State>("loading");
   const [url, setUrl] = useState<string | null>(null);
   const [name, setName] = useState("EHCP / SEND plan");
+  const [kind, setKind] = useState<"pdf" | "image" | "other">("pdf");
 
   useEffect(() => {
     let objUrl: string | null = null;
@@ -35,8 +36,12 @@ export function PlanViewer({ id }: { id: string }) {
         const cd = res.headers.get("content-disposition") || "";
         const m = /filename="?([^"]+)"?/.exec(cd);
         if (m && alive) setName(decodeURIComponent(m[1]));
-        objUrl = URL.createObjectURL(await res.blob());
-        if (alive) { setUrl(objUrl); setState("ready"); }
+        const blob = await res.blob();
+        // Only a PDF or a photo is rendered. A blob URL runs with THIS app's
+        // origin, so anything else in an iframe could script the page.
+        const kind = blob.type === "application/pdf" ? "pdf" : blob.type.startsWith("image/") && blob.type !== "image/svg+xml" ? "image" : "other";
+        objUrl = URL.createObjectURL(blob);
+        if (alive) { setKind(kind); setUrl(objUrl); setState("ready"); }
       } catch {
         if (alive) setState("error");
       }
@@ -69,7 +74,14 @@ export function PlanViewer({ id }: { id: string }) {
   if (state === "ready" && url)
     return (
       <Shell>
-        <iframe src={url} title={name} style={{ flex: 1, width: "100%", border: 0, background: "#fff" }} />
+        {kind === "pdf" ? (
+          <iframe src={url} title={name} style={{ flex: 1, width: "100%", border: 0, background: "#fff" }} />
+        ) : kind === "image" ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <div style={{ flex: 1, overflow: "auto", display: "flex", justifyContent: "center", padding: 16 }}><img src={url} alt={name} style={{ maxWidth: "100%", height: "auto", background: "#fff" }} /></div>
+        ) : (
+          <Msg emoji="📄" title="This file can't be shown here" body="It isn't a PDF or a photo, so it won't open in the browser. Ask the family to upload the plan as a PDF or a photo." />
+        )}
       </Shell>
     );
   if (state === "loading")

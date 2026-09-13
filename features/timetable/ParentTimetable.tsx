@@ -3,11 +3,12 @@
 import { useCallback, useEffect, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
-import { PublishedDayGrid, type PublishedWeek } from "./PublishedTimetable";
+import { PublishedDayGrid, localDayName as dayName, type PublishedWeek } from "./PublishedTimetable";
+import { useI18n } from "@/lib/i18n/provider";
 
-const fmt = (iso: string) => {
+const fmt = (iso: string, loc = "en-GB") => {
   const d = new Date(iso + "T00:00:00");
-  return isNaN(d.getTime()) ? iso : d.toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+  return isNaN(d.getTime()) ? iso : d.toLocaleDateString(loc, { day: "numeric", month: "short" });
 };
 
 /**
@@ -18,6 +19,9 @@ const fmt = (iso: string) => {
  * and only the chosen week's plan shows.
  */
 export function ParentTimetableApp() {
+  const { t, locale } = useI18n();
+  // Plain "en" would format US-style; English users keep the UK date format.
+  const dateLoc = locale === "en" ? "en-GB" : locale;
   const [weeks, setWeeks] = useState<PublishedWeek[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [sel, setSel] = useState(0);
@@ -26,7 +30,7 @@ export function ParentTimetableApp() {
   const refresh = useCallback(() => {
     apiGet<PublishedWeek[]>("/api/timetables/published")
       .then((w) => { setWeeks(w); setError(null); })
-      .catch((e) => setError(e instanceof Error ? e.message : "Couldn’t load the timetable"));
+      .catch((e) => setError(e instanceof Error ? e.message : ""));
   }, []);
   useEffect(refresh, [refresh]);
   useRealtime(["timetables"], refresh);
@@ -46,20 +50,20 @@ export function ParentTimetableApp() {
       >
         <h2 className="m-0 flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 flex-none items-center justify-center rounded-full bg-white/20 text-[17px]">▦</span>
-          Activity timetable
+          {t("feed.ttTitle")}
         </h2>
         <p className="mt-1.5 max-w-[640px] text-[12.5px] leading-[1.5] text-white/85">
-          The day plan for the days your child is booked — updated whenever your provider publishes the week.
+          {t("feed.ttLede")}
         </p>
       </div>
 
-      {error && <div className="text-[13px] font-bold text-[var(--red,#e21d27)]">{error}</div>}
-      {!error && weeks === null && <div className="text-[13px] text-[var(--ink-3)]">Loading…</div>}
-      {!error && weeks !== null && !list.length && (
+      {error !== null && <div className="text-[13px] font-bold text-[var(--red,#e21d27)]">{error || t("feed.ttLoadFailed")}</div>}
+      {error === null && weeks === null && <div className="text-[13px] text-[var(--ink-3)]">{t("feed.loading")}</div>}
+      {error === null && weeks !== null && !list.length && (
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-5 py-10 text-center">
-          <div className="text-[15px] font-extrabold text-[var(--ink)]">No timetable shared yet</div>
+          <div className="text-[15px] font-extrabold text-[var(--ink)]">{t("feed.ttEmptyTitle")}</div>
           <div className="mx-auto mt-1 max-w-[420px] text-[12.5px] text-[var(--ink-3)]">
-            When your provider publishes the week for the days your child is booked, the daily plan appears here.
+            {t("feed.ttEmptyBody")}
           </div>
         </div>
       )}
@@ -90,7 +94,7 @@ export function ParentTimetableApp() {
               <div className="text-[14px] font-extrabold">{wk.name}</div>
             </div>
             <span className="rounded-full bg-white/20 px-2.5 py-1 text-[11.5px] font-bold">
-              {fmt(wk.dateFrom)} – {fmt(wk.dateTo)}
+              {fmt(wk.dateFrom, dateLoc)} – {fmt(wk.dateTo, dateLoc)}
             </span>
           </div>
           <div className="p-3.5">
@@ -103,13 +107,13 @@ export function ParentTimetableApp() {
                     i === dayIdx ? "border-[var(--brand)] bg-[var(--brand)] text-white" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"
                   }`}
                 >
-                  {d.n}
+                  {dayName(d, dateLoc)}
                   {d.d && <span className="ml-1 font-semibold opacity-70">{d.d.split(" ")[0]}</span>}
                 </button>
               ))}
             </div>
             <div className="overflow-x-auto">
-              <PublishedDayGrid rows={rows} groups={wk.config.groups} dayLabel={wk.dayList[dayIdx]?.n ?? ""} />
+              <PublishedDayGrid rows={rows} groups={wk.config.groups} dayLabel={wk.dayList[dayIdx] ? dayName(wk.dayList[dayIdx], dateLoc) : ""} />
             </div>
           </div>
         </div>

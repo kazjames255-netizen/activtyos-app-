@@ -3,10 +3,11 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
-import type { Role } from "../middleware/role";
+import { isPlainStaff, type Role } from "../middleware/role";
 import { tenantTier, franchiseLabel, nextTicket, type ThreadDoc, type Msg } from "./platformSupport";
 import { emailNewMessage } from "../lib/emails";
 import { franchiseFamilyEmails, familyFranchiseMap } from "../lib/franchiseScope";
+import { customerAreaOn } from "../lib/customerArea";
 import { webUrl } from "../lib/stripe";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -23,6 +24,44 @@ const msgsCol = db.collection("messages");
 const isOperator = (role: Role) => role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
 
 const threadId = (tenantId: string, email: string) => `${tenantId}__${email.toLowerCase()}`;
+
+// Staff who aren't leads see only the conversations they're PART of — ones
+// they've written in (a register's late-collection nudge, a booking's "Message
+// family", a note from their own Messages page) — and only from their first
+// message on. A thread is one per family, shared by the whole team, so before
+// this a coach's token read every family's conversation with the owner
+// (acceptance d20s1). Owners, franchises and leads are unchanged.
+// thread.staffJoined = { [uid]: first message at } (set on send, never moved).
+type Req = import("express").Request;
+const plainStaffUid = (req: Req): string | null => (isPlainStaff(req.auth!) ? (req.user?.uid ?? "") : null);
+const joinedAt = (t: { staffJoined?: Record<string, string> }, uid: string): string | null => (uid && t.staffJoined?.[uid]) || null;
+/** The staffJoined stamp to merge into a thread this operator is writing to. */
+function joinStamp(req: Req, existing: FirebaseFirestore.DocumentSnapshot, now: string) {
+  const uid = plainStaffUid(req);
+  if (!uid || joinedAt((existing.data() ?? {}) as { staffJoined?: Record<string, string> }, uid)) return {};
+  return { staffJoined: { [uid]: now } };
+}
+const withoutJoins = <T extends Record<string, unknown>>(t: T): Omit<T, "staffJoined"> => { const rest: Record<string, unknown> = { ...t }; delete rest.staffJoined; return rest as Omit<T, "staffJoined">; };
+
+// Setup → Customer area → Messaging (or Features → Messages) OFF: the family
+// can't read or send in-app messages with that provider (acceptance d7s7 —
+// the switch only hid the link). The provider's own operational messages (a
+// register's late-collection nudge, a booking's "Message family", Bookings'
+// "email these families") still reach the family — by EMAIL ONLY, with the
+// provider's address to reply to — and are kept in the provider's inbox.
+// Franchise-aware: a franchise family follows that franchise's own Setup.
+const MESSAGING_OFF = { error: "Messaging isn't available from this provider at the moment — please contact them directly by email or phone.", code: "area_off" };
+async function familyMessagingOn(tenantId: string, email: string, franchiseId?: string | null): Promise<boolean> {
+  let fr = franchiseId ?? null;
+  if (franchiseId === undefined) {
+    const bk = await db.collection("bookings").where("tenantId", "==", tenantId).where("email", "==", email).limit(20).get();
+    fr = (bk.docs.map((d) => d.get("franchiseId") as string | null | undefined).find(Boolean)) ?? null;
+  }
+  return customerAreaOn(tenantId, "messaging", fr);
+}
+const EMAIL_ONLY_NOTE = "Messaging is switched off for your families in Setup, so this went by email only — their replies come to your contact email address.";
+/** The franchise an operator is writing as — undefined = work it out from the family's bookings (head office). */
+const senderFranchise = (req: Req) => (req.auth!.role === "franchise" || req.auth!.role === "staff") && req.auth!.franchiseId ? req.auth!.franchiseId : undefined;
 const bodySchema = z.object({ body: z.string().trim().min(1).max(4_000), subject: z.string().trim().max(80).optional() });
 const startOperatorSchema = bodySchema.extend({ parentEmail: z.string().trim().email().max(160), parentName: z.string().trim().max(120).optional() });
 const startParentSchema = bodySchema.extend({ tenantId: z.string().min(1).max(60) });
@@ -76,14 +115,25 @@ messages.get("/threads", async (req, res) => {
   } else if (isOperator(auth.role) && auth.tenantId) {
     snap = await threadsCol.where("tenantId", "==", auth.tenantId).get();
   } else { res.status(403).json({ error: "Requires a parent or operator account" }); return; }
-  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { lastAt?: string; operatorHidden?: boolean })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { lastAt?: string; operatorHidden?: boolean; staffJoined?: Record<string, string> })[];
   // A broadcast delivers into each family's thread so they receive + can reply,
   // but those threads stay hidden from the OPERATOR inbox until a family actually
   // replies (avoids N duplicate rows per bulk send). Parents always see theirs.
   if (auth.role !== "parent") list = list.filter((t) => t.operatorHidden !== true);
+  // Families: nothing from a provider who has switched messaging off.
+  if (auth.role === "parent") {
+    const email = req.user!.email!;
+    const on = new Map<string, boolean>();
+    for (const tid of new Set(list.map((t) => String(t.tenantId ?? "")))) on.set(tid, await familyMessagingOn(tid, email));
+    list = list.filter((t) => on.get(String(t.tenantId ?? "")) === true);
+  }
+  // Plain staff: only the conversations they've written in.
+  const staffUid = plainStaffUid(req);
+  if (staffUid !== null) list = list.filter((t) => joinedAt(t, staffUid));
+  list = list.map(withoutJoins);
   // A franchise only sees conversations with ITS OWN families (booked on its
   // listings), not the whole company's. Head office sees the whole tenant.
-  if (auth.role === "franchise" && auth.franchiseId && auth.tenantId) {
+  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId && auth.tenantId) {
     const fam = await franchiseFamilyEmails(auth.tenantId, auth.franchiseId);
     list = list.filter((t) => fam.has(String((t as { parentEmail?: string }).parentEmail ?? "").toLowerCase()));
   }
@@ -104,20 +154,26 @@ messages.get("/threads/:id", async (req, res) => {
   const ref = threadsCol.doc(req.params.id);
   const snap = await ref.get();
   if (!snap.exists) { res.status(404).json({ error: "Conversation not found" }); return; }
-  const t = snap.data() as { tenantId: string; parentEmail: string };
+  const t = snap.data() as { tenantId: string; parentEmail: string; staffJoined?: Record<string, string> };
   const email = req.user?.email?.toLowerCase();
   let mine = auth.role === "parent" ? t.parentEmail === email : isOperator(auth.role) && t.tenantId === auth.tenantId;
   // A franchise can only open a conversation with one of its own families.
-  if (mine && auth.role === "franchise" && auth.franchiseId && auth.tenantId) {
+  if (mine && (auth.role === "franchise" || auth.role === "staff") && auth.franchiseId && auth.tenantId) {
     const fam = await franchiseFamilyEmails(auth.tenantId, auth.franchiseId);
     mine = fam.has(String(t.parentEmail ?? "").toLowerCase());
   }
+  // Plain staff: only a conversation they've written in, from their first message on.
+  const staffUid = plainStaffUid(req);
+  const since = staffUid !== null ? joinedAt(t, staffUid) : null;
+  if (staffUid !== null && !since) mine = false;
   if (!mine) { res.status(404).json({ error: "Conversation not found" }); return; }
+  if (auth.role === "parent" && !(await familyMessagingOn(t.tenantId, req.user!.email!))) { res.status(403).json(MESSAGING_OFF); return; }
   const msgs = await msgsCol.where("threadId", "==", req.params.id).get();
-  const list = msgs.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
+  let list = msgs.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
+  if (since) list = list.filter((m) => `${m.createdAt ?? ""}` >= since);
   list.sort((a, b) => (`${a.createdAt ?? ""}` < `${b.createdAt ?? ""}` ? -1 : 1));
   await ref.set(auth.role === "parent" ? { parentUnread: 0 } : { operatorUnread: 0 }, { merge: true });
-  res.json({ thread: { id: snap.id, ...t, ...snap.data() }, messages: list });
+  res.json({ thread: withoutJoins({ id: snap.id, ...t, ...snap.data() }), messages: list });
 });
 
 // POST /api/messages — send (creating the thread if needed).
@@ -136,6 +192,7 @@ messages.post("/", async (req, res) => {
       res.status(403).json({ error: "You can only message a provider you've booked with" });
       return;
     }
+    if (!(await familyMessagingOn(tenantId, email))) { res.status(403).json(MESSAGING_OFF); return; }
     parentEmail = email.toLowerCase();
     parentName = req.user?.name ?? email;
     from = "parent";
@@ -178,10 +235,13 @@ messages.post("/", async (req, res) => {
     ...(!existing.exists && subject ? { subject } : {}),
     // Bump the other side's unread.
     ...(from === "parent" ? { operatorUnread: FieldValue.increment(1) } : { parentUnread: FieldValue.increment(1) }),
+    ...(from === "operator" ? joinStamp(req, existing, now) : {}),
   }, { merge: true });
 
-  const msg = { threadId: id, tenantId, parentEmail, from, senderName, body, createdAt: now };
+  const msg = { threadId: id, tenantId, parentEmail, from, senderName, body, createdAt: now, ...(from === "operator" ? { senderUid: req.user?.uid ?? null } : {}) };
   const ref = await msgsCol.add(msg);
+  // Messaging switched off for families → this reaches them by email only.
+  const emailOnly = from === "operator" && !(await familyMessagingOn(tenantId, parentEmail, senderFranchise(req)));
   // NB: new messages are NOT put in the right-hand bell — the unread count shows
   // as a badge on the Messages tab instead (thread operatorUnread/parentUnread,
   // surfaced by useUnreadMessages). The email below is the only push.
@@ -198,11 +258,11 @@ messages.post("/", async (req, res) => {
         emailNewMessage(tEmail, { providerName: pName, senderName, body, deepLink: webUrl, tenantId });
       }
     } else {
-      emailNewMessage(parentEmail, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages`, tenantId });
+      emailNewMessage(parentEmail, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages`, tenantId, emailOnly });
     }
   } catch { /* ignore — never block a message on email */ }
 
-  res.status(201).json({ id: ref.id, ...msg });
+  res.status(201).json({ id: ref.id, ...msg, ...(emailOnly ? { emailOnly: true, note: EMAIL_ONLY_NOTE } : {}) });
 });
 
 // POST /api/messages/from-booking — message a family in the context of a booking,
@@ -271,10 +331,13 @@ messages.post("/from-booking", async (req, res) => {
     operatorHidden: false,
     ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, ...(mergedSubject ? { subject: mergedSubject } : {}) }),
     parentUnread: FieldValue.increment(1),
+    ...joinStamp(req, existing, now),
   }, { merge: true });
-  await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, body, createdAt: now });
-  try { emailNewMessage(email, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages`, tenantId }); } catch { /* email never blocks */ }
-  res.status(201).json({ ok: true, threadId: id });
+  await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, senderUid: req.user?.uid ?? null, body, createdAt: now });
+  // Messaging switched off for families → email only (the booking's franchise's Setup).
+  const emailOnly = !(await customerAreaOn(tenantId, "messaging", (bkSnap.docs[0].get("franchiseId") as string | null | undefined) ?? null));
+  try { emailNewMessage(email, { providerName: pName, senderName, body, deepLink: `${webUrl}/custdash/messages`, tenantId, emailOnly }); } catch { /* email never blocks */ }
+  res.status(201).json({ ok: true, threadId: id, ...(emailOnly ? { emailOnly: true, note: EMAIL_ONLY_NOTE } : {}) });
 });
 
 // ─── Notification settings ──────────────────────────────────────────────────
@@ -375,7 +438,8 @@ messages.put("/threads/:id/folder", async (req, res) => {
   const folderId = typeof req.body?.folderId === "string" && req.body.folderId ? req.body.folderId : null;
   const tRef = threadsCol.doc(req.params.id);
   const tSnap = await tRef.get();
-  if (!tSnap.exists || tSnap.data()!.tenantId !== tenantId) { res.status(404).json({ error: "Conversation not found" }); return; }
+  const staffUid = plainStaffUid(req);
+  if (!tSnap.exists || tSnap.data()!.tenantId !== tenantId || (staffUid !== null && !joinedAt(tSnap.data()!, staffUid))) { res.status(404).json({ error: "Conversation not found" }); return; }
   if (folderId) {
     const fSnap = await foldersCol.doc(folderId).get();
     if (!fSnap.exists || fSnap.data()!.tenantId !== tenantId) { res.status(400).json({ error: "Unknown folder" }); return; }
@@ -464,7 +528,7 @@ messages.post("/broadcast", async (req, res) => {
   for (const e of parsed.data.excludeEmails) recipients.delete(e.toLowerCase());
   // A franchise can only broadcast to ITS OWN families (booked on its listings) —
   // never company-wide. Head office reaches the whole tenant.
-  if (req.auth!.role === "franchise" && req.auth!.franchiseId) {
+  if ((req.auth!.role === "franchise" || req.auth!.role === "staff") && req.auth!.franchiseId) {
     const fam = await franchiseFamilyEmails(tenantId, req.auth!.franchiseId);
     for (const e of [...recipients.keys()]) if (!fam.has(e)) recipients.delete(e);
   }
@@ -474,6 +538,17 @@ messages.post("/broadcast", async (req, res) => {
   const tName = await tenantName(tenantId);
   // {ListingName} is only unambiguous when exactly one listing was targeted.
   const listingName = parsed.data.listings.length === 1 ? parsed.data.listings[0] : "";
+  // Families whose provider (head office or their franchise) has messaging
+  // switched off get this by email only — they can't open it in the app.
+  const sentAs = senderFranchise(req);
+  const frOf = sentAs === undefined ? await familyFranchiseMap(tenantId) : null;
+  const areaOn = new Map<string, boolean>();
+  const offFor = async (email: string) => {
+    const fr = sentAs ?? frOf?.get(email) ?? null;
+    if (!areaOn.has(fr ?? "")) areaOn.set(fr ?? "", await customerAreaOn(tenantId, "messaging", fr));
+    return areaOn.get(fr ?? "") === false;
+  };
+  let emailOnly = 0;
   await Promise.all([...recipients].map(async ([email, name]) => {
     const id = threadId(tenantId, email);
     const tRef = threadsCol.doc(id);
@@ -492,8 +567,13 @@ messages.post("/broadcast", async (req, res) => {
       // send handler). Existing threads keep whatever visibility they had.
       ...(existing.exists ? {} : { createdAt: now, operatorUnread: 0, parentUnread: 0, operatorHidden: true, ...(parsed.data.subject ? { subject: parsed.data.subject } : {}) }),
       parentUnread: FieldValue.increment(1),
+      ...joinStamp(req, existing, now),
     }, { merge: true });
-    await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, body: rbody, createdAt: now, broadcast: true });
+    await msgsCol.add({ threadId: id, tenantId, parentEmail: email, from: "operator", senderName, senderUid: req.user?.uid ?? null, body: rbody, createdAt: now, broadcast: true });
+    if (await offFor(email)) {
+      emailOnly++;
+      try { emailNewMessage(email, { providerName: tName, senderName, body: rbody, deepLink: webUrl, tenantId, emailOnly: true }); } catch { /* email never blocks */ }
+    }
   }));
   // One record per bulk send — the single row the operator sees instead of N threads.
   await broadcastsCol.add({
@@ -502,10 +582,11 @@ messages.post("/broadcast", async (req, res) => {
     subject: parsed.data.subject ?? "",
     sentAt: now,
     senderName,
+    senderUid: req.user?.uid ?? null,
     recipientCount: recipients.size,
     recipients: [...recipients].slice(0, 500).map(([email, name]) => ({ email, name })),
   });
-  res.json({ ok: true, sent: recipients.size });
+  res.json({ ok: true, sent: recipients.size, ...(emailOnly ? { emailOnly, note: EMAIL_ONLY_NOTE } : {}) });
 });
 
 // GET /api/messages/broadcasts — the operator's bulk sends (one row each).
@@ -513,7 +594,10 @@ messages.get("/broadcasts", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
   const snap = await broadcastsCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { sentAt?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { sentAt?: string; senderUid?: string | null })[];
+  // Plain staff see only their own bulk sends (the recipient lists are families).
+  const staffUid = plainStaffUid(req);
+  if (staffUid !== null) list = list.filter((b) => !!staffUid && b.senderUid === staffUid);
   list.sort((a, b) => (`${b.sentAt ?? ""}` < `${a.sentAt ?? ""}` ? -1 : 1));
   res.json(list);
 });

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { del, get, post, put } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
+import { whoLabel, foldRepeats, REPEAT_WORD, type Person } from "@/features/tasks/taskDisplay";
 
 // ── Sales CRM ───────────────────────────────────────────────────────────────
 // Backed by the platform Sales CRM API (/api/platform/leads — see
@@ -12,9 +13,26 @@ import { useRealtime } from "@/lib/realtime";
 
 type Stage = "new" | "contacted" | "demo" | "trial" | "won" | "lost";
 type Source = "cold_call" | "email" | "social" | "referral" | "event" | "inbound";
+type Kind = "person" | "business" | "group" | "franchise" | "school" | "cluster" | "charity";
+// What sort of prospect this is. `nameLabel` retitles the first field, because
+// "Business" is wrong for a self-employed coach and misleading for a trust.
+const KINDS: Record<Kind, { label: string; nameLabel: string; icon: string }> = {
+  person:    { label: "Person / sole trader", nameLabel: "Their name",        icon: "👤" },
+  business:  { label: "Business",              nameLabel: "Business name",     icon: "🏢" },
+  group:     { label: "Multi-site group",      nameLabel: "Group name",        icon: "🏘️" },
+  franchise: { label: "Franchise network",     nameLabel: "Network name",      icon: "🔗" },
+  school:    { label: "School / academy",      nameLabel: "School name",       icon: "🎓" },
+  cluster:   { label: "Trust or cluster",      nameLabel: "Trust / cluster name", icon: "🏛️" },
+  charity:   { label: "Charity / community",   nameLabel: "Organisation name", icon: "🤝" },
+};
+const KIND_ORDER: Kind[] = ["person", "business", "group", "franchise", "school", "cluster", "charity"];
 interface Activity { id: string; type: "call" | "email" | "social" | "demo" | "note"; note: string; outcome?: string; at: string; by: string }
 interface SalesTask {
   id: string; t: string; due?: string | null; time?: string | null; who?: string;
+  // The assignee's email and the repeat this date belongs to. Both were missing,
+  // so this board printed a raw `who` where the task manager says "Me", and
+  // listed a repeating task once per date.
+  whoEmail?: string; seriesId?: string; seriesFreq?: string;
   prio?: "urgent" | "high" | "med" | "low"; status?: string; archived?: boolean;
   link?: { k: string; v: string; href?: string } | null;
 }
@@ -22,6 +40,7 @@ interface SalesTask {
 interface Lead {
   id: string; business: string; contactName: string; email: string; phone: string; location: string;
   source: Source; owner: string; plan: "freelancer" | "company" | "franchise"; estMrr: number;
+  kind?: Kind;
   stage: Stage; lostReason?: string; notes: string; activities: Activity[]; createdAt: string; updatedAt: string;
 }
 
@@ -88,6 +107,7 @@ function normaliseLead(raw: Lead & Partial<{ name: string; message: string; stat
     plan,
     // estMrr feeds a column total — undefined turns it into NaN on screen.
     estMrr: typeof raw.estMrr === "number" ? raw.estMrr : PLAN_MRR[plan],
+    kind: (raw.kind && KIND_ORDER.includes(raw.kind)) ? raw.kind : "business",
     activities: Array.isArray(raw.activities) ? raw.activities : [],
     createdAt: raw.createdAt || nowIso(),
     updatedAt: raw.updatedAt || raw.createdAt || nowIso(),
@@ -104,6 +124,14 @@ export function SalesApp() {
   // Tasks the HQ board has linked to a lead. They're ordinary tasks — this is
   // the same list, filtered — so ticking one off here or there is the same act.
   const [salesTasks, setSalesTasks] = useState<SalesTask[]>([]);
+  // Who's looking, so an assignee that's you reads "Me" here as it does on the
+  // task manager.
+  const [me, setMe] = useState<Person>({ name: "", email: "" });
+  useEffect(() => {
+    get<{ name?: string; email?: string }>("/api/me")
+      .then((m) => setMe({ name: (m.name ?? "").trim(), email: (m.email ?? "").trim() }))
+      .catch(() => {});
+  }, []);
   const loadTasks = useCallback(() => {
     get<SalesTask[]>("/api/tasks")
       .then((ts) => setSalesTasks(ts.filter((t) => t.link?.k === "sales" && !t.archived)))
@@ -225,13 +253,23 @@ export function SalesApp() {
               <div key={lead}>
                 <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{lead}</div>
                 <ul className="overflow-hidden rounded-xl border border-[var(--line)]">
-                  {[...ts].sort((a, b) => `${a.due ?? "9999"}`.localeCompare(`${b.due ?? "9999"}`)).map((t, i) => {
+                  {/* Sorted by date, THEN folded — so the row a repeat shows is
+                      its next date, with the count of the rest beside it rather
+                      than thirty more rows under it. */}
+                  {foldRepeats([...ts].sort((a, b) => `${a.due ?? "9999"}`.localeCompare(`${b.due ?? "9999"}`))).map(({ lead: t, rest }, i) => {
                     const overdue = !!t.due && t.due < today && t.status !== "done";
+                    const who = whoLabel(t, me);
                     return (
                       <li key={t.id} className={`flex items-center gap-3 px-3 py-2.5 ${i > 0 ? "border-t border-[var(--line)]" : ""}`}>
                         <span className="h-2 w-2 flex-none rounded-full" style={{ background: PRIO_DOT[t.prio ?? "med"] }} />
                         <a href={`/platform/tasks?task=${t.id}`} className={`min-w-0 flex-1 truncate text-[13.5px] font-semibold hover:underline ${t.status === "done" ? "text-[var(--ink-3)] line-through" : ""}`}>{t.t}</a>
-                        {t.who && <span className="hidden shrink-0 text-[11.5px] text-[var(--ink-3)] sm:inline">{t.who}</span>}
+                        {rest.length > 0 && (
+                          <span className="hidden shrink-0 rounded-full bg-[var(--panel)] px-2 py-0.5 text-[11px] font-bold text-[var(--ink-3)] sm:inline"
+                            title={`Repeats ${t.seriesFreq ? REPEAT_WORD[t.seriesFreq] ?? t.seriesFreq : ""} — ${rest.length} more date${rest.length === 1 ? "" : "s"}. Open it to see them all.`}>
+                            🔁 +{rest.length}
+                          </span>
+                        )}
+                        {who && <span className="hidden shrink-0 text-[11.5px] text-[var(--ink-3)] sm:inline">{who}</span>}
                         <span className="shrink-0 rounded-full px-2 py-0.5 text-[11px] font-extrabold"
                           style={overdue ? { background: "#fdeaee", color: "#b3123c" } : { background: "var(--panel)", color: "var(--ink-3)" }}>
                           {t.due ? (overdue ? `Overdue · ${t.due}` : t.due) : "No date"}{t.time ? ` · ${t.time}` : ""}
@@ -269,7 +307,10 @@ function Pipeline({ leads, onOpen, onMove, drag, setDrag }: { leads: Lead[]; onO
               {items.map((l) => (
                 <div key={l.id} draggable onDragStart={() => setDrag(l.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(l)}
                   className="cursor-pointer rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-[0_1px_2px_rgba(16,24,40,.05)] hover:border-[var(--ink-3)]">
-                  <div className="truncate text-[12.5px] font-extrabold">{l.business}</div>
+                  <div className="flex items-center gap-1.5">
+                    <span title={KINDS[l.kind ?? "business"].label}>{KINDS[l.kind ?? "business"].icon}</span>
+                    <div className="truncate text-[12.5px] font-extrabold">{l.business}</div>
+                  </div>
                   <div className="truncate text-[11px] text-[var(--ink-3)]">{l.contactName} · {l.location}</div>
                   <div className="mt-1.5 flex items-center justify-between text-[10.5px]">
                     <span className="text-[var(--ink-3)]">{srcLabel(l.source).split(" ")[0]}{l.owner ? ` · ${l.owner}` : ""}</span>
@@ -434,7 +475,7 @@ function Dashboard({ leads }: { leads: Lead[] }) {
 // ── Lead modal (add / edit / activity) ──────────────────────────────────────
 function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onClose: () => void; onSave: (l: Lead, newActs: NewActivity[]) => void; onDelete?: () => void }) {
   const [f, setF] = useState<Lead>(() => lead ?? {
-    id: "", business: "", contactName: "", email: "", phone: "", location: "", source: "cold_call", owner: "", plan: "company", estMrr: PLAN_MRR.company, stage: "new", notes: "", activities: [], createdAt: nowIso(), updatedAt: nowIso(),
+    id: "", business: "", kind: "business", contactName: "", email: "", phone: "", location: "", source: "cold_call", owner: "", plan: "company", estMrr: PLAN_MRR.company, stage: "new", notes: "", activities: [], createdAt: nowIso(), updatedAt: nowIso(),
   });
   const [act, setAct] = useState<{ type: Activity["type"]; note: string; outcome: string }>({ type: "call", note: "", outcome: "" });
   // Touches logged here are sent on Save (POST …/activities — the server
@@ -460,7 +501,12 @@ function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onC
         </div>
         <div className="p-5">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block sm:col-span-2"><span className={lbl}>Business</span><input className={fld} value={f.business} onChange={(e) => set({ business: e.target.value })} /></label>
+            <label className="block"><span className={lbl}>Type</span>
+              <select className={fld} value={f.kind ?? "business"} onChange={(e) => set({ kind: e.target.value as Kind })}>
+                {KIND_ORDER.map((k) => <option key={k} value={k}>{KINDS[k].icon} {KINDS[k].label}</option>)}
+              </select>
+            </label>
+            <label className="block"><span className={lbl}>{KINDS[f.kind ?? "business"].nameLabel}</span><input className={fld} value={f.business} onChange={(e) => set({ business: e.target.value })} /></label>
             <label className="block"><span className={lbl}>Contact name</span><input className={fld} value={f.contactName} onChange={(e) => set({ contactName: e.target.value })} /></label>
             <label className="block"><span className={lbl}>Location</span><input className={fld} value={f.location} onChange={(e) => set({ location: e.target.value })} /></label>
             <label className="block"><span className={lbl}>Email</span><input className={fld} value={f.email} onChange={(e) => set({ email: e.target.value })} /></label>

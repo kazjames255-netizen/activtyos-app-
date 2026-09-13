@@ -339,7 +339,8 @@ export function MedicationApp() {
   const [notice, setNotice] = useState<string | null>(null);
   const flash = (msg: string) => { setNotice(msg); setTimeout(() => setNotice(null), 4500); };
   // Only leads/managers record doses when the setting is on (staff are blocked).
-  const canRecord = !(med.leadsOnly && role === "staff");
+  const [lead, setLead] = useState(false);
+  const canRecord = !(med.leadsOnly && role === "staff" && !lead);
   const parentMsg = (given: boolean) => {
     const informed = given ? (med.informParentGiven ?? true) : (med.informParentMissed ?? true);
     return `✓ ${given ? "Administration logged" : "Logged as not given"}${informed ? " — parent informed" : ""}`;
@@ -355,7 +356,7 @@ export function MedicationApp() {
     apiGet<{ child?: string; days?: string[]; listing?: string }[]>("/api/bookings").then(setBkgs).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
-  useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => { setRole(me.role); setCanManage(["company", "freelancer", "franchise"].includes(me.role)); }).catch(() => {}); }, []);
+  useEffect(() => { apiGet<{ role: string; lead?: boolean }>("/api/me").then((me) => { setRole(me.role); setLead(me.lead === true); setCanManage(["company", "freelancer", "franchise"].includes(me.role)); }).catch(() => {}); }, []);
   useRealtime(["medications", "medicationAdmin", "bookings"], refresh);
   // The child's live set of booked ISO days — recomputed each render, so a new
   // booking immediately widens what "On every booked day" approves.
@@ -364,6 +365,13 @@ export function MedicationApp() {
   async function setArchived(m: Med, archived: boolean) {
     try { await api(`/api/medications/${encodeURIComponent(m.id)}`, { method: "PUT", body: JSON.stringify({ archived }) }); refresh(); }
     catch (e) { setError(e instanceof Error ? e.message : "Failed"); }
+  }
+  // Only a record entered by mistake can be deleted: once a dose is recorded or
+  // the parent has withdrawn consent it stays, archived (the server enforces it — d12s6).
+  async function removeMed(m: Med) {
+    if (!window.confirm(`Delete ${m.name} for ${m.childName}? Only do this for a record entered by mistake — it has no doses and can't be recovered.`)) return;
+    try { await api(`/api/medications/${encodeURIComponent(m.id)}`, { method: "DELETE" }); refresh(); }
+    catch (e) { setError(e instanceof Error ? e.message : "Delete failed"); }
   }
   // One-tap log for the common case — stamps today + now with the given/not-given
   // outcome. The detailed form ("with time / notes") handles back-dating etc.
@@ -529,7 +537,12 @@ export function MedicationApp() {
                   )}
                   <Button sm onClick={() => setOpenId(openId === m.id ? null : m.id)}>{openId === m.id ? "Hide" : `History (${doses.length})`}</Button>
                   {canManage && (m.archived
-                    ? <Button sm variant="solid" onClick={() => setArchived(m, false)}>Restore</Button>
+                    ? m.consentWithdrawnAt
+                      ? <span className="text-[11px] text-[var(--ink-3)]">Parent withdrew consent — kept on the record; only they can authorise it again.</span>
+                      : <>
+                          <Button sm variant="solid" onClick={() => setArchived(m, false)}>Restore</Button>
+                          {doses.length === 0 && <Button sm variant="danger" onClick={() => removeMed(m)}>Delete</Button>}
+                        </>
                     : <Button sm variant="danger" onClick={() => setArchived(m, true)}>Archive</Button>)}
                 </div>
                 {administering === m.id && <AdministerForm med={m} requireWitness={!!med.requireWitness} booked={bookedDaysFor(m.childName)} onDone={(recorded, g) => { setAdministering(null); if (recorded) flash(parentMsg(g ?? true)); refresh(); }} />}

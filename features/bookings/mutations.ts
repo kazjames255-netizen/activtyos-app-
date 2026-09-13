@@ -4,7 +4,7 @@
 // drift. No React/zustand/Firebase imports allowed here.
 
 import type { Booking } from "./types";
-import { bookingKids, kidActiveDays, nowStr, refundedTotal, sessionDayLabel } from "./helpers";
+import { bookingKids, kidActiveDays, nowStr, refundableSoFar, refundedTotal, sessionDayLabel } from "./helpers";
 
 export type RowAction =
   | "approve"
@@ -36,6 +36,10 @@ export interface CreateBookingInput {
   dates: string;
   amount: number;
   method: string;
+  /** The family's phone (checkout, or their record with the provider). Stored
+   *  as given — never a "—" placeholder: staff ring this number at hand-over,
+   *  and a placeholder hid the real one everywhere it was read (d10s8). */
+  phone?: string;
 }
 
 // Recompute a booking's derived status/pay after per-child/per-day refunds.
@@ -96,8 +100,12 @@ export function applyBulkAction(b: Booking, action: BulkAction): void {
 }
 
 export function applyCancel(b: Booking, refund: RefundType, partialAmount?: number, reason?: string): void {
-  let amt = refund === "full" ? b.amount : 0;
-  if (refund === "partial") amt = partialAmount || 0;
+  // "Full" gives back what was actually paid (incl. wallet credit), and a
+  // partial refund can't exceed it — it used to refund `amount` whatever had
+  // been paid, and take any partial figure typed in.
+  const paid = refundableSoFar(b);
+  let amt = refund === "full" ? paid : 0;
+  if (refund === "partial") amt = Math.min(Math.max(0, partialAmount || 0), paid);
   if (b.past !== true) b.status = "Cancelled";
   b.cancel = {
     on: nowStr(),
@@ -237,7 +245,7 @@ export function buildBooking(input: CreateBookingInput, bid: number): Booking {
     bid: "03073" + bid,
     booker: input.booker,
     email: input.email,
-    phone: "—",
+    phone: input.phone?.trim() ?? "",
     child: input.child || "—",
     age: input.age || 0,
     dob: "—",

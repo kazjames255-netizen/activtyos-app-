@@ -1,15 +1,17 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { librarySnap, loadSettings } from "../lib/tenantLibrary";
 import { checkCode, normaliseCode, reservedEmails, type DiscountCodeDoc } from "../lib/discountCodes";
-import { consumeDiscountCodes, releaseDiscountCodes } from "../lib/discountRedemptions";
+import { redeemCodesInTx, releaseDiscountCodes, type CodeToRedeem } from "../lib/discountRedemptions";
 import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../lib/wallet";
 import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
+import { registerRows } from "../lib/registerRows";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
-import { money } from "../../../features/bookings/helpers";
+import { money, paidSoFar as totalPaid, realPhone, refundableSoFar } from "../../../features/bookings/helpers";
 import type { Booking } from "../../../features/bookings/types";
 import { applyParentCancel, applyPartialCancel, buildBooking } from "../../../features/bookings/mutations";
 import { applyDiscounts, type DiscountRule } from "../../../features/listings/discounts";
@@ -49,7 +51,12 @@ import { upsertFamilyFromBasket } from "../lib/customerUpsert";
 import { voucherWindow } from "../../../lib/vouchers";
 import { DEFAULT_POLICY, policyById, refundFor, type NamedPolicy } from "../../../lib/cancellation";
 import { bookingDocId } from "./bookings";
+import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { grantPlanAccess } from "./childFiles";
+import { ukToday } from "../lib/ukDate";
+import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutoff";
+import { customerAreaOn } from "../lib/customerArea";
+import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
 // Firebase token — the booker email is stamped server-side and every read
@@ -184,6 +191,11 @@ const childSchema = z.object({
   // collect this child. Plain text on purpose — staff read it off the
   // register — so it must never be treated as, or reused as, a credential.
   collectionPassword: z.string().trim().max(60).optional(),
+  /** The child's HMRC Tax-Free Childcare payment reference, saved once their
+   *  account is linked so a returning family never links twice. Not a
+   *  credential — it's the reference the money arrives under, which the
+   *  provider already sees on the booking. */
+  tfcReference: z.string().trim().max(40).optional(),
   /** Who to ring if the parent can't be reached. Either of them can fill it
    *  in — the provider usually takes it on the call. Split, because a
    *  register prints the name and dials the number. */
@@ -220,7 +232,8 @@ const childSchema = z.object({
   // the real file-storage milestone.
   photo: z
     .string()
-    .startsWith("data:image/")
+    // Raster images only — not SVG, which can carry script (acceptance test d26s8).
+    .regex(/^data:image\/(jpeg|png|webp|gif);base64,/, "Photo must be a JPEG, PNG, WebP or GIF")
     .max(150_000)
     .optional(),
 });
@@ -274,6 +287,8 @@ my.get("/meal-days", async (req, res) => {
   const listings = new Map(
     listingSnaps.filter((s) => s.exists).map((s) => [s.id, s.data() as Record<string, unknown>]),
   );
+  // Not from a provider that switched Meals off (Setup → Features / Customer area).
+  for (const [id, l] of [...listings]) if (!(await customerAreaOn(String(l.tenantId), "meals", (l.franchiseId as string | null | undefined) ?? null))) listings.delete(id);
   // Only the menus referenced by a meals-enabled listing's plan.
   const menuIds = [...new Set(
     [...listings.values()]
@@ -366,6 +381,73 @@ my.get("/meal-days", async (req, res) => {
   res.json(out);
 });
 
+/**
+ * Providers this family has linked themselves to.
+ *
+ * Held on the USER, deliberately not written into the provider's `customers`
+ * collection: that list is the provider's own record of their families (and
+ * their marketing base). A parent following a link is not the same act as a
+ * provider adding a customer, and conflating them would silently grow someone's
+ * customer list with people they've never dealt with.
+ */
+// POST /api/my/providers/follow { tenantId } — link this family to a provider
+// they arrived at via that provider's own storefront link, or signed up
+// through. Writes them into the provider's customers: a family who has put
+// their hand up IS a lead the provider should see and be able to market to,
+// even before they book.
+//
+// Marketing opt-in is set TRUE here, on the product owner's instruction —
+// signing up through a provider's own link is treated as opting in to hearing
+// from them. Stamped with a source so the record shows WHERE the opt-in came
+// from, which is what you need if anyone ever asks. The signup form should
+// carry visible consent wording to match; that's on the testing checklist.
+// Idempotent.
+my.post("/providers/follow", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const parsed = z.object({ tenantId: z.string().trim().min(1).max(60) }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const { tenantId } = parsed.data;
+  // Only a real provider, and only one that actually publishes — otherwise any
+  // id could be attached to an account by guessing.
+  const [tenant, listings] = await Promise.all([
+    db.collection("tenants").doc(tenantId).get(),
+    db.collection("listings").where("tenantId", "==", tenantId).limit(20).get(),
+  ]);
+  const publishes = listings.docs.some((d) => {
+    const l = d.data() as { title?: string; name?: string; status?: string; visibility?: string; archived?: boolean };
+    return !!((l.title ?? l.name ?? "").trim()) && (l.status ?? "live") === "live" && (l.visibility ?? "public") === "public" && !l.archived;
+  });
+  if (!tenant.exists || !publishes) { res.status(404).json({ error: "Provider not found" }); return; }
+
+  const lower = email.toLowerCase();
+  const [exact, lc] = await Promise.all([
+    db.collection("customers").where("tenantId", "==", tenantId).where("email", "==", email).limit(1).get(),
+    db.collection("customers").where("tenantId", "==", tenantId).where("email", "==", lower).limit(1).get(),
+  ]);
+  if (!exact.empty || !lc.empty) {
+    // The family chose this provider themselves — that (not a provider typing
+    // their email in) is what lets the provider see an unbooked child's card.
+    await (exact.empty ? lc : exact).docs[0].ref.set({ followedByParent: true, followedAt: new Date().toISOString() }, { merge: true });
+    res.json({ ok: true, tenantId, created: false }); return;
+  }
+
+  const name = (req.user?.name ?? "").trim() || email.split("@")[0];
+  const [firstName, ...rest] = name.split(/\s+/);
+  await db.collection("customers").add({
+    tenantId, name, firstName, lastName: rest.join(" "), email: lower, phone: "",
+    notes: "Signed up through your booking link — no bookings yet.",
+    // The field the app actually reads is marketingOptIn (marketingConsent is
+    // not a thing) — with the same stamp pair customers.ts writes.
+    marketingOptIn: true,
+    marketingOptInAt: new Date().toISOString(),
+    marketingSource: "Signed up through the provider's booking link",
+    followedByParent: true, followedAt: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+  });
+  res.json({ ok: true, tenantId, created: true });
+});
+
 // GET /api/my/providers — the distinct providers the parent has booked with
 // (tenant id + name). Powers the newsfeed header and the "message a provider"
 // picker, so a parent only ever contacts someone they have a booking with.
@@ -382,6 +464,9 @@ my.get("/providers", async (req, res) => {
     db.collection("customers").where("email", "==", email).get(),
     db.collection("customers").where("email", "==", email.toLowerCase()).get(),
   ]);
+  // A family who signs up through a provider's own link is written into that
+  // provider's customers (see POST /providers/follow), so they resolve through
+  // custSnap above — no separate store.
   const ids = [...new Set([
     ...bySnap.docs.map((d) => (d.data() as { tenantId?: string }).tenantId),
     ...custSnap.docs.map((d) => (d.data() as { tenantId?: string }).tenantId),
@@ -430,7 +515,9 @@ my.get("/contact", async (req, res) => {
 my.get("/wallet", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
-  res.json({ balances: await walletsForFamily(email) });
+  const all = await walletsForFamily(email);
+  const on = await Promise.all(all.map((w) => customerAreaOn((w as { tenantId: string }).tenantId, "wallet")));
+  res.json({ balances: all.filter((_, i) => on[i]) });
 });
 
 // GET /api/my/coupons — discount codes a parent can actually use: the PUBLIC
@@ -442,7 +529,7 @@ my.get("/coupons", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
   const el = email.toLowerCase();
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
 
   // Providers the parent has booked with.
   const bk = await bookingsCol.where("email", "==", email).get();
@@ -542,6 +629,8 @@ my.post("/bookings", async (req, res) => {
   let familyEmail = email;
   let familyName = req.user?.name || email.split("@")[0];
   let familyUid: string | null = req.user?.uid ?? null;
+  // The number staff ring at hand-over — stored on the booking (d10s8).
+  let familyPhone = "";
   let accountCreated = false;
   let passwordLink: string | null = null;
   const onBehalf = "onBehalfOf" in input ? input.onBehalfOf : undefined;
@@ -584,6 +673,7 @@ my.post("/bookings", async (req, res) => {
     }
     familyEmail = target.email;
     familyName = target.name || target.email.split("@")[0];
+    familyPhone = target.phone.trim();
   }
 
   const listingSnap = await db.collection("listings").doc(input.listingId).get();
@@ -601,6 +691,7 @@ my.post("/bookings", async (req, res) => {
     status?: string;
     archived?: boolean;
     opensAt?: string;
+    bookingCutoffHours?: string;
     waitlist?: boolean;
     waitlistSize?: string;
     waitlistMode?: "manual" | "auto";
@@ -622,6 +713,14 @@ my.post("/bookings", async (req, res) => {
   // Lifecycle gates — the client-side lock is a courtesy, this is the control.
   if ((listing.status ?? "live") !== "live" || listing.archived) {
     res.status(409).json({ error: "This listing isn't open for booking" });
+    return;
+  }
+  // A provider whose ActivityOS subscription is read-only (payment overdue
+  // past the 14-day grace) or ended takes no NEW online bookings or waitlist
+  // joins (s13-sub3, decided by Kaz 13 Sept). Existing bookings, cancelling
+  // and the family's own records are untouched — only this checkout refuses.
+  if (!(await takesNewBookings(listing.tenantId))) {
+    res.status(409).json({ error: NOT_TAKING_BOOKINGS, code: "provider_not_taking_bookings" });
     return;
   }
   if (onBehalf && listing.tenantId !== req.auth!.tenantId) {
@@ -659,6 +758,7 @@ my.post("/bookings", async (req, res) => {
 
   let resolved: ResolvedPricing | null = null;
   let periodTitle = new Map<string, string>();
+  let periodStart = new Map<string, string>(); // timing id → its "HH:MM" start (for the booking cut-off)
   if (listing.blockId) {
     const bSnap = await db.collection("blockBundles").doc(listing.blockId).get();
     if (bSnap.exists && bSnap.data()!.tenantId === listing.tenantId) {
@@ -675,6 +775,7 @@ my.post("/bookings", async (req, res) => {
       );
       resolved = resolveBundlePricing(bundle, passesById, periodsById);
       periodTitle = new Map([...periodsById.values()].map((p) => [p.id, p.title]));
+      periodStart = new Map([...periodsById.values()].map((p) => [p.id, p.start]));
     }
   }
   // Resolve each item's child against the ACCOUNT's saved profiles (the
@@ -701,7 +802,7 @@ my.post("/bookings", async (req, res) => {
   // status line below). Ids only; a lookup failure must never block a booking.
   let reviewNoQ: string[] = [];
   try {
-    const cq = ((await db.collection("libraries").doc(listing.tenantId).get()).data()?.childQuestions ?? []) as { id: string; reviewIfNo?: boolean; hidden?: boolean }[];
+    const cq = ((await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data()?.childQuestions ?? []) as { id: string; reviewIfNo?: boolean; hidden?: boolean }[];
     reviewNoQ = cq.filter((q) => !q.hidden && q.reviewIfNo).map((q) => q.id);
   } catch { /* skip the hold rather than fail the booking */ }
   // The parent's per-child payment reference (voucher/TFC), keyed by name.
@@ -737,7 +838,7 @@ my.post("/bookings", async (req, res) => {
   let voucher: { name: string; details: { label: string; value: string }[] } | null = null;
   let voucherWin: ReturnType<typeof voucherWindow> | null = null;
   if (needsAddons || wantsVoucher) {
-    const lib = (await db.collection("libraries").doc(listing.tenantId).get()).data() ?? {};
+    const lib = (await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data() ?? {};
     for (const a of ((lib.addons ?? []) as LibAddon[])) libAddons.set(a.id, a);
     if (wantsVoucher) {
       const settings = (lib.settings ?? {}) as Record<string, unknown>;
@@ -784,6 +885,20 @@ my.post("/bookings", async (req, res) => {
     if (!(listing as { mealsEnabled?: boolean }).mealsEnabled) throw new HttpError(400, "This listing isn't offering meals");
     const plan = ((listing as { mealPlan?: Record<string, unknown> }).mealPlan) ?? {};
     const dates = [...new Set(input.items.flatMap((i) => (i.meals ?? []).map((m) => m.date)))];
+    // Cut-offs apply HERE too. The parent Meals page and the standalone order
+    // endpoint both gate on canOrderMeal, but checkout never did — so a family
+    // booking late could still attach a meal to a day whose kitchen deadline had
+    // passed, after the caterer digest for that day had already gone out. The
+    // kitchen never sees it and a child arrives expecting lunch.
+    {
+      const lib = await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId);
+      const tMeals = ((lib.data()?.settings ?? {}) as { meals?: { cutoffWhen?: unknown; cutoffTime?: unknown } }).meals;
+      const cut = resolveCutoff((listing as { mealConfig?: { cutoffWhen?: unknown; cutoffTime?: unknown } }).mealConfig, tMeals);
+      const shut = dates.filter((dt) => !canOrderMeal(cut.when, cut.time, dt));
+      if (shut.length) {
+        throw new HttpError(400, `Meal ordering has closed for ${shut.sort().join(", ")} (${cutoffLabel(cut.when, cut.time)}). Remove those meals, or book without them and order later if the kitchen reopens.`);
+      }
+    }
     const planByDate = new Map(dates.map((dt) => [dt, mealDayPlan(plan[dt])]).filter(([, p]) => !!p) as [string, { menuId: string; itemIds: string[] }][]);
     const menuIds = [...new Set([...planByDate.values()].map((p) => p.menuId))];
     const menuSnaps = menuIds.length ? await db.getAll(...menuIds.map((id) => db.collection("mealMenus").doc(id))) : [];
@@ -800,7 +915,13 @@ my.post("/bookings", async (req, res) => {
   // Price each item (base pass/timing + add-ons) and validate its days.
   // A family can't book a day that's already gone — only an operator recording
   // a past attendance (onBehalf) may back-date.
-  const todayIso = new Date().toISOString().slice(0, 10);
+  const todayIso = ukToday();
+  const cutoffH = cutoffHours(listing.bookingCutoffHours);
+  // date → that day's session start, from the block that owns the date.
+  const sessionStartOf = new Map<string, string>();
+  for (const d of blocksSnap.docs)
+    for (const s of (d.data() as BlockDoc).sessions)
+      if (blockOfDate.get(s.date) === d.id && !sessionStartOf.has(s.date)) sessionStartOf.set(s.date, s.start);
   let priced;
   try {
     priced = input.items.map((item) => {
@@ -828,6 +949,12 @@ my.post("/bookings", async (req, res) => {
       if (!onBehalf) {
         const past = days.find((d) => d < todayIso);
         if (past) throw new HttpError(400, `${prettyDay(past)} has already passed — that date can no longer be booked.`);
+        // The listing's booking cut-off: a session that starts within N hours
+        // is closed to families. The operator adding a place by hand may override.
+        if (cutoffH) {
+          const late = days.find((d) => pastCutoff(cutoffH, d, (periodId && periodStart.get(periodId)) || sessionStartOf.get(d)));
+          if (late) throw new HttpError(400, `Bookings for ${prettyDay(late)} have closed — ${listing.name || "this activity"} stops taking bookings ${bookingCutoffLabel(cutoffH)} before each session. Please pick a later date, or contact the provider.`);
+        }
       }
       const missing = days.find((d) => !blockOfDate.has(d));
       if (missing) throw new HttpError(400, `This activity doesn't run on ${missing}`);
@@ -900,6 +1027,45 @@ my.post("/bookings", async (req, res) => {
     throw e;
   }
 
+  // One child, one place per session (s13-rtE2 / d23s3). The same child twice
+  // in a basket for the same day used to be charged twice and take two seats,
+  // while the register and ratios showed them once. Refuse it — and refuse a
+  // child who already holds a place on that exact day of that block. A
+  // different TIMING on the same day (a morning and an afternoon session) is a
+  // different session, so it's allowed.
+  {
+    const want: { name: string; childId?: string; blockId: string; day: string; timing: string }[] = [];
+    const seen = new Set<string>();
+    for (const p of priced) {
+      const rc = resolveChild(p.item);
+      const ck = rc.childId ?? `name:${rc.name.trim().toLowerCase()}`;
+      const timing = (p.timing ?? "").trim().toLowerCase();
+      for (const seg of p.segments)
+        for (const d of seg.days) {
+          const k = `${ck}|${seg.blockId}|${d}|${timing}`;
+          if (seen.has(k)) { res.status(400).json({ error: `${rc.name || "A child"} is in this basket twice for ${prettyDay(d)} — remove one of them.` }); return; }
+          seen.add(k);
+          want.push({ name: rc.name, childId: rc.childId, blockId: seg.blockId, day: d, timing });
+        }
+    }
+    const famEmail = familyEmail.trim().toLowerCase();
+    const onBlocks = await Promise.all([...new Set(want.map((w) => w.blockId))].map((id) => bookingsCol.where("blockId", "==", id).get()));
+    for (const snap of onBlocks)
+      for (const d of snap.docs) {
+        const b = fromDoc(d.data() as BookingDoc);
+        if (b.tenantId !== listing.tenantId) continue;
+        const sameFamily = (b.email ?? "").trim().toLowerCase() === famEmail;
+        for (const w of want) {
+          if (w.blockId !== b.blockId) continue;
+          const bt = String((d.get("timing") as string | undefined) ?? "").trim().toLowerCase();
+          if (bt && w.timing && bt !== w.timing) continue; // another session that day
+          // By child id when both sides have one; by name only within the same family.
+          const hit = registerRows(b, w.day).some((r) => r.expected && (w.childId && r.childId ? r.childId === w.childId : sameFamily && r.name.trim().toLowerCase() === w.name.trim().toLowerCase()));
+          if (hit) { res.status(409).json({ error: `${w.name || "This child"} already has a place on ${prettyDay(w.day)} (booking ${b.ref}).` }); return; }
+        }
+      }
+  }
+
   // Automatic discounts across the basket, with the shared engine. The
   // engine prices "these pass lines × N attendees", so when every child has
   // the same lines we use it exactly (multi-person rules apply); a mixed
@@ -947,13 +1113,14 @@ my.post("/bookings", async (req, res) => {
   // written (so we can link the booking). Captured here, fired after the tx.
   let referralHit: { referrerEmail: string; code: string; friendDiscount: number } | null = null;
   // Codes are only CONSUMED once the booking actually exists — a basket that
-  // fails capacity must not burn a single-use code. Captured here, written
-  // after the tx with the refs, so a later cancel can hand the code back.
-  let codesToConsume: { codeId: string; code: string }[] = [];
+  // fails capacity must not burn a single-use code. Captured here, then
+  // re-checked and spent INSIDE the booking transaction (redeemCodesInTx), so
+  // simultaneous checkouts can't all squeeze through a one-use code (d7s6).
+  let codesToConsume: CodeToRedeem[] = [];
   const rawCodes = [...(input.discountCode ? [input.discountCode] : []), ...(input.discountCodes ?? [])];
   const wantedCodes = [...new Set(rawCodes.map((c) => normaliseCode(c)).filter(Boolean))];
   if (wantedCodes.length) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = ukToday();
     // Load every requested code.
     const loaded: { doc: FirebaseFirestore.QueryDocumentSnapshot; data: DiscountCodeDoc; code: string }[] = [];
     for (const code of wantedCodes) {
@@ -994,8 +1161,22 @@ my.post("/bookings", async (req, res) => {
     const codeDrift = round2(codeTarget - amounts.reduce((s, a) => round2(s + a), 0));
     if (amounts.length) amounts[amounts.length - 1] = round2(amounts[amounts.length - 1] + codeDrift);
     discountCodes = loaded.map((l) => l.code);
-    codesToConsume = loaded.map((l) => ({ codeId: l.doc.id, code: l.code }));
+    codesToConsume = loaded.map((l) => ({ codeId: l.doc.id, code: l.code, perCustomer: !!l.data.perCustomerLimit }));
   }
+
+  // The family's phone for the booking: what they gave at checkout, else the
+  // number this provider already holds for them, else their own account's.
+  // Every booking used to be stamped "—", which then hid the real number on
+  // the child card, Find-a-child and the register (acceptance d10s8).
+  if (!familyPhone && "phone" in input && input.phone?.trim()) familyPhone = input.phone.trim();
+  if (!familyPhone && familyEmail) {
+    for (const e of [...new Set([familyEmail.toLowerCase(), familyEmail])]) {
+      const cust = await db.collection("customers").where("tenantId", "==", listing.tenantId).where("email", "==", e).limit(1).get();
+      if (!cust.empty) { familyPhone = String(cust.docs[0].get("phone") ?? "").trim(); break; }
+    }
+  }
+  if (!familyPhone && familyUid) familyPhone = String((await db.collection("users").doc(familyUid).get()).get("phone") ?? "").trim();
+  familyPhone = realPhone(familyPhone);
 
   const bookerName = familyName;
   const tenantRef = db.collection("tenants").doc(listing.tenantId);
@@ -1023,6 +1204,11 @@ my.post("/bookings", async (req, res) => {
       ]);
       const walletSnap = useWallet ? await tx.get(walletRef(listing.tenantId, familyEmail)) : null;
       const walletHeld = walletSnap?.exists ? Number(walletSnap.get("balance") ?? 0) : 0;
+      // The codes, re-read under the transaction: the usage cap and the
+      // once-per-family rule hold even when checkouts land at the same moment.
+      // The loser gets a clear refusal and nothing is booked at the discount.
+      const redemption = codesToConsume.length ? await redeemCodesInTx(tx, listing.tenantId, codesToConsume, familyEmail) : null;
+      if (redemption && !redemption.ok) throw new HttpError(409, redemption.reason);
       if (!tenantSnap.exists) throw new HttpError(400, "Listing's provider no longer exists");
       const blockById = new Map<string, BlockDoc>();
       for (const snap of blockSnaps) {
@@ -1176,6 +1362,7 @@ my.post("/bookings", async (req, res) => {
                 dates: block.name,
                 amount: due,
                 method: input.method,
+                phone: familyPhone,
               },
               nextBid + created.length,
             ),
@@ -1297,6 +1484,8 @@ my.post("/bookings", async (req, res) => {
       created.length = 0; created.push(...merged);
 
       if (walletSpends.length) spendWalletInTx(tx, listing.tenantId, familyEmail, walletHeld, walletSpends);
+      // The booking exists (in this same write), so the codes are genuinely spent.
+      if (redemption?.ok) redemption.commit(created.map((b) => b.ref));
       tx.update(tenantRef, { nextBid: nextBid + preMergeCount });
       for (const id of changed) {
         const blk = working.get(id)!;
@@ -1305,14 +1494,6 @@ my.post("/bookings", async (req, res) => {
       for (const b of created) tx.set(bookingsCol.doc(bookingDocId(listing.tenantId, b.ref)), toDoc(b));
       return created;
     });
-
-    // The booking exists, so the codes are genuinely spent.
-    void consumeDiscountCodes(
-      listing.tenantId,
-      codesToConsume,
-      bookings.map((b) => b.ref),
-      familyEmail,
-    );
 
     // Refer-a-friend: now the friend's booking exists, reward the referrer —
     // capped to what the friend paid — and link the booking for the dashboard.
@@ -1420,7 +1601,7 @@ my.post("/bookings", async (req, res) => {
         let location: string | undefined;
         const venueId = (listing as { venueId?: string | null }).venueId;
         if (venueId) {
-          const lib = (await db.collection("libraries").doc(listing.tenantId).get()).data() ?? {};
+          const lib = (await librarySnap(listing.tenantId, (listing as { franchiseId?: string | null }).franchiseId)).data() ?? {};
           const venues = (lib.venues ?? []) as { id: string; name?: string; address?: string }[];
           const v = venues.find((x) => x.id === venueId);
           if (v) location = [v.name, v.address].filter(Boolean).join(", ") || undefined;
@@ -1569,14 +1750,32 @@ const amendSchema = z.object({
   message: z.string().max(500).optional(),
   msg: z.string().max(500).optional(),
 });
+/**
+ * A parent's booking by its number. Every provider numbers bookings from the
+ * same start (APF-10312…), so a family booked with two providers can hold two
+ * bookings with ONE number — and "cancel APF-10312" cancelled whichever came
+ * back first, possibly the other provider's. The screens now say which
+ * provider (?tenantId=); without it, an ambiguous number is refused rather
+ * than guessed.
+ */
+async function myBookingByRef(req: import("express").Request<{ ref?: string }>, email: string, ref: string): Promise<{ snap: FirebaseFirestore.QueryDocumentSnapshot } | { status: number; error: string }> {
+  const tenantId = String((req.query.tenantId as string | undefined) ?? (req.body as { tenantId?: string } | undefined)?.tenantId ?? "").trim();
+  const matches = await bookingsCol.where("email", "==", email).where("ref", "==", ref).get();
+  let docs = matches.docs;
+  if (tenantId) docs = docs.filter((d) => d.get("tenantId") === tenantId);
+  if (!docs.length) return { status: 404, error: "Booking not found" };
+  if (docs.length > 1) return { status: 409, error: "You have more than one booking with this number (with different providers). Open it from My bookings and try again." };
+  return { snap: docs[0] };
+}
+
 my.post("/bookings/:ref/amend", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
   const parsed = amendSchema.safeParse(req.body ?? {});
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const matches = await bookingsCol.where("email", "==", email).where("ref", "==", req.params.ref).limit(1).get();
-  if (matches.empty) { res.status(404).json({ error: "Booking not found" }); return; }
-  const snap = matches.docs[0];
+  const found = await myBookingByRef(req, email, String(req.params.ref));
+  if ("error" in found) { res.status(found.status).json({ error: found.error }); return; }
+  const snap = found.snap;
   const booking = fromDoc(snap.data() as BookingDoc);
 
   const m = parsed.data.moves;
@@ -1675,17 +1874,18 @@ my.post("/bookings/:ref/amend", async (req, res) => {
 my.post("/bookings/:ref/amend/withdraw", async (req, res) => {
   const email = tokenEmail(req);
   if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
-  const matches = await bookingsCol.where("email", "==", email).where("ref", "==", req.params.ref).limit(1).get();
-  if (matches.empty) { res.status(404).json({ error: "Booking not found" }); return; }
-  await matches.docs[0].ref.set({ dateChangeRequest: null }, { merge: true });
-  const after = await matches.docs[0].ref.get();
+  const found = await myBookingByRef(req, email, String(req.params.ref));
+  if ("error" in found) { res.status(found.status).json({ error: found.error }); return; }
+  await found.snap.ref.set({ dateChangeRequest: null }, { merge: true });
+  const after = await found.snap.ref.get();
   res.json(fromDoc(after.data() as BookingDoc));
 });
 
 // ——— Waiting-list offers (§E): a place is held for 2 hours; the family
 // accepts (→ Confirmed, then pays) or declines (→ back to the queue's next).
 
-async function ownOfferedBooking(email: string, ref: string) {
+async function ownOfferedBooking(email: string, ref: string, req?: import("express").Request<{ ref?: string }>) {
+  if (req) { const found = await myBookingByRef(req, email, ref); return "error" in found ? null : found.snap.ref; }
   const matches = await bookingsCol
     .where("email", "==", email)
     .where("ref", "==", ref)
@@ -1700,7 +1900,7 @@ my.post("/bookings/:ref/accept-offer", async (req, res) => {
     res.status(400).json({ error: "Account has no email address" });
     return;
   }
-  const ref = await ownOfferedBooking(email, req.params.ref);
+  const ref = await ownOfferedBooking(email, String(req.params.ref), req);
   if (!ref) {
     res.status(404).json({ error: "Booking not found" });
     return;
@@ -1733,7 +1933,7 @@ my.post("/bookings/:ref/decline-offer", async (req, res) => {
     res.status(400).json({ error: "Account has no email address" });
     return;
   }
-  const ref = await ownOfferedBooking(email, req.params.ref);
+  const ref = await ownOfferedBooking(email, String(req.params.ref), req);
   if (!ref) {
     res.status(404).json({ error: "Booking not found" });
     return;
@@ -1777,6 +1977,7 @@ async function bookingContext(b: Booking): Promise<{
   policy: NamedPolicy | typeof DEFAULT_POLICY;
 }> {
   let tenantId: string | undefined = b.tenantId;
+  let franchiseId: string | null = b.franchiseId ?? null;
   let block: BlockDoc | null = null;
   let policyId: string | undefined;
   if (b.blockId) {
@@ -1787,12 +1988,13 @@ async function bookingContext(b: Booking): Promise<{
       if (lst.exists) {
         policyId = lst.data()?.cancellationPolicyId as string | undefined;
         tenantId = (lst.data()?.tenantId as string | undefined) ?? tenantId;
+        franchiseId = (lst.data()?.franchiseId as string | undefined) ?? franchiseId;
       }
     }
   }
-  const settings = tenantId
-    ? ((await db.collection("libraries").doc(tenantId).get()).data()?.settings as Record<string, unknown>) ?? {}
-    : {};
+  // A franchise's booking runs on the franchise's own Setup — its
+  // cancellation policies decide the refund, not head office's.
+  const settings = tenantId ? await loadSettings(tenantId, franchiseId) : {};
   const policies = (settings.cancellationPolicies ?? []) as NamedPolicy[];
   return { tenantId, block, settings, policy: policyById(policies, policyId) ?? DEFAULT_POLICY };
 }
@@ -1849,7 +2051,7 @@ async function partialCancel(
 
   // Validate every released day BEFORE anything moves: on that child, still
   // standing, and not already gone or in the past.
-  const today = new Date().toISOString().slice(0, 10);
+  const today = ukToday();
   let releasedCount = 0;
   for (const w of wanted) {
     const kid = kids.find((k) => (k.childId ?? k.name) === w.childKey);
@@ -1875,7 +2077,9 @@ async function partialCancel(
   // Pro-rata over every child-day BOOKED (the same denominator the parent's
   // preview uses), against money actually received.
   const bookedChildDays = kids.reduce((n, k) => n + (k.dates ?? []).length, 0) || 1;
-  const paid = existing.amountPaid ?? (existing.pay === "Paid" ? existing.amount : 0);
+  // A joint booking that's been paid stores amountPaid 0, which valued every
+  // released day at £0 — use what was actually paid (incl. wallet credit).
+  const paid = totalPaid(existing);
   const perSlotPaid = round2(paid / bookedChildDays);
 
   // Refund runs each released day through the policy on ITS OWN date, so a day
@@ -1883,10 +2087,11 @@ async function partialCancel(
   // pro-rata value — that's the trade for keeping it in the business.
   const now = new Date().toISOString();
   const releasedDays = wanted.flatMap((w) => w.days);
-  const value =
+  // Never more than is still refundable (earlier releases/refunds taken off).
+  const value = Math.min(refundableSoFar(existing),
     resolution === "wallet"
       ? round2(releasedCount * perSlotPaid)
-      : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, d, perSlotPaid, now, "parent")?.amount ?? 0), 0));
+      : round2(releasedDays.reduce((sum, d) => sum + (refundFor(policy, d, perSlotPaid, now, "parent")?.amount ?? 0), 0)));
 
   const updated = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
@@ -1984,19 +2189,15 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     return;
   }
 
-  // Find the parent's own booking with this ref (email-scoped query, so a
-  // ref from another family is simply never found).
-  const matches = await bookingsCol
-    .where("email", "==", email)
-    .where("ref", "==", req.params.ref)
-    .limit(1)
-    .get();
-  if (matches.empty) {
-    res.status(404).json({ error: "Booking not found" });
+  // The parent's own booking with this number — at the provider the screen
+  // names (see myBookingByRef: numbers repeat across providers).
+  const found = await myBookingByRef(req, email, String(req.params.ref));
+  if ("error" in found) {
+    res.status(found.status).json({ error: found.error });
     return;
   }
-  const ref = matches.docs[0].ref;
-  const existing = fromDoc(matches.docs[0].data() as BookingDoc);
+  const ref = found.snap.ref;
+  const existing = fromDoc(found.snap.data() as BookingDoc);
 
   // ── Partial (per-day) cancellation ──────────────────────────────────────
   // Released days are valued pro-rata over every child-day the family BOOKED,
@@ -2008,6 +2209,10 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     try {
       const out = await partialCancel(ref, existing, email, parsed.data);
       res.json(out);
+      // Meals / trips on the days just released (lib/cancelCleanup.ts).
+      const left = new Set([...(out.days ?? []), ...((out.kids ?? []).flatMap((k) => (k.cancelled ? [] : (k.dates ?? []).filter((d) => !(k.cancelledDays ?? []).includes(d)))))]);
+      const released = [...new Set([...(existing.days ?? []), ...((existing.kids ?? []).flatMap((k) => k.dates ?? []))])].filter((d) => !left.has(d));
+      if (out.tenantId && released.length) void cleanupAfterCancel(out.tenantId, out, released);
     } catch (e) {
       if (e instanceof HttpError) res.status(e.status).json({ error: e.message });
       else throw e;
@@ -2018,13 +2223,17 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
   // §O — the refund is worked out by the SERVER from the listing's policy, not
   // in the browser (it's money; the client isn't trusted for it). Same pure
   // rules the operator's cancel panel shows. Reference reads, done up front.
-  const paid = existing.pay === "Paid" ? existing.amount : 0;
+  // What they handed over — card/cash, a part payment, wallet credit — minus
+  // anything already refunded (features/bookings/helpers refundableSoFar).
+  // Was: `amount` only when "Paid", with earlier refunds never taken off.
+  const paid = refundableSoFar(existing);
   const firstSession = (existing.days ?? []).slice().sort()[0];
   let policyAmount: number | null = null;
   let policyReason: string | undefined;
   try {
     let policyId: string | undefined;
     let tenantId: string | undefined = existing.tenantId;
+    let franchiseId: string | null = existing.franchiseId ?? null;
     if (existing.blockId) {
       const blk = await db.collection("blocks").doc(existing.blockId).get();
       const lid = blk.data()?.listingId as string | undefined;
@@ -2032,11 +2241,11 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
         const lst = await db.collection("listings").doc(lid).get();
         policyId = lst.data()?.cancellationPolicyId as string | undefined;
         tenantId = (lst.data()?.tenantId as string | undefined) ?? tenantId;
+        franchiseId = (lst.data()?.franchiseId as string | undefined) ?? franchiseId;
       }
     }
-    const settings = tenantId
-      ? ((await db.collection("libraries").doc(tenantId).get()).data()?.settings as Record<string, unknown> | undefined)
-      : undefined;
+    // The franchise's own cancellation policies, for a franchise's booking.
+    const settings = tenantId ? await loadSettings(tenantId, franchiseId) : undefined;
     const policies = (settings?.cancellationPolicies ?? []) as NamedPolicy[];
     const policy = policyById(policies, policyId) ?? DEFAULT_POLICY;
     const advice = refundFor(policy, firstSession, paid, new Date().toISOString(), "parent");
@@ -2087,6 +2296,8 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
     if (updated.blockId) void triggerWaitlist(updated.blockId);
     // …and frees the discount code it was booked with.
     if (updated.tenantId) void releaseDiscountCodes(updated.tenantId, updated.ref);
+    // …and the meals / trip places that hung off it (lib/cancelCleanup.ts).
+    if (updated.tenantId) void cleanupAfterCancel(updated.tenantId, updated);
     // Tell the provider a cancellation came in and a refund is waiting on their
     // decision — bell + email, deep-linked straight to the booking so they can
     // approve or decline it. (The partial-day path already did this; the whole
@@ -2099,10 +2310,12 @@ my.post("/bookings/:ref/cancel", async (req, res) => {
       // back to card, or (voucher/TFC) reimbursed via the scheme — so the
       // operator knows what they're approving without opening the booking.
       const vScheme = updated.voucherScheme;
-      const isVoucher = !!vScheme || (updated.method ?? "").toLowerCase().includes("voucher");
+      // TFC / HAF / childcare methods too (same rule as isChildcare above) — a
+      // TFC booking with no voucherScheme read "back to their CARD" (d9s4).
+      const isVoucher = !!vScheme || /voucher|tax-?free|tfc|childcare|haf/i.test(updated.method ?? "");
       const destTxt = updated.cancel?.refundTo === "wallet"
         ? "to their WALLET (store credit)"
-        : isVoucher ? `via ${vScheme ?? "their voucher scheme"} (not a bank card)` : "back to their CARD";
+        : isVoucher ? `via ${vScheme ?? (/tax-?free|tfc/i.test(updated.method ?? "") ? "Tax-Free Childcare" : "their voucher scheme")} (not a bank card)` : "back to their CARD";
       const refundTxt = updated.cancel?.refund === "none" || amt <= 0
         ? "No refund is due under your cancellation policy."
         : `${money(amt)} refund requested ${destTxt} — approve or decline.`;
@@ -2175,6 +2388,9 @@ my.get("/trips", async (req, res) => {
       });
     }
   }
+  // A provider that has switched Trips off for families shows none (d7s7).
+  const tripsOn = new Map(await Promise.all([...tenantIds].map(async (id) => [id, await customerAreaOn(id, "trips")] as const)));
+  for (let i = rows.length - 1; i >= 0; i--) if (rows[i].tenantId && tripsOn.get(String(rows[i].tenantId)) === false) rows.splice(i, 1);
   const tenants = tenantIds.size ? await db.getAll(...[...tenantIds].map((id) => db.collection("tenants").doc(id))) : [];
   const providerName = new Map(tenants.filter((t) => t.exists).map((t) => [t.id, (t.data()!.name as string) ?? "Your provider"]));
   rows.forEach((r) => { r.provider = providerName.get(String(r.tenantId)) ?? "Your provider"; delete r.tenantId; });
@@ -2200,6 +2416,12 @@ my.post("/trips/:id/consent", async (req, res) => {
   }
   const by = req.user?.email ?? "parent";
   const ref = tripsCol.doc(req.params.id);
+  // Not once the provider has switched Trips off (their planner is off too).
+  const pre = await ref.get();
+  if (pre.exists && !(await customerAreaOn(String(pre.get("tenantId")), "trips", (pre.get("franchiseId") as string | null | undefined) ?? null))) {
+    res.status(403).json({ error: "Trips aren't available from this provider at the moment — please contact them directly about this trip.", code: "area_off" });
+    return;
+  }
   const result = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     if (!snap.exists) return null;
@@ -2210,6 +2432,9 @@ my.post("/trips/:id/consent", async (req, res) => {
     mine.consent = parsed.data.decision;
     mine.consentAt = new Date().toISOString();
     mine.consentBy = by;
+    // Marks the decision as the parent's own, so the provider can't overwrite
+    // it from the trip planner (routes/trips.ts).
+    (mine as { consentSource?: string }).consentSource = "parent";
     const allAnswered = attendees.every((a) => (a.consent ?? "pending") !== "pending");
     const allGranted = attendees.every((a) => a.consent === "granted");
     tx.set(ref, { attendees, consentObtained: allGranted, updatedAt: mine.consentAt }, { merge: true });
@@ -2233,7 +2458,8 @@ my.post("/trips/:id/consent", async (req, res) => {
 
 my.get("/children", async (req, res) => {
   const snap = await childrenCol.where("parentUid", "==", req.user!.uid).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as { name: string }) }));
+  // Removed children are archived (see DELETE) — kept for their records, not listed.
+  const list = snap.docs.filter((d) => d.get("archived") !== true).map((d) => ({ id: d.id, ...(d.data() as { name: string }) }));
   list.sort((a, b) => (a.name < b.name ? -1 : 1));
   res.json(list);
 });
@@ -2262,19 +2488,104 @@ my.put("/children/:id", async (req, res) => {
     return;
   }
   const age = parsed.data.age ?? ageFromDob(parsed.data.dob);
-  const doc = { ...parsed.data, ...(age !== undefined ? { age } : {}), parentUid: req.user!.uid };
+  const before = snap.data()!;
+  // Overlay, don't replace. A plain .set() wiped every field this form doesn't
+  // send (the provider's SEND plan link, anything added by another screen) —
+  // and because the schema defaults photoConsent to false, any caller that
+  // left it out silently WITHDREW photo consent. Omitted = unchanged.
+  const doc = {
+    ...before,
+    ...parsed.data,
+    ...(!("photoConsent" in (req.body ?? {})) ? { photoConsent: before.photoConsent ?? false } : {}),
+    ...(age !== undefined ? { age } : {}),
+    parentUid: req.user!.uid,
+  };
+  // A field sent blank is the parent clearing it — remove it, don't keep "".
+  const d = doc as Record<string, unknown>;
+  for (const [k, v] of Object.entries(parsed.data)) if (v === "") delete d[k];
+  if (parsed.data.dob === "" && parsed.data.age === undefined) delete d.age;
   await snap.ref.set(doc);
   res.json({ id: snap.id, ...doc });
+
+  // A rename has to reach the bookings: registers, meals and trips read the
+  // child's name off the booking (b21), so the old name kept showing — and
+  // anything matched by name stopped matching.
+  const oldName = String(before.name ?? "").trim();
+  const newName = String(parsed.data.name ?? "").trim();
+  if (newName && oldName !== newName) {
+    void (async () => {
+      // childId finds single-child bookings; a sibling on a joint booking only
+      // appears inside kids[], so also sweep this parent's own bookings.
+      const email = (req.user?.email ?? "").trim();
+      const [bs, ...mine] = await Promise.all([
+        db.collection("bookings").where("childId", "==", snap.id).get(),
+        ...[...new Set([email, email.toLowerCase()].filter(Boolean))].map((e) => db.collection("bookings").where("email", "==", e).get()),
+      ]);
+      const docs = new Map([...bs.docs, ...mine.flatMap((m) => m.docs)].map((d) => [d.id, d]));
+      for (const d of docs.values()) {
+        const b = d.data() as { child?: string; childId?: string; kids?: { name?: string; childId?: string }[] };
+        if (b.childId !== snap.id && !b.kids?.some((k) => k.childId === snap.id)) continue;
+        const kids = b.kids?.map((k) => (k.childId === snap.id ? { ...k, name: newName } : k));
+        const child = kids?.length ? kids.map((k) => k.name).join(", ") : b.child?.trim() === oldName ? newName : b.child;
+        await d.ref.set({ ...(kids ? { kids } : {}), child }, { merge: true });
+      }
+      // …and to everything else that carries the child's name for display or
+      // matching: meal orders (the kitchen matched meals to the register BY
+      // NAME — a renamed child's meals looked like a stranger's, d14s8),
+      // medications and incident records.
+      const renameIn = async (col: string, field: string) => {
+        const q = await db.collection(col).where("childId", "==", snap.id).get();
+        await Promise.all(q.docs.filter((x) => String(x.get(field) ?? "").trim() === oldName).map((x) => x.ref.set({ [field]: newName }, { merge: true })));
+      };
+      await Promise.all([renameIn("mealOrders", "childName"), renameIn("medications", "childName"), renameIn("incidents", "childName")]);
+      // Meal orders placed without a childId (older ones) — this family's, by the old name.
+      const em = (req.user?.email ?? "").trim().toLowerCase();
+      if (em) {
+        const mo = await db.collection("mealOrders").where("parentEmail", "==", em).get();
+        await Promise.all(mo.docs.filter((x) => !x.get("childId") && String(x.get("childName") ?? "").trim() === oldName).map((x) => x.ref.set({ childName: newName, childId: snap.id }, { merge: true })));
+      }
+    })().catch((e) => console.error("[children] rename → bookings:", (e as Error).message));
+  }
 });
 
+// Removing a child is an ARCHIVE, not a delete. A hard delete left every
+// booking, medication (and its dose record), accident and safeguarding record
+// pointing at nothing: the register lost the child's allergies and collection
+// password, and the parent lost sight of the child's own history. And a child
+// still booked in can't be removed at all — cancel the bookings first.
 my.delete("/children/:id", async (req, res) => {
   const snap = await childrenCol.doc(req.params.id).get();
   if (!snap.exists || snap.data()!.parentUid !== req.user!.uid) {
     res.status(404).json({ error: "Child not found" });
     return;
   }
-  await snap.ref.delete();
-  res.json({ ok: true });
+  const today = ukToday();
+  const email = (req.user?.email ?? "").trim();
+  const [byId, ...byEmail] = await Promise.all([
+    db.collection("bookings").where("childId", "==", snap.id).get(),
+    ...[...new Set([email, email.toLowerCase()].filter(Boolean))].map((e) => db.collection("bookings").where("email", "==", e).get()),
+  ]);
+  const theirs = [...byId.docs, ...byEmail.flatMap((q) => q.docs)]
+    .map((d) => d.data() as { childId?: string; kids?: { childId?: string; cancelled?: boolean }[]; status?: string; days?: string[]; ref?: string; blockId?: string })
+    .filter((b) => b.childId === snap.id || b.kids?.some((k) => k.childId === snap.id && !k.cancelled))
+    .filter((b) => !["Cancelled", "Declined"].includes(b.status ?? ""));
+  // A whole-block booking has no days[] — it runs until the block ends. It was
+  // read as "live forever", so a child who did one course last year could
+  // never be removed.
+  const blockIds = [...new Set(theirs.filter((b) => !(b.days ?? []).length && b.blockId).map((b) => b.blockId!))];
+  const blockEnd = new Map((await Promise.all(blockIds.map((id) => db.collection("blocks").doc(id).get())))
+    .map((d) => [d.id, (d.get("endDate") as string | undefined) ?? null]));
+  const live = theirs.filter((b) => (b.days ?? []).length
+    ? b.days!.some((d) => d >= today)
+    : !b.blockId || !blockEnd.get(b.blockId) || blockEnd.get(b.blockId)! >= today);
+  if (live.length) {
+    // The same booking can match both queries (by childId and by email) — name each once.
+    const refs = [...new Set(live.map((b) => b.ref).filter(Boolean))];
+    res.status(409).json({ error: `${snap.get("name") ?? "This child"} is still booked in${refs.length ? ` (${refs.slice(0, 3).join(", ")}${refs.length > 3 ? ` and ${refs.length - 3} more` : ""})` : ""}. Cancel ${(refs.length || live.length) === 1 ? "that booking" : "those bookings"} first.` });
+    return;
+  }
+  await snap.ref.set({ archived: true, archivedAt: new Date().toISOString() }, { merge: true });
+  res.json({ ok: true, archived: true });
 });
 
 class HttpError extends Error {

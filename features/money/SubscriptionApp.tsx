@@ -35,6 +35,11 @@ interface Current {
   plan: string; status: string; band?: string | null; cadence?: string;
   since: string | null; trialEndsAt?: string | null; currentPeriodEnd?: string | null; cancelAt?: string | null;
   price?: number; staffLimit?: number | null; locationLimit?: number | null; staffUsed?: number | null;
+  /** Staff invites sent but not accepted — they count toward the limit. */
+  staffPending?: number;
+  /** The grace model (server/src/middleware/subscription.ts). */
+  access?: { mode: "full" | "grace" | "readonly" | "locked"; graceEndsAt: string | null };
+  pastDueSince?: string | null;
   cardLast4?: string | null; cardBrand?: string | null;
   details: Plan;
 }
@@ -349,7 +354,9 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
           <div className="flex flex-wrap items-center gap-2.5">
             <span className="text-[16px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{c.details?.name}{c.band ? ` · ${c.band}` : ""}</span>
             <span className="rounded-full px-2.5 py-0.5 text-[11px] font-bold" style={{ background: sm.bg, color: sm.fg }}>{statusLabel[c.status] ?? statusLabel.none}</span>
-            <span className="ml-auto text-[13px] font-bold">{onFranchise && fb ? `${gbp(fb.total)}/${c.cadence === "year" ? "yr" : "mo"}` : c.price != null ? `${gbp(c.price)}/${c.cadence === "year" ? "yr" : "mo"}` : ""}</span>
+            <span className="ml-auto text-[13px] font-bold">{/* The stored price is MONTHLY; annual is billed at ×10 (lib/billing.ts).
+                Showing the monthly figure with "/yr" understated the charge. */}
+              {onFranchise && fb ? `${gbp(c.cadence === "year" ? fb.total * 10 : fb.total)}/${c.cadence === "year" ? "yr" : "mo"}` : c.price != null ? `${gbp(c.cadence === "year" ? c.price * 10 : c.price)}/${c.cadence === "year" ? "yr" : "mo"}` : ""}</span>
           </div>
           {c.cardLast4 && (
             <div className="mt-1 flex flex-wrap items-center gap-2 text-[11.5px] text-[var(--ink-3)]">
@@ -377,11 +384,24 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
             {c.status === "active" && c.currentPeriodEnd && <>{t("money.subRenewsOn", { date: fmtDay(c.currentPeriodEnd) })}</>}
             {c.status === "canceling" && c.cancelAt && <>{t("money.subCancelsOn", { date: fmtDay(c.cancelAt) })}</>}
           </div>
+          {/* Payment failed: 14 days' full access, then read-only (safety
+              records keep working) — see server/src/middleware/subscription.ts. */}
+          {c.status === "past_due" && (
+            <div className="mt-2.5 rounded-xl border border-[#f3c4c9] bg-[#fdebec] px-3.5 py-2.5 text-[12.5px] font-semibold leading-snug text-[#c02636]">
+              {c.access?.mode === "readonly"
+                ? t("money.subPastDueReadOnly", { date: fmtDay(c.pastDueSince) })
+                : t("money.subPastDueGrace", { date: fmtDay(c.access?.graceEndsAt) })}
+              {data.billingConfigured && (
+                <button type="button" className="ml-2 font-extrabold underline" onClick={() => setUpdatingCard(true)}>{t("money.subUpdateCard")}</button>
+              )}
+            </div>
+          )}
 
           {c.staffLimit != null && (
             <div className="mt-3">
               <div className="flex items-center justify-between text-[11.5px] font-bold text-[var(--ink-3)]"><span>{t("money.subStaff")}</span><span>{staffUsed ?? "—"} / {c.staffLimit}</span></div>
               <div className="mt-1 h-2 overflow-hidden rounded-full bg-[var(--panel)]"><div className="h-full rounded-full" style={{ width: `${Math.min(100, staffUsed != null ? (staffUsed / c.staffLimit) * 100 : 0)}%`, background: overStaff ? "#c02636" : "#1d3a8f" }} /></div>
+              {!!c.staffPending && <div className="mt-1 text-[11.5px] text-[var(--ink-3)]">{t("money.subStaffPending", { n: c.staffPending })}</div>}
               {overStaff && <div className="mt-1 text-[11.5px] font-bold text-[#c02636]">{t("money.subStaffLimitHit")}</div>}
             </div>
           )}
@@ -485,7 +505,7 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
               <button type="button" className="text-[12px] font-bold text-[var(--ink-3)]" onClick={() => setPayFor(null)}>✕ {t("money.close")}</button>
             </div>
             <p className="mb-3 mt-1 text-[12px] text-[var(--ink-3)]">
-              {c.status === "none" ? t("money.subFreeThenPrice", { n: data.trialDays ?? 7, price: gbp(monthlyPrice(payFor)) }) : t("money.subYoullBeCharged", { price: gbp(monthlyPrice(payFor)), unit: annual ? t("money.subUnitAnnualBilling") : t("money.subMo") })}
+              {c.status === "none" ? t("money.subFreeThenPrice", { n: data.trialDays ?? 7, price: gbp(monthlyPrice(payFor)) }) : t("money.subYoullBeCharged", { price: gbp(annual ? monthlyPrice(payFor) * 10 : monthlyPrice(payFor)), unit: annual ? t("money.subUnitAnnualBilling") : t("money.subMo") })}
             </p>
             <CardCapture
               plan={payFor.id}

@@ -15,6 +15,9 @@ import { db } from "../firebase";
  * cheaper than a query per keystroke; if it ever outgrows that, this is the one
  * place to swap in a search index.
  */
+/** The outward half of a UK postcode ("MK14" of "MK14 6BN" / "MK146BN"). */
+const outward = (pc: string) => { const c = pc.replace(/\s+/g, "").toUpperCase(); return c.length > 3 ? c.slice(0, -3) : c; };
+
 export const providersPublic = Router();
 
 type Provider = { id: string; name: string; town?: string; postcode?: string };
@@ -133,22 +136,31 @@ providersPublic.get("/", async (req, res) => {
   try {
     const rows = await directory();
     const squashed = q.replace(/\s/g, "");
+    // Postcodes match on the OUTWARD code only — the only part ever shown. On
+    // the full code, "MK14 6BN" vs "MK14 6BX" answered yes/no, so a provider's
+    // hidden home postcode could be confirmed by guessing (acceptance d5s4). A
+    // full postcode typed in is cut to its outward half, so it finds everyone
+    // in that district and says nothing about the inward half.
+    const fullPc = squashed.match(/^([a-z]{1,2}\d[a-z\d]?)(\d[a-z]{2})$/);
     const scored = rows
       .map((r) => {
         const terms = r.terms.map(norm);
-        const pc = (r.postcode ?? "").toLowerCase().replace(/\s/g, "");
+        const pc = r.postcode ? outward(r.postcode).toLowerCase() : "";
         // Rank a name that STARTS with what they typed above one that merely
         // contains it — "Kick Off" should beat "Sidekick Offside" for "kick".
         if (terms.some((t) => t.startsWith(q))) return { r, score: 0 };
         if (terms.some((t) => t.includes(q))) return { r, score: 1 };
-        if (pc && pc.startsWith(squashed)) return { r, score: 2 };
+        if (pc && (fullPc ? pc === fullPc[1] : pc.startsWith(squashed))) return { r, score: 2 };
         if (norm(r.town ?? "").startsWith(q)) return { r, score: 3 };
         return null;
       })
       .filter((x): x is { r: Row; score: number } => x !== null)
       .sort((a, b) => a.score - b.score || a.r.name.localeCompare(b.r.name))
       .slice(0, MAX_RESULTS)
-      .map(({ r }): Provider => ({ id: r.id, name: r.name, town: r.town, postcode: r.postcode }));
+      // Outward code only ("MK14", not "MK14 6BN"): for a sole trader the
+      // business postcode is often their home. Enough to tell two same-named
+      // providers apart; matching above uses the same outward code.
+      .map(({ r }): Provider => ({ id: r.id, name: r.name, town: r.town, postcode: r.postcode ? outward(r.postcode) : r.postcode }));
 
     res.json(scored);
   } catch (err) {

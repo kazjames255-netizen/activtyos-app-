@@ -757,7 +757,7 @@ export function RatiosApp() {
       })
       .catch(() => {});
   }, []);
-  useRealtime(["ratioGroups", "bookings", "blocks", "library"], refresh);
+  useRealtime(["ratioGroups", "bookings", "blocks", "library", "registers"], refresh); // sign-ins change who is here
 
   // Add/remove staff writes to the tenant library's `staff` list — the same
   // one the listing builder's Step 9 edits — so a coach added here shows up

@@ -124,7 +124,7 @@ function PostForm({ activities, settings, save, listings, initialChild, onPosted
     setBusy(true); setError(null);
     try {
       let url: string | undefined;
-      if (preview) url = (await apiPost<{ url: string }>("/api/uploads", { dataUrl: preview })).url;
+      if (preview) url = (await apiPost<{ url: string }>("/api/uploads", { dataUrl: preview, purpose: "private" })).url;
       await apiPost("/api/moments", { photoUrl: url, caption: caption.trim() || undefined, activity, photoType, date, listingId: listingId || undefined, childIds: ids });
       onPosted();
     } catch (e) { setError(e instanceof Error ? e.message : "Couldn’t post"); setBusy(false); }

@@ -14,9 +14,19 @@ import { bookings } from "./routes/bookings";
 import { customers } from "./routes/customers";
 import { events } from "./routes/events";
 import { invitePreview, invites } from "./routes/invites";
+import { referencePublic, references } from "./routes/references";
 import { library, libraryPublic } from "./routes/library";
 import { listings } from "./routes/listings";
 import { my } from "./routes/my";
+import { rateLimit } from "./lib/rateLimit";
+import { staffAnnouncements } from "./routes/staffAnnouncements";
+import { learning } from "./routes/learning";
+import { leave } from "./routes/leave";
+import { rota } from "./routes/rota";
+import { timeclock } from "./routes/timeclock";
+import { payroll } from "./routes/payroll";
+import { onboarding } from "./routes/onboarding";
+import { credentials } from "./routes/credentials";
 import { images, uploads } from "./routes/uploads";
 import { invoices, invoicePublic } from "./routes/invoices";
 import { income } from "./routes/income";
@@ -30,7 +40,7 @@ import { feedback } from "./routes/feedback";
 import { referral, referralsAdmin } from "./routes/referral";
 import { memberships, membershipsAdmin } from "./routes/memberships";
 import { platform } from "./routes/platform";
-import { leads, leadsPublic } from "./routes/leads";
+import { leads, leadsPublic, warmLeads } from "./routes/leads";
 import { providersPublic } from "./routes/providers";
 import { analytics } from "./routes/analytics";
 import { reconciliation } from "./routes/reconciliation";
@@ -48,6 +58,9 @@ import { mealMenus } from "./routes/mealMenus";
 import { documents } from "./routes/documents";
 import { compliance } from "./routes/compliance";
 import { expenses } from "./routes/expenses";
+import { expenseClaims } from "./routes/expenseClaims";
+import { appraisals } from "./routes/appraisals";
+import { locationStaff } from "./routes/locationStaff";
 import { purchasing } from "./routes/purchasing";
 import { subscription } from "./routes/subscription";
 import { wallet } from "./routes/wallet";
@@ -73,10 +86,15 @@ import { me, tenants } from "./routes/tenants";
 import { ai } from "./routes/ai";
 import { stripeWebhook } from "./routes/stripeWebhook";
 import { enforceSubscription } from "./middleware/subscription";
+import { enforceAccess } from "./middleware/access";
 import { platformLeads } from "./routes/platformLeads";
 import { platformSupport, supportReport } from "./routes/platformSupport";
 
 const app = express();
+// Behind the host's proxy (Railway/Vercel: one hop) req.ip must be the real
+// client, not the proxy — the public rate limits key on it. Override with
+// TRUST_PROXY (a hop count, or "false").
+app.set("trust proxy", process.env.TRUST_PROXY ? (process.env.TRUST_PROXY === "false" ? false : Number(process.env.TRUST_PROXY)) : process.env.NODE_ENV === "production" ? 1 : false);
 
 app.use(
   cors({
@@ -110,54 +128,75 @@ app.get("/health", (_req, res) => res.json({ ok: true }));
 // Interactive API docs (no auth) — spec lives in server/openapi.yaml.
 const here = path.dirname(fileURLToPath(import.meta.url));
 const openapi = parseYaml(fs.readFileSync(path.resolve(here, "../openapi.yaml"), "utf8"));
-app.get("/openapi.json", (_req, res) => res.json(openapi));
-app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi));
+// Not in production: the whole API surface, readable by anyone, is a map for an
+// attacker and no use to a customer. Set PUBLIC_API_DOCS=1 to serve it anyway.
+if (process.env.NODE_ENV !== "production" || process.env.PUBLIC_API_DOCS === "1") {
+  app.get("/openapi.json", (_req, res) => res.json(openapi));
+  app.use("/docs", swaggerUi.serve, swaggerUi.setup(openapi));
+}
 
 // Public invite preview (GET /api/invites/:token) — the token is the
 // secret; a prospective franchise/staff member sees it before signing up.
-app.use("/api/invites", invitePreview);
+app.use("/api/invites", rateLimit("invite-preview", 30), invitePreview);
 
 // Realtime stream — authenticates via ?token= itself (EventSource can't set
-// headers), so it mounts before the header-based auth middleware.
-app.use("/api/events", events);
+// headers), so it mounts before the header-based auth middleware. The limit
+// only bounds reconnect storms / token guessing (the client retries every 3s).
+app.use("/api/events", rateLimit("events", 120), events);
 
 // Images are public (<img> tags can't send Authorization; ids are the
 // secret). Uploading them requires an operator account — see routes/uploads.
-app.use("/api/images", images);
+// Generous: a storefront or gallery pulls many at once.
+app.use("/api/images", rateLimit("images", 600), images);
 // Email open-tracking pixel — fetched by mail clients, so it can't carry auth.
-app.use("/api/emails/open", emailsOpen);
-app.use("/api/emails/unsubscribe", emailsUnsub);
+// Very generous: Gmail/Apple proxies fetch for many recipients from few IPs.
+app.use("/api/emails/open", rateLimit("email-open", 1000), emailsOpen);
+app.use("/api/emails/unsubscribe", rateLimit("unsubscribe", 30), emailsUnsub);
 // Inbound email webhook — called by a mail platform with a shared secret.
-app.use("/api/emails/inbound", emailsInbound);
+app.use("/api/emails/inbound", rateLimit("email-inbound", 300), emailsInbound);
 
   // Map tiles are public (proxied so the OS key stays server-side; <img>/map
-  // tags can't send auth). See routes/geo.ts.
-  app.use("/api/geo/tiles", tiles);
+  // tags can't send auth). See routes/geo.ts. Each tile spends OS-key quota;
+  // a map view loads dozens, so the limit is only against scraping.
+  app.use("/api/geo/tiles", rateLimit("geo-tiles", 1200), tiles);
 
 // Listings are the public storefront: browsing and the /book/{id} page work
 // signed-out (anonymous = parent-shaped permissions — live+public feed,
 // hidden by direct link, drafts 404). A token still changes what you see
 // (?mine=1, own drafts) and writes still require an operator.
-app.use("/api/listings", optionalAuth, attachRoleOptional, listings);
+// Signed-out callers are rate-limited (scraping the storefront); a signed-in
+// operator saving a listing isn't — a bad token is a 401 anyway.
+const anonOnly = (limit: express.RequestHandler): express.RequestHandler => (req, res, next) => (req.headers.authorization ? next() : limit(req, res, next));
+app.use("/api/listings", anonOnly(rateLimit("listings-public", 300)), optionalAuth, attachRoleOptional, enforceAccess, listings);
 
 // Parent-facing settings for the signed-out booking page (see library.ts).
-app.use("/api/public/library", optionalAuth, libraryPublic);
+app.use("/api/public/library", anonOnly(rateLimit("library-public", 300)), optionalAuth, libraryPublic);
 
 // Public invoice pay page — found by unguessable payToken, no account needed.
-app.use("/api/public/invoice", invoicePublic);
+app.use("/api/public/invoice", rateLimit("public-invoice", 60), invoicePublic);
+
+// Employment-reference form — the referee is an outsider with no account, so
+// the whole exchange rides on the unguessable token. See routes/references.ts.
+app.use("/api/public/reference", rateLimit("public-reference", 30), referencePublic);
 
 // Marketing "Book a demo" lead capture — POST is public (the /demo form).
-app.use("/api/leads", leadsPublic);
+// The limit is for the public "Book a demo" POST — not HQ reading its own list.
+const leadsLimit = rateLimit("leads", 10);
+app.use("/api/leads", (req, res, next) => (req.method === "POST" ? leadsLimit(req, res, next) : next()), leadsPublic);
 
 // Provider directory for the parent sign-up picker — a parent has no account
 // yet, so this must sit above requireAuth. Name + rough location only.
-app.use("/api/providers", providersPublic);
+app.use("/api/providers", rateLimit("providers", 120), providersPublic);
 
 app.use("/api", requireAuth, attachRole);
 // The subscription wall: a lapsed owner tenant (canceled / past_due / past
 // its cancel date) gets 402 on everything except the endpoints that let them
 // see and fix their subscription. See middleware/subscription.ts.
 app.use("/api", enforceSubscription);
+// Setup → Features switches and the Roles & permissions matrix, enforced
+// (403 on a switched-off module / an area the staff member's role can't
+// reach). See middleware/access.ts + lib/accessMap.ts.
+app.use("/api", enforceAccess);
 // Tenant scope is enforced inside each route from the authenticated account
 // (see middleware/role.ts — the client never sends its own scope).
 app.use("/api/bookings", bookings);
@@ -184,6 +223,14 @@ app.use("/api/trips", trips);
 app.use("/api/calendar-events", calendarEvents);
 app.use("/api/inventory", inventory);
 app.use("/api/shifts", shifts);
+app.use("/api/rota", rota);
+app.use("/api/timeclock", timeclock);
+app.use("/api/payroll", payroll);
+app.use("/api/onboarding", onboarding);
+app.use("/api/credentials", credentials);
+app.use("/api/staff-announcements", staffAnnouncements);
+app.use("/api/leave", leave);
+app.use("/api/learning", learning);
 app.use("/api/reviews", reviews);
 app.use("/api/availability", availability);
 app.use("/api/dashboard", dashboard);
@@ -201,6 +248,9 @@ app.use("/api/meal-menus", mealMenus);
 app.use("/api/documents", documents);
 app.use("/api/compliance", compliance);
 app.use("/api/expenses", expenses);
+app.use("/api/expense-claims", expenseClaims);
+app.use("/api/appraisals", appraisals);
+app.use("/api/location-staff", locationStaff);
 app.use("/api/income", income);
 app.use("/api/suppliers", suppliers);
 app.use("/api/purchasing", purchasing);
@@ -222,6 +272,7 @@ app.use("/api/referrals", referralsAdmin);
 app.use("/api/memberships", membershipsAdmin);
 app.use("/api/register-role", registerRole);
 app.use("/api/invites", invites);
+app.use("/api/references", references);
 app.use("/api/tenants", tenants);
 app.use("/api/me", me);
 // Before /api/platform so the general router can't shadow them.
@@ -253,6 +304,7 @@ app.use(
 const port = Number(process.env.PORT || 4000);
 app.listen(port, () => {
   console.log(`ActivityOS API listening on http://localhost:${port}`);
+  warmLeads();
 });
 
 // Time-based work (calendar reminders, medication due-times, the

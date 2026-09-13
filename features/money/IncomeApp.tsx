@@ -9,6 +9,7 @@ import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
 import { SeasonPicker } from "@/components/SeasonPicker";
+import { csvText } from "@/lib/csv";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -18,9 +19,9 @@ const LIGHT_PALETTE = {
 type Repeat = "weekly" | "fortnightly" | "monthly";
 interface Income { id: string; date: string; category: string; amount: number; source?: string; notes?: string; method?: string; repeat?: Repeat; repeatUntil?: string; seriesId?: string; virtual?: boolean; listingId?: string }
 interface Payload { items: Income[]; summary: { total: number; count: number; byCategory: Record<string, number> } }
-interface Invoice { id: string; customerName: string; reference?: string; amount: number; date: string; dueDate?: string; status: string; paidAt?: string; paidVia?: "link" | "manual"; overdue?: boolean }
+interface Invoice { id: string; customerName: string; reference?: string; amount: number; date: string; dueDate?: string; status: string; paidAt?: string; paidVia?: "link" | "manual"; overdue?: boolean; bookingSettledAt?: string }
 interface InvPayload { items: Invoice[] }
-interface Booking { ref?: string; pay?: string; method?: string; amount?: number; amountPaid?: number; createdAt?: string; booker?: string; listing?: string; listingId?: string }
+interface Booking { ref?: string; pay?: string; method?: string; amount?: number; amountPaid?: number; createdAt?: string; booker?: string; listing?: string; listingId?: string; refundedApproved?: number }
 
 const CATEGORIES = ["Sessions", "Camps", "Memberships", "Merchandise", "Grants", "Fundraising", "Deposits", "Other"];
 const INVOICE_CAT = "Invoices";
@@ -140,16 +141,21 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   // booking was taken; amountPaid wins over the headline amount.
   const bookingRows = useMemo<Income[]>(() => bookings
     .map((b) => {
-      const paid = b.amountPaid != null ? b.amountPaid : (b.pay === "Paid" ? (b.amount ?? 0) : 0);
-      return { b, paid };
+      const taken = b.amountPaid != null ? b.amountPaid : (b.pay === "Paid" ? (b.amount ?? 0) : 0);
+      // Net of money handed back — a refunded booking isn't money in
+      // (acceptance d18s4). Older refunds without the running total count in full.
+      const back = Math.min(taken, b.refundedApproved ?? (b.pay === "Refunded" ? taken : 0));
+      return { b, paid: Math.round((taken - back) * 100) / 100, back };
     })
     .filter(({ paid }) => paid > 0)
-    .map(({ b, paid }) => ({ id: `bk-${b.ref}`, date: (b.createdAt || "").slice(0, 10), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId })), [bookings]);
+    .map(({ b, paid, back }) => ({ id: `bk-${b.ref}`, date: (b.createdAt || "").slice(0, 10), category: BOOKINGS_CAT, amount: paid, source: b.booker || b.listing, notes: [b.listing, b.ref, back > 0 ? `£${back.toFixed(2)} refunded` : ""].filter(Boolean).join(" · "), method: normaliseMethod(b.method), virtual: true, listingId: b.listingId })), [bookings]);
 
   // Paid invoices ARE money in — folded in as read-only rows so Income shows the
   // whole picture without you re-keying them. Dated by when they were paid.
   const invoiceRows = useMemo<Income[]>(() => invoices
-    .filter((v) => v.status === "paid")
+    // An invoice that settled a booking is already inside that booking's
+    // amountPaid — counting it again double-counts the money (d18s4).
+    .filter((v) => v.status === "paid" && !v.bookingSettledAt)
     .map((v) => ({ id: `inv-${v.id}`, date: (v.paidAt || v.date || "").slice(0, 10), category: INVOICE_CAT, amount: v.amount, source: v.customerName, notes: v.reference ? `Invoice ${v.reference}` : "Invoice", method: "Invoice", virtual: true })), [invoices]);
 
   const allItems = useMemo(() => [...bookingRows, ...invoiceRows, ...logged], [bookingRows, invoiceRows, logged]);
@@ -300,9 +306,8 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
   }
   function exportCsv() {
     const header = ["Date", "Category", "Amount", "Source", "Payment type", "Notes", "Source type"];
-    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const rows = filtered.map((x) => [x.date, x.category, x.amount, x.source ?? "", x.method ?? "", x.notes ?? "", x.category === BOOKINGS_CAT ? "booking" : x.virtual ? "paid invoice" : "logged"]);
-    const csv = [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+    const csv = csvText([header, ...rows]); // formula-safe: Source is the parent-typed booker name
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `income-${range}-${todayIso()}.csv`; a.click(); URL.revokeObjectURL(url);
   }

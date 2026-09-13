@@ -152,16 +152,19 @@ function seedLocal(): LocalState {
     send: ["Wheelchair accessible", "1:1 support available", "Quiet space", "Visual timetables", "SEND-trained staff"],
     outcomes: ["Teamwork", "Confidence", "New skills", "Physical activity", "Creativity", "Making friends"],
     addons: [],
-    // Seeds the team library with your demo staff so you can preview the
-    // "pick who's onsite" flow (real onboarded/invited accounts feed this once
-    // Amir wires it). All are editable/removable like any other example content.
+    // Just you. It used to be topped up with six fabricated demo staff (Marcus
+    // Bell, Jess Patel…), and emptying the list re-uploaded them to the tenant,
+    // where they could be picked onto a listing and shown to parents as the
+    // people looking after their children.
     staff: [
       { id: uid(), first: myName().split(" ")[0] || "Me", last: myName().split(" ").slice(1).join(" "), bio: "" },
-      ...DEMO_STAFF.map((s) => ({ id: uid(), first: s.name.split(" ")[0], last: s.name.split(" ").slice(1).join(" "), bio: s.role })),
     ],
     emojis: {},
   };
 }
+/** A fabricated demo team member (name AND role both match) — never real staff. */
+const DEMO_STAFF_KEYS = new Set(DEMO_STAFF.map((d) => `${d.name}|${d.role}`.toLowerCase()));
+const isDemoStaff = (s: StaffMember) => DEMO_STAFF_KEYS.has(`${`${s.first ?? ""} ${s.last ?? ""}`.trim()}|${s.bio ?? ""}`.toLowerCase());
 // The old manual/demo venues, stripped from any saved state on load (see below).
 const DEMO_VENUES = new Set([
   "Stantonbury Leisure Centre|Purbeck, Milton Keynes MK14 6BN",
@@ -182,9 +185,7 @@ function loadLocal(): LocalState {
     const mappedStaff = rawStaff.length
       ? rawStaff.map((s) => (typeof s === "string" ? { id: uid(), first: s.split(" ")[0], last: s.split(" ").slice(1).join(" "), bio: "" } : s))
       : seed.staff;
-    // Preview the "assign your team" flow: a still-default library (just "Me")
-    // gets topped up with the demo team; a real, customised one is left alone.
-    const staff = mappedStaff.length <= 1 ? seed.staff : mappedStaff;
+    const staff = mappedStaff.filter((m) => !isDemoStaff(m));
     return {
       categories: p.categories ?? seed.categories,
       // Strip the old demo venues from any state that saved them before the
@@ -317,8 +318,13 @@ export function FreelancerListingsApp() {
           // list over them erased them from view. Recover those and push
           // them up rather than leaving the operator to rebuild.
           const merged = { ...seedLocal(), ...lib } as LocalState;
+          // Demo staff already uploaded to the tenant are dropped from view (and
+          // from the next save).
+          if (merged.staff?.length) merged.staff = merged.staff.filter((m) => !isDemoStaff(m));
           const cached = loadLocal();
-          const listKeys = ["addons", "staff", "categories", "venues", "provided", "toBring", "safety", "send", "outcomes"] as const;
+          // Not "staff": an empty team is a real answer, and this browser's copy
+          // is exactly where the demo team used to come back from.
+          const listKeys = ["addons", "categories", "venues", "provided", "toBring", "safety", "send", "outcomes"] as const;
           let recovered = false;
           for (const k of listKeys) {
             if ((merged[k]?.length ?? 0) === 0 && (cached[k]?.length ?? 0) > 0) {

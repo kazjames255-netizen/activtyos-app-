@@ -8,13 +8,17 @@
 // item can still be added to an individual. Front-end demo store; the real
 // sensitive-data storage + retention is Amir's (see handoff). Reuses the same
 // staff roster as the Staff-certificates area.
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Input, Select } from "@/components/ui";
 import { useSettings } from "@/lib/settings";
 import { DEMO_STAFF, useCredentials, credStatus, CredBadge, appliesTo as credAppliesTo, openCredFile } from "@/features/learning/credentials";
 import { Tile, GRAD } from "@/features/money/finance-kit";
+import { ReferencesStep } from "./ReferenceRequests";
 import { useT } from "@/lib/i18n/provider";
+import { get as apiGet, isDemoMode } from "@/lib/api";
+import { useTeam, type TeamMember } from "./useTeam";
+import { fetchOnboarding, saveOnboardFields, saveOnboardRecord, hydrateFiles, stashLocalOnce, localBackup, importLocalBackup, discardLocalBackup, type StoredRecord } from "./onboardStore";
 
 // ——— model ———
 type FieldType = "text" | "tel" | "email" | "date" | "textarea" | "select" | "file" | "checkbox" | "check" | "addresses" | "certs" | "jobtitle" | "pay" | "readdoc" | "availability";
@@ -45,7 +49,7 @@ I declare that:
 I understand that providing false information may lead to withdrawal of any offer of employment or to dismissal, and may be a criminal offence.
 
 Signed: ______________________________   Print name: ______________________________   Date: ____________`;
-export interface OnboardValue { v?: string; fileData?: string; fileName?: string; status?: "todo" | "requested" | "received" | "verified"; at?: string }
+export interface OnboardValue { v?: string; fileData?: string; fileId?: string; fileName?: string; status?: "todo" | "requested" | "received" | "verified"; at?: string }
 const nowIso = () => { try { return new Date().toISOString(); } catch { return ""; } };
 const fmtStamp = (iso?: string) => { if (!iso) return ""; const d = new Date(iso); return isNaN(+d) ? "" : d.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }); };
 // DBS certs don't legally "expire", but employers re-check on their own cycle
@@ -113,7 +117,8 @@ export const DEFAULT_FIELDS: OnboardField[] = [
   F("idFile", "dbs", "ID document (upload)", "file", true),
   F("addrProofType", "dbs", "Proof of current address — document type", "select", false, { options: ["Utility bill (last 3 months)", "Bank or building society statement (last 3 months)", "Council tax bill (current year)", "Driving licence (if not used as ID above)", "Tenancy agreement (current)", "Mortgage statement (last 12 months)", "HMRC / DWP / benefits letter (last 3 months)", "Other"], hint: "Must show your name + current address. A passport can't be used here — it doesn't show your address." }),
   F("addrProof", "dbs", "Proof of address (upload)", "file", false, { hint: "A different document to your photo ID, dated within the last 3 months where relevant." }),
-  F("idCheck", "dbs", "Identity verified", "check", true),
+  // A gate: an unverified identity can't be "cleared to start" (acceptance d15s4).
+  F("idCheck", "dbs", "Identity verified", "check", true, { gate: true }),
   // ── DBS check — its own section. This just records an EXISTING certificate;
   // applying for a NEW DBS is done through the umbrella-body / DBS system, not here.
   F("hasDbs", "dbscheck", "Do you have an enhanced DBS certificate?", "select", true, { options: ["Yes — I have one", "No — the company will arrange it"] }),
@@ -199,12 +204,20 @@ export function fieldApplies(f: OnboardField, name: string, role?: string, extra
   if (k === "staff") return (f.applyStaff ?? []).includes(name);
   return (f.applyRoles ?? []).some((r) => { const rl = r.toLowerCase(), sr = (role ?? "").toLowerCase(); return !!sr && (rl.includes(sr) || sr.includes(rl.split(/[ /]/)[0])); });
 }
+/** A gate is met when its tick is verified — and "DBS seen & cleared" also
+ *  needs the certificate number on file (a tick with no number isn't a
+ *  checked DBS; acceptance d15s4). */
+export function gateMet(f: OnboardField, values: Record<string, OnboardValue | undefined>): boolean {
+  if (!satisfied(f, values[f.id])) return false;
+  if (f.id === "dbsCheck") return !!values.dbsCert?.v?.trim();
+  return true;
+}
 export function satisfied(f: OnboardField, val?: OnboardValue): boolean {
   if (f.type === "certs") return true; // informational — pulled from the certificates area
   if (!val) return false;
   if (f.type === "checkbox" || f.type === "readdoc") return val.v === "yes";
   if (f.type === "check") return val.status === "verified";
-  if (f.type === "file") return !!val.fileData;
+  if (f.type === "file") return !!(val.fileData || val.fileId);
   if (f.type === "pay") return !!parsePay(val.v).amount;
   if (f.type === "availability") return Object.values(parseAvail(val.v)).some((a) => a.length > 0);
   if (f.type === "addresses") { try { return (JSON.parse(val.v || "[]") as unknown[]).length > 0; } catch { return false; } }
@@ -222,15 +235,53 @@ const parseAvail = (v?: string): Record<string, string[]> => { try { const a = J
 function useOnboarding() {
   const [fields, setFields] = useState<OnboardField[]>(DEFAULT_FIELDS);
   const [records, setRecords] = useState<OnboardRecord[]>([]);
-  useEffect(() => {
-    try { const f = JSON.parse(localStorage.getItem(FKEY) || "null"); if (Array.isArray(f) && f.length) setFields(f); } catch { /* ignore */ }
-    try { const r = JSON.parse(localStorage.getItem(RKEY) || "null"); if (Array.isArray(r)) setRecords(r); } catch { /* ignore */ }
+  const [error, setError] = useState<string | null>(null);
+  // This browser's pre-server records, set aside for Import / Discard.
+  const [backup, setBackup] = useState<StoredRecord[]>(() => { stashLocalOnce(); return localBackup(); });
+  // On the server since 12 Sept (routes/onboarding.ts) — it used to be this
+  // browser's localStorage, scans and all.
+  const load = useCallback(() => {
+    fetchOnboarding<OnboardField>()
+      .then((r) => { if (r.fields?.length) setFields(r.fields); setRecords(r.records as OnboardRecord[]); })
+      .catch((e) => setError(e instanceof Error ? e.message : "Couldn't load onboarding records"));
   }, []);
-  const saveFields = (f: OnboardField[]) => { setFields(f); try { localStorage.setItem(FKEY, JSON.stringify(f)); } catch { /* ignore */ } };
-  const saveRecords = (r: OnboardRecord[]) => { setRecords(r); try { localStorage.setItem(RKEY, JSON.stringify(r)); } catch { /* ignore */ } };
+  useEffect(() => { load(); }, [load]);
+  const saveFields = (f: OnboardField[]) => { setFields(f); saveOnboardFields(f).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save the requirements")); };
   const recordFor = (name: string): OnboardRecord => records.find((r) => r.staff === name) ?? { staff: name, values: {}, extra: [] };
-  const upsertRecord = (rec: OnboardRecord) => saveRecords(records.some((r) => r.staff === rec.staff) ? records.map((r) => (r.staff === rec.staff ? rec : r)) : [...records, rec]);
-  return { fields, saveFields, records, recordFor, upsertRecord };
+  // Fields save as they're typed, so saves are debounced and run one at a time
+  // per person — the latest version always wins.
+  const pending = useRef(new Map<string, OnboardRecord>());
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const chain = useRef<Promise<void>>(Promise.resolve());
+  const flush = useCallback(() => {
+    const batch = [...pending.current.values()];
+    pending.current.clear();
+    for (const rec of batch) {
+      chain.current = chain.current.then(() => saveOnboardRecord(rec).then((saved) => {
+        // Keep the new file ids, without undoing anything typed since.
+        setRecords((rs) => rs.map((r) => (r.staff !== saved.staff ? r : { ...r, values: Object.fromEntries(Object.entries(r.values).map(([k, v]) => [k, saved.values[k]?.fileId && v?.fileData === saved.values[k]?.fileData ? { ...v, fileId: saved.values[k].fileId } : v])) })));
+        setError(null);
+      }).catch((e) => setError(e instanceof Error ? e.message : "Couldn't save — check your connection")));
+    }
+  }, []);
+  const upsertRecord = (rec: OnboardRecord) => {
+    setRecords((rs) => (rs.some((r) => r.staff === rec.staff) ? rs.map((r) => (r.staff === rec.staff ? rec : r)) : [...rs, rec]));
+    pending.current.set(rec.staff, rec);
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(flush, 700);
+  };
+  useEffect(() => () => { if (timer.current) { clearTimeout(timer.current); flush(); } }, [flush]);
+  /** Fill a person's stored scans back in, for previews and the print pack. */
+  const recordsRef = useRef(records);
+  useEffect(() => { recordsRef.current = records; }, [records]);
+  const hydrate = useCallback((name: string) => {
+    const r = recordsRef.current.find((x) => x.staff === name);
+    if (!r || !Object.values(r.values).some((v) => v?.fileId && !v.fileData)) return;
+    void hydrateFiles(r).then((h) => setRecords((cur) => cur.map((x) => (x.staff === name ? { ...x, values: Object.fromEntries(Object.entries(x.values).map(([k, v]) => [k, v?.fileId && !v.fileData && h.values[k]?.fileData ? { ...v, fileData: h.values[k].fileData } : v])) } : x))));
+  }, []);
+  const importBackup = async () => { try { const n = await importLocalBackup(); setBackup([]); load(); return n; } catch (e) { setError(e instanceof Error ? e.message : "Import failed"); return 0; } };
+  const discardBackup = () => { discardLocalBackup(); setBackup([]); };
+  return { fields, saveFields, records, recordFor, upsertRecord, error, hydrate, backup, importBackup, discardBackup };
 }
 
 const openFile = (dataUrl?: string) => { if (!dataUrl || typeof window === "undefined") return; const w = window.open(); if (w) w.document.write(`<iframe src="${dataUrl}" style="border:0;width:100vw;height:100vh"></iframe>`); };
@@ -286,24 +337,28 @@ export function OnboardingPanel() {
   const { settings } = useSettings();
   const t = useT();
   const ob = useOnboarding();
-  const [sel, setSel] = useState<string>(DEMO_STAFF[0]?.name ?? "");
+  const TEAM = useTeam();
+  const { hydrate } = ob;
+  const [picked, setSel] = useState<string>(() => (isDemoMode() ? DEMO_STAFF[0]?.name ?? "" : ""));
+  // The first real person until someone's picked (the team loads after mount).
+  const sel = TEAM.some((p) => p.name === picked) ? picked : TEAM[0]?.name ?? picked;
   const [cfg, setCfg] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [mode, setMode] = useState<"records" | "scr">("records");
   const [showDecl, setShowDecl] = useState(false);
   const [scrDetail, setScrDetail] = useState(false);
   const [step, setStep] = useState(0);
-  const cred = useCredentials(DEMO_STAFF);
+  const cred = useCredentials(TEAM);
   const router = useRouter();
   const portal = (usePathname() || "/company").split("/")[1] || "company";
   const jobTitles = settings.staffRoles ?? [];
   const provider = settings.providerName || settings.billing?.businessName || "Your company";
 
-  const staffOf = (name: string) => DEMO_STAFF.find((s) => s.name === name);
+  const staffOf = (name: string) => TEAM.find((s) => s.name === name);
   // Job title / name / email are captured when the sign-up link is sent — pre-fill
   // them here (staff can't edit; the company can). Seed the record once if empty.
   useEffect(() => {
-    const s = DEMO_STAFF.find((x) => x.name === sel); if (!s) return;
+    const s = TEAM.find((x) => x.name === sel); if (!s) return;
     const r = ob.recordFor(sel); const seed: Record<string, OnboardValue> = {};
     if (r.values.fullName?.v == null) seed.fullName = { v: s.name };
     if (r.values.jobTitle?.v == null) seed.jobTitle = { v: s.role };
@@ -311,13 +366,22 @@ export function OnboardingPanel() {
     setStep(0);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sel]);
+  // The selected person's scans, fetched back for previews and the pack.
+  useEffect(() => { if (sel) hydrate(sel); }, [sel, hydrate, ob.records.length]);
   const applicable = (name: string, role?: string, extra: string[] = []) => ob.fields.filter((f) => fieldApplies(f, name, role, extra));
   const progressOf = (name: string) => { const s = staffOf(name); const rec = ob.recordFor(name); const fs = applicable(name, s?.role, rec.extra); const done = fs.filter((f) => satisfied(f, rec.values[f.id])).length; return { done, total: fs.length, pct: fs.length ? Math.round((done / fs.length) * 100) : 0 }; };
-  const clearedOf = (name: string) => { const s = staffOf(name); const rec = ob.recordFor(name); return applicable(name, s?.role, rec.extra).filter((f) => f.gate).every((f) => satisfied(f, rec.values[f.id])); };
+  const clearedOf = (name: string) => { const s = staffOf(name); const rec = ob.recordFor(name); return applicable(name, s?.role, rec.extra).filter((f) => f.gate).every((f) => gateMet(f, rec.values)); };
 
   const staff = staffOf(sel); const rec = ob.recordFor(sel); const appl = applicable(sel, staff?.role, rec.extra);
-  const cleared = appl.filter((f) => f.gate).every((f) => satisfied(f, rec.values[f.id]));
+  const cleared = appl.filter((f) => f.gate).every((f) => gateMet(f, rec.values));
   const setVal = (fieldId: string, patch: Partial<OnboardValue>) => ob.upsertRecord({ ...rec, values: { ...rec.values, [fieldId]: { ...rec.values[fieldId], ...patch } } });
+  // Several fields at once, in ONE write. Calling setVal in a loop doesn't work:
+  // every call closes over the same `rec` from this render, so each overwrites
+  // the last and only the final field survives.
+  const setVals = (patches: Record<string, Partial<OnboardValue>>) => ob.upsertRecord({
+    ...rec,
+    values: Object.entries(patches).reduce((acc, [id, p]) => ({ ...acc, [id]: { ...rec.values[id], ...p } }), { ...rec.values }),
+  });
   const hiddenFields = ob.fields.filter((f) => !fieldApplies(f, sel, staff?.role, rec.extra));
 
   // ——— export one staff member's full onboarding pack ———
@@ -342,12 +406,12 @@ export function OnboardingPanel() {
   const exportSCR = () => {
     const cols = scrDetail ? [...SCR_COLS, ...METHOD_COLS] : SCR_COLS;
     const head = `<tr><td class="k">Staff</td><td class="k">Role</td><td class="k">Location</td>${cols.map(([, l]) => `<td class="k">${esc(l)}</td>`).join("")}<td class="k">DBS no.</td><td class="k">Cleared</td></tr>`;
-    const body = DEMO_STAFF.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id, scrDetail); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const methods = scrDetail ? METHOD_COLS.map(([id]) => `<td>${esc(r.values[id]?.v || "—")}</td>`).join("") : ""; const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}${methods}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Yes" : "On hold"}</span></td></tr>`; }).join("");
+    const body = TEAM.map((s) => { const r = ob.recordFor(s.name); const cells = SCR_COLS.map(([id]) => { const c = scrCell(s.name, s.role, r.extra, id, scrDetail); return `<td class="v"><span class="${c.cls}">${esc(c.txt)}</span></td>`; }).join(""); const methods = scrDetail ? METHOD_COLS.map(([id]) => `<td>${esc(r.values[id]?.v || "—")}</td>`).join("") : ""; const dbsNo = r.values.dbsCert?.v || "—"; const clr = clearedOf(s.name); return `<tr><td class="v">${esc(s.name)}</td><td>${esc(s.role)}</td><td>${esc(s.op)}</td>${cells}${methods}<td>${esc(dbsNo)}</td><td><span class="badge ${clr ? "cleared" : "hold"}">${clr ? "Yes" : "On hold"}</span></td></tr>`; }).join("");
     printWindow(`<!doctype html><html><head><meta charset="utf-8"><title>Single Central Record — ${esc(provider)}</title><style>${PRINT_CSS} td{font-size:11px} .k{color:#6b7086;font-size:9.5px;text-transform:uppercase;letter-spacing:.04em}</style></head><body><h1>${esc(provider)} — Single Central Record</h1><div class="sub">Safer-recruitment checks${scrDetail ? " · with verified dates & methods" : ""} · Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}</div><table>${head}${body}</table><script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`);
   };
 
   // ——— slideshow (one section per step) ———
-  const gateOutstanding = appl.filter((f) => f.gate && !satisfied(f, rec.values[f.id]));
+  const gateOutstanding = appl.filter((f) => f.gate && !gateMet(f, rec.values));
   const activeSections = SECTIONS.filter(([sid]) => appl.some((f) => f.section === sid));
   const curStep = Math.min(step, Math.max(0, activeSections.length - 1));
   const [curSid, curLabel, curIcon] = activeSections[curStep] ?? ["personal", "Personal", "👤"];
@@ -380,13 +444,13 @@ export function OnboardingPanel() {
         <div className="space-y-2">
           <div className="flex flex-wrap items-center gap-2">
             {val?.fileData ? <button type="button" onClick={() => openFile(val.fileData)} className="rounded-lg border border-[#1d3a8f] bg-[#eef4ff] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">{t("team.viewDocument")}</button> : <span className="text-[11.5px] text-[var(--ink-3)]">{t("team.noDocumentYet")}</span>}
-            <label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{val?.fileData ? t("team.replaceWord") : t("team.attachWord")}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileName: file.name }); r.readAsDataURL(file); }} /></label>
+            <label className="cursor-pointer rounded-lg border border-[var(--line)] px-2.5 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{val?.fileData ? t("team.replaceWord") : t("team.attachWord")}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileId: undefined, fileName: file.name }); r.readAsDataURL(file); }} /></label>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-[13px] font-semibold text-[var(--ink)]"><input type="checkbox" checked={val?.v === "yes"} onChange={(e) => setVal(f.id, { v: e.target.checked ? "yes" : "", at: e.target.checked ? nowIso() : undefined })} className="h-4 w-4 accent-[#0f7a43]" /> {t("team.readAndUnderstood")}</label>
           {val?.v === "yes" && val?.at && <div className="text-[10px] text-[var(--ink-3)]">Confirmed {fmtStamp(val.at)}</div>}
         </div>
       ) : f.type === "file" ? (
-        <div className="flex flex-wrap items-center gap-2"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{t("team.uploadBtn")}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileName: file.name }); r.readAsDataURL(file); }} /></label>{val?.fileName && <button type="button" onClick={() => openFile(val.fileData)} className="max-w-[170px] truncate text-[12px] font-bold text-[#1d3a8f] hover:underline">📎 {val.fileName}</button>}</div>
+        <div className="flex flex-wrap items-center gap-2"><label className="cursor-pointer rounded-lg border border-[var(--line)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f]">{t("team.uploadBtn")}<input type="file" accept="application/pdf,image/*" className="hidden" onChange={(e) => { const file = e.target.files?.[0]; if (!file) return; const r = new FileReader(); r.onload = () => setVal(f.id, { fileData: String(r.result), fileId: undefined, fileName: file.name }); r.readAsDataURL(file); }} /></label>{val?.fileName && <button type="button" onClick={() => openFile(val.fileData)} className="max-w-[170px] truncate text-[12px] font-bold text-[#1d3a8f] hover:underline">📎 {val.fileName}</button>}</div>
       ) : f.type === "select" ? (() => {
         const opts = f.options ?? []; const v = val?.v ?? ""; const inList = opts.includes(v);
         const selectVal = inList ? v : (v && f.other ? "Other" : ""); const showOther = !!f.other && selectVal === "Other";
@@ -455,8 +519,18 @@ export function OnboardingPanel() {
         </div>
         <Button className="ml-auto" onClick={() => setCfg(true)}>{t("team.requirements")}</Button>
       </div>
+      {ob.error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c0392b]">{ob.error}</div>}
+      {ob.backup.length > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#f3d9a4] bg-[#fdf6e3] px-3.5 py-2.5 text-[12.5px] text-[#8a5a09]">
+          <span className="min-w-0 flex-1">{t("team.onbImportTitle", { n: ob.backup.length, names: ob.backup.map((r) => r.staff).slice(0, 3).join(", ") })}</span>
+          <Button sm variant="primary" onClick={() => { void ob.importBackup(); }}>{t("team.onbImportBtn")}</Button>
+          <Button sm onClick={() => { if (confirm(t("team.onbDiscardConfirm"))) ob.discardBackup(); }}>{t("team.onbDiscardBtn")}</Button>
+        </div>
+      )}
 
-      {mode === "scr" ? (
+      {!TEAM.length && !isDemoMode() ? (
+        <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 text-center text-[13px] text-[var(--ink-3)]">{t("team.onbNoStaff")}</div>
+      ) : mode === "scr" ? (
         <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
           <div className="mb-3 flex flex-wrap items-center gap-2">
             <div><div className="text-[14px] font-extrabold text-[var(--ink)]">{t("team.singleCentralRecord")}</div><div className="text-[12px] text-[var(--ink-3)]">{t("team.scrSubtitle")}</div></div>
@@ -466,7 +540,7 @@ export function OnboardingPanel() {
           <div className="overflow-x-auto rounded-xl border border-[var(--line)]">
             <table className="w-full text-[12.5px]">
               <thead><tr className="bg-[var(--panel)] text-left text-[10px] uppercase tracking-wide text-[var(--ink-3)]"><th className="px-3 py-2.5 font-extrabold">{t("team.staffCol")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.roleCol")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.locationCol")}</th>{SCR_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}{scrDetail && METHOD_COLS.map(([, l]) => <th key={l} className="whitespace-nowrap px-3 py-2.5 font-extrabold">{l}</th>)}<th className="px-3 py-2.5 font-extrabold">{t("team.dbsNo")}</th><th className="px-3 py-2.5 font-extrabold">{t("team.clearedCol")}</th></tr></thead>
-              <tbody>{DEMO_STAFF.map((s) => { const r = ob.recordFor(s.name); const cl = clearedOf(s.name); return (
+              <tbody>{TEAM.map((s) => { const r = ob.recordFor(s.name); const cl = clearedOf(s.name); return (
                 <tr key={s.name} className="border-t border-[var(--line-2,#eef2f8)]">
                   <td className="px-3 py-2.5"><button type="button" onClick={() => { setSel(s.name); setMode("records"); }} className="font-bold text-[#1d3a8f] hover:underline">{s.name}</button></td>
                   <td className="px-3 py-2.5 text-[var(--ink-2)]">{s.role}</td><td className="px-3 py-2.5 text-[var(--ink-2)]">{s.op}</td>
@@ -484,12 +558,12 @@ export function OnboardingPanel() {
       <>
       {/* Team-wide onboarding progress — a top-line before drilling into one person. */}
       {(() => {
-        const cleared = DEMO_STAFF.filter((s) => clearedOf(s.name)).length;
-        const started = DEMO_STAFF.filter((s) => { const p = progressOf(s.name); return p.pct > 0 && p.pct < 100; }).length;
+        const cleared = TEAM.filter((s) => clearedOf(s.name)).length;
+        const started = TEAM.filter((s) => { const p = progressOf(s.name); return p.pct > 0 && p.pct < 100; }).length;
         return (
           <div className="mb-3 grid grid-cols-3 gap-2.5">
-            <Tile label={t("team.clearedToStart")} icon="✅" grad={GRAD.green} value={String(cleared)} sub={t("team.ofNStaff", { n: DEMO_STAFF.length })} />
-            <Tile label={t("team.startOnHold")} icon="⛔" grad={cleared < DEMO_STAFF.length ? GRAD.pink : GRAD.green} value={String(DEMO_STAFF.length - cleared)} sub={t("team.checksOutstanding")} />
+            <Tile label={t("team.clearedToStart")} icon="✅" grad={GRAD.green} value={String(cleared)} sub={t("team.ofNStaff", { n: TEAM.length })} />
+            <Tile label={t("team.startOnHold")} icon="⛔" grad={cleared < TEAM.length ? GRAD.pink : GRAD.green} value={String(TEAM.length - cleared)} sub={t("team.checksOutstanding")} />
             <Tile label={t("team.inProgress")} icon="⏳" grad={GRAD.amber} value={String(started)} sub={t("team.partWayThrough")} />
           </div>
         );
@@ -497,7 +571,7 @@ export function OnboardingPanel() {
       <div className="grid gap-3 md:grid-cols-[260px_1fr]">
         {/* roster */}
         <div className="space-y-2">
-          {DEMO_STAFF.map((s) => { const p = progressOf(s.name); const cl = clearedOf(s.name); const on = s.name === sel; return (
+          {TEAM.map((s) => { const p = progressOf(s.name); const cl = clearedOf(s.name); const on = s.name === sel; return (
             <button key={s.name} type="button" onClick={() => setSel(s.name)} className={"block w-full rounded-xl border p-3 text-left transition-colors " + (on ? "border-[#1d3a8f] bg-[#eef4ff]" : "border-[var(--line)] bg-[var(--surface)] hover:border-[#1d3a8f]")}>
               <div className="flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">{s.name}</span>{cl ? <span className="ml-auto rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#0f7a43]">{t("team.clearedShort")}</span> : <span className="ml-auto rounded-full bg-[#fdf3e0] px-1.5 py-0.5 text-[9px] font-extrabold uppercase text-[#8a5a09]">{t("team.onHold")}</span>}</div>
               <div className="mt-0.5 text-[11px] text-[var(--ink-3)]">{s.role} · {s.op}</div>
@@ -548,8 +622,14 @@ export function OnboardingPanel() {
           {cleared ? <div className="mx-4 mb-3 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] px-3.5 py-2 text-[12px] font-semibold text-[#0f7a43]">{t("team.allChecksVerified")}</div>
             : gateOutstanding.length > 0 && <div className="mx-4 mb-3 rounded-xl border border-[#f3cfa6] bg-[#fdf3e0] px-3.5 py-2 text-[12px] font-semibold text-[#8a4b09]">{t("team.notClearedYet", { labels: gateOutstanding.map((f) => f.label).join(" · ") })}</div>}
 
-          {/* this step's fields */}
-          <div className="grid gap-2.5 px-4 sm:grid-cols-2">{stepFields.map(fieldCard)}</div>
+          {/* this step's fields. References is the one step that isn't just a
+              form: behind the referee's contact details sits the actual exchange
+              — request, chase, what came back — so it renders its own step. */}
+          {curSid === "refs" ? (
+            <ReferencesStep fields={stepFields} staffName={sel} jobTitle={rec.values.jobTitle?.v} values={rec.values} setVal={setVal} setVals={setVals} fieldCard={fieldCard} />
+          ) : (
+            <div className="grid gap-2.5 px-4 sm:grid-cols-2">{stepFields.map(fieldCard)}</div>
+          )}
 
           {/* nav */}
           <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-[var(--line)] px-4 py-3">
@@ -582,13 +662,13 @@ export function OnboardingPanel() {
         </div>
       )}
 
-      {cfg && <RequirementsModal fields={ob.fields} onSave={ob.saveFields} onClose={() => setCfg(false)} accessRoles={(settings.roles ?? []).map((r) => r.name).filter(Boolean)} jobTitles={(settings.staffRoles ?? []).filter(Boolean)} />}
+      {cfg && <RequirementsModal team={TEAM} fields={ob.fields} onSave={ob.saveFields} onClose={() => setCfg(false)} accessRoles={(settings.roles ?? []).map((r) => r.name).filter(Boolean)} jobTitles={(settings.staffRoles ?? []).filter(Boolean)} />}
     </div>
   );
 }
 
 // ——— requirements config ———
-function RequirementsModal({ fields, onSave, onClose, accessRoles, jobTitles }: { fields: OnboardField[]; onSave: (f: OnboardField[]) => void; onClose: () => void; accessRoles: string[]; jobTitles: string[] }) {
+function RequirementsModal({ team, fields, onSave, onClose, accessRoles, jobTitles }: { team: TeamMember[]; fields: OnboardField[]; onSave: (f: OnboardField[]) => void; onClose: () => void; accessRoles: string[]; jobTitles: string[] }) {
   const t = useT();
   const [list, setList] = useState<OnboardField[]>(fields);
   const [newLabel, setNewLabel] = useState(""); const [newSection, setNewSection] = useState(SECTIONS[0][0]); const [newType, setNewType] = useState<FieldType>("text");
@@ -623,7 +703,7 @@ function RequirementsModal({ fields, onSave, onClose, accessRoles, jobTitles }: 
                         {!accessRoles.length && !jobTitles.length && <span className="text-[11px] text-[var(--ink-3)]">{t("team.addRolesFirst")}</span>}
                       </div>
                     )}
-                    {f.applyKind === "staff" && <div className="mt-1.5 flex flex-wrap gap-1">{DEMO_STAFF.map((s) => <button key={s.name} type="button" onClick={() => setList((l) => l.map((x) => { if (x.id !== f.id) return x; const a = x.applyStaff ?? []; return { ...x, applyStaff: a.includes(s.name) ? a.filter((y) => y !== s.name) : [...a, s.name] }; }))} className={"rounded-full border px-2 py-0.5 text-[10.5px] font-bold " + ((f.applyStaff ?? []).includes(s.name) ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)]")}>{s.name}</button>)}</div>}
+                    {f.applyKind === "staff" && <div className="mt-1.5 flex flex-wrap gap-1">{team.map((s) => <button key={s.name} type="button" onClick={() => setList((l) => l.map((x) => { if (x.id !== f.id) return x; const a = x.applyStaff ?? []; return { ...x, applyStaff: a.includes(s.name) ? a.filter((y) => y !== s.name) : [...a, s.name] }; }))} className={"rounded-full border px-2 py-0.5 text-[10.5px] font-bold " + ((f.applyStaff ?? []).includes(s.name) ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)]")}>{s.name}</button>)}</div>}
                   </div>
                 ))}
               </div>

@@ -7,9 +7,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
+import { useTenantSettings } from "@/lib/settings";
 import {
   type ClockRecord, type ClockSettings, loadClock, loadClockSettings, saveClockSettings,
-  offToday, workedMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, shiftToday, lateMinutesToday, rateFor, setApproved, editRecord, payHours, clockOut,
+  offToday, workedMs, paidMs, roundHours, fmtDur, hhmm, sinceLabel, scheduledHoursToday, shiftToday, lateMinutesToday, rateFor, setApproved, editRecord, payHours, clockOut, useClockRefresh
 } from "./data";
 
 const gbp = (n: number) => "£" + (n || 0).toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -21,7 +22,10 @@ type Tab = "in" | "sheets" | "settings";
 export function TimesheetsApp() {
   const [tab, setTab] = useState<Tab>("in");
   const [all, setAll] = useState<Record<string, ClockRecord>>({});
+  useClockRefresh(setAll);
   const [settings, setSettings] = useState<ClockSettings>(loadClockSettings);
+  const { settings: tenantSettings } = useTenantSettings();
+  const breakPaid = tenantSettings.scheduling?.breakPaid === "paid";
   const [q, setQ] = useState("");
   const [locFilter, setLocFilter] = useState("all");
   const [edit, setEdit] = useState<ClockRecord | null>(null);
@@ -42,7 +46,7 @@ export function TimesheetsApp() {
 
   // one person's timesheet numbers for today
   const sheet = (r: ClockRecord) => {
-    const workedH = roundHours(workedMs(r) / 3600000, settings.rounding);
+    const workedH = roundHours(paidMs(r, breakPaid) / 3600000, settings.rounding);
     const schedH = scheduledHoursToday(r.name);
     const late = r.lateMin || 0;
     const lateOver = Math.max(0, late - settings.graceMin);
@@ -50,7 +54,7 @@ export function TimesheetsApp() {
     const overtime = schedH ? Math.max(0, Math.round((workedH - schedH) * 100) / 100) : 0;
     const override = !!r.payBasis;
     let payH: number;
-    if (override) payH = payHours(r, settings.rounding, lateOver / 60);
+    if (override) payH = payHours(r, settings.rounding, lateOver / 60, breakPaid);
     else if (settings.payPolicy === "scheduled") payH = schedH || workedH;
     else if (settings.payPolicy === "scheduled-less-late") payH = Math.max(0, (schedH || workedH) - lateOver / 60);
     else payH = settings.autoPayOvertime ? workedH : (schedH ? Math.min(workedH, schedH) : workedH); // "actual"

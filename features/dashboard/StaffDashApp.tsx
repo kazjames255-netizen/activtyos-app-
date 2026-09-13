@@ -2,28 +2,37 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { get as apiGet, put as apiPut, openFile } from "@/lib/api";
+import { get as apiGet, put as apiPut, openFile, isDemoMode } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Button } from "@/components/ui";
 import { PageHero } from "@/components/OperatorPage";
-import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDurSec, workedMs, type ClockRecord } from "@/features/timeclock/data";
+import { loadClock, clockIn, clockOut, startBreak, endBreak, slug, fmtDurSec, workedMs, type ClockRecord, useClockRefresh } from "@/features/timeclock/data";
 import { greeting } from "@/lib/greeting";
 import { useSettings } from "@/lib/settings";
-import { loadAnnouncements, loadRead, saveRead, type Announcement } from "@/features/staff/announcements";
+import { fetchAnnouncements, markAnnouncementRead, type Announcement } from "@/features/staff/announcements";
 import { useT } from "@/lib/i18n/provider";
 
 // ─────────────────────────────────────────────────────────────────────────
 // staff/dash — the staff member's colourful landing page. Live tenant data:
 // today's sessions, the team's tasks, plus the staffer's own shift-today +
 // a quick clock in/out card (same store the Clock in & out page uses).
-// Demo "me" = Marcus Bell (per-user identity is Amir's).
+// "Me" is the signed-in account's name (the rota matches people by name). The
+// hardcoded "Marcus Bell" is kept only for the guided-tour demo.
 // ─────────────────────────────────────────────────────────────────────────
 
-const ME = "Marcus Bell";
+const DEMO_ME = "Marcus Bell";
 const ROTA_KEY = "aos.rota.v5";
 
 interface RatioSession { blockId: string; start: string; end: string; blockName: string; listingName: string; totalChildren: number; sendCount: number; requiredStaff: number; staffAssigned: number; met: boolean }
-interface Task { id: string; title: string; done: boolean; priority?: "low" | "normal" | "high"; dueDate?: string; assignee?: string }
+// The shape /api/tasks actually returns (see server/src/routes/tasks.ts). This
+// read `{title, done, priority, dueDate}` — none of which the API sends — so
+// against live data every title rendered blank, `!t.done` was true for EVERY
+// task (done and archived ones counted as open), and the tick posted a field
+// Zod strips, so it silently did nothing. It only looked right in the demo
+// tour, whose hand-written fixture used the same wrong shape.
+// subtaskOnly: you were given a STEP on someone else's task — you tick your
+// step in the task, not the whole task (server/src/routes/tasks.ts, d11s8).
+interface Task { id: string; t: string; status?: "backlog" | "todo" | "prog" | "done"; prio?: "urgent" | "high" | "med" | "low"; due?: string | null; time?: string | null; archived?: boolean; seriesId?: string; subtaskOnly?: boolean }
 interface PublishedLite { id: string; dayList: { iso: string }[] }
 interface Me { tenantName: string | null; name?: string }
 interface MyShift { start: string; end: string; role?: string; site?: string; listing?: string }
@@ -50,10 +59,18 @@ const todayIso = () => { const t = new Date(); const p = (n: number) => String(n
 const addDaysIso = (iso: string, n: number) => { const d = new Date(`${iso}T00:00:00`); d.setDate(d.getDate() + n); const p = (x: number) => String(x).padStart(2, "0"); return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; };
 const to12 = (t: string) => { const [h, m] = (t || "0:0").split(":").map(Number); const ap = h >= 12 ? "pm" : "am"; const hr = h % 12 === 0 ? 12 : h % 12; return `${hr}${m ? ":" + String(m).padStart(2, "0") : ""}${ap}`; };
 const initials = (n: string) => n.split(/\s+/).filter(Boolean).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "?";
-function myShiftToday(day: string): MyShift | null {
+// The API sends an ISO due date; this card used to print a pre-baked string
+// ("Today") that the API never sends. Relative where it matters, dated beyond.
+const dueChip = (due: string, today: string) => {
+  if (due === today) return "Today";
+  if (due === addDaysIso(today, 1)) return "Tomorrow";
+  if (due < today) return "Overdue";
+  return new Date(`${due}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
+};
+function myShiftToday(day: string, ME: string): MyShift | null {
   try {
     const s = JSON.parse(localStorage.getItem(ROTA_KEY) || "null") as { staff?: { id: string; name: string }[]; shifts?: MyShift[] & { staffId?: string; date?: string }[] } | null;
-    const ids = new Set((s?.staff || []).filter((x) => x.name === ME).map((x) => x.id));
+    const ids = new Set((s?.staff || []).filter((x) => !!ME && x.name.trim().toLowerCase() === ME.trim().toLowerCase()).map((x) => x.id));
     return ((s?.shifts as (MyShift & { staffId?: string; date?: string })[]) || []).find((x) => x.staffId && ids.has(x.staffId) && x.date === day) ?? null;
   } catch { return null; }
 }
@@ -61,13 +78,13 @@ function myShiftToday(day: string): MyShift | null {
 interface Coworker { name: string; start: string; end: string; role?: string; where?: string }
 // Who else is rostered today — gated by the same "co-worker visibility" setting
 // that controls MySchedule's "Who's on" tab (all / same-listing / leads / none).
-function coworkersToday(vis: "all" | "team" | "leads" | "none", day: string): Coworker[] {
+function coworkersToday(vis: "all" | "team" | "leads" | "none", day: string, ME: string): Coworker[] {
   if (vis === "none") return [];
   try {
     const s = JSON.parse(localStorage.getItem(ROTA_KEY) || "null") as { staff?: { id: string; name: string }[]; shifts?: (MyShift & { staffId?: string; date?: string })[] } | null;
     const staff = s?.staff || [];
     const shifts = (s?.shifts as (MyShift & { staffId?: string; date?: string })[]) || [];
-    const meIds = new Set(staff.filter((x) => x.name === ME).map((x) => x.id));
+    const meIds = new Set(staff.filter((x) => !!ME && x.name.trim().toLowerCase() === ME.trim().toLowerCase()).map((x) => x.id));
     const mine = shifts.filter((x) => x.date === day && x.staffId && meIds.has(x.staffId));
     const iAmLead = mine.some((x) => /lead|manager|owner/i.test(x.role || ""));
     if (vis === "leads" && !iAmLead) return [];
@@ -127,6 +144,7 @@ export function StaffDashApp() {
   const [timetableToday, setTimetableToday] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [clock, setClock] = useState<Record<string, ClockRecord> | null>(null);
+  useClockRefresh(setClock);
   const [shift, setShift] = useState<MyShift | null>(null);
   // My real assigned camp days (backend), keyed by date, so the shift card shows them.
   const [assignedByDate, setAssignedByDate] = useState<Record<string, MyShift>>({});
@@ -138,6 +156,7 @@ export function StaffDashApp() {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);
   const [annRead, setAnnRead] = useState<string[]>([]);
   const [annOpen, setAnnOpen] = useState(false); // is the current announcement expanded
+  const [loadFailed, setLoadFailed] = useState(false);
   const { settings } = useSettings();
   const coworkerVis = settings.scheduling?.coworkerVisibility ?? "all";
   const today = todayIso();
@@ -146,13 +165,15 @@ export function StaffDashApp() {
 
   const refresh = useCallback(() => {
     apiGet<{ sessions: RatioSession[] }>(`/api/ratios?date=${date}`).then((d) => setSessions(d?.sessions ?? [])).catch((e) => setError(e instanceof Error ? e.message : t("dashboard.couldntLoadDay")));
-    apiGet<RegSession[]>(`/api/registers?date=${date}`).then((r) => setRegs(r ?? [])).catch(() => setRegs([]));
+    // A failed load stays "not loaded" (and says so) — not an all-clear built
+    // from nothing: "0 children in", "no flagged children" (acceptance d27s1).
+    apiGet<RegSession[]>(`/api/registers?date=${date}`).then((r) => { setRegs(r ?? []); setLoadFailed(false); }).catch(() => { setRegs(null); setLoadFailed(true); });
     apiGet<Task[]>("/api/tasks").then((t) => setTasks(t ?? [])).catch(() => {});
-    apiGet<Accident[]>("/api/incidents?kind=accident").then((l) => setAccidents(l ?? [])).catch(() => setAccidents([]));
+    apiGet<Accident[]>("/api/incidents?kind=accident").then((l) => setAccidents(l ?? [])).catch(() => setLoadFailed(true));
     apiGet<PublishedLite[]>("/api/timetables/published").then((w) => setTimetableToday((w ?? []).some((x) => x.dayList.some((d) => d.iso === date)))).catch(() => {});
     apiGet<{ venues?: { name: string; address?: string; city?: string }[] }>("/api/library").then((l) => setVenues(l.venues ?? [])).catch(() => {});
   }, [date, t]);
-  useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); setClock(loadClock()); setAnnouncements(loadAnnouncements()); setAnnRead(loadRead()); }, []);
+  useEffect(() => { apiGet<Me>("/api/me").then(setMe).catch(() => {}); setClock(loadClock()); fetchAnnouncements().then((l) => { setAnnouncements(l); setAnnRead(l.filter((a) => a.read).map((a) => a.id)); }).catch(() => {}); }, []);
   useEffect(() => {
     apiGet<{ requests: { camp?: { listingName: string; location?: string; open: string; close: string; assignedDates?: string[] } | null }[]; pattern: { grid?: Record<string, { from: string; to: string }> } | null }>("/api/availability/mine")
       .then((r) => {
@@ -162,11 +183,34 @@ export function StaffDashApp() {
       }).catch(() => {});
   }, []);
   useEffect(() => { setSessions(null); setRegs(null); refresh(); }, [refresh]);
-  useEffect(() => { setShift(myShiftToday(date) ?? assignedByDate[date] ?? null); setCoworkers(coworkersToday(coworkerVis, date)); }, [date, coworkerVis, assignedByDate]);
+  // The rota lives on the server; refresh this device's cache, then re-read.
+  const [rotaTick, setRotaTick] = useState(0);
+  useEffect(() => {
+    if (isDemoMode()) return;
+    apiGet<{ staff?: unknown[]; shifts?: unknown[]; sites?: string[] }>("/api/rota")
+      .then((r) => {
+        // Don't replace a rota only this device has with the server's empty one.
+        if (!(r.staff?.length) && !(r.shifts?.length)) return;
+        try { localStorage.setItem(ROTA_KEY, JSON.stringify({ staff: r.staff ?? [], shifts: r.shifts ?? [], sites: r.sites ?? [] })); } catch { /* ignore */ }
+        setRotaTick((n) => n + 1);
+      })
+      .catch(() => {});
+  }, []);
+  const ME = me?.name?.trim() || (isDemoMode() ? DEMO_ME : "");
+  useEffect(() => { setShift(myShiftToday(date, ME) ?? assignedByDate[date] ?? null); setCoworkers(coworkersToday(coworkerVis, date, ME)); }, [date, coworkerVis, assignedByDate, ME, rotaTick]);
   useEffect(() => { const id = setInterval(() => tick((n) => n + 1), 1000); return () => clearInterval(id); }, []);
   useRealtime(["bookings", "blocks", "tasks", "timetables", "registers"], refresh);
 
-  const open = (tasks ?? []).filter((t) => !t.done);
+  // Open = not done and not archived. A repeat is one job on many dates, so
+  // only its next date takes a slot here — six rows of the same daily task told
+  // you nothing, and pushed everything else off the card.
+  const open = (() => {
+    const seen = new Set<string>();
+    return (tasks ?? [])
+      .filter((x) => x.status !== "done" && !x.archived)
+      .sort((a, b) => `${a.due ?? "9999-99-99"}`.localeCompare(`${b.due ?? "9999-99-99"}`))
+      .filter((x) => !x.seriesId || !seen.has(x.seriesId) ? (x.seriesId && seen.add(x.seriesId), true) : false);
+  })();
   // "at my site, today" — from the live register: present = in now, expected = due in.
   const childrenIn = (regs ?? []).reduce((n, s) => n + s.counts.present, 0);
   const dueIn = (regs ?? []).reduce((n, s) => n + s.counts.expected, 0);
@@ -185,7 +229,9 @@ export function StaffDashApp() {
   const sendKids = kidsToday.filter((k) => k.c.send || k.c.sendPlanId || k.c.sendPlanName).map((k) => ({ ...k, plan: k.c.sendPlanName || k.c.send || "" }));
   const permKids = kidsToday.filter((k) => k.c.collectionPassword || k.c.emergencyName || k.c.photoConsent != null || k.c.suncreamConsent != null || k.c.walkHomeConsent != null || k.c.firstAidConsent != null);
   const recentAccidents = (accidents ?? []).slice(0, 6);
-  const tickTask = (t: Task) => { setTasks((list) => (list ?? []).map((x) => (x.id === t.id ? { ...x, done: true } : x))); void apiPut(`/api/tasks/${t.id}`, { done: true }).catch(() => refresh()); };
+  // `status`, not `done` — the schema has no `done` field, so the old body was
+  // stripped and the tick never saved.
+  const tickTask = (task: Task) => { setTasks((list) => (list ?? []).map((x) => (x.id === task.id ? { ...x, status: "done" as const } : x))); void apiPut(`/api/tasks/${task.id}`, { status: "done" }).catch(() => refresh()); };
   const dayLabel = new Date(`${date}T00:00:00`).toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
   // Where I'm working today — match the shift's venue name to the library venue for its address.
   const myVenueName = shift?.site || shift?.listing || "";
@@ -193,7 +239,7 @@ export function StaffDashApp() {
   const myAddress = myVenue ? [myVenue.address, myVenue.city].filter(Boolean).join(", ") : "";
 
   // ── quick clock in/out ──
-  const meId = slug(ME);
+  const meId = slug(ME || "me");
   const rec = clock?.[meId];
   const status = rec?.status ?? "out";
   const doIn = () => setClock((c) => clockIn(c || {}, meId, ME, shift?.site));
@@ -233,7 +279,7 @@ export function StaffDashApp() {
     .sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || (Number(!!b.important) - Number(!!a.important)) || b.date.localeCompare(a.date));
   const curAnn = recentUnread[0] ?? null;
   const annDate = (d: string) => new Date(`${d}T00:00:00`).toLocaleDateString("en-GB", { day: "numeric", month: "short" });
-  const markAnnRead = (id: string) => { const next = Array.from(new Set([...annRead, id])); setAnnRead(next); saveRead(next); setAnnOpen(false); };
+  const markAnnRead = (id: string) => { const next = Array.from(new Set([...annRead, id])); setAnnRead(next); void markAnnouncementRead(id).catch(() => {}); setAnnOpen(false); };
 
   return (
     <div className="text-[var(--ink)]">
@@ -396,7 +442,8 @@ export function StaffDashApp() {
 
       <div className="mb-3 grid items-start gap-3 lg:grid-cols-2">
       <Section id="watch" icon="⚠️" title={t("dashboard.watchList")} sub={t("dashboard.tapChildCareCard")} tint="#fdecec" ink="#c0362c" badge={regs !== null && watch.length > 0 ? watch.length : undefined} defaultOpen>
-          {regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.loading")}</div>
+          {loadFailed ? <div className="py-3 text-center text-[12.5px] font-bold text-[#c0392b]">{t("dashboard.couldntLoadDay")}</div>
+            : regs === null ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.loading")}</div>
             : watch.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.noFlaggedChildren")}</div>
               : watch.map((k) => (
                 <button type="button" key={k.key} onClick={() => setProfile(k)} title={t("dashboard.viewCareCard")} className="-mx-1 flex w-full flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border-b border-dashed border-[var(--line)] px-1 py-2 text-left transition-colors last:border-b-0 hover:bg-[var(--panel)]">
@@ -480,10 +527,12 @@ export function StaffDashApp() {
             : open.length === 0 ? <div className="py-3 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.allDoneNothingOpen")}</div>
               : open.slice(0, 6).map((task) => (
                 <div key={task.id} className="flex items-center gap-2.5 border-b border-dashed border-[var(--line)] py-1.5 last:border-b-0">
-                  <button type="button" onClick={() => tickTask(task)} aria-label={t("dashboard.markTaskDone", { title: task.title })} className="h-[18px] w-[18px] flex-none cursor-pointer rounded-md border-[1.5px] border-[var(--line)] hover:border-[var(--brand)]" />
-                  <span className="min-w-0 flex-1 truncate text-[12.5px]">{task.title}</span>
-                  {task.priority === "high" && <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>{t("dashboard.high")}</Badge>}
-                  {task.dueDate && <span className="text-[11px] text-[var(--ink-3)]">{task.dueDate}</span>}
+                  {task.subtaskOnly
+                    ? <Link href="/staff/tasks" title="Your step on this task — open it to tick your step" className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-md border-[1.5px] border-dashed border-[var(--line)] text-[10px] hover:border-[var(--brand)]">↗</Link>
+                    : <button type="button" onClick={() => tickTask(task)} aria-label={t("dashboard.markTaskDone", { title: task.t })} className="h-[18px] w-[18px] flex-none cursor-pointer rounded-md border-[1.5px] border-[var(--line)] hover:border-[var(--brand)]" />}
+                  <span className="min-w-0 flex-1 truncate text-[12.5px]">{task.t}</span>
+                  {(task.prio === "high" || task.prio === "urgent") && <Badge tone={{ bg: "var(--red-soft,#fdebec)", fg: "#bb1620" }}>{t(task.prio === "urgent" ? "dashboard.urgent" : "dashboard.high")}</Badge>}
+                  {task.due && <span className="text-[11px] text-[var(--ink-3)]">{dueChip(task.due, date)}</span>}
                 </div>
               ))}
       </Section>

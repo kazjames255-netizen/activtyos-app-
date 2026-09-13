@@ -24,6 +24,8 @@ export interface SubRecord {
   staffUsed?: number; locationsUsed?: number;
   trialEndsAt?: string | null; currentPeriodEnd?: string | null; cancelAt?: string | null;
   since?: string | null; canceledAt?: string | null;
+  /** When the tenant first went past_due (null otherwise) — starts the grace period. */
+  pastDueSince?: string | null;
   stripeCustomerId?: string; stripeSubscriptionId?: string; stripePriceId?: string;
   cardLast4?: string; cardBrand?: string;
   perStaffOver?: number; perLocationPct?: number;
@@ -90,13 +92,26 @@ export async function ensureCustomer(tenantId: string, email?: string | null): P
   return winner;
 }
 
-/** Team size that counts against the band cap (staff + franchise members). */
+/** Does this users doc take a seat on the band? Active STAFF only: a
+ *  switched-off account (Team → Deactivate) frees its place, and a franchisee
+ *  login is billed as a location (locationCount), not a staff seat
+ *  (acceptance test d19s6). */
+export const takesStaffSeat = (d: FirebaseFirestore.DocumentSnapshot): boolean =>
+  d.get("role") === "staff" && d.get("disabled") !== true;
+
+/** Team size that counts against the band cap — the real team, as Team &
+ *  invites shows it. */
 export async function staffCount(tenantId: string): Promise<number> {
   const snap = await db.collection("users").where("tenantId", "==", tenantId).get();
-  return snap.docs.filter((d) => {
-    const r = d.get("role") as string;
-    return r === "staff" || r === "franchise";
-  }).length;
+  return snap.docs.filter(takesStaffSeat).length;
+}
+
+/** Staff invites sent but not yet accepted (withdrawn ones excluded). Each is
+ *  a place spoken for — without counting them, ten invites could go out
+ *  against a plan with one place left and all ten be accepted. */
+export async function pendingStaffInvites(tenantId: string): Promise<number> {
+  const snap = await db.collection("invites").where("tenantId", "==", tenantId).get();
+  return snap.docs.filter((d) => d.get("role") === "staff" && !d.get("usedBy") && d.get("status") !== "deactivated").length;
 }
 
 /** Accepted franchisee invites = extra locations (base band covers site #1). */
@@ -105,16 +120,21 @@ export async function locationCount(tenantId: string): Promise<number> {
   return snap.docs.filter((d) => (d.get("role") as string) === "franchise").length;
 }
 
-/** May this tenant add another team member? No subscription record
- *  (pre-billing tenant) or a metered band (staffLimit null) → always yes. */
+/** May this tenant invite another team member? Active staff + invites still
+ *  waiting to be accepted must stay under the cap. No subscription record
+ *  (pre-billing tenant) or a metered band (staffLimit null) → always yes.
+ *  Acceptance re-checks the cap itself (routes/invites.ts). */
 export async function staffHeadroom(tenantId: string): Promise<{ ok: boolean; reason?: string }> {
   const sub = await subOf(tenantId);
   if (!sub || sub.staffLimit === null || sub.staffLimit === undefined) return { ok: true };
-  const used = await staffCount(tenantId);
-  if (used < sub.staffLimit) return { ok: true };
+  const [used, pending] = await Promise.all([staffCount(tenantId), pendingStaffInvites(tenantId)]);
+  if (used + pending < sub.staffLimit) return { ok: true };
+  const cap = `Your plan covers ${sub.staffLimit} team member${sub.staffLimit === 1 ? "" : "s"}`;
   return {
     ok: false,
-    reason: `Your plan covers ${sub.staffLimit} team member${sub.staffLimit === 1 ? "" : "s"} and you already have ${used} — upgrade your band in Money → Subscription to invite more.`,
+    reason: pending
+      ? `${cap} — you have ${used} and ${pending} invite${pending === 1 ? "" : "s"} still waiting to be accepted. Withdraw an unused invite in Team & invites, or upgrade your band in Money → Subscription.`
+      : `${cap} and you already have ${used} — upgrade your band in Money → Subscription to invite more.`,
   };
 }
 
@@ -177,14 +197,28 @@ export async function syncFromStripe(tenantId: string, s: Stripe.Subscription): 
     : s.status === "past_due" || s.status === "unpaid" ? "past_due"
     : s.status === "canceled" || s.status === "incomplete_expired" ? "canceled"
     : "past_due"; // incomplete/paused — treat as needing attention
+  // When it FIRST went past_due — the start of the 14-day grace period
+  // (middleware/subscription.ts). Kept across re-syncs, cleared once paid.
+  const prior = status === "past_due" ? await subOf(tenantId) : null;
   await saveSub(tenantId, {
     status,
+    pastDueSince: status === "past_due" ? (prior?.status === "past_due" && prior.pastDueSince) || new Date().toISOString() : null,
     trialEndsAt: iso(s.trial_end),
     currentPeriodEnd: periodEnd(s),
     cancelAt: s.cancel_at_period_end ? (iso(s.cancel_at) ?? periodEnd(s)) : null,
     ...(status === "canceled" ? { canceledAt: iso(s.canceled_at) ?? new Date().toISOString() } : {}),
   });
   return status;
+}
+
+/** A renewal failed (invoice.payment_failed): past_due, stamped with when it
+ *  started. A later retry failing again doesn't restart the grace period. */
+export async function markPastDue(tenantId: string): Promise<void> {
+  const prior = await subOf(tenantId);
+  await saveSub(tenantId, {
+    status: "past_due",
+    pastDueSince: (prior?.status === "past_due" && prior.pastDueSince) || new Date().toISOString(),
+  });
 }
 
 /** Find the tenant a Stripe customer belongs to (webhook lookups). */

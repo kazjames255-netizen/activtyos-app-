@@ -9,6 +9,7 @@ import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { LineItemsEditor, PrintableDoc, lineTotal, type LineItem } from "@/features/money/doc-shared";
 import { Card } from "@/components/ui";
+import { csvText } from "@/lib/csv";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -219,9 +220,8 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
   }
   function exportCsv() {
     const header = ["Customer", "Email", "Booking", "Description", "Date", "Due", "Amount", "Status"];
-    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const rows = filtered.map((p) => [p.customerName, p.customerEmail ?? "", p.bookingRef ?? "", p.description ?? "", p.date, p.dueDate ?? "", p.amount, p.status]);
-    const csv = [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+    const csv = csvText([header, ...rows]); // formula-safe (a leading = + - @ is neutralised)
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `invoices-${flt}-${todayIso()}.csv`; a.click(); URL.revokeObjectURL(url);
   }

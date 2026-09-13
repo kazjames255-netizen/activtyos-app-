@@ -19,7 +19,10 @@ export async function franchiseListingIds(tenantId: string, franchiseId: string)
 
 /** True when the caller is a franchise (so the caller should narrow its reads). */
 export function isFranchise(auth: AuthContext): auth is AuthContext & { franchiseId: string } {
-  return auth.role === "franchise" && !!auth.franchiseId;
+  // A franchise's own STAFF are scoped to it too — they carry its franchiseId
+  // (copied from the invite on accept), and must not read head office's or a
+  // sibling franchise's children, bookings or families.
+  return (auth.role === "franchise" || auth.role === "staff") && !!auth.franchiseId;
 }
 
 /** A record with an explicit franchiseId belongs to the franchise iff they match. */
@@ -84,4 +87,28 @@ export async function familyFranchiseMap(tenantId: string): Promise<Map<string, 
     if (b.email && b.franchiseId) out.set(b.email.toLowerCase(), b.franchiseId);
   }
   return out;
+}
+
+/** A franchise's own people: the accounts carrying its franchiseId (the
+ *  franchise owner and the staff who joined through its invites) plus the names
+ *  on its own rota. Used where a record carries only a person's name or email —
+ *  certificates, availability requests — to tell whose it is. */
+export async function franchiseTeam(tenantId: string, franchiseId: string): Promise<{ emails: Set<string>; names: Set<string> }> {
+  const [users, rota] = await Promise.all([
+    db.collection("users").where("tenantId", "==", tenantId).where("franchiseId", "==", franchiseId).get(),
+    db.collection("rotas").doc(`${tenantId}__fr__${franchiseId}`).get(),
+  ]);
+  const emails = new Set<string>();
+  const names = new Set<string>();
+  for (const u of users.docs) {
+    const e = String(u.get("email") ?? "").trim().toLowerCase();
+    const n = String(u.get("name") ?? "").trim().toLowerCase();
+    if (e) emails.add(e);
+    if (n) names.add(n);
+  }
+  for (const s of ((rota.get("staff") as { name?: string }[] | undefined) ?? [])) {
+    const n = String(s.name ?? "").trim().toLowerCase();
+    if (n) names.add(n);
+  }
+  return { emails, names };
 }

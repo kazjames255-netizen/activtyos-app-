@@ -58,9 +58,17 @@ const laurel = (a: string) => {
 };
 
 const metaCell = (label: string, val: string) => `<div class="mcell"><span class="mk">${esc(label)}</span><b class="mv">${esc(val)}</b></div>`;
-const verifyUrlOf = (d: CertData) => d.verifyUrl || `https://activityos.uk/v/${d.ref}`;
-// framed verification QR for the bottom of the certificate
-const qrFoot = (d: CertData) => { if (d.showQr === false) return ""; const url = verifyUrlOf(d); return `<div style="display:flex;align-items:center;gap:11px;font-family:${F_SANS}"><span style="display:inline-block;background:#fff;padding:6px;border-radius:9px;box-shadow:0 1px 5px rgba(0,0,0,.22)">${qrSvg(url, 74)}</span><div style="text-align:left;line-height:1.4"><div style="font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;opacity:.55">Scan to verify</div><div style="font-size:10px;opacity:.85">${esc(url)}</div><div style="font-size:10px;opacity:.6">Ref ${esc(d.ref)}</div></div></div>`; };
+// The QR is only printed when the caller supplies a verifyUrl that genuinely
+// resolves. It used to fall back to `https://activityos.uk/v/<ref>` — a
+// hardcoded domain, a /v/ route this app does not have, and a brand name that
+// is a placeholder. Every certificate therefore carried a "Scan to verify"
+// badge that 404s, on a document staff hand to an inspector. A missing QR is
+// honest; one that fails to resolve is a false assurance.
+const qrFoot = (d: CertData) => {
+  if (d.showQr === false || !d.verifyUrl) return "";
+  const url = d.verifyUrl;
+  return `<div style="display:flex;align-items:center;gap:11px;font-family:${F_SANS}"><span style="display:inline-block;background:#fff;padding:6px;border-radius:9px;box-shadow:0 1px 5px rgba(0,0,0,.22)">${qrSvg(url, 74)}</span><div style="text-align:left;line-height:1.4"><div style="font-size:8.5px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;opacity:.55">Scan to verify</div><div style="font-size:10px;opacity:.85">${esc(url)}</div><div style="font-size:10px;opacity:.6">Ref ${esc(d.ref)}</div></div></div>`;
+};
 const metaRow = (d: CertData) => `<div class="meta">${[d.showScore === false ? "" : metaCell("Score", d.pct + "%"), metaCell("Completed", d.date), d.showExpiry === false || !d.expiry ? "" : metaCell("Renew by", d.expiry)].join("")}</div>`;
 
 export interface CertTemplate { id: string; name: string; desc: string; accent: string; render: (d: CertData, a: string) => string }

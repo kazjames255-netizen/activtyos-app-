@@ -1,11 +1,16 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
-import { franchiseChildIds } from "../lib/franchiseScope";
+import { esc } from "../lib/html";
+import { bareImageUrl, signImageUrl } from "../lib/signing";
+import { franchiseChildIds, isFranchise } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 import { countsTowardCapacity, type BlockDoc } from "../lib/blockDomain";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { notify, parentEmailForChild } from "../lib/notify";
+import { ukToday } from "../lib/ukDate";
+import { siteChildIds, siteRecordFilter, staffSiteScope } from "../lib/siteScope";
+import { customerAreaOn } from "../lib/customerArea";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Moments (Pupils) — the photos a provider shares of the day, and the feed a
@@ -57,7 +62,22 @@ async function resolveChildren(
   return { ok: true, names };
 }
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => ukToday();
+
+/** Staff assigned to certain sites (a site lead) see, tag and act on moments
+ *  from those sites only — or ones they posted themselves. */
+const siteMomentFilter = (req: Request) => {
+  const me = req.user?.email ?? req.user?.uid;
+  return siteRecordFilter(req.auth!, (m) => !!me && m.postedBy === me);
+};
+async function siteMayTag(req: Request, childIds: string[], listingId?: string): Promise<boolean> {
+  const site = await staffSiteScope(req.auth!);
+  if (!site) return true;
+  if (listingId && !site.listings.has(listingId)) return false;
+  if (!childIds.length) return true;
+  const kids = await siteChildIds(req.auth!.tenantId!, site);
+  return childIds.every((c) => kids.has(c));
+}
 
 // POST /api/moments — share a moment (operators + staff).
 moments.post("/", async (req, res) => {
@@ -71,6 +91,10 @@ moments.post("/", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
+  if (!(await siteMayTag(req, parsed.data.childIds, parsed.data.listingId))) {
+    res.status(403).json({ error: "You can only share moments of children at the sites you're assigned to", code: "child_not_yours" });
+    return;
+  }
   const consent = await resolveChildren(parsed.data.childIds, parsed.data.photoType !== "work");
   if (!consent.ok) {
     res.status(409).json({ error: `${consent.blocked} can't be tagged in a child photo — no photo consent on file. Use “their work” instead.` });
@@ -78,6 +102,7 @@ moments.post("/", async (req, res) => {
   }
   const doc = {
     ...parsed.data,
+    photoUrl: bareImageUrl(parsed.data.photoUrl),
     date: parsed.data.date ?? todayIso(),
     childNames: parsed.data.childIds.map((id) => consent.names[id] ?? ""),
     tenantId: auth.tenantId,
@@ -109,8 +134,8 @@ moments.post("/", async (req, res) => {
         body: doc.caption || (doc.activity ? `${doc.activity} — ${what} from the day.` : `${what[0].toUpperCase()}${what.slice(1)} from the day.`),
         subject: `${names.join(" and ")}: a new moment was shared`,
         emailHtml:
-          `<p><b>${names.join(" and ")}</b> ${names.length > 1 ? "were" : "was"} featured in ${what} shared today${doc.activity ? ` from <b>${doc.activity}</b>` : ""}.</p>` +
-          (doc.caption ? `<p>“${doc.caption}”</p>` : "") +
+          `<p><b>${esc(names.join(" and "))}</b> ${names.length > 1 ? "were" : "was"} featured in ${what} shared today${doc.activity ? ` from <b>${esc(doc.activity)}</b>` : ""}.</p>` +
+          (doc.caption ? `<p>“${esc(doc.caption)}”</p>` : "") +
           `<p>See it — and leave a comment — in your Moments feed.</p>`,
         href: "/custdash/moments",
         ref: ref.id,
@@ -118,10 +143,31 @@ moments.post("/", async (req, res) => {
     ),
   );
 
-  res.status(201).json({ id: ref.id, ...doc });
+  res.status(201).json({ id: ref.id, ...doc, photoUrl: signImageUrl(doc.photoUrl) });
 });
 
 // GET /api/moments — role-aware:
+/** Consent is checked when a child is TAGGED — but a parent can withdraw it
+ *  afterwards, and the photo stayed published to every family in the session.
+ *  Re-check on every read: any child-photo moment tagging a child whose photo
+ *  consent is now off is hidden from parents, and flagged for the provider so
+ *  they can take it down. Photo links are re-signed on the way out. */
+async function forViewing<T extends Record<string, unknown> & { childIds?: string[]; photoType?: unknown; photoUrl?: unknown }>(
+  list: T[],
+  viewer: "parent" | "team",
+): Promise<T[]> {
+  const ids = [...new Set(list.filter((m) => m.photoType !== "work").flatMap((m) => m.childIds ?? []))];
+  const consent = new Map<string, boolean>();
+  for (let i = 0; i < ids.length; i += 300) {
+    const snaps = await db.getAll(...ids.slice(i, i + 300).map((id) => db.collection("children").doc(id)));
+    for (const d of snaps) consent.set(d.id, d.exists ? d.get("photoConsent") === true : false);
+  }
+  const withdrawn = (m: T) => m.photoType !== "work" && !!m.photoUrl && (m.childIds ?? []).some((id) => consent.get(id) === false);
+  return list
+    .filter((m) => viewer === "team" || !withdrawn(m))
+    .map((m) => ({ ...m, photoUrl: signImageUrl(m.photoUrl), ...(viewer === "team" && withdrawn(m) ? { consentWithdrawn: true } : {}) }));
+}
+
 //   parent          → moments featuring THEIR children (any provider)
 //   operator/staff  → the tenant's moments (optional ?date= / ?childId=)
 moments.get("/", async (req, res) => {
@@ -135,10 +181,14 @@ moments.get("/", async (req, res) => {
       return;
     }
     const snap = await col.where("childIds", "array-contains-any", ids).get();
+    // Not from a provider that switched Moments off (Setup → Features / Customer area).
+    const tenants = [...new Set(snap.docs.map((d) => String(d.get("tenantId") ?? "")))].filter(Boolean);
+    const on = new Map(await Promise.all(tenants.map(async (t) => [t, await customerAreaOn(t, "moments")] as const)));
     const list = snap.docs
+      .filter((d) => on.get(String(d.get("tenantId") ?? "")))
       .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
       .sort((a, b) => (`${(b as { createdAt?: string }).createdAt}` < `${(a as { createdAt?: string }).createdAt}` ? -1 : 1));
-    res.json(list);
+    res.json(await forViewing(list as (Record<string, unknown> & { childIds?: string[] })[], "parent"));
     return;
   }
 
@@ -153,13 +203,15 @@ moments.get("/", async (req, res) => {
   const snap = await q.get();
   let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; date?: string; createdAt?: string; childIds?: string[] })[];
   // A franchise sees moments (child photos) only for ITS OWN children.
-  if (auth.role === "franchise" && auth.franchiseId) {
+  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) {
     const kids = await franchiseChildIds(tenantId, auth.franchiseId);
     list = list.filter((m) => (m.childIds ?? []).some((cid) => kids.has(cid)));
   }
+  const inSite = await siteMomentFilter(req);
+  if (inSite) list = list.filter(inSite);
   if (typeof req.query.date === "string") list = list.filter((x) => x.date === req.query.date);
   list.sort((a, b) => (`${b.createdAt}` < `${a.createdAt}` ? -1 : 1));
-  res.json(list);
+  res.json(await forViewing(list, "team"));
 });
 
 // GET /api/moments/taggable?date= — the day's booked children who HAVE photo
@@ -176,9 +228,11 @@ moments.get("/taggable", async (req, res) => {
   // child booked anywhere. Not date-filtered — you can share a moment about any
   // child you run sessions for.
   const blocks = await db.collection("blocks").where("tenantId", "==", auth.tenantId).get();
+  const site = await staffSiteScope(auth);
   const relevant = blocks.docs
     .map((d) => ({ id: d.id, block: d.data() as BlockDoc }))
-    .filter(({ block }) => (!listingId || block.listingId === listingId));
+    .filter(({ block }) => (!listingId || block.listingId === listingId))
+    .filter(({ block }) => !site || site.listings.has(block.listingId));
   if (!relevant.length) {
     res.json([]);
     return;
@@ -190,6 +244,8 @@ moments.get("/taggable", async (req, res) => {
   const parentOf = new Map<string, { parentName: string; email: string; listing: string }>();
   for (const snap of bookingSnaps)
     for (const d of snap.docs) {
+      // A franchise (and its staff) tags only its own families (d22s6).
+      if (isFranchise(auth) && (d.get("franchiseId") ?? null) !== auth.franchiseId) continue;
       const b = fromDoc(d.data() as BookingDoc);
       if (b.childId && countsTowardCapacity(b.status) && b.status !== "Offered") {
         childIds.add(b.childId);
@@ -217,6 +273,8 @@ async function ownMoment(req: Request, id: string) {
   if (!auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  const inSite = await siteMomentFilter(req);
+  if (inSite && !inSite(snap.data()!)) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -239,6 +297,11 @@ moments.put("/:id", async (req, res) => {
     return;
   }
   const patch: Record<string, unknown> = { ...parsed.data, updatedAt: new Date().toISOString() };
+  if (parsed.data.photoUrl !== undefined) patch.photoUrl = bareImageUrl(parsed.data.photoUrl);
+  if (parsed.data.childIds && !(await siteMayTag(req, parsed.data.childIds, parsed.data.listingId))) {
+    res.status(403).json({ error: "You can only tag children at the sites you're assigned to", code: "child_not_yours" });
+    return;
+  }
   if (parsed.data.childIds) {
     const requireConsent = (parsed.data.photoType ?? (own.snap.data()!.photoType as string | undefined)) !== "work";
     const consent = await resolveChildren(parsed.data.childIds, requireConsent);
@@ -250,7 +313,7 @@ moments.put("/:id", async (req, res) => {
   }
   await own.snap.ref.set(patch, { merge: true });
   const after = await own.snap.ref.get();
-  res.json({ id: after.id, ...after.data() });
+  res.json({ id: after.id, ...after.data(), photoUrl: signImageUrl(after.get("photoUrl")) });
 });
 
 // DELETE /api/moments/:id — operators only.
@@ -282,8 +345,14 @@ moments.post("/:id/comment", async (req, res) => {
     const kids = await db.collection("children").where("parentUid", "==", req.user!.uid).get();
     const ids = new Set(kids.docs.map((d) => d.id));
     allowed = ((m.childIds as string[]) ?? []).some((id) => ids.has(id));
+    if (allowed && !(await customerAreaOn(String(m.tenantId), "moments"))) {
+      res.status(403).json({ error: "Moments aren't available from this provider at the moment.", code: "area_off" });
+      return;
+    }
   } else {
     allowed = canPost(auth.role) && m.tenantId === auth.tenantId;
+    const inSite = allowed ? await siteMomentFilter(req) : null;
+    if (inSite && !inSite(m)) allowed = false;
   }
   if (!allowed) { res.status(403).json({ error: "You can't comment on this moment" }); return; }
   const parsed = commentSchema.safeParse(req.body);
@@ -292,7 +361,7 @@ moments.post("/:id/comment", async (req, res) => {
   const comments = Array.isArray(m.comments) ? m.comments : [];
   await snap.ref.set({ comments: [...comments, comment] }, { merge: true });
   const after = await snap.ref.get();
-  res.json({ id: after.id, ...after.data() });
+  res.json({ id: after.id, ...after.data(), photoUrl: signImageUrl(after.get("photoUrl")) });
 });
 
 // POST /api/moments/:id/comment/:idx/marketing — operator flips whether a
@@ -307,5 +376,5 @@ moments.post("/:id/comment/:idx/marketing", async (req, res) => {
   comments[idx] = { ...comments[idx], marketing: !comments[idx].marketing };
   await own.snap.ref.set({ comments }, { merge: true });
   const after = await own.snap.ref.get();
-  res.json({ id: after.id, ...after.data() });
+  res.json({ id: after.id, ...after.data(), photoUrl: signImageUrl(after.get("photoUrl")) });
 });

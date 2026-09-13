@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { allergenHits } from "./allergens";
 import { get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useT } from "@/lib/i18n/provider";
@@ -37,17 +38,9 @@ const avatarOf = (name: string) => { const s = [...name].reduce((a, c) => a + c.
 // the optional description, and its allergens.
 const dishOptText = (it: MenuItem) => `${it.name}${it.price > 0 ? ` · ${money(it.price)}` : ""}${it.diet ? ` · ${dietMeta(it.diet)?.label}` : ""}${it.description ? ` · ${it.description}` : ""}${it.allergens?.length ? ` · contains ${it.allergens.join(", ")}` : ""}`;
 
-const ALLERGEN_SYN: Record<string, string[]> = {
-  milk: ["milk", "dairy", "lactose", "cheese"], gluten: ["gluten", "wheat", "bread", "coeliac", "celiac"], eggs: ["egg"], fish: ["fish"],
-  crustaceans: ["crustacean", "shellfish", "prawn", "shrimp", "crab", "lobster"], molluscs: ["mollusc", "shellfish", "squid", "mussel", "oyster"],
-  peanuts: ["peanut"], nuts: ["nut", "almond", "cashew", "walnut", "hazelnut", "pecan"], soya: ["soya", "soy"], sesame: ["sesame", "tahini"],
-  celery: ["celery"], mustard: ["mustard"], lupin: ["lupin"], sulphites: ["sulphite", "sulfite", "sulphur"],
-};
-const allergenClash = (dishAllergens: string[] | undefined, allergiesText: string | undefined): string[] => {
-  if (!dishAllergens?.length || !allergiesText?.trim()) return [];
-  const t = allergiesText.toLowerCase();
-  return dishAllergens.filter((a) => (ALLERGEN_SYN[a.toLowerCase()] ?? [a.toLowerCase()]).some((syn) => t.includes(syn)));
-};
+
+// Shared with the kitchen view and the server (features/meals/allergens.ts).
+const allergenClash = (dishAllergens: string[] | undefined, allergiesText: string | undefined): string[] => allergenHits(allergiesText, dishAllergens);
 const dietClash = (it: MenuItem, dietary: string | undefined): string | null => {
   const d = (dietary ?? "").toLowerCase();
   if (!it.diet) return null;

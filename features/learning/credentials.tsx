@@ -6,7 +6,9 @@
 // each staff member holds RECORDS against a type (file, dates, number, verify
 // state). Front-end demo store; real file storage + verification persistence are
 // Amir's (see handoff).
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { del as apiDel, fetchBlob, get as apiGet, isDemoMode, openFile, post as apiPost, put as apiPut } from "@/lib/api";
+import { typeOf } from "@/features/listings/planUpload";
 import { createPortal } from "react-dom";
 import { Button, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE } from "@/components/OperatorPage";
@@ -108,11 +110,18 @@ export function seedRecords(staff: { name: string; dbs: string; pfa: string }[])
 // documents appended (images embed inline; PDF uploads are listed to attach).
 export function exportCredsPdf(staff: { name: string; op: string }[], types: CredType[], getRec: (name: string, typeId: string) => CredRecord | undefined, provider: string, withDocs: boolean) {
   if (typeof window === "undefined") return;
+  // Open the window now (a popup opened after an await gets blocked), then
+  // fetch any stored scans and fill it in.
+  const w = window.open("", "_blank"); if (!w) return;
+  w.document.write("<p style=\"font-family:sans-serif;padding:24px\">Preparing…</p>");
+  void (async () => {
+  const data = new Map<string, string>();
+  if (withDocs) await Promise.all(staff.flatMap((s) => types.map(async (t) => { const r = getRec(s.name, t.id); const d = await resolveData(r?.fileData); if (d) data.set(`${s.name}|${t.id}`, d); })));
   const e = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
   const head = `<tr><th>Staff</th><th>Location</th>${types.map((t) => `<th>${e(t.name)}</th>`).join("")}</tr>`;
   const body = staff.map((s) => `<tr><td><b>${e(s.name)}</b></td><td>${e(s.op)}</td>${types.map((t) => { const r = getRec(s.name, t.id); const st = credStatus(r); return `<td class="st ${st}">${st}${r?.expiry ? `<span class="d">exp ${e(fmtDate(r.expiry))}</span>` : ""}</td>`; }).join("")}</tr>`).join("");
   let docs = "";
-  if (withDocs) staff.forEach((s) => types.forEach((t) => { const r = getRec(s.name, t.id); if (r?.fileData) { const img = r.fileData.startsWith("data:image"); docs += `<div class="doc"><div class="dh">${e(s.name)} — ${e(t.name)}${r.number ? " · " + e(r.number) : ""}${r.fileName ? ` · ${e(r.fileName)}` : ""}</div>${img ? `<img src="${r.fileData}"/>` : `<object data="${r.fileData}" type="application/pdf" class="pdfdoc"><iframe src="${r.fileData}" class="pdfdoc"></iframe></object>`}</div>`; } }));
+  if (withDocs) staff.forEach((s) => types.forEach((t) => { const r = getRec(s.name, t.id); const fd = data.get(`${s.name}|${t.id}`); if (r && fd) { const img = fd.startsWith("data:image"); docs += `<div class="doc"><div class="dh">${e(s.name)} — ${e(t.name)}${r.number ? " · " + e(r.number) : ""}${r.fileName ? ` · ${e(r.fileName)}` : ""}</div>${img ? `<img src="${fd}"/>` : `<object data="${fd}" type="application/pdf" class="pdfdoc"><iframe src="${fd}" class="pdfdoc"></iframe></object>`}</div>`; } }));
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Credential register — ${e(provider)}</title><style>
     body{font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:#1a1c2b;padding:26px}
     h1{font-size:20px;margin:0 0 2px}.sub{color:#6b7086;font-size:12px;margin-bottom:16px}
@@ -121,7 +130,8 @@ export function exportCredsPdf(staff: { name: string; op: string }[], types: Cre
     .doc{page-break-before:always;padding-top:16px}.dh{font-weight:700;font-size:14px;margin-bottom:8px;border-bottom:1px solid #e5e7f0;padding-bottom:6px}.doc img{max-width:100%;max-height:880px;border:1px solid #e5e7f0;border-radius:6px}.pdfdoc{display:block;width:100%;height:960px;border:1px solid #e5e7f0;border-radius:6px}
     @media print{body{padding:0 6mm}}
   </style></head><body><h1>${e(provider)} — Credential register</h1><div class="sub">Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })}${withDocs ? " · with certificate documents" : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}<script>window.onload=function(){setTimeout(function(){window.print()},400)}</script></body></html>`;
-  const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); }
+  w.document.open(); w.document.write(html); w.document.close();
+  })();
 }
 
 // Configurable export pack — chosen staff × chosen credential types, optionally
@@ -137,11 +147,18 @@ export function exportCredsPack(params: {
 }) {
   if (typeof window === "undefined") return;
   const { staff, types, getRec, provider, withDocs, courseCerts = [] } = params;
+  // Open the window now (a popup opened after an await gets blocked), then
+  // fetch any stored scans and fill it in.
+  const w = window.open("", "_blank"); if (!w) return;
+  w.document.write("<p style=\"font-family:sans-serif;padding:24px\">Preparing…</p>");
+  void (async () => {
+  const data = new Map<string, string>();
+  if (withDocs) await Promise.all(staff.flatMap((s) => types.map(async (t) => { const r = getRec(s.name, t.id); const d = await resolveData(r?.fileData); if (d) data.set(`${s.name}|${t.id}`, d); })));
   const e = (s = "") => String(s).replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" }[c] as string));
   const head = `<tr><th>Staff</th><th>Location</th>${types.map((t) => `<th>${e(t.name)}</th>`).join("")}</tr>`;
   const body = staff.map((s) => `<tr><td><b>${e(s.name)}</b></td><td>${e(s.op)}</td>${types.map((t) => { const r = getRec(s.name, t.id); const st = credStatus(r); return `<td class="st ${st}">${st}${r?.expiry ? `<span class="d">exp ${e(fmtDate(r.expiry))}</span>` : ""}</td>`; }).join("")}</tr>`).join("");
   let docs = "";
-  if (withDocs) staff.forEach((s) => types.forEach((t) => { const r = getRec(s.name, t.id); if (r?.fileData) { const img = r.fileData.startsWith("data:image"); docs += `<div class="doc"><div class="dh">${e(s.name)} — ${e(t.name)}${r.number ? " · " + e(r.number) : ""}${r.fileName ? ` · ${e(r.fileName)}` : ""}</div>${img ? `<img src="${r.fileData}"/>` : `<object data="${r.fileData}" type="application/pdf" class="pdfdoc"><iframe src="${r.fileData}" class="pdfdoc"></iframe></object>`}</div>`; } }));
+  if (withDocs) staff.forEach((s) => types.forEach((t) => { const r = getRec(s.name, t.id); const fd = data.get(`${s.name}|${t.id}`); if (r && fd) { const img = fd.startsWith("data:image"); docs += `<div class="doc"><div class="dh">${e(s.name)} — ${e(t.name)}${r.number ? " · " + e(r.number) : ""}${r.fileName ? ` · ${e(r.fileName)}` : ""}</div>${img ? `<img src="${fd}"/>` : `<object data="${fd}" type="application/pdf" class="pdfdoc"><iframe src="${fd}" class="pdfdoc"></iframe></object>`}</div>`; } }));
   const certPages = courseCerts.map(({ data, templateId }) => `<div class="certpage">${renderCert(data, templateId)}</div>`).join("");
   const needFonts = courseCerts.length ? CERT_FONTS : "";
   const html = `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Credential pack — ${e(provider)}</title>${needFonts}<style>
@@ -153,25 +170,98 @@ export function exportCredsPack(params: {
     .certpage{page-break-before:always;transform:scale(.82);transform-origin:top center}
     @media print{body{padding:0 6mm}}
   </style></head><body><h1>${e(provider)} — Credential pack</h1><div class="sub">Generated ${new Date().toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" })} · ${staff.length} staff · ${types.length} credential${types.length === 1 ? "" : "s"}${withDocs ? " · with documents" : ""}${courseCerts.length ? ` · ${courseCerts.length} course certificate${courseCerts.length === 1 ? "" : "s"}` : ""}</div><table><thead>${head}</thead><tbody>${body}</tbody></table>${docs}${certPages}<script>window.onload=function(){setTimeout(function(){window.print()},${courseCerts.length ? 650 : 400})}</script></body></html>`;
-  const w = window.open("", "_blank"); if (w) { w.document.write(html); w.document.close(); }
+  w.document.open(); w.document.write(html); w.document.close();
+  })();
 }
 
 // ——— shared store hook ———
 export function useCredentials(seedStaff: { name: string; dbs: string; pfa: string }[]) {
+  const demo = isDemoMode();
   const [types, setTypes] = useState<CredType[]>(DEFAULT_CRED_TYPES);
-  const [records, setRecords] = useState<CredRecord[]>(() => seedRecords(seedStaff));
+  // The demo cast's certificates are for the demo only.
+  const [records, setRecords] = useState<CredRecord[]>(() => (demo ? seedRecords(seedStaff) : []));
   useEffect(() => {
-    try { const t = JSON.parse(localStorage.getItem(CRED_TKEY) || "null"); if (Array.isArray(t)) setTypes(t); } catch { /* ignore */ }
-    try { const r = JSON.parse(localStorage.getItem(CRED_RKEY) || "null"); if (Array.isArray(r)) setRecords(r); } catch { /* ignore */ }
+    if (isDemoMode()) {
+      try { const t = JSON.parse(localStorage.getItem(CRED_TKEY) || "null"); if (Array.isArray(t)) setTypes(t); } catch { /* ignore */ }
+      try { const r = JSON.parse(localStorage.getItem(CRED_RKEY) || "null"); if (Array.isArray(r)) setRecords(r); } catch { /* ignore */ }
+      return;
+    }
+    // On the server since 12 Sept (routes/credentials.ts). A manager's saves
+    // also feed the rota's DBS / first-aid check, which used to read a
+    // different store entirely.
+    apiGet<{ types: CredType[] | null; records: ServerRec[] }>("/api/credentials")
+      .then((r) => {
+        if (r.types?.length) setTypes(r.types);
+        const recs = r.records.map(fromServer);
+        setRecords(recs);
+        try { if (r.types?.length) localStorage.setItem(CRED_TKEY, JSON.stringify(r.types)); localStorage.setItem(CRED_RKEY, JSON.stringify(recs)); } catch { /* ignore */ }
+      })
+      .catch(() => {});
   }, []);
-  const saveTypes = (t: CredType[]) => { setTypes(t); try { localStorage.setItem(CRED_TKEY, JSON.stringify(t)); } catch { /* ignore */ } };
+  const typesTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const saveTypes = (t: CredType[]) => {
+    setTypes(t);
+    try { localStorage.setItem(CRED_TKEY, JSON.stringify(t)); } catch { /* ignore */ }
+    if (isDemoMode()) return;
+    // Type names are edited as you type — save once they settle.
+    if (typesTimer.current) clearTimeout(typesTimer.current);
+    typesTimer.current = setTimeout(() => { apiPut("/api/credentials/types", { types: t }).catch((e) => alert(`Couldn't save credential types: ${e instanceof Error ? e.message : "try again"}`)); }, 800);
+  };
   const saveRecords = (r: CredRecord[]) => { setRecords(r); try { localStorage.setItem(CRED_RKEY, JSON.stringify(r)); } catch { /* ignore */ } };
-  const upsertRecord = (r: CredRecord) => saveRecords(records.some((x) => x.id === r.id) ? records.map((x) => (x.id === r.id ? r : x)) : [...records, r]);
-  const deleteRecord = (id: string) => saveRecords(records.filter((x) => x.id !== id));
+  const upsertRecord = (r: CredRecord) => {
+    saveRecords(records.some((x) => x.id === r.id) ? records.map((x) => (x.id === r.id ? r : x)) : [...records, r]);
+    if (isDemoMode()) return;
+    void toServer(r)
+      .then((body) => apiPut<ServerRec>(`/api/credentials/records/${encodeURIComponent(r.id)}`, body))
+      .then((saved) => setRecords((cur) => cur.map((x) => (x.id === r.id ? fromServer(saved) : x))))
+      .catch((e) => alert(`Couldn't save the certificate: ${e instanceof Error ? e.message : "try again"}`));
+  };
+  const deleteRecord = (id: string) => {
+    saveRecords(records.filter((x) => x.id !== id));
+    if (!isDemoMode()) apiDel(`/api/credentials/records/${encodeURIComponent(id)}`).catch((e) => alert(`Couldn't delete the certificate: ${e instanceof Error ? e.message : "try again"}`));
+  };
   const upsertType = (t: CredType) => saveTypes(types.some((x) => x.id === t.id) ? types.map((x) => (x.id === t.id ? t : x)) : [...types, t]);
   const deleteType = (id: string) => saveTypes(types.filter((x) => x.id !== id));
   const recordFor = (staff: string, typeId: string) => records.find((r) => r.staff === staff && r.typeId === typeId);
   return { types, records, saveTypes, saveRecords, upsertRecord, deleteRecord, upsertType, deleteType, recordFor };
+}
+
+// ——— server shape ———
+// A stored scan travels as "aosfile:<id>" in fileData / files[].data, so the
+// screens that only check "is there a file?" or open it keep working;
+// openCredFile and the export packs fetch the real bytes when needed.
+const FILE_PREFIX = "aosfile:";
+type ServerRec = Omit<CredRecord, "fileData" | "files"> & { fileId?: string; files?: { name: string; fileId: string; at?: string }[] };
+function fromServer(r: ServerRec): CredRecord {
+  const { fileId, files, ...rest } = r;
+  return { ...rest, fileData: fileId ? FILE_PREFIX + fileId : undefined, files: files?.map((f) => ({ name: f.name, data: FILE_PREFIX + f.fileId, at: f.at ?? "" })) };
+}
+async function toServer(r: CredRecord): Promise<ServerRec> {
+  const up = async (data: string, name: string) => (data.startsWith(FILE_PREFIX) ? data.slice(FILE_PREFIX.length) : uploadCredFile(r.staff, data, name));
+  const files = await Promise.all(credFiles(r).map(async (f) => ({ name: f.name, fileId: await up(f.data, f.name), at: f.at })));
+  const last = files[files.length - 1];
+  const rest: Partial<CredRecord> = { ...r };
+  delete rest.fileData; delete rest.files;
+  return { ...(rest as Omit<CredRecord, "fileData" | "files">), ...(last ? { fileId: last.fileId, fileName: last.name } : {}), files };
+}
+const CHUNK = 480_000;
+async function uploadCredFile(staff: string, dataUrl: string, name: string): Promise<string> {
+  const blob = await (await fetch(dataUrl)).blob();
+  if (blob.size > 15_000_000) throw new Error(`${name} is over 15MB`);
+  const total = Math.max(1, Math.ceil(blob.size / CHUNK));
+  const { id } = await apiPost<{ id: string }>("/api/onboarding/files", { staff, name, contentType: typeOf(Object.assign(blob, { name })), bytes: blob.size, total });
+  const b64 = (part: Blob) => new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onload = () => { const u = String(rd.result); res(u.slice(u.indexOf(",") + 1)); }; rd.onerror = () => rej(rd.error); rd.readAsDataURL(part); });
+  for (let i = 0; i < total; i += 1) await apiPut(`/api/onboarding/files/${id}/chunks/${i}`, { b64: await b64(blob.slice(i * CHUNK, (i + 1) * CHUNK)) });
+  await apiPost(`/api/onboarding/files/${id}/done`, {});
+  return id;
+}
+/** A stored scan's bytes as a data URL (for the export packs). */
+async function resolveData(data?: string): Promise<string | undefined> {
+  if (!data?.startsWith(FILE_PREFIX)) return data;
+  try {
+    const blob = await fetchBlob(`/api/onboarding/files/${encodeURIComponent(data.slice(FILE_PREFIX.length))}`);
+    return await new Promise<string>((res, rej) => { const rd = new FileReader(); rd.onload = () => res(String(rd.result)); rd.onerror = () => rej(rd.error); rd.readAsDataURL(blob); });
+  } catch { return undefined; }
 }
 
 export const blankRecord = (staff: string, typeId: string): CredRecord => ({ id: "cr" + Date.now().toString(36), staff, typeId, verified: "pending" });
@@ -179,6 +269,7 @@ export const blankRecord = (staff: string, typeId: string): CredRecord => ({ id:
 // open an uploaded certificate (data URL) in a new tab via a Blob URL
 export function openCredFile(dataUrl?: string) {
   if (!dataUrl || typeof window === "undefined") return;
+  if (dataUrl.startsWith(FILE_PREFIX)) { openFile(`/api/onboarding/files/${encodeURIComponent(dataUrl.slice(FILE_PREFIX.length))}`).catch((e) => alert(e instanceof Error ? e.message : "Couldn't open that file")); return; }
   try {
     const [meta, b64] = dataUrl.split(","); const m = /:(.*?);/.exec(meta)?.[1] || "application/octet-stream";
     const bin = atob(b64); const arr = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);

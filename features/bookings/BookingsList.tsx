@@ -12,6 +12,7 @@ import {
   money,
   payLabel,
   payLabelFor,
+  pendingPayWords,
   payMethodLabel,
   payTone,
   bookedOn,
@@ -387,7 +388,10 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
           {list.map((b) => {
             const on = !!selected[b.ref];
             const kids = bookingKids(b);
-            const lead = kids[0]?.name?.trim() || b.child?.trim() || b.booker;
+            // Types say booker/child are always set; Firestore disagrees (older
+            // seeded rows carry neither, and kids[] is then synthesised from the
+            // missing child). Fall back to the same "—" the name line uses.
+            const lead = kids[0]?.name?.trim() || b.child?.trim() || b.booker?.trim() || "—";
             const att = attendeeCount(b);
             // A refund is owed and not yet actioned (the cancel sets full /
             // partial; approve/decline clear it). "pending" too, for safety.
@@ -441,7 +445,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
                   <span className="ml-auto flex flex-wrap items-center justify-end gap-1.5">
                     {b.pay === "Awaiting voucher payment" && !off && (
                       <button onClick={(e) => { e.stopPropagation(); act(b.ref, "paid"); }} title="Confirm the voucher money has arrived — marks it paid and tells the family"
-                        className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">Mark voucher received</button>
+                        className="flex-none whitespace-nowrap rounded-full bg-[#1d3a8f] px-3 py-[5px] text-[11px] font-bold text-white hover:brightness-110">{pendingPayWords(b).action}</button>
                     )}
                     {refundPending && (
                       <button onClick={(e) => { e.stopPropagation(); act(b.ref, "refund-approve"); }} title={isVoucherBk ? "Send the refund back through the scheme, then confirm — the family is told" : "Approve and issue the refund"}

@@ -10,6 +10,7 @@ import { useSettings } from "@/lib/settings";
 import { LIGHT_PALETTE, CollapsibleStats } from "@/components/OperatorPage";
 import { useHoScope, HO_OWN } from "@/components/franchise/HoScope";
 import { OnSiteNowCard } from "@/features/timeclock/OnSiteNowCard";
+import { InboxCard, MessagesCard, NewsfeedCard, NotificationsCard } from "@/features/dashboard/CommsCards";
 import { Badge } from "@/components/ui";
 import { greeting } from "@/lib/greeting";
 import { useT } from "@/lib/i18n/provider";
@@ -189,6 +190,48 @@ function Panel({ title, right, children, className = "" }: { title: string; righ
     </div>
   );
 }
+// A bolder card for the "run the day" row — the heading sits in a solid
+// coloured band (title on its own line, the detail under it) rather than
+// competing with badges and links on one grey rule. Deliberately a different
+// shape from the comms cards above it, so the two rows don't blur together.
+function BannerPanel({ glyph, title, sub, grad, action, badge, children }: {
+  glyph: string; title: string; sub?: string; grad: string;
+  action?: React.ReactNode; badge?: React.ReactNode; children: React.ReactNode;
+}) {
+  return (
+    <div className="flex min-w-0 flex-col overflow-hidden rounded-2xl border border-[var(--line)] bg-[var(--surface)] shadow-[0_1px_2px_rgba(16,32,90,.04)]">
+      <div
+        className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-4 py-3 text-white"
+        style={{
+          // The same 18px dot grid the hero and sidebar wear, so a banner reads
+          // as part of the house rather than a stray coloured box.
+          backgroundImage: `radial-gradient(rgba(255,255,255,0.10) 1px, transparent 1.6px), ${grad}`,
+          backgroundSize: "18px 18px, cover",
+          backgroundRepeat: "repeat, no-repeat",
+        }}
+      >
+        <div className="min-w-[9rem] flex-1">
+          <h3 className="m-0 flex items-center gap-2 text-[15px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>
+            <span aria-hidden className="flex h-7 w-7 flex-none items-center justify-center rounded-xl bg-white/20 text-[14px] leading-none">{glyph}</span>
+            <span className="truncate">{title}</span>
+          </h3>
+          {sub && <div className="mt-1.5 text-[11.5px] font-semibold leading-snug text-white/85">{sub}</div>}
+        </div>
+        <div className="flex flex-none flex-wrap items-center justify-end gap-1.5">{badge}{action}</div>
+      </div>
+      <div className="flex-1 p-3.5">{children}</div>
+    </div>
+  );
+}
+// The two controls that live ON a banner — white-on-colour, not brand-blue.
+const BANNER_BTN = "whitespace-nowrap rounded-full bg-white/15 px-3 py-1 text-[11px] font-extrabold text-white ring-1 ring-white/25 transition hover:bg-white/25";
+const BANNER_BADGE = "whitespace-nowrap rounded-full bg-white/15 px-2.5 py-1 text-[11px] font-extrabold text-white ring-1 ring-white/25";
+const BAND = {
+  blue: "linear-gradient(120deg,#16306e 0%,#274ba3 55%,#3f78d8 100%)",
+  teal: "linear-gradient(120deg,#0b5566 0%,#0e7490 55%,#17a2b8 100%)",
+  green: "linear-gradient(120deg,#0b5a33 0%,#0f7a43 55%,#17c06d 100%)",
+};
+
 function Legend({ items }: { items: [string, string][] }) {
   return <div className="flex gap-3 text-[11px] font-bold text-[var(--ink-3)]">{items.map(([l, c]) => <span key={l} className="flex items-center gap-1"><span className="h-2 w-2 rounded-full" style={{ background: c }} />{l}</span>)}</div>;
 }
@@ -472,6 +515,13 @@ export function DashboardApp() {
         </div>
       </div>
 
+      {/* What's come in — first thing under the banner, four across: email,
+          messages, the newsfeed and the bell. Each row opens that item where
+          it lives. */}
+      <div className="mt-3 grid grid-cols-2 gap-2.5 sm:gap-3 xl:grid-cols-4">
+        <InboxCard /><MessagesCard /><NewsfeedCard /><NotificationsCard />
+      </div>
+
       {/* Live operational KPIs (from /api/dashboard) */}
       <CollapsibleStats id="dashboard-kpis" className="mt-4" label={t("dashboard.liveKpis")}>
       <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
@@ -504,19 +554,21 @@ export function DashboardApp() {
       </div>
       </CollapsibleStats>
 
-      {/* live clock-in board */}
-      <div className="mt-3"><OnSiteNowCard /></div>
+      {/* Live clock-in board. Not for a freelancer: the card exists to answer
+          "are the children covered, and by whom" across a team, and a solo
+          operator is the only staff member — it would just report them to
+          themselves. The same board is still on Timesheets if they want it. */}
+      {portal !== "freelancer" && <div className="mt-3"><OnSiteNowCard /></div>}
 
       {/* Today · Live listings · Tasks today — three across */}
       <div className="mt-3 grid gap-3 lg:grid-cols-3">
-        <Panel
-          title={`☀️ ${t("dashboard.today")} · ${fmtDay(d.today.date)}`}
-          right={
-            <span className="flex items-center gap-2">
-              {d.bookings.waitlist > 0 && <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>{t("dashboard.onWaitlist", { count: d.bookings.waitlist })}</Badge>}
-              <button type="button" onClick={() => router.push(`/${portal}/registers`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">{t("dashboard.registers")} →</button>
-            </span>
-          }
+        <BannerPanel
+          glyph="☀️"
+          title={t("dashboard.today")}
+          sub={`${fmtDay(d.today.date)} · ${t("dashboard.sessionsRunningCount", { count: d.today.sessions.length })}`}
+          grad={BAND.blue}
+          badge={d.bookings.waitlist > 0 ? <span className={BANNER_BADGE}>{t("dashboard.onWaitlist", { count: d.bookings.waitlist })}</span> : undefined}
+          action={<button type="button" onClick={() => router.push(`/${portal}/registers`)} className={BANNER_BTN}>{t("dashboard.registers")} →</button>}
         >
           {d.today.sessions.length === 0 ? (
             <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.nothingRunningToday")}</div>
@@ -541,10 +593,13 @@ export function DashboardApp() {
               })}
             </div>
           )}
-        </Panel>
-        <Panel
-          title={`🎟️ ${t("dashboard.liveListingsPlaces")}`}
-          right={<button type="button" onClick={() => router.push(`/${portal}/listings`)} className="text-[11px] font-bold text-[var(--brand)] hover:underline">{t("dashboard.allListings")} →</button>}
+        </BannerPanel>
+        <BannerPanel
+          glyph="🎟️"
+          title={t("dashboard.liveListings")}
+          sub={t("dashboard.placesLeftSub")}
+          grad={BAND.teal}
+          action={<button type="button" onClick={() => router.push(`/${portal}/listings`)} className={BANNER_BTN}>{t("dashboard.allListings")} →</button>}
         >
           {d.byListing.length === 0 ? (
             <div className="py-4 text-center text-[12.5px] text-[var(--ink-3)]">{t("dashboard.noOpenListings")}</div>
@@ -572,10 +627,13 @@ export function DashboardApp() {
               })}
             </div>
           )}
-        </Panel>
-        <Panel
-          title={`✅ ${t("dashboard.tasksToday")}`}
-          right={todayTasks.length > 0 ? <Badge tone={{ bg: "#fdeede", fg: "#a85f08" }}>{t("dashboard.due", { count: todayTasks.length })}</Badge> : undefined}
+        </BannerPanel>
+        <BannerPanel
+          glyph="✅"
+          title={t("dashboard.tasksToday")}
+          sub={todayTasks.length > 0 ? t("dashboard.due", { count: todayTasks.length }) : t("dashboard.nothingDueToday")}
+          grad={BAND.green}
+          action={<button type="button" onClick={() => router.push(`/${portal}/tasks`)} className={BANNER_BTN}>{t("dashboard.openTaskManager")} →</button>}
         >
           {tasks === null ? (
             <Empty>{t("dashboard.loading")}</Empty>
@@ -604,7 +662,7 @@ export function DashboardApp() {
               <button type="button" onClick={() => router.push(`/${portal}/tasks`)} className="pt-2 text-center text-[11px] font-bold text-[var(--brand)] hover:underline">{t("dashboard.openTaskManager")} →</button>
             </div>
           )}
-        </Panel>
+        </BannerPanel>
       </div>
 
       {/* ── Business analytics (computed from your bookings) ── */}

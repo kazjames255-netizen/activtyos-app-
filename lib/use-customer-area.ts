@@ -5,6 +5,7 @@ import { get as apiGet } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { DEFAULT_SETTINGS, withDefaults, type TenantSettings } from "@/lib/settings";
 import type { PortalKey } from "@/lib/nav/config";
+import { CA_FEATURES, firstOff } from "@/lib/accessMap";
 
 export type CustomerArea = TenantSettings["customerArea"];
 export type Features = TenantSettings["features"]; // { [navView]: boolean } — absent/true = shown
@@ -26,6 +27,31 @@ export const featureOff = (features: Features | undefined, view: string) => feat
 // account/privacy, and "report a problem". Everything else is hidden.
 export const SIMPLE_ALLOWED = new Set(["dash", "browse", "bookings", "children", "account", "privacy", "activityos"]);
 
+/** A family's provider's customer area, as the family nav applies it (one
+ *  providers read + one public-library read). Also used by ViewGate to refuse
+ *  a switched-off family page typed by URL. */
+export function fetchCustomerArea(): Promise<CustomerArea> {
+  return apiGet<{ tenantId: string }[]>("/api/my/providers")
+    .then((ps) => ps?.[0]?.tenantId)
+    .then((tid) => (tid ? apiGet<{ settings?: Partial<TenantSettings> } | null>(`/api/public/library/${tid}`) : null))
+    .then((lib) => {
+      const full = withDefaults(lib?.settings ?? null);
+      const ca = { ...full.customerArea };
+      const fe = full.features;
+      // A module the operator switched off (Setup → Features, keyed by their
+      // nav view) is hidden for families too — the same table the parent APIs
+      // refuse by (lib/accessMap.ts CA_FEATURES; trips + timetable since
+      // 13 Sept). Refer also needs the referral programme actually on.
+      for (const [key, fkeys] of Object.entries(CA_FEATURES)) if (firstOff(fe, fkeys)) (ca as Record<string, boolean>)[key] = false;
+      // Memberships also needs the programme actually switched on (at least
+      // one tier live), or the family sees an empty page.
+      ca.memberships = ca.memberships && !featureOff(fe, "memberships")
+        && !!full.memberships?.enabled && (full.memberships?.tiers ?? []).some((t) => t.enabled);
+      ca.refer = ca.refer && full.referral.enabled && !featureOff(fe, "referrals");
+      return ca;
+    });
+}
+
 // What a family sees is set by THEIR provider (Setup → Customer area). A parent
 // reads it from their single provider's PUBLIC library slice.
 //
@@ -37,29 +63,7 @@ export function useCustomerArea(portal?: PortalKey): CustomerArea {
   const [ca, setCa] = useState<CustomerArea>(DEFAULT_SETTINGS.customerArea);
   const load = useCallback(() => {
     if (portal && portal !== "custdash") return;
-    void apiGet<{ tenantId: string }[]>("/api/my/providers")
-      .then((ps) => ps?.[0]?.tenantId)
-      .then((tid) => (tid ? apiGet<{ settings?: Partial<TenantSettings> } | null>(`/api/public/library/${tid}`) : null))
-      .then((lib) => {
-        const full = withDefaults(lib?.settings ?? null);
-        const ca = { ...full.customerArea };
-        const fe = full.features;
-        // A module the operator switched off (Setup → Features, keyed by their
-        // nav view) is hidden for families too. Refer also needs the referral
-        // programme actually on.
-        if (featureOff(fe, "messages")) ca.messaging = false;
-        if (featureOff(fe, "marketing")) { ca.coupons = false; ca.codesBanner = false; }
-        if (featureOff(fe, "newsfeed")) ca.newsfeed = false;
-        if (featureOff(fe, "moments")) ca.moments = false;
-        if (featureOff(fe, "meals")) ca.meals = false;
-        // Memberships also needs the programme actually switched on (at least
-        // one tier live), or the family sees an empty page.
-        ca.memberships = ca.memberships && !featureOff(fe, "memberships")
-          && !!full.memberships?.enabled && (full.memberships?.tiers ?? []).some((t) => t.enabled);
-        ca.refer = ca.refer && full.referral.enabled && !featureOff(fe, "referrals");
-        setCa(ca);
-      })
-      .catch(() => {});
+    void fetchCustomerArea().then(setCa).catch(() => {});
   }, [portal]);
   useEffect(() => { load(); }, [load]);
   // Live: the provider's library streams to families (see events.ts parent
@@ -68,11 +72,13 @@ export function useCustomerArea(portal?: PortalKey): CustomerArea {
   return ca;
 }
 
-// The operator's own module switches (Setup → Features), for hiding their nav.
-// Live-refetches on library changes; a no-op for families/staff/platform.
+// The operator's own module switches (Setup → Features), for hiding their nav
+// — and their staff's (a module the operator switched off is off for the team
+// too; staff views map onto them via lib/accessMap.ts). Live-refetches on
+// library changes; a no-op for families/platform.
 export function useOperatorFeatures(portal?: PortalKey): Features {
   const [fe, setFe] = useState<Features>(DEFAULT_SETTINGS.features);
-  const active = !!portal && portal !== "custdash" && portal !== "platform" && portal !== "staff";
+  const active = !!portal && portal !== "custdash" && portal !== "platform";
   const load = useCallback(() => {
     if (!active) return;
     void apiGet<{ settings?: Partial<TenantSettings> } | null>("/api/library")

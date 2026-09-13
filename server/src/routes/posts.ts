@@ -3,6 +3,7 @@ import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { customerAreaOn } from "../lib/customerArea";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Newsfeed (Communication) — a provider's announcements to their families.
@@ -113,7 +114,10 @@ posts.get("/", async (req, res) => {
   if (auth.role === "parent") {
     const email = req.user?.email;
     if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
-    const tenantIds = await parentTenantIds(email);
+    // Not from a provider that switched the Newsfeed off (Setup → Features / Customer area).
+    const all = await parentTenantIds(email);
+    const onFlags = await Promise.all(all.map((t) => customerAreaOn(t, "newsfeed")));
+    const tenantIds = all.filter((_, i) => onFlags[i]);
     if (!tenantIds.length) { res.json([]); return; }
     const snap = await col.where("tenantId", "in", tenantIds).get();
     // A parent sees a post if it's network-wide (no franchiseId) OR targeted to
@@ -156,7 +160,7 @@ posts.post("/", async (req, res) => {
   let authorLabel = brand;
   let authorScope: "network" | "franchise" | "own" = "own";
   let targetName: string | null = null;
-  if (auth.role === "franchise" && auth.franchiseId) {
+  if ((auth.role === "franchise" || auth.role === "staff") && auth.franchiseId) {
     targetFr = auth.franchiseId;
     authorLabel = await franchiseNameOf(auth.tenantId, auth.franchiseId);
     authorScope = "franchise";

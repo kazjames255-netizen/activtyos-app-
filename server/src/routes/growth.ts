@@ -1,9 +1,10 @@
 import { Router } from "express";
 import { db } from "../firebase";
-import { operatorScope } from "../middleware/role";
+import { managerScope } from "../middleware/role";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import { blockSummary, type BlockDoc } from "../lib/blockDomain";
 import type { Booking } from "../../../features/bookings/types";
+import { ukToday } from "../lib/ukDate";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Growth — the "Marketing strategies" page reimagined as a data-driven engine.
@@ -42,8 +43,9 @@ interface Play {
   secondary?: { label: string; view: string };
 }
 
+// Revenue-derived figures — managers only, not staff (acceptance d24s4).
 growth.get("/", async (req, res) => {
-  const scope = operatorScope(req, res);
+  const scope = managerScope(req, res);
   if (!scope) return;
   const tenantId = scope.role === "platform" && typeof req.query.tenantId === "string" ? req.query.tenantId : scope.tenantId;
   if (!tenantId) { res.status(400).json({ error: "No tenant in scope" }); return; }
@@ -59,7 +61,7 @@ growth.get("/", async (req, res) => {
   ]);
 
   const now = Date.now();
-  const today = new Date(now).toISOString().slice(0, 10);
+  const today = ukToday(new Date(now));
   const in30 = new Date(now + 30 * DAY).toISOString().slice(0, 10);
 
   // Operator-tunable segment thresholds (passed from the page, with sensible

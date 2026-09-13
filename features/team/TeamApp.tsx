@@ -28,7 +28,7 @@ import { useT } from "@/lib/i18n/provider";
 // the assignment ride along as extra fields and are mirrored locally so they
 // show now — the backend persists them per docs/team-invites-handoff.md.
 
-interface Invite { token: string; role: "franchise" | "staff"; createdAt: string; usedBy: string | null; sentTo?: string | null }
+interface Invite { token: string; role: "franchise" | "staff"; createdAt: string; usedBy: string | null; sentTo?: string | null; name?: string | null; staffRole?: string | null; jobTitle?: string | null; assignment?: Assignment | null; status?: "active" | "deactivated"; lead?: boolean }
 interface Me { role: string; tenantName: string | null }
 interface Listing { id: string; title: string; venueId?: string | null; seasonId?: string | null }
 interface Venue { id: string; name: string }
@@ -140,7 +140,15 @@ export function TeamApp() {
 
   // Active = accepted invites we haven't locally deactivated.
   const rows = useMemo(
-    () => (invites ?? []).map((inv) => ({ ...inv, meta: meta[inv.token] ?? {} })).filter((r) => r.meta.status !== "deleted"),
+    // The server now holds role, assignment and status (12 Sept); the local
+    // copy only fills gaps for invites made before that.
+    () => (invites ?? []).map((inv) => {
+      const m = meta[inv.token] ?? {};
+      return { ...inv, meta: {
+        name: inv.name ?? m.name, staffRole: inv.staffRole ?? m.staffRole, jobTitle: inv.jobTitle ?? m.jobTitle, assignment: inv.assignment ?? m.assignment,
+        status: m.status === "deleted" ? "deleted" as const : (inv.status ?? m.status),
+      } };
+    }).filter((r) => r.meta.status !== "deleted"),
     [invites, meta],
   );
   const active = rows.filter((r) => r.usedBy && r.meta.status !== "deactivated");
@@ -184,18 +192,28 @@ export function TeamApp() {
   function copy(token: string) {
     navigator.clipboard.writeText(`${window.location.origin}/signup?invite=${token}`).then(() => { setCopied(token); setTimeout(() => setCopied(null), 1500); });
   }
-  const setStatus = (token: string, status: "active" | "deactivated") => {
-    // IMPORTANT: this does NOT revoke access. There is no disabled-account
-    // concept in the API yet (no flag on the user doc, no check in
-    // server/src/middleware/auth.ts), and PATCH /api/invites/:token/status
-    // does not exist — the call below 404s and is swallowed. So this is a
-    // bookkeeping flag on THIS device only, and the person can still sign in.
-    // Say so out loud rather than letting an operator believe they've removed
-    // someone's access to children's records.
-    if (status === "deactivated" && !confirm(t("team.deactivateNotYetLive"))) return;
-    patchMeta(token, { status });
-    // Best-effort backend call — no-op until Amir adds the route (handoff).
-    void api(`/api/invites/${token}/status`, { method: "PATCH", body: JSON.stringify({ status }) }).catch(() => {});
+  const setStatus = async (token: string, status: "active" | "deactivated") => {
+    // Real since 12 Sept: the server disables the account they joined with —
+    // every API call is refused and their sessions are revoked. So it's
+    // confirmed, and a failure is shown rather than swallowed.
+    if (status === "deactivated" && !confirm(t("team.deactivateConfirm"))) return;
+    try {
+      await api(`/api/invites/${token}/status`, { method: "PATCH", body: JSON.stringify({ status }) });
+      patchMeta(token, { status });
+      refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("team.failedCreateInvite"));
+    }
+  };
+  // Leads get through every "leads only" setting (doses, trips, group
+  // assignment) — enforced by the server, which now knows who they are.
+  const setLead = async (token: string, lead: boolean) => {
+    try {
+      await api(`/api/invites/${token}/lead`, { method: "PATCH", body: JSON.stringify({ lead }) });
+      refresh();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("team.failedCreateInvite"));
+    }
   };
   const deleteInvite = (token: string) => {
     if (!confirm(t("team.deleteInviteConfirm"))) return;
@@ -430,10 +448,12 @@ export function TeamApp() {
                         {r.meta.jobTitle && <span className="rounded-full bg-[var(--panel)] px-2 py-[2px] font-bold text-[var(--ink-2)]">{r.meta.jobTitle}</span>}
                         {r.role === "staff" && <span className="rounded-full bg-[var(--panel)] px-2 py-[2px] font-semibold text-[var(--ink-3)]">📍 {assignLabel(r.meta.assignment)}</span>}
                         <span className="rounded-full px-2 py-[2px] font-extrabold" style={{ background: badge.bg, color: badge.fg }}>{badge.t}</span>
+                        {r.role === "staff" && r.lead && <span className="rounded-full bg-[#fdf3d8] px-2 py-[2px] font-extrabold text-[#9a5a00]" title={t("team.leadHelp")}>{t("team.leadBadge")}</span>}
                       </div>
                     </div>
                     <div className="flex flex-none items-center gap-2">
                       {st === "pending" && <Button sm title={t("team.copyLinkTitle")} onClick={() => copy(r.token)}>{copied === r.token ? t("team.copiedSendIt") : t("team.copyInviteLink")}</Button>}
+                      {r.role === "staff" && st !== "deactivated" && <button type="button" title={t("team.leadHelp")} onClick={() => setLead(r.token, !r.lead)} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{r.lead ? t("team.removeLead") : t("team.makeLead")}</button>}
                       {st === "activated" && <button type="button" onClick={() => setStatus(r.token, "deactivated")} className="rounded-full border border-[var(--line)] bg-white px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">{t("team.deactivate")}</button>}
                       {st === "deactivated" && <button type="button" onClick={() => setStatus(r.token, "active")} className="rounded-full border border-[#bfe3cd] bg-[#eef8f1] px-3 py-1.5 text-[12px] font-bold text-[#0f7a43] hover:brightness-105">{t("team.reactivate")}</button>}
                       <button type="button" onClick={() => deleteInvite(r.token)} title={t("team.deleteInviteTitle")} className="rounded-full border border-[#e6b3b3] bg-white px-3 py-1.5 text-[12px] font-bold text-[#c0392b] hover:bg-[#fdebec]">{t("team.deleteWord")}</button>

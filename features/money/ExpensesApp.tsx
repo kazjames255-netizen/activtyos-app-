@@ -8,6 +8,8 @@ import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
+import { StaffClaimsPanel } from "./StaffClaimsPanel";
+import { csvText } from "@/lib/csv";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -78,9 +80,14 @@ function compressImage(dataUrl: string): Promise<string> {
   });
 }
 
+// PDF receipts: the server caps them at ~750KB (routes/uploads.ts MAX_PDF_B64).
+const PDF_MAX_BYTES = 750_000;
+
+// A photo previews; anything <img> can't draw (a PDF receipt, a pasted link to
+// a web page) falls back to a file chip — the Open link beside it still works.
 function ReceiptThumb({ url, className = "" }: { url: string; className?: string }) {
   const [ok, setOk] = useState(true);
-  if (!ok) return <div className={`flex items-center justify-center bg-[var(--panel)] text-[18px] ${className}`}>📎</div>;
+  if (!ok) return <div title="PDF / file — open to view" className={`flex flex-col items-center justify-center bg-[var(--panel)] text-[18px] leading-none ${className}`}>📄<span className="mt-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">file</span></div>;
   return <img src={url} alt="receipt" onError={() => setOk(false)} className={`object-cover ${className}`} />;
 }
 
@@ -289,9 +296,13 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   async function onPickReceipt(file: File) {
     setUploading(true); setError(null);
     try {
-      const dataUrl = await readAsDataUrl(file);
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      if (isPdf && file.size > PDF_MAX_BYTES) throw new Error(`That PDF is ${Math.ceil(file.size / 1000)}KB — the limit is ${PDF_MAX_BYTES / 1000}KB. Save a smaller PDF or upload a photo instead.`);
+      let dataUrl = await readAsDataUrl(file);
+      if (isPdf) dataUrl = dataUrl.replace(/^data:[^;,]*;base64,/, "data:application/pdf;base64,"); // some OSes label a .pdf octet-stream
       const payload = dataUrl.startsWith("data:image/") ? await compressImage(dataUrl) : dataUrl;
-      const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: payload });
+      // Private: a receipt is only for the business — a signed link, not a public image (d18s5).
+      const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: payload, purpose: "private" });
       setEditor((ed) => (ed ? { ...ed, receiptUrl: url } : ed));
     } catch (e) { setError(e instanceof Error ? e.message : "Upload failed — try a smaller image or paste a link."); } finally { setUploading(false); }
   }
@@ -325,9 +336,8 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
   }
   function exportCsv() {
     const header = ["Date", "Category", "Amount", "Status", "Due", "Supplier", "Notes", "Receipt", "Repeats", "Repeat until", "Source"];
-    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const rows = filtered.map((x) => [x.date, x.category, x.amount, statusOf(x), x.dueDate ?? "", x.supplier ?? "", x.notes ?? "", x.receiptUrl ?? "", x.repeat ?? "", x.repeatUntil ?? "", x.virtual ? "subscription" : "logged"]);
-    const csv = [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+    const csv = csvText([header, ...rows]); // formula-safe (a leading = + - @ is neutralised)
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `expenses-${range}${from || to ? "-custom" : ""}-${todayIso()}.csv`; a.click(); URL.revokeObjectURL(url);
   }
@@ -356,6 +366,9 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
         )}
       </div>
       )}
+
+      {/* Staff expense claims waiting for a manager (approve → Money out). */}
+      <StaffClaimsPanel onChanged={refresh} />
 
       {/* ActivityOS subscription include toggle */}
       {sub && (
@@ -756,8 +769,8 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
                 <span className={labelCls}>Receipt <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></span>
                 <div className="flex flex-wrap items-center gap-2">
                   <label className={`${btnGhost} cursor-pointer !py-1.5`}>
-                    {uploading ? "Uploading…" : "⬆ Upload photo"}
-                    <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) void onPickReceipt(f); e.target.value = ""; }} />
+                    {uploading ? "Uploading…" : "⬆ Upload photo or PDF"}
+                    <input type="file" accept="image/*,application/pdf,.pdf" className="hidden" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) void onPickReceipt(f); e.target.value = ""; }} />
                   </label>
                   <span className="text-[11px] text-[var(--ink-3)]">or paste a link</span>
                   <input value={editor.receiptUrl} onChange={(e) => setEditor({ ...editor, receiptUrl: e.target.value })} placeholder="https://…" className={`${fieldCls} min-w-[160px] flex-1`} />

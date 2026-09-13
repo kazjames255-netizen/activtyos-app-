@@ -3,10 +3,11 @@
 // Compact live "Who's in now" card for the operator Dashboard — clocked in / on
 // break / off right now, with a jump to the full Clock in/out & timesheets area.
 import { useEffect, useState } from "react";
-import { type ClockRecord, loadClock, offToday, sinceLabel } from "./data";
+import { type ClockRecord, loadClock, offToday, sinceLabel, useClockRefresh } from "./data";
 
 export function LiveClockCard() {
   const [all, setAll] = useState<Record<string, ClockRecord>>({});
+  useClockRefresh(setAll);
   const [off, setOff] = useState<{ name: string; kind: string }[]>([]);
   useEffect(() => { setAll(loadClock()); setOff(offToday()); const t = setInterval(() => setAll(loadClock()), 30000); return () => clearInterval(t); }, []);
   const people = Object.values(all);

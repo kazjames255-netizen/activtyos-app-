@@ -1,5 +1,9 @@
 import { Router } from "express";
 import { z } from "zod";
+import { readFile, rename, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { gzipSync } from "node:zlib";
 import { db } from "../firebase";
 
 // Marketing-site "Book a demo" lead capture.
@@ -28,7 +32,10 @@ leadsPublic.post("/", async (req, res) => {
     return;
   }
   const ref = db.collection("leads").doc();
-  await ref.set({ ...parsed.data, status: "new", createdAt: new Date().toISOString() });
+  // A demo request is a live sales conversation: it goes on the HQ Sales board.
+  const doc = { ...parsed.data, status: "new", inPipeline: true, createdAt: new Date().toISOString() };
+  await ref.set(doc);
+  if (cache) { cache.items.unshift({ id: ref.id, ...doc }); rev++; }
   res.json({ ok: true, id: ref.id });
 });
 
@@ -42,12 +49,78 @@ leads.use((req, res, next) => {
   next();
 });
 
-leads.get("/", async (_req, res) => {
-  const snap = await db.collection("leads").get();
-  const items = snap.docs
-    .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
-    .sort((a, b) => (String((a as { createdAt?: string }).createdAt) < String((b as { createdAt?: string }).createdAt) ? 1 : -1));
-  res.json({ leads: items });
+// The list is a few thousand researched prospects: reading them all from
+// Firestore takes ~10s, so the page is served from a trimmed in-memory copy
+// (only the fields the cards show) and refreshed in the background.
+const LIST_FIELDS = ["name", "email", "phone", "business", "size", "message", "source", "status", "createdAt", "updatedAt",
+  "website", "location", "kind", "legalForm", "companyNumber", "charityNumber", "bookingSystem", "sourceUrl",
+  "confidence", "listingsOnSource", "plan", "planReason", "personalContact", "sport",
+  // Cross-source tracking: every directory the provider is on, with the listing links.
+  "sources", "sourceRefs", "onSources", "duplicateOf", "excluded",
+  // A "coming soon" website (likely no booking platform yet) · Ofsted venue count.
+  "comingSoon", "ofstedSites",
+  // What kind of provider (Ofsted-classified) and whether it's part of a franchise / group.
+  "providerTypes", "providerType", "network", "networkKind", "networkOperators", "ofstedRegions",
+  // Where they are (from postcode / town via ONS data) and where each contact detail was read.
+  "region", "county", "emailFrom", "phoneFrom",
+  // A site that matches their name but couldn't be confirmed as theirs (no contacts taken from it).
+  "websiteCandidate", "websiteCandidateWhy",
+  // Activities / HAF read from their own website.
+  "activityTypes", "haf"];
+const FRESH_MS = 3 * 60_000;
+type Row = Record<string, unknown> & { id: string; createdAt?: string };
+let cache: { at: number; items: Row[] } | null = null;
+let inflight: Promise<Row[]> | null = null;
+// Tens of thousands of leads is tens of MB of JSON: send it gzipped, zipped once
+// per version of the list (rev bumps when a lead changes in the cache).
+let rev = 0;
+let zipped: { key: string; buf: Buffer } | null = null;
+// A copy on disk (outside the repo) so a restart serves the list at once
+// instead of making the page wait a minute for thousands of reads.
+const DISK = join(tmpdir(), "aos-leads-list-cache.json");
+function refresh(): Promise<Row[]> {
+  inflight ??= db.collection("leads").select(...LIST_FIELDS).get()
+    .then((snap) => {
+      const items = snap.docs
+        .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }) as Row)
+        // The card shows two lines of the description; a long Ofsted site list
+        // would otherwise make the whole list tens of MB.
+        .map((r) => (typeof r.message === "string" && r.message.length > 400 ? { ...r, message: `${r.message.slice(0, 400)}…` } : r))
+        // The same provider found on two directories is one lead; the folded
+        // copy (duplicateOf) isn't listed twice.
+        .filter((r) => !r.duplicateOf && !r.excluded)
+        .sort((a, b) => (String(a.createdAt) < String(b.createdAt) ? 1 : -1));
+      cache = { at: Date.now(), items };
+      // Write-then-rename, so a restart mid-write can't leave a broken copy.
+      const tmp = `${DISK}.${process.pid}.tmp`;
+      writeFile(tmp, JSON.stringify(cache)).then(() => rename(tmp, DISK)).catch(() => {});
+      return items;
+    })
+    .finally(() => { inflight = null; });
+  return inflight;
+}
+/** At start-up: serve the saved copy straight away, then read the latest. */
+export function warmLeads() {
+  // Only re-read Firestore if the saved copy is stale — the API restarts on every
+  // code change in dev, and 26k reads per restart kept the page from loading.
+  readFile(DISK, "utf8").then((t) => { if (!cache) cache = JSON.parse(t); }).catch(() => {})
+    .finally(() => { if (!cache || Date.now() - cache.at > FRESH_MS) refresh().catch(() => {}); });
+}
+
+leads.get("/", async (req, res) => {
+  if (cache) {
+    if (req.query.fresh === "1" || Date.now() - cache.at > FRESH_MS) refresh().catch(() => {});
+    const body = () => JSON.stringify({ leads: cache!.items, asOf: new Date(cache!.at).toISOString(), refreshing: !!inflight });
+    if (!/\bgzip\b/.test(String(req.headers["accept-encoding"] ?? ""))) { res.type("json").send(body()); return; }
+    const key = `${cache.at}|${!!inflight}|${rev}`;
+    if (zipped?.key !== key) zipped = { key, buf: gzipSync(body()) };
+    res.set({ "Content-Type": "application/json; charset=utf-8", "Content-Encoding": "gzip", Vary: "Accept-Encoding" }).send(zipped.buf);
+    return;
+  }
+  // Nothing read yet (first start): say so rather than hold the request past
+  // the browser's timeout; the page asks again in a few seconds.
+  refresh().catch(() => {});
+  res.status(202).json({ leads: [], warming: true });
 });
 
 leads.patch("/:id", async (req, res) => {
@@ -61,9 +134,17 @@ leads.patch("/:id", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  await db
-    .collection("leads")
-    .doc(req.params.id)
-    .set({ ...parsed.data, updatedAt: new Date().toISOString() }, { merge: true });
+  // Working a researched prospect (contacted / won / lost) puts it on the HQ
+  // Sales board; its pipeline stage follows unless the board already has it further on.
+  const ref = db.collection("leads").doc(req.params.id);
+  const extra: Record<string, unknown> = {};
+  if (parsed.data.status && parsed.data.status !== "new") {
+    extra.inPipeline = true;
+    const stage = ((await ref.get()).get("stage") as string | undefined) ?? "new";
+    if (parsed.data.status !== "contacted" || stage === "new") extra.stage = parsed.data.status;
+  }
+  await ref.set({ ...parsed.data, ...extra, updatedAt: new Date().toISOString() }, { merge: true });
+  const row = cache?.items.find((l) => l.id === req.params.id);
+  if (row && parsed.data.status) { row.status = parsed.data.status; rev++; }
   res.json({ ok: true });
 });

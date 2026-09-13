@@ -7,7 +7,7 @@
 // grouping are Amir's (the timesheet backend).
 import { useEffect, useMemo, useState } from "react";
 import { useT } from "@/lib/i18n/provider";
-import { loadClock, workedMs, fmtDur, hhmm, type ClockRecord } from "@/features/timeclock/data";
+import { loadClock, workedMs, fmtDur, hhmm, type ClockRecord, useClockRefresh } from "@/features/timeclock/data";
 
 const GREEN = "#0f9d58", BLUE = "#1d3a8f", AMBER = "#b45309";
 const todayISO = () => new Date().toISOString().slice(0, 10);
@@ -19,6 +19,7 @@ const checkedIn = (r: ClockRecord) => !!r.clockInAt;
 export function StaffAttendanceBoard() {
   const t = useT();
   const [all, setAll] = useState<Record<string, ClockRecord> | null>(null);
+  useClockRefresh(setAll);
   const [site, setSite] = useState("all");
   const [date, setDate] = useState(todayISO());
   const [, tick] = useState(0);

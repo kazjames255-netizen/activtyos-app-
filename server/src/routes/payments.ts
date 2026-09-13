@@ -1,7 +1,7 @@
 import { Router, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
-import { canWrite, operatorScope, type Role } from "../middleware/role";
+import { canWrite, operatorScope, type Role, managerScope } from "../middleware/role";
 import { platformFallback, stripe, toPence, webUrl } from "../lib/stripe";
 import { autoEmailOn } from "../lib/autoEmails";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
@@ -165,7 +165,7 @@ payments.post("/dashboard", async (req, res) => {
 payments.get("/status", async (req, res) => {
   const s = needStripe(res);
   if (!s) return;
-  const scope = operatorScope(req, res);
+  const scope = managerScope(req, res);
   if (!scope || !scope.tenantId) {
     if (scope) res.status(403).json({ error: "Requires a tenant account" });
     return;
@@ -196,7 +196,7 @@ payments.get("/status", async (req, res) => {
 
 // GET /api/payments — the tenant's payment & refund records (oversight).
 payments.get("/", async (req, res) => {
-  const scope = operatorScope(req, res);
+  const scope = managerScope(req, res);
   if (!scope) return;
   let q = paymentsCol as FirebaseFirestore.Query;
   if (scope.role === "platform") {
@@ -208,7 +208,7 @@ payments.get("/", async (req, res) => {
   const snap = await q.get();
   let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
   // A franchise sees only payments for ITS OWN bookings (on its listings).
-  if (scope.role === "franchise" && scope.franchiseId && scope.tenantId) {
+  if ((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId && scope.tenantId) {
     const bk = await db.collection("bookings").where("tenantId", "==", scope.tenantId).where("franchiseId", "==", scope.franchiseId).get();
     const refs = new Set(bk.docs.map((d) => (d.data() as { ref?: string }).ref).filter(Boolean) as string[]);
     list = list.filter((p) => ((p as { refs?: string[] }).refs ?? []).some((r) => refs.has(r)));
@@ -217,7 +217,7 @@ payments.get("/", async (req, res) => {
   res.json(list);
 });
 
-const checkoutSchema = z.object({ refs: z.array(z.string().min(1)).min(1).max(20) });
+const checkoutSchema = z.object({ refs: z.array(z.string().min(1)).min(1).max(20), tenantId: z.string().max(80).optional() });
 
 // POST /api/payments/checkout — the signed-in parent starts paying for
 // their bookings (one PaymentIntent for the lot).
@@ -271,12 +271,19 @@ payments.post("/checkout", async (req, res) => {
     return;
   }
   // Email-scoped lookup — a ref from another family is simply never found.
+  // Numbers repeat across providers: pay the ones at the provider the screen
+  // names, and refuse an ambiguous number rather than charging the wrong one.
   const snaps = await Promise.all(
     parsed.data.refs.map((ref) =>
-      db.collection("bookings").where("email", "==", email).where("ref", "==", ref).limit(1).get(),
+      db.collection("bookings").where("email", "==", email).where("ref", "==", ref).get(),
     ),
   );
-  const bookings = snaps.filter((x) => !x.empty).map((x) => fromDoc(x.docs[0].data() as BookingDoc));
+  const picked = snaps.map((x) => (parsed.data.tenantId ? x.docs.filter((d) => d.get("tenantId") === parsed.data.tenantId) : x.docs));
+  if (picked.some((docs) => docs.length > 1)) {
+    res.status(409).json({ error: "More than one booking has this number (with different providers). Pay from the booking itself in My bookings." });
+    return;
+  }
+  const bookings = picked.filter((docs) => docs.length === 1).map((docs) => fromDoc(docs[0].data() as BookingDoc));
   if (bookings.length !== parsed.data.refs.length) {
     res.status(404).json({ error: "Booking not found" });
     return;
@@ -408,6 +415,9 @@ payments.post("/checkout/:id/confirm", async (req, res) => {
       if (!bSnap.exists) continue;
       const b = fromDoc(bSnap.data() as BookingDoc);
       b.pay = "Paid";
+      // Record what was taken, so a later part-refund or cancel works from
+      // real money rather than inferring it from the status word.
+      b.amountPaid = b.amount;
       b.paymentIntentId = rec.paymentIntentId;
       b.stripeAccount = rec.stripeAccount;
       batch.set(bSnap.ref, toDoc(b));

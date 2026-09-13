@@ -9,6 +9,7 @@ import { useSettings } from "@/lib/settings";
 import { money } from "@/features/bookings/helpers";
 import { Card } from "@/components/ui";
 import { LineItemsEditor, PrintableDoc, lineTotal, type LineItem } from "@/features/money/doc-shared";
+import { csvText } from "@/lib/csv";
 
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
@@ -79,9 +80,13 @@ function compressImage(dataUrl: string): Promise<string> {
     img.src = dataUrl;
   });
 }
+// PDF bills/receipts: the server caps them at ~750KB (routes/uploads.ts MAX_PDF_B64).
+const PDF_MAX_BYTES = 750_000;
+
+// A photo previews; a PDF (or a pasted link <img> can't draw) shows a file chip.
 function DocThumb({ url, className = "" }: { url: string; className?: string }) {
   const [ok, setOk] = useState(true);
-  if (!ok) return <div className={`flex items-center justify-center bg-[var(--panel)] text-[18px] ${className}`}>🧾</div>;
+  if (!ok) return <div title="PDF / file — open to view" className={`flex flex-col items-center justify-center bg-[var(--panel)] text-[18px] leading-none ${className}`}>🧾<span className="mt-0.5 text-[9px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">file</span></div>;
   return <img src={url} alt="invoice" onError={() => setOk(false)} className={`object-cover ${className}`} />;
 }
 
@@ -247,9 +252,14 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   async function onPickDoc(file: File) {
     setUploading(true); setError(null);
     try {
-      const dataUrl = await readAsDataUrl(file);
+      const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+      if (isPdf && file.size > PDF_MAX_BYTES) throw new Error(`That PDF is ${Math.ceil(file.size / 1000)}KB — the limit is ${PDF_MAX_BYTES / 1000}KB. Save a smaller PDF or upload a photo instead.`);
+      let dataUrl = await readAsDataUrl(file);
+      if (isPdf) dataUrl = dataUrl.replace(/^data:[^;,]*;base64,/, "data:application/pdf;base64,"); // some OSes label a .pdf octet-stream
       const payload = dataUrl.startsWith("data:image/") ? await compressImage(dataUrl) : dataUrl;
-      const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: payload });
+      // Private, like an expense receipt: a supplier bill is the business's own
+      // paperwork — a signed link the purchasing route re-signs, not a public image.
+      const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl: payload, purpose: "private" });
       setEditor((ed) => (ed ? { ...ed, attachmentUrl: url } : ed));
     } catch (e) { setError(e instanceof Error ? e.message : "Upload failed — try a smaller image or paste a link."); } finally { setUploading(false); }
   }
@@ -271,9 +281,8 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   }
   function exportCsv() {
     const header = ["Supplier", "Reference", "Date", "Due", "Amount", "Status", "Notes", "Attachment", "Repeats", "Source"];
-    const esc = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
     const rows = filtered.map((p) => [p.supplier, p.reference ?? "", p.date, p.dueDate ?? "", p.amount, p.status, p.notes ?? "", p.attachmentUrl ?? "", p.repeat ?? "", p.seriesId ? "series" : "one-off"]);
-    const csv = [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+    const csv = csvText([header, ...rows]); // formula-safe (a leading = + - @ is neutralised)
     const url = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `purchasing-${flt}-${todayIso()}.csv`; a.click(); URL.revokeObjectURL(url);
   }
@@ -669,8 +678,8 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
                 <span className={labelCls}>{editor.kind === "po" ? "Attach a document" : "Receipt / supplier invoice"} <span className="font-normal normal-case text-[var(--ink-3)]">(optional)</span></span>
                 <div className="flex flex-wrap items-center gap-2">
                   <label className={`${btnGhost} cursor-pointer !py-1.5`}>
-                    {uploading ? "Uploading…" : "⬆ Upload photo"}
-                    <input type="file" accept="image/*" className="hidden" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) void onPickDoc(f); e.target.value = ""; }} />
+                    {uploading ? "Uploading…" : "⬆ Upload photo or PDF"}
+                    <input type="file" accept="image/*,application/pdf,.pdf" className="hidden" disabled={uploading} onChange={(e) => { const f = e.target.files?.[0]; if (f) void onPickDoc(f); e.target.value = ""; }} />
                   </label>
                   <span className="text-[11px] text-[var(--ink-3)]">or paste a link</span>
                   <input value={editor.attachmentUrl} onChange={(e) => setEditor({ ...editor, attachmentUrl: e.target.value })} placeholder="https://…" className={`${fieldCls} min-w-[160px] flex-1`} />

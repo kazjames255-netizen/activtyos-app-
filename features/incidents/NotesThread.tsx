@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { post as apiPost } from "@/lib/api";
+import { useI18n } from "@/lib/i18n/provider";
 
 export interface Note { by: string; role: string; text: string; at: string }
 
-const stamp = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const stamp = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 
 /**
  * A shared accident/incident notes thread. Both the provider's staff and the
@@ -19,6 +20,9 @@ export function NotesThread({ id, notes, side, onAdded }: {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // Parents read this in their language (the accident screen is translated).
+  const { t: tr, locale } = useI18n();
+  const loc = locale === "en" ? "en-GB" : locale;
 
   async function send() {
     const t = text.trim();
@@ -29,13 +33,13 @@ export function NotesThread({ id, notes, side, onAdded }: {
       setList((l) => [...l, res.note]);
       setText("");
       onAdded?.();
-    } catch (e) { setErr(e instanceof Error ? e.message : "Couldn’t add note"); }
+    } catch (e) { setErr(e instanceof Error ? e.message : tr("care.notesErr")); }
     finally { setBusy(false); }
   }
 
   return (
     <div className="mt-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3">
-      <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Notes {list.length > 0 && `· ${list.length}`}</div>
+      <div className="mb-2 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{tr("care.notesTitle")} {list.length > 0 && `· ${list.length}`}</div>
       {list.length > 0 ? (
         <div className="mb-2.5 flex flex-col gap-1.5">
           {list.map((n, i) => {
@@ -44,7 +48,7 @@ export function NotesThread({ id, notes, side, onAdded }: {
             return (
               <div key={i} className={`flex ${mine ? "justify-end" : "justify-start"}`}>
                 <div className="max-w-[85%] rounded-xl px-3 py-1.5" style={isParent ? { background: "#eef4fd" } : { background: "#f3f0f8" }}>
-                  <div className="text-[9.5px] font-bold uppercase tracking-wide" style={{ color: isParent ? "#1d3a8f" : "#6a5a86" }}>{isParent ? "👪 " : "🏷️ "}{n.by}{n.role === "staff" ? " (staff)" : ""} · {stamp(n.at)}</div>
+                  <div className="text-[9.5px] font-bold uppercase tracking-wide" style={{ color: isParent ? "#1d3a8f" : "#6a5a86" }}>{isParent ? "👪 " : "🏷️ "}{n.by}{n.role === "staff" ? tr("care.notesStaffTag") : ""} · {stamp(n.at, loc)}</div>
                   <div className="mt-0.5 text-[12.5px] leading-snug text-[var(--ink)]">{n.text}</div>
                 </div>
               </div>
@@ -52,12 +56,12 @@ export function NotesThread({ id, notes, side, onAdded }: {
           })}
         </div>
       ) : (
-        <p className="mb-2 text-[12px] text-[var(--ink-3)]">No notes yet — {side === "parent" ? "add one for the provider" : "add one for the parent or your team"}.</p>
+        <p className="mb-2 text-[12px] text-[var(--ink-3)]">{side === "parent" ? tr("care.notesEmptyParent") : tr("care.notesEmptyStaff")}</p>
       )}
       <div className="flex items-center gap-2">
         <input value={text} onChange={(e) => setText(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") send(); }}
-          placeholder={side === "parent" ? "Reply to the provider…" : "Add a note…"} className="flex-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
-        <button type="button" disabled={busy || !text.trim()} onClick={send} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-50">{busy ? "…" : "Send"}</button>
+          placeholder={side === "parent" ? tr("care.notesReplyPh") : tr("care.notesAddPh")} className="flex-1 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
+        <button type="button" disabled={busy || !text.trim()} onClick={send} className="rounded-full bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-extrabold text-white disabled:opacity-50">{busy ? "…" : tr("care.notesSend")}</button>
       </div>
       {err && <div className="mt-1.5 text-[11.5px] font-bold text-[var(--red)]">{err}</div>}
     </div>

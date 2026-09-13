@@ -4,19 +4,25 @@
 // area (moved out of the Learning Centre). Staff upload/renew in their own "My
 // learning" area; here the manager sees the compliance matrix, verifies, chases
 // and exports. Front-end demo store (see credentials.tsx); backend owed to Amir.
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Button, Card, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
 import { useSettings } from "@/lib/settings";
-import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel, exportCredsPdf, exportCredsPack, credFiles, DEMO_STAFF, fmtDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
-import { completionsFor, downloadCourseCertificate, courseCertData, courseCertTemplate, courseInDate, courseExpiry } from "./courseCompletions";
+import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel, exportCredsPdf, exportCredsPack, credFiles, fmtDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
+import { useTeam } from "@/features/team/useTeam";
+import { csvText } from "@/lib/csv";
+import { useLearnRefresh, syncLearning, completionsFor, downloadCourseCertificate, courseCertData, courseCertTemplate, courseInDate, courseExpiry } from "./courseCompletions";
 
 const OPS: [string, string][] = [["all", "All locations"], ["Company-owned", "Company-owned (Head Office)"], ["Milton Keynes", "Milton Keynes"], ["Northampton", "Northampton"], ["Bedford", "Bedford"]];
 
 export function CredentialsApp() {
-  const cred = useCredentials(DEMO_STAFF);
+  const TEAM = useTeam();
+  const cred = useCredentials(TEAM);
   const { settings } = useSettings();
+  // Completions come from the server (courseCompletions.syncLearning) — re-render when they land.
+  useLearnRefresh();
+  useEffect(() => { void syncLearning(); }, []);
   const router = useRouter();
   const portal = (usePathname() || "/company").split("/")[1] || "company";
   const [op, setOp] = useState("all");
@@ -34,12 +40,12 @@ export function CredentialsApp() {
   const [xCourses, setXCourses] = useState(false);
   const [xCourseIds, setXCourseIds] = useState<Set<string>>(new Set());
 
-  const staff = op === "all" ? DEMO_STAFF : DEMO_STAFF.filter((s) => s.op === op);
+  const staff = op === "all" ? TEAM : TEAM.filter((s) => s.op === op);
   const visTypes = typeFilter === "all" ? cred.types : cred.types.filter((t) => t.id === typeFilter);
   const cells = staff.flatMap((s) => cred.types.map((t) => ({ req: t.required, applies: appliesTo(t, s.name, s.role), st: credStatus(cred.recordFor(s.name, t.id)) })));
   const cnt = (st: CredStatus) => st === "Missing" ? cells.filter((c) => c.st === "Missing" && c.req && c.applies).length : cells.filter((c) => c.st === st).length;
   const rows = staff.filter((s) => statusFilter === "all" || visTypes.some((t) => { const st = credStatus(cred.recordFor(s.name, t.id)); if (st !== statusFilter) return false; return statusFilter === "Missing" ? t.required && appliesTo(t, s.name, s.role) : true; }));
-  const csv = () => { const e = (v: string | number) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }; const rowsCsv = [["Staff", "Location", ...cred.types.map((t) => t.name)], ...staff.map((s) => [s.name, s.op, ...cred.types.map((t) => credStatus(cred.recordFor(s.name, t.id)))])].map((r) => r.map(e).join(",")).join("\n"); const url = URL.createObjectURL(new Blob([rowsCsv], { type: "text/csv" })); const a = document.createElement("a"); a.href = url; a.download = "staff-credentials.csv"; a.click(); URL.revokeObjectURL(url); };
+  const csv = () => { const rowsCsv = csvText([["Staff", "Location", ...cred.types.map((t) => t.name)], ...staff.map((s) => [s.name, s.op, ...cred.types.map((t) => credStatus(cred.recordFor(s.name, t.id)))])]); const url = URL.createObjectURL(new Blob([rowsCsv], { type: "text/csv" })); const a = document.createElement("a"); a.href = url; a.download = "staff-credentials.csv"; a.click(); URL.revokeObjectURL(url); };
   const providerName = settings.providerName || settings.billing?.businessName || "Your company";
   // distinct completed courses across the staff currently in scope
   const courseOpts = Array.from(new Map(staff.flatMap((s) => completionsFor(s.name)).map((d) => [d.courseId, d.title])).entries());
@@ -118,7 +124,7 @@ export function CredentialsApp() {
                     {done.map((d) => (
                       <button key={d.courseId} type="button" onClick={() => downloadCourseCertificate(s.name, d, settings)} title="Download the completion certificate (PDF)" className="group inline-flex items-center gap-2 rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1.5 text-left hover:border-[#1d3a8f]">
                         <span className="max-w-[220px] truncate text-[12px] font-bold text-[var(--ink)]">{d.title}</span>
-                        <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-extrabold text-[#0f7a43] tabular-nums">{d.score}%</span>
+                        <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-extrabold text-[#0f7a43] tabular-nums" title={d.selfReported ? "Self-reported: recorded from the staff member's own device" : undefined}>{d.score}%{d.selfReported ? " · self" : ""}</span>
                         <span className="text-[10.5px] text-[var(--ink-3)]">{fmtDate(d.date)}</span>
                         <span className="text-[11px] font-bold text-[#1d3a8f] group-hover:underline">⬇ Certificate</span>
                       </button>
@@ -236,7 +242,7 @@ export function CredentialsApp() {
                   {done.map((d) => (
                     <div key={d.courseId} className="flex items-center gap-2 rounded-lg border border-[var(--line)] px-2.5 py-1.5">
                       <span className="truncate text-[12.5px] font-bold text-[var(--ink)]">{d.title}</span>
-                      <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-extrabold text-[#0f7a43] tabular-nums">{d.score}%</span>
+                      <span className="rounded-full bg-[#e6f4ea] px-1.5 py-0.5 text-[10px] font-extrabold text-[#0f7a43] tabular-nums" title={d.selfReported ? "Self-reported: recorded from the staff member's own device" : undefined}>{d.score}%{d.selfReported ? " · self" : ""}</span>
                       <span className="text-[10.5px] text-[var(--ink-3)]">{fmtDate(d.date)}</span>
                       <button type="button" onClick={() => downloadCourseCertificate(profile.name, d, settings)} className="ml-auto text-[11px] font-bold text-[#1d3a8f] hover:underline">⬇ Certificate</button>
                     </div>
@@ -249,7 +255,7 @@ export function CredentialsApp() {
           </div>);
       })()}
 
-      {edit && <CredEditor rec={edit} types={cred.types} staffList={DEMO_STAFF} onSave={(r) => { cred.upsertRecord(r); setEdit(null); }} onClose={() => setEdit(null)} />}
+      {edit && <CredEditor rec={edit} types={cred.types} staffList={TEAM} onSave={(r) => { cred.upsertRecord(r); setEdit(null); }} onClose={() => setEdit(null)} />}
 
       {cell && (() => {
         const t = cred.types.find((x) => x.id === cell.typeId); const r = cred.recordFor(cell.staff, cell.typeId); const st = credStatus(r); const dl = daysUntil(r?.expiry);

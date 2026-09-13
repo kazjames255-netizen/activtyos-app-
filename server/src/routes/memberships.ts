@@ -3,6 +3,7 @@ import { db } from "../firebase";
 import { normaliseCode } from "../lib/discountCodes";
 import { creditWallet } from "../lib/wallet";
 import { notify } from "../lib/notify";
+import { customerAreaOn } from "../lib/customerArea";
 
 // Customer memberships (parent-facing). A provider offers up to three monthly
 // tiers; a family joins one and gets EITHER wallet credit each month (credit
@@ -81,7 +82,7 @@ memberships.get("/", async (req, res) => {
   }
   if (!tenantId) { res.json({ enabled: false, reason: "Book with a provider first to see their memberships." }); return; }
   const { enabled, tiers } = await membershipsCfg(tenantId);
-  if (!enabled) { res.json({ enabled: false }); return; }
+  if (!enabled || !(await customerAreaOn(tenantId, "memberships"))) { res.json({ enabled: false }); return; }
   const tName = (await db.collection("tenants").doc(tenantId).get()).data()?.name ?? "your provider";
   const mine = (await db.collection("memberships").doc(memDocId(tenantId, email)).get()).data() ?? null;
   res.json({
@@ -103,7 +104,7 @@ memberships.post("/join", async (req, res) => {
   if (!tenantId || !tierId) { res.status(400).json({ error: "tenantId and tierId are required" }); return; }
   const { enabled, tiers } = await membershipsCfg(tenantId);
   const tier = tiers.find((t) => t.id === tierId && t.enabled);
-  if (!enabled || !tier) { res.status(400).json({ error: "That membership isn’t available" }); return; }
+  if (!enabled || !tier || !(await customerAreaOn(tenantId, "memberships"))) { res.status(400).json({ error: "That membership isn’t available" }); return; }
 
   // You may only join a provider you actually deal with. tenantId arrives in the
   // REQUEST BODY, and tenant ids are not secret — they appear in booking URLs
@@ -126,22 +127,46 @@ memberships.post("/join", async (req, res) => {
   // old one. If the previous tier was a % perk, deactivate its standing code so
   // two memberships' discounts can't stack. (Credit already paid out on a prior
   // credit tier stays theirs — it can't be clawed back.)
-  const prev = (await db.collection("memberships").doc(memDocId(tenantId, email)).get()).data();
+  const memRef = db.collection("memberships").doc(memDocId(tenantId, email));
+  const prev = (await memRef.get()).data();
+  if (prev && prev.status === "active" && prev.tierId === tier.id) {
+    res.status(409).json({ error: `You're already a ${tier.name} member` });
+    return;
+  }
   if (prev && prev.status === "active" && prev.tierId && prev.tierId !== tier.id && prev.benefitType === "percent") {
     await deactivateMembershipCode(tenantId, email, prev.tierId as string);
   }
 
+  // Credit is paid ONCE per monthly period per family, however many times they
+  // join, cancel and join again (or switch tiers). Join/cancel/join used to
+  // drop the credit in the wallet every time — free money, on demand, with no
+  // payment behind it. `creditPaidUntil` survives cancellation for exactly
+  // that reason, and the check-and-set is one transaction so two quick joins
+  // can't both pay out.
   const now = new Date();
   const renews = new Date(now); renews.setMonth(renews.getMonth() + 1);
-  await db.collection("memberships").doc(memDocId(tenantId, email)).set({
-    tenantId, email, tierId: tier.id, tierName: tier.name,
-    benefitType: tier.benefitType, benefitValue: tier.benefitValue, priceMonthly: tier.priceMonthly,
-    status: "active", startedAt: now.toISOString(), renewsAt: renews.toISOString(), lastDeliveredAt: now.toISOString(),
-  }, { merge: true });
+  const creditNow = await db.runTransaction(async (tx) => {
+    const cur = (await tx.get(memRef)).data();
+    // Members from before 12 Sept have no creditPaidUntil — their last join +
+    // one month stands in for it, whatever tier they're on now (credit → a %
+    // tier → back to credit must not pay the credit out again).
+    const legacy = typeof cur?.lastDeliveredAt === "string"
+      ? (() => { const d = new Date(cur.lastDeliveredAt as string); d.setMonth(d.getMonth() + 1); return d.toISOString(); })()
+      : "";
+    const paidUntil = typeof cur?.creditPaidUntil === "string" ? cur.creditPaidUntil : legacy;
+    const due = tier.benefitType === "credit" && tier.benefitValue > 0 && paidUntil <= now.toISOString();
+    tx.set(memRef, {
+      tenantId, email, tierId: tier.id, tierName: tier.name,
+      benefitType: tier.benefitType, benefitValue: tier.benefitValue, priceMonthly: tier.priceMonthly,
+      status: "active", startedAt: now.toISOString(), renewsAt: renews.toISOString(), lastDeliveredAt: now.toISOString(),
+      ...(due ? { creditPaidUntil: renews.toISOString() } : {}),
+    }, { merge: true });
+    return due;
+  });
 
   // Phase 1: deliver the benefit on join. Phase 2 must gate this behind a
   // successful Stripe charge (call deliverMembershipBenefit from the webhook).
-  await deliverMembershipBenefit(tenantId, email, tier);
+  if (tier.benefitType === "percent" || creditNow) await deliverMembershipBenefit(tenantId, email, tier);
 
   const renewTxt = renews.toLocaleDateString("en-GB");
   void notify({
@@ -149,10 +174,12 @@ memberships.post("/join", async (req, res) => {
     title: `You’re a ${tier.name} member 🎉`,
     body: tier.benefitType === "percent"
       ? `${tier.benefitValue}% off every booking is now active. Your ${tier.name} membership renews ${renewTxt}.`
-      : `£${tier.benefitValue.toFixed(2)} added to your wallet — ready to spend on any booking, anytime. Your ${tier.name} membership renews ${renewTxt}.`,
+      : creditNow
+        ? `£${tier.benefitValue.toFixed(2)} added to your wallet — ready to spend on any booking, anytime. Your ${tier.name} membership renews ${renewTxt}.`
+        : `Welcome back. This month's credit was already added to your wallet, so the next lands when your membership renews on ${renewTxt}.`,
     href: "/custdash/memberships", ref: tenantId,
   });
-  res.json({ ok: true, tierId: tier.id, renewsAt: renews.toISOString() });
+  res.json({ ok: true, tierId: tier.id, renewsAt: renews.toISOString(), creditAdded: creditNow });
 });
 
 // POST /api/my/memberships/cancel { tenantId }

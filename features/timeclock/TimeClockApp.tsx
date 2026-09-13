@@ -8,7 +8,7 @@ import { Button, Card } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero } from "@/components/OperatorPage";
 import {
   type ClockRecord, loadClock, loadClockSettings, slug, clockIn, clockOut, startBreak, endBreak,
-  workedMs, fmtDur, hhmm, sinceLabel, shiftToday,
+  workedMs, fmtDur, hhmm, sinceLabel, shiftToday, useClockRefresh
 } from "./data";
 
 const ME = "Marcus Bell";
@@ -16,6 +16,7 @@ const ME_ID = slug(ME);
 
 export function TimeClockApp() {
   const [all, setAll] = useState<Record<string, ClockRecord>>({});
+  useClockRefresh(setAll);
   const [tick, setTick] = useState(0);
   const [loc, setLoc] = useState<string | undefined>();
   useEffect(() => { setAll(loadClock()); }, []);

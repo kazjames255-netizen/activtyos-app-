@@ -33,11 +33,17 @@ const inputCls = "rounded-lg border border-[var(--line)] bg-[var(--surface)] px-
 const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }) : "");
 const fmtStamp = (iso?: string | null) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }) : "");
 const dayssince = (iso?: string | null) => (iso ? Math.floor((Date.now() - new Date(iso).getTime()) / 86400000) : Infinity);
-const lowStock = (i: Item) => i.minQty != null && i.quantity <= i.minQty;
+const isLow = (i: Item) => i.minQty != null && i.quantity <= i.minQty;
 
 export function InventoryApp() {
   const { settings, save } = useSettings();
   const inv = settings.inventory ?? {};
+  // Setup → Inventory has a "Low stock alerts" toggle that was written and then
+  // read by nothing: turning it OFF left every item still flagged, the tile
+  // still counting and the filter still offered. Everything low-stock now hangs
+  // off this one flag, so the switch means what it says.
+  const lowAlerts = inv.lowStockAlert ?? true;
+  const lowStock = (i: Item) => lowAlerts && isLow(i);
   const categories = useMemo(() => inv.categories ?? [], [inv.categories]);
   const locations = useMemo(() => inv.locations ?? [], [inv.locations]);
   const seasons = useMemo(() => (inv.seasons?.length ? inv.seasons : ["This season"]), [inv.seasons]);
@@ -86,7 +92,7 @@ export function InventoryApp() {
   const low = seasonItems.filter(lowStock).length;
   const toCheck = seasonItems.filter((i) => dayssince(i.lastCheckedAt) >= STALE_DAYS).length;
   const cats = new Set(seasonItems.map((i) => i.category || "Uncategorised")).size;
-  const tiles: [string, number | string][] = [["Items", seasonItems.length], ["Categories", cats], ["Low stock", low], ["To check", toCheck]];
+  const tiles: [string, number | string][] = [["Items", seasonItems.length], ["Categories", cats], ...(lowAlerts ? [["Low stock", low] as [string, number]] : []), ["To check", toCheck]];
 
   async function remove(i: Item) { if (!confirm(`Delete “${i.name}”?`)) return; try { await api(`/api/inventory/${encodeURIComponent(i.id)}`, { method: "DELETE" }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
   async function doCheck(i: Item, qty: number) { try { await apiPost(`/api/inventory/${encodeURIComponent(i.id)}/check`, { quantity: qty }); setCheckVals((v) => { const n = { ...v }; delete n[i.id]; return n; }); refresh(); } catch (e) { setError(e instanceof Error ? e.message : "Failed"); } }
@@ -153,7 +159,7 @@ export function InventoryApp() {
         <div className="mb-3 flex flex-wrap items-center gap-2">
           <select value={catFilter} onChange={(e) => setCatFilter(e.target.value)} className={inputCls}><option value="">All categories</option>{[...new Set(seasonItems.map((i) => i.category || "Uncategorised"))].sort().map((c) => <option key={c} value={c === "Uncategorised" ? "" : c}>{c}</option>)}</select>
           <select value={locFilter} onChange={(e) => setLocFilter(e.target.value)} className={inputCls}><option value="">All locations</option>{[...new Set(seasonItems.map((i) => i.location).filter(Boolean))].sort().map((l) => <option key={l} value={l!}>{l}</option>)}</select>
-          <button type="button" onClick={() => setLowOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={lowOnly ? { borderColor: RED, background: "#fdebec", color: RED } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{lowOnly ? "✓ " : ""}Low stock</button>
+          {lowAlerts && <button type="button" onClick={() => setLowOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={lowOnly ? { borderColor: RED, background: "#fdebec", color: RED } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{lowOnly ? "✓ " : ""}Low stock</button>}
           <button type="button" onClick={() => setUncheckedOnly((v) => !v)} className="rounded-full border px-3 py-1 text-[11.5px] font-bold" style={uncheckedOnly ? { borderColor: AMBER, background: "#FCF1DC", color: "var(--ink-2)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{uncheckedOnly ? "✓ " : ""}Needs a check</button>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search items…" className="ml-auto w-56 rounded-full border border-[var(--line)] bg-[var(--surface)] px-3.5 py-1.5 text-[12.5px] outline-none focus:border-[#1d3a8f]" />
         </div>
@@ -234,8 +240,9 @@ type SaveFn = ReturnType<typeof useSettings>["save"];
 function ItemForm({ existing, categories, locations, seasons, defaultSeason, settings, save, onClose, onSaved, onDelete }: { existing?: Item; categories: string[]; locations: string[]; seasons: string[]; defaultSeason: string; settings: SettingsShape; save: SaveFn; onClose: () => void; onSaved: () => void; onDelete?: () => void }) {
   const isEdit = !!existing;
   const [name, setName] = useState(existing?.name ?? "");
-  const [category, setCategory] = useState(existing?.category ?? (categories[0] ?? ""));
-  const [location, setLocation] = useState(existing?.location ?? (locations[0] ?? ""));
+  // A cleared (null) category/location stays "— none —" on re-open; only a NEW item defaults to the first option.
+  const [category, setCategory] = useState(existing ? (existing.category ?? "") : (categories[0] ?? ""));
+  const [location, setLocation] = useState(existing ? (existing.location ?? "") : (locations[0] ?? ""));
   const [quantity, setQuantity] = useState(String(existing?.quantity ?? 0));
   const [unit, setUnit] = useState(existing?.unit ?? "");
   const [minQty, setMinQty] = useState(existing?.minQty != null ? String(existing.minQty) : "");
@@ -256,7 +263,11 @@ function ItemForm({ existing, categories, locations, seasons, defaultSeason, set
   async function submit() {
     if (!name.trim()) { setError("Give the item a name."); return; }
     setBusy(true); setError(null);
-    const body = { name: name.trim(), category: category || undefined, location: location || undefined, quantity: Math.max(0, parseInt(quantity, 10) || 0), unit: unit.trim() || undefined, minQty: minQty.trim() === "" ? undefined : Math.max(0, parseInt(minQty, 10) || 0), season: season || undefined, notes: notes.trim() || undefined };
+    // Editing: a field left blank is sent as null so the server CLEARS it (undefined
+    // would be dropped and the merge keep the old value — e.g. a reorder level
+    // could never be removed, d18s7).
+    const blank = isEdit ? null : undefined;
+    const body = { name: name.trim(), category: category || blank, location: location || blank, quantity: Math.max(0, parseInt(quantity, 10) || 0), unit: unit.trim() || blank, minQty: minQty.trim() === "" ? blank : Math.max(0, parseInt(minQty, 10) || 0), season: season || undefined /* never cleared: a seasonless item drops out of every season view */, notes: notes.trim() || blank };
     try { if (isEdit) await apiPut(`/api/inventory/${encodeURIComponent(existing!.id)}`, body); else await apiPost("/api/inventory", body); onSaved(); }
     catch (e) { setError(e instanceof Error ? e.message : "Couldn’t save"); setBusy(false); }
   }

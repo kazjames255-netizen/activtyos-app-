@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseTeam } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 
 // Manual calendar events — one-off things the operator adds to the calendar
@@ -29,11 +30,23 @@ const eventSchema = z.object({
   remindMinutes: z.number().int().nonnegative().max(1440).optional(),
 });
 
+/** A franchise's calendar: events stamped with its franchiseId, and older
+ *  unstamped ones its own people created. Head office's and siblings' stay theirs. */
+async function eventInMyFranchise(auth: { role: string; tenantId: string | null; franchiseId: string | null }, e: Record<string, unknown>, team?: { emails: Set<string> }): Promise<boolean> {
+  if (!auth.franchiseId || (auth.role !== "franchise" && auth.role !== "staff")) return true;
+  if (e.franchiseId) return e.franchiseId === auth.franchiseId;
+  const t = team ?? (await franchiseTeam(auth.tenantId!, auth.franchiseId));
+  return t.emails.has(String(e.createdBy ?? "").toLowerCase());
+}
+
 calendarEvents.get("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
   const snap = await col.where("tenantId", "==", auth.tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { date?: string })[];
+  const team = auth.franchiseId && auth.role !== "company" ? await franchiseTeam(auth.tenantId, auth.franchiseId) : undefined;
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { date?: string })[];
+  const keep = await Promise.all(all.map((e) => eventInMyFranchise(auth, e, team)));
+  const list = all.filter((_, i) => keep[i]);
   list.sort((a, b) => (`${a.date}` < `${b.date}` ? -1 : 1));
   res.json(list);
 });
@@ -43,7 +56,7 @@ calendarEvents.post("/", async (req, res) => {
   if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
   const parsed = eventSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { ...parsed.data, tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Staff", createdAt: new Date().toISOString() };
+  const doc = { ...parsed.data, tenantId: auth.tenantId, franchiseId: auth.role === "company" ? null : auth.franchiseId ?? null, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Staff", createdAt: new Date().toISOString() };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -53,6 +66,7 @@ async function own(req: Request, id: string) {
   if (!auth.tenantId || !canUse(auth.role)) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!(await eventInMyFranchise(auth, snap.data()!))) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 

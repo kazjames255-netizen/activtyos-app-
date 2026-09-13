@@ -2,6 +2,8 @@ import { Router, json } from "express";
 import { FieldValue } from "firebase-admin/firestore";
 import { z } from "zod";
 import { db } from "../firebase";
+import { contentDisposition } from "../lib/contentDisposition";
+import { franchiseFamilyEmails, isFranchise } from "../lib/franchiseScope";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Parent document storage — today, SEND/EHCP plans.
@@ -36,9 +38,15 @@ const CHUNK_MAX_B64 = 700_000;
 export const FILE_MAX_BYTES = 15_000_000;
 const MAX_CHUNKS = 30;
 
+/** What a plan/EHCP may be: a PDF or a photo of the paper. Anything else —
+ *  HTML, SVG, a script — used to be accepted and served back inline, and the
+ *  operator's viewer turned it into a same-origin blob in an iframe, so a file
+ *  a parent uploaded could run in the provider's session. */
+const PLAN_TYPES = new Set(["application/pdf", "image/jpeg", "image/png", "image/webp", "image/gif", "image/heic", "image/heif"]);
+
 const createSchema = z.object({
   name: z.string().trim().min(1).max(200),
-  contentType: z.string().trim().max(120),
+  contentType: z.string().trim().toLowerCase().max(120).refine((t) => PLAN_TYPES.has(t), "Upload a PDF or a photo (JPG, PNG)"),
   bytes: z.number().int().positive().max(FILE_MAX_BYTES),
   total: z.number().int().positive().max(MAX_CHUNKS),
 });
@@ -132,7 +140,14 @@ childFiles.get("/:id", async (req, res) => {
   const data = snap.data() as FileDoc;
   const mine = data.ownerUid === req.user!.uid;
   const tenant = req.auth?.tenantId;
-  const staff = !!tenant && (data.tenantIds ?? []).includes(tenant);
+  let staff = !!tenant && (data.tenantIds ?? []).includes(tenant);
+  // The grant is per tenant, and a franchise shares its head office's tenant —
+  // so a franchise (and its staff) also needs the family to be booked with IT,
+  // not a sibling franchise (acceptance test d22s6).
+  if (staff && !mine && req.auth && isFranchise(req.auth)) {
+    const owner = String((await db.collection("users").doc(data.ownerUid).get()).get("email") ?? "").toLowerCase();
+    staff = !!owner && (await franchiseFamilyEmails(tenant!, req.auth.franchiseId)).has(owner);
+  }
   if (!mine && !staff) {
     // 404 rather than 403: whether a plan exists is itself worth not saying.
     res.status(404).json({ error: "File not found" });
@@ -151,8 +166,13 @@ childFiles.get("/:id", async (req, res) => {
     res.status(409).json({ error: "That upload is missing parts" });
     return;
   }
-  res.setHeader("Content-Type", data.contentType);
-  res.setHeader("Content-Disposition", `inline; filename="${data.name.replace(/["\\]/g, "")}"`);
+  // A file stored before the type check (or with an odd type) is handed over
+  // as a download, never rendered: only PDFs and photos show inline.
+  const safe = PLAN_TYPES.has((data.contentType ?? "").toLowerCase());
+  res.setHeader("Content-Type", safe ? data.contentType : "application/octet-stream");
+  res.setHeader("Content-Disposition", contentDisposition(safe ? "inline" : "attachment", data.name));
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Content-Security-Policy", "sandbox");
   res.setHeader("Cache-Control", "private, no-store");
   res.send(Buffer.from(parts.join(""), "base64"));
 });

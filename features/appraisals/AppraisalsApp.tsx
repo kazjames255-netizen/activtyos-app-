@@ -3,8 +3,9 @@
 // Staff appraisals & performance — operator suite. Review cycles + two-sided
 // reviews (self + manager) with data-informed signals, SMART goals, an ongoing
 // feedback/supervision log, a 9-box talent grid, editable templates, and PIPs.
-// Embedded as a Team tab next to Deployment. Demo store; backend owed
-// (docs/appraisals-handoff.md).
+// Embedded as a Team tab next to Deployment. On the server since 13 Sept
+// (/api/appraisals) — the people are the real team (useTeam); the demo cast
+// and its seeded reviews are the demo's only.
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { Button, Card, Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, PageHero, CollapsibleStats } from "@/components/OperatorPage";
@@ -15,12 +16,12 @@ import {
 import { useSettings, DEFAULT_ROLES } from "@/lib/settings";
 import {
   loadReviews, saveReviews, loadTemplates, saveTemplates, loadFeedback, saveFeedback, loadPIPs, savePIPs, loadTalent, saveTalent,
-  loadBoxes, saveBoxes, resetBoxes, BOX_TONES, templateFor, signalsFor, slug,
+  loadBoxes, saveBoxes, resetBoxes, BOX_TONES, templateFor, signalsFor, slug, syncAppraisals, APPRAISALS_EVENT,
 } from "./data";
-import { DEMO_STAFF } from "@/features/learning/credentials";
+import { useTeam, type TeamMember } from "@/features/team/useTeam";
+import { isDemoMode } from "@/lib/api";
 
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-const APPRAISERS = ["You", ...DEMO_STAFF.filter((s) => s.role === "Lead").map((s) => s.name)];
 const uid = () => (typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "id" + Math.floor(performance.now() * 1000));
 type Sub = "reviews" | "feedback" | "talent" | "templates" | "pip" | "settings";
 
@@ -43,9 +44,20 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
   const [pipEdit, setPipEdit] = useState<PIP | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const { settings } = useSettings();
-  const roleNames = useMemo(() => [...new Set([...(settings.roles?.length ? settings.roles : DEFAULT_ROLES).map((r) => r.name), ...DEMO_STAFF.map((s) => s.role)])], [settings.roles]);
-  useEffect(() => { setReviews(loadReviews()); setTemplates(loadTemplates()); setFeedback(loadFeedback()); setPips(loadPIPs()); setTalent(loadTalent()); setBoxes(loadBoxes()); }, []);
+  const team = useTeam();
+  const appraisers = useMemo(() => ["You", ...team.filter((s) => /lead|manager/i.test(s.role)).map((s) => s.name)], [team]);
+  const roleNames = useMemo(() => [...new Set([...(settings.roles?.length ? settings.roles : DEFAULT_ROLES).map((r) => r.name), ...team.map((s) => s.role).filter(Boolean)])], [settings.roles, team]);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2400); };
+  // The server's copy (a real account) — the screen stays empty until it lands,
+  // never showing another account's cached reviews on a shared browser.
+  useEffect(() => {
+    const loadAll = () => { setReviews(loadReviews()); setTemplates(loadTemplates()); setFeedback(loadFeedback()); setPips(loadPIPs()); setTalent(loadTalent()); setBoxes(loadBoxes()); };
+    if (isDemoMode()) { loadAll(); return; }
+    const h = (e: Event) => { const err = (e as CustomEvent<{ error?: string }>).detail?.error; if (err) flash(`⚠ ${err}`); else loadAll(); };
+    window.addEventListener(APPRAISALS_EVENT, h);
+    void syncAppraisals().then((ok) => { if (!ok) flash("⚠ Couldn't load appraisals — check your connection"); });
+    return () => window.removeEventListener(APPRAISALS_EVENT, h);
+  }, []);
   const persistR = (r: Review[]) => { setReviews(r); saveReviews(r); };
   const persistF = (f: FeedbackNote[]) => { setFeedback(f); saveFeedback(f); };
   const persistP = (p: PIP[]) => { setPips(p); savePIPs(p); };
@@ -53,7 +65,10 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
   const persistTpl = (t: ReviewTemplate[]) => { setTemplates(t); saveTemplates(t); };
   const persistBoxes = (b: Record<string, BoxDef>) => { setBoxes(b); saveBoxes(b); };
 
-  const locations = useMemo(() => [...new Set(DEMO_STAFF.map((s) => s.op))].sort(), []);
+  const locations = useMemo(() => [...new Set(team.map((s) => s.op).filter(Boolean))].sort(), [team]);
+  const staffOf = (id: string) => team.find((s) => slug(s.name) === id);
+  // Everyone on the team has a place on the 9-box — "Core" until moved.
+  const talentAll = useMemo(() => [...talent, ...team.filter((s) => !talent.some((t) => t.staffId === slug(s.name))).map((s) => ({ staffId: slug(s.name), performance: 2 as const, potential: 2 as const }))], [talent, team]);
   const inOp = (opv?: string) => op === "all" || opv === op;
   const appraiserOptions = useMemo(() => [...new Set(["You", ...reviews.map((r) => r.appraiser || "You")])], [reviews]);
   const visReviews = reviews.filter((r) => inOp(r.op) && (apr === "all" || (r.appraiser || "You") === apr));
@@ -107,7 +122,7 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
 
       {/* ── FEEDBACK ── */}
       {sub === "feedback" && (() => {
-        const rows = feedback.filter((f) => inOp(DEMO_STAFF.find((s) => slug(s.name) === f.staffId)?.op) && (fbType === "all" || f.kind === fbType)).sort((a, b) => (a.at < b.at ? 1 : -1));
+        const rows = feedback.filter((f) => inOp(staffOf(f.staffId)?.op) && (fbType === "all" || f.kind === fbType)).sort((a, b) => (a.at < b.at ? 1 : -1));
         return (
         <Card className="mt-4 p-0">
           <div className="flex flex-wrap items-center gap-2 border-b border-[var(--line)] bg-[var(--panel)] px-4 py-2.5">
@@ -133,8 +148,8 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
 
       {/* ── TALENT 9-BOX ── */}
       {sub === "talent" && (
-        <TalentGrid talent={talent.filter((t) => inOp(DEMO_STAFF.find((s) => slug(s.name) === t.staffId)?.op))} reviews={reviews} boxes={boxes}
-          onMove={(id, perf, pot) => { persistT(talent.map((x) => x.staffId === id ? { ...x, performance: perf, potential: pot } : x)); const s = DEMO_STAFF.find((x) => slug(x.name) === id); flash(`${s?.name.split(" ")[0]} → ${boxes[`${perf}-${pot}`].label}`); }}
+        <TalentGrid team={team} talent={talentAll.filter((t) => inOp(staffOf(t.staffId)?.op))} reviews={reviews} boxes={boxes}
+          onMove={(id, perf, pot) => { persistT(talent.some((x) => x.staffId === id) ? talent.map((x) => x.staffId === id ? { ...x, performance: perf, potential: pot } : x) : [...talent, { staffId: id, performance: perf, potential: pot }]); const s = staffOf(id); flash(`${s?.name.split(" ")[0]} → ${boxes[`${perf}-${pot}`].label}`); }}
           onOpenReview={(id) => { const r = reviews.filter((x) => x.staffId === id).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]; if (r) setEdit(r); else flash("No review yet — start one on the Reviews tab."); }}
           onLogNote={(name, text) => { persistF([{ id: uid(), staffId: slug(name), name, kind: "supervision", text, at: new Date().toISOString(), by: "You" }, ...feedback]); flash("Note logged."); }} />
       )}
@@ -162,7 +177,7 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
       {sub === "pip" && (
         <Card className="mt-4 p-4">
           <div className="mb-3 flex items-center gap-2"><div><div className="text-[13px] font-extrabold text-[var(--ink)]">Performance improvement plans</div><div className="text-[11px] text-[var(--ink-3)]">Structured, time-bound plans with measurable targets, support and dated check-ins.</div></div><Button variant="primary" className="ml-auto" onClick={() => setPipEdit({ id: uid(), staffId: "", name: "", concern: "", support: "", consequence: "If targets aren't met by the review date, the plan may be extended once or escalated to a formal capability process.", owner: "", targets: [], checkIns: [], start: isoDate(new Date()), end: isoDate(new Date(Date.now() + 30 * 86400000)), status: "open" })}>+ New PIP</Button></div>
-          {pips.length === 0 ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No PIPs — hopefully none needed. A PIP is a fair, documented way to turn performance around.</div> : <div className="space-y-2.5">{pips.filter((p) => inOp(DEMO_STAFF.find((s) => slug(s.name) === p.staffId)?.op) || !p.staffId).map((p) => { const pct = pipProgress(p); const left = daysUntil(p.end); return (
+          {pips.length === 0 ? <div className="py-6 text-center text-[12.5px] text-[var(--ink-3)]">No PIPs — hopefully none needed. A PIP is a fair, documented way to turn performance around.</div> : <div className="space-y-2.5">{pips.filter((p) => inOp(staffOf(p.staffId)?.op) || !p.staffId).map((p) => { const pct = pipProgress(p); const left = daysUntil(p.end); return (
             <button key={p.id} type="button" onClick={() => setPipEdit(p)} className="block w-full rounded-xl border border-[var(--line)] p-3 text-left hover:border-[#1d3a8f]">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="grid h-8 w-8 place-items-center rounded-full bg-[var(--panel)] text-[10.5px] font-extrabold text-[var(--ink-2)]">{p.name ? initials(p.name) : "—"}</span>
@@ -185,7 +200,7 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
             <li>• Competencies are rated <b>1–5</b> ({Object.entries(RATING_LABEL).map(([n, l]) => `${n} ${l}`).join(" · ")}). Build the list per role in <b>Templates</b>.</li>
             <li>• Each review pulls <b>real signals</b> — lateness (clock-in), sickness &amp; Bradford factor (Leave &amp; absence), and DBS / first-aid — so it&rsquo;s evidence-based.</li>
             <li>• Log <b>kudos, concerns and supervision notes</b> any time so nothing is invented on the day; place people on the <b>9-box grid</b>; and open a <b>PIP</b> when needed.</li>
-            <li className="text-[var(--ink-3)]">Demo matches people by name. Real per-user store, e-signatures and reminders are the backend piece.</li>
+            <li className="text-[var(--ink-3)]">Each person sees their own reviews (and fills in their self-assessment) under <b>My appraisals</b> on their own device; feedback notes, PIPs and the 9-box stay with managers. People are matched by the name on their account. E-signatures and reminders are still to come.</li>
           </ul>
         </Card>
       )}
@@ -211,10 +226,10 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
 
   const modals = (
     <>
-      {edit && <ReviewEditor rev={edit} onSave={(r) => { persistR(reviews.map((x) => x.id === r.id ? r : x)); setEdit(null); flash("Review saved."); }} onClose={() => setEdit(null)} />}
-      {newRev && <NewReview onCreate={(r) => { persistR([r, ...reviews]); setNewRev(false); setEdit(r); }} onClose={() => setNewRev(false)} />}
-      {fbAdd && <AddFeedback onAdd={(f) => { persistF([f, ...feedback]); setFbAdd(false); flash("Note logged."); }} onClose={() => setFbAdd(false)} />}
-      {pipEdit && <PIPEditor pip={pipEdit} reviews={reviews}
+      {edit && <ReviewEditor rev={edit} appraisers={appraisers} onSave={(r) => { persistR(reviews.map((x) => x.id === r.id ? r : x)); setEdit(null); flash("Review saved."); }} onClose={() => setEdit(null)} />}
+      {newRev && <NewReview team={team} appraisers={appraisers} onCreate={(r) => { persistR([r, ...reviews]); setNewRev(false); setEdit(r); }} onClose={() => setNewRev(false)} />}
+      {fbAdd && <AddFeedback team={team} onAdd={(f) => { persistF([f, ...feedback]); setFbAdd(false); flash("Note logged."); }} onClose={() => setFbAdd(false)} />}
+      {pipEdit && <PIPEditor pip={pipEdit} team={team} reviews={reviews}
         onSave={(p) => { persistP(pips.some((x) => x.id === p.id) ? pips.map((x) => x.id === p.id ? p : x) : [p, ...pips]); setPipEdit(null); flash("PIP saved."); }}
         onDelete={() => { persistP(pips.filter((x) => x.id !== pipEdit.id)); setPipEdit(null); flash("PIP removed."); }}
         onClose={() => setPipEdit(null)} />}
@@ -235,8 +250,8 @@ export function AppraisalsApp({ embedded = false }: { embedded?: boolean }) {
 const suggestPerf = (score: number | null): 1 | 2 | 3 | null => (score == null ? null : score >= 4 ? 3 : score >= 2.5 ? 2 : 1);
 const LMH = { 1: "Low", 2: "Med", 3: "High" } as const;
 
-function TalentGrid({ talent, reviews, boxes, onMove, onOpenReview, onLogNote }: {
-  talent: Talent[]; reviews: Review[]; boxes: Record<string, BoxDef>;
+function TalentGrid({ team, talent, reviews, boxes, onMove, onOpenReview, onLogNote }: {
+  team: TeamMember[]; talent: Talent[]; reviews: Review[]; boxes: Record<string, BoxDef>;
   onMove: (id: string, perf: 1 | 2 | 3, pot: 1 | 2 | 3) => void;
   onOpenReview: (id: string) => void; onLogNote: (name: string, text: string) => void;
 }) {
@@ -244,7 +259,7 @@ function TalentGrid({ talent, reviews, boxes, onMove, onOpenReview, onLogNote }:
   const [over, setOver] = useState<string | null>(null);
   const [place, setPlace] = useState<string | null>(null);
   const scoreFor = (id: string) => { const r = reviews.filter((x) => x.staffId === id).sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))[0]; return r ? overallScore(r) : null; };
-  const staffOf = (id: string) => DEMO_STAFF.find((s) => slug(s.name) === id);
+  const staffOf = (id: string) => team.find((s) => slug(s.name) === id);
   const POT_LABEL = { 3: "High", 2: "Medium", 1: "Low" } as const;
   const PERF_LABEL = { 1: "Low", 2: "Medium", 3: "High" } as const;
   return (
@@ -337,7 +352,7 @@ function PlacePopover({ name, role, perf, pot, score, suggest, boxes, onMove, on
 }
 
 // ── PIP editor ───────────────────────────────────────────────────────────────
-function PIPEditor({ pip, reviews, onSave, onDelete, onClose }: { pip: PIP; reviews: Review[]; onSave: (p: PIP) => void; onDelete: () => void; onClose: () => void }) {
+function PIPEditor({ pip, team, reviews, onSave, onDelete, onClose }: { pip: PIP; team: TeamMember[]; reviews: Review[]; onSave: (p: PIP) => void; onDelete: () => void; onClose: () => void }) {
   const [p, setP] = useState<PIP>(pip);
   const set = (patch: Partial<PIP>) => setP((x) => ({ ...x, ...patch }));
   const setTarget = (id: string, patch: Partial<PIPTarget>) => set({ targets: p.targets.map((t) => t.id === id ? { ...t, ...patch } : t) });
@@ -352,7 +367,7 @@ function PIPEditor({ pip, reviews, onSave, onDelete, onClose }: { pip: PIP; revi
 
         {/* who + dates + status */}
         <div className="grid gap-2 sm:grid-cols-2">
-          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={p.staffId} onChange={(e) => { const s = DEMO_STAFF.find((x) => slug(x.name) === e.target.value); set({ staffId: e.target.value, name: s?.name || "", role: s?.role, op: s?.op }); }} className="w-full"><option value="">Choose staff…</option>{DEMO_STAFF.map((s) => <option key={s.name} value={slug(s.name)}>{s.name} · {s.role}</option>)}</Select></label>
+          <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={p.staffId} onChange={(e) => { const s = team.find((x) => slug(x.name) === e.target.value); set({ staffId: e.target.value, name: s?.name || "", role: s?.role, op: s?.op }); }} className="w-full"><option value="">Choose staff…</option>{team.map((s) => <option key={s.name} value={slug(s.name)}>{s.name} · {s.role}</option>)}</Select></label>
           <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Plan owner</span><Input value={p.owner || ""} onChange={(e) => set({ owner: e.target.value })} placeholder="e.g. Site lead" className="w-full" /></label>
           <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Start</span><Input type="date" value={p.start} onChange={(e) => set({ start: e.target.value })} className="w-full" /></label>
           <label className="block"><span className="mb-1 block text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Review by</span><Input type="date" value={p.end} onChange={(e) => set({ end: e.target.value })} className="w-full" /></label>
@@ -397,7 +412,7 @@ function PIPEditor({ pip, reviews, onSave, onDelete, onClose }: { pip: PIP; revi
 }
 
 // ── Review editor ───────────────────────────────────────────────────────────
-function ReviewEditor({ rev, onSave, onClose }: { rev: Review; onSave: (r: Review) => void; onClose: () => void }) {
+function ReviewEditor({ rev, appraisers, onSave, onClose }: { rev: Review; appraisers: string[]; onSave: (r: Review) => void; onClose: () => void }) {
   const [r, setR] = useState<Review>(rev);
   const tpl = templateFor(r.role);
   const sig = signalsFor(r.name);
@@ -410,7 +425,7 @@ function ReviewEditor({ rev, onSave, onClose }: { rev: Review; onSave: (r: Revie
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-2xl rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-1 flex items-center gap-2"><h3 className="text-[16px] font-extrabold text-[var(--ink)]">{r.name}</h3><span className="text-[12.5px] text-[var(--ink-3)]">· {KIND_LABEL[r.kind]} · due {fmtDate(r.due)}</span><span className="ml-auto rounded-full bg-[#eef4fd] px-2 py-0.5 text-[10.5px] font-bold text-[#1d3a8f]">{STATUS_LABEL[r.status]}</span><button type="button" onClick={onClose} className="ml-1 text-[18px] text-[var(--ink-3)]">×</button></div>
-        <div className="mb-3 flex items-center gap-2"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Appraiser</span><Select value={r.appraiser || "You"} onChange={(e) => set({ appraiser: e.target.value })} className="w-56 text-[12px]">{[...new Set([r.appraiser || "You", ...APPRAISERS])].filter((a) => slug(a) !== r.staffId).map((a) => <option key={a} value={a}>{a}</option>)}</Select><span className="text-[10.5px] text-[var(--ink-3)]">conducts &amp; edits this form</span></div>
+        <div className="mb-3 flex items-center gap-2"><span className="text-[10px] font-extrabold uppercase text-[var(--ink-3)]">Appraiser</span><Select value={r.appraiser || "You"} onChange={(e) => set({ appraiser: e.target.value })} className="w-56 text-[12px]">{[...new Set([r.appraiser || "You", ...appraisers])].filter((a) => slug(a) !== r.staffId).map((a) => <option key={a} value={a}>{a}</option>)}</Select><span className="text-[10.5px] text-[var(--ink-3)]">conducts &amp; edits this form</span></div>
 
         {/* data-informed signals */}
         <div className="mb-3 grid grid-cols-2 gap-2 rounded-xl bg-[var(--panel)] p-2.5 sm:grid-cols-4">
@@ -462,16 +477,16 @@ function ReviewEditor({ rev, onSave, onClose }: { rev: Review; onSave: (r: Revie
   );
 }
 
-function NewReview({ onCreate, onClose }: { onCreate: (r: Review) => void; onClose: () => void }) {
+function NewReview({ team, appraisers, onCreate, onClose }: { team: TeamMember[]; appraisers: string[]; onCreate: (r: Review) => void; onClose: () => void }) {
   const [name, setName] = useState(""); const [kind, setKind] = useState<ReviewKind>("annual"); const [due, setDue] = useState(isoDate(new Date(Date.now() + 14 * 86400000))); const [appraiser, setAppraiser] = useState("You");
-  const create = () => { const s = DEMO_STAFF.find((x) => slug(x.name) === name); if (!s) return; const tpl = templateFor(s.role); onCreate({ id: uid(), staffId: slug(s.name), name: s.name, role: s.role, op: s.op, appraiser, kind, templateId: tpl.id, due, status: "scheduled", self: { done: false, ratings: tpl.competencies.map((c) => ({ id: c.id })) }, manager: { ratings: tpl.competencies.map((c) => ({ id: c.id })) }, goals: [], signoff: {}, createdAt: new Date().toISOString() }); };
+  const create = () => { const s = team.find((x) => slug(x.name) === name); if (!s) return; const tpl = templateFor(s.role); onCreate({ id: uid(), staffId: slug(s.name), name: s.name, role: s.role, op: s.op, appraiser, kind, templateId: tpl.id, due, status: "scheduled", self: { done: false, ratings: tpl.competencies.map((c) => ({ id: c.id })) }, manager: { ratings: tpl.competencies.map((c) => ({ id: c.id })) }, goals: [], signoff: {}, createdAt: new Date().toISOString() }); };
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[10vh]" onClick={onClose} style={LIGHT_PALETTE}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">New review</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
-          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={name} onChange={(e) => setName(e.target.value)} className="w-full"><option value="">Choose…</option>{DEMO_STAFF.map((s) => <option key={s.name} value={slug(s.name)}>{s.name} · {s.role}</option>)}</Select></label>
-          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Appraiser <span className="font-normal normal-case text-[var(--ink-3)]">— who conducts &amp; signs it off</span></span><Select value={appraiser} onChange={(e) => setAppraiser(e.target.value)} className="w-full">{APPRAISERS.filter((a) => slug(a) !== name).map((a) => <option key={a} value={a}>{a}</option>)}</Select></label>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={name} onChange={(e) => setName(e.target.value)} className="w-full"><option value="">Choose…</option>{team.map((s) => <option key={s.name} value={slug(s.name)}>{s.name}{s.role ? ` · ${s.role}` : ""}</option>)}</Select>{!team.length && <span className="mt-1 block text-[11px] text-[var(--ink-3)]">No one on your team yet — invite staff under Team &amp; invites first.</span>}</label>
+          <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Appraiser <span className="font-normal normal-case text-[var(--ink-3)]">— who conducts &amp; signs it off</span></span><Select value={appraiser} onChange={(e) => setAppraiser(e.target.value)} className="w-full">{appraisers.filter((a) => slug(a) !== name).map((a) => <option key={a} value={a}>{a}</option>)}</Select></label>
           <div className="grid grid-cols-2 gap-2">
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={kind} onChange={(e) => setKind(e.target.value as ReviewKind)} className="w-full">{(Object.keys(KIND_LABEL) as ReviewKind[]).map((k) => <option key={k} value={k}>{KIND_LABEL[k]}</option>)}</Select></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Due</span><Input type="date" value={due} onChange={(e) => setDue(e.target.value)} className="w-full" /></label>
@@ -483,7 +498,7 @@ function NewReview({ onCreate, onClose }: { onCreate: (r: Review) => void; onClo
   );
 }
 
-function AddFeedback({ onAdd, onClose }: { onAdd: (f: FeedbackNote) => void; onClose: () => void }) {
+function AddFeedback({ team, onAdd, onClose }: { team: TeamMember[]; onAdd: (f: FeedbackNote) => void; onClose: () => void }) {
   const [name, setName] = useState(""); const [kind, setKind] = useState<FeedbackKind>("kudos"); const [text, setText] = useState("");
   return (
     <div className="fixed inset-0 z-[140] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[12vh]" onClick={onClose} style={LIGHT_PALETTE}>
@@ -491,7 +506,7 @@ function AddFeedback({ onAdd, onClose }: { onAdd: (f: FeedbackNote) => void; onC
         <div className="mb-3 flex items-center gap-2"><h3 className="text-[15px] font-extrabold text-[var(--ink)]">Log feedback / 1:1</h3><button type="button" onClick={onClose} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
         <div className="grid gap-2.5">
           <div className="grid grid-cols-2 gap-2">
-            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={name} onChange={(e) => setName(e.target.value)} className="w-full"><option value="">Choose…</option>{DEMO_STAFF.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}</Select></label>
+            <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Employee</span><Select value={name} onChange={(e) => setName(e.target.value)} className="w-full"><option value="">Choose…</option>{team.map((s) => <option key={s.name} value={s.name}>{s.name}</option>)}</Select></label>
             <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Type</span><Select value={kind} onChange={(e) => setKind(e.target.value as FeedbackKind)} className="w-full">{(Object.keys(FB_META) as FeedbackKind[]).map((k) => <option key={k} value={k}>{FB_META[k].icon} {FB_META[k].label}</option>)}</Select></label>
           </div>
           <label className="block"><span className="mb-1 block text-[11px] font-extrabold uppercase text-[var(--ink-3)]">Note</span><textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} className="w-full rounded-lg border border-[var(--line)] p-2 text-[12.5px]" /></label>

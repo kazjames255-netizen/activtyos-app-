@@ -31,7 +31,11 @@ export function useBookingFlags(portal: PortalKey): BookingFlags {
       .then((bs) => {
         const live = bs.filter((b) => b.status !== "Cancelled" && b.status !== "Declined");
         if (portal === "custdash") {
-          const toPay = live.filter((b) => b.pay !== "Paid" && (b.amount ?? 0) > 0).length;
+          // A waiting-list place isn't yours yet, so there's nothing to pay for
+          // it — counting it made "My bookings 2" appear over a list showing
+          // one booking, because the other was queued, not booked.
+          const NO_PLACE_YET = ["Waitlisted", "Offered", "Approval needed"];
+          const toPay = live.filter((b) => !NO_PLACE_YET.includes(b.status) && b.pay !== "Paid" && (b.amount ?? 0) > 0).length;
           setFlags(toPay ? { count: toPay, tip: `${plural(toPay, "booking")} to pay` } : { count: 0, tip: "" });
           return;
         }

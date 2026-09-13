@@ -318,6 +318,9 @@ export interface WizardDraft {
   staffIds: string[];
   visibility: "public" | "hidden";
   opensAt?: string;              // local datetime; blank = open now
+  /** Stop taking family bookings this many hours before each session ("" = none).
+   *  The server enforces it at checkout; an operator's manual booking may override. */
+  bookingCutoffHours?: string;
   bookingType: "auto" | "manual";
   waitlist: boolean;
   waitlistSize: string;
@@ -615,7 +618,7 @@ function withoutHiddenPasses(booking: BlockBooking | null, overrides: Record<str
 /** The customer page a PARENT sees — rendered purely from the API's
  * GET /api/listings/:id response, so it is pixel-for-pixel the operator's
  * "Preview as a parent" (same ParentPreview component, same data shape). */
-export function CustomerPage({ listing, topRight, bookingOnly }: { listing: ServerListing; topRight?: React.ReactNode; bookingOnly?: boolean }) {
+export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing: ServerListing; topRight?: React.ReactNode; bookingOnly?: boolean; logo?: string | null }) {
   const d = draftFromListing(listing);
   const { settings: tSettings } = useTenantSettings();
   const [bookState, setBookState] = useState<{ busy: boolean; error: string | null }>({ busy: false, error: null });
@@ -864,6 +867,7 @@ export function CustomerPage({ listing, topRight, bookingOnly }: { listing: Serv
       addons={lib?.addons ?? []}
       theme={resolveTheme(d.pageStyle)}
       brand={listing.tenantName}
+      logo={logo}
       tenantId={listing.tenantId}
       mode="parent"
       bookState={bookState}
@@ -1007,8 +1011,12 @@ export function ListingWizard({
     } catch (e) {
       // Autosaves fail silently — the blockers strip already says what's missing,
       // and a half-built draft failing validation shouldn't nag mid-typing.
+      // EXCEPT a refused date removal: children are booked on it, and the
+      // operator has to know the change didn't happen and why.
+      const rawMsg = e instanceof Error ? e.message : "";
+      if (quiet && /children are booked on/i.test(rawMsg)) setMsg(rawMsg);
       if (!quiet) {
-        const raw = e instanceof Error ? e.message : "";
+        const raw = rawMsg;
         // Server validation comes back as a raw JSON issues array — never show that.
         const looksLikeValidation = /\[\{|"code"|too_small|"path"/.test(raw);
         setMsg(looksLikeValidation ? (d.title.trim() ? "Couldn’t save — please check your entries." : "Give the listing a name first.") : (raw || "Save failed"));
@@ -2568,6 +2576,31 @@ function BookingOpens({ value, onChange }: { value: string; onChange: (v: string
   );
 }
 
+// The booking cut-off — how close to a session families can still book.
+function BookingCutoff({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  return (
+    <div className="mb-1 mt-2 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+      <div className="text-[12.5px] font-extrabold text-[var(--brand-ink)]">🛑 Stop taking bookings</div>
+      <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[12.5px] font-semibold text-[var(--ink-2)]">
+        <Input type="number" min={0} step={1} value={value} onChange={(e) => onChange(e.target.value.replace(/[^\d]/g, "").slice(0, 4))} placeholder="0" className="w-[90px]" aria-label="Hours before a session" />
+        <span>hours before each session starts</span>
+      </div>
+      <div className="mt-1.5 text-[11px] leading-[1.5] text-[var(--ink-2)]">
+        Leave blank to take bookings right up to the day. Once a session is inside the cut-off, parents can&rsquo;t book it online
+        (e.g. 24 closes a 9am session at 9am the day before). You can still add a late place yourself from Bookings.
+      </div>
+    </div>
+  );
+}
+
+/** Parent-facing line under "Choose your dates" when the listing has a cut-off. */
+function cutoffNote(d: WizardDraft, color: string) {
+  const h = parseInt(d.bookingCutoffHours ?? "", 10);
+  if (!Number.isFinite(h) || h <= 0) return null;
+  const label = h >= 48 && h % 24 === 0 ? `${h / 24} days` : `${h} hour${h === 1 ? "" : "s"}`;
+  return <div className="-mt-1 mb-2 text-[11.5px] font-semibold" style={{ color }}>🛑 Bookings close {label} before each session starts.</div>;
+}
+
 function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>) => void }) {
   const { settings: wizSettings } = useTenantSettings();
   const vis: [WizardDraft["visibility"], string, string][] = [
@@ -2595,6 +2628,7 @@ function PolicyStep({ d, upd }: { d: WizardDraft; upd: (p: Partial<WizardDraft>)
         ))}
       </div>
       <BookingOpens value={d.opensAt ?? ""} onChange={(v) => upd({ opensAt: v })} />
+      <BookingCutoff value={d.bookingCutoffHours ?? ""} onChange={(v) => upd({ bookingCutoffHours: v })} />
       <SectionHead icon="📋">Booking &amp; waiting list</SectionHead>
       <div className="mb-2 flex flex-wrap gap-1.5">
         {book.map(([k, label]) => (
@@ -2912,6 +2946,7 @@ function PlayfulBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook
             </div>
           </>}
           {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? "Choose any dates" : "Choose your dates")}
+          {b.pass && cutoffNote(d, "#7a8194")}
           {weeks.length ? <div className="flex flex-col gap-3">
             {weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[11px] font-bold" style={{ color: BLUE }}>Week {w.n} <span className="font-semibold text-[#a6adba]">· from {fmtDate(w.mon)}</span></div>
@@ -3102,6 +3137,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
               <div className="flex flex-wrap gap-2">{b.periods.map((p) => <button key={p.id} type="button" onClick={() => b.setPeriodId(p.id)} className="border px-3 py-1.5 text-left text-[11.5px] font-bold leading-tight" style={p.id === b.periodId ? on : idle}>{p.range}{b.pass ? <span className="block text-[10px] font-semibold opacity-80">{p.title} · {money(booking!.priceFor(b.pass.id, p.id))}</span> : null}</button>)}</div>
             </>}
             {b.pass && step(b.periods.length ? 3 : 2, b.isSingle ? "Choose any dates" : "Choose your dates")}
+            {b.pass && cutoffNote(d, "#8f9bb0")}
             {weeks.length ? <div className="flex flex-col gap-3">{weeks.slice(0, 8).map((w) => <div key={w.mon}>
               <div className="mb-1.5 text-[10.5px] font-bold uppercase tracking-[0.06em] text-[#8f9bb0]">Week {w.n} · from {fmtDate(w.mon)}</div>
               <div className="flex flex-wrap gap-1.5">{w.days.map((iso) => {
@@ -3218,7 +3254,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
   );
 }
 
-function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand, tenantId, topRight }: {
+function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand, logo, tenantId, topRight }: {
   topRight?: React.ReactNode;
   d: WizardDraft; venue: Venue | null; local: LocalState; blocks?: RunBlock[];
   mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void; bookState?: { busy: boolean; error: string | null };
@@ -3227,6 +3263,8 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   /** The provider's brand in the page header. Defaults to the signed-in
    * account (right for the operator's own preview, wrong for a parent). */
   brand?: string;
+  /** The provider's logo beside the brand in the header (public storefront only). */
+  logo?: string | null;
   /** The listing's tenant, so a signed-out parent can read that provider's
    *  public settings (vouchers, child questions). */
   tenantId?: string;
@@ -3253,7 +3291,7 @@ function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook,
   const heroCat = cats.find((c) => c.id === d.heroCategoryId) ?? cats[0] ?? null;
   const widget = <BookingWidget d={d} booking={booking} weeks={weeks} spacesLeft={spacesLeft} addons={addons} blocks={blocks} mode={mode} onBook={onBook} bookState={bookState} theme={theme} tenantId={tenantId} />;
   const opens = useOpensAt(d.opensAt);
-  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand(), topRight };
+  const p: PageProps = { d, venue, cats, heroCat, town, runLabel, staff, staffNames, addons, imgs, widget, full, emo, fromPrice, passSummary, spacesLeft, whereHead: whereHeading(local), opens, blocks, brand: brand ?? myBrand(), logo, topRight };
 
   // No theme picker here — the colour theme is chosen in the listing editor
   // (Basics step), so the preview shows exactly what the parent sees, nothing more.
@@ -3276,6 +3314,7 @@ interface PageProps {
   opens: { locked: boolean; countdown: string; opensLabel: string };
   blocks?: RunBlock[];
   brand: string;
+  logo?: string | null;
   /** Optional links rendered in the storefront header (e.g. the signed-in
    *  parent's "My home page / My bookings" on the real booking page). */
   topRight?: React.ReactNode;
@@ -3381,7 +3420,7 @@ function SportSec({ eye, title, children }: { eye: string; title: string; childr
 }
 
 // ── PAGE · PLAYFUL (bright, rounded, friendly) ─────────────────────────────
-function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, brand, topRight }: PageProps) {
+function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, brand, logo, topRight }: PageProps) {
   const BLUE = "#2f6bd8", DEEP = "#1d3a8f", INKp = "#232842", MUTp = "#7a8194";
   // Fixed ASPECT (not height) so the hero crops identically on every screen and
   // matches the wizard's crop preview exactly — WYSIWYG.
@@ -3405,7 +3444,10 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
   return (
     <div className={`overflow-hidden ${full ? "" : "rounded-[26px] border border-[#e8edf7]"}`} style={{ background: "#f4f7ff", fontFamily: '"Segoe UI",system-ui,sans-serif', boxShadow: full ? undefined : undefined }}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 bg-white px-6 py-4">
-        <span className="text-[18px] font-extrabold tracking-[-0.02em]" style={{ color: BLUE }}>{brand}</span>
+        <span className="flex min-w-0 items-center gap-2.5">
+          {logo && <img src={logo} alt={`${brand} logo`} className="h-9 w-9 flex-none rounded-lg object-contain" />}
+          <span className="text-[18px] font-extrabold tracking-[-0.02em]" style={{ color: BLUE }}>{brand}</span>
+        </span>
         <span className="flex items-center gap-4 [&_a]:text-[#2f6bd8]">
           {topRight}
           <span className="rounded-full px-3.5 py-1.5 text-[11.5px] font-bold" style={{ background: "#fff6e0", color: "#c98a00" }}>★ Trusted provider</span>
@@ -3594,7 +3636,7 @@ function PlayfulPage({ d, venue, whereHead, opens, cats, heroCat, town, runLabel
 }
 
 // ── PAGE · SPORT (dark, electric, athletic) ────────────────────────────────
-function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand, topRight }: PageProps & { surf: Surf }) {
+function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroCat, town, runLabel, staff, addons, imgs, widget, full, emo, passSummary, spacesLeft, surf, brand, logo, topRight }: PageProps & { surf: Surf }) {
   const BG = surf.bg, PANEL = surf.panel, LINEs = surf.line;
   const EL = surf.el;
   const LIME = surf.accent;      // headline accent (price, chips, borders)
@@ -3617,7 +3659,10 @@ function SportPage({ d, venue, whereHead, opens, blocks, staffNames, cats, heroC
   return (
     <div className={`overflow-hidden ${full ? "" : "rounded-[18px] border"}`} style={{ background: BG, color: "#fff", borderColor: LINEs, fontFamily: "system-ui,-apple-system,sans-serif" }}>
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b px-6 py-4" style={{ borderColor: LINEs, background: headerBg }}>
-        <span className={`text-[18px] font-black ${cond}`}>{brand}</span>
+        <span className="flex min-w-0 items-center gap-2.5">
+          {logo && <img src={logo} alt={`${brand} logo`} className="h-9 w-9 flex-none rounded-lg bg-white object-contain p-0.5" />}
+          <span className={`text-[18px] font-black ${cond}`}>{brand}</span>
+        </span>
         <span className="flex items-center gap-4 [&_a]:text-white">
           {topRight}
           <span className="text-[11px]" style={{ color: MUTs }}>Secure checkout</span>

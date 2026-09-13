@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import { FieldValue } from "firebase-admin/firestore";
 import type { Role } from "../middleware/role";
 import { applyHoNetFilter } from "../lib/franchiseScope";
+import { bareImageUrl, signImageUrl } from "../lib/signing";
 
 // Expenses (Money) — the provider's outgoings: what was spent, on what, with
 // an optional receipt. Operators only (Money is not a staff surface).
@@ -34,10 +35,18 @@ const expenseSchema = z.object({
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const MAX_OCCURRENCES = 104; // 2 years of weekly — a runaway guard, not a limit users hit
-function stepDate(iso: string, repeat: "weekly" | "fortnightly" | "monthly"): string {
+/** The next date in a series. Monthly keeps the start's day of the month,
+ *  clamped to shorter months (31 Jan → 28 Feb → 31 Mar), instead of rolling
+ *  over — setUTCMonth turned 31 Jan into 3 Mar and skipped February (d18s5). */
+function stepDate(iso: string, repeat: "weekly" | "fortnightly" | "monthly", anchorDay?: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
-  if (repeat === "monthly") d.setUTCMonth(d.getUTCMonth() + 1);
-  else d.setUTCDate(d.getUTCDate() + (repeat === "fortnightly" ? 14 : 7));
+  if (repeat === "monthly") {
+    const day = anchorDay ?? d.getUTCDate();
+    const y = d.getUTCFullYear(), m = d.getUTCMonth() + 1;
+    const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(y, m, Math.min(day, last))).toISOString().slice(0, 10);
+  }
+  d.setUTCDate(d.getUTCDate() + (repeat === "fortnightly" ? 14 : 7));
   return d.toISOString().slice(0, 10);
 }
 
@@ -62,6 +71,8 @@ expenses.get("/", async (req, res) => {
   if (auth.role === "franchise") list = list.filter((e) => (e.franchiseId ?? null) === auth.franchiseId);
   list = applyHoNetFilter(list, auth.role, req.query.franchiseId); // head-office network scope
   list.sort((a, b) => (`${b.date ?? ""}` < `${a.date ?? ""}` ? -1 : 1));
+  // Receipts are private images: store the bare link, hand out a fresh signed one.
+  list = list.map((e) => (e.receiptUrl ? { ...e, receiptUrl: signImageUrl(e.receiptUrl) } : e));
   const byCategory: Record<string, number> = {};
   for (const e of list) byCategory[e.category ?? "Other"] = round2((byCategory[e.category ?? "Other"] ?? 0) + (e.amount ?? 0));
   res.json({ items: list, summary: { total: round2(list.reduce((s, e) => s + (e.amount ?? 0), 0)), count: list.length, byCategory } });
@@ -73,6 +84,7 @@ expenses.post("/", async (req, res) => {
   const parsed = expenseSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const { repeat, repeatUntil, seriesId: _ignore, ...rest } = parsed.data;
+  if (rest.receiptUrl) rest.receiptUrl = bareImageUrl(rest.receiptUrl);
   const meta = { tenantId: auth.tenantId, franchiseId: auth.role === "franchise" ? auth.franchiseId : null, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Operator", createdAt: new Date().toISOString() };
   const base = { ...rest, amount: round2(rest.amount), ...meta };
 
@@ -80,7 +92,7 @@ expenses.post("/", async (req, res) => {
   if (repeat && repeatUntil && repeatUntil > rest.date) {
     const sid = col.doc().id;
     const dates: string[] = [];
-    for (let d = rest.date, i = 0; d <= repeatUntil && i < MAX_OCCURRENCES; d = stepDate(d, repeat), i++) dates.push(d);
+    for (let d = rest.date, i = 0; d <= repeatUntil && i < MAX_OCCURRENCES; d = stepDate(d, repeat, Number(rest.date.slice(8, 10))), i++) dates.push(d);
     const batch = db.batch();
     const items = dates.map((date) => {
       const ref = col.doc();
@@ -89,12 +101,12 @@ expenses.post("/", async (req, res) => {
       return { id: ref.id, ...doc };
     });
     await batch.commit();
-    res.status(201).json({ created: items.length, seriesId: sid, items });
+    res.status(201).json({ created: items.length, seriesId: sid, items: items.map((x) => (x.receiptUrl ? { ...x, receiptUrl: signImageUrl(x.receiptUrl) } : x)) });
     return;
   }
 
   const ref = await col.add(base);
-  res.status(201).json({ id: ref.id, ...base });
+  res.status(201).json({ id: ref.id, ...base, ...(base.receiptUrl ? { receiptUrl: signImageUrl(base.receiptUrl) } : {}) });
 });
 
 // Delete a whole recurring series in one go.
@@ -124,10 +136,11 @@ expenses.put("/:id", async (req, res) => {
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Requires an operator account" : "Expense not found" }); return; }
   const parsed = expenseSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const patch = { ...parsed.data, ...(parsed.data.amount !== undefined ? { amount: round2(parsed.data.amount) } : {}) };
+  const patch = { ...parsed.data, ...(parsed.data.amount !== undefined ? { amount: round2(parsed.data.amount) } : {}), ...(parsed.data.receiptUrl ? { receiptUrl: bareImageUrl(parsed.data.receiptUrl) } : {}) };
   await o.snap.ref.set(patch, { merge: true });
   const after = await o.snap.ref.get();
-  res.json({ id: after.id, ...after.data() });
+  const doc = after.data() ?? {};
+  res.json({ id: after.id, ...doc, ...(doc.receiptUrl ? { receiptUrl: signImageUrl(doc.receiptUrl) } : {}) });
 });
 
 expenses.delete("/:id", async (req, res) => {

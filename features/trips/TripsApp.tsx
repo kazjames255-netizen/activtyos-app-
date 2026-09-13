@@ -737,7 +737,11 @@ export function TripsApp() {
   // the staff portal we honour the setting — "all" lets staff plan, otherwise
   // only leads/managers may (true per-user role gating is Amir's roles system).
   const onStaffPortal = (usePathname()?.split("/")[1] ?? "") === "staff";
-  const canPlan = !onStaffPortal || (settings.trips?.whoCanPlan ?? "all") === "all";
+  // A lead (Team & invites → Make lead) plans when the setting is "leads".
+  const [lead, setLead] = useState(false);
+  useEffect(() => { if (onStaffPortal) apiGet<{ lead?: boolean }>("/api/me").then((m) => setLead(m.lead === true)).catch(() => {}); }, [onStaffPortal]);
+  const who = settings.trips?.whoCanPlan ?? "all";
+  const canPlan = !onStaffPortal || who === "all" || (who === "leads" && lead);
   const ratioTarget = settings.trips?.ratioTarget ?? 8;
   const notifies = settings.trips?.notifyParent ?? true;
   const [trips, setTrips] = useState<Trip[] | null>(null);

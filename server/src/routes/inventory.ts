@@ -12,15 +12,17 @@ const col = db.collection("inventory");
 const canUse = (role: Role) => role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 
+// null = "clear it" on an edit (the PUT merges, so a missing key keeps the old
+// value — that's how a reorder level used to be impossible to remove, d18s7).
 const itemSchema = z.object({
   name: z.string().trim().min(1).max(160),
-  category: z.string().trim().max(80).optional(),
-  location: z.string().trim().max(120).optional(),
+  category: z.string().trim().max(80).nullable().optional(),
+  location: z.string().trim().max(120).nullable().optional(),
   quantity: z.number().nonnegative().max(1_000_000).default(0),
-  unit: z.string().trim().max(24).optional(),
-  minQty: z.number().nonnegative().max(1_000_000).optional(),
+  unit: z.string().trim().max(24).nullable().optional(),
+  minQty: z.number().nonnegative().max(1_000_000).nullable().optional(),
   season: z.string().trim().max(60).optional(),
-  notes: z.string().trim().max(2_000).optional(),
+  notes: z.string().trim().max(2_000).nullable().optional(),
 });
 
 inventory.get("/", async (req, res) => {

@@ -9,11 +9,10 @@ import { Input, Select } from "@/components/ui";
 import { LIGHT_PALETTE, SettingsLink } from "@/components/OperatorPage";
 import { Tile, GRAD } from "@/features/money/finance-kit";
 import { LocationDetail, type Venue } from "./LocationDetail";
+import { fetchDeployment, resolveDeployment, saveDeployment, type LocStaff } from "./locStaff";
 
 interface Listing { id: string; title?: string; name?: string; venueId?: string | null; seasonId?: string | null; status?: string; visibility?: string; archived?: boolean }
-interface LocStaff { id: string; name: string; role?: string; sites: string[]; listings: string[] }
 interface Store { staff: LocStaff[] }
-const STAFF_KEY = "aos.locstaff.v2";
 const initials = (n: string) => n.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase();
 const AV_COL = ["#c2268f", "#0f857b", "#2f6bd8", "#c06a10", "#6366f1", "#b45309"];
 const avColour = (id: string) => AV_COL[[...id].reduce((n, c) => n + c.charCodeAt(0), 0) % AV_COL.length];
@@ -34,6 +33,8 @@ const DEMO_DEPLOY: LocStaff[] = [
 // Deployment — move staff around fast. Three views: by location, by staff (A–Z),
 // by listing. Assignment = which venues (sites) + which specific listings each
 // person works. Turn one on and the schedule offers them for those shifts.
+// Saved on the server (/api/location-staff, see ./locStaff) — the team is the
+// provider's joined staff, first placed where their invite said.
 export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -46,6 +47,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
   const [q, setQ] = useState("");
   const [addFor, setAddFor] = useState<string | null>(null); // which location's add-picker is open
   const [addQ, setAddQ] = useState("");
+  const [saveErr, setSaveErr] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     apiGet<{ venues?: Venue[] }>("/api/library").then((lib) => setVenues(lib.venues ?? [])).catch(() => setVenues([]));
@@ -56,17 +58,25 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
 
   const list = venues; // real venues from the library (null while loading, [] if none)
 
-  // Load any saved staff assignments (real staff only — no demo seed), UNLESS
-  // we're inside a guided-tour iframe (demo mode), where we seed a small pretend
-  // team so the walkthrough can show deploying and assigning to listings.
+  // The saved deployment + the real team (no demo seed), UNLESS we're inside a
+  // guided-tour iframe (demo mode), where we seed a small pretend team so the
+  // walkthrough can show deploying and assigning to listings.
   useEffect(() => {
     if (isDemoMode()) { setStore({ staff: DEMO_DEPLOY }); return; }
-    try { const s = JSON.parse(localStorage.getItem(STAFF_KEY) || "null"); if (s?.staff) setStore({ staff: s.staff.map((x: LocStaff) => ({ ...x, sites: x.sites ?? [], listings: x.listings ?? [] })) }); } catch { /* ignore */ }
+    // Locations + listings alongside: an invite's "all locations" / listings need them to place someone.
+    Promise.all([fetchDeployment(), apiGet<{ venues?: Venue[] }>("/api/library"), apiGet<Listing[]>("/api/listings?mine=1")])
+      .then(([raw, lib, ls]) => setStore({ staff: resolveDeployment(raw, (lib.venues ?? []).map((v) => v.id), ls) }))
+      .catch((e) => setSaveErr(`Couldn't load who works where: ${e instanceof Error ? e.message : "check your connection"}`));
   }, []);
 
-  const persist = (next: Store) => { setStore(next); try { localStorage.setItem(STAFF_KEY, JSON.stringify(next)); } catch { /* ignore */ } };
+  const persist = (next: Store) => {
+    setStore(next);
+    if (isDemoMode()) return;
+    saveDeployment(next.staff, (err) => setSaveErr(err ? `Couldn't save that change: ${err}` : null));
+  };
   const staff = store.staff;
-  const upd = (staffId: string, fn: (s: LocStaff) => LocStaff) => persist({ staff: staff.map((s) => (s.id === staffId ? fn(s) : s)) });
+  // Touching someone places them (they're no longer "not set up").
+  const upd = (staffId: string, fn: (s: LocStaff) => LocStaff) => persist({ staff: staff.map((s) => (s.id === staffId ? { ...fn(s), unset: undefined } : s)) });
   const has = (arr: string[], v: string) => arr.includes(v);
   const flip = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   const toggleSite = (sid: string, vid: string) => upd(sid, (s) => ({ ...s, sites: flip(s.sites, vid) }));
@@ -99,6 +109,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
         <Tile label="Listings" icon="🎫" grad={GRAD.blue} value={String(deployListings.length)} sub="active programmes" />
       </div>
       <p className="mb-3 text-[12.5px] text-[var(--ink-3)]">Move staff across locations &amp; listings — turn one on and the schedule offers them for its shifts. Locations &amp; listings are edited in <a href="/company/listings" className="font-bold text-[#1d3a8f] hover:underline">Listings</a>.</p>
+      {saveErr && <p className="mb-3 rounded-lg bg-[#fdecec] px-3 py-2 text-[12px] font-bold text-[#c0392b]">⚠ {saveErr}</p>}
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="inline-flex rounded-xl bg-[var(--panel)] p-1">
@@ -181,7 +192,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
             const sAllLoc = list.length > 0 && list.every((v) => s.sites.includes(v.id));
             const sAllList = s.listings.length === 0;
             const sScoped = deployListings.filter((l) => sAllLoc || (l.venueId && s.sites.includes(l.venueId)));
-            const summary = sNone ? "Not rostered" : (sAllLoc ? "All locations" : `${s.sites.length} location${s.sites.length === 1 ? "" : "s"}`) + (sAllList ? " · all listings" : ` · ${s.listings.length} listing${s.listings.length === 1 ? "" : "s"}`);
+            const summary = s.unset ? "Not placed yet — offered for any location" : sNone ? "Not rostered" : (sAllLoc ? "All locations" : `${s.sites.length} location${s.sites.length === 1 ? "" : "s"}`) + (sAllList ? " · all listings" : ` · ${s.listings.length} listing${s.listings.length === 1 ? "" : "s"}`);
             return (
             <div key={s.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-3.5">
               <div className="flex items-center gap-2.5">
@@ -192,7 +203,7 @@ export function LocationsApp({ embedded = false }: { embedded?: boolean }) {
 
               <div className="mt-2.5 flex flex-wrap gap-1.5">
                 <button type="button" onClick={() => upd(s.id, (x) => ({ ...x, sites: list.map((v) => v.id), listings: [] }))} className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={!sNone ? CHIP_ON : CHIP_OFF}>{!sNone ? "✓ " : ""}Rostered</button>
-                <button type="button" onClick={() => upd(s.id, (x) => ({ ...x, sites: [], listings: [] }))} className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={sNone ? { borderColor: "#c06a10", background: "#fbeddb", color: "#8a4a12" } : CHIP_OFF}>{sNone ? "✓ " : ""}None — office / admin</button>
+                <button type="button" onClick={() => upd(s.id, (x) => ({ ...x, sites: [], listings: [] }))} className="rounded-full border-2 px-3 py-1.5 text-[12px] font-extrabold transition-colors" style={sNone && !s.unset ? { borderColor: "#c06a10", background: "#fbeddb", color: "#8a4a12" } : CHIP_OFF}>{sNone && !s.unset ? "✓ " : ""}None — office / admin</button>
               </div>
 
               {!sNone && (

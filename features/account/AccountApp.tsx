@@ -1,14 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import type { CSSProperties } from "react";
-import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail } from "firebase/auth";
+import { Fragment, useCallback, useEffect, useState } from "react";
+import type { CSSProperties, ReactNode } from "react";
+import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, sendPasswordResetEmail, verifyBeforeUpdateEmail } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { useAuth } from "@/components/auth/AuthProvider";
 import { clearMeCache } from "@/components/auth/PortalGuard";
 import { TerritoryMapClient, type TerritoryArea } from "@/features/franchise/TerritoryMapClient";
 import { get as apiGet, api } from "@/lib/api";
 import { useSettings } from "@/lib/settings";
+import { useI18n } from "@/lib/i18n/provider";
 import { Button, Card, FieldLabel, Input } from "@/components/ui";
 
 // Wire/storage shape — points are {lat,lng} OBJECTS (Firestore forbids nested arrays).
@@ -16,8 +17,16 @@ interface WireArea { id: string; name: string; color: string; rings: { lat: numb
 interface WireTerritory { areas: WireArea[]; status?: "draft" | "agreed" }
 const toMapAreas = (t?: WireTerritory | null): TerritoryArea[] => (t?.areas ?? []).map((a) => ({ ...a, rings: a.rings.map((p) => [p.lat, p.lng] as [number, number]) }));
 const toWireAreas = (areas: TerritoryArea[]): WireArea[] => areas.map((a) => ({ ...a, rings: a.rings.map(([lat, lng]) => ({ lat, lng })) }));
-interface Profile { email: string | null; name: string; phone: string; address: string; postcode: string; marketingConsent: boolean; role: string; emergencyName?: string; emergencyPhone?: string; franchiseName?: string; franchiseArea?: string; franchiseTerritory?: WireTerritory | null }
-const roleLabel: Record<string, string> = { parent: "Parent", staff: "Staff", company: "Company / head office", franchise: "Franchise", freelancer: "Freelancer", platform: "Platform" };
+interface Profile { email: string | null; pendingEmail?: string | null; name: string; phone: string; address: string; postcode: string; marketingConsent: boolean; role: string; emergencyName?: string; emergencyPhone?: string; franchiseName?: string; franchiseArea?: string; franchiseTerritory?: WireTerritory | null }
+// The load callback keeps its [] deps (the i18n `t` changes every render), so a
+// non-Error rejection stores this marker and the render swaps in the translation.
+const LOAD_FAILED = "Failed to load";
+
+/** A translated sentence with {placeholders} swapped for rich parts (bold text,
+ *  links) — word order differs by language. */
+function Rich({ text, vars }: { text: string; vars: Record<string, ReactNode> }) {
+  return <>{text.split(/(\{\w+\})/).map((part, i) => { const m = /^\{(\w+)\}$/.exec(part); return m && m[1] in vars ? <Fragment key={i}>{vars[m[1]]}</Fragment> : part; })}</>;
+}
 const LIGHT_PALETTE = {
   "--bg": "#f5f8fd", "--surface": "#ffffff", "--panel": "#fbf8fc",
   "--ink": "#171534", "--ink-2": "#4a4763", "--ink-3": "#8a86a3", "--line": "#ece6f1",
@@ -60,6 +69,7 @@ async function compressLogo(dataUrl: string): Promise<string> {
 }
 
 export function AccountApp() {
+  const { t } = useI18n();
   const { signOutUser } = useAuth();
   const { settings, save } = useSettings();
   const [p, setP] = useState<Profile | null>(null);
@@ -76,6 +86,13 @@ export function AccountApp() {
   const [pw, setPw] = useState({ current: "", next: "", confirm: "" });
   const [pwMsg, setPwMsg] = useState<{ err?: string; ok?: string }>({});
   const [showPw, setShowPw] = useState(false);
+  // Change of sign-in email (Firebase verifyBeforeUpdateEmail — the switch only
+  // happens once the link sent to the NEW address is opened).
+  const [emOpen, setEmOpen] = useState(false);
+  const [em, setEm] = useState({ next: "", password: "" });
+  const [emNeedPw, setEmNeedPw] = useState(false);
+  const [emBusy, setEmBusy] = useState(false);
+  const [emMsg, setEmMsg] = useState<{ err?: string; ok?: string }>({});
   // Franchise identity (business name + territory) — editable by the franchise here.
   const [frName, setFrName] = useState("");
   const [frArea, setFrArea] = useState("");
@@ -103,7 +120,7 @@ export function AccountApp() {
       setFrArea(prof.franchiseArea ?? "");
       setTerritory(toMapAreas(prof.franchiseTerritory));
       setTerrStatus(prof.franchiseTerritory?.status ?? "draft");
-    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    }).catch((e) => setError(e instanceof Error ? e.message : LOAD_FAILED));
   }, []);
   useEffect(() => { load(); }, [load]);
 
@@ -111,20 +128,20 @@ export function AccountApp() {
     const f = e.target.files?.[0]; if (!f) return;
     setError(null); setOk(null);
     try {
-      const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error("Couldn’t read that file")); r.readAsDataURL(f); });
+      const dataUrl = await new Promise<string>((res, rej) => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.onerror = () => rej(new Error(t("account.errReadFile"))); r.readAsDataURL(f); });
       const payload = dataUrl.startsWith("data:image/") ? await compressLogo(dataUrl) : dataUrl;
       const { url } = await api<{ url: string }>("/api/uploads", { method: "POST", body: JSON.stringify({ dataUrl: payload }) });
       await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: url } } });
-      setOk("Logo saved — it'll show on your customer emails and pages.");
+      setOk(t("account.logoSaved"));
     } catch (err) {
-      setError(err instanceof Error ? `Logo upload failed: ${err.message}` : "Couldn’t upload that logo — most image files work (PNG, JPG, SVG, WebP, GIF…).");
+      setError(err instanceof Error ? t("account.logoUploadFailed", { msg: err.message }) : t("account.logoUploadErr"));
     }
     e.target.value = "";
   }
   async function removeLogo() {
     setError(null); setOk(null);
-    try { await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } }); setOk("Logo removed."); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t remove the logo"); }
+    try { await save({ settings: { ...settings, billing: { ...(settings.billing ?? {}), logoUrl: "" } } }); setOk(t("account.logoRemoved")); }
+    catch (e) { setError(e instanceof Error ? e.message : t("account.logoRemoveErr")); }
   }
 
   function startEditReg() {
@@ -150,7 +167,7 @@ export function AccountApp() {
         activityKinds: rf.activityKinds.split(",").map((s) => s.trim()).filter(Boolean),
         billing: { ...(settings.billing ?? {}), businessName: rf.businessName.trim(), address: rf.address.trim(), email: rf.email.trim(), phone: rf.phone.trim(), vatNumber: rf.vatNumber.trim() },
       } });
-      setEditReg(false); setOk("Registration details saved.");
+      setEditReg(false); setOk(t("account.regSaved"));
     } catch (e) { setError(niceError(e)); }
   }
 
@@ -162,7 +179,7 @@ export function AccountApp() {
         // Status is head-office-controlled; the server coerces a franchise's value anyway.
         franchiseTerritory: { areas: toWireAreas(territory), status: territory.length ? "proposed" : "draft" },
       }) });
-      setFrOk(territory.length ? "Saved — sent to your head office to agree." : "Saved.");
+      setFrOk(territory.length ? t("account.frSavedProposed") : t("account.saved"));
       setTerrStatus(territory.length ? "proposed" : "draft");
       clearMeCache(); // so the sidebar banner picks up the new name/area on next navigation
     } catch (e) { setError(niceError(e)); }
@@ -172,7 +189,7 @@ export function AccountApp() {
     setError(null); setOk(null);
     try {
       await api("/api/account", { method: "PUT", body: JSON.stringify({ name, phone, address, postcode, marketingConsent: marketing, ...(p?.role === "parent" ? { emergencyName: emergencyName.trim(), emergencyPhone: emergencyPhone.trim() } : {}) }) });
-      setOk("Saved.");
+      setOk(t("account.saved"));
       // Let the header (and anything else showing my name) update without a reload.
       window.dispatchEvent(new CustomEvent("aos:me-updated", { detail: { name: name.trim() } }));
       load();
@@ -182,19 +199,49 @@ export function AccountApp() {
 
   async function changePassword() {
     setPwMsg({});
-    if (pw.next.length < 6) { setPwMsg({ err: "New password must be at least 6 characters." }); return; }
-    if (pw.next !== pw.confirm) { setPwMsg({ err: "The new passwords don’t match." }); return; }
+    if (pw.next.length < 6) { setPwMsg({ err: t("account.pwTooShort") }); return; }
+    if (pw.next !== pw.confirm) { setPwMsg({ err: t("account.pwMismatch") }); return; }
     const user = firebaseAuth.currentUser;
-    if (!user || !user.email) { setPwMsg({ err: "Not signed in." }); return; }
+    if (!user || !user.email) { setPwMsg({ err: t("account.notSignedIn") }); return; }
     try {
       await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, pw.current));
       await updatePassword(user, pw.next);
       setPw({ current: "", next: "", confirm: "" });
-      setPwMsg({ ok: "Password changed." });
+      setPwMsg({ ok: t("account.pwChanged") });
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "Couldn’t change password";
-      setPwMsg({ err: /auth\/(wrong-password|invalid-credential)/.test(msg) ? "Current password is incorrect — if you’ve forgotten it, use “Forgot your current password?” below." : msg });
+      const msg = e instanceof Error ? e.message : t("account.pwChangeErr");
+      setPwMsg({ err: /auth\/(wrong-password|invalid-credential)/.test(msg) ? t("account.pwWrong", { forgot: t("account.forgotPw") }) : msg });
     }
+  }
+
+  async function changeEmail() {
+    setEmMsg({});
+    const next = em.next.trim().toLowerCase();
+    const user = firebaseAuth.currentUser;
+    if (!user || !user.email) { setEmMsg({ err: t("account.notSignedIn") }); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)) { setEmMsg({ err: t("account.emInvalid") }); return; }
+    if (next === user.email.toLowerCase()) { setEmMsg({ err: t("account.emSame") }); return; }
+    setEmBusy(true);
+    try {
+      // Firebase refuses a sensitive change on an old sign-in — then we ask for
+      // the password once and re-authenticate before trying again.
+      if (emNeedPw) await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, em.password));
+      await verifyBeforeUpdateEmail(user, next);
+      // Tell the server which address is on its way, so it can recognise the
+      // switch and move the family's records across when it lands.
+      await api("/api/account/email-change", { method: "POST", body: JSON.stringify({ newEmail: next }) }).catch(() => {});
+      setEmMsg({ ok: t("account.emSent", { email: next, current: user.email }) });
+      setEm({ next: "", password: "" }); setEmNeedPw(false); setEmOpen(false);
+      load();
+    } catch (e) {
+      const code = `${(e as { code?: string })?.code ?? ""} ${e instanceof Error ? e.message : ""}`;
+      if (/requires-recent-login/.test(code)) { setEmNeedPw(true); setEmMsg({ err: t("account.emNeedPw") }); }
+      else if (/wrong-password|invalid-credential/.test(code)) setEmMsg({ err: t("account.emWrongPw") });
+      else if (/email-already-in-use/.test(code)) setEmMsg({ err: t("account.emTaken") });
+      else if (/invalid-email|invalid-new-email/.test(code)) setEmMsg({ err: t("account.emInvalid") });
+      else if (/too-many-requests/.test(code)) setEmMsg({ err: t("account.emTooMany") });
+      else setEmMsg({ err: t("account.emErr") });
+    } finally { setEmBusy(false); }
   }
 
   // Forgot the current password → email a reset link (Firebase-hosted reset page,
@@ -202,28 +249,30 @@ export function AccountApp() {
   async function resetPassword() {
     setPwMsg({});
     const em = firebaseAuth.currentUser?.email || p?.email;
-    if (!em) { setPwMsg({ err: "No email on this account to send a reset to." }); return; }
+    if (!em) { setPwMsg({ err: t("account.noResetEmail") }); return; }
     try {
       await sendPasswordResetEmail(firebaseAuth, em);
-      setPwMsg({ ok: `We’ve emailed a password-reset link to ${em}. Open it to set a new password — no need for your old one.` });
+      setPwMsg({ ok: t("account.resetSent", { email: em }) });
     } catch (e) {
-      setPwMsg({ err: e instanceof Error ? e.message : "Couldn’t send the reset email" });
+      setPwMsg({ err: e instanceof Error ? e.message : t("account.resetErr") });
     }
   }
 
-  if (error && !p) return <div className="p-2 text-[12.5px] text-[var(--red)]">{error}</div>;
-  if (!p) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>;
+  const errMsg = error === LOAD_FAILED ? t("account.failedLoad") : error;
+  if (error && !p) return <div className="p-2 text-[12.5px] text-[var(--red)]">{errMsg}</div>;
+  if (!p) return <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("account.loading")}</div>;
 
+  const roleLabel: Record<string, string> = { parent: t("account.roleParent"), staff: t("account.roleStaff"), company: t("account.roleCompany"), franchise: t("account.roleFranchise"), freelancer: t("account.roleFreelancer"), platform: t("account.rolePlatform") };
   const isOperator = p.role === "freelancer" || p.role === "company" || p.role === "franchise";
   const b = settings.billing ?? {};
   const reg: [string, string][] = [
-    ["Business name", b.businessName || "—"],
-    ["Shown to parents as", settings.providerName ? `${settings.providerName} (${settings.providerNameMode === "person" ? "your own name" : "business name"})` : "—"],
-    ["What you run", settings.activityKinds?.length ? settings.activityKinds.join(", ") : "—"],
-    ["Based", [b.address, settings.postcode].filter(Boolean).join(", ") || "—"],
-    ["Contact email", b.email || p.email || "—"],
-    ["Contact phone", b.phone || "—"],
-    ["VAT number", b.vatNumber || "—"],
+    [t("account.fBusinessName"), b.businessName || "—"],
+    [t("account.fShownAs"), settings.providerName ? `${settings.providerName} (${settings.providerNameMode === "person" ? t("account.shownOwnName") : t("account.shownBusinessName")})` : "—"],
+    [t("account.fWhatYouRun"), settings.activityKinds?.length ? settings.activityKinds.join(", ") : "—"],
+    [t("account.fBased"), [b.address, settings.postcode].filter(Boolean).join(", ") || "—"],
+    [t("account.fContactEmail"), b.email || p.email || "—"],
+    [t("account.fContactPhone"), b.phone || "—"],
+    [t("account.fVat"), b.vatNumber || "—"],
   ];
 
   return (
@@ -233,39 +282,39 @@ export function AccountApp() {
         <div className="relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "var(--hero-grad)" }}>
           <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
             <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">👤</span>
-            My account
+            {t("account.title")}
           </div>
-          <p className="mt-1.5 text-[12.5px] leading-[1.5] text-white/85">{p.email} · {roleLabel[p.role] ?? p.role}{isOperator ? " — your details and everything from your sign-up." : ""}</p>
+          <p className="mt-1.5 text-[12.5px] leading-[1.5] text-white/85">{p.email} · {roleLabel[p.role] ?? p.role}{isOperator ? ` — ${t("account.heroOperator")}` : ""}</p>
         </div>
 
-        {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
+        {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{errMsg}</div>}
         {ok && <div className="mb-3 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12.5px] text-[#1d3a8f]">{ok}</div>}
 
         {p.role === "franchise" && (
           <Card className="mb-3 border-2 border-[#e6d8f6] p-4" style={{ background: "#faf6ff" }}>
-            <div className="flex items-center gap-2 text-[13.5px] font-extrabold text-[#7a3aa8]">🌐 Your franchise</div>
-            <p className="mb-3 mt-0.5 text-[11.5px] leading-snug text-[var(--ink-3)]">Your franchise business name and the area/territory you cover — shown across your portal as “{(frName.trim() || "Your brand")} · {(frArea.trim() || "Area")} franchise”.</p>
+            <div className="flex items-center gap-2 text-[13.5px] font-extrabold text-[#7a3aa8]">{t("account.frTitle")}</div>
+            <p className="mb-3 mt-0.5 text-[11.5px] leading-snug text-[var(--ink-3)]">{t("account.frLede", { brand: frName.trim() || t("account.frBrandFallback"), area: frArea.trim() || t("account.frAreaFallback") })}</p>
             <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
-              <div><FieldLabel>Franchise business name</FieldLabel><Input value={frName} onChange={(e) => setFrName(e.target.value)} className="w-full" placeholder="e.g. APF Activity Camps" /></div>
-              <div><FieldLabel>Area / territory</FieldLabel><Input value={frArea} onChange={(e) => setFrArea(e.target.value)} className="w-full" placeholder="e.g. London" /></div>
+              <div><FieldLabel>{t("account.frNameLabel")}</FieldLabel><Input value={frName} onChange={(e) => setFrName(e.target.value)} className="w-full" placeholder={t("account.frNamePh")} /></div>
+              <div><FieldLabel>{t("account.frAreaLabel")}</FieldLabel><Input value={frArea} onChange={(e) => setFrArea(e.target.value)} className="w-full" placeholder={t("account.frAreaPh")} /></div>
             </div>
 
             {/* Territory map — the franchise PROPOSES a border; the head office agrees it (HO-only). Optional. */}
             <div className="mt-4 border-t border-[#e6d8f6] pt-3.5">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div className="text-[12.5px] font-extrabold text-[#7a3aa8]">🗺 Your territory on the map <span className="font-bold text-[var(--ink-3)]">— optional</span></div>
+                <div className="text-[12.5px] font-extrabold text-[#7a3aa8]">{t("account.terrTitle")} <span className="font-bold text-[var(--ink-3)]">{t("account.optional")}</span></div>
                 {territory.length === 0
-                  ? <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Not set</span>
+                  ? <span className="rounded-full bg-[var(--panel)] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{t("account.terrNotSet")}</span>
                   : terrStatus === "agreed"
-                    ? <span className="rounded-full bg-[#e2f4ea] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#0f7a43]">✓ Agreed by head office</span>
-                    : <span className="rounded-full bg-[#fdf0e3] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#b45309]">Awaiting head office agreement</span>}
+                    ? <span className="rounded-full bg-[#e2f4ea] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#0f7a43]">{t("account.terrAgreed")}</span>
+                    : <span className="rounded-full bg-[#fdf0e3] px-2.5 py-0.5 text-[10.5px] font-extrabold uppercase tracking-wide text-[#b45309]">{t("account.terrAwaiting")}</span>}
               </div>
-              <p className="mb-2.5 mt-0.5 text-[11.5px] leading-snug text-[var(--ink-3)]">Optional, but your head office encourages it: draw the border(s) where you run your services so the patch is clear. Add more than one area if you cover several. <b>Your head office reviews and agrees it</b> — you can propose and adjust, they sign it off. Leave it blank and you can still create listings anywhere.</p>
+              <p className="mb-2.5 mt-0.5 text-[11.5px] leading-snug text-[var(--ink-3)]"><Rich text={t("account.terrHelp")} vars={{ reviews: <b>{t("account.terrHelpBold")}</b> }} /></p>
               <TerritoryMapClient value={territory} onChange={setTerritory} editable focus={frArea || "London"} height={360} />
             </div>
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
-              <Button variant="primary" onClick={saveFranchise}>Save franchise</Button>
+              <Button variant="primary" onClick={saveFranchise}>{t("account.saveFranchise")}</Button>
               {frOk && <span className="text-[12.5px] font-bold text-[#1d7a43]">✓ {frOk}</span>}
             </div>
           </Card>
@@ -274,40 +323,40 @@ export function AccountApp() {
         {isOperator && (
           <Card className="mb-3 p-4">
             <div className="mb-1 flex items-center justify-between gap-2">
-              <div className="text-[13.5px] font-extrabold">From your registration</div>
+              <div className="text-[13.5px] font-extrabold">{t("account.regTitle")}</div>
               {editReg
-                ? <div className="flex items-center gap-3"><button type="button" onClick={() => setEditReg(false)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:underline">Cancel</button><button type="button" onClick={saveReg} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Save</button></div>
-                : <button type="button" onClick={startEditReg} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Edit details →</button>}
+                ? <div className="flex items-center gap-3"><button type="button" onClick={() => setEditReg(false)} className="text-[11.5px] font-bold text-[var(--ink-3)] hover:underline">{t("account.cancel")}</button><button type="button" onClick={saveReg} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("account.save")}</button></div>
+                : <button type="button" onClick={startEditReg} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("account.editDetails")}</button>}
             </div>
-            <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]">The details you gave when you signed up. Edit them here, or set them up in full in <a href={`/${p.role}/setup`} className="font-bold text-[#1d3a8f] hover:underline">Setup</a>.</p>
+            <p className="mb-2.5 text-[11.5px] text-[var(--ink-3)]"><Rich text={t("account.regLede")} vars={{ setup: <a href={`/${p.role}/setup`} className="font-bold text-[#1d3a8f] hover:underline">{t("account.setupLink")}</a> }} /></p>
 
             {/* Logo — editable right here (not only in Setup), since it's the one
                 thing every customer email + page shows. */}
             <div className="mb-3 rounded-lg border border-[var(--line)] bg-[var(--panel)] p-3">
-              <div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">Logo</div>
+              <div className="text-[10.5px] font-bold uppercase tracking-wide text-[var(--ink-3)]">{t("account.logo")}</div>
               <div className="mt-1.5 flex flex-wrap items-center gap-2.5">
                 {b.logoUrl
-                  ? <img src={b.logoUrl} alt="Your logo" className="h-10 max-w-[140px] rounded border border-[var(--line)] bg-white object-contain" />
-                  : <span className="text-[12px] text-[var(--ink-3)]">No logo yet — parents just see your name.</span>}
+                  ? <img src={b.logoUrl} alt={t("account.logoAlt")} className="h-10 max-w-[140px] rounded border border-[var(--line)] bg-white object-contain" />
+                  : <span className="text-[12px] text-[var(--ink-3)]">{t("account.noLogo")}</span>}
                 <label className="cursor-pointer rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f]">
-                  {b.logoUrl ? "⬆ Change logo" : "⬆ Upload logo"}
+                  {b.logoUrl ? t("account.changeLogo") : t("account.uploadLogo")}
                   <input type="file" accept="image/png,image/jpeg,image/jpg,image/svg+xml,image/webp,image/gif,image/bmp,image/avif,image/*" className="hidden" onChange={uploadLogo} />
                 </label>
-                {b.logoUrl && <button type="button" onClick={removeLogo} className="text-[11.5px] font-bold text-[var(--ink-3)]">Remove</button>}
+                {b.logoUrl && <button type="button" onClick={removeLogo} className="text-[11.5px] font-bold text-[var(--ink-3)]">{t("account.remove")}</button>}
               </div>
-              <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">Shown on your customer emails, booking pages and PDFs. PNG, JPG, SVG, WebP, GIF — up to 1MB, resized automatically.</div>
+              <div className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("account.logoHint")}</div>
             </div>
 
             {editReg ? (
               <div className="grid gap-x-4 gap-y-2.5 sm:grid-cols-2">
-                <div><FieldLabel>Business name</FieldLabel><Input value={rf.businessName} onChange={(e) => setRf((s) => ({ ...s, businessName: e.target.value }))} className="w-full" /></div>
-                <div><FieldLabel>Shown to parents as</FieldLabel><Input value={rf.providerName} onChange={(e) => setRf((s) => ({ ...s, providerName: e.target.value }))} className="w-full" placeholder="Defaults to your business name" /></div>
-                <div><FieldLabel>What you run</FieldLabel><Input value={rf.activityKinds} onChange={(e) => setRf((s) => ({ ...s, activityKinds: e.target.value }))} className="w-full" placeholder="e.g. Holiday camps, After-school clubs" /></div>
-                <div><FieldLabel>Postcode</FieldLabel><Input value={rf.postcode} onChange={(e) => setRf((s) => ({ ...s, postcode: e.target.value }))} className="w-full" placeholder="e.g. MK1 1AA" /></div>
-                <div className="sm:col-span-2"><FieldLabel>Based (address)</FieldLabel><Input value={rf.address} onChange={(e) => setRf((s) => ({ ...s, address: e.target.value }))} className="w-full" placeholder="Street, town" /></div>
-                <div><FieldLabel>Contact email</FieldLabel><Input value={rf.email} onChange={(e) => setRf((s) => ({ ...s, email: e.target.value }))} className="w-full" /></div>
-                <div><FieldLabel>Contact phone</FieldLabel><Input value={rf.phone} onChange={(e) => setRf((s) => ({ ...s, phone: e.target.value }))} className="w-full" /></div>
-                <div><FieldLabel>VAT number</FieldLabel><Input value={rf.vatNumber} onChange={(e) => setRf((s) => ({ ...s, vatNumber: e.target.value }))} className="w-full" placeholder="If registered" /></div>
+                <div><FieldLabel>{t("account.fBusinessName")}</FieldLabel><Input value={rf.businessName} onChange={(e) => setRf((s) => ({ ...s, businessName: e.target.value }))} className="w-full" /></div>
+                <div><FieldLabel>{t("account.fShownAs")}</FieldLabel><Input value={rf.providerName} onChange={(e) => setRf((s) => ({ ...s, providerName: e.target.value }))} className="w-full" placeholder={t("account.shownAsPh")} /></div>
+                <div><FieldLabel>{t("account.fWhatYouRun")}</FieldLabel><Input value={rf.activityKinds} onChange={(e) => setRf((s) => ({ ...s, activityKinds: e.target.value }))} className="w-full" placeholder={t("account.whatYouRunPh")} /></div>
+                <div><FieldLabel>{t("account.postcode")}</FieldLabel><Input value={rf.postcode} onChange={(e) => setRf((s) => ({ ...s, postcode: e.target.value }))} className="w-full" placeholder={t("account.postcodePh")} /></div>
+                <div className="sm:col-span-2"><FieldLabel>{t("account.fBasedAddress")}</FieldLabel><Input value={rf.address} onChange={(e) => setRf((s) => ({ ...s, address: e.target.value }))} className="w-full" placeholder={t("account.addressPh")} /></div>
+                <div><FieldLabel>{t("account.fContactEmail")}</FieldLabel><Input value={rf.email} onChange={(e) => setRf((s) => ({ ...s, email: e.target.value }))} className="w-full" /></div>
+                <div><FieldLabel>{t("account.fContactPhone")}</FieldLabel><Input value={rf.phone} onChange={(e) => setRf((s) => ({ ...s, phone: e.target.value }))} className="w-full" /></div>
+                <div><FieldLabel>{t("account.fVat")}</FieldLabel><Input value={rf.vatNumber} onChange={(e) => setRf((s) => ({ ...s, vatNumber: e.target.value }))} className="w-full" placeholder={t("account.vatPh")} /></div>
               </div>
             ) : (
               <dl className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
@@ -323,53 +372,90 @@ export function AccountApp() {
         )}
 
         <Card className="mb-3 p-4">
-          <div className="mb-2 text-[13.5px] font-extrabold">Profile</div>
+          <div className="mb-2 text-[13.5px] font-extrabold">{t("account.profile")}</div>
           <div className="grid gap-2.5 sm:grid-cols-2">
-            <div><FieldLabel>Name</FieldLabel><Input value={name} onChange={(e) => setName(e.target.value)} className="w-full" /></div>
-            <div><FieldLabel>Phone</FieldLabel><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full" placeholder="Your contact number" /></div>
-            <div className="sm:col-span-2"><FieldLabel>Home address</FieldLabel><Input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full" placeholder="House, street, town" /></div>
-            <div><FieldLabel>Postcode</FieldLabel><Input value={postcode} onChange={(e) => setPostcode(e.target.value)} className="w-full" placeholder="e.g. MK1 1AA" /></div>
+            <div>
+              <FieldLabel>{t("account.name")}</FieldLabel>
+              {/* Staff: the name links their shifts, certificates and training, so the manager sets it. */}
+              <Input value={name} onChange={(e) => setName(e.target.value)} className="w-full" readOnly={p.role === "staff" && !!p.name} />
+              {p.role === "staff" && !!p.name && <p className="mt-1 text-[11px] leading-[1.45] text-[var(--ink-3)]">{t("account.nameSetByManager")}</p>}
+            </div>
+            <div><FieldLabel>{t("account.phone")}</FieldLabel><Input value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full" placeholder={t("account.phonePh")} /></div>
+            <div className="sm:col-span-2"><FieldLabel>{t("account.homeAddress")}</FieldLabel><Input value={address} onChange={(e) => setAddress(e.target.value)} className="w-full" placeholder={t("account.homeAddressPh")} /></div>
+            <div><FieldLabel>{t("account.postcode")}</FieldLabel><Input value={postcode} onChange={(e) => setPostcode(e.target.value)} className="w-full" placeholder={t("account.postcodePh")} /></div>
           </div>
-          {p?.role === "parent" && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Your address helps your provider keep accurate records for registers and safeguarding.</p>}
+          {p?.role === "parent" && <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("account.addressHelp")}</p>}
           {p?.role === "parent" && (
             <div className="mt-3 border-t border-[var(--line)] pt-3">
-              <FieldLabel>Emergency contact</FieldLabel>
+              <FieldLabel>{t("account.emergencyContact")}</FieldLabel>
               <div className="mt-1 grid gap-2.5 sm:grid-cols-2">
-                <Input value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} className="w-full" placeholder="Name — e.g. Aunt Priya" />
-                <Input value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="w-full" inputMode="tel" placeholder="Phone" />
+                <Input value={emergencyName} onChange={(e) => setEmergencyName(e.target.value)} className="w-full" placeholder={t("account.emergencyNamePh")} />
+                <Input value={emergencyPhone} onChange={(e) => setEmergencyPhone(e.target.value)} className="w-full" inputMode="tel" placeholder={t("account.phone")} />
               </div>
-              <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">Who staff ring if they can’t reach you. This pre-fills each child’s emergency contact — you can still set a different one per child.</p>
+              <p className="mt-1.5 text-[11px] text-[var(--ink-3)]">{t("account.emergencyHelp")}</p>
             </div>
           )}
-          <label className="mt-2.5 flex items-center gap-2 text-[12.5px]"><input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />Email me occasional news and offers</label>
+          <label className="mt-2.5 flex items-center gap-2 text-[12.5px]"><input type="checkbox" checked={marketing} onChange={(e) => setMarketing(e.target.checked)} />{t("account.marketingOptIn")}</label>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <Button variant="primary" onClick={saveProfile}>Save profile</Button>
+            <Button variant="primary" onClick={saveProfile}>{t("account.saveProfile")}</Button>
             {ok && <span className="text-[12.5px] font-bold text-[#1d7a43]">✓ {ok}</span>}
-            {error && <span className="text-[12.5px] font-bold text-[var(--red)]">{error}</span>}
+            {error && <span className="text-[12.5px] font-bold text-[var(--red)]">{errMsg}</span>}
           </div>
         </Card>
 
         <Card className="mb-3 p-4">
           <div className="mb-2 flex items-center justify-between gap-2">
-            <div className="text-[13.5px] font-extrabold">Change password</div>
-            <button type="button" onClick={() => setShowPw((s) => !s)} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{showPw ? "🙈 Hide" : "👁 Show"} passwords</button>
+            <div className="text-[13.5px] font-extrabold">{t("account.changePassword")}</div>
+            <button type="button" onClick={() => setShowPw((s) => !s)} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{showPw ? t("account.hidePasswords") : t("account.showPasswords")}</button>
           </div>
           {pwMsg.err && <div className="mb-2 text-[12px] text-[var(--red)]">{pwMsg.err}</div>}
           {pwMsg.ok && <div className="mb-2 text-[12px] text-[#1d3a8f]">{pwMsg.ok}</div>}
           <div className="grid gap-2.5 sm:grid-cols-3">
-            <div><FieldLabel>Current</FieldLabel><Input type={showPw ? "text" : "password"} value={pw.current} onChange={(e) => setPw((s) => ({ ...s, current: e.target.value }))} className="w-full" /></div>
-            <div><FieldLabel>New</FieldLabel><Input type={showPw ? "text" : "password"} value={pw.next} onChange={(e) => setPw((s) => ({ ...s, next: e.target.value }))} className="w-full" /></div>
-            <div><FieldLabel>Confirm</FieldLabel><Input type={showPw ? "text" : "password"} value={pw.confirm} onChange={(e) => setPw((s) => ({ ...s, confirm: e.target.value }))} className="w-full" /></div>
+            <div><FieldLabel>{t("account.pwCurrent")}</FieldLabel><Input type={showPw ? "text" : "password"} value={pw.current} onChange={(e) => setPw((s) => ({ ...s, current: e.target.value }))} className="w-full" /></div>
+            <div><FieldLabel>{t("account.pwNew")}</FieldLabel><Input type={showPw ? "text" : "password"} value={pw.next} onChange={(e) => setPw((s) => ({ ...s, next: e.target.value }))} className="w-full" /></div>
+            <div><FieldLabel>{t("account.pwConfirm")}</FieldLabel><Input type={showPw ? "text" : "password"} value={pw.confirm} onChange={(e) => setPw((s) => ({ ...s, confirm: e.target.value }))} className="w-full" /></div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-            <Button onClick={changePassword} disabled={!pw.current || !pw.next}>Update password</Button>
-            <button type="button" onClick={resetPassword} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">Forgot your current password?</button>
+            <Button onClick={changePassword} disabled={!pw.current || !pw.next}>{t("account.updatePassword")}</Button>
+            <button type="button" onClick={resetPassword} className="text-[12px] font-bold text-[#1d3a8f] hover:underline">{t("account.forgotPw")}</button>
           </div>
         </Card>
 
+        <Card className="mb-3 p-4">
+          <div className="mb-1 flex items-center justify-between gap-2">
+            <div className="text-[13.5px] font-extrabold">{t("account.emTitle")}</div>
+            {!emOpen && <button type="button" onClick={() => { setEmOpen(true); setEmMsg({}); }} className="text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{t("account.emChange")}</button>}
+          </div>
+          <p className="text-[12px] text-[var(--ink-2)]">{t("account.emCurrent", { email: p.email ?? "" })}</p>
+          {p.pendingEmail && !emMsg.ok && <div className="mt-2 rounded-lg border border-[#f6d78a] bg-[#fff8e6] px-3 py-2 text-[12px] text-[#7a5a00]">{t("account.emPending", { email: p.pendingEmail })}</div>}
+          {emMsg.err && <div className="mt-2 text-[12px] text-[var(--red)]">{emMsg.err}</div>}
+          {emMsg.ok && <div className="mt-2 rounded-lg border border-[var(--line)] bg-[#eaf0fc] px-3 py-2 text-[12px] text-[#1d3a8f]">{emMsg.ok}</div>}
+          {emOpen && (
+            <div className="mt-2.5">
+              <p className="mb-2 text-[11.5px] leading-[1.5] text-[var(--ink-3)]">{t("account.emHelp")}</p>
+              <div className="grid gap-2.5 sm:grid-cols-2">
+                <div><FieldLabel>{t("account.emNewLabel")}</FieldLabel><Input type="email" autoComplete="email" value={em.next} onChange={(e) => setEm((s) => ({ ...s, next: e.target.value }))} className="w-full" /></div>
+                {emNeedPw && <div><FieldLabel>{t("account.emPwLabel")}</FieldLabel><Input type="password" autoComplete="current-password" value={em.password} onChange={(e) => setEm((s) => ({ ...s, password: e.target.value }))} className="w-full" /></div>}
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-3">
+                <Button variant="primary" onClick={changeEmail} disabled={emBusy || !em.next.trim() || (emNeedPw && !em.password)}>{emBusy ? t("account.sending") : t("account.emSend")}</Button>
+                <button type="button" onClick={() => { setEmOpen(false); setEmNeedPw(false); setEm({ next: "", password: "" }); setEmMsg({}); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:underline">{t("account.cancel")}</button>
+              </div>
+            </div>
+          )}
+        </Card>
+
         <Card className="flex flex-wrap items-center justify-between gap-2 p-4">
-          <div className="text-[12.5px] text-[var(--ink-3)]">Signed in as {p.email}</div>
-          <Button variant="danger" onClick={() => signOutUser()}>Sign out</Button>
+          <div className="text-[12.5px] text-[var(--ink-3)]">{t("account.signedInAs", { email: p.email ?? "" })}</div>
+          <div className="flex flex-wrap gap-2">
+            {/* Ends every session on every device (lost phone, shared computer) — then this one. */}
+            <Button variant="ghost" onClick={async () => {
+              if (!window.confirm(t("account.signOutEverywhereConfirm"))) return;
+              await api("/api/account/signout-everywhere", { method: "POST" }).catch(() => {});
+              await signOutUser();
+            }}>{t("account.signOutEverywhere")}</Button>
+            <Button variant="danger" onClick={() => signOutUser()}>{t("account.signOut")}</Button>
+          </div>
         </Card>
 
         {p.role === "parent" && <CloseAccount />}
@@ -382,6 +468,7 @@ export function AccountApp() {
 // too), cancels active memberships, warns about wallet credit, and explains the
 // 30-day reactivation window. Enforcement (login disable + reactivation) is Amir's.
 function CloseAccount() {
+  const { t } = useI18n();
   const { signOutUser } = useAuth();
   const [open, setOpen] = useState(false);
   const [checks, setChecks] = useState<null | { outstanding: number; toPayCount: number; wallet: number; memberships: { tenantId: string; name: string; tierName: string }[] }>(null);
@@ -407,11 +494,11 @@ function CloseAccount() {
       for (const pr of providers ?? []) {
         try {
           const m = await apiGet<{ mine?: { status?: string; tierName?: string } }>(`/api/my/memberships?tenantId=${encodeURIComponent(pr.tenantId)}`);
-          if (m?.mine?.status === "active") memberships.push({ tenantId: pr.tenantId, name: pr.name, tierName: m.mine.tierName ?? "Member" });
+          if (m?.mine?.status === "active") memberships.push({ tenantId: pr.tenantId, name: pr.name, tierName: m.mine.tierName ?? t("account.memberFallback") });
         } catch { /* ignore a provider that has no membership programme */ }
       }
       setChecks({ outstanding: Math.round(outstanding * 100) / 100, toPayCount: unpaid.length, wallet: Math.round(wallet * 100) / 100, memberships });
-    } catch { setErr("Couldn’t load your account details — try again."); }
+    } catch { setErr(t("account.closeLoadErr")); }
   }
 
   async function confirmClose() {
@@ -432,40 +519,40 @@ function CloseAccount() {
 
   return (
     <Card className="mb-3 border border-[#f0cfc9] p-4">
-      <div className="text-[13.5px] font-extrabold text-[#b3261e]">Close my account</div>
-      <p className="mt-1 text-[12px] leading-[1.5] text-[var(--ink-3)]">Closing disables your login and stops all emails. Your provider keeps the records they’re legally required to (safeguarding &amp; payment history). You can reopen it by signing back in within <b>30 days</b>.</p>
+      <div className="text-[13.5px] font-extrabold text-[#b3261e]">{t("account.closeTitle")}</div>
+      <p className="mt-1 text-[12px] leading-[1.5] text-[var(--ink-3)]"><Rich text={t("account.closeLede")} vars={{ days: <b>{t("account.thirtyDays")}</b> }} /></p>
 
       {!open ? (
-        <button type="button" onClick={loadChecks} className="mt-3 rounded-full border border-[#e2b6ae] px-4 py-2 text-[12.5px] font-bold text-[#b3261e] transition hover:bg-[#fdf3f1]">Close my account…</button>
+        <button type="button" onClick={loadChecks} className="mt-3 rounded-full border border-[#e2b6ae] px-4 py-2 text-[12.5px] font-bold text-[#b3261e] transition hover:bg-[#fdf3f1]">{t("account.closeStart")}</button>
       ) : done ? (
-        <div className="mt-3 rounded-lg border border-[#f0cfc9] bg-[#fdf3f1] p-3 text-[13px] font-bold text-[#b3261e]">Your account is closed. Signing you out… sign back in within 30 days to reopen it.</div>
+        <div className="mt-3 rounded-lg border border-[#f0cfc9] bg-[#fdf3f1] p-3 text-[13px] font-bold text-[#b3261e]">{t("account.closeDone")}</div>
       ) : !checks ? (
-        <div className="mt-3 text-[12px] text-[var(--ink-3)]">Checking your account…</div>
+        <div className="mt-3 text-[12px] text-[var(--ink-3)]">{t("account.closeChecking")}</div>
       ) : (
         <div className="mt-3 flex flex-col gap-2.5">
           {checks.outstanding > 0 ? (
-            <div className="rounded-lg border border-[#f0cfc9] bg-[#fdf3f1] p-3 text-[12px] leading-[1.5] text-[#7a2a22]"><b>You have £{checks.outstanding.toFixed(2)} still to pay</b> across {checks.toPayCount} booking{checks.toPayCount === 1 ? "" : "s"}. Please settle up first. <a href="/custdash/bookings" className="font-bold underline">Go to My bookings →</a></div>
+            <div className="rounded-lg border border-[#f0cfc9] bg-[#fdf3f1] p-3 text-[12px] leading-[1.5] text-[#7a2a22]"><Rich text={checks.toPayCount === 1 ? t("account.owedOne") : t("account.owedMany", { n: checks.toPayCount })} vars={{ owed: <b>{t("account.owedBold", { amount: checks.outstanding.toFixed(2) })}</b> }} /> <a href="/custdash/bookings" className="font-bold underline">{t("account.goMyBookings")}</a></div>
           ) : (
-            <div className="rounded-lg border border-[#cfe9df] bg-[#e9f9f2] p-2.5 text-[12px] font-semibold text-[#0b5a3f]">✓ No outstanding payments.</div>
+            <div className="rounded-lg border border-[#cfe9df] bg-[#e9f9f2] p-2.5 text-[12px] font-semibold text-[#0b5a3f]">{t("account.noOutstanding")}</div>
           )}
           {checks.memberships.length > 0 && (
-            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px] leading-[1.5] text-[var(--ink-2)]">These membership{checks.memberships.length > 1 ? "s" : ""} will be <b>cancelled</b> when you close: {checks.memberships.map((m) => `${m.tierName} (${m.name})`).join(", ")}.</div>
+            <div className="rounded-lg border border-[var(--line)] bg-[var(--panel)] p-2.5 text-[12px] leading-[1.5] text-[var(--ink-2)]"><Rich text={checks.memberships.length > 1 ? t("account.membershipsMany") : t("account.membershipsOne")} vars={{ cancelled: <b>{checks.memberships.length > 1 ? t("account.cancelledMany") : t("account.cancelledOne")}</b>, list: checks.memberships.map((m) => `${m.tierName} (${m.name})`).join(", ") }} /></div>
           )}
           {checks.wallet > 0 && (
-            <div className="rounded-lg border border-[#f6d78a] bg-[#fff8e6] p-2.5 text-[12px] leading-[1.5] text-[#7a5a00]">⚠ You have <b>£{checks.wallet.toFixed(2)}</b> of wallet credit. It can’t be refunded once you close — spend it first, or ask your provider.</div>
+            <div className="rounded-lg border border-[#f6d78a] bg-[#fff8e6] p-2.5 text-[12px] leading-[1.5] text-[#7a5a00]"><Rich text={t("account.walletWarn")} vars={{ amount: <b>£{checks.wallet.toFixed(2)}</b> }} /></div>
           )}
           <div>
-            <FieldLabel>Why are you leaving? <span className="font-normal normal-case text-[var(--ink-3)]">— optional</span></FieldLabel>
-            <Input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full" placeholder="Helps your provider improve" />
+            <FieldLabel>{t("account.whyLeaving")} <span className="font-normal normal-case text-[var(--ink-3)]">{t("account.optional")}</span></FieldLabel>
+            <Input value={reason} onChange={(e) => setReason(e.target.value)} className="w-full" placeholder={t("account.whyLeavingPh")} />
           </div>
           <label className="flex items-start gap-2 text-[12px] leading-[1.5] text-[var(--ink-2)]">
             <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} className="mt-0.5 flex-none" disabled={checks.outstanding > 0} />
-            I understand my login will be disabled and any memberships cancelled — and that I can reopen my account by signing in within 30 days.
+            {t("account.closeAck")}
           </label>
           {err && <div className="text-[12px] font-bold text-[var(--red)]">{err}</div>}
           <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => { setOpen(false); setChecks(null); setAck(false); setReason(""); }} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">Keep my account</button>
-            <button type="button" onClick={confirmClose} disabled={checks.outstanding > 0 || !ack || busy} className="rounded-full bg-[#b3261e] px-4 py-2 text-[12.5px] font-extrabold text-white transition enabled:hover:brightness-110 disabled:opacity-40">{busy ? "Closing…" : "Close my account"}</button>
+            <button type="button" onClick={() => { setOpen(false); setChecks(null); setAck(false); setReason(""); }} className="rounded-full border border-[var(--line)] px-4 py-2 text-[12.5px] font-bold text-[var(--ink-2)] transition hover:bg-[var(--panel)]">{t("account.keepAccount")}</button>
+            <button type="button" onClick={confirmClose} disabled={checks.outstanding > 0 || !ack || busy} className="rounded-full bg-[#b3261e] px-4 py-2 text-[12.5px] font-extrabold text-white transition enabled:hover:brightness-110 disabled:opacity-40">{busy ? t("account.closing") : t("account.closeTitle")}</button>
           </div>
         </div>
       )}

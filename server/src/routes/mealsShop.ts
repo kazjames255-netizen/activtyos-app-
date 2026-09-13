@@ -1,9 +1,13 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { librarySnap } from "../lib/tenantLibrary";
+import { franchiseListingIds, isFranchise } from "../lib/franchiseScope";
+import { notify } from "../lib/notify";
 import type { Role } from "../middleware/role";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel } from "../lib/mealCutoff";
+import { customerAreaOn } from "../lib/customerArea";
 
 // Meal ordering (parent-facing meals shop). Operators publish a menu of
 // orderable meals (name + price); a parent who's booked with that provider
@@ -23,9 +27,20 @@ async function hasBooking(tenantId: string, email: string) {
   return !snap.empty;
 }
 
+// A family's meal calls are refused once the provider switches Meals off
+// (Setup → Features, or Customer area → Meals) — the listing's franchise's own
+// Setup when it has one. Before 13 Sept only the family's nav hid it.
+const MEALS_OFF = { error: "Meals aren't available from this provider at the moment.", code: "area_off" };
+async function mealsOffForFamilies(tenantId: string, listingId?: string | null): Promise<boolean> {
+  const fr = listingId ? ((await db.collection("listings").doc(listingId).get()).get("franchiseId") as string | undefined) ?? null : null;
+  return !(await customerAreaOn(tenantId, "meals", fr));
+}
+
 // Do parent meal changes / cancellations need the provider's approval first?
-async function mealApproval(tenantId: string): Promise<"review" | "auto"> {
-  const lib = await db.collection("libraries").doc(tenantId).get();
+// (The listing's franchise's own Meals setting, when it has one.)
+async function mealApproval(tenantId: string, listingId?: string): Promise<"review" | "auto"> {
+  const fr = listingId ? ((await db.collection("listings").doc(listingId).get()).get("franchiseId") as string | undefined) ?? null : null;
+  const lib = await librarySnap(tenantId, fr);
   return ((lib.data()?.settings as { meals?: { changeApproval?: string } } | undefined)?.meals?.changeApproval) === "review" ? "review" : "auto";
 }
 
@@ -37,7 +52,7 @@ async function resolveDishForDay(tenantId: string, listingId: string, date: stri
   const listingSnap = await db.collection("listings").doc(listingId).get();
   const listing = listingSnap.data();
   if (!listingSnap.exists || listing!.tenantId !== tenantId || !listing!.mealsEnabled) return { error: "That listing isn't offering meals", code: 400 };
-  const libSnap = await db.collection("libraries").doc(tenantId).get();
+  const libSnap = await librarySnap(tenantId, (listing!.franchiseId as string | null | undefined) ?? null);
   const meals = ((libSnap.data()?.settings as { meals?: { cutoffWhen?: string; cutoffTime?: string } } | undefined)?.meals ?? {});
   const cut = resolveCutoff(listing!.mealConfig as { cutoffWhen?: unknown; cutoffTime?: unknown } | undefined, meals);
   if (!canOrderMeal(cut.when, cut.time, date)) return { error: `Ordering for that day has closed — ${cutoffLabel(cut.when, cut.time).toLowerCase()}.`, code: 409 };
@@ -80,6 +95,7 @@ mealOptions.get("/", async (req, res) => {
     const tenantId = typeof req.query.tenantId === "string" ? req.query.tenantId : null;
     if (!email || !tenantId) { res.status(400).json({ error: "Pass ?tenantId=" }); return; }
     if (!(await hasBooking(tenantId, email))) { res.status(403).json({ error: "You can only order from a provider you've booked with" }); return; }
+    if (await mealsOffForFamilies(tenantId)) { res.status(403).json(MEALS_OFF); return; }
     const snap = await optionsCol.where("tenantId", "==", tenantId).where("active", "==", true).get();
     res.json(snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })));
     return;
@@ -164,30 +180,46 @@ function operatorScope(req: Request, res: Response): string | null {
 mealOrders.get("/report", async (req, res) => {
   const tenantId = operatorScope(req, res);
   if (!tenantId) return;
-  const [snap, orderSnap] = await Promise.all([
+  const [snap0, orderSnap0] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     ordersCol.where("tenantId", "==", tenantId).get(),
   ]);
+  // A franchise's kitchen report covers its own listings only — not head
+  // office's or a sibling franchise's families (acceptance test d22s6).
+  const mine = isFranchise(req.auth!) ? await franchiseListingIds(tenantId, req.auth!.franchiseId) : null;
+  const snap = { docs: mine ? snap0.docs.filter((d) => mine.has(String(d.get("listingId") ?? "")) || d.get("franchiseId") === req.auth!.franchiseId) : snap0.docs };
+  const orderSnap = { docs: mine ? orderSnap0.docs.filter((d) => mine.has(String(d.get("listingId") ?? ""))) : orderSnap0.docs };
   const allListingIds = new Set<string>();
-  const rows: { listingId: string | null; date: string; child: string; dish: string; price: number }[] = [];
+  // Allergies/diets for every child the kitchen is feeding — the report listed
+  // counts but no allergies (acceptance test d14s3). By child id, never name.
+  const kidIds = new Set<string>();
+  for (const d of snap.docs) { const b = d.data() as { childId?: string; kids?: { childId?: string }[] }; if (b.childId) kidIds.add(b.childId); for (const k of b.kids ?? []) if (k.childId) kidIds.add(k.childId); }
+  for (const d of orderSnap.docs) { const c = d.get("childId"); if (typeof c === "string" && c) kidIds.add(c); }
+  const kidDocs = kidIds.size ? await db.getAll(...[...kidIds].map((id) => db.collection("children").doc(id))) : [];
+  const careOf = new Map(kidDocs.filter((k) => k.exists).map((k) => [k.id, { allergies: String(k.get("allergies") ?? "").trim(), dietary: String(k.get("dietary") ?? "").trim() }]));
+  const care = (id?: string | null) => (id ? careOf.get(id) : undefined) ?? { allergies: "", dietary: "" };
+  const rows: { listingId: string | null; date: string; child: string; dish: string; price: number; allergies?: string; dietary?: string }[] = [];
   const chosen = new Set<string>(); // `${listingId}|${date}|${childLc}` that has a meal
   const bkInfo: { listingId: string; days: string[]; roster: string[] }[] = [];
   for (const d of snap.docs) {
-    const b = d.data() as { status?: string; child?: string; listingId?: string; kids?: { name?: string }[]; days?: string[]; mealItems?: { date: string; name: string; price: number }[] };
+    const b = d.data() as { status?: string; child?: string; childId?: string; listingId?: string; kids?: { name?: string }[]; days?: string[]; mealItems?: { date: string; name: string; price: number }[] };
     if (b.status === "Cancelled") continue;
     const roster = [b.child, ...((b.kids ?? []).map((k) => k.name))].filter((n): n is string => !!n?.trim());
     if (b.listingId) { allListingIds.add(b.listingId); bkInfo.push({ listingId: b.listingId, days: b.days ?? [], roster }); }
     for (const it of (b.mealItems ?? [])) {
-      rows.push({ listingId: b.listingId ?? null, date: it.date, child: b.child ?? "—", dish: it.name, price: round2(it.price) });
+      // A day released by a partial cancel is gone from `days`; its meal isn't
+      // the kitchen's any more.
+      if (b.days?.length && !b.days.includes(it.date)) continue;
+      rows.push({ listingId: b.listingId ?? null, date: it.date, child: b.child ?? "—", dish: it.name, price: round2(it.price), ...care(b.childId) });
       for (const c of roster) chosen.add(`${b.listingId}|${it.date}|${c.toLowerCase()}`);
     }
   }
   // Meals ordered later from the parent Meals area (the mealOrders collection)
   // count towards the kitchen's numbers too — one row per unit, like above.
   for (const d of orderSnap.docs) {
-    const o = d.data() as { status?: string; childName?: string; listingId?: string; date?: string; items?: { name: string; price: number; qty: number }[] };
+    const o = d.data() as { status?: string; childName?: string; childId?: string; listingId?: string; date?: string; items?: { name: string; price: number; qty: number }[] };
     if (o.status === "cancelled" || !o.date) continue;
-    for (const it of (o.items ?? [])) for (let q = 0; q < (it.qty ?? 1); q++) rows.push({ listingId: o.listingId ?? null, date: o.date, child: o.childName ?? "—", dish: it.name, price: round2(it.price) });
+    for (const it of (o.items ?? [])) for (let q = 0; q < (it.qty ?? 1); q++) rows.push({ listingId: o.listingId ?? null, date: o.date, child: o.childName ?? "—", dish: it.name, price: round2(it.price), ...care(o.childId) });
     if (o.listingId) { allListingIds.add(o.listingId); chosen.add(`${o.listingId}|${o.date}|${(o.childName ?? "").toLowerCase()}`); }
   }
   const ids = [...allListingIds];
@@ -222,7 +254,11 @@ mealOrders.get("/", async (req, res) => {
     const email = req.user?.email;
     if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
     const snap = await ordersCol.where("parentEmail", "==", email.toLowerCase()).get();
-    const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
+    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; tenantId?: string; listingId?: string })[];
+    // Not from a provider that has switched Meals off.
+    const off = new Map<string, boolean>();
+    for (const o of list) { const k = `${o.tenantId}|${o.listingId ?? ""}`; if (!off.has(k)) off.set(k, await mealsOffForFamilies(String(o.tenantId), o.listingId)); }
+    list = list.filter((o) => !off.get(`${o.tenantId}|${o.listingId ?? ""}`));
     list.sort((a, b) => (`${b.createdAt ?? ""}` < `${a.createdAt ?? ""}` ? -1 : 1));
     res.json(list);
     return;
@@ -232,7 +268,8 @@ mealOrders.get("/", async (req, res) => {
   let q = ordersCol.where("tenantId", "==", tenantId) as FirebaseFirestore.Query;
   if (typeof req.query.date === "string") q = q.where("date", "==", req.query.date);
   const snap = await q.get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; listingId?: string })[];
+  if (isFranchise(auth)) { const mine = await franchiseListingIds(tenantId, auth.franchiseId); list = list.filter((o) => mine.has(String(o.listingId ?? ""))); }
   list.sort((a, b) => (`${b.createdAt ?? ""}` < `${a.createdAt ?? ""}` ? -1 : 1));
   res.json(list);
 });
@@ -262,13 +299,19 @@ mealOrders.post("/", async (req, res) => {
     } else {
       const name = input.childName.trim().toLowerCase();
       const kids = await db.collection("children").where("parentUid", "==", uid).get();
-      ok = kids.docs.some((d) => ((d.data() as { name?: string }).name ?? "").trim().toLowerCase() === name);
+      // Keep WHICH child it is, not just the name — the kitchen joins allergies
+      // off the id, and a rename would otherwise orphan the order (d14s3/d14s8).
+      const mine = kids.docs.find((d) => ((d.data() as { name?: string }).name ?? "").trim().toLowerCase() === name);
+      ok = !!mine;
+      if (mine) input.childId = mine.id;
       if (!ok) {
         const bs = await db.collection("bookings").where("tenantId", "==", input.tenantId).where("email", "==", email.toLowerCase()).get();
-        ok = bs.docs.some((d) => {
-          const b = d.data() as { child?: string; kids?: { name?: string }[] };
-          return (b.child ?? "").trim().toLowerCase() === name || (b.kids ?? []).some((k) => (k.name ?? "").trim().toLowerCase() === name);
-        });
+        for (const d of bs.docs) {
+          const b = d.data() as { child?: string; childId?: string; kids?: { name?: string; childId?: string }[] };
+          const k = (b.kids ?? []).find((x) => (x.name ?? "").trim().toLowerCase() === name);
+          if (k) { ok = true; if (k.childId) input.childId = k.childId; break; }
+          if ((b.child ?? "").trim().toLowerCase() === name) { ok = true; if (b.childId && !b.kids?.length) input.childId = b.childId; break; }
+        }
       }
       if (!ok) { res.status(400).json({ error: "Pick one of your children — add their profile under My children if they're not listed" }); return; }
     }
@@ -276,7 +319,10 @@ mealOrders.post("/", async (req, res) => {
 
   // Settings → Meals: ordering can be switched off entirely, and a central
   // cut-off default is set here.
-  const lib = await db.collection("libraries").doc(input.tenantId).get();
+  // The listing's franchise runs its own Meals settings (ordering on/off, cut-off).
+  const orderFranchise = input.listingId ? ((await db.collection("listings").doc(input.listingId).get()).get("franchiseId") as string | undefined) ?? null : null;
+  if (!(await customerAreaOn(input.tenantId, "meals", orderFranchise))) { res.status(403).json(MEALS_OFF); return; }
+  const lib = await librarySnap(input.tenantId, orderFranchise);
   const mealsSettings = ((lib.data()?.settings as { meals?: { ordering?: boolean; cutoffWhen?: string; cutoffTime?: string } } | undefined)?.meals ?? {});
   if (mealsSettings.ordering === false) { res.status(403).json({ error: "This provider isn't taking meal orders at the moment" }); return; }
 
@@ -402,7 +448,18 @@ mealOrders.post("/", async (req, res) => {
   };
   const ref = await ordersCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
+  // The kitchen has to hear about it. Orders reached the server and nobody was
+  // told — the provider found out only by opening the report.
+  void mealAlert(doc.tenantId, `${doc.parentName} ordered a meal for ${doc.childName}`, `${doc.items.map((i: { name: string; qty?: number }) => `${i.qty && i.qty > 1 ? `${i.qty} × ` : ""}${i.name}`).join(", ")} · ${doc.date}`, input.listingId);
 });
+
+/** Bell (+ email, per Setup → Notifications "meal-order") to the provider —
+ *  the franchise that runs the listing, when there is one. */
+async function mealAlert(tenantId: string, title: string, body: string, listingId?: string): Promise<void> {
+  const franchiseId = listingId ? ((await db.collection("listings").doc(listingId).get()).get("franchiseId") as string | undefined) ?? null : null;
+  await notify({ tenantId, to: { kind: "tenant" }, category: "booking", key: "meal-order", franchiseId, title, body, href: "/company/meals" })
+    .catch((e) => console.error("[meals] alert:", (e as Error).message));
+}
 
 // POST /api/meal-orders/:id/pay — the provider records payment (Paid).
 mealOrders.post("/:id/pay", async (req, res) => {
@@ -429,10 +486,15 @@ mealOrders.post("/:id/cancel", async (req, res) => {
   const isOwner = auth.role === "parent" && o.parentEmail === email;
   if (!isOperator && !isOwner) { res.status(404).json({ error: "Order not found" }); return; }
   if (isOwner) {
+    if (await mealsOffForFamilies(o.tenantId, snap.get("listingId") as string | undefined)) { res.status(403).json(MEALS_OFF); return; }
     if (o.pay === "Paid") { res.status(409).json({ error: "This order is paid — ask the provider to cancel it" }); return; }
-    if ((await mealApproval(o.tenantId)) === "review") {
+    if ((await mealApproval(o.tenantId, (snap.get("listingId") as string | undefined))) === "review") {
       await snap.ref.set({ cancelRequest: { at: new Date().toISOString() }, changeRequest: null }, { merge: true });
       res.json({ ok: true, requested: true });
+      // The parent is told it's "awaiting your provider's approval" — so the
+      // provider must actually be asked.
+      const od = snap.data() as { childName?: string; date?: string; parentName?: string };
+      void mealAlert(o.tenantId, `Meal removal requested — ${od.childName ?? "a child"}`, `${od.parentName ?? "A parent"} asked to remove the meal on ${od.date ?? "a day"}. Approve or decline it in Meals.`, snap.get("listingId") as string | undefined);
       return;
     }
   }
@@ -453,13 +515,16 @@ mealOrders.post("/:id/change", async (req, res) => {
   if (!snap.exists) { res.status(404).json({ error: "Order not found" }); return; }
   const o = snap.data() as { tenantId: string; parentEmail: string; listingId?: string; date: string; pay: string; status?: string };
   if (o.parentEmail !== email) { res.status(404).json({ error: "Order not found" }); return; }
+  if (await mealsOffForFamilies(o.tenantId, o.listingId)) { res.status(403).json(MEALS_OFF); return; }
   if (o.status === "cancelled") { res.status(409).json({ error: "This order was cancelled" }); return; }
   if (o.pay === "Paid") { res.status(409).json({ error: "This order is paid — ask the provider to change it" }); return; }
   if (!o.listingId) { res.status(400).json({ error: "This order can't be changed here" }); return; }
   const r = await resolveDishForDay(o.tenantId, o.listingId, o.date, parsed.data.menuItemId, snap.id);
   if ("error" in r) { res.status(r.code).json({ error: r.error }); return; }
-  if ((await mealApproval(o.tenantId)) === "review") {
+  if ((await mealApproval(o.tenantId, o.listingId)) === "review") {
     await snap.ref.set({ changeRequest: { menuItemId: r.line.menuItemId, name: r.line.name, price: r.line.price, at: new Date().toISOString() }, cancelRequest: null }, { merge: true });
+    const od = snap.data() as { childName?: string; parentName?: string };
+    void mealAlert(o.tenantId, `Meal change requested — ${od.childName ?? "a child"}`, `${od.parentName ?? "A parent"} asked to swap to ${r.line.name} on ${o.date}. Approve or decline it in Meals.`, o.listingId);
   } else {
     await snap.ref.set({ items: [r.line], total: r.line.price, changeRequest: null }, { merge: true });
   }
@@ -479,6 +544,7 @@ mealOrders.post("/:id/request", async (req, res) => {
   const isOperator = canManage(auth.role) && auth.tenantId === o.tenantId;
   const isOwner = auth.role === "parent" && o.parentEmail === email;
   if (!isOperator && !isOwner) { res.status(404).json({ error: "Order not found" }); return; }
+  if (!isOperator && (await mealsOffForFamilies(o.tenantId, o.listingId))) { res.status(403).json(MEALS_OFF); return; }
   if (action === "withdraw" || action === "decline") {
     if (action === "withdraw" && !isOwner) { res.status(403).json({ error: "Not allowed" }); return; }
     if (action === "decline" && !isOperator) { res.status(403).json({ error: "Not allowed" }); return; }

@@ -1,5 +1,8 @@
 "use client";
 
+import { isDemoMode, post as apiPost, put as apiPut } from "@/lib/api";
+import { syncLearning, useLearnRefresh, completionsFor, rolesCover, withoutDemoAssignments } from "./courseCompletions";
+import { useTeam } from "@/features/team/useTeam";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { Button, Card, Input, Select } from "@/components/ui";
@@ -15,6 +18,7 @@ import { openCertificate, makeRef } from "./certificates";
 import { useCredentials, credStatus, CredBadge, CredEditor, blankRecord, openCredFile, appliesTo, targetLabel as credTargetLabel, exportCredsPdf, fmtDate as fmtCredDate, daysUntil, type CredRecord, type CredStatus } from "./credentials";
 import { useRouter } from "next/navigation";
 import { CourseEditor } from "./CourseEditor";
+import { csvText } from "@/lib/csv";
 
 // Company / Franchise Learning Centre — the training management side (the manual's
 // LCM view, compliance merged in). Four tabs: Catalogue (courses + quizzes, create
@@ -184,8 +188,7 @@ const SEED_POLICY_ACKS: PolicyAck[] = [
 // ——— CSV export (evidence pack for inspections) ———
 function downloadCSV(filename: string, header: string[], rows: (string | number)[][]) {
   if (typeof document === "undefined") return;
-  const esc = (v: string | number) => { const s = String(v ?? ""); return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-  const csv = [header, ...rows].map((r) => r.map(esc).join(",")).join("\n");
+  const csv = csvText([header, ...rows]);
   const url = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8;" }));
   const a = document.createElement("a"); a.href = url; a.download = filename; a.click(); URL.revokeObjectURL(url);
 }
@@ -198,6 +201,16 @@ const DEFAULT_REMINDERS: ReminderPrefs = { courseDue: true, overdueChase: true, 
 function daysLeft(due: string): number | null { if (!/^\d{4}-\d{2}-\d{2}$/.test(due)) return null; const d = new Date(due + "T00:00:00"); const now = new Date(); now.setHours(0, 0, 0, 0); return Math.round((d.getTime() - now.getTime()) / 86400000); }
 const KEY = "aos.learn.lcm.v2";
 
+/** Tell the people an assignment covers (POST /api/learning/notify). Returns
+ *  how many were reached, or null if it couldn't be sent / demo mode. */
+async function notifyLearning(kind: "assign" | "remind", a: { title?: string; course: string; kind: string; roles: string[]; staff: string[]; locs?: string[]; due?: string; required?: boolean }): Promise<number | null> {
+  if (isDemoMode()) return null;
+  try {
+    const r = await apiPost<{ sent: number }>("/api/learning/notify", { kind, title: a.title || a.course, due: a.due, required: a.required, target: { kind: a.kind, roles: a.roles ?? [], staff: a.staff ?? [], locs: a.locs ?? [] } });
+    return r.sent;
+  } catch { return null; }
+}
+
 export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "franchise" }) {
   const isCo = scope === "company";
   const { settings } = useSettings();
@@ -206,7 +219,9 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const [activityOpen, setActivityOpen] = useState(true);
   const [focusOpen, setFocusOpen] = useState(true);
   const [focusQ, setFocusQ] = useState("");
-  const [assignments, setAssignments] = useState<Assignment[]>(SEED_ASSIGNMENTS);
+  // The sample assignments are the demo's only — a real provider starts with
+  // none (they used to be saved to the server with the first real assignment).
+  const [assignments, setAssignments] = useState<Assignment[]>(() => (isDemoMode() ? SEED_ASSIGNMENTS : []));
   const [courses, setCourses] = useState<CourseDoc[]>(SEED_LIBRARY);
   const [player, setPlayer] = useState<CourseDoc | null>(null);
   const [editing, setEditing] = useState<CourseDoc | null>(null);
@@ -283,8 +298,31 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const [certExportOpen, setCertExportOpen] = useState(false);
   const router = useRouter();
 
-  useEffect(() => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s?.assignments) setAssignments(s.assignments); } catch { /* ignore */ } try { const c = JSON.parse(localStorage.getItem(CKEY) || "null"); if (Array.isArray(c) && c.length) { const seen = new Set(c.map((x: CourseDoc) => x.id)); const merged = [...c, ...SEED_LIBRARY.filter((s) => !seen.has(s.id))]; setCourses(merged); } } catch { /* ignore */ } try { const p = JSON.parse(localStorage.getItem(PKEY) || "null"); if (p?.policies) setPolicies(p.policies); if (p?.acks) setAcks(p.acks); } catch { /* ignore */ } try { const r = JSON.parse(localStorage.getItem(RKEY) || "null"); if (r) setReminders({ ...DEFAULT_REMINDERS, ...r }); } catch { /* ignore */ } }, []);
-  const persistA = (a: Assignment[]) => { setAssignments(a); try { localStorage.setItem(KEY, JSON.stringify({ assignments: a })); } catch { /* ignore */ } };
+  useEffect(() => { try { const s = JSON.parse(localStorage.getItem(KEY) || "null"); if (s?.assignments) setAssignments(withoutDemoAssignments(s.assignments)); } catch { /* ignore */ } try { const c = JSON.parse(localStorage.getItem(CKEY) || "null"); if (Array.isArray(c) && c.length) { const seen = new Set(c.map((x: CourseDoc) => x.id)); const merged = [...c, ...SEED_LIBRARY.filter((s) => !seen.has(s.id))]; setCourses(merged); } } catch { /* ignore */ } try { const p = JSON.parse(localStorage.getItem(PKEY) || "null"); if (p?.policies) setPolicies(p.policies); if (p?.acks) setAcks(p.acks); } catch { /* ignore */ } try { const r = JSON.parse(localStorage.getItem(RKEY) || "null"); if (r) setReminders({ ...DEFAULT_REMINDERS, ...r }); } catch { /* ignore */ } }, []);
+  // Assignments live on the server (/api/learning/assignments) — staff read
+  // them for My learning on their own phones. This device keeps a copy.
+  const learnTick = useLearnRefresh();
+  useEffect(() => { void syncLearning().then(() => { try { const x = JSON.parse(localStorage.getItem(KEY) || "null"); if (x?.assignments) setAssignments(withoutDemoAssignments(x.assignments)); } catch { /* ignore */ } }); }, []);
+  const persistA = (a: Assignment[]) => {
+    setAssignments(a);
+    try { localStorage.setItem(KEY, JSON.stringify({ assignments: a })); } catch { /* ignore */ }
+    if (!isDemoMode()) apiPut("/api/learning/assignments", { assignments: a }).catch((e) => alert(`Couldn't save the assignment to the server: ${e instanceof Error ? e.message : "try again"}`));
+  };
+  // The team, their passes and their certificates — the real ones. The demo
+  // cast (with made-up progress) is for the demo only; it used to be what
+  // every provider's completion view showed.
+  const demo = isDemoMode();
+  const TEAM = useTeam();
+  const STAFF: Staff[] = useMemo(() => (demo ? SEED_STAFF : TEAM.map((p) => {
+    const done = completionsFor(p.name);
+    const c1 = done.find((d) => d.courseId === "c1"), c2 = done.find((d) => d.courseId === "c2");
+    const st = (id: string) => credStatus(cred.records.find((r) => r.staff === p.name && r.typeId === id));
+    return { name: p.name, role: p.role, op: p.op || "Company-owned", sg: c1 ? "Complete" : "Not started", sgq: c1?.score ?? null, fa: c2 ? "Complete" : "Not started", dbs: st("dbs"), pfa: st("pfa") };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- learnTick: completions landed
+  })), [demo, TEAM, cred.records, learnTick]);
+  /** Average pass mark for a course across the team (null = nobody yet). */
+  const realScore = (id: string): number | null => { const xs = STAFF.flatMap((x) => completionsFor(x.name).filter((d) => d.courseId === id).map((d) => d.score)); return xs.length ? Math.round(xs.reduce((a, b) => a + b, 0) / xs.length) : null; };
+  const completedCount = (id: string) => STAFF.filter((x) => completionsFor(x.name).some((d) => d.courseId === id)).length;
   const persistP = (pol: PolicyDoc[], ak: PolicyAck[]) => { setPolicies(pol); setAcks(ak); try { localStorage.setItem(PKEY, JSON.stringify({ policies: pol, acks: ak })); } catch { /* ignore */ } };
   const savePolicy = (p: PolicyDoc) => { persistP(policies.some((x) => x.id === p.id) ? policies.map((x) => (x.id === p.id ? p : x)) : [...policies, p], acks); setPolicyForm(null); flash("✅ Policy saved"); };
   const deletePolicy = (id: string) => { if (typeof window !== "undefined" && !window.confirm("Delete this policy? This can't be undone.")) return; persistP(policies.filter((x) => x.id !== id), acks.filter((a) => a.docId !== id)); flash("Policy deleted"); };
@@ -320,17 +358,19 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
   const companyAll = useMemo(() => shownCourses.filter((c) => !isPlatform(c.id)), [shownCourses]);
   const companyCats = useMemo(() => Array.from(new Set(companyAll.map((c) => (c.category || "Uncategorised")))), [companyAll]);
   const companyCourses = useMemo(() => companyCatFilter === "all" ? companyAll : companyAll.filter((c) => (c.category || "Uncategorised") === companyCatFilter), [companyAll, companyCatFilter]);
-  const assignedStaffN = useMemo(() => { const s = new Set<string>(); if (assignments.some((a) => a.kind === "all")) SEED_STAFF.forEach((x) => s.add(x.name)); assignments.forEach((a) => a.kind === "staff" && a.staff.forEach((n) => s.add(n))); return s.size; }, [assignments]);
-  const overdueN = SEED_STAFF.filter((x) => x.sg === "Overdue" || x.fa === "Overdue").length;
-  const overduePct = SEED_STAFF.length ? Math.round((overdueN / SEED_STAFF.length) * 100) : 0;
-  const avgScore = useMemo(() => { const v = SEED_STAFF.map((x) => x.sgq).filter((n): n is number => n != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : 0; }, []);
+  const assignedStaffN = useMemo(() => { const s = new Set<string>(); if (assignments.some((a) => a.kind === "all")) STAFF.forEach((x) => s.add(x.name)); assignments.forEach((a) => a.kind === "staff" && a.staff.forEach((n) => s.add(n))); return s.size; }, [assignments]);
+  const overdueN = STAFF.filter((x) => x.sg === "Overdue" || x.fa === "Overdue").length;
+  const overduePct = STAFF.length ? Math.round((overdueN / STAFF.length) * 100) : 0;
+  const avgScore = useMemo(() => { const v = STAFF.map((x) => x.sgq).filter((n): n is number => n != null); return v.length ? Math.round(v.reduce((a, b) => a + b, 0) / v.length) : 0; }, [STAFF]);
   // per-course average score (illustrative until Amir's backend supplies real quiz scores)
-  const courseScore = (id: string) => { let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) & 0xffff; return 62 + (h % 38); };
-  const ranked = useMemo(() => courses.map((c) => ({ c, s: courseScore(c.id) })).sort((a, b) => b.s - a.s), [courses]);
+  // Demo: a stable made-up score per course. Real: the team's actual average.
+  const courseScore = (id: string) => { if (!demo) return realScore(id) ?? 0; let h = 0; for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) & 0xffff; return 62 + (h % 38); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- courseScore reads STAFF
+  const ranked = useMemo(() => courses.map((c) => ({ c, s: courseScore(c.id) })).sort((a, b) => b.s - a.s), [courses, STAFF]);
   // "Assigned to me" = courses assigned to everyone (the current admin is also a staff member)
   const myCourses = useMemo(() => courses.filter((c) => assignments.some((a) => a.course === c.id && a.kind === "all")), [courses, assignments]);
 
-  const staff = useMemo(() => isCo ? (op === "all" ? SEED_STAFF : SEED_STAFF.filter((s) => s.op === op)) : SEED_STAFF.filter((s) => s.op === "Milton Keynes"), [isCo, op]);
+  const staff = useMemo(() => isCo ? (op === "all" ? STAFF : STAFF.filter((s) => s.op === op)) : demo ? STAFF.filter((s) => s.op === "Milton Keynes") : STAFF, [isCo, op, STAFF, demo]);
   const compN = staff.filter((s) => s.sg === "Complete").length;
   const overN = staff.filter((s) => s.sg === "Overdue" || s.fa === "Overdue").length;
   const certAttN = staff.filter((s) => s.pfa === "Expiring" || s.pfa === "Expired" || s.dbs === "Pending").length;
@@ -341,7 +381,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
     assignments.slice(-3).reverse().forEach((a) => ev.push({ icon: "📌", tone: "#1d3a8f", head: `${titleOf(a.course)} assigned to ${targetLabel(a)}`, meta: a.due && a.due !== "—" ? `Due ${a.due} · ${a.required ? "Required" : "Optional"}` : a.required ? "Required" : "Optional" }));
     Object.entries(progress).filter(([, p]) => p.passed).slice(0, 3).forEach(([id]) => ev.push({ icon: "✅", tone: "#0f7a43", head: `${titleOf(id)} completed`, meta: "Passed the end-of-course quiz" }));
     assignments.forEach((a) => { const dl = daysLeft(a.due); if (dl == null) return; if (dl < 0) ev.push({ icon: "⏰", tone: "#c0392b", head: `${titleOf(a.course)} has expired`, meta: `Renew for ${targetLabel(a)}` }); else if (dl <= 30) ev.push({ icon: "🔄", tone: "#b45309", head: `${titleOf(a.course)} due in ${dl} day${dl === 1 ? "" : "s"}`, meta: `${targetLabel(a)} — ${a.renewMonths ? "renewal" : "deadline"} approaching` }); });
-    if (requireConfirm) policies.forEach((p) => { if (!p.required) return; const left = SEED_STAFF.length - SEED_STAFF.filter((s) => acks.some((a) => a.docId === p.id && a.staff === s.name)).length; if (left > 0) ev.push({ icon: "📄", tone: "#1d3a8f", head: `${p.title} — ${left} still to confirm`, meta: "Required policy" }); });
+    if (requireConfirm) policies.forEach((p) => { if (!p.required) return; const left = STAFF.length - STAFF.filter((s) => acks.some((a) => a.docId === p.id && a.staff === s.name)).length; if (left > 0) ev.push({ icon: "📄", tone: "#1d3a8f", head: `${p.title} — ${left} still to confirm`, meta: "Required policy" }); });
     if (certAttN > 0) ev.push({ icon: "🎖", tone: "#b7791f", head: `${certAttN} certificate${certAttN === 1 ? "" : "s"} need attention`, meta: "DBS or Paediatric First Aid due — see Team → Staff certificates" });
     return ev.slice(0, 6);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -349,7 +389,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
 
   const openAssign = (courseId: string) => { const cid = courseId || courses[0]?.id || ""; setACourse(cid); setAKind("all"); setARoles([]); setAStaff([]); setALocs([]); setAStaffQ(""); setADue(""); setAReq(true); setARenew(courses.find((c) => c.id === cid)?.renewMonths ?? settings.learning?.renewMonths ?? 0); setAVer(courses.find((c) => c.id === cid)?.activeQuiz ?? 0); setAOpen(true); };
   // courses a given staff member is on (all-staff assignments, their job-role, or named)
-  const coursesForStaff = (s: Staff) => assignments.filter((a) => a.kind === "all" || (a.kind === "roles" && a.roles.some((r) => r.toLowerCase().includes(s.role.toLowerCase()) || s.role.toLowerCase().includes(r.split(" ")[0].toLowerCase()))) || (a.kind === "staff" && a.staff.includes(s.name)));
+  const coursesForStaff = (s: Staff) => assignments.filter((a) => a.kind === "all" || (a.kind === "roles" && rolesCover(a.roles, s.role)) || (a.kind === "staff" && a.staff.includes(s.name)));
   const toggle = (arr: string[], v: string) => (arr.includes(v) ? arr.filter((x) => x !== v) : [...arr, v]);
   const saveAssign = () => {
     if (!aCourse) return;
@@ -357,9 +397,13 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
     persistA([...assignments, a]);
     if (aVer !== (courses.find((c) => c.id === aCourse)?.activeQuiz ?? 0)) setQuizVersion(aCourse, aVer);
     setAOpen(false);
-    flash(`✅ Assigned to ${targetLabel(a)} — they'll be notified`);
+    // Really notify them (server bells + emails each person covered) and say how
+    // many that reached — it used to claim "they'll be notified" and send nothing.
+    notifyLearning("assign", a).then((n) => flash(n == null ? `✅ Assigned to ${targetLabel(a)}` : n > 0 ? `✅ Assigned to ${targetLabel(a)} — ${n} ${n === 1 ? "person" : "people"} notified` : `✅ Assigned to ${targetLabel(a)} — nobody on your team with an account matched, so no one was notified`));
   };
-  const remind = (a: Assignment) => flash(`🔔 Reminder sent to ${targetLabel(a)} and to admin`);
+  const remind = (a: Assignment) => {
+    notifyLearning("remind", a).then((n) => flash(n == null ? "Couldn't send the reminder" : n > 0 ? `🔔 Reminder sent to ${n} ${n === 1 ? "person" : "people"}` : "Nobody on your team with an account matched — no reminder sent"));
+  };
   // Quick-assign every course in a set to all staff as OPTIONAL; courses already set Required stay compulsory (not overridden).
   const quickAssignAll = (which: "platform" | "company" | "both") => {
     const set = courses.filter((c) => which === "both" ? true : which === "platform" ? isPlatform(c.id) : !isPlatform(c.id));
@@ -773,8 +817,8 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
             <div className="mb-2.5 flex items-center gap-2"><span className="text-[13px] font-extrabold text-[var(--ink)]">All policies &amp; documents</span><Button variant="primary" className="ml-auto" onClick={() => setPolicyForm(blankPolicy())}>+ Add policy</Button></div>
             <div className="flex flex-col gap-2">
               {policies.map((p) => {
-                const done = SEED_STAFF.filter((s) => acks.some((a) => a.docId === p.id && a.staff === s.name));
-                const pct = SEED_STAFF.length ? Math.round((done.length / SEED_STAFF.length) * 100) : 0;
+                const done = STAFF.filter((s) => acks.some((a) => a.docId === p.id && a.staff === s.name));
+                const pct = STAFF.length ? Math.round((done.length / STAFF.length) * 100) : 0;
                 const open = expandedPolicy === p.id;
                 return (
                   <div key={p.id} className="rounded-xl border border-[var(--line)] bg-white p-3">
@@ -783,7 +827,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                         <div className="flex items-center gap-2"><span className="truncate text-[13.5px] font-extrabold text-[var(--ink)]">{p.title || "Untitled policy"}</span><Badge text={p.required ? "Required" : "Recommended"} /></div>
                         <div className="text-[11px] text-[var(--ink-3)]">{p.category ? p.category + " · " : ""}added {fmtDate(p.added)}</div>
                       </div>
-                      <div className="text-right"><div className="text-[14px] font-extrabold tabular-nums text-[var(--ink)]">{done.length}/{SEED_STAFF.length}</div><div className="text-[10.5px] text-[var(--ink-3)]">confirmed</div></div>
+                      <div className="text-right"><div className="text-[14px] font-extrabold tabular-nums text-[var(--ink)]">{done.length}/{STAFF.length}</div><div className="text-[10.5px] text-[var(--ink-3)]">confirmed</div></div>
                       <div className="flex gap-0.5">
                         <button type="button" title="Read" onClick={() => setReadingDoc(p)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">👁</button>
                         <button type="button" title="Edit" onClick={() => setPolicyForm(p)} className="px-1.5 text-[13px] text-[var(--ink-3)] hover:text-[#1d3a8f]">✏️</button>
@@ -794,7 +838,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                     <button type="button" onClick={() => setExpandedPolicy(open ? null : p.id)} className="mt-2 text-[11.5px] font-bold text-[#1d3a8f] hover:underline">{open ? "Hide who's confirmed" : "Who's confirmed?"}</button>
                     {open && (
                       <div className="mt-2 grid gap-1 sm:grid-cols-2">
-                        {SEED_STAFF.map((s) => { const a = acks.find((x) => x.docId === p.id && x.staff === s.name); return (
+                        {STAFF.map((s) => { const a = acks.find((x) => x.docId === p.id && x.staff === s.name); return (
                           <div key={s.name} className="flex items-center gap-2 rounded-lg bg-[var(--surface)] px-2.5 py-1.5 text-[12px]"><span className={a ? "text-[#0f7a43]" : "text-[var(--ink-3)]"}>{a ? "✓" : "○"}</span><span className="flex-1 truncate font-semibold text-[var(--ink)]">{s.name}</span><span className="text-[11px] text-[var(--ink-3)]">{a ? fmtDate(a.date) : "Not yet"}</span></div>
                         ); })}
                       </div>
@@ -837,8 +881,8 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
                 <div className="rounded-xl border border-[var(--line)] p-2.5">
                   <div className="mb-1.5 flex items-center gap-2"><span className="text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Tick one or more staff</span><Input value={aStaffQ} onChange={(e) => setAStaffQ(e.target.value)} placeholder="🔍 Search names…" className="ml-auto w-[150px]" /></div>
                   <div className="max-h-[180px] overflow-y-auto">
-                    {SEED_STAFF.filter((s) => s.name.toLowerCase().includes(aStaffQ.trim().toLowerCase())).map((s) => { const on = aStaff.includes(s.name); return <label key={s.name} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12.5px] text-[var(--ink-2)] hover:bg-[var(--panel)]"><input type="checkbox" checked={on} onChange={() => setAStaff(toggle(aStaff, s.name))} /> <b className="font-semibold text-[var(--ink)]">{s.name}</b> <span className="text-[11px] text-[var(--ink-3)]">· {s.role} · {s.op}</span></label>; })}
-                    {SEED_STAFF.filter((s) => s.name.toLowerCase().includes(aStaffQ.trim().toLowerCase())).length === 0 && <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">No staff match “{aStaffQ}”.</div>}
+                    {STAFF.filter((s) => s.name.toLowerCase().includes(aStaffQ.trim().toLowerCase())).map((s) => { const on = aStaff.includes(s.name); return <label key={s.name} className="flex items-center gap-2 rounded-lg px-2 py-1.5 text-[12.5px] text-[var(--ink-2)] hover:bg-[var(--panel)]"><input type="checkbox" checked={on} onChange={() => setAStaff(toggle(aStaff, s.name))} /> <b className="font-semibold text-[var(--ink)]">{s.name}</b> <span className="text-[11px] text-[var(--ink-3)]">· {s.role} · {s.op}</span></label>; })}
+                    {STAFF.filter((s) => s.name.toLowerCase().includes(aStaffQ.trim().toLowerCase())).length === 0 && <div className="px-2 py-2 text-[12px] text-[var(--ink-3)]">No staff match “{aStaffQ}”.</div>}
                   </div>
                 </div>
               )}
@@ -984,7 +1028,7 @@ export function LearningCentreApp({ scope = "company" }: { scope?: "company" | "
           <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()} style={LIGHT_PALETTE}>
             <div className="mb-2 flex items-center gap-2"><div className="text-[15px] font-extrabold text-[var(--ink)]">📊 {insight.title}</div><button type="button" onClick={() => setInsight(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>
             <div className="mb-3 flex gap-2">
-              {[[`${courseScore(insight.id)}%`, "team avg score"], [`${SEED_STAFF.length}`, "assigned"], [`${Math.round(SEED_STAFF.length * 0.7)}`, "completed"]].map(([n, l], i) => (
+              {[[`${courseScore(insight.id)}%`, "team avg score"], [`${STAFF.length}`, "assigned"], [`${demo ? Math.round(STAFF.length * 0.7) : completedCount(insight.id)}`, "completed"]].map(([n, l], i) => (
                 <div key={i} className="flex-1 rounded-lg bg-[var(--panel)] px-3 py-2"><div className="text-[18px] font-extrabold text-[#1d3a8f]">{n}</div><div className="text-[10.5px] text-[var(--ink-3)]">{l}</div></div>
               ))}
             </div>

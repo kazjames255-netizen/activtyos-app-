@@ -1,9 +1,11 @@
 import { Router, type Request } from "express";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
+import { franchiseFamilyEmails } from "../lib/franchiseScope";
 import { normaliseCode } from "../lib/discountCodes";
 import { emailNewMessage } from "../lib/emails";
 import { webUrl } from "../lib/stripe";
+import { customerAreaOn } from "../lib/customerArea";
 
 // Refer-a-friend (parent-facing). Every family gets a personal code: a friend
 // using it on their FIRST booking gets `friendOff` off (an ordinary discount
@@ -28,7 +30,9 @@ referralsAdmin.get("/", async (req, res) => {
   const ref = lib?.settings?.referral;
 
   const snap = await db.collection("referrals").where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => d.data() as { referrerEmail: string; friendEmail: string; reward?: number; friendOff?: number; friendSpend?: number; friendDiscount?: number; bookingRef?: string | null; rewardCode?: string | null; type?: "amount" | "percent"; cap?: number; at?: string; viaCode?: string });
+  // A franchise sees referrals for ITS families only (the friend booked with it).
+  const frFamilies = auth.role === "franchise" && auth.franchiseId ? await franchiseFamilyEmails(tenantId, auth.franchiseId) : null;
+  const list = snap.docs.filter((d) => !frFamilies || frFamilies.has(String(d.get("friendEmail") ?? "").toLowerCase())).map((d) => d.data() as { referrerEmail: string; friendEmail: string; reward?: number; friendOff?: number; friendSpend?: number; friendDiscount?: number; bookingRef?: string | null; rewardCode?: string | null; type?: "amount" | "percent"; cap?: number; at?: string; viaCode?: string });
   const rewardsPaid = list.reduce((s, r) => s + (Number(r.reward) || 0), 0);
 
   // Resolve real family names from the customer list (fallback to the email).
@@ -218,7 +222,7 @@ referral.get("/", async (req, res) => {
 
   const lib = (await db.collection("libraries").doc(tenantId).get()).data() as { settings?: { referral?: { enabled?: boolean; type?: "amount" | "percent"; friendOff?: number; referrerReward?: number; minSpend?: number; capToFriendSpend?: boolean } } } | undefined;
   const ref = lib?.settings?.referral;
-  if (!ref?.enabled) { res.json({ enabled: false }); return; }
+  if (!ref?.enabled || !(await customerAreaOn(tenantId, "refer"))) { res.json({ enabled: false }); return; }
 
   const type = ref.type === "percent" ? "percent" : "amount";
   const friendOff = Math.max(0, Number(ref.friendOff) || 0);

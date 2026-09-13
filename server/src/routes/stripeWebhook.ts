@@ -1,7 +1,7 @@
 import { Router, raw } from "express";
 import type Stripe from "stripe";
 import { stripe } from "../lib/stripe";
-import { notifyBilling, syncFromStripe, tenantForCustomer } from "../lib/billing";
+import { markPastDue, notifyBilling, syncFromStripe, tenantForCustomer } from "../lib/billing";
 import { clearSubscriptionCache } from "../middleware/subscription";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -77,13 +77,14 @@ stripeWebhook.post("/", raw({ type: "application/json" }), async (req, res) => {
         const inv = event.data.object;
         const tenantId = (await tenantForCustomer(String(inv.customer))) ?? tenantOf(inv);
         if (tenantId) {
-          const { db } = await import("../firebase");
-          await db.collection("tenants").doc(tenantId).set({ subscription: { status: "past_due" } }, { merge: true });
+          // Stamps pastDueSince — the start of the 14-day grace period
+          // (middleware/subscription.ts).
+          await markPastDue(tenantId);
           clearSubscriptionCache(tenantId);
           await notifyBilling(
             tenantId,
             "Your ActivityOS payment failed",
-            "We couldn't charge your card. Update it in Money → Subscription — access pauses until a payment goes through.",
+            "We couldn't charge your card. Update it in Money → Subscription within 14 days to keep full access — after that ActivityOS goes read-only (registers, incidents, first aid and medication keep working).",
           );
         }
         break;

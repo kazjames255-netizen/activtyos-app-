@@ -1,8 +1,12 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
-import type { Role } from "../middleware/role";
+import { esc } from "../lib/html";
+import { isPlainStaff, type Role } from "../middleware/role";
 import { notify, parentEmailForChild } from "../lib/notify";
+import { franchiseChildIds } from "../lib/franchiseScope";
+import { loadSettings } from "../lib/tenantLibrary";
+import { bookingInSite, siteRecordFilter, staffSiteScope, type SiteScope } from "../lib/siteScope";
 
 // Trips & visits (Run the day) — the record for an off-site trip: where, when,
 // who's going (children + staff), transport, the risk-assessment note and
@@ -75,15 +79,35 @@ const tripSchema = z.object({
 type Attendee = {
   n: string; childId?: string; age?: number;
   consent?: "granted" | "pending" | "declined"; consentAt?: string; consentBy?: string; consentRequestedAt?: string;
+  /** Who made the decision: the parent in their portal, or the provider
+   *  recording it (a paper form). A parent's decision can't be overwritten. */
+  consentSource?: "parent" | "provider";
   paid?: boolean; em?: boolean; med?: string; sent?: boolean;
 };
 
-/** Setup → Trips & visits toggles (defaults per the handoff: both on). */
-async function tripSettings(tenantId: string) {
-  const lib = await db.collection("libraries").doc(tenantId).get();
-  const t = (lib.data()?.settings as { trips?: Record<string, unknown> } | undefined)?.trips ?? {};
-  return { notifyParent: t.notifyParent !== false, requireConsent: t.requireConsent !== false };
+/** Setup → Trips & visits toggles (defaults per the handoff: both on). A
+ *  franchise's own Setup applies to its own trips. */
+async function tripSettings(tenantId: string, franchiseId?: string | null) {
+  const t = ((await loadSettings(tenantId, franchiseId)) as { trips?: Record<string, unknown> }).trips ?? {};
+  return {
+    notifyParent: t.notifyParent !== false,
+    requireConsent: t.requireConsent !== false,
+    whoCanPlan: (t.whoCanPlan === "leads" || t.whoCanPlan === "managers" ? t.whoCanPlan : "all") as "all" | "leads" | "managers",
+  };
 }
+
+/** A decision the PARENT made. Since 12 Sept it's marked; before that the
+ *  parent route stamped their email as consentBy, which the operator form
+ *  never did — so an email-shaped consentBy is theirs too. */
+const parentOwned = (a: Attendee) =>
+  a.consentSource === "parent" || (a.consentSource === undefined && !!a.consentBy && /@/.test(a.consentBy) && (a.consent ?? "pending") !== "pending");
+
+/** Children with no answer yet stop the trip going ahead. A DECLINED child is
+ *  "not going" everywhere — the planner's headcount, roll call, ratio and the
+ *  parent message all leave them out, and the decline stays on the record —
+ *  so a decline doesn't block; what mattered was that nobody but the parent
+ *  can turn it into a yes (see parentOwned above). */
+const consentPending = (list: Attendee[]) => list.filter((a) => (a.consent ?? "pending") === "pending");
 
 // ── Server-side enrichment (the handoff's #2) ────────────────────────────
 // The front-end picks booked children by NAME; parents are reached by
@@ -94,6 +118,7 @@ async function enrichTrip(
   tenantId: string,
   childNames: string[],
   attendees: Attendee[] | undefined,
+  site?: SiteScope | null,
 ): Promise<{ attendees: Attendee[]; childIds: string[] }> {
   const list: Attendee[] = (attendees ?? []).map((a) => ({ ...a }));
   for (const n of childNames) {
@@ -105,13 +130,23 @@ async function enrichTrip(
 
   // One tenant-wide scan resolves every name (per-name queries would be N×).
   const bookings = await col.firestore.collection("bookings").where("tenantId", "==", tenantId).get();
-  const idByName = new Map<string, string>();
+  const idsByName = new Map<string, Set<string>>();
+  const note = (name: string, id: string) => { const k = name.trim().toLowerCase(); idsByName.set(k, (idsByName.get(k) ?? new Set()).add(id)); };
   for (const d of bookings.docs) {
-    const b = d.data() as { child?: string; childId?: string; kids?: { name?: string; childId?: string }[] };
-    if (b.childId && b.child) idByName.set(b.child.trim().toLowerCase(), b.childId);
-    for (const k of b.kids ?? []) if (k.childId && k.name) idByName.set(k.name.trim().toLowerCase(), k.childId);
+    const b = d.data() as { child?: string; childId?: string; listingId?: string; blockId?: string; kids?: { name?: string; childId?: string }[] };
+    // A site-scoped planner (a site lead) links only children booked at their
+    // sites — typing another site's child's name mustn't pull their medical notes.
+    if (site && !bookingInSite(b, site)) continue;
+    if (b.childId && b.child && !b.kids?.length) note(b.child, b.childId);
+    for (const k of b.kids ?? []) if (k.childId && k.name) note(k.name, k.childId);
   }
-  for (const a of list) a.childId = a.childId ?? idByName.get(a.n.trim().toLowerCase());
+  // Only an UNAMBIGUOUS name links. With two children of the same name, the
+  // last booking used to win — and the wrong parent was asked for consent.
+  for (const a of list) {
+    if (a.childId) continue;
+    const ids = idsByName.get(a.n.trim().toLowerCase());
+    if (ids?.size === 1) a.childId = [...ids][0];
+  }
 
   const ids = [...new Set(list.map((a) => a.childId).filter(Boolean) as string[])];
   if (ids.length) {
@@ -135,10 +170,10 @@ async function enrichTrip(
 async function requestConsents(tripId: string, trip: Record<string, unknown>): Promise<void> {
   const tenantId = String(trip.tenantId);
   if (trip.status !== "planned" || trip.askConsent === false) return;
-  if (!(await tripSettings(tenantId)).notifyParent) return;
+  if (!(await tripSettings(tenantId, (trip.franchiseId as string | null | undefined) ?? null)).notifyParent) return;
   const attendees = (trip.attendees as Attendee[] | undefined) ?? [];
   const when = [trip.date, trip.departTime && `departing ${trip.departTime}`, trip.returnTime && `back ${trip.returnTime}`].filter(Boolean).join(", ");
-  let changed = false;
+  const asked = new Map<string, string>(); // childId → when we asked
   for (const a of attendees) {
     if (!a.childId || a.consentRequestedAt || (a.consent ?? "pending") !== "pending") continue;
     const email = await parentEmailForChild(a.childId);
@@ -151,24 +186,60 @@ async function requestConsents(tripId: string, trip: Record<string, unknown>): P
       body: `${when}${trip.transport ? ` · ${trip.transport}` : ""}. Please give or decline consent in your Trips area.`,
       subject: `${a.n}: consent needed for the trip to ${trip.destination}`,
       emailHtml:
-        `<p><b>${a.n}</b> is down for a trip to <b>${String(trip.destination)}</b> on <b>${when}</b>${trip.transport ? ` (travel: ${String(trip.transport)})` : ""}.</p>` +
-        (trip.cost ? `<p>Cost: £${String(trip.cost)}${trip.payBy ? ` — pay by ${String(trip.payBy)}` : ""}.</p>` : "") +
+        `<p><b>${esc(a.n)}</b> is down for a trip to <b>${esc(String(trip.destination))}</b> on <b>${when}</b>${trip.transport ? ` (travel: ${esc(String(trip.transport))})` : ""}.</p>` +
+        (trip.cost ? `<p>Cost: £${esc(String(trip.cost))}${trip.payBy ? ` — pay by ${esc(String(trip.payBy))}` : ""}.</p>` : "") +
         `<p>Please open your Trips area to <b>give or decline consent</b> — it takes one tap.</p>`,
       href: "/custdash/trips",
       ref: tripId,
     });
-    a.consentRequestedAt = new Date().toISOString();
-    a.sent = true;
-    changed = true;
+    asked.set(a.childId, new Date().toISOString());
   }
-  if (changed) await col.doc(tripId).set({ attendees }, { merge: true });
+  if (!asked.size) return;
+  // Stamp "asked" onto the attendees as they are NOW. This runs after the save
+  // has returned; writing back the list it started with wiped any answer given
+  // while the emails went out — a parent's decline (or a provider's grant) went
+  // back to "pending" (acceptance re-test d14s4/d14s5).
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(col.doc(tripId));
+    if (!snap.exists) return;
+    const current = (snap.get("attendees") as Attendee[] | undefined) ?? [];
+    for (const a of current) {
+      const at = a.childId ? asked.get(a.childId) : undefined;
+      if (at && !a.consentRequestedAt) { a.consentRequestedAt = at; a.sent = true; }
+    }
+    tx.update(snap.ref, { attendees: current });
+  });
 }
+
+/** Does this trip belong to the franchise? Trips created since 12 Sept carry
+ *  the franchiseId they were made under. Older ones carry none, so they're
+ *  derived from who is on them: a trip taking any of the franchise's children
+ *  is the franchise's. A head-office trip with none of its children stays hidden. */
+function tripInFranchise(t: Record<string, unknown>, franchiseId: string, kids: Set<string>): boolean {
+  if (t.franchiseId) return t.franchiseId === franchiseId;
+  return ((t.childIds as string[] | undefined) ?? []).some((c) => kids.has(c));
+}
+
+/** A site-scoped member of staff (a site lead) sees a trip from one of their
+ *  sites (its listing, or a child booked there) or one they planned. */
+const siteTripFilter = (req: Request) => {
+  const me = req.user?.email;
+  return siteRecordFilter(req.auth!, (t) => !!me && t.createdBy === me);
+};
 
 trips.get("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
   const snap = await col.where("tenantId", "==", auth.tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { date?: string })[];
+  let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { date?: string })[];
+  // A franchise (and its staff) saw every trip in the company — each one names
+  // children, a destination and a date. Narrow to the franchise's own.
+  if (auth.franchiseId) {
+    const kids = await franchiseChildIds(auth.tenantId, auth.franchiseId);
+    list = list.filter((t) => tripInFranchise(t, auth.franchiseId!, kids));
+  }
+  const inSite = await siteTripFilter(req);
+  if (inSite) list = list.filter(inSite);
   list.sort((a, b) => (`${b.date}` < `${a.date}` ? -1 : 1));
   res.json(list);
 });
@@ -176,15 +247,29 @@ trips.get("/", async (req, res) => {
 trips.post("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
+  // Setup → Trips "who can plan" used to only hide the button on the staff
+  // portal. Anything but "all" means leads and managers plan trips — not a
+  // plain staff token calling the API.
+  const who = auth.role === "staff" ? (await tripSettings(auth.tenantId, auth.franchiseId)).whoCanPlan : "all";
+  if ((who === "leads" && isPlainStaff(auth)) || (who === "managers" && auth.role === "staff")) {
+    res.status(403).json({ error: "Planning trips is limited to leads and managers (Setup → Trips & visits)" });
+    return;
+  }
   const parsed = tripSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const enriched = await enrichTrip(auth.tenantId, parsed.data.childNames, parsed.data.attendees as Attendee[] | undefined);
+  const site = await staffSiteScope(auth);
+  if (site && parsed.data.listingId && !site.listings.has(parsed.data.listingId)) {
+    res.status(403).json({ error: "You can only plan trips for the sites you're assigned to" });
+    return;
+  }
+  const enriched = await enrichTrip(auth.tenantId, parsed.data.childNames, parsed.data.attendees as Attendee[] | undefined, site);
   const doc = {
     ...parsed.data,
     attendees: enriched.attendees,
     childIds: enriched.childIds,
     headcount: parsed.data.headcount ?? parsed.data.childNames.length,
     tenantId: auth.tenantId,
+    franchiseId: auth.franchiseId ?? null,
     createdBy: req.user?.email ?? "unknown",
     createdByName: req.user?.name ?? req.user?.email ?? "Staff",
     createdAt: new Date().toISOString(),
@@ -199,53 +284,101 @@ async function own(req: Request, id: string) {
   if (!auth.tenantId || !canUse(auth.role)) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (auth.franchiseId && !tripInFranchise(snap.data()!, auth.franchiseId, await franchiseChildIds(auth.tenantId, auth.franchiseId)))
+    return { status: 404 as const };
+  const inSite = await siteTripFilter(req);
+  if (inSite && !inSite(snap.data()!)) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
+
+class TripRefusal extends Error { constructor(public code: number, msg: string) { super(msg); } }
 
 trips.put("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Forbidden" : "Trip not found" }); return; }
   const parsed = tripSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const before = o.snap.data()!;
-  const tenantId = String(before.tenantId);
-
-  // Re-resolve whenever the children change; a merge must never lose the
-  // consent trail already collected, so carry each existing attendee's
-  // consent fields onto the incoming entry (matched by childId, else name).
-  let patch: Record<string, unknown> = { ...parsed.data };
-  if (parsed.data.childNames || parsed.data.attendees) {
-    const prev = (before.attendees as Attendee[] | undefined) ?? [];
-    const incoming = (parsed.data.attendees as Attendee[] | undefined) ?? prev;
-    const names = parsed.data.childNames ?? (before.childNames as string[] | undefined) ?? [];
-    const enriched = await enrichTrip(tenantId, names, incoming);
-    for (const a of enriched.attendees) {
-      const was = prev.find((p) => (a.childId && p.childId === a.childId) || p.n.trim().toLowerCase() === a.n.trim().toLowerCase());
-      if (!was) continue;
-      a.consent = a.consent === undefined || a.consent === "pending" ? (was.consent ?? a.consent) : a.consent;
-      a.consentAt = a.consentAt ?? was.consentAt;
-      a.consentBy = a.consentBy ?? was.consentBy;
-      a.consentRequestedAt = a.consentRequestedAt ?? was.consentRequestedAt;
-    }
-    patch = { ...patch, attendees: enriched.attendees, childIds: enriched.childIds };
+  const site = await staffSiteScope(req.auth!);
+  if (site && parsed.data.listingId && !site.listings.has(parsed.data.listingId)) {
+    res.status(403).json({ error: "You can only plan trips for the sites you're assigned to" });
+    return;
   }
+  // Read-merge-write in ONE transaction: a parent answering consent while the
+  // planner is open used to have their answer overwritten by the stale
+  // "pending" this screen was holding.
+  try {
+    await db.runTransaction(async (tx) => {
+      const fresh = await tx.get(o.snap.ref);
+      const before = fresh.data()!;
+      const tenantId = String(before.tenantId);
 
-  // Enforcement (the handoff's #3): with Setup → requireConsent on, a trip
-  // can't be completed while any attending child's consent is still pending
-  // ("declined" = not coming — that child isn't on the trip to block it).
-  if (parsed.data.status === "completed" && (before.askConsent !== false)) {
-    const { requireConsent } = await tripSettings(tenantId);
-    if (requireConsent) {
-      const list = (patch.attendees as Attendee[] | undefined) ?? ((before.attendees as Attendee[] | undefined) ?? []);
-      const pending = list.filter((a) => (a.consent ?? "pending") === "pending");
-      if (pending.length) {
-        res.status(409).json({ error: `${pending.length} ${pending.length === 1 ? "child still needs" : "children still need"} consent before this trip can be completed (${pending.map((a) => a.n).slice(0, 4).join(", ")}${pending.length > 4 ? "…" : ""}).` });
-        return;
+      // Re-resolve whenever the children change; a merge must never lose the
+      // consent trail already collected, so carry each existing attendee's
+      // consent fields onto the incoming entry (matched by childId, else name).
+      let patch: Record<string, unknown> = { ...parsed.data };
+      if (parsed.data.childNames || parsed.data.attendees) {
+        const prev = (before.attendees as Attendee[] | undefined) ?? [];
+        const incoming = (parsed.data.attendees as Attendee[] | undefined) ?? prev;
+        const names = parsed.data.childNames ?? (before.childNames as string[] | undefined) ?? [];
+        const enriched = await enrichTrip(tenantId, names, incoming, site);
+        const who = req.user?.email ?? req.user?.uid ?? "provider";
+        const now = new Date().toISOString();
+        for (const a of enriched.attendees) {
+          const was = prev.find((p) => (a.childId && p.childId === a.childId) || p.n.trim().toLowerCase() === a.n.trim().toLowerCase());
+          a.consentRequestedAt = a.consentRequestedAt ?? was?.consentRequestedAt;
+          if (was && parentOwned(was)) {
+            // The parent's answer stands. A staff PUT carrying "granted" used to
+            // overwrite a decline — and kept the parent's name and date on it, so
+            // the record claimed the parent had said yes.
+            a.consent = was.consent; a.consentAt = was.consentAt; a.consentBy = was.consentBy; a.consentSource = "parent";
+            continue;
+          }
+          const incomingDecision = a.consent && a.consent !== "pending" ? a.consent : undefined;
+          if (incomingDecision && incomingDecision !== was?.consent) {
+            // The provider recorded (or changed) a decision — say who did, and when.
+            a.consentAt = now; a.consentBy = who; a.consentSource = "provider";
+          } else if (was) {
+            a.consent = was.consent ?? a.consent; a.consentAt = was.consentAt; a.consentBy = was.consentBy; a.consentSource = was.consentSource;
+          }
+        }
+        patch = { ...patch, attendees: enriched.attendees, childIds: enriched.childIds };
       }
-    }
-  }
 
-  await o.snap.ref.set({ ...patch, updatedAt: new Date().toISOString() }, { merge: true });
+      // Enforcement (the handoff's #3): with Setup → requireConsent on, a trip
+      // can't be completed while any attending child's consent is still pending
+      // ("declined" = not coming — that child isn't on the trip to block it).
+      //
+      // It bites when the trip is submitted for sign-off (before it goes) as well
+      // as on completion, and it no longer honours the per-trip askConsent switch:
+      // with the Setup gate on, a trip can't be waved through by turning consent
+      // off for that one trip. askConsent now only means "don't chase parents in
+      // the app" — consent collected on paper still has to be recorded per child.
+      const submitting = parsed.data.signoff?.submitted === true && (before.signoff as { submitted?: boolean } | undefined)?.submitted !== true;
+      if (parsed.data.status === "completed" || submitting) {
+        const { requireConsent } = await tripSettings(tenantId, (before.franchiseId as string | null | undefined) ?? req.auth!.franchiseId);
+        if (requireConsent) {
+          const list = (patch.attendees as Attendee[] | undefined) ?? ((before.attendees as Attendee[] | undefined) ?? []);
+          const pending = consentPending(list);
+          const names = (xs: Attendee[]) => `${xs.map((a) => a.n).slice(0, 4).join(", ")}${xs.length > 4 ? "…" : ""}`;
+          if (pending.length) {
+            throw new TripRefusal(409, `${pending.length} ${pending.length === 1 ? "child still needs" : "children still need"} consent before this trip can ${submitting ? "be signed off" : "be completed"} (${names(pending)}).`);
+          }
+        }
+      }
+      // Turning in-app consent requests off for a trip is the provider's call.
+      // (Compared as "on unless false" — the planner always sends the flag, and
+      // older trips never stored it.)
+      if (parsed.data.askConsent !== undefined && (parsed.data.askConsent !== false) !== (before.askConsent !== false) && !canManage(req.auth!.role)) {
+        throw new TripRefusal(403, "Only the provider can change how consent is collected for a trip");
+      }
+
+
+      tx.set(o.snap.ref, { ...patch, updatedAt: new Date().toISOString() }, { merge: true });
+    });
+  } catch (e) {
+    if (e instanceof TripRefusal) { res.status(e.code).json({ error: e.message }); return; }
+    throw e;
+  }
   const after = await o.snap.ref.get();
   void requestConsents(after.id, after.data()!).catch((e) => console.error("[trips] consent notify:", (e as Error).message));
   res.json({ id: after.id, ...after.data() });

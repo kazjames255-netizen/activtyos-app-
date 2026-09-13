@@ -3,13 +3,14 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties, ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { get as apiGet, post as apiPost } from "@/lib/api";
+import { api, ApiError, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings, needsNappies, type ChildQuestion } from "@/lib/settings";
 import { useT } from "@/lib/i18n/provider";
 import { Button } from "@/components/ui";
 import { SettingsLink } from "@/components/OperatorPage";
 import { TourLauncher } from "@/features/common/TourLauncher";
+import { csvText } from "@/lib/csv";
 import { ChildCard, type ChildInfo } from "./ChildCard";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -50,11 +51,32 @@ const GHOST = "inline-flex items-center gap-1.5 rounded-lg border border-white/3
 const GHOST_ON = "inline-flex items-center gap-1.5 rounded-lg border border-white/70 bg-[var(--surface)] px-3 py-1.5 text-[12.5px] font-bold text-[#2f5fd0] transition";
 
 interface Attendance { status?: "in" | "absent"; inAt?: string | null; collectedAt?: string | null; collectedBy?: string | null }
-interface SGRec { photo?: string; dob?: string; school?: string; allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; careNotes?: string; collectionPassword?: string; emergencyName?: string; emergencyPhone?: string; photoConsent?: boolean; likes?: string; dislikes?: string; swimming?: string; sex?: string; suncreamConsent?: boolean; firstAidConsent?: boolean; walkHomeConsent?: boolean; answers?: Record<string, string> }
-interface Attendee { ref: string; booker: string; email: string; phone?: string; note?: string; addons?: string[]; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null }
+interface SGRec { photo?: string; dob?: string; school?: string; allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; careNotes?: string; collectionPassword?: string; emergencyName?: string; emergencyPhone?: string; photoConsent?: boolean; likes?: string; dislikes?: string; swimming?: string; sex?: string; suncreamConsent?: boolean; firstAidConsent?: boolean; walkHomeConsent?: boolean; answers?: Record<string, string>;
+  /** Authorised medicines (active, not withdrawn) — shown on the row (d12s9). */
+  medications?: { name: string; dose: string; schedule?: string; asNeeded?: boolean; heldOnSite?: boolean; consent: boolean }[] }
+// `ref` is the register key — one per CHILD (siblings on one booking are
+// ref#child); `bookingRef` is the booking they belong to. `cancelledOnSite`:
+// the booking was cancelled while they were signed in, so they stay listed
+// until someone signs them out.
+interface Attendee { ref: string; bookingRef?: string; cancelledOnSite?: boolean; childId?: string | null; booker: string; email: string; phone?: string; note?: string; addons?: string[]; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null }
 interface Head { n: number; by: string; at: string }
-interface Session { blockId: string; date: string; start: string; end: string; blockName: string; listingId: string; listingName: string; attendees: Attendee[]; counts: { expected: number; present: number; notArrived: number; absent: number; collected: number }; heads: Head[]; takenBy: { name: string; at: string } | null }
+interface Session { blockId: string; date: string; start: string; end: string; blockName: string; listingId: string; listingName: string; attendees: Attendee[]; counts: { expected: number; present: number; notArrived: number; absent: number; collected: number }; heads: Head[]; takenBy: { name: string; at: string } | null;
+  // The day's staff jottings, keyed by attendee ref — server-held since 12 Sept.
+  notes?: Record<string, RegNote>; nappies?: Record<string, NappyChange[]>; nudges?: Record<string, string> }
+// What a button MEANS on screen ("In" on a signed-in row = undo it)…
 type Action = "in" | "absent" | "collect" | "reset";
+// …and what goes over the wire: always an explicit target state, never a
+// toggle, plus `from` — the state this screen showed — so a stale phone can't
+// silently overwrite a colleague's mark (server/src/routes/registers.ts, d10s12).
+type WireAction = "in" | "absent" | "collect" | "uncollect" | "reset";
+type MarkFrom = "none" | "in" | "absent" | "collected";
+const markFrom = (a: Attendance | null | undefined): MarkFrom =>
+  !a?.status ? "none" : a.status === "absent" ? "absent" : a.collectedAt ? "collected" : "in";
+// A row tap: tapping the lit button undoes it, as an EXPLICIT undo.
+const wireFor = (a: Attendance | null | undefined, action: Action): WireAction =>
+  action === "in" && a?.status === "in" ? "reset"
+  : action === "collect" && a?.collectedAt ? "uncollect"
+  : action;
 type FlagKind = "" | "allergy" | "medical" | "send" | "dietary" | "nappy";
 // One definition for the flags, so the filter menu and the row chips can't
 // drift apart on wording or colour.
@@ -93,6 +115,45 @@ const ageFrom = (dob?: string, today?: string): number | undefined => {
   return age >= 0 && age < 120 ? age : undefined;
 };
 const st = (a: Attendee): "present" | "absent" | "notArrived" => (a.attendance?.status === "in" ? "present" : a.attendance?.status === "absent" ? "absent" : "notArrived");
+
+// One source for a row's status colour, so the left stripe, the row wash and
+// the avatar ring can never disagree about what state a child is in. Collected
+// outranks present: it's the later, more final fact.
+const rowTone = (a: Attendee): { key: "collected" | "present" | "absent" | "notArrived"; c: string } =>
+  a.attendance?.collectedAt ? { key: "collected", c: BLUE }
+  : a.attendance?.status === "in" ? { key: "present", c: GREEN }
+  : a.attendance?.status === "absent" ? { key: "absent", c: RED }
+  : { key: "notArrived", c: AMBER };
+
+// ── Optimistic marking ──────────────────────────────────────────────────────
+// The round trip to /mark is ~1s on a good day, and the row couldn't change
+// until it landed — so a tap read as "nothing happened", then flipped a second
+// later. These two apply the change locally first; the refetch reconciles.
+//
+// applyAction MIRRORS the server transaction in server/src/routes/registers.ts
+// (POST /:blockId/:date/mark): explicit states, already-there = unchanged. Keep
+// the two in step — drift here shows the wrong state for a beat, then snaps.
+function applyAction(prev: Attendance | null, action: WireAction, now: string): Attendance | null {
+  if (action === "reset") return null;
+  if (action === "in") return prev?.status === "in" ? prev : { status: "in", inAt: now, collectedAt: null, collectedBy: null };
+  if (action === "absent") return prev?.status === "absent" ? prev : { status: "absent", inAt: null, collectedAt: null, collectedBy: null };
+  if (action === "uncollect") return prev?.collectedAt ? { ...prev, collectedAt: null, collectedBy: null } : prev;
+  // collect — collecting a child who was never signed in signs them in too.
+  if (prev?.collectedAt) return prev;
+  const base: Attendance = prev?.status === "in" ? prev : { status: "in", inAt: now, collectedAt: null, collectedBy: null };
+  return { ...base, status: "in", collectedAt: now };
+}
+// The hero tally ("8 of 12 signed in") reads session.counts, which the SERVER
+// computes — so without recounting here the row would flip instantly while the
+// number above it lagged a second behind. `expected` is left alone: it's about
+// who's booked, which marking never changes.
+const recount = (attendees: Attendee[], expected: number): Session["counts"] => ({
+  expected,
+  present: attendees.filter((a) => st(a) === "present").length,
+  notArrived: attendees.filter((a) => st(a) === "notArrived").length,
+  absent: attendees.filter((a) => st(a) === "absent").length,
+  collected: attendees.filter((a) => !!a.attendance?.collectedAt).length,
+});
 
 // ── Nudge bell ──────────────────────────────────────────────────────────────
 // A child is "late" two ways: not dropped off once the session has been running
@@ -156,10 +217,25 @@ const AV = ["#FDE7EF", "#E2F6EC", "#E8EEFD", "#FCF1DC", "#DEF4F1", "#EDE9FD", "#
 const avBg = (n: string) => AV[[...n].reduce((a, c) => a + c.charCodeAt(0), 0) % AV.length];
 
 
-function AlertSq({ kind, text }: { kind: "allergy" | "medical" | "send"; text: string }) {
+// Outlined, not filled: three filled pastels side by side read as a paint chart
+// (the same complaint ChildCard's Fact carries), and the fill is what forced the
+// label down to 9.5px uppercase to stay legible. A hairline border in the
+// category colour codes it just as well at a readable size.
+// The glyph lives here rather than in the translations, so every locale gets it
+// without editing 11 strings.
+function AlertSq({ kind, text }: { kind: "allergy" | "medical" | "medicine" | "send" | "walk"; text: string }) {
   const t = useT();
-  const m = kind === "allergy" ? { bg: "#fde2e4", fg: "#c02636", label: t("registers.allergy") } : kind === "medical" ? { bg: "#e0e9ff", fg: BLUE, label: t("registers.medical") } : { bg: "#f3e8ff", fg: "#6d28d9", label: t("registers.sendShort") };
-  return <span title={text} className="rounded-md px-1.5 py-[2px] text-[9.5px] font-extrabold uppercase tracking-[0.03em]" style={{ background: m.bg, color: m.fg }}>{m.label}</span>;
+  const m = kind === "allergy" ? { bd: "#f3c6c1", fg: "#c02636", glyph: "⚠️", label: t("registers.allergy") }
+    : kind === "medical" ? { bd: "#c9d8f6", fg: BLUE, glyph: "✚", label: t("registers.medical") }
+    : kind === "medicine" ? { bd: "#b9e4de", fg: "#0e7a75", glyph: "💊", label: t("registers.medicine") }
+    : kind === "walk" ? { bd: "#f1d6a6", fg: "#9a5b06", glyph: "🚶", label: t("registers.walkHome") }
+    : { bd: "#e2d3f7", fg: "#6d28d9", glyph: "◆", label: t("registers.sendShort") };
+  return (
+    <span title={text} className="inline-flex items-center gap-1 rounded-full border px-2 py-[3px] text-[11px] font-extrabold leading-none"
+      style={{ borderColor: m.bd, color: m.fg }}>
+      <span aria-hidden>{m.glyph}</span>{m.label}
+    </span>
+  );
 }
 
 // Searchable listing picker for the hero — a button + type-to-filter popover.
@@ -206,7 +282,7 @@ function ChildModal({ a, showTimes, fields, card, questions, ctx, edit, canEdit,
     photoConsent: c?.photoConsent, suncreamConsent: c?.suncreamConsent, firstAidConsent: c?.firstAidConsent, walkHomeConsent: c?.walkHomeConsent,
     collectionPassword: c?.collectionPassword, emergencyName: c?.emergencyName, emergencyPhone: c?.emergencyPhone, school: c?.school,
     contactName: a.booker, contactPhone: a.phone, contactEmail: a.email,
-    bookingRef: a.ref, bookingNotes: a.note,
+    bookingRef: a.bookingRef ?? a.ref, bookingNotes: a.note,
     collected: a.attendance?.collectedAt ? `${showTimes ? timeOf(a.attendance.collectedAt) : "yes"}${a.attendance.collectedBy ? ` \u00b7 by ${a.attendance.collectedBy}` : ""}` : undefined,
     siblings: ctx.siblings,
     statusChip,
@@ -274,7 +350,7 @@ function DownloadDialog({ sessions, date, allDates, listingName, sessionsForDate
     const bundle = await sessionsForDates(dates);
     const rows = [[...(multi ? ["Date"] : []), "Listing", "Session", "Child", ...cols.map((c) => c.label)]];
     for (const { date: d, sessions: ss } of bundle) for (const s of ss) for (const a of s.attendees) rows.push([...(multi ? [d] : []), s.listingName, s.blockName, a.children.map((k) => k.name).join(" / "), ...cols.map((c) => cell(c.key, s, a))]);
-    const url = URL.createObjectURL(new Blob([rows.map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")], { type: "text/csv" }));
+    const url = URL.createObjectURL(new Blob([csvText(rows)], { type: "text/csv" })); // formula-safe: names/notes are parent-typed
     const l = document.createElement("a"); l.href = url; l.download = `${fileStem}.csv`; l.click(); URL.revokeObjectURL(url);
     setBusy(""); onClose();
   };
@@ -364,6 +440,7 @@ function GalTile({ a, start, end, showTimes, busy, showConsent, onMark, onOpen }
   const flags: { t: string; bg: string; fg: string }[] = [];
   if (a.child?.allergies) flags.push({ t: t("registers.allergy"), bg: "#fde2e4", fg: "#c02636" });
   if (a.child?.medical) flags.push({ t: t("registers.medical"), bg: "#e0e9ff", fg: BLUE });
+  if (a.child?.medications?.length) flags.push({ t: `💊 ${t("registers.medicine")}`, bg: "#e6f6f4", fg: "#0e7a75" });
   if (a.child?.dietary) flags.push({ t: t("registers.dietary"), bg: "#dcfce7", fg: "#15803d" });
   if (a.child?.send || a.child?.sendPlanName) flags.push({ t: t("registers.sendShort"), bg: "#f3e8ff", fg: "#6d28d9" });
   return (
@@ -387,11 +464,11 @@ function GalTile({ a, start, end, showTimes, busy, showConsent, onMark, onOpen }
   );
 }
 
-// ── Register notes (staff jottings per child per day) ────────────────────────
-// Demo store; real per-tenant notes are Amir's. Keyed `${date}|${ref}`.
-// When each family was last nudged, keyed `${date}|${ref}` — same demo-store
-// shape as the notes below. Local on purpose: it's a "have I already chased
-// them" marker for whoever holds the register, not tenant state.
+// ── Register notes, nappy changes and nudges (per child per day) ─────────────
+// These live on the day's register on the SERVER (POST /api/registers/…/note,
+// /nappy, /nudge) so every device on the register sees them. They used to be
+// this browser's localStorage — the keys below are only read once, to upload
+// anything jotted before the move, and then cleared.
 const NUDGES_KEY = "aos.register.nudges.v1";
 const loadNudges = (): Record<string, string> => { try { return JSON.parse(localStorage.getItem(NUDGES_KEY) || "{}") || {}; } catch { return {}; } };
 // Nappy changes, keyed `${date}|${ref}` → the day's log. Demo store like the
@@ -501,13 +578,11 @@ function NotePopup({ name, note, canDeleteForever, onSave, onArchive, onRestore,
 }
 
 // ── Safeguarding quick-edit (SEND / allergies / medical) ─────────────────────
-// Managers/leads can amend a child's needs from the register. Saves to a local
-// overlay (shows on the register instantly); the permanent per-child record +
-// multi-device sync are Amir's (needs childId in the /api/registers projection
-// + a lead-gated PUT /api/children/:id). Keyed by booking ref.
-const CHILD_EDITS_KEY = "aos.register.childedits.v1";
+// Managers amend a child's needs from the register, saved to the child's own
+// record (PUT /api/children/:id — attributed, with history), so every device and
+// the next shift see it. It used to be this browser's localStorage only; the
+// key below is read once to upload any edit made before that, then cleared.
 type ChildEdit = Partial<{ allergies: string; medical: string; dietary: string; send: string; careNotes: string }>;
-const loadChildEdits = (): Record<string, ChildEdit> => { try { return JSON.parse(localStorage.getItem(CHILD_EDITS_KEY) || "{}") || {}; } catch { return {}; } };
 
 function SafeguardingEditor({ child, edit, canEdit, onSave, onOpenFamilies }: { child: { allergies?: string; medical?: string; dietary?: string; send?: string; sendPlanName?: string; careNotes?: string } | null; edit?: ChildEdit; canEdit: boolean; onSave: (patch: ChildEdit) => void; onOpenFamilies: () => void }) {
   const t = useT();
@@ -636,9 +711,12 @@ function CollectPin({ pw }: { pw: string }) {
   const [show, setShow] = useState(false);
   useEffect(() => { if (!show) return; const timer = setTimeout(() => setShow(false), 4000); return () => clearTimeout(timer); }, [show]);
   return (
+    // Sits on its own line under the age now, so it can carry its existing label
+    // instead of four anonymous dots in a row of identical grey squares. Still
+    // hidden until tapped — the label says what it is, not what it is.
     <button type="button" onClick={() => setShow((s) => !s)} title={t("registers.collectionPasswordReveal")}
-      className={"inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-extrabold transition-all " + (show ? "border-[#E4E9F5] bg-[#FCF1DC] text-[var(--ink-2)] shadow-sm" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-3)] hover:border-[#E4E9F5] hover:text-[#2f5fd0]")}>
-      🔑 <span className={"tabular-nums " + (show ? "tracking-normal" : "tracking-[0.15em]")}>{show ? pw : "••••"}</span>
+      className={"inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10.5px] font-extrabold transition-all " + (show ? "border-[#E4E9F5] bg-[#FCF1DC] text-[var(--ink-2)] shadow-sm" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-3)] hover:border-[#E4E9F5] hover:text-[#2f5fd0]")}>
+      🔑 <span className="truncate tabular-nums">{show ? pw : t("registers.collectionPassword")}</span>
     </button>
   );
 }
@@ -658,6 +736,14 @@ export function RegistersApp() {
   const anchor = todayIso();
   const WINDOW = useMemo(() => Array.from({ length: 10 }, (_, i) => shiftDay(anchor, i)), [anchor]);
   const [days, setDays] = useState<Record<string, Session[]>>({});
+  // Refetch ONE day. Marking, head counts and bulk actions only ever change the
+  // day on screen, but they all used to call refresh() — which refetches the
+  // whole 10-day window (10 requests, ~2.3s before the row could update, and
+  // the realtime echo of your own write then ran it a second time).
+  const refreshDay = useCallback(async (d: string) => {
+    try { const l = await apiGet<Session[]>(`/api/registers?date=${d}`); setDays((prev) => ({ ...prev, [d]: l })); }
+    catch { /* the optimistic row stands; realtime or the next load corrects it */ }
+  }, []);
   const [ready, setReady] = useState(false);
   const [date, setDate] = useState(anchor);
   // Ticks so the nudge bell appears on its own as a child tips over the line —
@@ -713,44 +799,90 @@ export function RegistersApp() {
   const [galFilter, setGalFilter] = useState<"all" | "present" | "notArrived" | "absent" | "collected">("all");
   const [showConsent, setShowConsent] = useState(false); // reveal photo-permission chips
   const [showLikes, setShowLikes] = useState(false); // reveal the likes/dislikes chip per child
-  const [notes, setNotes] = useState<Record<string, RegNote>>({});
-  useEffect(() => { setNotes(loadNotes()); }, []);
-  const [nudges, setNudges] = useState<Record<string, string>>({});
-  useEffect(() => { setNudges(loadNudges()); }, []);
-  const [nappies, setNappies] = useState<Record<string, NappyChange[]>>({});
-  useEffect(() => { setNappies(loadNappies()); }, []);
-  const logNappy = useCallback((ref: string, d: string, by: string) => setNappies((prev) => {
+  // Server state for every loaded day, flattened to `${date}|${ref}` keys, with
+  // a small optimistic overlay so a tap shows before the request lands.
+  const [noteOverlay, setNoteOverlay] = useState<Record<string, RegNote | null>>({});
+  const [nappyOverlay, setNappyOverlay] = useState<Record<string, NappyChange[]>>({});
+  const [nudgeOverlay, setNudgeOverlay] = useState<Record<string, string>>({});
+  const regFlat = useMemo(() => {
+    const n: Record<string, RegNote> = {}, np: Record<string, NappyChange[]> = {}, nu: Record<string, string> = {};
+    for (const [d, list] of Object.entries(days)) for (const s of list ?? []) {
+      for (const [k, v] of Object.entries(s.notes ?? {})) n[`${d}|${k}`] = v;
+      for (const [k, v] of Object.entries(s.nappies ?? {})) np[`${d}|${k}`] = v;
+      for (const [k, v] of Object.entries(s.nudges ?? {})) nu[`${d}|${k}`] = v;
+    }
+    return { n, np, nu };
+  }, [days]);
+  const notes = useMemo(() => {
+    const out: Record<string, RegNote> = { ...regFlat.n };
+    for (const [k, v] of Object.entries(noteOverlay)) { if (v) out[k] = v; else delete out[k]; }
+    return out;
+  }, [regFlat, noteOverlay]);
+  const nappies = useMemo(() => ({ ...regFlat.np, ...nappyOverlay }), [regFlat, nappyOverlay]);
+  const nudges = useMemo(() => ({ ...regFlat.nu, ...nudgeOverlay }), [regFlat, nudgeOverlay]);
+  /** Which session (block) a child's row is on, for the day on screen. */
+  const blockFor = (ref: string, d: string) => (days[d] ?? []).find((s) => s.attendees.some((a) => a.ref === ref))?.blockId;
+  const regPost = async (d: string, ref: string, what: "note" | "nappy", body: Record<string, unknown>) => {
+    const blockId = blockFor(ref, d);
+    if (!blockId) throw new Error(t("registers.couldntUpdate"));
+    await apiPost(`/api/registers/${encodeURIComponent(blockId)}/${d}/${what}`, { ref, ...body });
+  };
+  const logNappy = useCallback((ref: string, d: string, by: string) => {
     const k = `${d}|${ref}`;
-    const next = { ...prev, [k]: [...(prev[k] ?? []), { at: new Date().toISOString(), by }] };
-    try { localStorage.setItem(NAPPY_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-    return next;
-  }), []);
-  const markNudged = useCallback((refs: string[], d: string) => setNudges((prev) => {
+    const entry = { at: new Date().toISOString(), by };
+    setNappyOverlay((prev) => ({ ...prev, [k]: [...(prev[k] ?? regFlat.np[k] ?? []), entry] }));
+    regPost(d, ref, "nappy", { at: entry.at })
+      .then(() => refreshDay(d))
+      .catch((e) => { setError(e instanceof Error ? e.message : t("registers.couldntUpdate")); })
+      .finally(() => setNappyOverlay((prev) => { const n = { ...prev }; delete n[k]; return n; }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days, regFlat]);
+  const markNudged = useCallback((refs: string[], d: string) => {
     const at = new Date().toISOString();
-    const next = { ...prev };
-    for (const r of refs) next[`${d}|${r}`] = at;
-    try { localStorage.setItem(NUDGES_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-    return next;
-  }), []);
+    setNudgeOverlay((prev) => { const n = { ...prev }; for (const r of refs) n[`${d}|${r}`] = at; return n; });
+    // One request per session the refs sit in.
+    const byBlock = new Map<string, string[]>();
+    for (const r of refs) { const b = blockFor(r, d); if (b) byBlock.set(b, [...(byBlock.get(b) ?? []), r]); }
+    Promise.all([...byBlock].map(([b, rs]) => apiPost(`/api/registers/${encodeURIComponent(b)}/${d}/nudge`, { refs: rs, at })))
+      .then(() => refreshDay(d))
+      .catch(() => { /* the chase itself went out; only the "already chased" marker failed */ });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [days]);
   const [role, setRole] = useState("");
   const canEditChild = ["company", "franchise", "freelancer", "owner", "manager"].includes(role); // managers; staff-lead editing pending the lead flag (Amir)
+  // Optimistic overlay only while a save is in flight.
   const [edits, setEdits] = useState<Record<string, ChildEdit>>({});
-  useEffect(() => { setEdits(loadChildEdits()); }, []);
   const applyEdit = (a: Attendee): Attendee => { const e = edits[a.ref]; return e && a.child ? { ...a, child: { ...a.child, ...e } } : a; };
-  const saveEdit = (ref: string, patch: ChildEdit) => setEdits((prev) => { const next = { ...prev, [ref]: { ...prev[ref], ...patch } }; try { localStorage.setItem(CHILD_EDITS_KEY, JSON.stringify(next)); } catch { /* ignore */ } return next; });
+  const findAttendee = (ref: string) => Object.values(days).flat().flatMap((s) => s.attendees).find((a) => a.ref === ref);
+  const saveEdit = (ref: string, patch: ChildEdit) => {
+    const a = findAttendee(ref);
+    if (!a?.childId) { setError(t("registers.couldntUpdate")); return; }
+    setEdits((prev) => ({ ...prev, [ref]: { ...prev[ref], ...patch } }));
+    api(`/api/children/${encodeURIComponent(a.childId)}`, { method: "PUT", body: JSON.stringify(patch) })
+      .then(() => refreshDay(date))
+      .catch((e) => setError(e instanceof Error ? e.message : t("registers.couldntUpdate")))
+      .finally(() => setEdits((prev) => { const n = { ...prev }; delete n[ref]; return n; }));
+  };
+  // Quick-edits made on one device before they were saved to the child record
+  // are NOT pushed up: they may be weeks old, and pushing them would overwrite
+  // what the parent or another manager has entered since (an allergy list
+  // going back to an older version for everyone). They simply stop showing.
   const noteKey = (ref: string) => `${date}|${ref}`;
   const [noteFor, setNoteFor] = useState<{ ref: string; name: string } | null>(null);
   const canDeleteForever = canEditChild; // admins/managers only — staff can archive but not delete forever
-  const mutateNote = (ref: string, fn: (n: RegNote | undefined) => RegNote | null) => setNotes((prev) => {
-    const k = noteKey(ref); const res = fn(prev[k]); const next = { ...prev };
-    if (res) next[k] = res; else delete next[k];
-    try { localStorage.setItem(NOTES_KEY, JSON.stringify(next)); } catch { /* ignore */ }
-    return next;
-  });
-  const saveNote = (ref: string, text: string, shareParent = false) => mutateNote(ref, () => (text.trim() ? { text: text.trim(), at: new Date().toISOString(), by: "You", archived: false, shareParent } : null));
-  const archiveNote = (ref: string) => mutateNote(ref, (n) => (n ? { ...n, archived: true } : null));
-  const restoreNote = (ref: string) => mutateNote(ref, (n) => (n ? { ...n, archived: false, at: new Date().toISOString() } : null));
-  const deleteNoteForever = (ref: string) => mutateNote(ref, () => null);
+  const mutateNote = (ref: string, op: "save" | "archive" | "restore" | "delete", optimistic: RegNote | null, body: Record<string, unknown> = {}) => {
+    const k = noteKey(ref); const d = date;
+    setNoteOverlay((prev) => ({ ...prev, [k]: optimistic }));
+    regPost(d, ref, "note", { op, ...body })
+      .then(() => refreshDay(d))
+      .catch((e) => setError(e instanceof Error ? e.message : t("registers.couldntUpdate")))
+      .finally(() => setNoteOverlay((prev) => { const n = { ...prev }; delete n[k]; return n; }));
+  };
+  const saveNote = (ref: string, text: string, shareParent = false) =>
+    mutateNote(ref, "save", text.trim() ? { text: text.trim(), at: new Date().toISOString(), by: meName, archived: false, shareParent } : null, { text: text.trim(), shareParent });
+  const archiveNote = (ref: string) => { const n = notes[noteKey(ref)]; if (n) mutateNote(ref, "archive", { ...n, archived: true }); };
+  const restoreNote = (ref: string) => { const n = notes[noteKey(ref)]; if (n) mutateNote(ref, "restore", { ...n, archived: false, at: new Date().toISOString() }); };
+  const deleteNoteForever = (ref: string) => mutateNote(ref, "delete", null);
 
   const [loadFailed, setLoadFailed] = useState(false);
   const refresh = useCallback(() => {
@@ -767,6 +899,58 @@ export function RegistersApp() {
       .catch((e) => setError(e instanceof Error ? e.message : t("registers.failedToLoad")));
   }, [WINDOW]);
   useEffect(() => { refresh(); }, [refresh]);
+
+  // One-off: anything jotted into this browser before notes moved to the server
+  // is uploaded for the days now loaded — one at a time (they share a register
+  // doc), archived notes too — and only the ones that landed are cleared here.
+  // An old key made against a whole joint booking maps to its first sibling.
+  useEffect(() => {
+    const loaded = Object.keys(days);
+    if (!loaded.length || readOnly) return;
+    const find = (d: string, ref: string) => {
+      for (const sess of days[d] ?? []) {
+        const exact = sess.attendees.find((a) => a.ref === ref);
+        if (exact) return { blockId: sess.blockId, key: exact.ref, sess };
+        const sib = sess.attendees.find((a) => a.bookingRef === ref);
+        if (sib) return { blockId: sess.blockId, key: sib.ref, sess };
+      }
+      return null;
+    };
+    type Job = { store: string; oldKey: string; run: () => Promise<unknown> };
+    const jobs: Job[] = [];
+    for (const [k, v] of Object.entries(loadNotes())) {
+      const hit = find(k.slice(0, 10), k.slice(11)); if (!hit) continue;
+      if (hit.sess.notes?.[hit.key]) { jobs.push({ store: NOTES_KEY, oldKey: k, run: async () => {} }); continue; }
+      const base = `/api/registers/${encodeURIComponent(hit.blockId)}/${k.slice(0, 10)}/note`;
+      jobs.push({ store: NOTES_KEY, oldKey: k, run: async () => { await apiPost(base, { ref: hit.key, op: "save", text: v.text, shareParent: !!v.shareParent }); if (v.archived) await apiPost(base, { ref: hit.key, op: "archive" }); } });
+    }
+    for (const [k, v] of Object.entries(loadNappies())) {
+      const hit = find(k.slice(0, 10), k.slice(11)); if (!hit) continue;
+      if (hit.sess.nappies?.[hit.key]?.length) { jobs.push({ store: NAPPY_KEY, oldKey: k, run: async () => {} }); continue; }
+      jobs.push({ store: NAPPY_KEY, oldKey: k, run: async () => { for (const c of v) await apiPost(`/api/registers/${encodeURIComponent(hit.blockId)}/${k.slice(0, 10)}/nappy`, { ref: hit.key, at: c.at }); } });
+    }
+    for (const [k, at] of Object.entries(loadNudges())) {
+      const hit = find(k.slice(0, 10), k.slice(11)); if (!hit) continue;
+      if (hit.sess.nudges?.[hit.key]) { jobs.push({ store: NUDGES_KEY, oldKey: k, run: async () => {} }); continue; }
+      jobs.push({ store: NUDGES_KEY, oldKey: k, run: () => apiPost(`/api/registers/${encodeURIComponent(hit.blockId)}/${k.slice(0, 10)}/nudge`, { refs: [hit.key], at }) });
+    }
+    if (!jobs.length) return;
+    let alive = true;
+    void (async () => {
+      const done: Record<string, string[]> = {};
+      for (const j of jobs) {
+        if (!alive) break;
+        try { await j.run(); (done[j.store] ??= []).push(j.oldKey); } catch { /* left in place — tried again next time */ }
+      }
+      for (const [store, keys] of Object.entries(done)) {
+        try { const o = JSON.parse(localStorage.getItem(store) || "{}"); for (const x of keys) delete o[x]; localStorage.setItem(store, JSON.stringify(o)); } catch { /* ignore */ }
+      }
+      for (const d of new Set(jobs.map((j) => j.oldKey.slice(0, 10)))) void refreshDay(d);
+    })();
+    return () => { alive = false; };
+  // Only when the set of loaded days changes — not on every register tick.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [Object.keys(days).join(","), readOnly]);
   // Fetch a single day the initial 10-day window didn't cover (calendar jumps /
   // arrowing past the window). Cached once loaded, so it only fetches once.
   const ensureDay = useCallback(async (d: string) => {
@@ -781,19 +965,62 @@ export function RegistersApp() {
   useRealtime(["registers", "bookings", "blocks"], refresh);
 
   async function mark(blockId: string, ref: string, action: Action) {
+    // Collecting (not un-collecting): ask who took the child — the register
+    // recorded the time but never the person (acceptance test d10s1).
+    let collectedBy: string | undefined;
+    const row = (days[date] ?? []).find((s) => s.blockId === blockId)?.attendees.find((a) => a.ref === ref);
+    if (action === "collect" && !row?.attendance?.collectedAt && typeof window !== "undefined") {
+      const who = window.prompt(t("registers.collectedByPrompt", { name: row?.children?.[0]?.name ?? "" }), row?.booker ?? "");
+      if (who === null) return; // cancelled — don't sign them out
+      collectedBy = who.trim() || undefined;
+    }
     setBusyRef(ref); setError(null);
-    try { await apiPost(`/api/registers/${encodeURIComponent(blockId)}/${date}/mark`, { ref, action }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : t("registers.couldntUpdate")); }
+    const now = new Date().toISOString();
+    const before = days[date];
+    const wire = wireFor(row?.attendance, action);
+    const from = markFrom(row?.attendance);
+    // Flip the row before the request goes out.
+    setDays((prev) => {
+      const list = prev[date];
+      if (!list) return prev;
+      return { ...prev, [date]: list.map((s) => {
+        if (s.blockId !== blockId || !s.attendees.some((a) => a.ref === ref)) return s;
+        const attendees = s.attendees.map((a) => (a.ref === ref ? { ...a, attendance: applyAction(a.attendance, wire, now) } : a));
+        return { ...s, attendees, counts: recount(attendees, s.counts.expected) };
+      }) };
+    });
+    try {
+      await apiPost(`/api/registers/${encodeURIComponent(blockId)}/${date}/mark`, { ref, action: wire, from, ...(collectedBy ? { collectedBy } : {}) });
+      await refreshDay(date);
+    } catch (e) {
+      if (before) setDays((prev) => ({ ...prev, [date]: before }));   // put the row back
+      setError(e instanceof Error ? e.message : t("registers.couldntUpdate"));
+      // Someone else marked this child since this screen loaded — show what
+      // the register really says now, rather than our stale copy.
+      if (e instanceof ApiError && e.status === 409) void refreshDay(date).catch(() => {});
+    }
     setBusyRef(null);
   }
+  // Bulk marks send the same explicit state for every row. A row a colleague
+  // has changed since this screen loaded is SKIPPED (409) rather than
+  // overwritten, and the rest carry on; the screen then refreshes.
+  async function markMany(items: { blockId: string; a: Attendee }[], action: WireAction): Promise<number> {
+    let skipped = 0;
+    for (const it of items) {
+      try { await apiPost(`/api/registers/${encodeURIComponent(it.blockId)}/${date}/mark`, { ref: it.a.ref, action, from: markFrom(it.a.attendance) }); }
+      catch (e) { if (e instanceof ApiError && e.status === 409) skipped++; else throw e; }
+    }
+    return skipped;
+  }
+  const skippedMsg = (n: number) => (n ? `${n} ${n === 1 ? "child was" : "children were"} changed on another device and left as they are — the register has been refreshed.` : null);
   async function signAllIn(items: { blockId: string; a: Attendee }[]) {
     setBulkBusy("all"); setError(null);
-    try { for (const it of items) await apiPost(`/api/registers/${encodeURIComponent(it.blockId)}/${date}/mark`, { ref: it.a.ref, action: "in" }); refresh(); }
-    catch (e) { setError(e instanceof Error ? e.message : t("registers.couldntUpdate")); }
+    try { const skipped = await markMany(items, "in"); await refreshDay(date); setError(skippedMsg(skipped)); }
+    catch (e) { setError(e instanceof Error ? e.message : t("registers.couldntUpdate")); void refreshDay(date).catch(() => {}); }
     setBulkBusy(null);
   }
   async function logHead(s: Session, n: number) {
-    try { await apiPost(`/api/registers/${encodeURIComponent(s.blockId)}/${date}/headcount`, { n }); refresh(); }
+    try { await apiPost(`/api/registers/${encodeURIComponent(s.blockId)}/${date}/headcount`, { n }); await refreshDay(date); }
     catch (e) { setError(e instanceof Error ? e.message : t("registers.couldntLogHeadCount")); }
   }
   // Messaging deep-links into the Messages composer, pre-addressed. "All
@@ -898,23 +1125,30 @@ export function RegistersApp() {
     : sort === "old" ? (x, y) => ((ageOf(y.a) ?? -1) - (ageOf(x.a) ?? -1)) || byName(x, y)
     : (x, y) => ((ageOf(x.a) ?? 999) - (ageOf(y.a) ?? 999)) || byName(x, y);
   const hasFlag = (a: Attendee, k: FlagKind) => k === "allergy" ? !!a.child?.allergies : k === "medical" ? !!a.child?.medical : k === "dietary" ? !!a.child?.dietary : k === "send" ? !!(a.child?.send || a.child?.sendPlanName) : k === "nappy" ? needsNappies(questions, a.child?.answers) : true;
-  const flatShown = flat
+  // A collected child is "out"; otherwise present / not-arrived / absent.
+  const galStat = (a: Attendee): "present" | "absent" | "notArrived" | "collected" => (a.attendance?.collectedAt ? "collected" : st(a));
+  // Everything EXCEPT the attendance filter. The menu's per-state counts are
+  // taken from here, or picking "Collected" would knock every other state's
+  // number to zero and you couldn't see what you were switching to.
+  const preAttend = flat
     .filter((r) => matchPass(pass, r))
     .filter(({ a }) => !flag || hasFlag(a, flag))
     .filter(({ a }) => !addonsOnly || (a.addons?.length ?? 0) > 0)
     .filter(({ a }) => !term || a.children.some((c) => c.name.toLowerCase().includes(term)) || a.booker.toLowerCase().includes(term))
     .slice()
     .sort(cmp);
-  // Photos view — same filtered set, sub-filtered by attendance state (a
-  // collected child is "Out", otherwise present / not-arrived / absent).
-  const galStat = (a: Attendee): "present" | "absent" | "notArrived" | "collected" => (a.attendance?.collectedAt ? "collected" : st(a));
-  const galRows = view === "gallery" ? flatShown.filter(({ a }) => galFilter === "all" || galStat(a) === galFilter) : flatShown;
+  // Attendance state now filters BOTH views. It used to be gallery-only pills;
+  // adding a second attendance control to the Filter menu would have let the
+  // two disagree ("Collected" in the menu, "Absent" in the pills → no rows and
+  // no way to see why). One piece of state, two places to drive it.
+  const flatShown = preAttend.filter(({ a }) => galFilter === "all" || galStat(a) === galFilter);
+  const galRows = flatShown;
   const galCounts = {
-    all: flatShown.length,
-    present: flatShown.filter(({ a }) => galStat(a) === "present").length,
-    notArrived: flatShown.filter(({ a }) => galStat(a) === "notArrived").length,
-    absent: flatShown.filter(({ a }) => galStat(a) === "absent").length,
-    collected: flatShown.filter(({ a }) => galStat(a) === "collected").length,
+    all: preAttend.length,
+    present: preAttend.filter(({ a }) => galStat(a) === "present").length,
+    notArrived: preAttend.filter(({ a }) => galStat(a) === "notArrived").length,
+    absent: preAttend.filter(({ a }) => galStat(a) === "absent").length,
+    collected: preAttend.filter(({ a }) => galStat(a) === "collected").length,
   };
   // Row selection → bulk In / Out / Absent.
   const shownRefs = flatShown.map(({ a }) => a.ref);
@@ -925,8 +1159,8 @@ export function RegistersApp() {
     const items = flatShown.filter(({ a }) => selected.has(a.ref));
     if (!items.length) return;
     setBulkBusy(action); setError(null);
-    try { for (const it of items) await apiPost(`/api/registers/${encodeURIComponent(it.blockId)}/${date}/mark`, { ref: it.a.ref, action }); refresh(); setSelected(new Set()); }
-    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update the register"); }
+    try { const skipped = await markMany(items, action); await refreshDay(date); setSelected(new Set()); setError(skippedMsg(skipped)); }
+    catch (e) { setError(e instanceof Error ? e.message : "Couldn’t update the register"); void refreshDay(date).catch(() => {}); }
     setBulkBusy(null);
   }
   // Counts for the filter tags (over the whole day / current pass, pre-search).
@@ -949,7 +1183,9 @@ export function RegistersApp() {
   const passBlocks = daySessions.filter((s) => matchPass(pass, s));
   const agg = passBlocks.reduce((o, s) => ({ expected: o.expected + s.counts.expected, present: o.present + s.counts.present, notArrived: o.notArrived + s.counts.notArrived, absent: o.absent + s.counts.absent, collectedCount: o.collectedCount + s.counts.collected }), { expected: 0, present: 0, notArrived: 0, absent: 0, collectedCount: 0 });
   const pct = agg.expected ? Math.round((agg.present / agg.expected) * 100) : 0;
-  const presentAll = passBlocks.flatMap((s) => s.attendees.filter((a) => st(a) === "present"));
+  // On site NOW: signed in and not yet collected — in an emergency roll call a
+  // child who has gone home is not someone to find (acceptance test d10s9).
+  const presentAll = passBlocks.flatMap((s) => s.attendees.filter((a) => st(a) === "present" && !a.attendance?.collectedAt));
   const allHeads = passBlocks.flatMap((s) => s.heads).slice().sort((a, b) => a.at.localeCompare(b.at));
   const lastHead = allHeads.at(-1);
   const notInRefs = flat.filter(inPass).filter((r) => st(r.a) === "notArrived");
@@ -1072,8 +1308,17 @@ export function RegistersApp() {
                   )}
                   <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("registers.searchThisRegister")} className="w-[210px] rounded-lg border border-white/30 bg-white/10 px-3 py-1.5 text-[12.5px] text-white outline-none placeholder:text-white/55 focus:border-white/70" />
 
-                  <Menu label={`⚗ ${t("registers.filter")}`} on={!!flag || addonsOnly} badge={(flag ? 1 : 0) + (addonsOnly ? 1 : 0)} width={264} dark>
+                  <Menu label={`⚗ ${t("registers.filter")}`} on={!!flag || addonsOnly || galFilter !== "all"} badge={(flag ? 1 : 0) + (addonsOnly ? 1 : 0) + (galFilter !== "all" ? 1 : 0)} width={264} dark>
                     {(close) => (<>
+                      {/* Attendance state first — on the day, "who's still to
+                          arrive" is asked far more than "who has an allergy".
+                          Labels and colours are the gallery pills' own, so the
+                          two controls can't drift apart. */}
+                      {([["present", t("registers.galCheckedIn"), GREEN], ["collected", t("registers.galCollected"), BLUE], ["notArrived", t("registers.galNotInYet"), AMBER], ["absent", t("registers.galAbsent"), RED]] as const).map(([k, label, dot]) => (
+                        <MenuItem key={k} on={galFilter === k} dot={dot} hint={galCounts[k]}
+                          onClick={() => { setGalFilter(galFilter === k ? "all" : k); close(); }}>{label}</MenuItem>
+                      ))}
+                      <div className="my-1 h-px bg-[var(--line)]" />
                       <div className="px-2.5 pb-1 pt-1 text-[10px] font-bold uppercase tracking-[0.1em] text-[var(--ink-3)]">{t("registers.showOnlyChildrenWith")}</div>
                       {FLAGS.filter((f) => f.k !== "nappy" || flagCounts.nappy).map((f) => (
                         <MenuItem key={f.k} on={flag === f.k} dot={f.fg} hint={flagCounts[f.k as keyof typeof flagCounts] || 0}
@@ -1084,9 +1329,9 @@ export function RegistersApp() {
                         <MenuItem on={addonsOnly} hint={flat.filter((r) => (r.a.addons?.length ?? 0) > 0).length}
                           onClick={() => setAddonsOnly((v) => !v)}>🧩 {t("registers.addonsOnly")}</MenuItem>
                       </>)}
-                      {(flag || addonsOnly) && (<>
+                      {(flag || addonsOnly || galFilter !== "all") && (<>
                         <div className="my-1 h-px bg-[var(--line)]" />
-                        <button type="button" onClick={() => { setFlag(""); setAddonsOnly(false); close(); }} className="w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] font-bold text-[#c02636] hover:bg-[var(--panel)]">{t("registers.clearFilters")}</button>
+                        <button type="button" onClick={() => { setFlag(""); setAddonsOnly(false); setGalFilter("all"); close(); }} className="w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] font-bold text-[#c02636] hover:bg-[var(--panel)]">{t("registers.clearFilters")}</button>
                       </>)}
                       <p className="px-2.5 pb-1 pt-1.5 text-[11px] leading-snug text-[var(--ink-3)]">{t("registers.pickingOneShows")}</p>
                     </>)}
@@ -1128,7 +1373,7 @@ export function RegistersApp() {
             <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] px-4 py-10 text-center text-[13px] text-[var(--ink-3)]">{days[date] === undefined ? t("registers.loadingDay", { day: dayLabel(date) }) : t("registers.nothingRunsForListing", { listing: activeName, day: dayLabel(date) })}</div>
           ) : (
             <>
-              {rollCall && <RollCallDialog expected={agg.expected} present={agg.present} presentAll={presentAll} heads={allHeads} readOnly={readOnly} onLog={(n) => logHead(passBlocks[0], n)} onClose={() => setRollCall(false)} />}
+              {rollCall && <RollCallDialog expected={agg.expected} present={presentAll.length} presentAll={presentAll} heads={allHeads} readOnly={readOnly} onLog={(n) => logHead(passBlocks[0], n)} onClose={() => setRollCall(false)} />}
 
               {/* ONE flat table for the day — blue/white card */}
               <div className="mb-3 overflow-hidden rounded-2xl border border-[#dbe6fb] bg-[var(--surface)] shadow-[0_10px_30px_-18px_rgba(29,58,143,.45)]">
@@ -1257,11 +1502,21 @@ function RollCallDialog({ expected, present, presentAll, heads, readOnly, onLog,
 
 // A compact attendance button (In / Out / Absent) — soft tinted when active, so
 // it reads clearly without shouting.
-function StBtn({ label, active, tint, soft, disabled, onClick }: { label: string; active: boolean; tint: string; soft: string; disabled?: boolean; onClick: () => void }) {
+// `wide` gives the row's primary action (In) twice the width and a bigger label,
+// so there's one obvious target on a tablet instead of three identical ones.
+// Collect and Absent stay visible rather than moving behind an overflow menu —
+// burying them would turn a one-tap action into two, mid-register.
+// The ACTIVE state is filled, not outlined. A pale outline on white among eight
+// other pale outlines gave the row no focal point — you had to read every box to
+// find the one that was on. Solid colour makes the answer pre-attentive, and
+// drops the inactive two back to where they belong.
+function StBtn({ label, active, tint, disabled, wide, onClick }: { label: string; active: boolean; tint: string; disabled?: boolean; wide?: boolean; onClick: () => void }) {
   return (
     <button type="button" disabled={disabled} onClick={onClick}
-      className="h-7 flex-1 rounded-lg border text-[11.5px] font-bold transition disabled:opacity-40"
-      style={active ? { borderColor: tint, background: soft, color: tint } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-3)" }}>
+      className={"h-9 rounded-lg border font-bold transition disabled:opacity-40 " + (wide ? "flex-[2] text-[13px]" : "flex-1 text-[11.5px]")}
+      style={active
+        ? { borderColor: tint, background: tint, color: "#fff", boxShadow: `0 1px 2px ${tint}55` }
+        : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-3)" }}>
       {active ? "✓ " : ""}{label}
     </button>
   );
@@ -1411,7 +1666,13 @@ function QuickActionsMenu({ acts, onMsg, onMed, onAccident, onIncident, onMoment
   if (!links.length) return null;
   return (
     <div className="md:text-right">
-      <button type="button" onClick={() => setOpen((o) => !o)} className="inline-flex items-center gap-1.5 rounded-full border border-[#c9dcfa] bg-gradient-to-r from-[#eef4ff] to-[#f6ecff] px-3.5 py-1.5 text-[12px] font-extrabold text-[#1d3a8f] shadow-sm transition hover:brightness-[0.98]">⚡ {t("registers.quickActions")} <span className="text-[9px]">{open ? "▲" : "▼"}</span></button>
+      {/* Secondary, and now dressed like it. The gradient pill carried as much
+          weight as the attendance buttons despite being the thing you reach for
+          least — it's a ghost until you're on the row (or it's open). */}
+      <button type="button" onClick={() => setOpen((o) => !o)}
+        className={"inline-flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12px] font-extrabold transition-colors " + (open
+          ? "border-[#c9dcfa] bg-[#eef4ff] text-[#1d3a8f]"
+          : "border-transparent text-[var(--ink-3)] group-hover:border-[#c9dcfa] group-hover:bg-[#eef4ff] group-hover:text-[#1d3a8f]")}>⚡ {t("registers.quickActions")} <span className="text-[9px]">{open ? "▲" : "▼"}</span></button>
       {open && <div className="mt-1.5 flex flex-wrap gap-1.5 md:justify-end">{links}</div>}
     </div>
   );
@@ -1422,59 +1683,88 @@ function Row({ a, start, end, showTimes, busy, age, flag, acts, note, showConsen
   const state = st(a); const c = a.child; const collected = !!a.attendance?.collectedAt; const kid = a.children[0];
   const lastNappy = nappyLog.at(-1); const nappyCount = nappyLog.length;
   const flagText = flag === "allergy" ? c?.allergies : flag === "medical" ? c?.medical : flag === "dietary" ? c?.dietary : flag === "send" ? (c?.send || (c?.sendPlanName ? t("registers.sendPlanOnFile") : "")) : flag === "nappy" ? (lastNappy ? t("registers.lastChangeBy", { time: timeOf(lastNappy.at), name: lastNappy.by }) : t("registers.noChangeLoggedYet")) : "";
-  const fs = flag === "allergy" ? { bg: "#fde2e4", fg: "#c02636" } : flag === "medical" ? { bg: "#e0e9ff", fg: BLUE } : flag === "dietary" ? { bg: "#dcfce7", fg: "#15803d" } : { bg: "#f3e8ff", fg: "#6d28d9" };
+  // Outlined to match AlertSq — this chip carries the fact's actual text, which
+  // is the longest thing in the column and suffered most from the fill.
+  const fs = flag === "allergy" ? { bd: "#f3c6c1", fg: "#c02636" } : flag === "medical" ? { bd: "#c9d8f6", fg: BLUE } : flag === "dietary" ? { bd: "#bfe6cf", fg: "#15803d" } : { bd: "#e2d3f7", fg: "#6d28d9" };
   const inAt = showTimes && a.attendance?.inAt ? timeOf(a.attendance.inAt) : "";
   const outAt = showTimes && a.attendance?.collectedAt ? timeOf(a.attendance.collectedAt) : "";
+  const tone = rowTone(a);
   return (
-    <div data-ui="card" className="grid grid-cols-1 items-center gap-3 border-b border-[var(--line)] px-4 py-3 transition-colors last:border-b-0 md:grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)]" style={selected ? { background: "#eef4fd" } : undefined}>
-      <div className="flex min-w-0 items-center gap-2.5">
-        <input type="checkbox" checked={selected} onChange={onSelect} aria-label={t("registers.selectChild", { name: kid?.name ?? "" })} className="h-4 w-4 flex-none accent-[#1d3a8f]" />
-        <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
-          {c?.photo
-            // eslint-disable-next-line @next/next/no-img-element
-            ? <img src={c.photo} alt="" className="h-11 w-11 flex-none rounded-2xl object-cover ring-2 ring-white shadow-sm" />
-            : <span className="flex h-11 w-11 flex-none items-center justify-center rounded-2xl text-[14px] font-extrabold text-[var(--ink)] ring-1 ring-[var(--line)]" style={{ background: avBg(kid?.name ?? "?") }}>{(kid?.name ?? "?").slice(0, 1)}</span>}
-          <div className="min-w-0">
-            <div className="truncate text-[13.5px] font-extrabold">
-              {a.children.map((k) => k.name).join(", ")}
-              {nappy && <span className="ml-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold align-middle" style={{ background: "#f3e8ff", color: "#6d28d9" }} title={t("registers.notToiletTrainedNappy")}>🚼 {t("registers.nappies")}</span>}
-              {" "}<span className="text-[11px] font-bold text-[#1d3a8f]">{t("registers.view")} ›</span>
-            </div>
-            <div className="truncate text-[11.5px] text-[var(--ink-3)]">{age != null ? t("registers.ageDot", { age }) : ""}<span className="font-bold text-[var(--ink-2)]">🕒 {start}–{end}</span></div>
-            {nappy && (
-              <div className="truncate text-[11px]" style={{ color: "#6d28d9" }}>
-                {lastNappy ? <>{t("registers.changedBy", { time: timeOf(lastNappy.at), name: lastNappy.by })}{nappyCount > 1 ? t("registers.nTodaySuffix", { n: nappyCount }) : ""}</> : <span className="text-[var(--ink-3)]">{t("registers.noChangeLoggedYetToday")}</span>}
+    // The 4px status stripe and the faint wash are the whole point of this row:
+    // nine outlined boxes all at the same weight meant you had to READ a row to
+    // know its state. Now the colour down the left says it before you do.
+    // Selection still wins outright — it's a thing you're doing, not a state the
+    // child is in. `group` lets Quick actions stay quiet until you're on the row.
+    <div data-ui="card" className="group relative grid grid-cols-1 items-center gap-3 border-b border-[var(--line)] py-3 pl-5 pr-4 transition-colors last:border-b-0 md:grid-cols-[minmax(190px,1.3fr)_84px_minmax(200px,210px)_minmax(230px,1fr)]"
+      style={selected ? { background: "#eef4fd" } : { background: `color-mix(in srgb, ${tone.c} 4%, transparent)` }}>
+      <span aria-hidden className="absolute inset-y-0 left-0 w-[4px]" style={{ background: tone.c, opacity: tone.key === "notArrived" ? 0.35 : 0.9 }} />
+      {/* Left cell is a COLUMN: the name button on the top line, the collection
+          PIN on its own line beneath. The PIN is interactive (tap to reveal), so
+          it cannot live inside the name button — nested buttons are invalid and
+          tapping the PIN would open the child card. It's indented to the avatar's
+          width instead, which lines it up under the name. */}
+      <div className="flex min-w-0 items-start gap-2.5">
+        <input type="checkbox" checked={selected} onChange={onSelect} aria-label={t("registers.selectChild", { name: kid?.name ?? "" })} className="mt-4 h-4 w-4 flex-none accent-[#1d3a8f]" />
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <button type="button" onClick={onOpen} className="flex min-w-0 items-center gap-3 text-left">
+              {c?.photo
+                // eslint-disable-next-line @next/next/no-img-element
+                // The ring carries the status colour too — at a glance the photo
+                // itself tells you whether they're in, out or still expected.
+                ? <img src={c.photo} alt="" className="h-12 w-12 flex-none rounded-2xl object-cover shadow-sm" style={{ boxShadow: `0 0 0 2px ${tone.c}` }} />
+                : <span className="flex h-12 w-12 flex-none items-center justify-center rounded-2xl text-[15px] font-extrabold text-[var(--ink)]" style={{ background: avBg(kid?.name ?? "?"), boxShadow: `0 0 0 2px ${tone.c}` }}>{(kid?.name ?? "?").slice(0, 1)}</span>}
+              <div className="min-w-0">
+                {/* No "view ›" affordance: the whole block is already the button,
+                    so it was a second label for what the name itself does. */}
+                <div className="truncate text-[15px] font-extrabold leading-tight">
+                  {a.children.map((k) => k.name).join(", ")}
+                  {nappy && <span className="ml-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold align-middle" style={{ background: "#f3e8ff", color: "#6d28d9" }} title={t("registers.notToiletTrainedNappy")}>🚼 {t("registers.nappies")}</span>}
+                  {a.cancelledOnSite && <span className="ml-1.5 whitespace-nowrap rounded-md px-1.5 py-0.5 text-[10.5px] font-extrabold align-middle" style={{ background: "#fdecea", color: "#c02636" }} title={t("registers.cancelledOnSiteTip")}>⚠ {t("registers.cancelledOnSite")}</span>}
+                </div>
+                <div className="mt-0.5 truncate text-[11.5px] text-[var(--ink-3)]">{age != null ? t("registers.ageDot", { age }) : ""}<span className="font-bold text-[var(--ink-2)]">🕒 {start}–{end}</span></div>
+                {nappy && (
+                  <div className="truncate text-[11px]" style={{ color: "#6d28d9" }}>
+                    {lastNappy ? <>{t("registers.changedBy", { time: timeOf(lastNappy.at), name: lastNappy.by })}{nappyCount > 1 ? t("registers.nTodaySuffix", { n: nappyCount }) : ""}</> : <span className="text-[var(--ink-3)]">{t("registers.noChangeLoggedYetToday")}</span>}
+                  </div>
+                )}
               </div>
-            )}
+            </button>
+            <span className="ml-auto flex flex-none items-center gap-1.5">
+              {nappy && !readOnlyRow && (
+                <button type="button" onClick={onLogNappy} title={t("registers.logNappyChangeStamp")}
+                  className="grid h-7 w-7 place-items-center rounded-lg border text-[13px]" style={{ borderColor: "#e2d3f7", background: "#faf5ff", color: "#6d28d9" }} aria-label={t("registers.logNappyChange")}>🚼</button>
+              )}
+              {showLikes && <LikesChip likes={c?.likes} dislikes={c?.dislikes} />}
+              {showConsent && c?.photoConsent != null && <PhotoConsentChip ok={!!c.photoConsent} />}
+              <NoteChip note={note} onClick={onOpenNote} />
+            </span>
           </div>
-        </button>
-        <span className="ml-auto flex flex-none items-center gap-1.5">
-          {nappy && !readOnlyRow && (
-            <button type="button" onClick={onLogNappy} title={t("registers.logNappyChangeStamp")}
-              className="grid h-7 w-7 place-items-center rounded-lg border text-[13px]" style={{ borderColor: "#e2d3f7", background: "#faf5ff", color: "#6d28d9" }} aria-label={t("registers.logNappyChange")}>🚼</button>
-          )}
-          {showLikes && <LikesChip likes={c?.likes} dislikes={c?.dislikes} />}
-          {showConsent && c?.photoConsent != null && <PhotoConsentChip ok={!!c.photoConsent} />}
-          {c?.collectionPassword && <CollectPin pw={c.collectionPassword} />}
-          <NoteChip note={note} onClick={onOpenNote} />
-        </span>
+          {c?.collectionPassword && <div className="mt-1.5 min-w-0 pl-[60px]"><CollectPin pw={c.collectionPassword} /></div>}
+        </div>
       </div>
       <div className="flex flex-wrap gap-1.5 md:justify-start">
         {flag
-          ? (flagText ? <span className="rounded-md px-2 py-1 text-[11px] font-bold leading-tight" style={{ background: fs.bg, color: fs.fg }}>{flagText}</span> : <span className="text-[12px] text-[var(--ink-3)]">—</span>)
+          ? (flagText ? <span className="rounded-xl border px-2 py-1 text-[11px] font-bold leading-tight" style={{ borderColor: fs.bd, color: fs.fg }}>{flagText}</span> : null)
           : <>
+              {/* No "—" when a child has nothing flagged: an em dash floating in
+                  an empty column read as a hole in the row, and "no alerts" is
+                  better said by the absence of chips than by a placeholder. */}
               {c?.allergies && <AlertSq kind="allergy" text={t("registers.allergyColon", { value: c.allergies })} />}
               {c?.medical && <AlertSq kind="medical" text={t("registers.medicalColon", { value: c.medical })} />}
+              {!!c?.medications?.length && <AlertSq kind="medicine" text={t("registers.medicineColon", { value: c.medications.map((m) => `${m.name} ${m.dose}${m.schedule ? ` (${m.schedule})` : m.asNeeded ? " (as needed)" : ""}`).join("; ") })} />}
               {(c?.send || c?.sendPlanName) && <AlertSq kind="send" text={t("registers.sendNeeds")} />}
-              {!c?.allergies && !c?.medical && !c?.send && !c?.sendPlanName && <span className="text-[12px] text-[var(--ink-3)]">—</span>}
+              {/* Allowed to leave on their own — the person signing them out
+                  needs this on the row, not a tap away in the child card. */}
+              {c?.walkHomeConsent === true && <AlertSq kind="walk" text={`${t("registers.walkHome")}: ${t("registers.yes")}`} />}
             </>}
       </div>
-      {/* Attendance — three compact buttons */}
+      {/* Attendance — In is the primary, at double width. */}
       <div>
         <div className="flex gap-1">
-          <StBtn label={t("registers.inBtn")} active={state === "present" || collected} tint={GREEN} soft="#e7f6ee" disabled={busy} onClick={() => onMark("in")} />
-          <StBtn label={t("registers.collectBtn")} active={collected} tint={BLUE} soft="#eef4fd" disabled={busy || (state !== "present" && !collected)} onClick={() => onMark("collect")} />
-          <StBtn label={t("registers.absentBtn")} active={state === "absent"} tint={RED} soft="#fde2e4" disabled={busy} onClick={() => onMark(state === "absent" ? "reset" : "absent")} />
+          <StBtn label={t("registers.inBtn")} wide active={state === "present" || collected} tint={GREEN} disabled={busy} onClick={() => onMark("in")} />
+          <StBtn label={t("registers.collectBtn")} active={collected} tint={BLUE} disabled={busy || (state !== "present" && !collected)} onClick={() => onMark("collect")} />
+          <StBtn label={t("registers.absentBtn")} active={state === "absent"} tint={RED} disabled={busy} onClick={() => onMark(state === "absent" ? "reset" : "absent")} />
         </div>
         {(inAt || outAt) && <div className="mt-1 text-center text-[10.5px] font-semibold text-[var(--ink-3)]">{inAt && `${t("registers.inShort")} ${inAt}`}{inAt && outAt ? " · " : ""}{outAt && `${t("registers.outShort")} ${outAt}`}</div>}
       </div>

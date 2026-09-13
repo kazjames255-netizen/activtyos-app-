@@ -5,16 +5,29 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 // ─────────────────────────────────────────────────────────────────────────
 // Gmail-style bright backgrounds for an operator surface (Messages, Email, …).
 // Each theme sets the page wash (shows around the white cards) and a matching
-// hero band; the cards stay opaque white so text always reads. "Classic" is
-// the original blue/pink wash. The choice is per-browser (localStorage), keyed
-// per-surface so each area can have its own look.
+// hero band; the cards stay opaque white so text always reads.
+// The choice is per-browser (localStorage), keyed
+// per-surface so each area can have its own look. "App default" is no wash
+// at all — the house light ground and navy hero the rest of the app uses.
 // ─────────────────────────────────────────────────────────────────────────
 export interface SurfaceTheme { id: string; name: string; swatch: string; page: string; hero: string }
 
 export const SURFACE_THEMES: SurfaceTheme[] = [
   {
-    // Wigglekit — the site's dark navy ground with a pink/indigo glow. Default,
-    // so Email/Messages match the marketing site out of the box.
+    // The house look — no wash at all: the app's light ground and the standard
+    // navy hero band, the same as the Dashboard, the sidebar and every other
+    // operator page. Listed first and used as the fallback, so a surface nobody
+    // has themed matches the rest of the app instead of standing out.
+    // `var(--hero-grad)` rather than a literal gradient, so the head-office
+    // black theme (which redefines that token) still takes.
+    id: "default", name: "App default",
+    swatch: "linear-gradient(120deg,#16306e 0%,#274ba3 58%,#3f78d8 100%)",
+    page: "var(--bg)",
+    hero: "var(--hero-grad)",
+  },
+  {
+    // Wigglekit — the site's dark navy ground with a pink/indigo glow, for
+    // matching the marketing site. Was the default until "App default" landed.
     id: "classic", name: "Wigglekit",
     swatch: "linear-gradient(135deg,#080B1E,#111A3A 55%,#FF3D7F)",
     page: "radial-gradient(130% 85% at 0% 0%, rgba(255,61,127,.12) 0%, transparent 52%), radial-gradient(115% 80% at 100% 0%, rgba(63,107,216,.12) 0%, transparent 46%), linear-gradient(180deg,#080B1E 0%,#0A0F26 100%)",
@@ -85,7 +98,7 @@ export const SURFACE_THEMES: SurfaceTheme[] = [
 const ACCENT = "#ee1f63"; // brand pink — active ring + tick
 
 // The saved theme id is external state (localStorage), read via
-// useSyncExternalStore so it's SSR-safe (server → "classic", client re-reads
+// useSyncExternalStore so it's SSR-safe (server → "default", client re-reads
 // after hydration) without a setState-in-effect. Same-tab writes notify these
 // listeners directly; cross-tab writes arrive via the "storage" event.
 const themeListeners = new Set<() => void>();
@@ -95,7 +108,7 @@ function subscribeTheme(cb: () => void) {
   return () => { themeListeners.delete(cb); if (typeof window !== "undefined") window.removeEventListener("storage", cb); };
 }
 function readThemeId(storageKey: string): string {
-  try { const s = localStorage.getItem(storageKey); return s && SURFACE_THEMES.some((t) => t.id === s) ? s : "classic"; } catch { return "classic"; }
+  try { const s = localStorage.getItem(storageKey); return s && SURFACE_THEMES.some((t) => t.id === s) ? s : "default"; } catch { return "default"; }
 }
 
 /**
@@ -105,11 +118,11 @@ function readThemeId(storageKey: string): string {
  *
  * The popover is positioned `fixed` from the button's rect so it escapes the
  * hero's `overflow-hidden` clip; it closes on scroll/resize so it can't hang
- * detached. Starts on "classic" for a stable first render, then hydrates the
+ * detached. Starts on "default" for a stable first render, then hydrates the
  * saved pick from localStorage (no SSR mismatch).
  */
 export function useSurfaceTheme(storageKey: string): { theme: SurfaceTheme; control: React.ReactNode } {
-  const themeId = useSyncExternalStore(subscribeTheme, () => readThemeId(storageKey), () => "classic");
+  const themeId = useSyncExternalStore(subscribeTheme, () => readThemeId(storageKey), () => "default");
   const [open, setOpen] = useState(false);
   const btnRef = useRef<HTMLButtonElement>(null);
   const [pos, setPos] = useState<{ top: number; right: number }>({ top: 0, right: 0 });

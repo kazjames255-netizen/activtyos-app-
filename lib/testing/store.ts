@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Results store for the 25-day test run.
+ * Results store for the 28-day test run.
  *
  * localStorage, deliberately: a platform account has no tenant, so there is no
  * per-tenant document to hang this on, and building a server store for it is
@@ -129,7 +129,7 @@ export function buildHandover(run: Run, owner: Owner): string {
 export function buildFullReport(run: Run): string {
   const p = progressOf(run);
   const out = [
-    `# 25-day test run`,
+    `# 28-day test run`,
     ``,
     `${p.done} of ${p.total} steps logged · ${p.pass} pass · ${p.fail} fail · ${p.blocked} blocked`,
     `Open: ${p.openForAmir} for Amir, ${p.openForTriage} to triage`,
@@ -143,7 +143,9 @@ export function buildFullReport(run: Run): string {
       const r = run[s.id];
       if (!r) continue;
       const mark = r.verdict === "pass" ? "PASS" : r.verdict === "fail" ? "FAIL" : "BLOCKED";
-      out.push(`- **${mark}** \`${s.id}\` ${s.action}${r.actual ? ` — got: ${r.actual}` : ""}${r.notes ? ` (${r.notes})` : ""}`);
+      // Who has each open item, and which are already dealt with (d28s9).
+      const tag = r.verdict === "pass" ? "" : r.resolved ? " · resolved" : ` · owner: ${r.owner === "amir" ? "Amir" : "triage"}`;
+      out.push(`- **${mark}**${tag} \`${s.id}\` ${s.action}${r.actual ? ` — got: ${r.actual}` : ""}${r.notes ? ` (${r.notes})` : ""}`);
     }
     out.push(``);
   }

@@ -11,21 +11,35 @@ import { db } from "../firebase";
 // always stamped server-side from the verified token — never from the body.
 export const platformLeads = Router();
 const col = db.collection("leads");
+// The `leads` collection also holds tens of thousands of researched prospects
+// (HQ → Leads). Only leads someone is actually working — created here, a demo
+// request, or moved on from HQ → Leads — carry `inPipeline`, and the board,
+// the live stream and the signup match read just those.
+const pipeline = () => col.where("inPipeline", "==", true);
 
 const SOURCES = ["cold_call", "email", "social", "referral", "event", "inbound"] as const;
 const PLANS = ["freelancer", "company", "franchise"] as const;
+/** What KIND of prospect this is — mirrors who actually buys: one person, a
+ *  business, a multi-site group, a school, a trust/cluster of schools, a
+ *  franchise network, or a community organisation. Drives the label on the
+ *  name field and how the pipeline reads. */
+const KINDS = ["person", "business", "group", "franchise", "school", "cluster", "charity"] as const;
 const STAGES = ["new", "contacted", "interested", "demo", "trial", "won", "lost"] as const;
 const ACTIVITY_TYPES = ["call", "email", "social", "demo", "note"] as const;
 
 // zod strips unknown keys, so a client re-sending a whole lead (id, activities,
 // timestamps and all) can never overwrite the server-owned fields.
 const leadSchema = z.object({
-  business: z.string().trim().min(1).max(160),
+  business: z.string().trim().min(1).max(160),   // the name — see `kind` for what it names
+  kind: z.enum(KINDS).default("business"),
   contactName: z.string().trim().max(120).default(""),
   email: z.string().trim().max(160).default(""),
   phone: z.string().trim().max(40).default(""),
   location: z.string().trim().max(120).default(""),
-  source: z.enum(SOURCES).default("cold_call"),
+  // Known channels (SOURCES) plus named lead sources such as a directory the
+  // prospect was found in ("eequ") — an enum here made the Sales board refuse
+  // to save any lead whose source it didn't list.
+  source: z.string().trim().min(1).max(60).default("cold_call"),
   owner: z.string().trim().max(80).default(""), // rep name (free text until a `sales` role exists)
   plan: z.enum(PLANS).default("company"),
   estMrr: z.number().min(0).max(100_000).default(0),
@@ -47,7 +61,7 @@ platformLeads.get("/", async (req, res) => {
     res.status(403).json({ error: "Requires the platform role" });
     return;
   }
-  const snap = await col.get();
+  const snap = await pipeline().get();
   const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { updatedAt?: string })[];
   list.sort((a, b) => (`${a.updatedAt ?? ""}` < `${b.updatedAt ?? ""}` ? 1 : -1));
   res.json(list);
@@ -62,7 +76,7 @@ platformLeads.post("/", async (req, res) => {
   const parsed = leadSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const now = new Date().toISOString();
-  const doc = { ...parsed.data, activities: [], createdAt: now, updatedAt: now, createdBy: req.user?.email ?? "unknown" };
+  const doc = { ...parsed.data, activities: [], inPipeline: true, createdAt: now, updatedAt: now, createdBy: req.user?.email ?? "unknown" };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -79,7 +93,18 @@ platformLeads.put("/:id", async (req, res) => {
   const ref = col.doc(req.params.id);
   const snap = await ref.get();
   if (!snap.exists) { res.status(404).json({ error: "Lead not found" }); return; }
-  await ref.set({ ...parsed.data, updatedAt: new Date().toISOString() }, { merge: true });
+  const now = new Date().toISOString();
+  // Stamp stage MOVES, not just the edit. `updatedAt` bumps on any change, so
+  // without this "how many reached Demo this week" can only ever be guessed at
+  // from the current stage plus the last time anything about the lead changed —
+  // renaming a lead would make it look like it had just moved. The dashboard's
+  // pipeline summary reads this log.
+  const before = snap.data() as { stage?: string; stageLog?: { from: string; to: string; at: string }[] };
+  const moved = parsed.data.stage && parsed.data.stage !== (before.stage ?? "new");
+  const stageLog = moved
+    ? [...(before.stageLog ?? []), { from: before.stage ?? "new", to: parsed.data.stage!, at: now }].slice(-40)
+    : undefined;
+  await ref.set({ ...parsed.data, ...(stageLog ? { stageLog, stageAt: now } : {}), inPipeline: true, updatedAt: now }, { merge: true });
   const after = await ref.get();
   res.json({ id: after.id, ...after.data() });
 });
@@ -119,7 +144,7 @@ platformLeads.post("/:id/activities", async (req, res) => {
     by: req.user?.name ?? req.user?.email ?? "Platform",
   };
   const existing = (snap.data()!.activities as unknown[] | undefined) ?? [];
-  await ref.set({ activities: [activity, ...existing], updatedAt: now }, { merge: true });
+  await ref.set({ activities: [activity, ...existing], inPipeline: true, updatedAt: now }, { merge: true });
   const after = await ref.get();
   res.status(201).json({ id: after.id, ...after.data() });
 });
@@ -134,12 +159,13 @@ platformLeads.post("/bulk", async (req, res) => {
   }
   const parsed = z.array(leadSchema).min(1).max(2_000).safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const existing = await col.get();
-  const seen = new Set(
-    existing.docs
-      .map((d) => `${(d.data().email as string | undefined) ?? ""}`.trim().toLowerCase())
-      .filter(Boolean),
-  );
+  // Skip emails already on file — looked up 30 at a time, not by reading every lead.
+  const wanted = [...new Set(parsed.data.map((l) => l.email.trim().toLowerCase()).filter(Boolean))];
+  const seen = new Set<string>();
+  for (let i = 0; i < wanted.length; i += 30) {
+    const hit = await col.where("email", "in", wanted.slice(i, i + 30)).select("email").get();
+    for (const d of hit.docs) seen.add(`${d.get("email") ?? ""}`.trim().toLowerCase());
+  }
   const now = new Date().toISOString();
   const createdBy = req.user?.email ?? "unknown";
   let added = 0;
@@ -152,7 +178,7 @@ platformLeads.post("/bulk", async (req, res) => {
     const email = lead.email.trim().toLowerCase();
     if (email && seen.has(email)) { skipped++; continue; }
     if (email) seen.add(email);
-    batch.set(col.doc(), { ...lead, activities: [], createdAt: now, updatedAt: now, createdBy });
+    batch.set(col.doc(), { ...lead, activities: [], inPipeline: true, createdAt: now, updatedAt: now, createdBy });
     added++;
     if (++inBatch === 400) { commits.push(batch.commit()); batch = db.batch(); inBatch = 0; }
   }

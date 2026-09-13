@@ -15,9 +15,19 @@
 // "Elsewhere / unassigned" rather than being silently dropped.
 import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
-import { loadClock, hhmm, type ClockRecord } from "./data";
+import { loadClock, hhmm, fmtDur, workedMs, rateFor, type ClockRecord, useClockRefresh } from "./data";
 
 const GREEN = "#0f7a43", AMBER = "#8a5a09", RED = "#c02636";
+// One tone per location card, cycled. House colours (--green / --violet /
+// --gold / --brand-2 / teal) rather than a new palette. Amber carries dark ink
+// because white on #f5b81f is ~1.8:1.
+const LOC_TONES: { bg: string; ink: string; ring: string }[] = [
+  { bg: "linear-gradient(150deg,#17c06d,#0f7a43)", ink: "#ffffff", ring: "#15b364" },
+  { bg: "linear-gradient(150deg,#7d5fe0,#4a35a0)", ink: "#ffffff", ring: "#6a4fd0" },
+  { bg: "linear-gradient(150deg,#f7c53f,#d9950a)", ink: "#3a2c00", ring: "#f5b81f" },
+  { bg: "linear-gradient(150deg,#3f78d8,#1d3a8f)", ink: "#ffffff", ring: "#2f6bd8" },
+  { bg: "linear-gradient(150deg,#17a2b8,#0b5566)", ink: "#ffffff", ring: "#0e7490" },
+];
 const ON = { borderColor: "#1d3a8f", background: "#eef4fd", color: "#1d3a8f" };
 const OFF = { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" };
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
@@ -85,6 +95,7 @@ const staffTone = (s: ClockRecord) => (s.status === "break" ? "#f59e0b" : s.stat
 export function OnSiteNowCard() {
   const [regs, setRegs] = useState<RegSession[] | null>(null);
   const [clock, setClock] = useState<Record<string, ClockRecord>>({});
+  useClockRefresh(setClock);
   const [venueOf, setVenueOf] = useState<Record<string, string>>({});
   const [roster, setRoster] = useState<Record<string, { start: string; end: string; role?: string }>>({});
   const today = todayIso();
@@ -133,13 +144,38 @@ export function OnSiteNowCard() {
     return { out, rest };
   }, [regs, staff, venueOf]);
 
+  // ── Locations ─────────────────────────────────────────────────────────────
+  // Staffing is a per-SITE question — "is anyone at Bedford?" — but the board
+  // below is per-listing, and two listings can share a venue. So group the
+  // listings by venue into one card each: how many staff are there, who they
+  // are, and how the children are doing under them. Clicking one filters
+  // everything below to that site.
+  const locations = useMemo(() => {
+    const by = new Map<string, { key: string; name: string; ids: string[]; staff: ClockRecord[]; present: number; expected: number; absent: number }>();
+    for (const r of rows.out) {
+      const key = norm(r.venue) || "__none__";
+      const cur = by.get(key) ?? { key, name: r.venue || "No venue set", ids: [], staff: [], present: 0, expected: 0, absent: 0 };
+      cur.ids.push(r.id);
+      // A venue's staff are the same list for every listing on it — dedupe by id
+      // or a site with two listings counts each coach twice.
+      for (const s of r.staff) if (!cur.staff.some((x) => x.id === s.id)) cur.staff.push(s);
+      cur.present += r.present; cur.expected += r.expected; cur.absent += r.absent;
+      by.set(key, cur);
+    }
+    return [...by.values()].sort((a, b) => b.staff.length - a.staff.length || a.name.localeCompare(b.name));
+  }, [rows.out]);
+
+  const [loc, setLoc] = useState("");
+  const visible = loc ? rows.out.filter((r) => (norm(r.venue) || "__none__") === loc) : rows.out;
+
   // One listing at a time — there is no "all" view. Defaults to the first
-  // listing once the register loads, and re-homes if that listing disappears.
+  // listing once the register loads, and re-homes if that listing disappears
+  // (including when the location filter changes under it).
   const [tab, setTab] = useState("");
   useEffect(() => {
-    if (rows.out.length && !rows.out.some((r) => r.id === tab)) setTab(rows.out[0].id);
-  }, [rows.out, tab]);
-  const shown = rows.out.filter((r) => r.id === tab);
+    if (visible.length && !visible.some((r) => r.id === tab)) setTab(visible[0].id);
+  }, [visible, tab]);
+  const shown = visible.filter((r) => r.id === tab);
   // Staff counts follow the tab too: on a listing, only that listing's staff.
   const staffScope = shown.flatMap((r) => r.staff);
   const staffIn = staffScope.filter((r) => r.status === "in").length;
@@ -181,11 +217,145 @@ export function OnSiteNowCard() {
         <a href="timesheets" className="ml-auto text-[11.5px] font-bold text-[#1d3a8f] hover:underline">Timesheets →</a>
       </div>
 
+      {/* ── Location cards ──────────────────────────────────────────────────
+          One per site: staff on it, who they are, and the children under them.
+          House colours rather than a new palette, so this reads as part of the
+          app; the amber card takes dark ink because white on amber fails. */}
+      {locations.length > 0 && (
+        <div className="mb-3 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
+          {locations.map((l, i) => {
+            const c = LOC_TONES[i % LOC_TONES.length];
+            const on = loc === l.key;
+            const inNow = l.staff.filter((s) => s.status === "in").length;
+            const onBreak = l.staff.filter((s) => s.status === "break").length;
+            // Adults to children, the number a manager is actually judged on.
+            const ratio = inNow ? Math.round(l.present / inNow) : 0;
+            return (
+              <button
+                key={l.key} type="button"
+                onClick={() => setLoc(on ? "" : l.key)}
+                title={on ? "Show every location" : `Show only ${l.name}`}
+                className="relative overflow-hidden rounded-2xl p-3.5 text-left transition hover:-translate-y-0.5"
+                style={{ background: c.bg, color: c.ink, boxShadow: on ? `0 0 0 3px var(--surface), 0 0 0 5px ${c.ring}` : "0 6px 18px -10px rgba(16,35,86,.55)" }}
+              >
+                {/* soft highlight, so a flat fill doesn't read as a button */}
+                <span aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-28 w-28 rounded-full" style={{ background: "rgba(255,255,255,.16)" }} />
+                <div className="relative flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="truncate text-[12px] font-bold opacity-90">📍 {l.name}</div>
+                    <div className="mt-1 flex items-baseline gap-1.5">
+                      <span className="text-[30px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)" }}>{inNow}</span>
+                      <span className="text-[12px] font-bold opacity-90">on site</span>
+                    </div>
+                    <div className="mt-0.5 text-[11.5px] font-semibold opacity-85">
+                      {onBreak > 0 ? `${onBreak} on break · ` : ""}{l.present}/{l.expected} children in
+                    </div>
+                  </div>
+                  {/* Overlapping initials — who is actually there, not just how many */}
+                  <div className="flex flex-none -space-x-2">
+                    {l.staff.slice(0, 4).map((s) => (
+                      <span key={s.id} title={`${s.name}${s.status === "break" ? " (on break)" : ""}`}
+                        className="grid h-8 w-8 place-items-center rounded-full text-[10px] font-extrabold"
+                        // A real box-shadow ring, not Tailwind's `ring-2`: that
+                        // needs --tw-ring-color, which an inline style can't set.
+                        style={{ background: "rgba(255,255,255,.92)", color: "#1d3a8f", boxShadow: `0 0 0 2px ${c.ring}`, opacity: s.status === "break" ? 0.72 : 1 }}>
+                        {s.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                      </span>
+                    ))}
+                    {l.staff.length > 4 && (
+                      <span className="grid h-8 w-8 place-items-center rounded-full text-[10px] font-extrabold" style={{ background: "rgba(0,0,0,.22)", color: c.ink, boxShadow: `0 0 0 2px ${c.ring}` }}>+{l.staff.length - 4}</span>
+                    )}
+                  </div>
+                </div>
+                <div className="relative mt-2.5 flex items-center gap-1.5">
+                  <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "rgba(255,255,255,.22)" }}>
+                    {inNow ? `1 adult : ${ratio} ${ratio === 1 ? "child" : "children"}` : "No staff clocked in"}
+                  </span>
+                  {on && <span className="rounded-full px-2 py-0.5 text-[10.5px] font-extrabold" style={{ background: "rgba(255,255,255,.22)" }}>Filtered ✓</span>}
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      )}
+      {/* ── Picked a location: who is on it ─────────────────────────────────
+          One card per person — the shift they're meant to be working, what
+          they've actually done so far, their role and rate. This is the whole
+          point of drilling in: the location card says "1 on site", this says
+          who, since when, and what it's costing. */}
+      {loc && (() => {
+        const here = (locations.find((l) => l.key === loc)?.staff ?? [])
+          .slice().sort((a, b) => (a.status === b.status ? a.name.localeCompare(b.name) : a.status === "in" ? -1 : 1));
+        return (
+          <div className="mb-3">
+            <div className="mb-2 flex items-center gap-2">
+              <button type="button" onClick={() => setLoc("")} className="rounded-full border border-[var(--line)] px-3 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:bg-[var(--panel)]">← All locations</button>
+              <span className="text-[11.5px] font-bold text-[var(--ink-3)]">{here.length} staff at {locations.find((l) => l.key === loc)?.name}</span>
+            </div>
+            {here.length === 0 ? (
+              <div className="rounded-2xl border border-dashed border-[var(--line)] py-6 text-center text-[12px] text-[var(--ink-3)]">Nobody is clocked in here yet.</div>
+            ) : (
+              // Portrait cards, like the reference: photo up top, details stacked
+              // under it. More per row and each one narrower, so a big team reads
+              // as a team sheet rather than a stack of banners.
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 lg:grid-cols-5">
+                {here.map((s, i) => {
+                  const c = LOC_TONES[i % LOC_TONES.length];
+                  const ros = roster[norm(s.name)];
+                  const worked = workedMs(s);
+                  const rate = rateFor(s.name);
+                  const onBreak = s.status === "break";
+                  return (
+                    <div key={s.id} className="relative overflow-hidden rounded-2xl p-3 text-center" style={{ background: c.bg, color: c.ink, boxShadow: "0 6px 18px -10px rgba(16,35,86,.55)" }}>
+                      <span aria-hidden className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full" style={{ background: "rgba(255,255,255,.14)" }} />
+                      {/* No photo field exists on a staff record yet, so this is
+                          initials in the same treatment a photo would take. */}
+                      <span className="relative mx-auto grid h-16 w-16 place-items-center rounded-full text-[18px] font-extrabold"
+                        style={{ background: "rgba(255,255,255,.94)", color: "#1d3a8f", boxShadow: `0 0 0 3px ${c.ring}`, opacity: onBreak ? 0.8 : 1 }}>
+                        {s.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
+                      </span>
+                      <div className="relative mt-2 truncate text-[13px] font-extrabold leading-tight">{s.name}</div>
+                      <div className="relative truncate text-[11px] font-semibold opacity-90">{s.role || ros?.role || "Staff"}</div>
+                      <span className="relative mt-1.5 inline-block rounded-full px-2 py-0.5 text-[10px] font-extrabold" style={{ background: "rgba(255,255,255,.24)" }}>
+                        {onBreak ? "On break" : "On site"}{!!s.lateMin && ` · ${s.lateMin}m late`}
+                      </span>
+                      {/* Stacked label→value rows: at this width three tiles
+                          side by side would clip "07:41–13:41". */}
+                      <div className="relative mt-2.5 space-y-1">
+                        {[
+                          ["Shift", ros ? `${ros.start}–${ros.end}` : s.clockInAt ? `${hhmm(s.clockInAt)}–?` : "—"],
+                          ["Worked", fmtDur(worked)],
+                          // 0 means nobody set one — saying "£0.00/hr" would be a
+                          // statement about their pay rather than about the gap.
+                          ["Rate", rate ? `£${rate.toFixed(2)}` : "Not set"],
+                        ].map(([k, v]) => (
+                          <div key={k} className="flex items-center justify-between gap-1 rounded-lg px-2 py-1" style={{ background: "rgba(255,255,255,.16)" }}>
+                            <span className="text-[9px] font-bold uppercase tracking-wide opacity-80">{k}</span>
+                            <span className="text-[11px] font-extrabold tabular-nums">{v}</span>
+                          </div>
+                        ))}
+                      </div>
+                      {/* Short form — the full sentence wrapped to three lines
+                          at this width. The title carries the meaning. */}
+                      {rate > 0 && (
+                        <div className="relative mt-1.5 text-[10.5px] font-semibold opacity-90" title="Earned so far today, at their rate for the hours worked">
+                          ≈ £{((worked / 3_600_000) * rate).toFixed(2)} today
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Listing tabs — each carries its own in/expected badge, so you can see
           at a glance which site needs a look before you even open it. */}
-      {rows.out.length > 1 && (
+      {visible.length > 1 && (
         <div className="mb-3 flex flex-wrap gap-1.5">
-          {rows.out.map((r) => {
+          {visible.map((r) => {
             const on = tab === r.id;
             return (
               <button key={r.id} type="button" onClick={() => setTab(r.id)} className="flex items-center gap-1.5 rounded-lg border px-2.5 py-1.5 text-[11.5px] font-bold" style={on ? ON : OFF}>

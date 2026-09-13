@@ -15,7 +15,7 @@ import {
   workingDays, fmtRange, isoDate, round1, isBankHoliday, sickPayNote, sickNotifyRuleText, sspWeekly, SSP_WEEKLY,
   type PayTreatment, defaultPayTreatment, PAY_TREATMENT, familyLeaveNote,
 } from "@/lib/holiday";
-import { loadPolicy, savePolicy, loadProfiles, saveProfiles, loadAbsences, saveAbsences } from "./data";
+import { loadPolicy, savePolicy, loadProfiles, saveProfiles, loadAbsences, saveAbsences, syncLeave, pendingLocalAbsences, importLocalAbsences, discardLocalAbsences, LEAVE_EVENT, LEAVE_ERROR_EVENT } from "./data";
 
 const KINDS = Object.keys(KIND_META) as AbsenceKind[];
 const mondayOf = (d: Date) => { const x = new Date(d); const k = (x.getDay() + 6) % 7; x.setDate(x.getDate() - k); return x; };
@@ -47,9 +47,19 @@ export function HolidayApp() {
   const [profEdit, setProfEdit] = useState<LeaveProfile | null>(null);
   const [adding, setAdding] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
+  // Absences only this browser had before leave moved to the server — the
+  // manager chooses to import them into THIS account (or not).
+  const [localOnly, setLocalOnly] = useState(0);
   useEffect(() => { setProfiles(loadProfiles()); setAbsences(loadAbsences()); setPolicy(loadPolicy()); }, []);
+  // Server-backed: fetch, re-read when it lands, surface a refused change.
+  useEffect(() => {
+    const reload = () => { setProfiles(loadProfiles()); setAbsences(loadAbsences()); setPolicy(loadPolicy()); };
+    const onErr = (e: Event) => { setToast((e as CustomEvent<string>).detail); setTimeout(() => setToast(null), 4000); };
+    window.addEventListener(LEAVE_EVENT, reload); window.addEventListener(LEAVE_ERROR_EVENT, onErr);
+    void syncLeave().then(() => setLocalOnly(pendingLocalAbsences().length)).catch(() => {});
+    return () => { window.removeEventListener(LEAVE_EVENT, reload); window.removeEventListener(LEAVE_ERROR_EVENT, onErr); };
+  }, []);
   const flash = (m: string) => { setToast(m); setTimeout(() => setToast(null), 2600); };
-
   const persistAbs = (a: Absence[]) => { setAbsences(a); saveAbsences(a); };
   const persistProfiles = (p: LeaveProfile[]) => { setProfiles(p); saveProfiles(p); };
   const persistPolicy = (p: HolidayPolicy) => { setPolicy(p); savePolicy(p); };
@@ -68,6 +78,13 @@ export function HolidayApp() {
   return (
     <div className="-m-3 min-h-[calc(100vh-3.5rem)] p-3 sm:-m-5 sm:p-5" style={LIGHT_PALETTE}>
       <PageHero title="Leave & absence" icon="🏖" lede="Approve time off, manage sickness & SSP, see who's off and who needs covering, track everyone's entitlement, and keep the rota in step. Follows UK law (5.6 weeks holiday capped at 28 days; SSP from day 1)." />
+      {localOnly > 0 && (
+        <div className="mb-3 flex flex-wrap items-center gap-2 rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] px-4 py-3 text-[12.5px] text-[#7a5b06]">
+          <span className="min-w-0 flex-1"><b>{localOnly} absence{localOnly === 1 ? "" : "s"} were only saved in this browser</b> (from before leave was stored in your account). Import them into <b>this</b> account only if they belong to it.</span>
+          <Button variant="primary" onClick={() => { void importLocalAbsences().then((r) => { setLocalOnly(pendingLocalAbsences().length); flash(r.failed ? `${r.ok} imported, ${r.failed} couldn't be` : `${r.ok} imported`); }); }}>Import</Button>
+          <Button onClick={() => { if (window.confirm("Discard the absences saved only in this browser? They won't be recoverable.")) { discardLocalAbsences(); setLocalOnly(0); } }}>Discard</Button>
+        </div>
+      )}
 
       {/* Overview — same BrightHR-style visuals as the staff "My time off" page:
           a week strip of who's off, plus colourful counter cards that jump to

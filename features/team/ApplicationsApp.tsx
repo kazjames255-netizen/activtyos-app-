@@ -12,7 +12,9 @@ import { CollapsibleStats, LIGHT_PALETTE, PageHero } from "@/components/Operator
 import { Tile, GRAD } from "@/features/money/finance-kit";
 import { useSettings } from "@/lib/settings";
 import { DEFAULT_FIELDS } from "./OnboardingApp";
+import { ApplicationReferences } from "./ReferenceRequests";
 import { useT } from "@/lib/i18n/provider";
+import { saveOnboardRecord } from "./onboardStore";
 
 type AField = { id: string; label: string; type: "text" | "textarea" | "email" | "tel" | "date" | "select" | "file" | "locations"; required: boolean; options?: string[]; mapsTo?: string };
 // the provider's sites — applicants pick one or more they can work at (demo; real
@@ -144,16 +146,16 @@ const STATUS_TONE: Record<string, string> = { new: "bg-[#e6efff] text-[#1d54c4]"
 function carryOver(app: Application, form: AppForm) {
   try {
     const list: { staff: string; values: Record<string, { v?: string; fileData?: string; fileName?: string }>; extra: string[] }[] = JSON.parse(localStorage.getItem(ONBOARD_RECORDS_KEY) || "[]");
-    const idx = list.findIndex((r) => r.staff === app.name);
-    const rec = idx >= 0 ? list[idx] : { staff: app.name, values: {}, extra: [] };
+    const rec = list.find((r) => r.staff === app.name) ?? { staff: app.name, values: {}, extra: [] };
     for (const f of form.fields) {
       if (!f.mapsTo) continue;
       const file = app.files?.[f.id];
       if (file) rec.values[f.mapsTo] = { fileData: file.data, fileName: file.name };
       else if (app.answers[f.id]) rec.values[f.mapsTo] = { v: app.answers[f.id] };
     }
-    if (idx >= 0) list[idx] = rec; else list.push(rec);
-    localStorage.setItem(ONBOARD_RECORDS_KEY, JSON.stringify(list));
+    // To the server (onboardStore) — the record used to be written only to
+    // this browser, so the new starter's onboarding started blank anywhere else.
+    void saveOnboardRecord(rec).catch((e) => alert(`The application was accepted, but copying it into onboarding failed: ${e instanceof Error ? e.message : "try again"}.`));
   } catch { /* ignore */ }
 }
 
@@ -206,6 +208,20 @@ export function ApplicationsPanel() {
         ); })}
       </div>
       <div className="mb-3 rounded-xl border border-[#cfe8d7] bg-[#f4fbf6] px-3.5 py-2 text-[11.5px] leading-relaxed text-[#0f7a43]">{t("team.carryPre")}<b>{t("team.carryBold")}</b>{t("team.carryPost", { name: app.name.split(" ")[0] })}</div>
+
+      {/* References are asked for HERE, not after onboarding — safer recruitment
+          wants them back before interview. Same requests either way: they key on
+          the candidate's name, which is also how carryOver keys their onboarding
+          record, so nothing is sent twice if they're hired. Rejected applicants
+          are the one case we don't offer it — no reason to trouble a referee. */}
+      {app.status !== "rejected" && (
+        <ApplicationReferences
+          candidateName={app.name}
+          jobTitle={app.answers.position}
+          answers={app.answers}
+          accepted={app.status === "accepted"}
+        />
+      )}
       {app.status === "rejected" && app.rejectReason && <div className="mb-3 rounded-xl bg-[#fdecec] px-3.5 py-2 text-[12px] font-semibold text-[#c0392b]">{t("team.rejectedColon")} {app.rejectReason}</div>}
       {app.status === "accepted" ? (
         <div className="flex flex-wrap items-center gap-2">

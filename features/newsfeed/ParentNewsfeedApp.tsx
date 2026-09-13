@@ -6,6 +6,7 @@ import { api, get as apiGet, post as apiPost } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { Badge, Card } from "@/components/ui";
 import { NewsletterView, PostImage, type Newsletter } from "./newsletter";
+import { useI18n } from "@/lib/i18n/provider";
 
 // The parent's newsfeed — updates from every provider they've booked with.
 // Events can be RSVP'd, urgent notices acknowledged, and posts reacted to. Since
@@ -24,25 +25,29 @@ interface Post {
 }
 type Mine = { rsvp?: "yes" | "no" | "maybe"; acked?: boolean; reacted?: boolean };
 
+// `label` is an i18n key (feed area), resolved with t() at render.
 const TPL: Record<Tpl, { label: string; color: string }> = {
-  announce: { label: "Announcement", color: "#2596df" }, event: { label: "Event", color: "#7c5cff" },
-  reminder: { label: "Reminder", color: "#f59e0b" }, urgent: { label: "Urgent", color: "#ef4444" },
-  celebrate: { label: "Celebration", color: "#e22295" }, booking: { label: "Booking", color: "#15b364" },
-  newsletter: { label: "Newsletter", color: "#1d3a8f" },
+  announce: { label: "feed.tplAnnounce", color: "#2596df" }, event: { label: "feed.tplEvent", color: "#7c5cff" },
+  reminder: { label: "feed.tplReminder", color: "#f59e0b" }, urgent: { label: "feed.tplUrgent", color: "#ef4444" },
+  celebrate: { label: "feed.tplCelebrate", color: "#e22295" }, booking: { label: "feed.tplBooking", color: "#15b364" },
+  newsletter: { label: "feed.tplNewsletter", color: "#1d3a8f" },
 };
-const when = (iso?: string) => (iso ? new Date(iso).toLocaleString("en-GB", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
+const when = (iso?: string, loc = "en-GB") => (iso ? new Date(iso).toLocaleString(loc, { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "");
 const LS = "aos.news.mine.v1";
 const readMine = (): Record<string, Mine> => { try { return JSON.parse(localStorage.getItem(LS) || "{}"); } catch { return {}; } };
 
 /** custdash/newsfeed — the parent's view. */
 export function ParentNewsfeedApp() {
+  const { t, locale } = useI18n();
+  // Plain "en" would format US-style; English users keep the UK date format.
+  const dateLoc = locale === "en" ? "en-GB" : locale;
   const [posts, setPosts] = useState<Post[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mine, setMine] = useState<Record<string, Mine>>(() => (typeof window === "undefined" ? {} : readMine()));
   const router = useRouter();
 
   const refresh = useCallback(() => {
-    apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Post[]>("/api/posts").then((p) => { setPosts(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : ""));
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["posts"], refresh);
@@ -56,35 +61,35 @@ export function ParentNewsfeedApp() {
   // "Message us for more info" — jump straight to this provider's message thread
   // with the subject pre-filled from the post, ready for the family to type + send.
   const messageUs = (p: Post) => { const subject = `Re: ${(p.title || (p.tpl === "newsletter" ? p.newsletter?.company.name : "") || "your update").toString().slice(0, 80)}`; const qs = new URLSearchParams({ compose: "1", subject }); if (p.tenantId) qs.set("tenant", p.tenantId); router.push(`/custdash/messages?${qs.toString()}`); };
-  const msgBtn = (p: Post) => <button type="button" onClick={() => messageUs(p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:text-[#1d3a8f]" style={{ borderColor: "var(--line)" }}>💬 Message us for more info</button>;
+  const msgBtn = (p: Post) => <button type="button" onClick={() => messageUs(p)} className="inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] transition-colors hover:border-[#1d3a8f] hover:text-[#1d3a8f]" style={{ borderColor: "var(--line)" }}>{t("feed.messageUs")}</button>;
 
   const list = useMemo(() => posts ?? [], [posts]);
 
   return (
     <div className="text-[var(--ink)]">
-      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Newsfeed</h2>
-      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">Updates from the providers you’ve booked with — RSVP to events, and tap “Got it” on anything that asks.</p>
-      {error && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error}</div>}
+      <h2 className="mb-1 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{t("feed.newsTitle")}</h2>
+      <p className="mb-4 text-[12.5px] text-[var(--ink-3)]">{t("feed.newsLede")}</p>
+      {error !== null && <div className="mb-3 rounded-lg border border-[var(--red-line,#f6c9cc)] bg-[var(--red-soft,#fdebec)] px-3 py-2 text-[12.5px] text-[var(--red,#e21d27)]">{error || t("feed.loadFailed")}</div>}
 
-      {!posts ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">Loading…</div>
-      : list.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">No updates yet.</Card>
+      {!posts ? <div className="py-10 text-center text-[12.5px] text-[var(--ink-3)]">{t("feed.loading")}</div>
+      : list.length === 0 ? <Card className="p-6 text-center text-[13px] text-[var(--ink-3)]">{t("feed.newsEmpty")}</Card>
       : (
         <div className="grid items-start gap-3 md:grid-cols-2">
           {list.map((p) => {
-            const t = TPL[p.tpl ?? "announce"];
-            const accent = p.colour || t.color;
+            const tp = TPL[p.tpl ?? "announce"];
+            const accent = p.colour || tp.color;
             const m = mine[p.id] ?? {};
             if (p.tpl === "newsletter" && p.newsletter) {
               return (
                 <Card key={p.id} className="overflow-hidden !p-0">
                   <div className="flex items-center gap-1.5 px-3 pt-2.5">
-                    {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">Pinned</span>}
-                    <Badge tone={{ bg: "color-mix(in srgb, var(--brand) 14%, transparent)", fg: "var(--brand)" }}>{p.tenantName ?? "Provider"}</Badge>
-                    <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt)}</span>
+                    {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10px] font-extrabold text-[#8a6d1a]">{t("feed.pinned")}</span>}
+                    <Badge tone={{ bg: "color-mix(in srgb, var(--brand) 14%, transparent)", fg: "var(--brand)" }}>{p.tenantName ?? t("feed.provider")}</Badge>
+                    <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt, dateLoc)}</span>
                   </div>
                   <div className="p-3 pt-2"><NewsletterView data={p.newsletter} /></div>
                   <div className="flex flex-wrap items-center gap-2 px-3 pb-3">
-                    {p.ackRequired && <button type="button" onClick={() => ack(p)} disabled={m.acked} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={m.acked ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#1d3a8f", color: "#fff" }}>{m.acked ? "✓ Got it" : "Got it"}</button>}
+                    {p.ackRequired && <button type="button" onClick={() => ack(p)} disabled={m.acked} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={m.acked ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#1d3a8f", color: "#fff" }}>{m.acked ? t("feed.gotItDone") : t("feed.gotIt")}</button>}
                     {msgBtn(p)}
                     {p.react !== false && <button type="button" onClick={() => react(p)} className="ml-auto inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-[11.5px] font-bold" style={m.reacted ? { borderColor: "#e22295", background: "#fdeaf4", color: "#e22295" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>{m.reacted ? "♥" : "♡"} {p.reactions ?? 0}</button>}
                   </div>
@@ -98,10 +103,10 @@ export function ParentNewsfeedApp() {
                   : <div className="h-1.5 w-full" style={{ background: accent }} />}
                 <div className="p-3.5">
                   <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
-                    <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide" style={{ background: accent, color: "#fff" }}>{t.label}</span>
-                    {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">Pinned</span>}
-                    <Badge tone={{ bg: "color-mix(in srgb, var(--brand) 14%, transparent)", fg: "var(--brand)" }}>{p.tenantName ?? "Provider"}</Badge>
-                    <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt)}</span>
+                    <span className="rounded-full px-3 py-1 text-[11.5px] font-extrabold uppercase tracking-wide" style={{ background: accent, color: "#fff" }}>{t(tp.label)}</span>
+                    {p.pinned && <span className="rounded-full bg-[#fff4d6] px-2 py-0.5 text-[10.5px] font-extrabold text-[#8a6d1a]">{t("feed.pinned")}</span>}
+                    <Badge tone={{ bg: "color-mix(in srgb, var(--brand) 14%, transparent)", fg: "var(--brand)" }}>{p.tenantName ?? t("feed.provider")}</Badge>
+                    <span className="ml-auto text-[11px] text-[var(--ink-3)]">{when(p.createdAt, dateLoc)}</span>
                   </div>
                   {p.title && <div className="text-[18px] font-extrabold leading-tight" style={{ fontFamily: "var(--ff-display)" }}>{p.title}</div>}
                   <div className="mt-1.5 whitespace-pre-wrap text-[13.5px] leading-relaxed text-[var(--ink-2)]">{p.body}</div>
@@ -114,13 +119,13 @@ export function ParentNewsfeedApp() {
                   <div className="mt-2.5 flex flex-wrap items-center gap-2">
                     {p.tpl === "event" && p.rsvp && (
                       <div className="inline-flex overflow-hidden rounded-full border border-[var(--line)]">
-                        {([["yes", "Going"], ["maybe", "Maybe"], ["no", "Can’t"]] as const).map(([k, label]) => (
-                          <button key={k} type="button" onClick={() => rsvp(p, k)} className="px-3 py-1 text-[11.5px] font-bold transition-colors" style={m.rsvp === k ? { background: t.color, color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
+                        {([["yes", t("feed.rsvpYes")], ["maybe", t("feed.rsvpMaybe")], ["no", t("feed.rsvpNo")]] as const).map(([k, label]) => (
+                          <button key={k} type="button" onClick={() => rsvp(p, k)} className="px-3 py-1 text-[11.5px] font-bold transition-colors" style={m.rsvp === k ? { background: tp.color, color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
                         ))}
                       </div>
                     )}
                     {p.ackRequired && (
-                      <button type="button" onClick={() => ack(p)} disabled={m.acked} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={m.acked ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#1d3a8f", color: "#fff" }}>{m.acked ? "✓ Got it" : "Got it"}</button>
+                      <button type="button" onClick={() => ack(p)} disabled={m.acked} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold" style={m.acked ? { background: "#e7f6ee", color: "#0f8a4a" } : { background: "#1d3a8f", color: "#fff" }}>{m.acked ? t("feed.gotItDone") : t("feed.gotIt")}</button>
                     )}
                     {p.cta && (
                       <button type="button" onClick={() => cta(p)} className="rounded-full px-3 py-1 text-[11.5px] font-extrabold text-white" style={{ background: accent }}>{p.cta.label}</button>

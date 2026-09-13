@@ -139,7 +139,9 @@ function followupsFor(text: string): string[] {
 
 // ── Lightweight markdown → nodes (bold, code, links, bullet + numbered lists) ─
 function inlineHtml(s: string): string {
-  const esc = s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Quotes too — a link the model repeats from parent-typed text must not break
+  // out of href="…" (acceptance test d26s7).
+  const esc = s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   return esc
     .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
     .replace(/`([^`]+)`/g, '<code class="rounded bg-black/5 px-1 py-0.5 text-[12px]">$1</code>')

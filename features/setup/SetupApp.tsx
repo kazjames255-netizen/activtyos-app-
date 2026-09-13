@@ -45,7 +45,8 @@ import { defaultSeasonNames, type Season } from "@/lib/seasons";
 import { SG_CATEGORIES, DEFAULT_PROTOCOL } from "@/features/incidents/safeguarding";
 import { MembershipTierCard } from "@/features/parent/MembershipsApp";
 import { CERT_TEMPLATES, CERT_ACCENTS, certTemplateOf, certificateDoc, openCertificate, CERT_SAMPLE } from "@/features/learning/certificates";
-import { useCredentials, DEMO_STAFF } from "@/features/learning/credentials";
+import { useCredentials } from "@/features/learning/credentials";
+import { useTeam } from "@/features/team/useTeam";
 
 // A logo can be a big PNG; /api/uploads caps at ~900KB, so downscale it first
 // (keeps transparency via PNG when it fits, else falls back to JPEG).
@@ -1355,6 +1356,7 @@ export function SetupApp() {
   }, []);
 
   const cred = useCredentials([]);
+  const credTeam = useTeam();
   const toggleIn = (arr: string[] | undefined, v: string) => { const a = arr ?? []; return a.includes(v) ? a.filter((x) => x !== v) : [...a, v]; };
   const certPreview = { ...CERT_SAMPLE, provider: settings.providerName || settings.billing?.businessName || CERT_SAMPLE.provider, signName: settings.learning?.certSignatory || CERT_SAMPLE.signName, signRole: settings.learning?.certSignatoryRole || CERT_SAMPLE.signRole, signImg: settings.learning?.certSignature, accent: settings.learning?.certColor, title: settings.learning?.certTitle || undefined, showScore: settings.learning?.certShowScore, showQr: settings.learning?.certShowQr };
   // deep-link: /setup?tab=learning#credtypes opens the tab and scrolls to the section
@@ -1450,13 +1452,40 @@ export function SetupApp() {
         </p>
       </HowItWorks>
 
+      {/* A franchise's settings are stored in its OWN library document
+          (`libraries/{tenantId}__fr__{franchiseId}`), seeded from head office and
+          then diverging. Since 12 Sept the server reads a franchise's OWN copy
+          (server/src/lib/tenantLibrary.ts) for everything that enforces or
+          decides something: medication gates, trips consent + who can plan,
+          safeguarding notifications, staff/rota compliance, cancellation
+          policies (refunds), meals ordering + cut-off, the customer pages'
+          venues/add-ons/staff, and Setup → Notifications. What still runs on
+          head office's copy: marketing/automatic emails (branding, reminders),
+          referrals, memberships and reviews. Say so — precisely. */}
+      {portal === "franchise" && (
+        <div className="mb-3 rounded-xl border border-[#f0d9a8] bg-[#fdf6e6] px-4 py-3 text-[12.5px] leading-[1.6] text-[#7a5b06]">
+          <b>Your settings here apply to your franchise</b> — including the safety gates (medication
+          witness and leads-only doses, trip consent), your cancellation policies, meals and your
+          notifications. A few areas still follow <b>head office&rsquo;s</b> settings for now:
+          automatic emails and reminders, referrals, memberships and reviews.
+        </div>
+      )}
+
       <TabStrip tabs={TABS} value={activeTab} onChange={setTab} accent="notifications" />
 
       {activeTab === "company" && (
         <Section title={t("setup.companySetup")} lede={t("setup.companySetupLede")}>
           <div className="grid gap-2.5 sm:grid-cols-2">
             <div><FieldLabel>{t("setup.displayName")}</FieldLabel><Input value={settings.providerName ?? ""} placeholder="Amir Coaching" onChange={(e) => set("providerName", e.target.value)} className="w-full" /></div>
-            <div><FieldLabel>{t("setup.showYourNameAs")}</FieldLabel><Select value={settings.providerNameMode ?? "business"} onChange={(e) => set("providerNameMode", e.target.value as "person" | "business")} className="w-full"><option value="business">{t("setup.businessName")}</option><option value="person">{t("setup.myOwnName")}</option></Select></div>
+            <div><FieldLabel>{t("setup.showYourNameAs")}</FieldLabel><Select value={settings.providerNameMode ?? "business"} onChange={(e) => {
+              // Switching what families see you as fills the display name with
+              // that name — the choice used to change only a label (d1s4).
+              // (One save with both fields — two set() calls would overwrite each other.)
+              const mode = e.target.value as "person" | "business";
+              const saveBoth = (name?: string) => void save({ settings: { ...settings, providerNameMode: mode, ...(name ? { providerName: name } : {}) } }).then(() => setSavedAt(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })));
+              if (mode === "business") saveBoth((settings.billing as { businessName?: string } | undefined)?.businessName?.trim());
+              else void apiGet<{ name?: string }>("/api/account").then((a) => saveBoth(a?.name?.trim())).catch(() => saveBoth());
+            }} className="w-full"><option value="business">{t("setup.businessName")}</option><option value="person">{t("setup.myOwnName")}</option></Select></div>
             {([
               ["businessName", "Legal / business name", "Little Kickers Ltd"],
               ["email", "Contact email", "hello@yourbiz.co.uk"],
@@ -1714,7 +1743,8 @@ export function SetupApp() {
 
       {activeTab === "roles" && (
         <Section title={t("setup.rolesPermissions")} lede={t("setup.rolesPermissionsLede")}>
-          <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => set("roles", roles)} areas={hoCombined ? HO_ROLE_AREAS : undefined} defaultRoles={hoCombined ? HO_DEFAULT_ROLES : undefined} />
+          {/* Editing the matrix stamps rolesSetAt — from then on the API enforces it (lib/accessMap.ts). */}
+          <RolesPermissions roles={settings.roles ?? []} onChange={(roles) => { void save({ settings: { ...settings, roles, rolesSetAt: new Date().toISOString() } }).then(() => setSavedAt(new Date().toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" }))); }} areas={hoCombined ? HO_ROLE_AREAS : undefined} defaultRoles={hoCombined ? HO_DEFAULT_ROLES : undefined} />
         </Section>
       )}
 
@@ -1812,7 +1842,7 @@ export function SetupApp() {
                         </div>
                       );
                     })()}
-                    {(t.applyKind ?? "all") === "staff" && DEMO_STAFF.map((s) => { const on = (t.applyStaff ?? []).includes(s.name); return <button key={s.name} type="button" onClick={() => cred.upsertType({ ...t, applyStaff: toggleIn(t.applyStaff, s.name) })} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{s.name}</button>; })}
+                    {(t.applyKind ?? "all") === "staff" && credTeam.map((s) => { const on = (t.applyStaff ?? []).includes(s.name); return <button key={s.name} type="button" onClick={() => cred.upsertType({ ...t, applyStaff: toggleIn(t.applyStaff, s.name) })} className={"rounded-full border px-2.5 py-0.5 text-[11px] font-bold transition-colors " + (on ? "border-transparent bg-[#111634] text-white" : "border-[var(--line)] text-[var(--ink-2)] hover:border-[var(--ink-3)]")}>{s.name}</button>; })}
                   </div>
                 )}
               </div>
@@ -1832,9 +1862,12 @@ export function SetupApp() {
           <Row label={t("setup.showAllergens")} hint={t("setup.showAllergensHint")}>
             <Toggle on={settings.meals?.showAllergens ?? true} onChange={(v) => set("meals", { ...settings.meals, showAllergens: v })} labels={[t("setup.yes"), t("setup.no")]} />
           </Row>
-          <Row label={t("setup.orderCutoff")} hint={t("setup.orderCutoffHint")}>
-            <Input type="number" min={0} value={settings.meals?.orderCutoffHours ?? 18} onChange={(e) => set("meals", { ...settings.meals, orderCutoffHours: Number(e.target.value) || 0 })} className="w-24" />
-          </Row>
+          {/* The "hours before a session" cut-off was REMOVED, not moved. It
+              wrote settings.meals.orderCutoffHours, which nothing has read since
+              the cut-off became a when+time pair (cutoffWhen / cutoffTime) set
+              per menu in Meals → Menu sharing. Two controls for one rule, and
+              the one here silently did nothing — an operator could close
+              ordering 18 hours out and watch orders keep arriving. */}
           <div className="mt-3"><FieldLabel>{t("setup.mealsNote")}</FieldLabel><Input value={settings.meals?.menuNote ?? ""} placeholder={t("setup.mealsNotePlaceholder")} onChange={(e) => set("meals", { ...settings.meals, menuNote: e.target.value })} className="w-full" /></div>
         </Section>
       )}
@@ -1890,11 +1923,27 @@ export function SetupApp() {
 
           <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Designated Safeguarding Lead (DSL)</div>
           <p className="mb-2.5 -mt-1 text-[12px] text-[var(--ink-3)]">As a sole provider you are the DSL — you record a concern and decide the external action yourself. Your name appears on records and the PDF.</p>
+          {!settings.safeguarding?.dslName?.trim() && (
+            // Not a hard block — a concern must always be loggable — but nobody
+            // named as DSL is a gap an inspector asks about first.
+            <div className="mb-2.5 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c02636]">
+              ⚠ No DSL is named. Concerns can still be logged, but every record and PDF will say nobody was named as the safeguarding lead. Add a name below.
+            </div>
+          )}
           <Row label="Your name (the DSL)" hint="Shown on records and exports as the safeguarding lead.">
             <Input value={settings.safeguarding?.dslName ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslName: e.target.value })} placeholder="e.g. Sam Taylor" className="w-full" />
           </Row>
           <Row label="Role title" hint="What you call the role (e.g. DSL, Safeguarding Lead, Welfare Officer).">
             <Input value={settings.safeguarding?.dslTitle ?? "Designated Safeguarding Lead (DSL)"} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslTitle: e.target.value })} className="w-full" />
+          </Row>
+          <Row label="DSL's email" hint="Alerted (bell + an email with no details) on every safeguarding concern and staff allegation. Use the email they sign in with — on a team account, that login gets full access to concerns and allegations. Blank = the account holder.">
+            <Input type="email" value={settings.safeguarding?.dslEmail ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, dslEmail: e.target.value.trim() })} placeholder="e.g. sam@yourcompany.co.uk" className="w-full" />
+          </Row>
+          <Row label="Deputy DSL (optional)" hint="Name and sign-in email of a deputy. They're alerted with the DSL and get the same access. An allegation about the DSL or deputy goes to the account holder only.">
+            <div className="grid w-full gap-2 sm:grid-cols-2">
+              <Input value={settings.safeguarding?.deputyDslName ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, deputyDslName: e.target.value })} placeholder="Deputy's name" className="w-full" />
+              <Input type="email" value={settings.safeguarding?.deputyDslEmail ?? ""} onChange={(e) => set("safeguarding", { ...settings.safeguarding, deputyDslEmail: e.target.value.trim() })} placeholder="Deputy's sign-in email" className="w-full" />
+            </div>
           </Row>
 
           <div className="mt-5 mb-2 text-[13px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>Your local safeguarding contacts</div>

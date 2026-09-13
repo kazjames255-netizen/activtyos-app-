@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
-import { api, get as apiGet, post as apiPost } from "@/lib/api";
+import { api, get as apiGet, post as apiPost, isDemoMode } from "@/lib/api";
 import { useHoScope, getHoScopeId, HO_OWN } from "@/components/franchise/HoScope";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -17,6 +17,7 @@ import type { TenantSettings } from "@/lib/settings";
 import { downscaleImage, type Company, type Newsletter } from "@/features/newsfeed/newsletter";
 import { CampaignDesigner, renderDesignHtml, renderDesignText, loadMyTemplates, persistMyTemplates, type CampaignDesign, type Block, type SavedTemplate, type Social } from "@/features/email/campaignTemplates";
 import { GmailSetupWalkthrough } from "@/features/email/GmailSetupWalkthrough";
+import { DEMO_INBOX, bestBody, htmlToText, type ServerMail } from "@/features/email/inbox-data";
 
 // ── "Automatic emails" — which system emails ActivityOS sends on the provider's
 // behalf, mirroring the Build Manual's Email screen. Toggles + reminder timing
@@ -118,18 +119,19 @@ function printDocHtml(html: string) {
 // Turn the composer's light markdown (# heading, **bold**, _italic_, [text](url),
 // line breaks) into safe HTML so the formatting actually renders in the sent email.
 function mdToHtml(src: string): string {
-  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  // Quotes too: a quote in link text or a URL must not break out of href="…".
+  const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   return esc(src)
     .replace(/^# (.*)$/gm, '<h3 style="margin:0 0 8px">$1</h3>')
     .replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>")
     .replace(/_([^_]+)_/g, "<i>$1</i>")
-    .replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>')
+    // Web, email and in-app links only — never javascript: or data:.
+    .replace(/\[([^\]]+)\]\(((?:https?:\/\/|mailto:|\/)[^)\s]*)\)/gi, '<a href="$2">$1</a>')
     .replace(/\n/g, "<br>");
 }
-// HTML (from the rich editor) → a plain-text fallback for the stored body.
-function htmlToText(html: string): string {
-  return html.replace(/<br\s*\/?>/gi, "\n").replace(/<\/(p|div|h[1-6]|li)>/gi, "\n").replace(/<li[^>]*>/gi, "• ").replace(/<[^>]+>/g, "").replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/\n{3,}/g, "\n\n").trim();
-}
+// htmlToText / bestBody / ServerMail / DEMO_INBOX now live in ./inbox-data, so
+// the dashboard's Inbox card shares them (same previews, same counts).
+
 // A small WYSIWYG editor — Bold/Heading/Italic/List/Link format the text LIVE
 // (contentEditable), and the value is HTML that's emailed as-is.
 function RichText({ value, onChange }: { value: string; onChange: (html: string) => void }) {
@@ -274,9 +276,6 @@ const LABEL_STYLE: Record<LabelTone, { bg: string; fg: string; text: string }> =
 type MailFolder = "inbox" | "sent" | "drafts" | "scheduled" | "spam" | "archive" | "snoozed" | "trash";
 interface Mail { id: string; from: string; fromEmail?: string; to?: string; cc?: string[]; tag?: string; subject: string; preview: string; body?: string; time: string; unread?: boolean; starred?: boolean; thread?: boolean; labels?: LabelTone[]; attachment?: string; attachmentSize?: string; quickReplies?: string[]; folder?: MailFolder; schedId?: string }
 
-// A received message as the API stores it (see server routes/emails.ts —
-// `emailMessages`, filled by the inbound webhook).
-interface ServerMail { id: string; from: string; fromEmail?: string; to?: string; subject: string; body?: string; html?: string; labels?: string[]; attachments?: { name: string; size?: string }[]; unread?: boolean; starred?: boolean; snoozedUntil?: string | null; folder?: string; at?: string }
 // A queued send (POST /api/emails/schedule) waiting for its sendAt.
 interface Scheduled { id: string; subject: string; body?: string; recipientCount: number; sendAt: string; status: "scheduled" | "sent" | "cancelled"; emailId?: string }
 // GET /api/emails/sender — the name families see and where their replies land.
@@ -285,15 +284,6 @@ interface Scheduled { id: string; subject: string; body?: string; recipientCount
 interface SenderIdentity { fromName: string; fromAddress: string; replyTo: string | null }
 
 const KNOWN_LABELS = new Set<string>(["urgent", "follow", "haf", "enquiry", "system"]);
-// Many emails (Gmail/Outlook) send the real content as HTML with only a sparse
-// text/plain part — often just a "--" signature. Show whichever is fuller so the
-// whole message is visible; both are rendered as plain text (linkified), never
-// as raw HTML, so there's no XSS surface.
-function bestBody(m: ServerMail): string {
-  const text = (m.body ?? "").trim();
-  const fromHtml = m.html ? htmlToText(m.html) : "";
-  return fromHtml.length > text.length ? fromHtml : text;
-}
 
 const toMail = (m: ServerMail): Mail => ({
   id: m.id,
@@ -311,14 +301,6 @@ const toMail = (m: ServerMail): Mail => ({
   attachmentSize: m.attachments?.[0]?.size,
   folder: (["inbox", "archive", "snoozed", "spam", "trash"].includes(m.folder ?? "") ? m.folder : "inbox") as MailFolder,
 });
-// Demo inbox — shown only when the real inbox is empty, so the enquiry flow can be tried end-to-end.
-const DEMO_INBOX: ServerMail[] = [
-  { id: "demo-1", from: "Sarah Thompson", fromEmail: "sarah.thompson@gmail.com", subject: "Summer camp availability?", body: "Hi, do you have any spaces left on your summer multi-activity camp in August? My daughter is 8. Thanks, Sarah", unread: true, folder: "inbox", at: "2026-07-31T08:42:00Z" },
-  { id: "demo-2", from: "James Patel", fromEmail: "j.patel@outlook.com", subject: "After-school football", body: "Hello — I'm interested in the after-school football club in Milton Keynes for my two boys. What days does it run and how much is it? Cheers, James", unread: true, folder: "inbox", at: "2026-07-31T07:15:00Z" },
-  { id: "demo-3", from: "Emma Wilson", fromEmail: "emmawilson88@icloud.com", subject: "Holiday club prices", body: "Could you send me a price list for the October holiday club please? Do you offer sibling discounts? Emma", unread: false, labels: ["enquiry"], folder: "inbox", at: "2026-07-30T16:20:00Z" },
-  { id: "demo-4", from: "Tom Harris", fromEmail: "tomharris.mk@gmail.com", subject: "Two children — any spaces?", body: "Hi there, we've just moved to Aylesbury and I'm looking for holiday cover for my 6 and 9 year old. Do you have space and what are your hours? Tom", unread: true, folder: "inbox", at: "2026-07-30T11:03:00Z" },
-  { id: "demo-5", from: "Priya Shah", fromEmail: "priya.shah@gmail.com", subject: "SEN support question", body: "Hello, my son has additional needs (ASD) — are your camps able to support him, and do you have 1:1 options? Thank you, Priya", unread: true, folder: "inbox", at: "2026-07-29T18:47:00Z" },
-];
 // "Sends Fri 1 Aug, 09:00" — sendAt is a local datetime string, not ISO+tz.
 const whenSched = (sendAt: string) => new Date(sendAt).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 const FOLDERS: [string, string][] = [
@@ -576,18 +558,39 @@ function linkify(text: string) {
   });
 }
 
-function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations, messages, scheduled, onRefresh }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, locations: string[]) => void; history: Sent[] | null; locations: string[]; messages: ServerMail[] | null; scheduled: Scheduled[] | null; onRefresh: () => void }) {
+function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, history, locations, messages, scheduled, onRefresh, seedMail }: { onCompose: () => void; onReply: (m: Mail) => void; onForward: (m: Mail) => void; onQuickReply: (m: Mail, text: string) => void; onEnquiry: (m: Mail, locations: string[]) => void; history: Sent[] | null; locations: string[]; messages: ServerMail[] | null; scheduled: Scheduled[] | null; onRefresh: () => void; seedMail?: string | null }) {
   const [enqFor, setEnqFor] = useState<Mail | null>(null);
   const [enqLocs, setEnqLocs] = useState<string[]>([]);
   // Server messages, patched optimistically — the realtime refresh reconciles.
   const [items, setItems] = useState<Mail[]>([]);
-  useEffect(() => { setItems((messages ?? []).map(toMail)); }, [messages]);
   const [folder, setFolder] = useState("inbox");
   const [filter, setFilter] = useState<"all" | "unread" | "starred" | "files">("all");
   const [density, setDensity] = useState<"cozy" | "compact">("cozy");
   const [q, setQ] = useState("");
   const [open, setOpen] = useState<Mail | null>(null);
   const [showContact, setShowContact] = useState(false);
+
+  // Arrived from the dashboard's Inbox card (?mail=<id>)? Open that message as
+  // soon as the mail it names has loaded — marking it read the same way a click
+  // in the list would. Once only, so closing it doesn't reopen on the next
+  // realtime refresh.
+  const seeded = useRef<string | null>(null);
+  useEffect(() => {
+    const next = (messages ?? []).map(toMail);
+    const target = seedMail && seeded.current !== seedMail ? next.find((m) => m.id === seedMail) : undefined;
+    if (target) {
+      seeded.current = seedMail ?? null;
+      if (target.unread) {
+        target.unread = false;
+        void api(`/api/emails/messages/${target.id}`, { method: "PATCH", body: JSON.stringify({ unread: false }) }).catch(() => onRefresh());
+      }
+      setOpen(target);
+    }
+    setItems(next);
+    // onRefresh is a stable useCallback on the parent; re-running on it would
+    // just re-seed the same message.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages, seedMail]);
 
   // A row is a real stored message unless it's a derived Sent/Scheduled one.
   const isMsg = (id: string) => !id.startsWith("sent-") && !id.startsWith("sch-");
@@ -1489,6 +1492,9 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
     mkGroup("g-lapsed", "Lapsed families", `Last attended over ${lapsedMonths} months ago with nothing upcoming — win them back.`, (a) => a.last > 0 && a.last < nowMs - lapsedMonths * 30 * DAY && !a.future),
   ];
   const hasPayData = bookings.some((b) => !!b.method);
+  // Belt and braces: if a value is somehow still held (bookings reloaded without
+  // methods, a restored form), it must not quietly filter everyone out.
+  const payFilter = hasPayData ? segPay : "";
   const SUBS = [
     { k: "enquiries" as const, label: "📩 Enquiries", count: combinedNotBooked?.count ?? 0 },
     { k: "segments" as const, label: "👪 Booked parents", count: 1 + computedGroups.length + groupSegs.length },
@@ -1497,7 +1503,7 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   // filters (all preset to "All"). A season is just a session-date window, so it
   // reuses the existing from/to/dateType machinery.
   const season = seasons.find((s) => s.id === segSeason);
-  const segFiltered = !!(segLoc || segListing || segPay || season);
+  const segFiltered = !!(segLoc || segListing || payFilter || season);
   const segTitle = listings.find((l) => l.id === segListing)?.title;
   // A season is the set of listings tagged to it (in the listing builder), so
   // filtering by season = filtering by those listing ids. A specific listing
@@ -1505,7 +1511,7 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
   // nobody (rather than falling through to "everyone").
   const seasonListings = season ? listings.filter((l) => l.seasonId === season.id).map((l) => l.id) : [];
   const seasonListingFilter = season ? (seasonListings.length ? seasonListings : ["__none__"]) : undefined;
-  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : seasonListingFilter, paymentMethod: segPay || undefined };
+  const segFilterObj: AudFilter = { location: segLoc || undefined, listingIds: segListing ? [segListing] : seasonListingFilter, paymentMethod: payFilter || undefined };
   const segResolved = segFiltered ? resolveAudience(bookings, segFilterObj) : { emails: allAudience.emails, count: allAudience.count };
   const filteredAudience: Audience = segFiltered
     ? { id: "seg-filter", name: `Families${segLoc ? ` · ${segLoc}` : ""}${segTitle ? ` · ${segTitle}` : ""}${season && !segListing ? ` · ${season.name}` : ""}${segPay ? ` · ${segPay}` : ""}`, count: segResolved.count, emails: segResolved.emails, desc: `${season && !segListing ? `Booked a ${season.name} activity` : "Active or upcoming booking"}${segLoc ? ` in ${segLoc}` : ""}${segTitle ? ` on ${segTitle}` : ""}${segPay ? ` · paid by ${segPay}` : ""}`, filter: segFilterObj, people: segResolved.emails.map((e) => ({ email: e })) }
@@ -1528,9 +1534,14 @@ function AudiencesView({ onUse, payMethods = [], seasons = [] }: { onUse: (a: Au
             {seasons.length > 0 && <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📅 Season</div><select value={segSeason} onChange={(e) => setSegSeason(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">All seasons</option>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select></div>}
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">📍 Location</div><select value={segLoc} onChange={(e) => setSegLoc(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">All locations</option>{locations.map((l) => <option key={l} value={l}>{l}</option>)}</select></div>
             <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">🎫 Listing</div><select value={segListing} onChange={(e) => setSegListing(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">All listings</option>{listings.map((l) => <option key={l.id} value={l.id}>{l.title}</option>)}</select></div>
-            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0]"><option value="">Any method</option>{payMethods.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
+            {/* DISABLED until bookings actually carry a payment method. It used
+                to stay pickable with only a note underneath: choosing "Card"
+                matched nothing, the audience silently fell to 0, and you could
+                send a campaign to an empty list believing it went out. A filter
+                that cannot match must not be selectable. */}
+            <div><div className="mb-1 text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">💳 Payment method</div><select value={segPay} onChange={(e) => setSegPay(e.target.value)} disabled={!hasPayData} title={hasPayData ? undefined : "Not available until bookings record how they were paid"} className="w-full rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] px-3.5 py-3 text-[15px] font-semibold text-[var(--ink)] outline-none focus:border-[#2f5fd0] disabled:cursor-not-allowed disabled:bg-[var(--panel)] disabled:text-[var(--ink-3)]"><option value="">Any method</option>{payMethods.map((m) => <option key={m} value={m}>{m}</option>)}</select></div>
           </div>
-          {!hasPayData && <p className="mt-2 text-[11px] text-[#9a6b00]">⚠ Options come from your <b>Setup → “How parents pay”</b> list. Filtering needs the method saved on each booking — it works the moment bookings include it (backend).</p>}
+          {!hasPayData && <p className="mt-2 text-[11px] text-[#9a6b00]">⚠ Payment-method filtering is off because no booking records how it was paid yet. Options come from <b>Setup → “How parents pay”</b>; the filter switches on by itself once bookings carry the method (backend).</p>}
           {segFiltered && <div className="mt-3 flex items-center gap-2"><span className="rounded-lg bg-[#eef4fd] px-3 py-1.5 text-[13px] font-extrabold text-[#1d3a8f]">{filteredAudience.count} matching famil{filteredAudience.count === 1 ? "y" : "ies"}</span><button type="button" onClick={() => { setSegLoc(""); setSegListing(""); setSegPay(""); setSegSeason(""); }} className="text-[12px] font-bold text-[var(--ink-3)] hover:text-[#c02636]">✕ Clear filters</button></div>}
         </div>
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">{[filteredAudience, ...computedGroups, ...groupSegs].filter(matchAud).map((a) => <AudienceCard key={a.id} a={a} onUse={onUse} accent={AUD_ACCENT.segments} extra={periodEditor(a.id)} />)}</div>
@@ -1831,6 +1842,9 @@ export function EmailApp() {
   const seedContent = seedGoal ? GOAL_SEED[seedGoal] : undefined;
   // ?listing=<id> — narrows the seeded audience to families who booked that listing.
   const seedListing = searchParams.get("listing");
+  // ?mail=<id> — a preview row on the dashboard's Inbox card: land on the Inbox
+  // with that message already open (and therefore marked read).
+  const seedMail = searchParams.get("mail");
   // Head-office network scope — which network's families this Email surface is
   // acting on. Drives the "Sending within" banner and re-reads when it changes.
   const emailPortalSeg = usePathname()?.split("/")[1] || "freelancer";
@@ -1905,7 +1919,7 @@ export function EmailApp() {
   // Land on Compose when arriving from a hand-off (newsletter/register), else on
   // the Inbox (the manual's default Email view).
   type Tab = "inbox" | "campaigns" | "audiences" | "templates" | "automatic" | "analytics" | "compose" | "settings";
-  const [tab, setTab] = useState<Tab>(seedAud ? "campaigns" : nlDraft || presetTo ? "compose" : "inbox");
+  const [tab, setTab] = useState<Tab>(seedAud ? "campaigns" : seedMail ? "inbox" : nlDraft || presetTo ? "compose" : "inbox");
   const savedImages: SavedImage[] = settings.emailAssets?.images ?? [];
   const momentById = new Map((moments ?? []).map((m) => [m.id, m]));
   // Read the live moment so a photo carries its own message + marketing quote
@@ -1929,7 +1943,9 @@ export function EmailApp() {
   // baked in exactly like the Moments card, so the text is part of the picture
   // (not separate text below it). Embedded inline + resizable.
   async function addImageToEmail(im: SavedImage) {
-    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    // Escapes quotes as well: this lands inside alt="…" and is set via innerHTML,
+    // so a child named  x"onload="…  must stay text (acceptance test d26s7).
+    const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     const { caption, quotes } = resolveSavedText(im);
     let src = im.photoUrl, composed = false;
     // Try the Moments-style composed image (text baked in). If it can't be made or
@@ -1941,7 +1957,7 @@ export function EmailApp() {
       ]);
       if (dataUrl) { composed = true; src = dataUrl; try { const r = await apiPost<{ url: string }>("/api/uploads", { dataUrl }); src = r.url; } catch { /* keep the data URL */ } }
     } catch { /* keep the raw photo */ }
-    let block = `<img src="${src}" alt="${esc(im.childName ?? "photo")}" style="max-width:100%;border-radius:10px">`;
+    let block = `<img src="${esc(src)}" alt="${esc(im.childName ?? "photo")}" style="max-width:100%;border-radius:10px">`;
     if (!composed) { // raw photo — add the message/quote as text since it isn't baked in
       if (caption) block += `<div style="margin-top:6px">${esc(caption)}</div>`;
       for (const q of quotes) block += `<div style="color:#5f6672"><i>“${esc(q.text)}”</i> — ${esc(q.byName ?? "a parent")}</div>`;
@@ -1953,7 +1969,8 @@ export function EmailApp() {
 
   const refresh = useCallback(() => {
     apiGet<Sent[]>("/api/emails").then((h) => { setHistory(h); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-    apiGet<ServerMail[]>("/api/emails/messages").then((m) => setMessages(m && m.length ? m : DEMO_INBOX)).catch(() => setMessages(DEMO_INBOX));
+    // Sample enquiries only in the demo/tour — a real, empty inbox shows empty (d27s2).
+    apiGet<ServerMail[]>("/api/emails/messages").then((m) => setMessages(m && m.length ? m : isDemoMode() ? DEMO_INBOX : [])).catch(() => setMessages(isDemoMode() ? DEMO_INBOX : []));
     apiGet<Scheduled[]>("/api/emails/scheduled").then(setScheduled).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
@@ -2181,7 +2198,7 @@ export function EmailApp() {
         </div>
       )}
 
-      {tab === "inbox" && <InboxView history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} />}
+      {tab === "inbox" && <InboxView seedMail={seedMail} history={history} messages={messages} scheduled={scheduled} onRefresh={refresh} locations={composeLocations} onEnquiry={addEnquiry} onCompose={() => { setReplyTo(null); setTab("compose"); }} onReply={(m) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(`\n\n———\n${m.from} wrote:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onQuickReply={(m, text) => { setAudience("one"); if (m.fromEmail) setTo(m.fromEmail); setReplyTo({ name: m.from, email: m.fromEmail ?? "" }); setSubject(`Re: ${m.subject}`); setBody(mdToHtml(text)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} onForward={(m) => { setAudience("one"); setTo(""); setReplyTo(null); setSubject(`Fwd: ${m.subject}`); setBody(mdToHtml(`\n\n———\nForwarded from ${m.from}:\n${m.body ?? m.preview}`)); setSigChoice(settings.emailPrefs?.replySignatureId ?? ""); setTab("compose"); setJumpMsg((n) => n + 1); }} />}
       {tab === "campaigns" && <CampaignsView onSent={refresh} seedAudienceId={campaignSeedId} seedName={seedContent?.name} seedSubject={seedContent?.subject} seedListingId={seedListing} onSeedConsumed={() => setCampaignSeedId(null)} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}
       {tab === "audiences" && <AudiencesView onUse={(a) => { setCampaignSeedId(a.id); setTab("campaigns"); }} payMethods={settings.payMethods ?? []} seasons={settings.seasons ?? []} />}
       {tab === "templates" && <TemplatesView onUse={(t) => { setSubject(t.subject ?? ""); setBody(mdToHtml(t.body)); setTab("compose"); }} company={{ name: settings.providerName || settings.billing?.businessName || "", phone: settings.billing?.phone, email: settings.billing?.email, address: settings.billing?.address, logo: settings.billing?.logoUrl }} socials={Object.entries(settings.social ?? {}).filter(([, v]) => v).map(([net, url]) => ({ net, url: url as string }))} />}

@@ -50,6 +50,16 @@ export interface CancelInfo {
    *  store credit with this provider; "card" (the default) refunds the payment
    *  method. Honoured when the operator approves the refund. */
   refundTo?: "card" | "wallet";
+  /** Where the approved money actually went (set by the server on approve):
+   *  "wallet" credit, back to the "card", or "offline" — a voucher/TFC/cash
+   *  booking the provider reimburses outside the app. */
+  refundVia?: "wallet" | "card" | "offline";
+  /** When the approved refund was actually settled (ISO) — `on` is when it
+   *  was asked for. Set by the server on approve. */
+  refundedAt?: string;
+  /** The last refund attempt failed (e.g. Stripe refused) — the refund went
+   *  back to awaiting approval rather than claiming money that never moved. */
+  refundError?: string;
 }
 
 export interface RefundLogEntry {
@@ -102,6 +112,10 @@ export interface Booking {
   /** Provider-only reconciliation notes — never shown to the parent. A running
    *  log; each entry is time-stamped and attributed. */
   reconNotes?: { at: string; by?: string; text: string }[];
+  /** Money logged against the booking AFTER it was cancelled/declined (manual
+   *  record-payment). It isn't the price of a place any more — Reconciliation
+   *  keeps it visible as "needs refund / credit" until it's refunded (d8s7). */
+  receivedAfterCancel?: number;
   /** Reconciliation nudges: how many payment reminders were sent and when the
    *  last one went, so the bell can show state. Off-platform / awaiting only. */
   nudges?: number;
@@ -140,6 +154,11 @@ export interface Booking {
   /** Store credit taken off this booking at checkout. `amount` is already net
    *  of it — this is here so the money trail shows where the difference went. */
   walletApplied?: number;
+  /** Running total of approved cancellation refunds (server-stamped) — so a
+   *  later cancel can't refund money that already went back. */
+  refundedApproved?: number;
+  /** How much of `walletApplied` has already been returned to the wallet. */
+  walletRefunded?: number;
   /** Marketing discount code redeemed on this booking, if any. */
   discountCode?: string;
   addons: string[];
@@ -152,6 +171,13 @@ export interface Booking {
   answers: [string, string][];
   note: string;
   recon: boolean | null;
+  /** WHO settled this and HOW. Reconciling used to leave no trace on the booking
+   *  at all — the row just said "Reconciled", with no way to tell an operator
+   *  ticking it off from HMRC/Stripe settling it by itself. `auto` is for
+   *  machine-matched payments (the HMRC EPP feed, per docs/tfc-build-spec.md);
+   *  absent entirely = reconciled before this was recorded, so we say nothing
+   *  rather than guess. */
+  reconciledBy?: { at: string; by: string; auto?: boolean } | null;
   evid: string | null;
   cancel: CancelInfo | null;
   past?: boolean;
@@ -186,6 +212,7 @@ export type BookingFilter =
   | "confirmed"
   | "waitlisted"
   | "unpaid"
+  | "unreconciled"
   | "cancelled"
   | "requests"
   | "refunds";

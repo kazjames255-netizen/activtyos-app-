@@ -118,7 +118,7 @@ const setup = {
     reviews: "Reviews",
     reviewsLede: "Blend your in-house feedback with the review sites you already use. Compliance is built in — every customer is invited to review on Google, never only the happy ones.",
     rolesPermissions: "Roles & permissions",
-    rolesPermissionsLede: "Define the roles in your organisation and what each can see or change. Assign a role to each person when you invite them (coming next); Owner always has full access.",
+    rolesPermissionsLede: "Define the roles in your organisation and what each can see or change. Assign a role to each person when you invite them (Team & invites). Once you change anything here it's enforced: staff can't open, or reach by link, an area set to None, and can only look at one set to View. Owner always has full access.",
     savedAt: "Saved {time}",
     sees: "Sees",
     seesAssignedOnly: "Sees only listings they're assigned to",

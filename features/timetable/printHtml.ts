@@ -6,7 +6,7 @@ import { facColor, groupIntoWeeks } from "./engine";
 import type { Cell, DayInfo, Plan, PlanRow, ViewMode } from "./types";
 
 const esc = (x: unknown) =>
-  String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&quot;");
+  String(x == null ? "" : x).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
 
 const cellBg = (c: Cell, FAC: string[]) => c.color || facColor(c.place, FAC) || "#64748B";
 

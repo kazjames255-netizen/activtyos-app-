@@ -27,10 +27,18 @@ const incomeSchema = z.object({
 });
 const round2 = (n: number) => Math.round(n * 100) / 100;
 const MAX_OCCURRENCES = 104; // 2 years of weekly — a runaway guard, not a limit users hit
-function stepDate(iso: string, repeat: "weekly" | "fortnightly" | "monthly"): string {
+/** The next date in a series. Monthly keeps the start's day of the month,
+ *  clamped to shorter months (31 Jan → 28 Feb → 31 Mar), instead of rolling
+ *  over — setUTCMonth turned 31 Jan into 3 Mar and skipped February (d18s5). */
+function stepDate(iso: string, repeat: "weekly" | "fortnightly" | "monthly", anchorDay?: number): string {
   const d = new Date(`${iso}T00:00:00Z`);
-  if (repeat === "monthly") d.setUTCMonth(d.getUTCMonth() + 1);
-  else d.setUTCDate(d.getUTCDate() + (repeat === "fortnightly" ? 14 : 7));
+  if (repeat === "monthly") {
+    const day = anchorDay ?? d.getUTCDate();
+    const y = d.getUTCFullYear(), m = d.getUTCMonth() + 1;
+    const last = new Date(Date.UTC(y, m + 1, 0)).getUTCDate();
+    return new Date(Date.UTC(y, m, Math.min(day, last))).toISOString().slice(0, 10);
+  }
+  d.setUTCDate(d.getUTCDate() + (repeat === "fortnightly" ? 14 : 7));
   return d.toISOString().slice(0, 10);
 }
 
@@ -73,7 +81,7 @@ income.post("/", async (req, res) => {
   if (repeat && repeatUntil && repeatUntil > rest.date) {
     const sid = col.doc().id;
     const dates: string[] = [];
-    for (let d = rest.date, i = 0; d <= repeatUntil && i < MAX_OCCURRENCES; d = stepDate(d, repeat), i++) dates.push(d);
+    for (let d = rest.date, i = 0; d <= repeatUntil && i < MAX_OCCURRENCES; d = stepDate(d, repeat, Number(rest.date.slice(8, 10))), i++) dates.push(d);
     const batch = db.batch();
     const items = dates.map((date) => {
       const ref = col.doc();

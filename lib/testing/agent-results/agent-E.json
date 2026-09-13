@@ -1,0 +1,1046 @@
+{
+  "d21s1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3 (13 Sept midday): two families booked with the same provider; family 2's moment/accident/medication/trip/message thread tagged SECRETFAM2. As family 1, 29 parent-portal GETs (the 28 from before + GET /api/account/reactivate, which the new reopen prompt calls): 28 x 200, /api/library 403 (by design — lib/settings.ts falls back to defaults). No response contained family 2's marker or email.",
+    "notes": "API layer only; 'on a phone, nothing blank' not rendered (no browser sign-in). /api/events (SSE) and /api/geo not called.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:03Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "I seeded two families booked with the same provider. Family 2 had a moment, an accident, a medication, a trip and a message tagged SECRET. As family 1 I called all 28 GETs the parent-portal views make on load (listings, my/providers, me, my/children, timetables/published, my/bookings, listings/:id, library, my/wallet, my/memberships, my/coupons, my/referral, meal-orders, moments, posts, messages/threads, messages/support, my/meal-days, notifications/prefs, medications, medications/administrations, incidents, my/trips, account, privacy, my/feedback, notifications, my/contact). 27 returned 200 and none contained family 2's data. /api/library returned 403 'Requires an account with a tenant'. That is by design: lib/settings.ts falls back to defaults and the public library when this call fails.",
+        "notes": "Tested at the API layer only. I could not check the 'on a phone, nothing blank' part: browser tools were off-limits, so no mobile rendering was looked at. /api/events (SSE) and /api/geo (external geocoder) were not called.",
+        "at": "2026-09-12T13:11:03.693Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: two families booked with the same provider; family 2 had a moment, accident, medication, trip and message thread tagged SECRETFAM2. As family 1 all 28 parent-portal GETs (listings, my/providers, me, my/children, timetables/published, my/bookings, listings/:id, library, my/wallet, my/memberships, my/coupons, my/referral, meal-orders, moments, posts, messages/threads, messages/support, my/meal-days, notifications/prefs, medications, medications/administrations, incidents, my/trips, account, privacy, my/feedback, notifications, my/contact): 27 x 200, /api/library 403 (by design - lib/settings.ts falls back to defaults). No response contained family 2's marker or email.",
+        "notes": "API layer only; the 'on a phone, nothing blank' part was not rendered (no browser sign-in). /api/events (SSE) and /api/geo not called.",
+        "at": "2026-09-13T00:02:50Z"
+      }
+    ]
+  },
+  "d21s2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: parent PUT /api/my/children/:id medical 'Asthma — blue inhaler', allergies 'Peanuts, sesame' → 200; operator GET /api/registers?date shows the same on attendee.child, GET /api/children/:id has it, GET /api/customers/:id/family children[] medical/allergies identical.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:05Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Parent PUT /api/my/children/:id with medical 'Asthma — blue inhaler' and allergies 'Peanuts, sesame' returned 200. The operator saw exactly the same values in GET /api/registers?date=2026-10-05 (attendee.child.medical/allergies), in GET /api/children/:id (record.medical) and in GET /api/customers/:id/family (children[].medical). There is only one child record, so all three read the same source.",
+        "notes": "",
+        "at": "2026-09-12T13:11:03.696Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: parent PUT /api/my/children/:id medical 'Asthma — blue inhaler', allergies 'Peanuts, sesame' → 200. The operator saw the same values on GET /api/registers?date (attendee.child.medical/allergies), GET /api/children/:id and GET /api/customers/:id/family (children[].medical/allergies) — one child record behind all three.",
+        "notes": "",
+        "at": "2026-09-13T00:02:51Z"
+      }
+    ]
+  },
+  "d21s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: POST /api/my/files (application/pdf) 201 → PUT chunk 0 200 → POST /done 200; PUT child with sendPlanId/sendPlanName 200 and the child doc carries it; owner GET /api/my/files/:id returns the exact bytes; a text/html upload → 400.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:08Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "POST /api/my/files (application/pdf) returned 201, then PUT chunk 0 returned 200 and POST /done returned 200. PUT /api/my/children/:id with sendPlanId/sendPlanName returned 200. The child doc now carries sendPlanId, and the owner's GET /api/my/files/:id gave back the exact bytes. A text/html upload was refused with 400.",
+        "notes": "",
+        "at": "2026-09-12T13:11:03.697Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: POST /api/my/files (application/pdf) 201 → PUT chunk 0 200 → POST /done 200; PUT child with sendPlanId/sendPlanName 200 and the child doc carries sendPlanId; the owner's GET /api/my/files/:id returns the exact bytes; a text/html upload is refused 400.",
+        "notes": "",
+        "at": "2026-09-13T00:02:51Z"
+      }
+    ]
+  },
+  "d21s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: GET /api/my/files/<EHCP>: tenant B's operator 404, another parent 404, the booked tenant 200 (file tenantIds = [booked tenant] only), owner 200.",
+    "notes": "Franchise side re-checked under d22s6.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:12Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "GET /api/my/files/<EHCP id>: tenant B's operator got 404, another parent got 404, and the tenant the child was booked with got 200. The file's tenantIds held only the booked tenant (granted by the booking route).",
+        "notes": "Related franchise gap: access is granted per tenantId, and franchises share their head office's tenantId. A sibling franchise, or head-office staff, can therefore read an EHCP whose only booking is with franchise A. Tested and recorded under d22s6.",
+        "at": "2026-09-12T13:11:03.697Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: GET /api/my/files/<EHCP>: tenant B's operator 404, another parent 404, the booked tenant 200 (the file's tenantIds = [booked tenant] only, granted by the booking route), owner 200.",
+        "notes": "The franchise side of the same grant is re-checked under d22s6.",
+        "at": "2026-09-13T00:02:51Z"
+      }
+    ]
+  },
+  "d21s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: DELETE a booked child → 409 'Ada Test is still booked in (APF-10312). Cancel that booking first.' (ref named once — the wave-4 de-dup holds). Parent cancel → 200; DELETE again → 200 {archived:true}; child doc archived with allergies 'Peanuts' kept; gone from GET /api/my/children; medication kept, 1 dose record, 1 accident, booking kept; operator GET /api/children/:id → 200 still shows Peanuts.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:15Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "DELETE /api/my/children/Ada while she had an upcoming booking returned 409: 'Ada Test is still booked in (APF-10312, APF-10312). Cancel those bookings first.' After the parent's POST /api/my/bookings/APF-10312/cancel (200, status Cancelled), DELETE returned 200 {archived:true}. Afterwards: the child doc still exists with archived:true and allergies 'Peanuts' kept; the child is gone from GET /api/my/children; the medication doc, 1 medicationAdmin dose record, the accident and the booking all still exist; the operator's GET /api/children/:id still shows allergies 'Peanuts'.",
+        "notes": "Cosmetic: the 409 message repeats the ref ('APF-10312, APF-10312'). The booking matches both the childId query and the email query and is not de-duplicated. Suggested fix: de-dupe `theirs` by doc id in my.ts DELETE /children/:id.",
+        "at": "2026-09-12T13:11:03.698Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: DELETE child while booked → 409 'Ada Test is still booked in (APF-10312, APF-10312). Cancel those bookings first.'; parent cancel → 200; DELETE → 200 {archived:true}. Child doc kept with archived:true and allergies 'Peanuts'; gone from /api/my/children; the medication, its 1 dose record, the accident and the booking all still exist; operator GET /api/children/:id still shows Peanuts.",
+        "notes": "Cosmetic, unchanged: the 409 repeats the ref (the booking matches both the childId and the email query and isn't de-duplicated) — also in d21s12's control ('ZC2, ZC2'). my.ts DELETE /children/:id could de-dupe `theirs` by ref.",
+        "at": "2026-09-13T00:02:51Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-test 13 Sept (wave 4): DELETE a booked child whose booking matches both the childId and the email query → 409 'Ada Fix is still booked in (ZF62712). Cancel that booking first.' — the ref named once (was 'APF-10312, APF-10312').",
+        "notes": "server/src/routes/my.ts DELETE /children/:id (~2573): refs de-duplicated, '… and N more' past three, singular/plural wording. Same message serves d21s12's control. Archive path unchanged.",
+        "at": "2026-09-13T01:03:04Z"
+      }
+    ]
+  },
+  "d21s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: 13-child family GET /api/privacy/export → 200: children 13, bookings 2, payments 1, mealOrders 1, medications 1, medicationDoses 1 (the MAR), register 1 (signed in 08:55 / collected 15:05 by Grandma / the shared note), moments 1, incidents 2 (accident + shared incident), tripConsents 1, uploadedFiles 1 (plan name), messageThreads 1, messages 1, memberships 1, wallet 1, walletEntries 1, providerFamilyRecords 1, plus profile/notifications/deletionRequests/feedback/referrals sections. 13th child's med/moment/trip present; confidential DSL concern withheld; the other family's register row (absent + note) and email absent.",
+    "notes": "Staff export side not re-run here (covered by fix4's run for d21s6).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:17Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "GET /api/privacy/export returned 200 for a family with 13 children (above the old 10 cap). It contained children:13 (archived ones included), bookings:4, payments:1, mealOrders:1, medications:1, moments:1, incidents:2 (the accident plus the incident shared with the parent), tripConsents:1 (with the child), uploadedFiles:1 (name 'Ada-EHCP.pdf'), messageThreads:1, messages:1, memberships:1, wallet:1, walletEntries:1, providerFamilyRecords:1. The CONFIDENTIAL safeguarding concern was withheld. No other family's data appeared.",
+        "notes": "Missing from the export: (1) medication DOSE records (medicationAdmin / the MAR). gather() only reads `medications`. (2) Account profile fields held on the users doc: address, postcode, emergency contact, locale. The account block has only email, name, phone and marketingConsent. (3) Register attendance, notes and nappy logs about the child (registers collection). (4) Notification/bell history, deletion requests, feedback/reviews and referral records. Suggested fix: add medicationAdmin by childId, the full users-doc profile, and register entries for the family's booking refs to privacy.ts gather().",
+        "at": "2026-09-12T13:11:03.698Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: GET /api/privacy/export for a 13-child family → 200 with children 13, bookings 2, payments 1, mealOrders 1, medications 1, moments 1, incidents 2 (the accident + the shared behaviour incident), tripConsents 1, uploadedFiles 1 ('Kid13-plan.pdf'), messageThreads 1, messages 1, memberships 1, wallet 1, walletEntries 1, providerFamilyRecords 1. The 13th child's medication/moment/trip are in; the CONFIDENTIAL safeguarding concern is withheld; no other family's email.",
+        "notes": "Still missing (unchanged since 12 Sept): medication DOSE records (medicationAdmin), the users-doc profile beyond email/name/phone/marketingConsent, register attendance/notes/nappies, bell history, deletion requests, feedback and referrals. (The script's first run used a mixed-case test email, which the export lowercases — re-run with lowercase ids; that artefact is not an app bug.)",
+        "at": "2026-09-13T00:02:52Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-test 13 Sept (wave 4): GET /api/privacy/export for a parent now also returns medicationDoses (the MAR — 1 dose for their child, not the other family's), register (2 days: signed in 08:55 / collected 15:05 by Grandma / 1 nappy change / the note staff shared; the absent day with no note), the full profile (address, postcode, consent …), their bell history, deletion requests, feedback and referrals (1, as referrer, without the friend's email), email preferences. Left out: the other family's register row/dose/email, a staff-internal register note, the unshared staff-subject accident. Staff export (new): own timeclock, leave, expense claims, availability, documents read, learning, appraisals (appraiser's unshared notes withheld as on My appraisals), onboarding record, bell — no colleague's records. /api/privacy summary counts include the new sections.",
+        "notes": "server/src/routes/privacy.ts gather(): profile (users doc minus token/secret/stripe keys), notifications + deletionRequests for every role; staff block (own records by uid/staffEmail/name); parent block adds medicationAdmin, registers (by the family's blockIds, matched block+booking ref), feedback, referrals, notificationPrefs. Decision taken: staff-internal register notes (shareParent false) stay out of the self-serve download like confidential concerns; referees' replies stay out of the staff copy (confidential-reference exemption). PrivacyApp shows the new counts with raw keys (no i18n labels — fix2small's area).",
+        "at": "2026-09-13T01:03:03Z"
+      }
+    ]
+  },
+  "d21s7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: POST /api/privacy/delete-request → 201; deletionRequests {status:'pending', dueBy:'2026-10-13'}; provider bell GET /api/notifications has 'Data deletion request'; HQ GET /api/platform/notifications → 200 in 2.7s listing the parent's email (the round-2 demo-leads-only fix s13-rtE1 holds — was a 150s timeout before it).",
+    "notes": "Provider email not verifiable (mail not live; locally SUPPRESSED).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:20Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "POST /api/privacy/delete-request returned 201 and wrote a deletionRequests doc {status:'pending', dueBy:'2026-10-12'}. The provider's tenant got a notifications doc (audience 'tenant', title 'Data deletion request from Pat Parent'), and it shows on the operator's GET /api/notifications. HQ's GET /api/platform/notifications also lists the pending request for the parent's email.",
+        "notes": "The provider email could not be verified: the send goes through notify(), and mail is not live (MAIL_LIVE unset, allowlist only), so nothing was delivered. The bell and HQ-queue parts were verified.",
+        "at": "2026-09-12T13:11:03.699Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-test 13 Sept: REGRESSION found and fixed. First run: POST /api/privacy/delete-request 201 and the provider's bell got 'Data deletion request from …', but HQ's GET /api/platform/notifications never answered (client timeout at 150s; the server logged Firestore DEADLINE_EXCEEDED at 300s) — so the request never reached HQ. After the fix: delete-request 201, deletionRequests {status:'pending', dueBy:'2026-10-12'}, provider bell 200 with the item, HQ bell 200 in 8.6s listing 'Data deletion request — <parent email>' (respond by 2026-10-12).",
+        "notes": "Cause: the HQ bell read every lead created in the last 45 days to find demo requests, and the 12 Sept research import put ~26,200 prospects in that window (~50MB per refresh). Fix: server/src/routes/platformNotifications.ts lead section now queries source == 'demo' only (what the /demo form + public schema default write; equality, no index), still skipping imported/old ones. 2 recent demo requests still ring; an HQ-typed lead (cold call) no longer rings HQ's own bell. Backlog s13-rtE1. Provider email not verifiable (mail not live).",
+        "at": "2026-09-13T00:02:53Z"
+      }
+    ]
+  },
+  "d21s8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: parent with a free booking joined Gold (POST /api/my/memberships/join 200); POST /api/account/deactivate → 409 'You still have an active membership. Cancel it first, then close your account.' (memberships:[Gold]); cancel 200; deactivate → 200.",
+    "notes": "Screen side unchanged in code (AccountApp warns about the membership; the server's 409 blocks the close).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:23Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "With an active Gold membership (joined via POST /api/my/memberships/join), POST /api/account/deactivate returned 409: 'You still have an active membership. Cancel it first, then close your account.' with memberships:[{tier:'Gold'}]. After POST /api/my/memberships/cancel (200), deactivate returned 200.",
+        "notes": "Screen side checked in code only: features/account/AccountApp.tsx:464 shows the membership warning in the close panel, then cancels each membership before calling deactivate. A failed cancel is still swallowed there (line 435), but the server's 409 now blocks the close.",
+        "at": "2026-09-12T13:11:03.699Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: a parent with a free booking joined Gold (POST /api/my/memberships/join 200); POST /api/account/deactivate → 409 'You still have an active membership. Cancel it first, then close your account.' (memberships:[Gold]); POST /api/my/memberships/cancel 200; deactivate → 200.",
+        "notes": "Screen side re-read in code: AccountApp.tsx still warns about the membership and cancels it before deactivate (a failed cancel is still swallowed at ~509, but the server's 409 now blocks the close).",
+        "at": "2026-09-13T00:02:52Z"
+      }
+    ]
+  },
+  "d21s9": {
+    "verdict": "fail",
+    "method": "code",
+    "actual": "Round 3: still unbuilt — no carer/household feature anywhere in features/, server/src, app/ or lib/ (grep carerUids/secondCarer/inviteCarer: nothing). A second adult's account sees none of the first parent's bookings (GET /api/my/bookings) or children (GET /api/my/children); children are keyed to one parentUid, bookings to one email.",
+    "notes": "Unbuilt feature — recorded, not built. Needs e.g. children.carerUids[] + household booking lookup + an invite-a-carer flow (product decision on permissions: can a second carer book/pay/cancel?).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out; server/src/routes/my.ts",
+    "at": "2026-09-13T07:12:25Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "There is no way to add a second carer. The parent portal has no 'add a carer/partner' feature: nothing in features/parent, features/account or server/src/routes/my.ts or account.ts. Children are keyed to one parentUid and bookings to one email. Via the API, a second parent account (p2) sees none of p1's bookings (GET /api/my/bookings) or children (GET /api/my/children), and no endpoint links two adults to the same children.",
+        "notes": "This is a missing feature, not a leak. Suggested fix: a household/co-carer link, e.g. children.carerUids[] plus booking lookup by household, with an invite-a-carer flow in ChildrenApp.",
+        "at": "2026-09-12T13:11:03.699Z"
+      },
+      {
+        "verdict": "fail",
+        "actual": "Re-run 13 Sept: still no way to add a second carer — no carer/household feature anywhere in features/, server/src or app/ (grep). A second adult's account sees none of the first parent's bookings (GET /api/my/bookings) or children (GET /api/my/children); children are keyed to one parentUid, bookings to one email.",
+        "notes": "Unbuilt feature — recorded, not built (per tonight's brief). Needs e.g. children.carerUids[] + booking lookup by household + an invite-a-carer flow.",
+        "at": "2026-09-13T00:02:52Z"
+      }
+    ]
+  },
+  "d21s10": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: POST /api/ai/chat as a parent with Groq stubbed in-process (1 captured call, no external request) → 200. The snapshot handed to the model: September = exactly one £20 Cash payment on 2026-09-10 (booking APF-10312, provider named), earliest upcoming day = the booked session date, children = the family's two; the other family's £999 payment, email and marker absent.",
+    "notes": "The model's wording not tested (live LLM calls off-limits).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:28Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "I stubbed the Groq call inside the script (the real API was never called) and captured the data the assistant is given for POST /api/ai/chat as a parent. The next session is in it: Ben, upcomingDays ['2026-10-05']. There is no other family's data. But there is NO payment date anywhere in the snapshot. Each booking carries only pay:'Paid' and amount, and there is no payments list. The £20 recorded on 2026-09-10 and the £100 course paid in June look the same. 'What was paid in September' therefore cannot be answered from real data; the model can only guess, or total every 'Paid' booking.",
+        "notes": "The model's actual reply was not tested because external LLM calls were off-limits. Also found: the snapshot lists a CANCELLED booking with upcomingDays still filled in (APF-10312: status Cancelled, upcomingDays 2026-10-05/06), and it includes archived (removed) children. Suggested fix: in ai.ts familySnapshot, add payments (date, amount, ref) from the payments collection, blank upcomingDays for cancelled bookings, and filter archived children.",
+        "at": "2026-09-12T13:11:03.700Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested as a parent via POST /api/ai/chat with Groq stubbed in-process (no external call) and captured the data handed to the model. It now has a dated payments list: September = exactly one £20 Cash on 2026-09-10 (booking ZA1, provider named); the June £100 card payment is dated 2026-06-02 from paidAt; another family's £999 payment and a £77 unfinished card attempt are absent, and no other family's email appears anywhere. The next session is still there (confirmed booking, upcomingDays [2026-10-02]). The CANCELLED and DECLINED bookings now have upcomingDays [] and the archived child is gone from children. The system prompt tells the model month totals come from the dated payments list.",
+        "notes": "server/src/routes/ai.ts familySnapshot (~418-485): payments query on the payments collection by the signed-in email (own family only) → {date (paidAt||createdAt), type payment/refund, amountGBP, method (card for Stripe), bookingRefs, reference, provider}; only succeeded/recorded payments + non-failed refunds; upcomingDays [] for Cancelled/Declined (UK today via ukToday); archived children filtered; provider names also resolved for payment-only tenants; parent 'who' line (~613) mentions the dated payment history. The model's actual wording was not tested (external LLM calls off-limits). Backlog s13-par1.",
+        "at": "2026-09-12T22:51:24Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: POST /api/ai/chat as a parent with Groq stubbed in-process (1 captured call, no external request). The data handed to the model had September = exactly one £20 Cash payment on 2026-09-10 (booking APF-10312, provider named), the earliest upcoming day = the booked session date, children = the family's two; another family's £999 payment, email and marker absent.",
+        "notes": "The model's wording was not tested (live LLM calls off-limits).",
+        "at": "2026-09-13T00:02:52Z"
+      }
+    ]
+  },
+  "d21s11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: PUT /api/my/children/:id with allergies '' and medical '' → 200; both fields removed from the child doc (sendPlanId kept); operator GET /api/registers?date shows allergies null and medical null.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:30Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Parent PUT /api/my/children/:id with allergies:'' and medical:'' returned 200. Both fields were REMOVED from the child doc (sendPlanId kept). The operator's GET /api/registers?date=2026-10-05 showed allergies null and medical null for the child.",
+        "notes": "",
+        "at": "2026-09-12T13:11:03.701Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: PUT /api/my/children/:id with allergies '' and medical '' → 200; both fields removed from the child doc (sendPlanId kept); operator GET /api/registers?date shows allergies null and medical null.",
+        "notes": "",
+        "at": "2026-09-13T00:02:52Z"
+      }
+    ]
+  },
+  "d21s12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: child whose only booking is a whole-course booking (no days[]) on a block ending 2026-07-17 → DELETE 200 {archived:true}. Control (course ending 2026-11-06) → 409 'Di Course is still booked in (ZC2). Cancel that booking first.' (ref once).",
+    "notes": "Booking seeded directly (a parent can't book past dates through the route).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:33Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "The child's only booking was a whole-course booking (no days[]) on a block that ended 2026-07-17. DELETE /api/my/children/:id returned 200 {archived:true}. Control: the same shape on a block ending 2026-11-06 was still refused with 409 naming the ref.",
+        "notes": "The booking was seeded straight into Firestore, because a parent cannot book past dates through the route.",
+        "at": "2026-09-12T13:11:03.701Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: a child whose only booking is a whole-course booking (no days[]) on a block ending 2026-07-17 → DELETE 200 {archived:true}. Control: the same shape on a block ending 2026-11-06 → 409 naming ZC2.",
+        "notes": "Booking seeded directly (a parent can't book past dates through the route). Same duplicate-ref cosmetic as d21s5.",
+        "at": "2026-09-13T00:02:53Z"
+      }
+    ]
+  },
+  "d21s13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: closed account → GET /api/my/bookings 403 account_closed; GET /api/account/reactivate {closed:true, closedAt}; public listing as the closed account 200 and anonymous 200; POST /api/account/reactivate {} → 400 confirm_required (bookings still 403); HQ view-as POST {confirm:true} → 403; the holder POST {confirm:true} → 200 {reopened:true}; GET /api/my/bookings → 200 with the 1 booking; status → closed:false.",
+    "notes": "Login screen's reopen prompt (app/login/page.tsx) not visually checked — can't sign in in the browser here.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d21.out",
+    "at": "2026-09-13T07:12:36Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "POST /api/account/deactivate returned 200. After that every authenticated call from the account, e.g. GET /api/my/bookings, returned 403 {code:'account_closed', error:'You closed this account. Reopen it to carry on — your bookings and history are still here.'}. The public GET /api/listings/:id still returned 200 for the closed account (served as a visitor) and for an anonymous caller. POST /api/account/reactivate returned 200 {reopened:true}, and GET /api/my/bookings then returned all 4 bookings.",
+        "notes": "The login page (app/login/page.tsx:69) calls /reactivate automatically on every sign-in and shows 'Welcome back — your account is open again'. So a returning parent is reopened silently rather than 'told it's closed with a way to reopen'. The Close screen also promises deletion 'within 30 days', and nothing enforces that (backlog r5).",
+        "at": "2026-09-12T13:11:03.702Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: deactivate → 200; then GET /api/my/bookings → 403 {code:'account_closed', 'You closed this account. Reopen it to carry on — your bookings and history are still here.'}; public GET /api/listings/:id → 200 for the closed account (served as a visitor) and anonymously; POST /api/account/reactivate → 200 {reopened:true}; GET /api/my/bookings → 200 with the booking.",
+        "notes": "Unchanged: app/login/page.tsx:69 reopens automatically on sign-in ('Welcome back — your account is open again') rather than telling the parent first and asking.",
+        "at": "2026-09-13T00:02:53Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-test 13 Sept (wave 4): closed account → GET /api/account/reactivate {closed:true, closedAt}; GET /api/my/bookings 403 account_closed; POST /api/account/reactivate {} → 400 confirm_required and the account stays closed (still 403); HQ viewing as them POST {confirm:true} → 403; the account holder POST {confirm:true} → 200 {reopened:true}; my/bookings 200; status then closed:false. Public storefront behaviour unchanged.",
+        "notes": "app/login/page.tsx: sign-in no longer reopens automatically — it asks GET /api/account/reactivate and, for a closed account, replaces the form with 'Your account was closed on <date> — reopen it?' [Yes, reopen my account] (POST confirm:true, then home) / [No, keep it closed] (signs out, account stays closed); same check when an already-signed-in session revisits /login. server/src/routes/account.ts: new GET /reactivate status; POST needs confirm:true and refuses under HQ view-as. Login screen not visually checked (can't sign in in the browser here).",
+        "at": "2026-09-13T01:03:03Z"
+      }
+    ]
+  },
+  "d22s1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: throwaway head-office tenant with franchises A and B (role franchise, franchiseId = own uid), a staffer each + a head-office staffer; listings A×2 (£30, £35), B×2 (£25, £25), HO×1 (£25). 5 parent self-bookings via POST /api/my/bookings → 201 ×5, each stamped with its listing's franchiseId (A, A, B, B, none). Through the real routes A/B/HO each created trip, certificate, availability request, task, document library, uploaded document, accident, medication, staff invite (200/201) + HO's franchise invite 201; each family left a review via POST /api/my/feedback.",
+    "notes": "POST /api/shifts for B and HO → 409 by design (staffRosterBlock wants a DBS once any certificate exists in the tenant). Referral records seeded directly. In-process identities through the real attachRole.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:32:26Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "I built a throwaway company tenant with head office (role company) and franchises A and B (role franchise, franchiseId = their uid). Each has a staff member (franchiseId copied), plus a head-office staffer. Listings: A x2, B x2, HO x1. Parents self-booked through POST /api/my/bookings and each booking was stamped with its listing's franchiseId (A, B, or null for HO). Through the real routes each party then created a trip, certificate, availability request, task, document library, uploaded document and rota (all 200/201), an accident and a medication, and invites (HO: a franchise invite plus a staff invite; A and B: a staff invite each). In-house reviews came from each family via POST /api/my/feedback. Franchise A's identity is the harness user {role:franchise, tenantId:HO, franchiseId:A}; every request went through the real attachRole.",
+        "notes": "No real Firebase token ($F) was used: the identity was injected in-process and ran through attachRole. POST /api/shifts for B and HO returned 409. That is correct: staffRosterBlock requires a DBS once any certificate exists in the tenant, and theirs were added after the shift. Referral records were seeded directly (they are written by the referral engine when a referred friend books).",
+        "at": "2026-09-12T13:36:06.224Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: throwaway head-office tenant (company) with franchises A and B (role franchise, franchiseId = their uid), a staff member each, a head-office staffer; listings A×2 (£30, £35), B×2 (£25, £25), HO×1 (£25). Parents self-booked through POST /api/my/bookings (5 × 201) and each booking was stamped with its listing's franchiseId (A, A, B, B, none). Through the real routes each of A / B / HO then created a trip, certificate, availability request, task, document library, uploaded document, accident, medication and staff invite (all 200/201), plus HO's franchise invite; each family left an in-house review via POST /api/my/feedback.",
+        "notes": "In-process identities through the real attachRole (no Firebase token). POST /api/shifts for B and HO → 409 by design: staffRosterBlock wants a DBS once any certificate exists in the tenant, and A's certificate was already in. Referral records seeded directly (the referral engine writes them).",
+        "at": "2026-09-13T00:19:41Z"
+      }
+    ]
+  },
+  "d22s2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: GET /api/children/lookup as franchise A → ['Alfie Alpha']; as A's staff → ['Alfie Alpha']. No B or head-office child.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:32:30Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "GET /api/children/lookup (Find a child) as franchise A returned only ['Alfie Alpha'], which is correct. The SAME call as franchise A's STAFF member ({role:staff, franchiseId:A}) returned ['Alfie Alpha','Bella Bravo','Hugo Hq']: franchise B's child and head office's child, each with the parent's name, email, phone, postcode and photo.",
+        "notes": "Cause: server/src/routes/children.ts:73 narrows only when auth.role === 'franchise'. A staff member carrying a franchiseId falls through to franchiseId=null, which means the whole tenant, and also merges in every customer's children. Suggested fix: use isFranchise(auth) from lib/franchiseScope, so staff with a franchiseId get the franchise lens too.",
+        "at": "2026-09-12T13:36:06.229Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested after fix (children.ts lookup now gives a franchise's STAFF the franchise lens): GET /api/children/lookup as franchise A → ['Alfie Alpha']; as A's staff → ['Alfie Alpha']. No B or head-office child in either.",
+        "notes": "Fixed 12 Sept: server/src/routes/children.ts — staff carrying a franchiseId are scoped like the franchise.",
+        "at": "2026-09-12T14:54:37Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: GET /api/children/lookup as franchise A → ['Alfie Alpha']; as A's staff → ['Alfie Alpha']. No B or head-office child in either.",
+        "notes": "",
+        "at": "2026-09-13T00:19:41Z"
+      }
+    ]
+  },
+  "d22s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: GET /api/children/<id>: franchise A → B's child 404, HO's child 404, own 200; A's staff the same (404/404/200); no 404 body carried the other child's data.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:32:32Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "GET /api/children/<id>: franchise A asking for B's child got 404 and for HO's child got 404; its own child got 200. A's staff got the same (404 / 404 / 200). No response body contained B's or HO's data.",
+        "notes": "",
+        "at": "2026-09-12T13:36:06.229Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: GET /api/children/<id>: franchise A → B's child 404, HO's child 404, own child 200; A's staff the same (404 / 404 / 200). No 404 body contained the other child's data.",
+        "notes": "",
+        "at": "2026-09-13T00:19:41Z"
+      }
+    ]
+  },
+  "d22s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: as franchise A and A's staff, /api/trips, /api/shifts, /api/compliance, /api/referrals, /api/availability/requests, /api/tasks, /api/reviews, /api/documents/library and /api/documents show only A's rows + nothing of franchise B's. Staff 403 on referrals, availability/requests, reviews. Cross-franchise writes: B dosing A's medication → 404; A noting B's accident → 404. One head-office row now reaches A's STAFF by design: head office's library doc (audience everyone) appears read-only in A's staff library as 'ho:doc-HEADOFFICE' (fromHo) — the wave-2 fix s13-fs4; franchise A's manager library shows only its own; B's everyone-doc reaches neither.",
+    "notes": "Test now gives each library doc all:true so the HO→franchise-staff rule and the B→A non-leak are both exercised. HO docs to franchise staff = intended (s13-fs4), not a leak.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:32:35Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "As franchise A, none of /api/trips, /api/shifts, /api/compliance, /api/referrals, /api/availability/requests, /api/tasks, /api/documents/library or /api/rota returned B's or HO's rows; A's staff also saw none. Three leaks found. (1) REVIEWS: attribution is by listing NAME (reviews.ts listingOwnerByName). With 'Holiday Club' run by both A and B, franchise A's GET /api/reviews returned BOTH families' reviews ('REVIEW-FROM-BRAVO-FAMILY' included), and franchise B's returned none, not even its own. (2) GET /api/documents, the uploaded-documents list and not the library, has no franchise filter: franchise A and A's staff got head office's and B's uploaded documents ('UPLOAD-HO', 'UPLOAD-B': title and URL). (3) Cross-franchise WRITES: franchise B's POST /api/medications/<A's child's med>/administer returned 201 (a dose recorded against the other franchise's child), and franchise A's POST /api/incidents/<B's accident>/note returned 201.",
+        "notes": "No screen currently calls /api/documents (GET /), but the endpoint answers any franchise or staff token. Suggested fixes: attribute reviews by listingId, not name (store listingId on feedback); filter documents.ts GET / by franchiseId, the same way docLibraries is keyed; add a franchise check (tripInFranchise-style via franchiseChildIds) to ownMed() in medications.ts and ownLog() in incidents.ts.",
+        "at": "2026-09-12T13:36:06.230Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested after fixes: reviews — franchise A sees only REVIEW-FROM-ALPHA-FAMILY, B only REVIEW-FROM-BRAVO-FAMILY (was: A saw both, B none). /api/documents — head office sees HO+A+B uploads, franchise A and A's staff see only A's, B only B's (checked directly in scratchpad/docs.test.ts). Cross-franchise writes — B recording a dose on A's child's medication → 404; A adding a note to B's accident → 404 (were 201). The other 8 list routes still show no B/HO rows.",
+        "notes": "Fixed 12 Sept: feedback stamps the booking's franchiseId + a shared listing name no longer attributes; documents stamped/filtered by franchiseId; ownMed/ownLog + incident notes check the franchise (and staff can't note records they may not read).",
+        "at": "2026-09-12T14:54:37Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: as franchise A and as A's staff, /api/trips, /api/shifts, /api/compliance, /api/referrals, /api/availability/requests, /api/tasks, /api/reviews, /api/documents/library and /api/documents showed only A's rows (A's own trip/shift/cert/referral/request/task/review/library doc/upload present; no BRAVO or HEADOFFICE marker in any). Staff got 403 on referrals, availability/requests and reviews. Cross-franchise writes: B dosing A's medication → 404; A adding a note to B's accident → 404.",
+        "notes": "",
+        "at": "2026-09-13T00:19:41Z"
+      }
+    ]
+  },
+  "d22s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: franchise A GET /api/invites → 200 with 1 invite, its own 'INVITE-ALPHA-STAFF'; not head office's franchise invite, head office's staff invite or B's.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:32:43Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "As franchise A, GET /api/invites returned 1 invite: its own staff invite 'INVITE-A-STAFF'. It did not include head office's unused role:'franchise' invite token, head office's staff invite, or franchise B's staff invite.",
+        "notes": "",
+        "at": "2026-09-12T13:36:06.230Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: franchise A GET /api/invites → 200 with 1 invite, its own 'INVITE-ALPHA-STAFF'; not head office's franchise invite, head office's staff invite or B's staff invite.",
+        "notes": "",
+        "at": "2026-09-13T00:19:41Z"
+      }
+    ]
+  },
+  "d22s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: with B's and HO's parents self-booked plus a meal order each, franchise A's /api/bookings, /api/meal-orders, ?date=, /api/meal-orders/report, /api/moments/taggable (A and A's staff), /api/customers and /api/registers?date show no B or head-office family. B's child's uploaded plan (granted to the head-office tenant): A → 404, A's staff → 404, B → 200.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:32:48Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "A parent self-booked onto franchise B's listing through the real route; the booking was stamped franchiseId B. As franchise A, none of /api/bookings, /api/customers, /api/registers?date=, /api/medications, /api/incidents, /api/moments or /api/ratios showed it, and GET /api/bookings/<B ref> and /children both returned 404. It WAS visible to A in these places: (1) GET /api/meal-orders and /api/meal-orders?date= returned B's order with parentEmail, parentName, childName, childId and items. (2) GET /api/meal-orders/report returned rows for B's and HO's children. (3) GET /api/moments/taggable returned every booked child in the company (B's and HO's) with parent name, email and postcode, to franchise A AND to A's staff. (4) The child's EHCP: GET /api/my/files/<B child's EHCP> returned 200 to franchise A, to A's staff and to head-office staff.",
+        "notes": "Causes: mealsShop.ts GET / and /report scope by tenantId only. moments.ts /taggable scopes by tenant blocks only. childFiles.ts grants plan access by tenantId, and a franchise shares its head office's tenantId, so every account in the network passes. Suggested fixes: apply franchiseListingIds / franchiseChildIds narrowing in those three routes; store the booking's franchiseId in the file grant (e.g. tenantIds entry 'T__fr__B') and check it for franchise/staff callers.",
+        "at": "2026-09-12T13:36:06.231Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested after fixes: franchise A's /api/meal-orders, ?date= and /report show no B or head-office family (were leaking); /api/moments/taggable no longer lists B's/HO's children to A or A's staff; B's child's EHCP → 404 for franchise A and A's staff (was 200). Head-office staff still open it (200) — head office has network-wide safeguarding oversight by design.",
+        "notes": "Fixed 12 Sept: mealsShop.ts + moments.ts filter by the franchise's listings/bookings; childFiles.ts requires the family to be booked with the calling franchise. Head-office staff access left as designed — say if HO staff (not managers) should be narrowed.",
+        "at": "2026-09-12T14:54:37Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: with B's and HO's parents self-booked (plus a meal order each), franchise A's /api/bookings, /api/meal-orders, ?date=, /api/meal-orders/report, /api/moments/taggable (A and A's staff), /api/customers and /api/registers?date showed no B or head-office family. B's child's uploaded plan (granted to the head-office tenant): franchise A → 404, A's staff → 404, B → 200.",
+        "notes": "",
+        "at": "2026-09-13T00:19:41Z"
+      }
+    ]
+  },
+  "d22s7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: bookings by all three families, accidents by A, B, HO, a B trip, parent acks (200×3), B trip consent 200, and — new this round — a meal order by each family (201×3). Franchise A's bell: only its own meal order, its accident ack and its booking (unread 3). B's bell: its meal order, consent, ack, booking. A's staff: only A's accident ack (category accident only — no booking/billing/incident, nothing of B/HO). A's staff POST /api/notifications/read (marked 1) left A's unread at 3. Main run: A's staff bell showed only its own 'Availability requested'.",
+    "notes": "Head-office staff (no franchiseId) see the network's accident acks + B's trip consent — looks intended for head office.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22s7.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22s7.out; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:32:55Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Events came from A, B and HO: new bookings (booking), parents acknowledging accidents (accident), meal orders (booking) and a trip consent (trip). Franchise A's GET /api/notifications showed only A's alerts: booking:A, accident:A, booking:A (unread 3). B's trip-consent alert reached only B. A's staff saw accident:A plus a calendar alert aimed at them personally, with no booking, billing or incident categories and nothing from B or HO. After A's staff POST /api/notifications/read (marked 2), franchise A's unread count stayed at 3.",
+        "notes": "Head-office staff (staff with no franchiseId) see the whole network's accidents (A's and B's). That looks intended for head office. Alerts from categories that cannot be traced to a record (message, billing, register, task) are untagged, so franchises never see them.",
+        "at": "2026-09-12T13:36:06.231Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: bookings by all three families, accidents logged by A, B and HO, a B trip; each parent acknowledged their accident and B's parent gave trip consent. Franchise A's bell: only 'Alpha Family acknowledged the accident for Alfie' + A's new booking (unread 2). B's bell: its consent, ack and booking. A's staff: only A's accident ack — no booking/billing/incident categories, nothing from B or HO. A's staff POST /api/notifications/read (marked 1) left franchise A's unread at 2.",
+        "notes": "Head-office staff (no franchiseId) see the whole network's accident acks and B's trip consent — looks intended for head office. Meal-order alerts not re-exercised this time.",
+        "at": "2026-09-13T00:19:42Z"
+      }
+    ]
+  },
+  "d22s8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: franchise A PUT /api/library {settings.medication.requireWitness:true} → 200 (head office's own setting stayed unset). POST /api/medications/<A child's med>/administer with no witnessedBy → 400 'A witness is required for each dose — record who witnessed it.' for A, A's staff and head office dosing A's child; with a witness → 201; B's own med with no witness → 201.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:33:00Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Franchise A: PUT /api/library {settings.medication.requireWitness:true} returned 200. That wrote A's own library doc; head office's setting stayed unset. POST /api/medications/<A's child's med>/administer with no witnessedBy then returned 400 'A witness is required for each dose — record who witnessed it.' for franchise A, for A's staff, and for head office dosing A's child. With a witness it returned 201. Franchise B's own med (B has no witness rule) returned 201.",
+        "notes": "SEPARATE BUG, found in the same call: franchise B could POST /administer on franchise A's child's medication and got 201. ownMed() in medications.ts checks only tenantId, not franchise. Recorded under d22s4.",
+        "at": "2026-09-12T13:36:06.232Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: franchise A PUT /api/library {settings.medication.requireWitness:true} → 200 (head office's own setting stayed unset). POST /api/medications/<A child's med>/administer with no witnessedBy → 400 'A witness is required for each dose — record who witnessed it.' for franchise A, A's staff and head office dosing A's child; with a witness → 201. B's own medication with no witness → 201.",
+        "notes": "",
+        "at": "2026-09-13T00:19:42Z"
+      }
+    ]
+  },
+  "d22s9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: HO GET /api/ho/overview → network revenue 140 (A 65 + B 50 + direct 25), bookings 5, royalty 11.5, collected 50, outstanding 90, franchises 2, families 3. GET /api/splitfees: A count 2 revenue 65 fee 6.5; B count 2 revenue 50 fee 5; direct 25; totals revenue 115 fee 11.5. HO /api/dashboard: live 5, takenThisWeek 50, outstanding 90, listings 5.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:33:05Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Head office's GET /api/ho/overview: Alpha revenue 65 (2 bookings) with royalty 6.50; Bravo revenue 50 (2 bookings) with royalty 5.00; direct revenue 25 (1 booking). Network: revenue 140 (65+50+25), bookings 5, royalty 11.50 (6.50+5.00), collected 90, outstanding 50, franchises 2. The totals equal the sum of the parts and match GET /api/splitfees. Head office's GET /api/dashboard: live 5, listings 5, takenThisWeek 50.",
+        "notes": "",
+        "at": "2026-09-12T13:36:06.232Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: head office GET /api/ho/overview → network revenue 140 (A 65 + B 50 + direct 25), bookings 5, royalty 11.5 (6.50 + 5.00), collected 50, outstanding 90, franchises 2, families 3. GET /api/splitfees: A count 2 revenue 65 fee 6.5; B count 2 revenue 50 fee 5; direct revenue 25; totals revenue 115 fee 11.5. HO /api/dashboard: live 5, takenThisWeek 50, outstanding 90, listings 5. Totals equal the sum of the parts.",
+        "notes": "",
+        "at": "2026-09-13T00:19:42Z"
+      }
+    ]
+  },
+  "d22s10": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: by hand (£30 + £35) × 10% = £6.50. Franchise GET /api/splitfees/mine → count 2, revenue 65, fee 6.5 (all-time and ?period=month); HO GET /api/splitfees A row → count 2, revenue 65, fee 6.5 (all-time and ?period=month). All three agree to the penny.",
+    "notes": "Royalty is on booked revenue (A collected £25 of £65).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:33:11Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "Franchise A had one booking this week (£25) and one from 10 Jul (£40); the royalty rate is 10%. By hand for this week: £25 × 10% = £2.50. Head office's GET /api/splitfees?from=<7 days ago>&to=<today> gave A revenue 25, fee 2.50, which matches. Franchise A's own Royalties screen (GET /api/splitfees/mine) gave count 2, revenue 65, fee 6.50: it is ALL-TIME only. /mine ignores ?period/from/to, and FranchiseRoyaltiesApp sends none. So for 'this week' the three disagree: franchise £6.50, head office £2.50, by hand £2.50. On all-time the franchise and head office agree to the penny (65 / 6.50).",
+        "notes": "Also: the royalty is charged on booked revenue, not collected money. B's fee is 5.00 on revenue 50 while only 25 has been collected. Suggested fix: give /api/splitfees/mine the same parseRange() window and a period picker on FranchiseRoyaltiesApp, so both ends can reconcile the same invoice period.",
+        "at": "2026-09-12T13:36:06.233Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Fixed (code-level): GET /api/splitfees/mine now takes the same ?period= / ?from= / ?to= window as head office's Split fees page (same parseRange helper, by booking date), and the franchise Royalties screen has Last month / 3 / 6 / 12 months / All time. For any window both sides now filter the same bookings — all-time already agreed to the penny.",
+        "notes": "Fixed 12 Sept: splitfees.ts /mine + FranchiseRoyaltiesApp.tsx. Not re-run with the week-long fixture.",
+        "at": "2026-09-12T17:05:38Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept (with this week's bookings): by hand (£30 + £35) × 10% = £6.50. Franchise GET /api/splitfees/mine → count 2, revenue 65, fee 6.50 (all-time and ?period=month); head office GET /api/splitfees A row → count 2, revenue 65, fee 6.50 (all-time and ?period=month). All three agree to the penny.",
+        "notes": "Royalty is on booked revenue (A had collected only £25 of the £65).",
+        "at": "2026-09-13T00:19:42Z"
+      }
+    ]
+  },
+  "d22s11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: franchise A /api/splitfees/mine → count 2, revenue 65, collected 25, fee 6.5 — only A's bookings; A GET /api/splitfees (network) → 403.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:33:16Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Franchise A's GET /api/splitfees/mine returned count 2, revenue 65, collected 65, fee 6.50: exactly A's own two bookings, with no B or HO trading included. GET /api/splitfees (head office's network breakdown) returned 403 to franchise A.",
+        "notes": "",
+        "at": "2026-09-12T13:36:06.234Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: franchise A GET /api/splitfees/mine → count 2, revenue 65, collected 25, fee 6.50 — only A's two bookings, no B or HO trading. A GET /api/splitfees (the network breakdown) → 403.",
+        "notes": "",
+        "at": "2026-09-13T00:19:42Z"
+      }
+    ]
+  },
+  "d22s12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: B's £25 booking paid £10 Card + £15 Tax-Free Childcare via POST /api/bookings/:ref/record-payment → amountPaid 25, pay 'Paid'; ledger rows 15 TFC + 10 Card = 25 exactly. HO's B row (count 2, revenue 50, collected 25, fee 5) = B's /mine — divergence £0.00. This booking: £2.50 royalty + £22.50 kept = £25.00.",
+    "notes": "Unchanged observations: neither screen shows the card vs TFC split; royalty ignores payment method and is on booked, not collected, revenue.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:33:21Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "B's booking cost £25. It was paid through POST /record-payment: £10 'Card' plus £15 'Tax-Free Childcare'. The booking shows amountPaid 25, pay 'Paid', and the payments ledger has both rows (10 Card, 15 TFC), which sum to 25 exactly. Split fees charges the royalty on the booking amount whatever the payment method, so this booking splits into £2.50 to head office and £22.50 kept by the franchise, summing to 25.00. Head office's /api/splitfees for B (revenue 50, collected 25, fee 5.00) and B's own /api/splitfees/mine (count 2, revenue 50, collected 25, fee 5.00) match: the divergence between the two ends was £0.00 in this case.",
+        "notes": "Neither screen shows the card vs TFC split. The royalty ignores payment method and is taken on booked, not collected, revenue. B's second, unpaid booking still attracts a £2.50 royalty.",
+        "at": "2026-09-12T13:36:06.235Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: B's £25 booking paid through POST /api/bookings/:ref/record-payment as £10 Card + £15 Tax-Free Childcare → amountPaid 25, pay 'Paid'; the payments ledger has both rows (10 Card, 15 TFC) summing to exactly 25. Head office's B row (count 2, revenue 50, collected 25, fee 5.00) matches B's /mine (same) — divergence £0.00. This booking splits £2.50 royalty + £22.50 kept = £25.00.",
+        "notes": "Unchanged observations: neither screen shows the card vs TFC split; the royalty ignores payment method and is charged on booked, not collected, revenue (B's unpaid second booking still carries £2.50).",
+        "at": "2026-09-13T00:19:42Z"
+      }
+    ]
+  },
+  "d22s13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: as franchise A the dashboard's endpoints (/api/dashboard, bookings, listings?mine=1, tasks, registers, ratios, incidents?kind=accident, posts, notifications, timetables/published, rota, growth) → 200 with no B/HO record. Figures A's alone: live 2, newThisWeek 2, takenThisWeek £25, outstanding £40, listings 2, activeBlocks 2.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:33:25Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "As franchise A, I called every endpoint the franchise dashboard (DashboardApp) loads: /api/dashboard, /api/bookings, /api/listings?mine=1, /api/tasks, /api/registers, /api/ratios, /api/incidents?kind=accident, /api/posts, /api/notifications, /api/timetables/published, /api/rota and /api/growth. All returned 200 and none contained franchise B's or head office's records. Dashboard figures were A's alone: live bookings 2, newThisWeek 1, takenThisWeek £25 (A's payment only; B paid £25 too), outstanding 0, listings 2, activeBlocks 2. Head office's whole-network dashboard: live 5, takenThisWeek 50, listings 5.",
+        "notes": "Cosmetic: dashboard byListing labels read 'Untitled' because dashboard.ts reads listing.title and these listings have only `name`. Real wizard listings may carry title.",
+        "at": "2026-09-12T13:36:06.236Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: as franchise A every endpoint the dashboard loads — /api/dashboard, /api/bookings, /api/listings?mine=1, /api/tasks, /api/registers, /api/ratios, /api/incidents?kind=accident, /api/posts, /api/notifications, /api/timetables/published, /api/rota, /api/growth — returned 200 with no B or head-office record. Dashboard figures A's alone: live 2, newThisWeek 2, takenThisWeek £25 (A's payment; B paid £25 too), outstanding £40 (65 − 25), listings 2, activeBlocks 2.",
+        "notes": "",
+        "at": "2026-09-13T00:19:42Z"
+      }
+    ]
+  },
+  "d22s14": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Round 3: franchise A GET /api/dashboard, ?franchiseId=<B> and ?franchiseId=__ho__ all → A's figures (live 2, newThisWeek 2, takenThisWeek 25, outstanding 40, listings 2). HO lens ?franchiseId=<A> the same; HO unfiltered live 5, takenThisWeek 50, outstanding 90.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-E/d22.out",
+    "at": "2026-09-13T07:33:28Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "As franchise A: GET /api/dashboard, GET /api/dashboard?franchiseId=<B> and GET /api/dashboard?franchiseId=__ho__ all returned A's figures (live 2, newThisWeek 1, takenThisWeek 25, listings 2). For comparison, head office's lens ?franchiseId=<A> gave the same numbers, and head office unfiltered gave live 5 and takenThisWeek 50.",
+        "notes": "",
+        "at": "2026-09-12T13:36:06.236Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: as franchise A, GET /api/dashboard, ?franchiseId=<B> and ?franchiseId=__ho__ all returned A's figures (live 2, newThisWeek 2, takenThisWeek 25, outstanding 40, listings 2). Head office's lens ?franchiseId=<A> gave the same; head office unfiltered gave live 5, takenThisWeek 50, outstanding 90.",
+        "notes": "",
+        "at": "2026-09-13T00:19:42Z"
+      }
+    ]
+  },
+  "d23s1": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Re-run 13 Sept: GET /api/location-staff (owner) → 200, nothing saved yet (staff null) + the joined team with each person's invite assignment (Ann –, Al all, Lia locations); PUT 3 people → 200 and GET returns them (Ann@Oak, Lia@Oak+Elm with an Elm listing, Una 'None — office'); staff GET/PUT → 403/403; another tenant sees nothing (staff null, team 0); blank name → 400. Client rule (features/locations/locStaff.ts, run offline, 12/12): deployed at Oak → offered at Oak not Elm; deployed via one Elm listing → Elm only; specific listings at a venue limit them; 'None — office' → nowhere; invite 'all' → everywhere; invite listing → that listing only; never placed / unknown venue / no deployment loaded → no rule. ScheduleApp still applies it (deployedFor in the Assign-staff list and both auto-fills).",
+    "notes": "Screens not visually checked. Rota PUT itself still accepts an undeployed person (soft rule by design for P1 — backlog s13-so4).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.out; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/logic.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/logic.out",
+    "at": "2026-09-13T00:36:35Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "Location staff assignments are never used when filling shifts. LocationsApp saves who works where only in the operator's browser (localStorage 'aos.locstaff.v2', features/locations/LocationsApp.tsx:16,64-67), and no other code reads that key. The schedule's 'Assign staff' picker (features/schedule/ScheduleApp.tsx:925) lists every member of store.staff, and auto-fill (line 386) uses the same pool. Neither filters by the shift's site. On the server, PUT /api/rota with a shift at 'Elm Primary' assigned to a lead whose account assignment is {mode:'locations', ids:['v-oak']} returned 200: nothing checks it.",
+        "notes": "Suggested fix: keep location assignments server-side (e.g. users.assignment, which invites already write), filter the assign picker and auto-fill by the shift's site, and have rota.ts refuse an assignment to a site the person isn't assigned to.",
+        "at": "2026-09-12T13:50:34.459Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested 13 Sept (P1). Server: new /api/location-staff — GET (managers) returns the saved deployment (null until saved) + the joined team with each person's invite assignment (HO sees HO staff, a franchise its own); PUT saves the list; staff 403 on both; other tenant sees nothing; blank name 400. Client logic (bundled run): Ann deployed at Oak -> offered at Oak, not Elm; someone deployed via listing l9 (Elm) -> Elm only; specific listings at a venue limit them to those; 'None - office' -> nowhere; invite 'all' -> everywhere; invite 'listings l2' -> only l2 at Oak; never placed / not in Deployment / shift at an unknown venue -> no rule. ScheduleApp's Assign staff list hides people deployed elsewhere (with 'Show N more' override) and both auto-fills skip them. Screens not visually checked. Rota PUT itself still accepts an undeployed person (soft rule, by design for P1 — see backlog decision s13-so4).",
+        "notes": "server/src/routes/locationStaff.ts (new, mounted server/src/index.ts:241); features/locations/locStaff.ts (fetch/save/resolveDeployment/deployedAt); features/locations/LocationsApp.tsx (server-backed, real team, no localStorage 'aos.locstaff.v2'); features/schedule/ScheduleApp.tsx (deployedFor in autoFillDraft, autoFill and the Assign staff list); lib/i18n/messages/areas/schedule.ts 3 en keys. Backlog s13-so3, s13-so4.",
+        "at": "2026-09-12T23:00:26Z"
+      }
+    ]
+  },
+  "d23s2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept: a company tenant (plan company-growth) with no franchise users: GET /api/me → role 'company', hasFranchises false, so CompanyDashboardSwitch (features/franchise/CompanyDashboardSwitch.tsx) renders DashboardApp, not HoDashboardApp; GET /api/dashboard → 200 with the operational shape (today, next, upcoming, byListing, bookings, occupancy, money, counts).",
+    "notes": "Unchanged edge: a company on the 'franchise' plan with zero franchises still gets hasFranchises:true (tenants.ts me) — seems intended for franchisors.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.out",
+    "at": "2026-09-13T00:36:36Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "For a company tenant (plan company-growth) with no franchise users, GET /api/me returned role 'company' with hasFranchises: false. CompanyDashboardSwitch (features/franchise/CompanyDashboardSwitch.tsx:17) then renders DashboardApp, the operational dashboard, not HoDashboardApp. GET /api/dashboard returned 200 with the operational shape (today, next, upcoming, byListing, bookings, occupancy, money, counts).",
+        "notes": "Edge case: a company on the 'franchise' plan with zero franchises still gets hasFranchises:true, and so the franchisor board (tenants.ts me route). That seems intended for franchisors.",
+        "at": "2026-09-12T13:50:34.462Z"
+      }
+    ]
+  },
+  "d23s3": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "Re-run 13 Sept (wave 3, fix3ops): multi-listing basket still unbuilt — POST /api/my/bookings takes ONE listingId + blockId, so breakfast/after-school/holiday club need separate checkouts (unchanged). The duplicate-child bug is FIXED: one basket with the same child twice on the same day → 400 'Dup Kid is in this basket twice for Mon 21 Sept — remove one of them.'; booking once → 201 (block bookedCount 1, dayCount 1); the same child again (by id, or by name only) → 409 'Dup Kid already has a place on Mon 21 Sept (booking APF-…)'; operator take-booking (POST /api/bookings) of the same child on that block → 409; a sibling on the same day → 201.",
+    "notes": "Step stays fail: multi-listing checkout is an unbuilt feature. s13-rtE2 FIXED 13 Sept (wave 3): server/src/routes/my.ts POST /bookings — after pricing, refuses duplicate child+block+date(+timing) lines (400) and a child who already holds a place on that exact day (409, via registerRows expected; a different timing on the same day is allowed); server/src/routes/bookings.ts POST / (operator) refuses the same family's child already placed on that block (409). Not race-proof against two simultaneous baskets for the same child (checked before the transaction).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/fix3ops.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/run1.out",
+    "at": "2026-09-13T00:59:35Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "Breakfast, After-school and Holiday clubs were built as three listings. POST /api/my/bookings takes ONE listingId + blockId per request, and the checkout (features/listings/ListingWizard.tsx:676-697) groups its basket by block within a single listing. Putting the after-school block under the breakfast listing's request returned 400 'Unknown block'. The parent had to make three separate checkouts (201, 201, 201). There is no basket spanning listings, so no single payment or single discount/wallet application covers all three.",
+        "notes": "Also found: one basket with the SAME child twice on the same day was accepted (201). It charged £30 for one £15 session, took 2 seats off the block (bookedCount 2), but put the child on the register only once. Suggested fix: reject duplicate child+date items in my.ts POST /bookings, and support a multi-listing basket (one checkout, one payment) if schools need it.",
+        "at": "2026-09-12T13:50:34.463Z"
+      },
+      {
+        "verdict": "fail",
+        "actual": "Re-run 13 Sept: breakfast, after-school and holiday clubs built as three listings. POST /api/my/bookings still takes ONE listingId + blockId; sending the after-school block under the breakfast listing → 400 'Unknown block'. The parent needed separate checkouts (201 each). No basket spans listings, so no single payment / discount / wallet application across the three. Also still open: one basket with the SAME child twice on the same day → 201, one booking charged £30 for a £15 session, block bookedCount 2 (dayCounts 2) — the register/ratios show the child once.",
+        "notes": "Multi-listing checkout is an unbuilt feature — recorded, not built (per tonight's brief). The duplicate child+date line is a separate bug in my.ts POST /bookings (should reject or de-dupe identical child+date items) — not fixed tonight (booking route shared with other agents); worth a backlog item.",
+        "at": "2026-09-13T00:36:36Z"
+      }
+    ]
+  },
+  "d23s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept: same date, Oak Breakfast Club (07:30–08:45) and Oak After-school Club (15:15–18:00). GET /api/registers → separate sessions: Breakfast expected 1 [Kit], After-school expected 2 [Kit, Ola]. Marking Kit 'in' at breakfast (POST /api/registers/<BK block>/<date>/mark 200) → Breakfast present 1, After-school present 0. GET /api/ratios → separate sessions: Breakfast 1 child, After-school 2.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.out",
+    "at": "2026-09-13T00:36:36Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "The same date (2026-10-06) had a Breakfast Club block (07:30-08:45, Oak) and an After-school Club block (15:15-18:00, Oak). GET /api/registers returned them as separate sessions: Breakfast expected 1 [Kit]; After-school expected 2 [Kit, Ola]. Marking Kit 'in' at breakfast (POST /api/registers/<BK block>/<date>/mark, 200) set Breakfast present=1 and left After-school at present=0. GET /api/ratios returned separate sessions: Breakfast 1 child, After-school 2 children, Art Club 1.",
+        "notes": "",
+        "at": "2026-09-12T13:50:34.463Z"
+      }
+    ]
+  },
+  "d23s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept (after the access2 extension landed, last edit 03:42): site lead assigned {mode:'locations', ids:['v-oak']}: registers → only the two Oak sessions; marking Elm's register → 404, Oak's → 200; Elm child's card → 404, Oak child → 200; Find-a-child → Oak children only; /api/bookings → Oak bookings only; Elm booking by ref → 404; POST /api/incidents on the Elm child → 403 child_not_yours. Newly scoped areas as the same lead: /api/ratios, /api/meals, /api/trips, /api/moments, /api/moments/taggable, /api/incidents and /api/medications all 200 showing Oak records and nothing from Elm (Elm accident, medication, trip and moment seeded). A lead with mode 'all' still sees all 5 sessions / 6 bookings; the owner is unscoped.",
+    "notes": "server/src/lib/siteScope.ts used by registers, children, bookings, childAccess and now ratios, meals, trips, moments, incidents, medications (backlog s13-acc5 covered). Tested via the API only.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.out",
+    "at": "2026-09-13T00:36:36Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "I made a staff member a lead (lead:true) assigned only to 'Oak Primary' (assignment {mode:'locations', ids:['v-oak']}). Everything came back unscoped. GET /api/registers?date=2026-10-26 returned Elm Primary's 'Holiday Club'. GET /api/registers?date=2026-10-06 returned Breakfast, After-school AND 'Art Club' (Ash Centre). GET /api/children/<a child booked only at Ash> returned 200 with the full card. POST /api/registers/<Elm holiday block>/<date>/mark returned 200 (the lead marked another site's register). GET /api/bookings returned bookings at all four listings across all three sites.",
+        "notes": "No site-lead scope exists on the server. `lead` is a single boolean (middleware/role.ts), and users.assignment is not read by registers, ratios, children, bookings or incidents. Suggested fix: resolve the staff member's assignment to listing ids and narrow these reads the same way franchiseListingIds narrows a franchise.",
+        "at": "2026-09-12T13:50:34.464Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Throwaway tenant, two sites (Oak venue v-oak, Elm v-elm), a lead with assignment {mode:'locations', ids:['v-oak']}: GET /api/registers?date → 1 session (Oak Holiday Club only); POST /api/registers/<Elm block>/<date>/mark → 404; Oak mark → 200; GET /api/children/<Elm child> → 404, Oak child → 200; /api/children/lookup → Oak child only; GET /api/bookings → Oak booking only; GET /api/bookings/<Elm ref> → 404; POST /api/incidents against the Elm child → 403 child_not_yours. A lead with mode 'all' still sees both sessions and both bookings; owner unscoped.",
+        "notes": "New server/src/lib/siteScope.ts (staffSiteScope: locations → listings by venueId, listings mode → ids; + their blocks; bookingInSite). Applied: registers.ts GET / filter + blockInMyFranchise (all register writes); children.ts /lookup (bookedChildren site filter, no customer fallback when scoped) + /:id; bookings.ts GET / + /:ref; lib/childAccess.ts childVisibleTo (incidents/medication). users.assignment now on req.auth (role.ts). Applies to any staff with a site assignment, not only leads. Not yet scoped: ratios, meals board, trips, moments, incident/medication lists (backlog s13-acc5).",
+        "at": "2026-09-12T22:51:43Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Throwaway tenant, two sites (Oak venue v-oak, Elm v-elm), a lead with assignment {mode:'locations', ids:['v-oak']}: GET /api/registers?date → 1 session (Oak Holiday Club only); POST /api/registers/<Elm block>/<date>/mark → 404; Oak mark → 200; GET /api/children/<Elm child> → 404, Oak child → 200; /api/children/lookup → Oak child only; GET /api/bookings → Oak booking only; GET /api/bookings/<Elm ref> → 404; POST /api/incidents against the Elm child → 403 child_not_yours. A lead with mode 'all' still sees both sessions and both bookings; owner unscoped. RE-RUN 13 Sept (access2): the same suite still 45/45 PASS (fix-access2/rerun-access.log). Extended scope, new suite 70/70 PASS on a fresh throwaway tenant (0 leftovers): the Oak-only lead now gets GET /api/ratios → Oak session only; the day board (ratios/board) → only Oak children's moves, and saving it keeps Elm's moves untouched; GET /api/meals board → Oak child only; GET /api/trips → Oak trip only, Elm trip PUT 404, planning on the Elm listing 403, a typed Elm child's name isn't linked (no childId/medical notes); GET /api/moments + /taggable → Oak only, tagging an Elm child 403, commenting on Elm's moment 403; GET /api/incidents → Oak's + the one the lead logged (not Elm's, not an unplaced office note), note on Elm's record 404; GET /api/medications → Oak only, dose on Elm's medicine 404, MAR → Oak dose only. Mode-'all' lead, unassigned coach and owner still see everything.",
+        "notes": "New server/src/lib/siteScope.ts (staffSiteScope: locations → listings by venueId, listings mode → ids; + their blocks; bookingInSite). Applied: registers.ts GET / filter + blockInMyFranchise (all register writes); children.ts /lookup (bookedChildren site filter, no customer fallback when scoped) + /:id; bookings.ts GET / + /:ref; lib/childAccess.ts childVisibleTo (incidents/medication). users.assignment now on req.auth (role.ts). Applies to any staff with a site assignment, not only leads. Not yet scoped: ratios, meals board, trips, moments, incident/medication lists (backlog s13-acc5). | 13 Sept access2 extended it (s13-acc5): server/src/lib/siteScope.ts siteChildIds/recordInSite/siteRecordFilter; ratios.ts (GET / site filter, board GET/PUT held to the site's children via siteBoardKeys); meals.ts (board); trips.ts (list + own() + POST/PUT listingId check + enrichTrip resolves names only at the site); moments.ts (list, ownMoment, taggable, POST/PUT tag check, staff comment); incidents.ts (list + ownLog → note/edit/delete); medications.ts (list, ownMed → administer/edit, MAR; the MAR now also franchise-scoped — it wasn't). Rule: a record is at the site when it names a listing/block there or a child booked there; plus records the person made themselves. Still open: groupStaff on the ratio board is tenant-wide (no site dimension); rota cover doesn't widen an assignment.",
+        "at": "2026-09-12T23:28:02Z"
+      }
+    ]
+  },
+  "d23s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept: two card payments each spanning two sites — £35 for Kit's Oak breakfast (£15) + Oak after-school (£20), and £50 for Eli's Elm holiday club (£30) + Ola's Ash art club (£20). Dashboard money-in by site (?venueId=): Oak £35, Elm £30, Ash £20 — sum £85 = the unfiltered total £85 (each payment split by booking price, not counted in full at every site).",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.out",
+    "at": "2026-09-13T00:36:36Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "Test: 3 sites. £30 was recorded by hand on Holiday Club (Elm). One card checkout paid 2 bookings at 2 sites: After-school £15 (Oak) + Art Club £20 (Ash) = £35. That payments doc is the exact shape payments.ts writes, {refs:[both], amount:35, status:'succeeded'}. The true split is Oak 15, Elm 30, Ash 20, total 65. The dashboard's venue lens gives GET /api/dashboard takenThisWeek: all 65, ?venueId=v-oak 35, ?venueId=v-elm 30, ?venueId=v-ash 35. The per-site figures sum to 100 against a real total of 65: the two-site payment is counted IN FULL at both sites. The per-booking method the Finance hub uses (amountPaid per booking from GET /api/bookings, grouped by listing venue) gave the correct Oak 15 / Elm 30 / Ash 20.",
+        "notes": "The multi-booking card payment was written straight to Firestore, mirroring payments.ts:347-358 plus the confirm step, because Stripe is unavailable here. Cause: dashboard.ts counts a payment for a venue when ANY of its refs is at that venue (`(p.refs ?? []).some(...)`). Suggested fix: apportion each payment across its refs by booking amount (or use booking.amountPaid) in the venue/franchise lenses.",
+        "at": "2026-09-12T13:50:34.464Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested after fix (same 3-site data): the dashboard's money-in by site now gives Oak £15, Elm £30, Ash £20 — sum £65 = the real total (was 35 + 30 + 35 = £100, because one card payment covering two sites counted in full at both).",
+        "notes": "Fixed 12 Sept: dashboard.ts splits a multi-booking payment across sites by each booking's price under a site/franchise lens.",
+        "at": "2026-09-12T17:03:18Z"
+      }
+    ]
+  },
+  "d23s7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept: Kit booked into Oak Breakfast and Oak After-school on the same day (two parent checkouts). GET /api/registers shows Kit on both registers (Breakfast expected 1, After-school expected 2 with Ola); GET /api/ratios counts Kit once in each session (Breakfast 1, After-school 2) — once per session, not once per day, and not merged.",
+    "notes": "The same-child-twice-in-one-basket bug (d23s3) still double-counts seats (bookedCount 2) while the register shows the child once.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d23.out",
+    "at": "2026-09-13T00:36:36Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Kit was booked into Breakfast Club and After-school Club on 2026-10-06 (two parent checkouts). GET /api/registers showed Kit on both registers: Breakfast expected 1, After-school expected 2 (with Ola). GET /api/ratios counted Kit once in each session: Breakfast 1 child, After-school 2 children. That is once per session, not once per day, and not merged across sessions.",
+        "notes": "A related bug is recorded under d23s3: the same child twice on the SAME session in one basket is charged twice and holds 2 seats, but shows once on the register and ratios (totalChildren 1, bookedCount 2).",
+        "at": "2026-09-12T13:50:34.465Z"
+      }
+    ]
+  },
+  "d24s1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept: as a staff member, every GET the staff sidebar pages make (32: me, library, rota, tasks, timetables/published, ratios, registers, incidents ×2, medications, meals, moments, moments/taggable, customers, trips, shifts, staff-announcements, onboarding, messages/threads, compliance, account, availability/mine, leave, appraisals, timeclock, expense-claims, payroll/mine, documents/library, learning/assignments, learning/completions, notifications, listings) → all 200. Tonight's pages: /api/appraisals gives the staffer only their own review with the appraiser's draft notes hidden and no feedback/PIPs/9-box; a colleague sees 0; own self-assessment 200 (→ status 'manager'); staff can't write a review (403). Payslips GET /api/payroll/mine → 200 [] (nothing published). Expense claim POST → 201, the manager sees it, a colleague doesn't.",
+    "notes": "API layer only — the screens were not visually checked (no browser sign-in).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.out",
+    "at": "2026-09-13T00:26:54Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "As a plain company staff member I called all 33 GETs the staff-portal views make on load (ratios, registers, tasks, incidents ?kind=accident|incident, timetables/published, library, me, staff-announcements, availability/mine, rota, credentials, learning/completions+assignments, documents/library, listings?mine=1, ratios/board/:date, medications + administrations, bookings, moments, customers, tasks/assignees, trips, onboarding, messages threads/folders/broadcasts/templates, compliance, account, leave, notifications). All returned 200. The failure is on the client side: 3 sidebar items can never show real data on a staff member's own device. 'Payslips' reads the pay-run store from localStorage (features/payroll/StaffPayslipsApp.tsx:29). 'Appraisals' uses loadReviews() from a local store (features/appraisals/MyAppraisalsApp.tsx:29). 'Expenses' keeps claims in localStorage 'aos.staff.expenses.v1' (features/staff/StaffExpensesApp.tsx:13). What the manager writes on their own browser never reaches the staff member's phone, so these pages are blank for a real staff account.",
+        "notes": "Screen rendering was not checked (browser tools off-limits). The Payroll/payslip backend is owed by Amir (RTI); Appraisals and staff Expenses have no server route. POST /api/expenses refuses staff with 403.",
+        "at": "2026-09-12T14:01:17.233Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested 13 Sept for the three pages that failed. Appraisals: new /api/appraisals — manager PUT review -> 200; staff GET returns ONLY their own review (+templates), no feedback/PIPs/9-box, and not the appraiser's draft ratings/summary before sign-off; a completed review shows the manager's summary to its owner; staff can submit their own self-assessment (-> status manager, manager part untouched) but not a colleague's (404) or a completed one (409); staff can't write reviews (403); other tenant sees nothing; franchise scope separate (same review id in HO and franchise don't collide). Payslips: StaffPayslipsApp now reads GET /api/payroll/mine (payroll agent's route; staff with nothing published -> 200 []), honest empty state otherwise. Expenses: already server-side — staff POST /api/expense-claims 201, manager GET sees it, another staff member gets []. Screens not visually checked (no browser sign-in).",
+        "notes": "server/src/routes/appraisals.ts (new, mounted server/src/index.ts:240); features/appraisals/data.ts (syncAppraisals / saveReviews diff / saveConfig / submitSelfAssessment; no seeds outside demo); features/appraisals/AppraisalsApp.tsx (server sync + real team via useTeam for every picker and the 9-box); features/appraisals/MyAppraisalsApp.tsx (server only, submitSelfAssessment); features/payroll/StaffPayslipsApp.tsx (GET /api/payroll/mine; demo keeps local store); lib/i18n/messages/areas/staffp.ts en payNone reworded. Expense claims unchanged (d24s8). Backlog s13-so2.",
+        "at": "2026-09-12T23:00:26Z"
+      }
+    ]
+  },
+  "d24s2": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "Re-run 13 Sept: still no real Firebase ID token for a staff account — browser sign-in and creating Firebase Auth accounts are off-limits. s3–s9 used an in-process staff identity that passes through the REAL attachRole middleware, as a verified token would.",
+    "notes": "To finish: in a signed-in staff browser, copy the Bearer header from any /api request in the Network tab.",
+    "evidence": "server/src/middleware/auth.ts (requireAuth), middleware/role.ts attachRole",
+    "at": "2026-09-13T00:26:54Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "blocked",
+        "actual": "I did not grab a real Firebase ID token for a staff account: browser tools and creating Firebase Auth accounts were both off-limits. For s3-s6 I used an in-process staff identity ({role:'staff', tenantId, franchiseId:null} on a users doc) that passes through the REAL attachRole middleware, as a real token would after verifyIdToken.",
+        "notes": "To finish this step you need a signed-in staff browser session: in the console, run `await firebase.auth().currentUser.getIdToken()`, or copy the Bearer header from any /api request in the Network tab.",
+        "at": "2026-09-12T14:01:17.237Z"
+      }
+    ]
+  },
+  "d24s3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept: staff GET /api/payments → 403 {error:'Requires a manager or owner account'}.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.out",
+    "at": "2026-09-13T00:26:55Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "As staff, GET /api/payments returned 403 {error:'Requires a manager or owner account'}. (GET /api/payments/status returned 503 'Payments aren't configured', because no Stripe key is set here.)",
+        "notes": "",
+        "at": "2026-09-12T14:01:17.240Z"
+      }
+    ]
+  },
+  "d24s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept: as staff, /api/reconciliation, /api/dashboard, /api/invoices, /api/growth, /api/income, /api/expenses, /api/splitfees, /api/memberships → 403. /api/bookings and /api/customers → 200 but with no money: a staff booking row carries none of amount/amountPaid/pay/method/refund/payment ids/TFC (keys: ref, booker, email, phone, child, listing, dates, sessions, status, addons, answers, note…), and the customer list mentions no spend/owed/balance.",
+    "notes": "Unchanged judgement (12 Sept): passed on the intent (no money to staff) rather than the letter (403 on all five) — the staff Families/Trips/Incidents screens need names and contacts. Say if bookings/customers should be 403 to staff too.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.out",
+    "at": "2026-09-13T00:26:55Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "As staff: /api/reconciliation returned 403, /api/dashboard 403 and /api/invoices 403. But /api/bookings returned 200 with the tenant's bookings (booker, email, phone, child, listing, days and the pay status such as 'Paid'/'Unpaid'); the amount, amountPaid and payment-reference fields are stripped. Sample: {\"ref\":\"APF-10313\",\"booker\":\"Priya Parent\",\"email\":\"…@example.test\",\"child\":\"Kid Two\",\"listing\":\"Drama Club\",…}. /api/customers returned 200 with every family (name, email, phone, uid, children). /api/bookings/:ref also returned 200. No amounts appeared in any of these. Not in the step's list: /api/growth ALSO returned 200 to staff, with money-derived figures ({\"stats\":{\"occupancy\":3,\"repeatRate\":100,\"listSize\":1,\"revenueWithinReach\":2470}…}).",
+        "notes": "The step expects 403 on all five. After backlog b1, bookings are deliberately served to staff without money fields, because staff screens (Families, trips, incidents) use them. So this is a fail against the letter of the step: 2 of 5 answer 200, with PII and pay status but no amounts. /api/growth uses operatorScope rather than managerScope (growth.ts:46). Suggested fix: managerScope on growth, and drop `pay`/`method` from staffView in bookings.ts.",
+        "at": "2026-09-12T14:01:17.242Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Fixed: /api/growth is now managers-only (403 to staff, was 200 with a revenue figure). Staff's /api/bookings rows no longer carry payment status or method either (pay, method, refund totals, card/invoice payment ids, TFC details stripped), on top of the amounts that were already stripped. Reconciliation, dashboard and invoices stay 403. /api/bookings and /api/customers still answer staff by design — the staff Families, Trips and Incidents screens need names and contact details — but with no money in them.",
+        "notes": "Changed 12 Sept: bookings.ts MONEY_KEYS; growth.ts managerScope. Judged against the intent (no money to staff) rather than the letter (403 on all five), because staff screens need bookings/families — say if you want those hidden from staff too.",
+        "at": "2026-09-12T16:54:56Z"
+      }
+    ]
+  },
+  "d24s5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept: staff 'Sam Staff' GET /api/compliance → only DBS-SAM-111 (not the colleague's DBS-CARA-999). PUT /api/account {name:'Cara Colleague'} → 200 but the name stays 'Sam Staff' (locked), and compliance still shows only his own. A nameless staff account sees 0 certificates and can't take the colleague's name (name stays '', nameLocked).",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.out",
+    "at": "2026-09-13T00:26:55Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "As staff 'Sam Staff', GET /api/compliance returned only ['Sam Staff:DBS-SAM-111'], which is correct. The own-only filter matches on the TOKEN's display-name claim (compliance.ts: req.user.name), and a user can change that claim themselves (Firebase client updateProfile({displayName}), then a refreshed token). With the same account's token name set to a colleague's ('Cara Colleague'), the call returned ['Cara Colleague:DBS-CARA-999']: the colleague's DBS reference and expiry. With no display name, staff see nothing, not even their own.",
+        "notes": "Serious: any staff member can read any named colleague's DBS certificates by renaming their own Firebase profile. Suggested fix: match on the name from the users doc, as credentials.ts ownName(uid) already does, or better a staff uid stored on the certificate. Never trust req.user.name.",
+        "at": "2026-09-12T14:01:17.243Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested after fix (7/7): staff 'Sam Staff' sees only DBS-SAM-111. With the token's display name changed to 'Cara Colleague' → still no DBS-CARA-999. PUT /api/account {name:'Cara Colleague'} as Sam → 200 but name stays 'Sam Staff' (nameLocked). A nameless staff account can't take a colleague's name, can set a new unique one; operators can still rename themselves.",
+        "notes": "Fixed 12 Sept: compliance.ts + leave.ts read the name on the account, not the token; account.ts locks a staff member's name once set (it links shifts, certificates, onboarding, training) — Settings shows 'set by your manager'.",
+        "at": "2026-09-12T14:56:07Z"
+      }
+    ]
+  },
+  "d24s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-test 13 Sept (wave 4), throwaway tenant: a staff member POSTed a concern about a colleague as kind 'incident' with subject 'staff' (201). Another staffer AND a lead: not in GET /api/incidents or ?kind=incident, dossier 404, note 404; their dossier of the same child's ordinary accident 200 with the staff-subject accident left out of its history. The reporter sees their own report as status only (restricted:true, 'Received — with the safeguarding lead', no description/name) — dossier 404, PUT 404, note 404; after the owner logged a DSL action it reads 'actioned' (the log itself not shown). The owner sees both in full. Their own child-subject safeguarding concern is still full. A staff-subject accident about a child is held back from the parent's list and export unless the DSL shares it.",
+    "notes": "server/src/routes/incidents.ts staffAccess()/statusOnly() (~153-185): subject 'staff' = manager/DSL only whatever the kind, reporter gets status only; list maps full/status/none; PUT refuses staff who can't fully read it; sharesWithParent + note-reply email + parent list gate subject 'staff' on shareWithParent. server/src/routes/ai.ts (~256): the staff co-pilot snapshot no longer carries safeguarding / confidential / staff-subject records (it had every incident's text). features/incidents/SafeguardingApp.tsx + IncidentsApp.tsx: a restricted row shows a 🔒 status badge and no Details/Edit/Review buttons (screen not visually checked). Backlog s13-rtE3.",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix4/fix4.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix4/run1.log",
+    "at": "2026-09-13T01:03:03Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "Seeded as the owner: an accident, a behaviour incident, a confidential DSL-only safeguarding concern about a child, and a safeguarding ALLEGATION about a colleague (subject 'staff', confidential). Plus a safeguarding concern logged by the staff member themselves. Staff GET /api/incidents returned the accident, the behaviour incident and the staff member's own safeguarding concern. It did NOT return the DSL-only concern or the allegation about the colleague. ?kind=safeguarding returned only their own concern. GET /api/incidents/<allegation>/dossier returned 404.",
+        "notes": "Gaps found along the way: (1) POST /api/incidents/<allegation id>/note by the same staff member returned 201. The note route never runs staffMayRead, so staff can write into a concern they are not allowed to read (they would need the id). (2) A concern about a colleague filed as kind 'incident' (possible via the API; the UI files staff allegations as safeguarding) IS visible to all staff, dossier included (200). Suggested fix: apply staffMayRead in incidents.ts POST /:id/note, and treat subject:'staff' as restricted whatever the kind.",
+        "at": "2026-09-12T14:01:17.244Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-run 13 Sept: staff GET /api/incidents → the accident, the behaviour incident and the staffer's own safeguarding concern; NOT the DSL-only confidential concern or the confidential allegation about a colleague. ?kind=safeguarding → only their own. The allegation's dossier → 404, and a staff POST note on it → 404 (was 201 on 12 Sept — fixed since).",
+        "notes": "Gap still open (noted 12 Sept): a concern about a colleague filed as kind 'incident' with subject 'staff' (possible through the API; the UI files staff allegations as safeguarding) IS visible to all staff, dossier included (200). Not changed tonight — incidents.ts lists are mid-edit by the access2 agent. Suggested: treat subject:'staff' as restricted whatever the kind.",
+        "at": "2026-09-13T00:26:55Z"
+      }
+    ]
+  },
+  "d24s7": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Re-run 13 Sept: code unchanged — PortalGuard (components/auth/PortalGuard.tsx accessOk: PORTAL_ACCESS.staff = ['staff']) bounces a staff account off /company/*, and the staff view registry (lib/view-registry.tsx staff block) has no finance, money-in or team view, so /staff/<slug> is notFound(). The data behind those screens refuses staff: /api/dashboard, /api/income, /api/expenses, /api/reconciliation, /api/growth and /api/invites all 403.",
+    "notes": "The redirect itself was not exercised in a browser.",
+    "evidence": "components/auth/PortalGuard.tsx; app/[portal]/[view]/page.tsx; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.out",
+    "at": "2026-09-13T00:26:55Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "pass",
+        "actual": "PortalGuard (components/auth/PortalGuard.tsx:88-153): PORTAL_ACCESS.staff = ['staff'], so a staff account opening /company/finance, /company/money-in or /company/team is not allowed there. It is router.replace()d to the same slug inside its own portal (/staff/finance, /staff/money-in, /staff/team). None of those is in the staff view registry (lib/view-registry.tsx staff block), so app/[portal]/[view]/page.tsx calls notFound(): 404, no operator screen renders. The data behind those screens refuses staff at the API: /api/dashboard 403, /api/income 403, /api/expenses 403, /api/invites 403 ('Your account cannot list invites'), /api/reconciliation 403.",
+        "notes": "The redirect itself was not exercised in a browser. Exception: /api/growth (Finance & analytics' growth panel) answers staff with 200 (see d24s4).",
+        "at": "2026-09-12T14:01:17.245Z"
+      }
+    ]
+  },
+  "d24s8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Re-run 13 Sept: staff POST /api/expense-claims → 201 (manager sees it, colleague doesn't); staff approving their own claim (PATCH) → 403; staff POST /api/expenses → 403 (manager-only by design). Register: staff rostered only on Football marks Football → 200; marks Drama (a colleague's session) → 403 code not_rostered.",
+    "notes": "",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.out",
+    "at": "2026-09-13T00:26:55Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "fail",
+        "actual": "Expense: the staff Expenses screen saves claims only to the device's localStorage (features/staff/StaffExpensesApp.tsx:13, 29-30), and POST /api/expenses as staff returned 403 'Requires an operator account'. The claim never reaches a manager. Register: the staff member was rostered only on Football Club (POST /api/shifts listingId=Football). POST /api/registers/<Football block>/<today>/mark returned 200, which is correct. POST /api/registers/<Drama block>/<today>/mark, a session they are NOT on (only a colleague is rostered), ALSO returned 200. It was not refused.",
+        "notes": "registers.ts POST /:blockId/:date/mark checks only tenant and franchise, not whether the staff member is rostered on that session. Suggested fix: give staff a real expense-claim route (a staff POST that lands in the manager's Money-out as pending), and gate plain staff's register marks on a shift or assignment for that listing and date (leads/managers exempt).",
+        "at": "2026-09-12T14:01:17.247Z"
+      },
+      {
+        "verdict": "pass",
+        "actual": "Re-tested after fix: Register — staff rostered only on Football: marking Football → 200, marking Drama (a session they're not rostered on) → 403 'not on the rota for this session' (was 200). Expenses — staff claims now go to the server: POST /api/expense-claims (staff) → 201 with their account name; the manager sees it, approves it (→ an expense in Money out, once), can mark it paid; a colleague can't see it; staff can't approve their own (8/8 in claims.test.ts). The staff My expenses screen and a Staff claims panel on the manager's Expenses page use it. POST /api/expenses stays manager-only by design.",
+        "notes": "Fixed 12 Sept: new server/src/routes/expenseClaims.ts (+ StaffExpensesApp on the server, StaffClaimsPanel on Expenses); registers.ts mark refuses non-rostered plain staff when the session has shifts.",
+        "at": "2026-09-12T17:27:14Z"
+      }
+    ]
+  },
+  "d24s9": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "Re-run 13 Sept: 'comfortable one-handed' still needs a real phone — no screen rendered. Server side all four work for a staff token: POST /api/timeclock/event in → 200 (status in), register mark → 200, POST /api/incidents → 201, clock out → 200 (status out); clocking a colleague in → 403.",
+    "notes": "Ergonomics untested (no device/browser).",
+    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-E/d24.out",
+    "at": "2026-09-13T00:26:55Z",
+    "agent": "E",
+    "retest": true,
+    "history": [
+      {
+        "verdict": "blocked",
+        "actual": "Needs a real phone to judge 'comfortable one-handed'. Browser and device tools were off-limits, so no screen was rendered.",
+        "notes": "Server-side, the register mark (200) and incident log (201) were exercised with a staff token in d24.test.ts. Clock in/out (POST /api/rota/clock, rota.ts:175) was not exercised. The ergonomics part is untested.",
+        "at": "2026-09-12T14:01:17.249Z"
+      }
+    ]
+  }
+}

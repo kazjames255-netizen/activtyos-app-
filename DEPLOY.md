@@ -56,6 +56,7 @@ and start only the server, so you don't set build/start commands by hand.
    | `CORS_ORIGIN` | `https://app.activityos.uk` (comma-separate if more) |
    | `STRIPE_SECRET_KEY` | your **live** key (or test key for a test deploy) |
    | `STRIPE_WEBHOOK_SECRET` | from step 4 |
+   | `URL_SIGNING_SECRET` | a long random string — `openssl rand -hex 32`. Signs children's-photo links and unsubscribe links (`server/src/lib/signing.ts`). **Set it once and never change it**: without it every restart makes a new key, so every photo link and every unsubscribe link already emailed stops working |
    | `PORT` | injected by Railway automatically; the server reads it |
 
 3. In Railway → the service → **Settings → Networking**, add the custom domain

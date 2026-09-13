@@ -15,12 +15,16 @@ interface SgLog {
   id: string; kind: "safeguarding"; date: string; time?: string; childName: string; childId?: string;
   location?: string; description: string; actionTaken?: string; concernCategory?: string;
   reportedTo?: string; witnesses?: string; severity: Risk; confidential?: boolean; subject?: "child" | "staff";
+  /** An allegation about the DSL / deputy themselves — the account holder's only. */
+  aboutDsl?: boolean;
   bodyMap?: BodyMark[]; attachments?: string[]; recordedByName?: string; createdAt?: string; updatedAt?: string;
   dslActions?: string[]; dslOutcome?: string; dslActionedAt?: string; shareWithReporter?: boolean;
   dslLog?: DslEntry[]; localAuthority?: string;
   notes?: { by: string; role: string; text: string; at: string }[];
+  /** Staff's own report about a colleague: the server sends its status only. */
+  restricted?: boolean; statusLabel?: string;
 }
-const RISK = { minor: { label: "Low", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "Medium", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "High", bg: "#fdebec", fg: "#c02636" } } as const;
+const RISK ={ minor: { label: "Low", bg: "#eaf0fc", fg: "#1d3a8f" }, moderate: { label: "Medium", bg: "#fdf3d8", fg: "#9a5a00" }, serious: { label: "High", bg: "#fdebec", fg: "#c02636" } } as const;
 const todayIso = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${t.getFullYear()}-${p(t.getMonth() + 1)}-${p(t.getDate())}`; };
 const nowTime = () => { const t = new Date(); const p = (n: number) => String(n).padStart(2, "0"); return `${p(t.getHours())}:${p(t.getMinutes())}`; };
 const fmtDate = (iso?: string) => (iso ? new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" }) : "");
@@ -75,6 +79,7 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
   const categories = sg.categories?.length ? sg.categories : [...SG_CATEGORIES];
   const isEdit = !!existing;
   const [d, setD] = useState<Draft>(existing ? { ...existing } : emptyDraft(dslLabel));
+
   const [bkgs, setBkgs] = useState<{ child?: string; childId?: string }[]>([]);
   const [busy, setBusy] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -96,7 +101,7 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
       const urls: string[] = [];
       for (const f of Array.from(files).slice(0, 10)) {
         const dataUrl = await readAsDataUrl(f);
-        const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl });
+        const { url } = await apiPost<{ url: string }>("/api/uploads", { dataUrl, purpose: "private" });
         urls.push(url);
       }
       set({ attachments: [...(d.attachments ?? []), ...urls] });
@@ -108,7 +113,11 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
     if (!d.childName.trim() || !d.description.trim()) { setError("Add who is involved and what happened."); return; }
     if (!d.concernCategory) { setError("Choose a concern category."); return; }
     setBusy(true); setError(null);
-    const payload = { ...d, kind: "safeguarding" as const, confidential: true };
+    // Settings can land after the form opens, so a new concern's "reported to"
+    // is resolved NOW — the DSL actually configured, unless someone typed their own.
+    const auto = !d.reportedTo || d.reportedTo === "Designated Safeguarding Lead (DSL)" || d.reportedTo === dslTitle || d.reportedTo.startsWith(`${dslTitle} · `);
+    const aboutLead = d.subject === "staff" && d.aboutDsl === true;
+    const payload = { ...d, aboutDsl: aboutLead, ...(!isEdit && aboutLead ? { reportedTo: "The account holder (it concerns the safeguarding lead)" } : !isEdit && auto ? { reportedTo: dslLabel } : {}), kind: "safeguarding" as const, confidential: true };
     try {
       if (isEdit) await apiPut(`/api/incidents/${encodeURIComponent(existing!.id)}`, { ...payload, notifyParentOfEdit: false });
       else await apiPost("/api/incidents", payload);
@@ -122,6 +131,11 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
     <Card className="mb-3.5 p-4">
       <div className="mb-1 text-[14px] font-extrabold">{isEdit ? "Edit safeguarding concern" : "Log a safeguarding concern"}</div>
       <p className="mb-3 text-[11.5px] text-[var(--ink-3)]">Record facts only — what you saw or heard, in the child&rsquo;s own words where possible. No opinions. This is confidential and routed to your {dslLabel}.</p>
+      {!dslName.trim() && (
+        <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12px] font-semibold text-[#c02636]">
+          ⚠ Nobody is named as your safeguarding lead (Setup → Safeguarding). You can still log this — do — but it won&rsquo;t reach a named person until one is set.
+        </div>
+      )}
 
       <FieldLabel>This concern is about…</FieldLabel>
       <div className="mb-2.5 mt-1 grid gap-1.5 sm:grid-cols-2">
@@ -171,7 +185,14 @@ function SgForm({ existing, onSaved, onCancel }: { existing?: SgLog; onSaved: ()
         <div className="sm:col-span-2">
           <FieldLabel>{d.subject === "staff" ? "Member of staff involved" : "Child / person involved"}</FieldLabel>
           {d.subject === "staff"
-            ? <Input value={d.childName} onChange={(e) => set({ childName: e.target.value, childId: undefined })} placeholder="Name of the staff member / volunteer" className="w-full" />
+            ? <>
+                <Input value={d.childName} onChange={(e) => set({ childName: e.target.value, childId: undefined })} placeholder="Name of the staff member / volunteer" className="w-full" />
+                {/* An allegation about the safeguarding lead can't go to them (s13-fx5-dsl). */}
+                <label className="mt-1.5 flex items-start gap-2 text-[12px] text-[var(--ink-2)]">
+                  <input type="checkbox" checked={d.aboutDsl === true} onChange={(e) => set({ aboutDsl: e.target.checked })} className="mt-0.5" />
+                  <span>This is about our safeguarding lead{sg.dslName ? ` (${sg.dslName}${sg.deputyDslName ? ` or deputy ${sg.deputyDslName}` : ""})` : sg.deputyDslName ? ` or deputy (${sg.deputyDslName})` : ""} — send it to the account holder only.</span>
+                </label>
+              </>
             : <ChildPicker value={d.childName} options={childOptions} onPick={(name, childId) => set({ childName: name, childId })} placeholder="Search a booked child, or ‘Other / staff member’…" />}
         </div>
         <div className="sm:col-span-2"><FieldLabel>Location</FieldLabel><Input value={d.location ?? ""} onChange={(e) => set({ location: e.target.value })} placeholder="e.g. Loughton Manor — Hall" className="w-full" /></div>
@@ -228,7 +249,7 @@ function downloadConcernPdf(rec: SgLog, contacts?: SgContacts, opts?: { extraHtm
   const row = (k: string, v?: string) => (v ? `<tr><th>${k}</th><td>${esc(v)}</td></tr>` : "");
   const marks = (rec.bodyMap ?? []).map((m) => `#${m.n} (${m.view})${m.note ? ` — ${esc(m.note)}` : ""}`).join("<br>");
   const dlog = rec.dslLog?.length ? rec.dslLog : (rec.dslActions ?? []).map((k, i) => ({ id: `m${i}`, key: k, label: labels.get(k) ?? k, note: i === 0 ? rec.dslOutcome : undefined, at: rec.dslActionedAt } as DslEntry));
-  const actionsHtml = dlog.map((e, i) => `<tr><th>${i + 1}. ${esc(e.label)}${e.done ? " ✓" : ""}</th><td>${e.at ? `<span style="color:#8a86a3">${esc(stampTime(e.at))}</span><br>` : ""}${e.note ? `${esc(e.note)}<br>` : ""}${e.reviewDate ? `<b>Review by ${esc(e.reviewDate)}${e.done ? " — completed" : ""}</b>` : ""}</td></tr>`).join("");
+  const actionsHtml = dlog.map((e, i) => `<tr><th>${i + 1}. ${esc(e.label)}${e.done ? " ✓" : ""}</th><td>${e.at ? `<span style="color:#8a86a3">${esc(stampTime(e.at))}${e.by ? ` · ${esc(e.by)}` : ""}</span><br>` : ""}${e.note ? `${esc(e.note)}<br>` : ""}${e.reviewDate ? `<b>Review by ${esc(e.reviewDate)}${e.done ? " — completed" : ""}</b>` : ""}</td></tr>`).join("");
   const contactsHtml = allContactLines(contacts, rec.localAuthority).map((it) => `${esc(it.label)}: <b>${esc(it.phone)}</b>`).join("<br>");
 
   const html = `<!doctype html><html><head><meta charset="utf-8"><title>Safeguarding concern — ${esc(rec.childName)}</title>
@@ -247,7 +268,7 @@ function downloadConcernPdf(rec: SgLog, contacts?: SgContacts, opts?: { extraHtm
       ${row("Category", rec.concernCategory)}${row("Risk level", rec.severity === "minor" ? "Low" : rec.severity === "moderate" ? "Medium" : "High")}
       ${row("Local authority", rec.localAuthority)}
       ${row("Date / time", `${rec.date}${rec.time ? ` at ${rec.time}` : ""}`)}${row("Location", rec.location)}
-      ${row("Witnesses", rec.witnesses)}${row("Recorded by", rec.recordedByName)}
+      ${row("Witnesses", rec.witnesses)}${row("Recorded by", rec.recordedByName)}${row("Reported to (DSL)", rec.reportedTo)}
     </table>
     <h2>What happened</h2><div class="box">${esc(rec.description)}</div>
     ${rec.actionTaken ? `<h2>Immediate action taken</h2><div class="box">${esc(rec.actionTaken)}</div>` : ""}
@@ -550,12 +571,16 @@ export function SafeguardingApp() {
                         {(() => { const pend = (l.dslLog ?? []).filter((e) => e.reviewDate && !e.done); if (!pend.length) return null; const next = pend.map((e) => e.reviewDate!).sort()[0]; return <p className="mt-1 text-[11.5px] font-bold text-[#9a5a00]">🗓 {pend.length} action{pend.length === 1 ? "" : "s"} to complete by {next}</p>; })()}
                       </div>
                       <div className="flex flex-wrap items-center gap-1 sm:max-w-[46%] sm:justify-end">
-                        <Badge tone={{ bg: risk.bg, fg: risk.fg }}>{risk.label} risk</Badge>
-                        {l.subject === "staff" && <Badge tone={{ bg: "#f3e8ff", fg: "#6d28d9" }}>🧑‍🏫 Staff</Badge>}
-                        {(l.dslLog?.length ?? 0) > 0 || (l.dslActions?.length ?? 0) > 0 ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ DSL actioned</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>⏳ Awaiting DSL</Badge>}
+                        {!l.restricted && <Badge tone={{ bg: risk.bg, fg: risk.fg }}>{risk.label} risk</Badge>}
+                        {l.subject === "staff" &&<Badge tone={{ bg: "#f3e8ff", fg: "#6d28d9" }}>🧑‍🏫 Staff</Badge>}
+                        {l.restricted ? <Badge tone={{ bg: "#f3e8ff", fg: "#6d28d9" }}>🔒 {l.statusLabel ?? "With the safeguarding lead"}</Badge>
+                          : (l.dslLog?.length ?? 0) > 0 || (l.dslActions?.length ?? 0) > 0 ? <Badge tone={{ bg: "#e7f6ee", fg: "#0f7a43" }}>✓ DSL actioned</Badge> : <Badge tone={{ bg: "#fdf3d8", fg: "#9a5a00" }}>⏳ Awaiting DSL</Badge>}
                         {(l.bodyMap?.length ?? 0) > 0 && <Badge tone={{ bg: "#fdebec", fg: "#c02636" }}>⛑️ {l.bodyMap!.length}</Badge>}
                       </div>
                     </div>
+                    {l.restricted ? (
+                      <p className="mt-2 border-t border-[var(--line)] pt-2 text-[11.5px] text-[var(--ink-3)]">You reported a concern about a member of staff. Only the safeguarding lead can see its details — speak to them if you have more to add.</p>
+                    ) : (<>
                     <div className="mt-2 flex flex-wrap gap-2 border-t border-[var(--line)] pt-2">
                       <Button sm variant={openId !== l.id && (l.dslLog?.length ?? 0) === 0 ? "solid" : undefined} onClick={() => setOpenId(openId === l.id ? null : l.id)}>{openId === l.id ? "Hide" : (l.dslLog?.length ?? 0) > 0 ? "🛡️ Review & action" : "🛡️ Review & action (DSL)"}</Button>
                       <Button sm variant="solid" onClick={() => { setEditing(l); setAdding(false); setOpenId(null); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Edit/Update</Button>
@@ -579,6 +604,7 @@ export function SafeguardingApp() {
                         <NotesThread id={l.id} notes={l.notes} side="staff" onAdded={refresh} />
                       </>
                     )}
+                    </>)}
                   </div>
                 </Card>
               );

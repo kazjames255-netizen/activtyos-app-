@@ -1,13 +1,19 @@
 import { Router, type Request, type Response } from "express";
 import { z } from "zod";
+import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
-import { canWrite, operatorScope } from "../middleware/role";
+import { canWrite, operatorScope, managerScope } from "../middleware/role";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
 import { upsertCustomerFromBooking } from "../lib/customerUpsert";
 import { stripe, toPence } from "../lib/stripe";
 import { queuePositions, triggerWaitlist, waitingCount } from "../lib/waitlist";
 import { releaseDiscountCodes } from "../lib/discountRedemptions";
+import { cleanupAfterCancel } from "../lib/cancelCleanup";
 import { creditWallet } from "../lib/wallet";
+import { loadSettings } from "../lib/tenantLibrary";
+import { bookingInSite, staffSiteScope } from "../lib/siteScope";
+import { registerRows } from "../lib/registerRows";
+import { money, realPhone, refundableSoFar, receivedOf } from "../../../features/bookings/helpers";
 import { notify } from "../lib/notify";
 import {
   blockCountDelta,
@@ -117,6 +123,8 @@ const createSchema = z.object({
   dates: z.string().min(1).optional(),
   amount: z.number().nonnegative(),
   method: z.string().min(1),
+  // The family's phone, stored on the booking (never a "—" placeholder, d10s8).
+  phone: z.string().trim().max(40).optional(),
 });
 
 const bulkSchema = z.object({
@@ -167,7 +175,7 @@ function inScope(
 ): boolean {
   if (scope.role === "platform") return true;
   if (b.tenantId !== scope.tenantId) return false;
-  if (scope.role === "franchise") return b.franchiseId === scope.franchiseId;
+  if ((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId) return b.franchiseId === scope.franchiseId;
   return true;
 }
 
@@ -190,18 +198,42 @@ bookings.get("/", async (req, res) => {
     if (tenantFilter) q = q.where("tenantId", "==", tenantFilter);
   } else {
     q = q.where("tenantId", "==", scope.tenantId);
-    if (scope.role === "franchise") q = q.where("franchiseId", "==", scope.franchiseId);
+    if ((scope.role === "franchise" || scope.role === "staff") && scope.franchiseId) q = q.where("franchiseId", "==", scope.franchiseId);
   }
 
   const snap = await q.get();
+  // Staff assigned to certain sites (a site lead) see only those sites'
+  // bookings (acceptance d23s5).
+  const site = await staffSiteScope(req.auth!);
   // Firestore stamps every document with its own createTime, so a booking
   // taken before the app started recording `createdAt` still knows when it
   // was made. Real metadata, not a guess from the reference number — which
   // matters, because "what came in yesterday" is answered from this.
-  const list = snap.docs.map((d) => withCreated(d));
+  const list = snap.docs.filter((d) => !site || bookingInSite(d.data(), site)).map((d) => withCreated(d));
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
-  res.json(list);
+  res.json(scope.role === "staff" ? list.map((b) => staffView(b as unknown as Record<string, unknown>)) : list);
 });
+
+/** What a STAFF token gets: the booking minus its money. Staff screens use
+ *  bookings for names, children, days and contacts (Families, trips,
+ *  incidents) — never the amounts, what was paid, or payment references that
+ *  would let someone match a family's money. A coach's token used to return
+ *  every figure in the tenant. */
+const MONEY_KEYS = [
+  "amount", "amountPaid", "cardPaid", "walletApplied", "discountCode", "paymentRef", "payRefs",
+  "paymentIntentId", "stripeAccount", "mealItems", "reconciledBy", "payments", "refund",
+  // Whether a family has paid, and how, is money too (acceptance d24s4).
+  "pay", "method", "refundedApproved", "walletRefunded", "invoicePaymentIntentIds", "tfc",
+] as const;
+function staffView<T extends Record<string, unknown>>(b: T): T {
+  const out: Record<string, unknown> = { ...b };
+  for (const k of MONEY_KEYS) delete out[k];
+  if (out.cancel && typeof out.cancel === "object") {
+    const { amount: _a, refund: _r, refundTo: _t, ...rest } = out.cancel as Record<string, unknown>;
+    out.cancel = rest;
+  }
+  return out as T;
+}
 
 /** A booking, with its own field taking precedence over Firestore's stamp. */
 function withCreated(d: FirebaseFirestore.QueryDocumentSnapshot | FirebaseFirestore.DocumentSnapshot) {
@@ -220,20 +252,22 @@ bookings.get("/:ref", async (req, res) => {
     return;
   }
   const doc = await (await resolveBookingRef(tenantId, req.params.ref)).get();
-  if (!doc.exists || !inScope(doc.data() as BookingDoc, scope)) {
+  const site = doc.exists ? await staffSiteScope(req.auth!) : null;
+  if (!doc.exists || !inScope(doc.data() as BookingDoc, scope) || (site && !bookingInSite(doc.data()!, site))) {
     res.status(404).json({ error: "Booking not found" });
     return;
   }
   // Same fallback as the list, so opening a booking and seeing it in the list
   // never disagree about when it was made.
-  res.json(withCreated(doc));
+  const one = withCreated(doc);
+  res.json(scope.role === "staff" ? staffView(one as unknown as Record<string, unknown>) : one);
 });
 
 // GET /api/bookings/:ref/children — the full child record(s) for this booking's
 // kids (same safeguarding projection the register uses), so the booking detail
 // can show the identical child card. Scoped to the operator's own booking.
 bookings.get("/:ref/children", async (req, res) => {
-  const scope = operatorScope(req, res);
+  const scope = managerScope(req, res);
   if (!scope) return;
   const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
   if (!tenantId) { res.status(400).json({ error: "tenantId query param required for platform accounts" }); return; }
@@ -257,7 +291,7 @@ bookings.get("/:ref/children", async (req, res) => {
     }] as const;
   }));
   res.json({
-    booker: b.booker, email: b.email ?? "", phone: b.phone ?? "", ref: b.ref, note: b.note ?? "",
+    booker: b.booker, email: b.email ?? "", phone: realPhone(b.phone), ref: b.ref, note: b.note ?? "",
     children: kids.map((k) => ({ name: k.name, childId: k.childId ?? null, record: k.childId ? byId.get(k.childId) ?? null : null })),
   });
 });
@@ -278,6 +312,23 @@ bookings.post("/", async (req, res) => {
   }
   const tenantId = scope.tenantId!;
   const tenantRef = tenantsCol.doc(tenantId);
+
+  // One child, one place per session (s13-rtE2): the same family's child who
+  // already holds a place on this block's days isn't booked onto them again.
+  if (input.blockId && input.child.trim()) {
+    const blk = await db.collection("blocks").doc(input.blockId).get();
+    const dates = blk.exists && blk.get("tenantId") === tenantId ? ((blk.get("sessions") as { date: string }[] | undefined) ?? []).map((x) => x.date) : [];
+    const nm = input.child.trim().toLowerCase();
+    const em = input.email.trim().toLowerCase();
+    for (const d of (await col.where("blockId", "==", input.blockId).get()).docs) {
+      const b = fromDoc(d.data() as BookingDoc);
+      if (b.tenantId !== tenantId || (b.email ?? "").trim().toLowerCase() !== em) continue;
+      if (dates.some((dt) => registerRows(b, dt).some((r) => r.expected && r.name.trim().toLowerCase() === nm))) {
+        res.status(409).json({ error: `${input.child.trim()} already has a place on this block (booking ${b.ref}).` });
+        return;
+      }
+    }
+  }
 
   let tenantName = "Your activity provider";
   try {
@@ -404,11 +455,18 @@ bookings.post("/:ref/actions", async (req, res) => {
       return;
     }
 
+    // Set inside the transaction on refund-approve, so a failed money move
+    // can put the refund back exactly as it was.
+    let refundBefore: RefundSnapshot | null = null;
+    // What had already come in before "Mark paid" — only the balance is new
+    // money. Recording the full price double-counted a part-payment (d19s7).
+    let receivedBefore = 0;
     const updated = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
       const oldStatus = b.status;
+      receivedBefore = receivedOf(b);
 
       // An offer must be backed by a real free place (§E: "reject if the
       // date is still full") — promote stays the overbooking override.
@@ -472,6 +530,17 @@ bookings.post("/:ref/actions", async (req, res) => {
           const ix = k?.dates ? k.dates.findIndex((d) => d === action.oldDate || toIso(d) === oldIso) : -1;
           if (k?.dates && ix > -1) k.dates[ix] = isIso(k.dates[ix]) ? newSess.date : labelOf(newSess);
         }
+      }
+
+      // A refund is approved ONCE. Replaying the action used to credit the
+      // wallet again, or fire a second Stripe refund.
+      if (action.type === "refund-approve") {
+        if (!b.cancel) throw new Conflict("There's no cancellation on this booking to refund");
+        if (b.cancel.refund === "approved") throw new Conflict("This refund has already been approved");
+        if (b.cancel.refund === "declined") throw new Conflict("This refund was declined");
+        // Snapshot BEFORE the action flips pay to "Refunded" — what's still
+        // refundable is worked out from this, not from the flipped booking.
+        refundBefore = { refund: b.cancel.refund, pay: b.pay, refundable: refundableSoFar(b), attempts: (b.cancel as { refundAttempts?: number }).refundAttempts ?? 0 };
       }
 
       switch (action.type) {
@@ -577,22 +646,34 @@ bookings.post("/:ref/actions", async (req, res) => {
       return b;
     });
 
-    // Approving a refund sends the money where the family asked for it. Store
-    // credit stays in-house and lands instantly; anything else is a REAL Stripe
-    // refund on the provider's connected account (the amount the cancel flow
-    // agreed — full or partial). Failures are logged and recorded, never
-    // swallowed into a fake "Refunded" without money moving.
+    // Approving a refund sends the money — and WAITS for it. It used to be
+    // fire-and-forget: the booking said Refunded and the family was told the
+    // money was on its way whether or not Stripe accepted it. Now a failure
+    // puts the refund back to awaiting approval and the operator sees why.
     if (action.type === "refund-approve") {
-      const owed = updated.cancel?.amount ?? updated.amount;
-      if (updated.cancel?.refundTo === "wallet" && owed > 0)
-        void creditWallet(
-          updated.tenantId ?? scope.tenantId!,
-          updated.email,
-          owed,
-          `Credit from ${updated.listing}`,
-          updated.ref,
-        );
-      else if (updated.paymentIntentId) void refundStripePayment(updated);
+      // (Assigned inside the transaction callback — TS can't see that.)
+      const back = refundBefore as RefundSnapshot | null;
+      let moved: Awaited<ReturnType<typeof settleApprovedRefund>>;
+      try {
+        moved = await settleApprovedRefund(updated, scope.tenantId!, back?.refundable ?? refundableSoFar(updated), back?.attempts ?? 0);
+      } catch (e) {
+        // A throw (settings read, a payments write, the wallet) is a failure
+        // too — the revert must run, or the booking is stuck "approved" with
+        // nothing moved and a retry blocked.
+        moved = { ok: false, error: e instanceof Error ? e.message : "unexpected error" };
+      }
+      if (!moved.ok) {
+        await ref.set({ cancel: { ...(updated.cancel ?? {}), refund: back?.refund ?? "pending", refundError: moved.error, refundAttempts: (back?.attempts ?? 0) + 1 }, pay: back?.pay ?? updated.pay }, { merge: true });
+        res.status(502).json({ error: `The refund didn't go through: ${moved.error}. Nothing was marked refunded — try again, or refund it in Stripe directly.` });
+        return;
+      }
+      // refundedAt: when the money actually moved (cancel.on is when it was
+      // asked for) — Reconciliation's "refunded today" keys off this (d9s7).
+      updated.cancel = { ...(updated.cancel ?? { on: "", by: "" }), refundVia: moved.via, refundedAt: new Date().toISOString(), refundError: undefined };
+      if (moved.partial) updated.pay = "Partially refunded";
+      updated.refundedApproved = Math.round(((updated.refundedApproved ?? 0) + moved.owed) * 100) / 100;
+      updated.walletRefunded = Math.round(((updated.walletRefunded ?? 0) + moved.walletPart) * 100) / 100;
+      await ref.set({ cancel: { ...updated.cancel, refundError: FieldValue.delete() }, pay: updated.pay, refundedApproved: updated.refundedApproved, walletRefunded: updated.walletRefunded }, { merge: true });
     }
 
     // Status-change emails to the booker (fire-and-forget).
@@ -615,7 +696,9 @@ bookings.post("/:ref/actions", async (req, res) => {
           title: toWallet ? `Wallet credit added · ${updated.ref}` : `Refund approved · ${updated.ref}`,
           body: toWallet
             ? `£${amt.toFixed(2)} added to your wallet for ${updated.listing} — it's there now, ready to spend on your next booking.`
-            : `£${amt.toFixed(2)} refund approved for ${updated.listing} — on its way back to your card.`,
+            : updated.cancel?.refundVia === "offline"
+              ? `£${amt.toFixed(2)} refund approved for ${updated.listing} — ${updated.voucherScheme ? `returned through ${updated.voucherScheme}` : "your provider will return it the way you paid"}.`
+              : `£${amt.toFixed(2)} refund approved for ${updated.listing} — on its way back to your card.`,
           href: `/custdash/bookings?open=${encodeURIComponent(updated.ref)}`,
           ref: updated.ref,
         });
@@ -624,12 +707,15 @@ bookings.post("/:ref/actions", async (req, res) => {
 
     // Offline settlements (TFC, HAF, PayPal, cash) become payment records
     // too — reconciliation needs an entry, not just a flag.
-    if (action.type === "paid") {
+    const balance = Math.round(Math.max(0, (updated.amount ?? 0) - receivedBefore) * 100) / 100;
+    // Nothing new to record when it was already paid in full (a £0 funded
+    // place still gets its £0 entry, as before).
+    if (action.type === "paid" && (balance > 0 || (updated.amount ?? 0) <= 0)) {
       void db.collection("payments").add({
         tenantId: updated.tenantId ?? scope.tenantId,
         refs: [updated.ref],
         email: updated.email,
-        amount: updated.amount,
+        amount: balance,
         currency: "gbp",
         method: updated.method,
         offline: true,
@@ -650,6 +736,16 @@ bookings.post("/:ref/actions", async (req, res) => {
     // become usable again once nothing in the basket is standing). Safe to
     // repeat — the redemption record is gone after the first release.
     if (updated.status === "Cancelled") void releaseDiscountCodes(scope.tenantId!, updated.ref);
+    // Meals ordered for the released days, and trips on them (lib/cancelCleanup).
+    // Only on the action that cancelled it — a note or "paid" on a booking that
+    // was cancelled weeks ago mustn't sweep meals/trips again.
+    if (action.type === "cancel" && updated.status === "Cancelled") void cleanupAfterCancel(scope.tenantId!, updated);
+    else if (action.type === "cancel-day") {
+      // Just that one child's day — not their siblings' meals.
+      const kid = updated.kids?.[action.ki];
+      const one = kid ? { ...updated, childId: kid.childId, child: kid.name, kids: [kid] } : updated;
+      void cleanupAfterCancel(scope.tenantId!, one, [action.date]);
+    }
     // Tell the family the outcome of their date-change request. The EMAIL is the
     // provider-branded one (their logo, each from → to date, approved/declined);
     // the notify here is bell-only so the family doesn't also get the plain
@@ -707,12 +803,28 @@ bookings.post("/:ref/actions", async (req, res) => {
 // aware: accumulates amountPaid, and the pay state follows the total —
 // Paid when covered, "Partially paid" when not. Writes a payment record so
 // the money trail is complete. Operators only.
+//
+// Guards (acceptance d8s5/d8s7/d8s8, manual analogue of the TFC feed):
+//  • The SAME payment logged twice — same booking, same amount, same reference
+//    (blank counts as the same), dated within DUP_WINDOW_MS of each other — is
+//    refused with 409 `possible_duplicate` unless the operator confirms it's a
+//    second real payment (`confirmDuplicate`). Two people logging one bank
+//    line used to count the money twice.
+//  • More than the booking's price → still recorded (the money did arrive),
+//    but the surplus is returned as `overpaid` and shown on Reconciliation as
+//    credit / to refund — no longer silently absorbed as "Paid".
+//  • Money on a cancelled/declined booking → recorded as `receivedAfterCancel`
+//    and kept on Reconciliation as "needs refund / credit" (it used to drop off).
+const DUP_WINDOW_MS = 24 * 60 * 60 * 1000;
 const recordPaymentSchema = z.object({
   amount: z.number().positive(),
   method: z.string().max(60).optional(),
   reference: z.string().max(120).optional(),
   date: z.string().max(25).optional(),
+  confirmDuplicate: z.boolean().optional(),
 });
+const refKey = (r: unknown) => String(r ?? "").replace(/\s+/g, "").toUpperCase();
+class Duplicate extends Error { constructor(public prior: { amount: number; reference: string | null; createdAt: string; recordedBy?: string }) { super("possible_duplicate"); } }
 bookings.post("/:ref/record-payment", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope || !requireWrite(req, res)) return;
@@ -727,34 +839,62 @@ bookings.post("/:ref/record-payment", async (req, res) => {
     return;
   }
   const ref = await resolveBookingRef(tenantId, req.params.ref);
+  const nowIso = new Date().toISOString();
+  const paidAt = parsed.data.date ?? nowIso;
   try {
     const updated = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
+      // Read under the transaction (it also writes the booking), so a double
+      // submit is serialised and the second one sees the first's record.
+      if (!parsed.data.confirmDuplicate) {
+        const prior = await tx.get(db.collection("payments").where("refs", "array-contains", b.ref));
+        const t0 = Date.parse(paidAt);
+        const dup = prior.docs.map((d) => d.data()).find((p) =>
+          p.tenantId === tenantId && p.offline === true && p.status === "recorded" && p.type !== "refund"
+          && Math.abs(Number(p.amount ?? 0) - parsed.data.amount) < 0.005
+          && refKey(p.reference) === refKey(parsed.data.reference)
+          && Number.isFinite(t0) && Math.abs(Date.parse(String(p.createdAt ?? "")) - t0) <= DUP_WINDOW_MS);
+        if (dup) throw new Duplicate({ amount: Number(dup.amount), reference: (dup.reference as string | null) ?? null, createdAt: String(dup.createdAt ?? ""), recordedBy: dup.recordedBy as string | undefined });
+      }
       const paid = Math.round(((b.amountPaid ?? 0) + parsed.data.amount) * 100) / 100;
       b.amountPaid = paid;
       b.pay = paid >= (b.amount ?? 0) ? "Paid" : "Partially paid";
+      if (b.status === "Cancelled" || b.status === "Declined")
+        b.receivedAfterCancel = Math.round(((b.receivedAfterCancel ?? 0) + parsed.data.amount) * 100) / 100;
       tx.set(ref, toDoc(b));
+      // Record the money for reconciliation/oversight — in the same write, so
+      // the duplicate check above always sees it.
+      tx.set(db.collection("payments").doc(), {
+        tenantId,
+        refs: [b.ref],
+        email: b.email,
+        amount: parsed.data.amount,
+        currency: "gbp",
+        method: parsed.data.method ?? b.method,
+        reference: parsed.data.reference ?? null,
+        offline: true,
+        status: "recorded",
+        recordedBy: req.user?.email ?? "operator",
+        createdAt: paidAt,
+        recordedAt: nowIso,
+      });
       return b;
     });
-    // Record the money for reconciliation/oversight.
-    void db.collection("payments").add({
-      tenantId,
-      refs: [updated.ref],
-      email: updated.email,
-      amount: parsed.data.amount,
-      currency: "gbp",
-      method: parsed.data.method ?? updated.method,
-      reference: parsed.data.reference ?? null,
-      offline: true,
-      status: "recorded",
-      recordedBy: req.user?.email ?? "operator",
-      createdAt: parsed.data.date ?? new Date().toISOString(),
-    });
-    res.json(updated);
+    const overpaid = Math.round(Math.max(0, (updated.amountPaid ?? 0) - (updated.amount ?? 0)) * 100) / 100;
+    res.json({ ...updated, ...(overpaid > 0 ? { overpaid } : {}) });
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else if (e instanceof Duplicate) {
+      const when = new Date(e.prior.createdAt);
+      const day = Number.isNaN(when.getTime()) ? "recently" : `on ${when.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" })}`;
+      res.status(409).json({
+        error: `This looks like a payment that's already been logged: ${money(e.prior.amount)}${e.prior.reference ? ` with reference ${e.prior.reference}` : ""} was recorded against this booking ${day}${e.prior.recordedBy ? ` by ${e.prior.recordedBy}` : ""}. Only record it again if it's a second, separate payment.`,
+        code: "possible_duplicate",
+        prior: e.prior,
+      });
+    }
     else throw e;
   }
 });
@@ -779,31 +919,47 @@ bookings.post("/:ref/reconcile", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const undo = !!parsed.data.undo;
   const ref = await resolveBookingRef(tenantId, req.params.ref);
+  // Only the balance is new money — a part-payment logged earlier already has
+  // its own record (same fix as "Mark paid", d19s7).
+  let receivedBefore = 0;
   try {
     const updated = await db.runTransaction(async (tx) => {
       const snap = await tx.get(ref);
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
+      receivedBefore = receivedOf(b);
       if (undo) {
         b.amountPaid = 0;
         b.pay = (b.amount ?? 0) <= 0 ? "Funded" : b.voucherScheme ? "Awaiting voucher payment" : "Unpaid";
+        b.reconciledBy = null;
       } else {
         b.amountPaid = b.amount ?? 0;
         b.pay = (b.amount ?? 0) <= 0 ? "Funded" : "Paid";
+        // Stamped by hand here. A machine match (HMRC EPP) sets auto: true.
+        b.reconciledBy = { at: new Date().toISOString(), by: req.user?.name ?? req.user?.email ?? "operator", auto: false };
       }
       tx.set(ref, toDoc(b));
       return b;
     });
     if (!undo) {
       const label = updated.voucherScheme ? `voucher (${updated.voucherScheme})` : (parsed.data.method ?? updated.method ?? "payment").toLowerCase();
-      void db.collection("payments").add({
+      const balance = Math.round(Math.max(0, (updated.amount ?? 0) - receivedBefore) * 100) / 100;
+      if (balance > 0 || (updated.amount ?? 0) <= 0) void db.collection("payments").add({
         tenantId, refs: [updated.ref], email: updated.email,
-        amount: updated.amount, currency: "gbp",
+        amount: balance, currency: "gbp",
         method: parsed.data.method ?? updated.method, reference: parsed.data.reference ?? null,
         offline: true, status: "recorded", recordedBy: req.user?.email ?? "operator",
         createdAt: parsed.data.date ?? new Date().toISOString(),
       });
       void notifyPaymentReceived(tenantId, updated, label).catch((e) => console.error("[reconcile] payment-received notify failed:", (e as Error).message));
+    } else {
+      // Undo puts amountPaid back to 0, so the offline money recorded against
+      // it is no longer "in" — mark those records reversed, or the Dashboard's
+      // "taken" keeps counting money Finance says never arrived (d19s7).
+      const recs = await db.collection("payments").where("refs", "array-contains", updated.ref).get();
+      await Promise.all(recs.docs
+        .filter((d) => d.get("tenantId") === tenantId && d.get("offline") === true && d.get("status") === "recorded" && d.get("type") !== "refund")
+        .map((d) => d.ref.update({ status: "reversed", reversedAt: new Date().toISOString(), reversedBy: req.user?.email ?? "operator" })));
     }
     res.json(updated);
   } catch (e) {
@@ -876,6 +1032,36 @@ bookings.put("/:ref/recon-notes", async (req, res) => {
       if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
       const b = fromDoc(snap.data() as BookingDoc);
       b.reconNotes = [...(b.reconNotes ?? []), { at: new Date().toISOString(), by: req.user?.name ?? req.user?.email ?? "operator", text: parsed.data.note }];
+      tx.set(ref, toDoc(b));
+      return b;
+    });
+    res.json(updated);
+  } catch (e) {
+    if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else throw e;
+  }
+});
+
+// PUT /api/bookings/:ref/voucher-scheme — name WHICH voucher provider paid.
+// Nothing captures this at booking time today, so 59 of 59 voucher bookings on
+// this instance read as a generic "Childcare voucher" and an operator can't tell
+// an Edenred payment from a Fideliti one when matching the bank. Set here, when
+// the money lands and you can see who sent it. Empty string clears it.
+const voucherSchemeSchema = z.object({ voucherScheme: z.string().trim().max(80) });
+bookings.put("/:ref/voucher-scheme", async (req, res) => {
+  const scope = operatorScope(req, res);
+  if (!scope || !requireWrite(req, res)) return;
+  const tenantId = scope.tenantId ?? (req.query.tenantId as string | undefined);
+  if (!tenantId) { res.status(400).json({ error: "tenantId required for platform accounts" }); return; }
+  const parsed = voucherSchemeSchema.safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const ref = await resolveBookingRef(tenantId, req.params.ref);
+  try {
+    const updated = await db.runTransaction(async (tx) => {
+      const snap = await tx.get(ref);
+      if (!snap.exists || !inScope(snap.data() as BookingDoc, scope)) throw new NotFound();
+      const b = fromDoc(snap.data() as BookingDoc);
+      b.voucherScheme = parsed.data.voucherScheme || undefined;
       tx.set(ref, toDoc(b));
       return b;
     });
@@ -983,13 +1169,103 @@ bookings.post("/bulk", async (req, res) => {
   res.json(updated);
 });
 
-// Refund the Stripe payment behind a booking (fire-and-forget from
-// refund-approve). Refunds what the cancel flow agreed (full booking amount
-// when no explicit figure). Recorded in `payments` either way — success or
-// failure — so the money trail is never silent.
-async function refundStripePayment(b: Booking): Promise<void> {
-  if (!stripe || !b.paymentIntentId) return;
-  const amount = b.cancel?.amount ?? b.amount;
+/**
+ * Move the money for an approved refund. Returns once it has actually moved.
+ *
+ *  - Wallet credit spent on the booking always goes back to the wallet — it
+ *    came from there (and used to be lost: `amount` is net of it).
+ *  - The rest goes where the family asked. If the provider has turned card
+ *    refunds off (Setup → allowCardRefund) it's wallet credit regardless — the
+ *    screen enforced that, the server took "card" from anyone who asked.
+ *  - A card booking is refunded through Stripe (awaited; the one step that
+ *    can fail, so it runs FIRST and nothing is credited if it does).
+ *  - A voucher/TFC/cash booking can't be refunded by the app. It's recorded as
+ *    owed back offline, and the family is told it comes back the way they paid
+ *    — not "to your card", which it never touched.
+ */
+async function settleApprovedRefund(b: Booking, tenantId: string, refundable: number, attempt: number): Promise<
+  { ok: true; via: "wallet" | "card" | "offline"; partial: boolean; owed: number; walletPart: number } | { ok: false; error: string }
+> {
+  // Never more than is still refundable (taken before pay flipped to Refunded).
+  const owed = Math.max(0, Math.min(b.cancel?.amount ?? refundable, refundable));
+  // Only the wallet credit not already returned goes back to the wallet.
+  const walletLeft = Math.max(0, (b.walletApplied ?? 0) - (b.walletRefunded ?? 0));
+  const walletPart = Math.min(owed, walletLeft);
+  const rest = Math.round((owed - walletPart) * 100) / 100;
+  const s = await loadSettings(b.tenantId ?? tenantId, b.franchiseId ?? null);
+  const cardAllowed = (s as { allowCardRefund?: boolean }).allowCardRefund !== false;
+  const restToWallet = b.cancel?.refundTo === "wallet" || !cardAllowed;
+  let via: "wallet" | "card" | "offline" = "wallet";
+
+  if (rest > 0 && !restToWallet) {
+    if (b.paymentIntentId) {
+      // Stripe refuses a refund larger than what's left of the card charge, and
+      // part of `rest` may have been paid another way (a hand-paid top-up
+      // invoice): the whole refund then failed and nothing went back (d19s8).
+      // Card gets what the card can take; the rest is owed back offline.
+      const cardLeft = await cardRefundable(b);
+      const cardPart = cardLeft == null ? rest : Math.min(rest, cardLeft);
+      const offlinePart = Math.round((rest - cardPart) * 100) / 100;
+      if (cardPart > 0) {
+        const r = await refundStripePayment(b, cardPart, `${Math.round((b.refundedApproved ?? 0) * 100)}-${attempt}`);
+        if (!r.ok) return { ok: false, error: r.error };
+      }
+      if (offlinePart > 0) {
+        await db.collection("payments").add({
+          tenantId: b.tenantId ?? tenantId, refs: [b.ref], email: b.email, type: "refund", amount: offlinePart, currency: "gbp",
+          method: "offline", offline: true, status: "to-reimburse", note: "Paid outside the card payment (e.g. a top-up invoice) — pay this part back by hand",
+          createdAt: new Date().toISOString(),
+        });
+      }
+      via = cardPart > 0 ? "card" : "offline";
+    } else {
+      // Nothing the app can refund. Record it so reconciliation shows money
+      // owed back, rather than a booking that just says "Refunded".
+      await db.collection("payments").add({
+        tenantId: b.tenantId ?? tenantId, refs: [b.ref], email: b.email, type: "refund", amount: rest, currency: "gbp",
+        method: b.voucherScheme || b.method || "offline", offline: true, status: "to-reimburse", createdAt: new Date().toISOString(),
+      });
+      via = "offline";
+    }
+  }
+  const toWallet = walletPart + (rest > 0 && restToWallet ? rest : 0);
+  if (toWallet > 0) {
+    await creditWallet(b.tenantId ?? tenantId, b.email, Math.round(toWallet * 100) / 100, `Credit from ${b.listing}`, b.ref);
+    // On the payments ledger too, like card and offline refunds — a wallet
+    // refund used to leave no record, so the ledger and Reconciliation came
+    // up short of the bookings list by every wallet refund (d9s7).
+    await db.collection("payments").add({
+      tenantId: b.tenantId ?? tenantId, refs: [b.ref], email: b.email, type: "refund", amount: Math.round(toWallet * 100) / 100, currency: "gbp",
+      method: "wallet", via: "wallet", status: "credited", createdAt: new Date().toISOString(),
+    }).catch((e) => console.error(`[refunds] wallet refund ledger write failed for ${b.ref}:`, (e as Error).message));
+    if (rest <= 0 || restToWallet) via = "wallet";
+  }
+  if (restToWallet && b.cancel) b.cancel.refundTo = "wallet";
+  return { ok: true, via, partial: owed > 0 && owed < refundable - 0.005, owed, walletPart };
+}
+
+/** What's left to refund on the booking's card payment: what Stripe actually
+ *  took, less card refunds already made. null when Stripe can't be asked. */
+async function cardRefundable(b: Booking): Promise<number | null> {
+  if (!stripe || !b.paymentIntentId) return null;
+  try {
+    const pi = await stripe.paymentIntents.retrieve(b.paymentIntentId, {}, b.stripeAccount ? { stripeAccount: b.stripeAccount } : undefined);
+    const taken = (pi.amount_received ?? pi.amount ?? 0) / 100;
+    const prior = await db.collection("payments").where("paymentIntentId", "==", b.paymentIntentId).get();
+    const refunded = prior.docs.reduce((n, d) => n + (d.get("type") === "refund" && d.get("status") === "succeeded" ? Number(d.get("amount")) || 0 : 0), 0);
+    return Math.max(0, Math.round((taken - refunded) * 100) / 100);
+  } catch (e) {
+    console.error(`[payments] couldn't read card payment for ${b.ref}:`, (e as Error).message);
+    return null;
+  }
+}
+
+// Refund part (or all) of the Stripe payment behind a booking. Awaited by
+// settleApprovedRefund; recorded in `payments` either way so the money trail
+// is never silent. Idempotency-keyed, so a retried approval can't refund twice.
+async function refundStripePayment(b: Booking, amount: number, nonce: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!stripe) return { ok: false, error: "Card payments aren't connected" };
+  if (!b.paymentIntentId) return { ok: false, error: "No card payment on this booking" };
   const base = {
     tenantId: b.tenantId ?? null,
     refs: [b.ref],
@@ -1003,14 +1279,21 @@ async function refundStripePayment(b: Booking): Promise<void> {
   try {
     const refund = await stripe.refunds.create(
       { payment_intent: b.paymentIntentId, amount: toPence(amount) },
-      b.stripeAccount ? { stripeAccount: b.stripeAccount } : undefined,
+      // Keyed on the refund so far + the attempt: two equal part-refunds don't
+      // collide, a double-submit of one approval does, and a retry after a
+      // failure isn't handed Stripe's cached error for 24h.
+      { idempotencyKey: `refund-${b.tenantId ?? ""}-${b.ref}-${toPence(amount)}-${nonce}`, ...(b.stripeAccount ? { stripeAccount: b.stripeAccount } : {}) },
     );
     await db.collection("payments").add({ ...base, status: "succeeded", refundId: refund.id });
+    return { ok: true };
   } catch (e) {
     console.error(`[payments] refund failed for ${b.ref}:`, (e as Error).message);
     await db.collection("payments").add({ ...base, status: "failed", error: (e as Error).message });
+    return { ok: false, error: (e as Error).message };
   }
 }
+
+type RefundSnapshot = { refund?: NonNullable<Booking["cancel"]>["refund"]; pay: Booking["pay"]; refundable: number; attempts: number };
 
 class NotFound extends Error {}
 class BadRequest extends Error {}
