@@ -10,7 +10,7 @@ interface Lead {
   id: string; name: string; email: string; phone?: string; business?: string;
   size?: string; message?: string; source?: string; status: string; createdAt: string;
   // Researched prospects (e.g. from the EEQU directory) also carry:
-  website?: string; location?: string; kind?: string; legalForm?: string;
+  website?: string; socialUrl?: string; location?: string; kind?: string; legalForm?: string;
   companyNumber?: string; charityNumber?: string; bookingSystem?: string;
   sourceUrl?: string; confidence?: string; researchSources?: string[]; listingsOnSource?: number;
   /** Which plan they'd buy: one person running it themselves, or an organisation. */
@@ -228,7 +228,8 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
     { value: "web", label: "🌐 Has website", test: ({ l }) => !!l.website },
     { value: "webOnly", label: "🌐 Website only", test: ({ l }) => !!l.website && !l.email && !l.phone },
     { value: "maybeWeb", label: "🌐? Possible website", hint: "A site matching their name that research couldn't confirm is theirs — check it before using", test: ({ l }) => !l.website && !!l.websiteCandidate },
-    { value: "noWeb", label: "🚫 No website", hint: "No confirmed website on record (includes possible-website leads)", test: ({ l }) => !l.website },
+    { value: "noWeb", label: "🚫 No website", hint: "No confirmed website on record (includes possible-website leads and social-page-only leads)", test: ({ l }) => !l.website },
+    { value: "socialOnly", label: "📘 Social page only", hint: "A Facebook/Instagram page but no website of their own", test: ({ l }) => !l.website && !!l.socialUrl },
     { value: "soon", label: "🚧 Coming-soon website", hint: "Their site is a holding page — likely no booking platform yet", test: ({ l }) => !!l.comingSoon },
   ],
   status: STATUSES.map((s) => ({ value: s, label: TONE[s].label, test: ({ l }: R) => (l.status || "new") === s })),
@@ -522,6 +523,7 @@ export function LeadsApp() {
                       {l.phone && <a href={`tel:${l.phone}`} className="hover:underline" title={`${l.phoneFrom ? `Published at ${l.phoneFrom}. ` : ""}Screen against the TPS / CTPS before a sales call (UK PECR).`}>📞 {l.phone}</a>}
                       {!l.email && !l.phone && <span className="text-[var(--ink-3)]" title="Research is still looking for their email / phone">🔎 contact details being researched</span>}
                       {l.website && <a href={l.website} target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: "var(--brand)" }}>🌐 {l.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")} ↗</a>}
+                      {l.socialUrl && <a href={l.socialUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#1d4ed8] hover:underline" title="Their social page — not counted as a website">{/instagram/i.test(l.socialUrl) ? "📸" : /linktr/i.test(l.socialUrl) ? "🔗" : "📘"} {l.socialUrl.replace(/^https?:\/\/(www\.|m\.|en-gb\.|business\.)?/, "").replace(/\/$/, "").slice(0, 40)} ↗</a>}
                       {!l.website && l.websiteCandidate && <a href={l.websiteCandidate} target="_blank" rel="noopener noreferrer" className="rounded-md border border-dashed border-[#d9a84e] px-1.5 font-semibold text-[#9a5a00] hover:underline" title={`Possible website — not confirmed as theirs: ${l.websiteCandidateWhy ?? ""}`}>🌐? {l.websiteCandidate.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")} · possible, not confirmed ↗</a>}
                       {l.location && <span title={[l.county, l.region].filter(Boolean).join(", ") || undefined}>📍 {l.location}{l.region && !l.location.includes(l.region) && (l.ofstedRegions?.length ?? 0) <= 1 ? ` · ${l.region}` : ""}</span>}
                       {l.size && <span>👥 {l.size}</span>}
