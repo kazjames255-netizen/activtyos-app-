@@ -163,6 +163,9 @@ const TONE: Record<string, { bg: string; fg: string; label: string }> = {
 // Where a lead came from. Today the website demo form is the only source, but
 // the field is stored per-lead so more can be added later (referral, event…).
 const SOURCE: Record<string, { label: string; emoji: string }> = {
+  ciw: { label: "Care Inspectorate Wales register", emoji: "🏴󠁧󠁢󠁷󠁬󠁳󠁿" },
+  cis: { label: "Care Inspectorate Scotland register", emoji: "🏴󠁧󠁢󠁳󠁣󠁴󠁿" },
+  fsni: { label: "Family Support NI register", emoji: "☘️" },
   demo: { label: "Demo request", emoji: "📩" },
   eequ: { label: "EEQU", emoji: "🗂️" },
   playwaze: { label: "Playwaze", emoji: "🏸" },

@@ -35,6 +35,7 @@
     "@types/node": "^20",
     "@types/nodemailer": "^8.0.1",
     "@types/swagger-ui-express": "^4.1.8",
+    "csv-parse": "^7.0.2",
     "typescript": "^5"
   }
 }
