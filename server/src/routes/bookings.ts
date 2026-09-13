@@ -35,6 +35,7 @@ import {
   emailRefundApproved,
   emailVoucherInstructions,
 } from "../lib/emails";
+import { applyHoNetFilter } from "../lib/franchiseScope";
 import type { Booking } from "../../../features/bookings/types";
 import {
   applyBulkAction,
@@ -209,7 +210,7 @@ bookings.get("/", async (req, res) => {
   // taken before the app started recording `createdAt` still knows when it
   // was made. Real metadata, not a guess from the reference number — which
   // matters, because "what came in yesterday" is answered from this.
-  const list = snap.docs.filter((d) => !site || bookingInSite(d.data(), site)).map((d) => withCreated(d));
+  const list = applyHoNetFilter(snap.docs.filter((d) => !site || bookingInSite(d.data(), site)).map((d) => withCreated(d)), scope.role, req.query.franchiseId);
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
   res.json(scope.role === "staff" ? list.map((b) => staffView(b as unknown as Record<string, unknown>)) : list);
 });

@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseScope";
 import { canWrite, type Role } from "../middleware/role";
 import { customerAreaOn } from "../lib/customerArea";
 
@@ -89,7 +90,7 @@ timetables.get("/", async (req, res) => {
     return;
   }
   const snap = await col.where("tenantId", "==", auth.tenantId).get();
-  const list = snap.docs.map((d) => docOut(d.id, d.data()));
+  const list = await scopeRows(auth, snap.docs.map((d) => docOut(d.id, d.data()) as Record<string, unknown> & { franchiseId?: string | null; createdBy?: string | null }), req.query.franchiseId);
   list.sort((a, b) => (((b as { updatedAt?: string }).updatedAt ?? "") < ((a as { updatedAt?: string }).updatedAt ?? "") ? -1 : 1));
   res.json(list);
 });
@@ -107,6 +108,8 @@ timetables.post("/", async (req, res) => {
     plan: planToDoc(parsed.data.plan),
     listingId: parsed.data.listingId ?? null,
     tenantId: auth.tenantId,
+    franchiseId: franchiseStamp(auth),
+    createdBy: req.user?.email ?? "unknown",
     updatedAt: new Date().toISOString(),
     updatedBy: req.user?.email ?? "unknown",
   };
@@ -119,6 +122,7 @@ async function ownTimetable(req: Request, id: string) {
   if (!auth.tenantId || !canWrite(auth.role)) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!(await visibleToFranchise(auth, snap.data() as { franchiseId?: string | null; createdBy?: string | null }))) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -201,8 +205,9 @@ timetables.get("/published", async (req, res) => {
 
   if (auth.tenantId && canRead(auth.role)) {
     const snap = await col.where("tenantId", "==", auth.tenantId).get();
-    const out = snap.docs
-      .map((d) => ({ id: d.id, published: d.data().published as Published | null }))
+    const mine = await scopeRows(auth, snap.docs.map((d) => ({ id: d.id, ...(d.data() as { franchiseId?: string | null; createdBy?: string | null; published?: Published | null }) })));
+    const out = mine
+      .map((d) => ({ id: d.id, published: (d.published ?? null) as Published | null }))
       .filter((t) => t.published && (canWrite(auth.role) || t.published.staff))
       .map((t) => ({ id: t.id, ...t.published!, plan: planFromDoc(t.published!.plan) }));
     out.sort((a, b) => (a.dateFrom < b.dateFrom ? -1 : 1));

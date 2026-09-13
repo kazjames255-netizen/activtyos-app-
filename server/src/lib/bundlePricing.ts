@@ -7,6 +7,8 @@
 
 export interface PeriodDoc {
   tenantId: string;
+  franchiseId?: string | null;
+  createdBy?: string | null;
   title: string;
   start: string; // "HH:MM"
   finish: string; // "HH:MM"
@@ -14,6 +16,8 @@ export interface PeriodDoc {
 
 export interface PassDoc {
   tenantId: string;
+  franchiseId?: string | null;
+  createdBy?: string | null;
   name: string;
   days: number;
   details?: string;
@@ -21,6 +25,8 @@ export interface PassDoc {
 
 export interface BundleDoc {
   tenantId: string;
+  franchiseId?: string | null;
+  createdBy?: string | null;
   name: string;
   periodIds: string[];
   passIds: string[];

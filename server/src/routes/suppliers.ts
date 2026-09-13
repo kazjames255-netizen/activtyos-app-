@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 
 // Suppliers — a saved contact directory (name, email, phone, address) the
@@ -33,7 +34,8 @@ suppliers.get("/", async (req, res) => {
   const tenantId = scope(req, res);
   if (!tenantId) return;
   const snap = await col.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string; franchiseId?: string | null; createdBy?: string | null })[];
+  const list = await scopeRows(req.auth!, all, req.query.franchiseId);
   list.sort((a, b) => `${a.name ?? ""}`.localeCompare(`${b.name ?? ""}`));
   res.json(list);
 });
@@ -43,7 +45,7 @@ suppliers.post("/", async (req, res) => {
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = supplierSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { ...parsed.data, tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
+  const doc = { ...parsed.data, tenantId: auth.tenantId, franchiseId: franchiseStamp(auth), createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -53,6 +55,7 @@ async function own(req: Request, id: string) {
   if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!(await visibleToFranchise(auth, snap.data() as { franchiseId?: string | null; createdBy?: string | null }))) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 

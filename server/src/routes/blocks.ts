@@ -2,6 +2,7 @@ import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
+import { franchiseListingIds, isFranchise } from "../lib/franchiseScope";
 import { fromDoc, type BookingDoc } from "../lib/bookingDoc";
 import {
   blockSummary,
@@ -68,6 +69,8 @@ async function ownBlock(req: Request, id: string) {
   if (!canWrite(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  // A franchise only owns blocks on its own listings.
+  if (isFranchise(auth) && !(await franchiseListingIds(auth.tenantId, auth.franchiseId)).has((snap.data() as BlockDoc).listingId)) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -87,7 +90,8 @@ blocks.get("/", async (req, res) => {
   let q: FirebaseFirestore.Query = col.where("tenantId", "==", tenantId);
   if (typeof req.query.listingId === "string") q = q.where("listingId", "==", req.query.listingId);
   const snap = await q.get();
-  const list = snap.docs.map((d) => blockSummary(d.id, d.data() as BlockDoc));
+  const mine = isFranchise(auth) ? await franchiseListingIds(tenantId, auth.franchiseId) : null;
+  const list = snap.docs.filter((d) => !mine || mine.has((d.data() as BlockDoc).listingId)).map((d) => blockSummary(d.id, d.data() as BlockDoc));
   list.sort((a, b) => (a.startDate < b.startDate ? -1 : 1));
   res.json(list);
 });
@@ -105,7 +109,7 @@ blocks.post("/", async (req, res) => {
     return;
   }
   const listing = await db.collection("listings").doc(parsed.data.listingId).get();
-  if (!listing.exists || listing.data()!.tenantId !== auth.tenantId) {
+  if (!listing.exists || listing.data()!.tenantId !== auth.tenantId || (isFranchise(auth) && ((listing.data() as { franchiseId?: string | null }).franchiseId ?? null) !== auth.franchiseId)) {
     res.status(400).json({ error: "Unknown listing (must belong to your tenant)" });
     return;
   }

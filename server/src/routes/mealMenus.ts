@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 
 // Saved-menu library (Phase 1 of the meal planner). A menu is a reusable, named
@@ -32,7 +33,8 @@ mealMenus.get("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId) { res.status(403).json({ error: "Requires a tenant account" }); return; }
   const snap = await menusCol.where("tenantId", "==", auth.tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string; franchiseId?: string | null; createdBy?: string | null })[];
+  const list = await scopeRows(auth, all, req.query.franchiseId);
   list.sort((a, b) => ((a.name ?? "") < (b.name ?? "") ? -1 : 1));
   res.json(list);
 });
@@ -43,7 +45,7 @@ mealMenus.post("/", async (req, res) => {
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = menuSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { name: parsed.data.name, items: normItems(parsed.data.items), tenantId: auth.tenantId, createdAt: new Date().toISOString() };
+  const doc = { name: parsed.data.name, items: normItems(parsed.data.items), tenantId: auth.tenantId, franchiseId: franchiseStamp(auth), createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
   const ref = await menusCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -55,6 +57,7 @@ mealMenus.put("/:id", async (req, res) => {
   const ref = menusCol.doc(req.params.id);
   const snap = await ref.get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Menu not found" }); return; }
+  if (!(await visibleToFranchise(auth, snap.data() as { franchiseId?: string | null; createdBy?: string | null }))) { res.status(404).json({ error: "Menu not found" }); return; }
   const parsed = menuSchema.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const patch = { ...parsed.data, ...(parsed.data.items ? { items: normItems(parsed.data.items) } : {}) };
@@ -69,6 +72,7 @@ mealMenus.delete("/:id", async (req, res) => {
   const ref = menusCol.doc(req.params.id);
   const snap = await ref.get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) { res.status(404).json({ error: "Menu not found" }); return; }
+  if (!(await visibleToFranchise(auth, snap.data() as { franchiseId?: string | null; createdBy?: string | null }))) { res.status(404).json({ error: "Menu not found" }); return; }
   await ref.delete();
   res.json({ ok: true });
 });

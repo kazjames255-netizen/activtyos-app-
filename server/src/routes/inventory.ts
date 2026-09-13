@@ -1,6 +1,7 @@
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
+import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseScope";
 import type { Role } from "../middleware/role";
 
 // Inventory — the operator's kit & stock: what they hold, where it's stored,
@@ -29,7 +30,8 @@ inventory.get("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
   const snap = await col.where("tenantId", "==", auth.tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string; franchiseId?: string | null; createdBy?: string | null })[];
+  const list = await scopeRows(auth, all, req.query.franchiseId);
   list.sort((a, b) => (`${a.name}` < `${b.name}` ? -1 : 1));
   res.json(list);
 });
@@ -39,7 +41,7 @@ inventory.post("/", async (req, res) => {
   if (!auth.tenantId || !canUse(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
   const parsed = itemSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { ...parsed.data, tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Staff", createdAt: new Date().toISOString(), lastCheckedAt: null as string | null, lastCheckedBy: null as string | null };
+  const doc = { ...parsed.data, tenantId: auth.tenantId, franchiseId: franchiseStamp(auth), createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? req.user?.email ?? "Staff", createdAt: new Date().toISOString(), lastCheckedAt: null as string | null, lastCheckedBy: null as string | null };
   const ref = await col.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -49,6 +51,7 @@ async function own(req: Request, id: string) {
   if (!auth.tenantId || !canUse(auth.role)) return { status: 403 as const };
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!(await visibleToFranchise(auth, snap.data() as { franchiseId?: string | null; createdBy?: string | null }))) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -144,7 +147,7 @@ inventory.post("/carry-over", async (req, res) => {
   snap.docs.forEach((d) => {
     const src = d.data();
     const ref = col.doc();
-    batch.set(ref, { name: src.name, category: src.category ?? null, location: src.location ?? null, quantity: src.quantity ?? 0, unit: src.unit ?? null, minQty: src.minQty ?? null, notes: src.notes ?? null, season: toSeason, tenantId: auth.tenantId, createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? "Staff", createdAt: now, lastCheckedAt: null, lastCheckedBy: null, carriedFrom: fromSeason });
+    batch.set(ref, { name: src.name, category: src.category ?? null, location: src.location ?? null, quantity: src.quantity ?? 0, unit: src.unit ?? null, minQty: src.minQty ?? null, notes: src.notes ?? null, season: toSeason, tenantId: auth.tenantId, franchiseId: franchiseStamp(auth), createdBy: req.user?.email ?? "unknown", createdByName: req.user?.name ?? "Staff", createdAt: now, lastCheckedAt: null, lastCheckedBy: null, carriedFrom: fromSeason });
   });
   await batch.commit();
   res.json({ copied: snap.size });

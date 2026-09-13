@@ -4,6 +4,7 @@ import { normaliseCode } from "../lib/discountCodes";
 import { creditWallet } from "../lib/wallet";
 import { notify } from "../lib/notify";
 import { customerAreaOn } from "../lib/customerArea";
+import { franchiseFamilyEmails, isFranchise } from "../lib/franchiseScope";
 
 // Customer memberships (parent-facing). A provider offers up to three monthly
 // tiers; a family joins one and gets EITHER wallet credit each month (credit
@@ -205,7 +206,9 @@ membershipsAdmin.get("/", async (req, res) => {
   if (!tenantId) { res.status(400).json({ error: "No tenant" }); return; }
   const { tiers } = await membershipsCfg(tenantId);
   const snap = await db.collection("memberships").where("tenantId", "==", tenantId).get();
-  const members = snap.docs.map((d) => d.data()).filter((m) => m.status === "active").map((m) => ({
+  // A franchise sees only members among the families booked on its own listings.
+  const fam = isFranchise(auth) ? await franchiseFamilyEmails(tenantId, auth.franchiseId) : null;
+  const members = snap.docs.map((d) => d.data()).filter((m) => m.status === "active").filter((m) => !fam || fam.has(String(m.email ?? "").toLowerCase())).map((m) => ({
     email: m.email, tierId: m.tierId, tierName: m.tierName,
     benefitType: m.benefitType, benefitValue: m.benefitValue, priceMonthly: m.priceMonthly,
     startedAt: m.startedAt, renewsAt: m.renewsAt,

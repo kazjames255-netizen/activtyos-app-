@@ -112,3 +112,40 @@ export async function franchiseTeam(tenantId: string, franchiseId: string): Prom
   }
   return { emails, names };
 }
+
+/** The franchiseId to stamp on a record the caller creates: head office
+ *  (company) records carry null; a franchise (or its staff) stamps its own. */
+export function franchiseStamp(auth: { role: string; franchiseId: string | null }): string | null {
+  return auth.role === "company" ? null : auth.franchiseId ?? null;
+}
+
+/** Whether the caller may see a tenant-scoped operational record (inventory,
+ *  suppliers, timetables, menus, bundles, blocks, discounts...). Head office /
+ *  freelancer / platform see everything in the tenant. A franchise sees records
+ *  stamped with its franchiseId, plus unstamped legacy records its own team
+ *  created. Pass `team` (franchiseTeam) when checking many rows. */
+export async function visibleToFranchise(
+  auth: { role: string; tenantId: string | null; franchiseId: string | null },
+  rec: { franchiseId?: string | null; createdBy?: string | null },
+  team?: { emails: Set<string> },
+): Promise<boolean> {
+  if (!isFranchise(auth as AuthContext)) return true;
+  if (rec.franchiseId !== undefined && rec.franchiseId !== null) return rec.franchiseId === auth.franchiseId;
+  const t = team ?? (await franchiseTeam(auth.tenantId!, auth.franchiseId!));
+  const by = String(rec.createdBy ?? "").trim().toLowerCase();
+  return !!by && t.emails.has(by);
+}
+
+/** Narrow a list of tenant-scoped rows to what the caller may see (see
+ *  visibleToFranchise), then apply head office's optional ?franchiseId= filter. */
+export async function scopeRows<T extends { franchiseId?: string | null; createdBy?: string | null }>(
+  auth: { role: string; tenantId: string | null; franchiseId: string | null },
+  rows: T[],
+  franchiseIdQuery?: unknown,
+): Promise<T[]> {
+  if (!isFranchise(auth as AuthContext)) return applyHoNetFilter(rows, auth.role, franchiseIdQuery);
+  const team = await franchiseTeam(auth.tenantId!, auth.franchiseId!);
+  const out: T[] = [];
+  for (const r of rows) if (await visibleToFranchise(auth, r, team)) out.push(r);
+  return out;
+}

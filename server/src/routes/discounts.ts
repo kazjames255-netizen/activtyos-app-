@@ -3,6 +3,7 @@ import { z } from "zod";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
+import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseScope";
 import { checkCode, normaliseCode, type DiscountCodeDoc } from "../lib/discountCodes";
 import { emailNewMessage } from "../lib/emails";
 import { webUrl } from "../lib/stripe";
@@ -111,7 +112,8 @@ discounts.get("/groups", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const snap = await groupsCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string })[];
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { name?: string; franchiseId?: string | null; createdBy?: string | null })[];
+  const list = await scopeRows(req.auth!, all, req.query.franchiseId);
   list.sort((a, b) => `${a.name ?? ""}`.localeCompare(`${b.name ?? ""}`));
   res.json(list);
 });
@@ -121,7 +123,7 @@ discounts.post("/groups", async (req, res) => {
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = groupSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { name: parsed.data.name, emails: normEmails(parsed.data.emails), tenantId: auth.tenantId, createdAt: new Date().toISOString() };
+  const doc = { name: parsed.data.name, emails: normEmails(parsed.data.emails), tenantId: auth.tenantId, franchiseId: franchiseStamp(auth), createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
   const ref = await groupsCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -131,6 +133,7 @@ async function ownGroup(req: Request, id: string) {
   if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await groupsCol.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!(await visibleToFranchise(auth, snap.data() as { franchiseId?: string | null; createdBy?: string | null }))) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 
@@ -173,7 +176,8 @@ discounts.get("/auto", async (req, res) => {
   const tenantId = opScope(req, res);
   if (!tenantId) return;
   const snap = await autoCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string })[];
+  const all = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { createdAt?: string; franchiseId?: string | null; createdBy?: string | null })[];
+  const list = await scopeRows(req.auth!, all, req.query.franchiseId);
   list.sort((a, b) => `${a.createdAt ?? ""}`.localeCompare(`${b.createdAt ?? ""}`));
   res.json(list);
 });
@@ -183,7 +187,7 @@ discounts.post("/auto", async (req, res) => {
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
   const parsed = autoSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
-  const doc = { ...parsed.data, tenantId: auth.tenantId, createdAt: new Date().toISOString() };
+  const doc = { ...parsed.data, tenantId: auth.tenantId, franchiseId: franchiseStamp(auth), createdBy: req.user?.email ?? "unknown", createdAt: new Date().toISOString() };
   const ref = await autoCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -193,6 +197,7 @@ async function ownAuto(req: Request, id: string) {
   if (!canManage(auth.role) || !auth.tenantId) return { status: 403 as const };
   const snap = await autoCol.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== auth.tenantId) return { status: 404 as const };
+  if (!(await visibleToFranchise(auth, snap.data() as { franchiseId?: string | null; createdBy?: string | null }))) return { status: 404 as const };
   return { status: 200 as const, snap };
 }
 

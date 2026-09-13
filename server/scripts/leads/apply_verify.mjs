@@ -18,6 +18,6 @@ for (const r of rows) { const ref = db.collection("leads").doc(r.id); const stam
     else if ((r.sector==="no-signal") && !r.nameOk) { upd = { website: D(), websiteCandidate: r.url, websiteCandidateWhy: "demoted 13 Sept 2026: neither their name nor any children's wording is on the site", websiteFoundBy: D() }; bump("confirmed→demoted: no name, no signal"); }
     else bump("confirmed ok");
   }
-  if (upd) { upd.updatedAt = stamp; batch.update(ref, upd); n++; if (n>=400) await flush(); }
+  if (!upd) upd = {}; upd.websiteCheckedAt = stamp; upd.updatedAt = stamp; batch.update(ref, upd); n++; if (n>=400) await flush();
 }
 await flush(); fs.appendFileSync(DONE, rows.map(r=>r.id+"\n").join("")); console.log(JSON.stringify(c)); process.exit(0);

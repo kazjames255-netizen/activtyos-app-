@@ -2,6 +2,7 @@ import { Router, type Request, type Response } from "express";
 import { z } from "zod";
 import { db } from "../firebase";
 import { canWrite } from "../middleware/role";
+import { franchiseStamp, scopeRows, visibleToFranchise } from "../lib/franchiseScope";
 import {
   resolveBundlePricing,
   type BundleDoc,
@@ -82,9 +83,10 @@ function requireOperatorWrite(req: Request, res: Response): string | null {
   return auth.tenantId;
 }
 
-async function ownDoc(col: FirebaseFirestore.CollectionReference, tenantId: string, id: string) {
+async function ownDoc(col: FirebaseFirestore.CollectionReference, tenantId: string, id: string, req?: Request) {
   const snap = await col.doc(id).get();
   if (!snap.exists || snap.data()!.tenantId !== tenantId) return null;
+  if (req && !(await visibleToFranchise(req.auth!, snap.data() as { franchiseId?: string | null; createdBy?: string | null }))) return null;
   return snap;
 }
 
@@ -117,7 +119,7 @@ periods.get("/", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
   const snap = await periodsCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as PeriodDoc) }));
+  const list = await scopeRows(req.auth!, snap.docs.map((d) => ({ id: d.id, ...(d.data() as PeriodDoc) })), req.query.franchiseId);
   list.sort((a, b) => (a.start < b.start ? -1 : 1));
   res.json(list);
 });
@@ -130,7 +132,7 @@ periods.post("/", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  const doc = { ...parsed.data, tenantId };
+  const doc = { ...parsed.data, tenantId, franchiseId: franchiseStamp(req.auth!), createdBy: req.user?.email ?? "unknown" };
   const ref = await periodsCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -138,7 +140,7 @@ periods.post("/", async (req, res) => {
 periods.put("/:id", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
-  const snap = await ownDoc(periodsCol, tenantId, req.params.id);
+  const snap = await ownDoc(periodsCol, tenantId, req.params.id, req);
   if (!snap) {
     res.status(404).json({ error: "Period not found" });
     return;
@@ -155,7 +157,7 @@ periods.put("/:id", async (req, res) => {
 periods.delete("/:id", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
-  const snap = await ownDoc(periodsCol, tenantId, req.params.id);
+  const snap = await ownDoc(periodsCol, tenantId, req.params.id, req);
   if (!snap) {
     res.status(404).json({ error: "Period not found" });
     return;
@@ -179,7 +181,7 @@ passes.get("/", async (req, res) => {
   const tenantId = operatorTenant(req, res);
   if (!tenantId) return;
   const snap = await passesCol.where("tenantId", "==", tenantId).get();
-  const list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as PassDoc) }));
+  const list = await scopeRows(req.auth!, snap.docs.map((d) => ({ id: d.id, ...(d.data() as PassDoc) })), req.query.franchiseId);
   list.sort((a, b) => b.days - a.days);
   res.json(list);
 });
@@ -192,7 +194,7 @@ passes.post("/", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
-  const doc = { ...parsed.data, tenantId };
+  const doc = { ...parsed.data, tenantId, franchiseId: franchiseStamp(req.auth!), createdBy: req.user?.email ?? "unknown" };
   const ref = await passesCol.add(doc);
   res.status(201).json({ id: ref.id, ...doc });
 });
@@ -200,7 +202,7 @@ passes.post("/", async (req, res) => {
 passes.put("/:id", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
-  const snap = await ownDoc(passesCol, tenantId, req.params.id);
+  const snap = await ownDoc(passesCol, tenantId, req.params.id, req);
   if (!snap) {
     res.status(404).json({ error: "Pass not found" });
     return;
@@ -217,7 +219,7 @@ passes.put("/:id", async (req, res) => {
 passes.delete("/:id", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
-  const snap = await ownDoc(passesCol, tenantId, req.params.id);
+  const snap = await ownDoc(passesCol, tenantId, req.params.id, req);
   if (!snap) {
     res.status(404).json({ error: "Pass not found" });
     return;
@@ -250,7 +252,7 @@ blockBundles.get("/", async (req, res) => {
   if (!tenantId) return;
   const snap = await bundlesCol.where("tenantId", "==", tenantId).get();
   const ctx = await pricingContext(tenantId);
-  const list = snap.docs.map((d) => bundleOut(d.id, d.data() as BundleDoc, ctx));
+  const list = await scopeRows(req.auth!, snap.docs.map((d) => bundleOut(d.id, d.data() as BundleDoc, ctx)), req.query.franchiseId);
   list.sort((a, b) => a.order - b.order);
   res.json(list);
 });
@@ -270,7 +272,7 @@ blockBundles.post("/", async (req, res) => {
   }
   const existing = await bundlesCol.where("tenantId", "==", tenantId).get();
   const order = existing.docs.reduce((m, d) => Math.max(m, (d.data().order as number) ?? 0), -1) + 1;
-  const doc: BundleDoc = { ...parsed.data, listingIds: [], order, tenantId };
+  const doc: BundleDoc = { ...parsed.data, listingIds: [], order, tenantId, franchiseId: franchiseStamp(req.auth!), createdBy: req.user?.email ?? "unknown" };
   const ref = await bundlesCol.add(doc);
   res.status(201).json(bundleOut(ref.id, doc, await pricingContext(tenantId)));
 });
@@ -278,7 +280,7 @@ blockBundles.post("/", async (req, res) => {
 blockBundles.put("/:id", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
-  const snap = await ownDoc(bundlesCol, tenantId, req.params.id);
+  const snap = await ownDoc(bundlesCol, tenantId, req.params.id, req);
   if (!snap) {
     res.status(404).json({ error: "Bundle not found" });
     return;
@@ -307,7 +309,7 @@ blockBundles.put("/:id", async (req, res) => {
 blockBundles.delete("/:id", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
-  const snap = await ownDoc(bundlesCol, tenantId, req.params.id);
+  const snap = await ownDoc(bundlesCol, tenantId, req.params.id, req);
   if (!snap) {
     res.status(404).json({ error: "Bundle not found" });
     return;
@@ -319,7 +321,7 @@ blockBundles.delete("/:id", async (req, res) => {
 blockBundles.post("/:id/duplicate", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
-  const snap = await ownDoc(bundlesCol, tenantId, req.params.id);
+  const snap = await ownDoc(bundlesCol, tenantId, req.params.id, req);
   if (!snap) {
     res.status(404).json({ error: "Bundle not found" });
     return;
@@ -335,7 +337,7 @@ blockBundles.post("/:id/duplicate", async (req, res) => {
 blockBundles.post("/:id/archive", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
-  const snap = await ownDoc(bundlesCol, tenantId, req.params.id);
+  const snap = await ownDoc(bundlesCol, tenantId, req.params.id, req);
   if (!snap) {
     res.status(404).json({ error: "Bundle not found" });
     return;
@@ -376,7 +378,7 @@ blockBundles.post("/reorder", async (req, res) => {
 blockBundles.put("/:id/listings", async (req, res) => {
   const tenantId = requireOperatorWrite(req, res);
   if (!tenantId) return;
-  const snap = await ownDoc(bundlesCol, tenantId, req.params.id);
+  const snap = await ownDoc(bundlesCol, tenantId, req.params.id, req);
   if (!snap) {
     res.status(404).json({ error: "Bundle not found" });
     return;
