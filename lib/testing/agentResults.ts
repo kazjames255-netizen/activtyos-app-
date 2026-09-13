@@ -21,6 +21,11 @@ import C from "./agent-results/agent-C.json";
 import D from "./agent-results/agent-D.json";
 import E from "./agent-results/agent-E.json";
 import F from "./agent-results/agent-F.json";
+// Plan 2 (what the 28-day run never touched) — run from 13 Sept 2026.
+import G from "./agent-results/plan2-agent-G.json";
+import H from "./agent-results/plan2-agent-H.json";
+import I from "./agent-results/plan2-agent-I.json";
+import J from "./agent-results/plan2-agent-J.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -37,4 +42,5 @@ export interface AgentResult {
 export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(A as Record<string, AgentResult>), ...(B as Record<string, AgentResult>), ...(C as Record<string, AgentResult>),
   ...(D as Record<string, AgentResult>), ...(E as Record<string, AgentResult>), ...(F as Record<string, AgentResult>),
+  ...(G as Record<string, AgentResult>), ...(H as Record<string, AgentResult>), ...(I as Record<string, AgentResult>), ...(J as Record<string, AgentResult>),
 };

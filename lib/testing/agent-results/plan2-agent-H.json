@@ -1,0 +1,161 @@
+{
+  "p2-f1": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "Throwaway company tenant + F1/F2 franchises; HO and F2 each created a row on every route, F1 read each list. Foreign (HO/F2) rows returned to F1: /api/blocks 2 of 3 | /api/block-bundles 2 of 2 | /api/inventory 2 of 2 | /api/meal-menus 2 of 2 | /api/suppliers 2 of 2 | /api/timetables 2 of 2 | /api/memberships 2 of 2 (members list) | /api/discounts/groups 2 of 2 | /api/discounts/auto 2 of 2 | /api/staff-announcements 1 of 1 (HO's whole-tenant notice — by design, franchiseId null reaches everyone; the F2-targeted one was correctly hidden). Clean: /api/calendar-events, /api/leave, /api/appraisals, /api/credentials, /api/onboarding, /api/payroll, /api/timeclock, /api/expense-claims, /api/location-staff, /api/posts (F2-targeted + F2's own hidden), /api/learning/assignments, /api/reviews, /api/referrals.",
+    "notes": "9 routes leak the whole network to a franchise (staff-announcements' whole-tenant post is intended). Cause: blocks, blockBundles/periods/passes, inventory, mealMenus, suppliers, timetables, discounts groups/auto and membershipsAdmin filter on tenantId only (e.g. server/src/routes/inventory.ts:31, suppliers.ts:35, mealMenus.ts:34, timetables.ts:91, blocks.ts:88, blockBundles.ts:251, discounts.ts:113/175, memberships.ts:207) and stamp no franchiseId on create.",
+    "evidence": "server/_t_p2H_day5.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/3fac029e-679f-4cf4-931c-3f2e8f2edfa3/scratchpad/p2h/p2h_day5.out",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f2": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "As F1 against HO-owned ids: /api/blocks PUT 409 / DELETE 409 (refused, but because the HO block has a booking — not an ownership 404) | /api/inventory PUT 200 / DELETE 200 | /api/suppliers PUT 200 / DELETE 200 | /api/timetables PUT 200 / DELETE 200 | /api/calendar-events PUT 404 / DELETE 404 | /api/meal-menus PUT 200 / DELETE 200.",
+    "notes": "A franchise renamed and deleted head office's inventory item, supplier, timetable and saved menu. Ownership helpers check tenantId only (inventory.ts own(), suppliers.ts own(), timetables.ts ownTimetable(), mealMenus.ts PUT/DELETE). calendar-events is the one route that scopes (eventInMyFranchise).",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f3": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "F1 created one of each; the create response's franchiseId and whether F2's GET listed it: inventory stamp=undefined, F2 sees=true | suppliers undefined/true | timetables undefined/true | meal-menus undefined/true | block-bundles undefined/true | calendar-events stamp=F1, F2 sees=false.",
+    "notes": "Only calendar-events stamps franchiseId on create (calendarEvents.ts:60). The other five write tenantId only, so a sibling franchise reads them.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f4": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "Seeded via POST /api/bookings: F1 £30+£20, F2 £50, HO direct £40 (all unpaid, this month). GET /api/ho/overview: F1 {bookings 2, revenue 50, outstanding 50}, F2 {bookings 1, revenue 50}, direct {1, 40}; month series F1 {2, 50}, F2 {1, 50}. GET /api/splitfees/mine agrees (F1 revenue 50, F2 50). But GET /api/dashboard as F1 → bookings.live=0, money.outstanding=0; as F2 → live=0. Attention list: 'P2H Franchise One has no agreed territory', 'P2H Franchise Two has no agreed territory' — both real and pointable.",
+    "notes": "HO overview and split-fees attribute by booking.franchiseId; the franchise dashboard keeps only bookings whose listingId is one of the franchise's listings (dashboard.ts:80-83, 101-103) and operator-taken bookings carry blockId but no listingId (see lib/siteScope.ts:17 comment), so a franchise's own dashboard shows 0 for bookings its HO chart counts. Attention items are correct.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f5": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "As HO: GET /api/bookings → 4 rows; GET /api/bookings?franchiseId=<F1> → the same 4 rows (F1's 2 + F2's 1 + HO's 1); GET /api/bookings?franchiseId=not-a-real-franchise → 200 with the same 4 rows.",
+    "notes": "routes/bookings.ts:191-204 has no ?franchiseId= handling for a company account (applyHoNetFilter is used by income/expenses but not bookings). The HO scope switch on the bookings list is client-side; a foreign id returns the whole tenant, not empty.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1 has £50 revenue. PUT /api/splitfees/settings rate 10 → GET /api/splitfees/mine fee=5, HO GET /api/splitfees F1 row fee=5. PUT rate 20 → mine fee=10, HO row fee=10.",
+    "notes": "Rule recorded: EVERYTHING is recomputed at the current rate — splitFees has no effective-from date; feeOf() applies tenant.splitFees.rate to every counted booking whatever its createdAt (splitfees.ts:126-127, 196). Head office and the franchise agree because both read the one setting.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "HO agreed F2's polygon (200). HO PUT an overlapping polygon on F1 as 'proposed' → 200 {ok:true,status:'proposed'} with NO overlap warning field. F1 PUT /api/franchises/<F1>/territory {status:'agreed'} → 403 'Head office only'. F1 POST /api/account/territory/approve → 400 'There's no head-office territory waiting for your approval.' HO PUT status agreed → 200; F1's /api/account then shows franchiseTerritory.status=agreed. F1 POST /api/listings with a venue outside its territory → 201, no territory/warning field on the response.",
+    "notes": "Self-approval refused and HO approval works (the pass). NOT built: overlap detection (franchises.ts:21-40 stores the polygon as given) and an out-of-territory warning on listings (listings.ts has no territory check). Also: a territory HO saves via /api/franchises carries no `by` field, so POST /account/territory/approve only works for a territory carried on the invite (invites.ts:462-466).",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1 POST /api/invites {role:'franchise'} → 403 'Your account cannot create this invite'. HO POST → 201 with token. A fresh account POST /api/invites/<token>/accept → 200 {role:'franchise', tenantId:<HO tenant>}; its GET /api/me → role=franchise, franchiseId=<its own uid>, tenantId=HO's, franchiseName='P2H Franchise Three'.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "HO POST /api/posts {franchiseId:F1}: F2's parent GET /api/posts does not include it; F1's parent sees it with authorLabel='Head office', authorScope='franchise'. F1 POST /api/posts {franchiseId:null} → 201 but stored franchiseId=F1 (auto-scoped); F2's parent never sees it.",
+    "notes": "A franchise's network-wide attempt is not a 403 — posts.ts:158-162 silently re-scopes it to the franchise. Outcome matches the expectation.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f10": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "HO POST /api/staff-announcements {important:true, franchiseId:F1}: F1 staff GET lists it, F2 staff GET does not. F1 staff POST /:id/read → 200, their GET shows read=true, HO's GET shows readCount=1. F2 DELETE /:id → 404. Notifications collection: F1 staff +1 bell (toEmail), F2 staff +0. Mailer log: one email attempt to the F1 staff address (SUPPRESSED — mailer not live), none to F2.",
+    "evidence": "server/_t_p2H_day5.mts (mail lines captured from console)",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "HO PUT /api/learning/assignments with locs:['P2H Franchise One']: F1 staff GET /assignments includes it (fromHo:true); F2 staff GET does not. F1 staff POST /completions → 200. GET /completions as F2 owner: F1 staff's completion absent; as F1 owner: present; as HO: absent.",
+    "notes": "Completions are keyed tenant__fr__F1 (learning.ts:206), so F2 cannot read them — but HO, who assigned the course, cannot see the completion either (GET /completions reads only the caller's key). Worth a follow-up: HO's who's-in-date view misses franchise staff's passes.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "HO PUT /api/documents/library doc roles:['Coach']: F1 coach sees it (ho: prefix), F2 coach sees it, HO's own coach sees it; HO POST /library/chase → people=3, one bell each. F1 PUT its OWN library doc roles:['Coach']: F1 coach sees it, F2 coach does not; F1 POST /library/chase → people=1 (its one unread coach).",
+    "notes": "The library has no 'F1's Coach role' — roles are job titles tenant-wide, so a HEAD-OFFICE document assigned to Coach reaches every franchise's coaches (documents.ts teamFor includes all franchise staff for a company). Franchise-only targeting is achieved by the franchise assigning from its own library; the pass is judged on that, the HO half is recorded.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f13": {
+    "verdict": "fail",
+    "method": "code",
+    "actual": "features/milestones/data.ts:7-9 — template and progress are read/written with localStorage under keys aos.milestones.template.v1 and aos.milestones.progress.v1 ('Demo localStorage; backend owed (docs/milestones-handoff.md)'). The only server calls in features/milestones/MilestonesApp.tsx are POST /api/tasks (spawning tasks from a step) and GET /api/me.",
+    "notes": "needsBackend: HO's template edits and a franchise's progress live in different browsers and never meet. No route to test tomorrow (p2-l11 is blocked on this).",
+    "evidence": "features/milestones/data.ts:1-9",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f14": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Seeded income HO £100 / F1 £50 / F2 £25 and expenses HO £10 / F1 £5 / F2 £2.50. GET /api/income?franchiseId=__ho__ as HO = 100; F1 GET = 50; F2 GET = 25; HO GET (no filter) = 175 = 100+50+25. GET /api/expenses?franchiseId=__ho__ = 10; F1 = 5; F2 = 2.50; tenant total = 17.50 = 10+5+2.50. Nothing counted twice.",
+    "notes": "The script's Venue-only expense filter printed 0s (a helper bug — the category field came back differently), but the all-category sums are exactly the seeded Venue amounts (the f1 expense claims never became expenses because they were never approved), so the arithmetic is verified.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f15": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "With an HO review + referral and an F2 review + referral seeded, F1 GET /api/reviews returned 0 real items (neither the HO nor the F2 review; no demo items for a franchise); F1 GET /api/referrals contained neither the HO nor the F2 referral.",
+    "notes": "Both routes ARE scoped for a franchise today — reviews by listing ownership (reviews.ts:198-208), referrals by the franchise's family emails (referral.ts:29-31). The 'still owed' note in the franchise review is out of date for these two.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f16": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1 POST /api/messages/support → 201; HO POST too. HQ (platform) GET /api/platform/support: F1's thread name='P2H Franchise One · P2H Franchise One area', tier='franchise', kind='message', franchiseId=F1; HO's thread name='P2H Head Office', tier='franchise', franchiseId null. F1 GET /api/messages/support → only its own message (HO's absent).",
+    "notes": "'Franchise' kind is expressed as tier: the tenant's plan 'franchise' → tier 'franchise' for BOTH the HO thread and the franchise thread (platformSupport.ts tenantTier); the franchise is told apart by franchiseId + its real name.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f17": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1's Setup names its own DSL, HO's Setup names HO's. F1 staff POST /api/incidents {kind:'safeguarding'} → 201. Notifications: F1 DSL +1 bell, HO DSL +0. Mailer log: email attempt to F1's DSL address (SUPPRESSED — not live), none to HO's DSL. [dsl] log line: '→ alerting <F1 DSL> as lead (bell + email)' with the franchise id.",
+    "notes": "Mail is not live on this machine (MAIL_ALLOWLIST only) — the attempt is proven by the mailer's SUPPRESSED log line, not a delivered message.",
+    "evidence": "server/_t_p2H_day5.mts",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  },
+  "p2-f18": {
+    "verdict": "blocked",
+    "method": "browser",
+    "actual": "Not attempted: needs a signed-in head-office session in a real browser (drill into F1, refresh, back, refresh). No head-office credentials are available to this agent and the harness cannot mint a browser session.",
+    "notes": "Needs: a company (HO) login with at least one franchise, or a dev sign-in bypass for localhost:3000.",
+    "at": "2026-09-13T14:42:00Z",
+    "agent": "H"
+  }
+}

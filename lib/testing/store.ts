@@ -11,6 +11,7 @@
  */
 
 import { PLAN, type Step } from "./plan";
+import { PLAN2 } from "./plan2";
 
 const KEY = "aos.testing.run.v1";
 
@@ -63,7 +64,7 @@ export function clearStep(stepId: string): Run {
 
 /** Every step, flattened, with its day — for lookups and the failure lists. */
 export const ALL_STEPS: { day: number; date: string; dayTitle: string; step: Step }[] =
-  PLAN.flatMap((d) => d.steps.map((step) => ({ day: d.day, date: d.date, dayTitle: d.title, step })));
+  [...PLAN, ...PLAN2].flatMap((d) => d.steps.map((step) => ({ day: d.day, date: d.date, dayTitle: d.title, step })));
 
 export const stepById = (id: string) => ALL_STEPS.find((s) => s.step.id === id);
 

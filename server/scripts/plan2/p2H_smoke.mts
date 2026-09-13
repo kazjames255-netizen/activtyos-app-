@@ -1,0 +1,16 @@
+console.log("boot");
+const H = await import("./p2H_harness.mts");
+console.log("imported");
+await H.start();
+console.log("started");
+const C = await H.mkTenant("company", "P2H HO");
+console.log("tenant", C.tenantId);
+const F1 = await H.mkFranchise(C.tenantId, "P2H F1");
+const S = await H.mkStaff(C.tenantId, { franchiseId: F1.franchiseId, name: "P2H Staff" });
+H.log("me HO", await H.api(C.owner, "GET", "/api/me"));
+H.log("me F1", await H.api(F1.actor, "GET", "/api/me"));
+H.log("me S", await H.api(S, "GET", "/api/me"));
+H.log("bookings F1", await H.api(F1.actor, "GET", "/api/bookings"));
+console.log("cleanup", await H.cleanup());
+H.stop();
+process.exit(0);

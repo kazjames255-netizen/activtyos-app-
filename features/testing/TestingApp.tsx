@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { PLAN, PLAN_START, AMIR_DUE, PREREQS, type Day, type Step } from "@/lib/testing/plan";
+import { PLAN2, PLAN2_START, PREREQS2 } from "@/lib/testing/plan2";
 import { BACKLOG, bySeverity, type Who } from "@/lib/testing/backlog";
 import {
   loadRun, saveResult, clearStep, progressOf, openFor, buildHandover, buildFullReport,
@@ -206,12 +207,17 @@ function HandoverPanel({ run, owner, title, lede }: { run: Run; owner: Owner; ti
 }
 
 export function TestingApp() {
+  // Plan 1 = the 28-day acceptance run (done); Plan 2 = the 244 checks it never covered.
+  const [planNo, setPlanNo] = useState<1 | 2>(2);
+  const plan = planNo === 2 ? PLAN2 : PLAN;
+  const prereqs = planNo === 2 ? PREREQS2 : PREREQS;
   const [run, setRun] = useState<Run>({});
   const [tab, setTab] = useState<"start" | "plan" | "backlog" | "amir" | "frontend" | "export">("start");
   const [ticks, setTicks] = useState<Record<string, boolean>>({});
   const today = todayISO();
   // Land on today's day if the run is under way, else day 1.
   const [dayNo, setDayNo] = useState(() => PLAN.find((d) => d.date === todayISO())?.day ?? 1);
+  useEffect(() => { setDayNo(1); }, [planNo]);
   const [logger, setLogger] = useState(false);
   useEffect(() => { setLogger(testLoggerOn()); }, []);
 
@@ -223,7 +229,7 @@ export function TestingApp() {
   }, []);
 
   const p = useMemo(() => progressOf(run), [run]);
-  const day = PLAN.find((d) => d.day === dayNo)!;
+  const day = plan.find((d) => d.day === dayNo) ?? plan[0];
   const pct = Math.round((p.done / p.total) * 100);
 
   const download = () => {
@@ -239,10 +245,20 @@ export function TestingApp() {
     <div className="mx-auto w-full max-w-[1180px] px-4 py-6">
       <header className="rounded-[20px] p-6 text-white" style={{ background: "linear-gradient(120deg,#16306e,#274ba3 58%,#3f78d8)" }}>
         <div className="text-[11px] font-extrabold uppercase tracking-[.12em] text-[#f5b81f]">Acceptance testing</div>
-        <h1 className="mt-2 text-[30px] font-extrabold leading-tight">28 days, {p.total} checks.</h1>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {([1, 2] as const).map((n) => (
+            <button key={n} type="button" onClick={() => setPlanNo(n)} className="rounded-full px-3.5 py-1.5 text-[12.5px] font-extrabold"
+              style={planNo === n ? { background: "#f5b81f", color: "#12224e" } : { background: "rgba(255,255,255,.16)", color: "#fff" }}>
+              {n === 1 ? `Plan 1 · 28-day run · ${PLAN.reduce((a, d) => a + d.steps.length, 0)} checks` : `Plan 2 · what plan 1 never covered · ${PLAN2.reduce((a, d) => a + d.steps.length, 0)} checks`}
+            </button>
+          ))}
+        </div>
+        <h1 className="mt-3 text-[30px] font-extrabold leading-tight">{plan.length} days, {plan.reduce((a, d) => a + d.steps.length, 0)} checks.</h1>
         <p className="mt-2 max-w-[70ch] text-[14.5px] text-white/80">
-          {PLAN_START} to 2026-10-08. Days 1&ndash;7 need nothing from Amir; his work is due {AMIR_DUE} and Day 8 is the Tax-Free Childcare reconciliation.
-          Log every step as you do it &mdash; a fail is only useful if you write down what actually happened.
+          {planNo === 1
+            ? <>{PLAN_START} to 2026-10-08. Days 1&ndash;7 need nothing from Amir; his work is due {AMIR_DUE} and Day 8 is the Tax-Free Childcare reconciliation.</>
+            : <>From {PLAN2_START}. Built from an inventory of every route, view and sweep minus what plan 1 exercised: money and safeguarding first, then permissions, franchise isolation, HR, comms, HQ, i18n, mobile and robustness. Each step says how it runs (api / code / browser) and what it needs.</>}
+          {" "}Log every step as you do it &mdash; a fail is only useful if you write down what actually happened.
         </p>
         <button type="button"
           onClick={() => { const next = !logger; setTestLoggerOn(next); setLogger(next); }}
@@ -274,7 +290,7 @@ export function TestingApp() {
                   if (!confirm(`Copy Claude's result into your run for the ${adoptable.length} step(s) you haven't logged yourself? Your own results are never overwritten.`)) return;
                   let r = run;
                   for (const [id, a] of adoptable) {
-                    const st = PLAN.flatMap((d) => d.steps).find((x) => x.id === id);
+                    const st = [...PLAN, ...PLAN2].flatMap((d) => d.steps).find((x) => x.id === id);
                     r = saveResult({ stepId: id, verdict: a.verdict, owner: st?.needsBackend ? "amir" : "triage", actual: a.actual, notes: `[Claude · ${a.method}] ${a.notes ?? ""}`.trim(), at: a.at });
                   }
                   setRun(r);
@@ -303,7 +319,7 @@ export function TestingApp() {
             reports success, Stripe has no key set, and there is no deployed environment to test on.
           </p>
           <ul className="mt-4 flex flex-col gap-2.5">
-            {PREREQS.map((q) => (
+            {prereqs.map((q) => (
               <li key={q.id} className="rounded-[14px] border border-[var(--line)] bg-[var(--surface)] p-4">
                 <div className="flex items-start gap-3">
                   <input type="checkbox" checked={!!ticks[q.id]} onChange={(e) => { saveTick(q.id, e.target.checked); setTicks(loadTicks()); }}
@@ -369,7 +385,7 @@ export function TestingApp() {
       {tab === "plan" && (
         <>
           <div className="mt-5 flex flex-wrap gap-1.5">
-            {PLAN.map((d) => {
+            {plan.map((d) => {
               const logged = d.steps.filter((s) => run[s.id]).length;
               const failed = d.steps.some((s) => run[s.id] && run[s.id].verdict !== "pass" && !run[s.id].resolved);
               const done = logged === d.steps.length;

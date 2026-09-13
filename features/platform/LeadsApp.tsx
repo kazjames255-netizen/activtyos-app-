@@ -29,10 +29,16 @@ interface Lead {
   network?: string; networkKind?: "franchise" | "group"; networkOperators?: number; ofstedRegions?: string[];
   /** Region + county from their postcode / town (ONS data), and the page each contact detail was read from. */
   region?: string; county?: string; emailFrom?: string; phoneFrom?: string; websiteFoundBy?: string;
+  /** Which UK nation's register they came from (England / Wales / Scotland / Northern Ireland). Derived from the region when the import didn't set it. */
+  nation?: string;
   /** A site matching their name that research couldn't confirm is theirs — shown as "possible", never used for contacts. */
   websiteCandidate?: string; websiteCandidateWhy?: string;
   /** Activities / HAF read from their own website by research. */
   activityTypes?: string[]; haf?: boolean;
+  /** Where the HAF mention was read, the words matched, the council programme that lists them, and whether they also sell paid places. */
+  hafFrom?: string; hafText?: string; hafLocalAuthority?: string; hafPaid?: boolean;
+  /** Where parents actually book, and which research pass found the booking system. */
+  bookingUrl?: string; bookingFrom?: string;
 }
 
 // ── What we sell vs who they are ─────────────────────────────────────────────
@@ -54,7 +60,7 @@ const HOLIDAY_WORDS = /\b(holiday|camps?|play ?scheme|half[- ]term)\b/i;
 type Fit = "core" | "adjacent" | "nursery";
 type Size = "solo" | "single" | "multi" | "large" | "franchise" | "group";
 type Booking = "none" | "soon" | "platform";
-interface Derived { types: string[]; fit: Fit; size: Size; booking: Booking; srcs: string[]; region: string; acts: string[] }
+interface Derived { types: string[]; fit: Fit; size: Size; booking: Booking; srcs: string[]; region: string; nation: string; acts: string[]; hafPaid: boolean | null; system: string }
 // What kind of activity they offer — read from their name, the directory's
 // activity field, the Ofsted site names, and (when research found it) words on
 // their own website (`activityTypes`, `haf`).
@@ -95,6 +101,16 @@ for (const [region, areas] of Object.entries({
   Scotland: "AB DD DG EH FK G HS IV KA KW KY ML PA PH TD ZE",
   "Northern Ireland": "BT",
 })) for (const a of areas.split(" ")) REGION_OF[a] = region;
+// Nation from the register / the region. English regions collapse to "England"; the
+// Welsh, Scottish and Northern Irish registers are imported with `nation` set explicitly.
+const NATIONS = ["England", "Wales", "Scotland", "Northern Ireland"] as const;
+const NATION_FLAG: Record<string, string> = { England: "🏴󠁧󠁢󠁥󠁮󠁧󠁿", Wales: "🏴󠁧󠁢󠁷󠁬󠁳󠁿", Scotland: "🏴󠁧󠁢󠁳󠁣󠁴󠁿", "Northern Ireland": "🇬🇧", "Isle of Man": "🇮🇲", "Channel Islands": "🇯🇪" };
+const nationFrom = (l: Lead, region: string) => {
+  if (l.nation) return l.nation;
+  if (!region) return "";
+  if ((NATIONS as readonly string[]).includes(region) || region === "Isle of Man" || region === "Channel Islands") return region;
+  return "England";
+};
 const regionFrom = (l: Lead) => {
   if (l.region) return l.region;
   if (l.ofstedRegions?.[0]) return l.ofstedRegions[0];
@@ -114,7 +130,13 @@ function derive(l: Lead): Derived {
   // (The Ofsted description starts with our own type labels — "Sports & activity classes…" — so skip that clause.)
   const text = `${l.name} ${l.business ?? ""} ${l.sport ?? ""} ${(l.message ?? "").replace(/^Ofsted-registered — [^.]*\./, "")} ${l.network ?? ""} ${(l.website ?? "").replace(/^https?:\/\/(www\.)?/, "")}`;
   const acts = [...new Set([...ACTIVITY.filter(([, , re]) => re.test(text)).map(([k]) => k), ...(l.activityTypes ?? []), ...(l.haf ? ["haf"] : [])])];
-  return { types, fit, size, booking, srcs, region: regionFrom(l), acts };
+  const region = regionFrom(l);
+  // HAF providers: do they also sell paid places? Confirmed by research when known; otherwise
+  // a strong signal is being on a booking directory / system, or running a nursery / wraparound / classes.
+  const hafPaid = !acts.includes("haf") ? null : typeof l.hafPaid === "boolean" ? l.hafPaid : booking === "platform" || types.some((t) => ["nursery", "preschool", "wraparound", "activity", "tuition"].includes(t)) ? true : null;
+  // The one booking system they use (first named), e.g. "Bookwhen", "own portal", "Famly (nursery app)".
+  const system = (l.bookingSystem || "").split(/;|\/| — /)[0].trim();
+  return { types, fit, size, booking, srcs, region, nation: nationFrom(l, region), acts, hafPaid, system };
 }
 const FIT: Record<Fit, { label: string; hint: string }> = {
   core: { label: "🎯 Core fit", hint: "Holiday camps, breakfast & after-school clubs, activity classes — what ActivityOS is built for" },
@@ -147,6 +169,7 @@ const SOURCE: Record<string, { label: string; emoji: string }> = {
   pebble: { label: "Pebble", emoji: "🪨" },
   yellowdays: { label: "Yellow Days", emoji: "🌼" },
   ofsted: { label: "Ofsted", emoji: "🏫" },
+  haf: { label: "Council HAF list", emoji: "🍎" },
 };
 /** The directories a lead is on — all of them, not only the one it was first found on. */
 const srcOf = (l: { sources?: string[]; source?: string }) => (l.sources?.length ? l.sources : [l.source || "demo"]);
@@ -163,8 +186,8 @@ function fmt(iso: string) {
 // dropdown the ticks are OR (holiday OR after-school); across dropdowns they're
 // AND. Every option shows how many leads it would leave, given everything else.
 type R = { l: Lead; d: Derived };
-type Opt = { value: string; label: string; hint?: string; test: (r: R) => boolean };
-type Dim = "plan" | "runs" | "activity" | "fit" | "size" | "booking" | "region" | "source" | "contact" | "status";
+type Opt = { value: string; label: string; hint?: string; group?: string; test: (r: R) => boolean };
+type Dim = "plan" | "runs" | "activity" | "fit" | "size" | "booking" | "nation" | "region" | "ofsted" | "source" | "contact" | "status";
 const okToEmail = (l: Lead) => !!l.email && !l.personalContact && l.kind !== "person";
 const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
   plan: [
@@ -172,15 +195,24 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
     { value: "freelancer", label: "🧑 Freelancers", test: ({ l }) => isFreelancer(l) },
   ],
   runs: [
-    ...Object.entries(TYPE).map(([k, t]) => ({ value: k, label: `${t.emoji} ${t.label}`, test: ({ d }: R) => d.types.includes(k) })),
-    { value: "multi2", label: "🔀 Runs 2+ of these", hint: "e.g. a nursery that also runs a holiday or after-school club — often the easiest win", test: ({ d }: R) => d.types.length > 1 },
+    ...Object.entries(TYPE).map(([k, t]) => ({ value: k, label: `${t.emoji} ${t.label}`, group: "Setting", test: ({ d }: R) => d.types.includes(k) })),
+    { value: "multi2", label: "🔀 Runs 2+ of these", group: "Setting", hint: "e.g. a nursery that also runs a holiday or after-school club — often the easiest win", test: ({ d }: R) => d.types.length > 1 },
+    { value: "haf:any", label: "🍎 HAF provider (any)", group: "HAF (holiday activities & food)", hint: "On a council HAF list or says so on their own website", test: ({ d }: R) => d.acts.includes("haf") },
+    { value: "haf:paid", label: "🍎💷 HAF + paid activities", group: "HAF (holiday activities & food)", hint: "Also sells places: confirmed by research, or on a booking platform / runs a nursery, wraparound or classes", test: ({ d }: R) => d.acts.includes("haf") && d.hafPaid === true },
+    { value: "haf:only", label: "🍎 HAF only — no paid activities seen", group: "HAF (holiday activities & food)", hint: "Free HAF places and nothing paid found yet (community groups, youth clubs, school-run schemes)", test: ({ d }: R) => d.acts.includes("haf") && d.hafPaid !== true },
+    { value: "haf:none", label: "🚫 No HAF offered (none found)", group: "HAF (holiday activities & food)", hint: "Not on any council HAF list we've read and no HAF mention on their website", test: ({ d }: R) => !d.acts.includes("haf") },
+    ...ACTIVITY.filter(([k]) => k !== "haf").map(([k, label]) => ({ value: `act:${k}`, label, group: "Activities", test: ({ d }: R) => d.acts.includes(k) })),
   ],
-  activity: ACTIVITY.map(([k, label]) => ({ value: k, label, test: ({ d }: R) => d.acts.includes(k) })),
+  activity: [],
   fit: (Object.keys(FIT) as Fit[]).map((k) => ({ value: k, label: FIT[k].label, hint: FIT[k].hint, test: ({ d }: R) => d.fit === k })),
   size: (Object.keys(SIZE) as Size[]).map((k) => ({ value: k, label: SIZE[k], test: ({ d }: R) => d.size === k })),
   booking: [
     ...(Object.keys(BOOKING) as Booking[]).map((k) => ({ value: k, label: BOOKING[k].label, hint: BOOKING[k].hint, test: ({ d }: R) => d.booking === k })),
     { value: "multi", label: "🔗 On 2+ directories", hint: "The same provider found on more than one directory — one lead", test: ({ d }) => d.srcs.length > 1 },
+  ],
+  ofsted: [
+    { value: "yes", label: "🏫 Yes — on the Ofsted register", hint: "Came from the Ofsted childcare register (England); the badge links to their Ofsted page", test: ({ l, d }) => d.srcs.includes("ofsted") || (l.ofstedSites ?? 0) > 0 },
+    { value: "no", label: "🚫 No — not Ofsted-registered", hint: "Directory / HAF / other-nation leads with no Ofsted record. Wales, Scotland and NI have their own registers (see Nation)", test: ({ l, d }) => !d.srcs.includes("ofsted") && !((l.ofstedSites ?? 0) > 0) },
   ],
   contact: [
     { value: "okEmail", label: "✅ OK to email", hint: "A business mailbox — not a sole trader or a named person's address (UK PECR)", test: ({ l }) => okToEmail(l) },
@@ -195,9 +227,9 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
   ],
   status: STATUSES.map((s) => ({ value: s, label: TONE[s].label, test: ({ l }: R) => (l.status || "new") === s })),
 };
-const DIM_LABEL: Record<Dim, string> = { plan: "Plan", runs: "What they run", activity: "Activity", fit: "Fit", size: "Size", booking: "Booking platform", region: "Region", source: "Found on", contact: "Contact", status: "Status" };
+const DIM_LABEL: Record<Dim, string> = { plan: "Plan", runs: "What they do", activity: "Activity", fit: "Fit", size: "Size", booking: "Platform", nation: "Nation", region: "Region", ofsted: "Ofsted registered", source: "Found on", contact: "Contact", status: "Status" };
 type Filters = Record<Dim, string[]>;
-const NO_FILTERS: Filters = { plan: [], runs: [], activity: [], fit: [], size: [], booking: [], region: [], source: [], contact: [], status: [] };
+const NO_FILTERS: Filters = { plan: [], runs: [], activity: [], fit: [], size: [], booking: [], nation: [], region: [], ofsted: [], source: [], contact: [], status: [] };
 
 // Which list you're working. Only four, and they don't overlap in confusing ways:
 // best prospects ⊂ ready to contact; still researching = everyone else; demo
@@ -208,6 +240,7 @@ const VIEWS: { key: string; label: string; hint: string; test: (r: R) => boolean
   { key: "best", label: "⭐ Best prospects", hint: "Run holiday camps, after-school clubs or activity classes, can be contacted, and aren't on a booking platform yet", test: ({ l, d }) => reachable(l) && d.fit === "core" && d.booking !== "platform" },
   { key: "all", label: "📇 Ready to contact", hint: "Every lead with an email or a phone number", test: ({ l }) => reachable(l) },
   { key: "demo", label: "📩 Demo requests", hint: "Asked for a demo on the website", test: ({ d }) => d.srcs.includes("demo") },
+  { key: "haf", label: "🍎 HAF providers", hint: "Listed on a council Holiday Activities & Food programme, or say on their own website that they run HAF places", test: ({ d }) => d.acts.includes("haf") },
   { key: "research", label: "🔎 Still researching", hint: "No email or phone found yet", test: ({ l }) => !reachable(l) },
 ];
 type SortKey = "best" | "reach" | "big" | "new" | "az";
@@ -216,9 +249,12 @@ const SORTS: Record<SortKey, string> = { best: "Best prospects first", reach: "M
 /** A dropdown of ticks with live counts. Counts are only worked out while it's open. */
 function FilterMenu({ dim, opts, value, onChange, countFor }: { dim: Dim; opts: Opt[]; value: string[]; onChange: (v: string[]) => void; countFor: (o: Opt) => number }) {
   const [open, setOpen] = useState(false);
+  // Anchor the menu to whichever side keeps it on screen (the right-hand filters were clipping their counts).
+  const [alignRight, setAlignRight] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
+    const r = box.current?.getBoundingClientRect(); if (r) setAlignRight(r.left + 320 > window.innerWidth - 12);
     const off = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("mousedown", off); document.addEventListener("keydown", esc);
@@ -239,14 +275,15 @@ function FilterMenu({ dim, opts, value, onChange, countFor }: { dim: Dim; opts: 
       {open && (
         // Fits the window: at most 60% of its height, scrolling inside; hints are a
         // single line (hover for the whole thing) so every option is visible.
-        <div className="absolute left-0 top-[calc(100%+6px)] z-30 w-[320px] overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_40px_-18px_rgba(15,23,42,.45)]" style={{ maxHeight: "min(60vh, 520px)" }}>
-          {opts.map((o) => { const n = countFor(o); const ticked = value.includes(o.value); return (
-            <label key={o.value} title={o.hint} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12.5px] hover:bg-[var(--panel)]" style={{ opacity: n || ticked ? 1 : 0.45 }}>
+        <div className={`absolute ${alignRight ? "right-0" : "left-0"} top-[calc(100%+6px)] z-30 w-[320px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_40px_-18px_rgba(15,23,42,.45)]`} style={{ maxHeight: "min(60vh, 520px)" }}>
+          {opts.map((o, i) => { const n = countFor(o); const ticked = value.includes(o.value); const heading = o.group && o.group !== opts[i - 1]?.group; return (<div key={o.value}>
+            {heading && <div className="mt-1.5 px-2.5 pb-0.5 pt-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)] first:mt-0">{o.group}</div>}
+            <label title={o.hint} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12.5px] hover:bg-[var(--panel)]" style={{ opacity: n || ticked ? 1 : 0.45 }}>
               <input type="checkbox" checked={ticked} onChange={() => toggle(o.value)} className="h-4 w-4 flex-none accent-[var(--brand)]" />
               <span className="min-w-0 flex-1 font-semibold text-[var(--ink)]">{o.label}{o.hint && <span className="block truncate text-[10.5px] font-normal text-[var(--ink-3)]">{o.hint}</span>}</span>
               <span className="text-[11.5px] font-bold tabular-nums text-[var(--ink-3)]">{n.toLocaleString()}</span>
             </label>
-          ); })}
+          </div>); })}
           {on && <button type="button" onClick={() => onChange([])} className="mt-1 w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] font-bold text-[var(--brand)] hover:bg-[var(--panel)]">Clear {DIM_LABEL[dim].toLowerCase()}</button>}
         </div>
       )}
@@ -306,12 +343,26 @@ export function LeadsApp() {
     const tally = (pick: (r: R) => string[]) => { const c = new Map<string, number>(); for (const r of rows) for (const v of pick(r)) c.set(v, (c.get(v) ?? 0) + 1); return [...c.keys()].sort((a, b) => c.get(b)! - c.get(a)!); };
     return {
       ...STATIC_OPTS,
+      nation: tally((r) => [r.d.nation || "Not known"]).sort((a, b) => Number(a === "Not known") - Number(b === "Not known")).map((v) => ({ value: v, label: v === "Not known" ? "❓ Not known" : `${NATION_FLAG[v] ?? "🇬🇧"} ${v}`, hint: v === "England" ? "Ofsted register + UK directories" : v === "Wales" ? "Care Inspectorate Wales register" : v === "Scotland" ? "Care Inspectorate (Scotland) register" : v === "Northern Ireland" ? "Family Support NI / HSC Trust registers" : undefined, test: ({ d }: R) => (d.nation || "Not known") === v })),
       region: tally((r) => [r.d.region || "Not known"]).sort((a, b) => Number(a === "Not known") - Number(b === "Not known")).map((v) => ({ value: v, label: v === "Not known" ? "📍 Not known" : `📍 ${v}`, test: ({ d }: R) => (d.region || "Not known") === v })),
-      source: tally((r) => r.d.srcs).map((v) => ({ value: v, label: `${srcMeta(v).emoji} ${srcMeta(v).label}`, test: ({ d }: R) => d.srcs.includes(v) })),
+      source: [],
+      booking: [
+        { value: "none", label: BOOKING.none.label, group: "Overall", hint: BOOKING.none.hint, test: ({ d }: R) => d.booking === "none" },
+        { value: "online", label: "✅ Takes bookings online (any way)", group: "Overall", hint: "On a national directory, or uses booking software, or has its own booking system", test: ({ d }: R) => d.booking === "platform" },
+        { value: "soon", label: BOOKING.soon.label, group: "Overall", hint: BOOKING.soon.hint, test: ({ d }: R) => d.booking === "soon" },
+        { value: "anyDir", label: "📇 On a national directory (any)", group: "National directories", hint: "Listed on at least one of EEQU, Playwaze, Pebble or Yellow Days — a switch sale", test: ({ d }: R) => d.srcs.some((v) => DIRECTORY.includes(v)) },
+        ...tally((r) => r.d.srcs.filter((v) => DIRECTORY.includes(v))).map((v) => ({ value: `dir:${v}`, label: `${srcMeta(v).emoji} ${srcMeta(v).label}`, group: "National directories", test: ({ d }: R) => d.srcs.includes(v) })),
+        { value: "multi", label: "🔗 On 2+ directories", group: "National directories", hint: "The same provider found on more than one directory — one lead", test: ({ d }: R) => d.srcs.filter((v) => DIRECTORY.includes(v)).length > 1 },
+        { value: "noDir", label: "🚫 Not on any national directory", group: "National directories", hint: "Not on EEQU, Playwaze, Pebble or Yellow Days (may still use booking software or its own system — see below)", test: ({ d }: R) => !d.srcs.some((v) => DIRECTORY.includes(v)) },
+        { value: "own", label: "🏠 Own booking system", group: "Booking software", hint: "Books through its own website, portal or app (e.g. family.premier-education.com) — hardest to switch", test: ({ d }: R) => /^own\b|own (site|portal|platform|booking|council)/i.test(d.system) },
+        { value: "anySoftware", label: "🧾 Uses booking software (any)", group: "Booking software", hint: "A third-party booking or class-management system spotted on their website", test: ({ d }: R) => !!d.system && !/^own\b|own (site|portal|platform|booking|council)/i.test(d.system) && !/\(booking form\)/.test(d.system) },
+        ...tally((r) => r.d.system && !/^own\b|own (site|portal|platform|booking|council)/i.test(r.d.system) ? [r.d.system] : []).slice(0, 40).map((v) => ({ value: `sys:${v}`, label: `🧾 ${v}`, group: "Booking software", test: ({ d }: R) => d.system === v })),
+        { value: "hafList", label: "🍎 Council HAF list", group: "Also found on", hint: "Named on a council Holiday Activities & Food programme list", test: ({ d, l }: R) => d.srcs.includes("haf") || !!l.hafLocalAuthority },
+      ],
     } as Record<Dim, Opt[]>;
   }, [rows]);
   const viewTest = VIEWS.find((v) => v.key === view)?.test ?? (() => true);
-  const okTerm = ({ l }: R) => !term || [l.name, l.business, l.location, l.county, l.region, l.email, l.phone, l.message, l.bookingSystem, l.website, l.websiteCandidate, l.sport, l.network].some((x) => (x ?? "").toLowerCase().includes(term));
+  const okTerm = ({ l }: R) => !term || [l.name, l.business, l.location, l.county, l.region, l.nation, l.email, l.phone, l.message, l.bookingSystem, l.website, l.websiteCandidate, l.sport, l.network].some((x) => (x ?? "").toLowerCase().includes(term));
   const DIMS = Object.keys(NO_FILTERS) as Dim[];
   /** Passes every filter except `skip` (so a dropdown's counts are "if you ticked this"). */
   const pass = (r: R, skip: Dim | "view" | null = null) => {
@@ -354,8 +405,8 @@ export function LeadsApp() {
   const clearAll = () => { setF(NO_FILTERS); setQ(""); setLimit(60); };
 
   const exportCsv = () => {
-    const head = ["Name", "Registered name", "Email", "OK to email (PECR)", "Phone", "Website", "Possible website (unconfirmed)", "Location", "Region", "Runs", "Fit", "Size", "Franchise / group", "Booking", "Directories", "Status", "Listing link"];
-    const lines = shown.map(({ l, d }) => [l.name, l.business, l.email, okToEmail(l) ? "yes" : l.email ? "needs consent" : "", l.phone, l.website, l.website ? "" : l.websiteCandidate, l.location, d.region, d.types.map((t) => TYPE[t]?.label).join("; "), FIT[d.fit].label.replace(/^\S+ /, ""), SIZE[d.size].replace(/^\S+ /, ""), l.network ?? "", BOOKING[d.booking].label.replace(/^\S+ /, ""), d.srcs.map((s) => srcMeta(s).label).join("; "), TONE[l.status]?.label ?? l.status, l.sourceUrl ?? ""].map(csvCell).join(","));
+    const head = ["Name", "Registered name", "Email", "OK to email (PECR)", "Phone", "Website", "Possible website (unconfirmed)", "Location", "Region", "Nation", "Runs", "Fit", "Size", "Franchise / group", "Booking", "Directories", "Status", "Listing link"];
+    const lines = shown.map(({ l, d }) => [l.name, l.business, l.email, okToEmail(l) ? "yes" : l.email ? "needs consent" : "", l.phone, l.website, l.website ? "" : l.websiteCandidate, l.location, d.region, d.nation, d.types.map((t) => TYPE[t]?.label).join("; "), FIT[d.fit].label.replace(/^\S+ /, ""), SIZE[d.size].replace(/^\S+ /, ""), l.network ?? "", BOOKING[d.booking].label.replace(/^\S+ /, ""), d.srcs.map((s) => srcMeta(s).label).join("; "), TONE[l.status]?.label ?? l.status, l.sourceUrl ?? ""].map(csvCell).join(","));
     const url = URL.createObjectURL(new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `leads-${view}-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -400,7 +451,7 @@ export function LeadsApp() {
               style={on ? { background: "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
           ); })}
         </div>
-        {(["runs", "activity", "region", "size", "booking", "contact", "source", "status"] as Dim[]).map((dim) => (
+        {(["runs", "nation", "region", "ofsted", "size", "booking", "contact", "status"] as Dim[]).map((dim) => (
           <FilterMenu key={dim} dim={dim} opts={opts[dim]} value={f[dim]} onChange={(v) => setDim(dim, v)}
             countFor={(o) => countWith(dim, o.test)} />
         ))}
@@ -470,13 +521,18 @@ export function LeadsApp() {
                       {l.size && <span>👥 {l.size}</span>}
                       <span className="text-[var(--ink-3)]">{fmt(l.createdAt)}</span>
                     </div>
-                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network) && (
+                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.haf || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network) && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                         {l.plan && <span className="rounded-full px-2 py-0.5 font-extrabold" style={isFreelancer(l) ? { background: "#f3e8ff", color: "#6b21a8" } : { background: "#e0ecff", color: "#1d3a8f" }} title={l.planReason || undefined}>{isFreelancer(l) ? "🧑 Freelancer" : "🏢 Company"}</span>}
                         {l.legalForm && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">{l.legalForm}</span>}
                         {l.companyNumber && <a href={`https://find-and-update.company-information.service.gov.uk/company/${encodeURIComponent(l.companyNumber)}`} target="_blank" rel="noopener noreferrer" className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)] hover:underline">Co. {l.companyNumber} ↗</a>}
                         {l.charityNumber && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">Charity {l.charityNumber}</span>}
-                        {l.bookingSystem && <span className="rounded-full bg-[#fff4e5] px-2 py-0.5 font-bold text-[#9a5a00]" title="The booking system their website sends parents to">🧾 Books via {l.bookingSystem}</span>}
+                        {l.bookingSystem && (l.bookingUrl
+                          ? <a href={l.bookingUrl} target="_blank" rel="noreferrer" className="rounded-full bg-[#fff4e5] px-2 py-0.5 font-bold text-[#9a5a00] underline-offset-2 hover:underline" title={`The booking system their website sends parents to${l.bookingFrom ? ` · found by ${l.bookingFrom}` : ""} — opens where parents book`}>🧾 Books via {l.bookingSystem} ↗</a>
+                          : <span className="rounded-full bg-[#fff4e5] px-2 py-0.5 font-bold text-[#9a5a00]" title={`The booking system their website sends parents to${l.bookingFrom ? ` · found by ${l.bookingFrom}` : ""}`}>🧾 Books via {l.bookingSystem}</span>)}
+                        {l.haf && (l.hafFrom
+                          ? <a href={l.hafFrom} target="_blank" rel="noreferrer" className="rounded-full bg-[#e8f7ec] px-2 py-0.5 font-extrabold text-[#1c6b3a] underline-offset-2 hover:underline" title={`Their website mentions the Holiday Activities & Food programme${l.hafText ? ` ("${l.hafText}")` : ""}${l.hafLocalAuthority ? ` · listed by ${l.hafLocalAuthority}` : ""} — opens the page`}>🍎 HAF provider{l.hafLocalAuthority ? ` · ${l.hafLocalAuthority}` : ""}{l.hafPaid === true ? " · also sells paid places" : l.hafPaid === false ? " · free places only" : ""} ↗</a>
+                          : <span className="rounded-full bg-[#e8f7ec] px-2 py-0.5 font-extrabold text-[#1c6b3a]" title="Listed as a Holiday Activities & Food programme provider">🍎 HAF provider{l.hafLocalAuthority ? ` · ${l.hafLocalAuthority}` : ""}{l.hafPaid === true ? " · also sells paid places" : l.hafPaid === false ? " · free places only" : ""}</span>)}
                         {l.listingsOnSource ? <span className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-bold text-[#1d3a8f]">{l.listingsOnSource} listing{l.listingsOnSource === 1 ? "" : "s"} on {srcMeta(l.source).label}</span> : null}
                         {(l.providerTypes ?? []).map((t) => TYPE[t] && <span key={t} className="rounded-full bg-[#eef9f0] px-2 py-0.5 font-bold text-[#0f6b3a]">{TYPE[t].emoji} {TYPE[t].label}</span>)}
                         {l.network && <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 font-extrabold text-[#6b21a8]" title={l.networkKind === "franchise" ? "A franchisee — the brand's head office is a Franchise-plan lead" : "Part of a group of separately registered companies"}>{l.networkKind === "franchise" ? `🌐 ${l.network} franchisee` : `🏛 ${l.network} group`}{l.networkOperators ? ` · 1 of ${l.networkOperators}` : ""}</span>}
