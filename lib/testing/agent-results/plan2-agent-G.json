@@ -160,5 +160,143 @@
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
+  },
+  "p2-m21": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "two simultaneous joins → 200/200; wallet balance 5; wallet entries 1; creditPaidUntil=set",
+    "notes": "Both requests answered 200 (the 409 only fires once the first has written 'active'); the credit itself is transactional (creditPaidUntil read+set inside runTransaction), so the wallet was credited once — the money is right, the second response is just not a 409.",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m22": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "cancel 200 → join % 200 → cancel 200 → join credit 200 (creditAdded=false); balance 5 → 5",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m23": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "$A → 200 1 member(s); $S → 403 Requires an operator account; $F1 → 200 members=[p2hmu0eo0oi-pa-fdahmc@p2h.test] (HO sees 2)",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m24": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "B's code at A → {\"valid\":false,\"reason\":\"That code isn’t recognised\"}; expired → {\"valid\":false,\"reason\":\"This code has expired\"}; valid code with a 10% membership active → {\"valid\":true,\"code\":\"SUMMER20\",\"off\":6,\"exclusive\":false}",
+    "notes": "Fix needed (spec gap): /validate knows nothing about the member's percentage perk — it validates the code alone and never says whether the membership or the code wins; the stacking rule is only applied inside POST /api/my/bookings (my.ts:1131, codes stack unless `exclusive`). A parent can't see the combined effect before booking.",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m25": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "' summer20 ' → {\"valid\":true,\"code\":\"SUMMER20\",\"off\":6,\"exclusive\":false}",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m26": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "supplier 201; PO 201 £20; email → 200 (mailer not live: 1 'Purchase order' send attempted, no attachment concept in purchasing.ts — the PO is the email body); mark received → 200 then again 200; Money-out rows before/after receiving: 0 → 0; delete supplier with a PO → 200; PO still lists supplier name \"Cones R Us\"",
+    "notes": "Fix needed: (1) receiving a PO writes NO Money-out entry (expenses count unchanged) — the plan expects one, once; (2) the PO email carries no PDF attachment (HTML body only); (3) the supplier delete is allowed and the PO keeps the free-text name (acceptable). Whether the email ARRIVES can't be seen — mailer not live.",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m27": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "staff raises → 201; other staff approves → 403; manager approves → 200; then 'paid' → 200; Money-out rows for the claim: 1; payroll: not in payroll (payroll ignores claims)",
+    "notes": "The approved claim lands in Money out once (expenseId guard). It is NOT a payroll adjustment — payroll runs store the lines the browser sends (see p2-h1); the plan's 'and as a payroll adjustment once' half is not implemented (design gap, not a bug).",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m28": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "access.mode=readonly; POST listing → 201; operator POST booking → 402; staff register mark → 200 ; parent new booking → 409 This provider isn't taking online bookings right now — please contact ",
+    "notes": "Fix needed: POST /api/listings is mounted BEFORE the subscription wall (index.ts mounts /api/listings with its own optional-auth chain so parents can browse) — so a read-only/locked tenant can still create and edit listings. The wall should also sit on the listings router's writes.",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m29": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "canceled: GET bookings 200, customers 200, listings?mine=1 200; staff POST incident 201; staff POST task 402; POST invite 402; deactivate a team member → 404 Invite not found",
+    "notes": "Note: GET /api/listings is mounted BEFORE enforceSubscription in src/index.ts (public listings route), so listing reads stay open while locked — the plan says 'listings refused'; reads being open is arguably right (parents browse them).",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m30": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "cap 3, 2 staff: invite → 201/403 (used 2, pending 1); cap lowered to 2: new invite → 403 Your plan covers 2 team members — you have 2 and 1 invite st; accepting an old pending invite → 409 P2H Money2 A's ActivityOS plan is full right now, so you can't join ju",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m31": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "$A PUT → 403, GET → 403; $H raises freelancer £29→£30 → 200; $A's own subscription price before/after: 29/30 (plan card shows 30)",
+    "notes": "A stored sub.price wins over the plan list (subscription.ts:195 `sub?.price ?? lim.price`) and /start stores the price at signup, so a real subscription's amount doesn't move; this throwaway tenant was seeded without a stored price, so its displayed price followed the list. The platform PUT itself never touches tenants.",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m33": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "GET subscription=403; GET subscription/access=200; POST subscription/checkout=403; POST subscription/card=403; DELETE subscription/card=403; POST subscription/start=403; PUT subscription=403; POST subscription/cancel=403; POST subscription/reactivate=403; GET subscription/pricing=403; POST payments/connect=503; POST payments/dashboard=503",
+    "notes": "GET /api/subscription/access is deliberately open to every team role (it drives the read-only banner). /api/payments/connect and /dashboard answer 503 here because needStripe() runs before the role check (payments.ts:57) — the franchise 403 can only be seen with Stripe keys (q4); every /api/subscription/* write and read is 403 for the franchise.",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m34": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "status 'unpaid' set directly → access.mode=locked; billing.ts syncFromStripe folds Stripe 'unpaid' into 'past_due': true",
+    "notes": "So a stored 'unpaid' locks (accessFor), but syncFromStripe never stores it — a lapsed card stays past_due → read-only after 14 days until Stripe cancels the subscription (then 'canceled' → locked). Documented behaviour, not a bug.",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m35": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "cancel → 200 (status=canceling, cancelAt=set, canceledAt=none); reactivate → 200 (status=active, cancelAt=null, canceledAt=none, history=no); HQ row status=active",
+    "notes": "As the plan predicts (Amir 46a): reactivation wipes cancelAt and keeps no record that a cancellation happened, so the churn/Fall-off numbers lose that month. Fix needed: keep a cancel history array on the subscription (or a platform events log) and have platform churn read it.",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m36": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "TFC booking paid £40; parent cancel → 200 (refund=pending, amount=undefined); refund-approve → 200 ; payments refund doc: type=refund offline=true status=to-reimburse amount=40; reconciliation refunds row: via=offline amount=40 (refunds listed: 1)",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
+  },
+  "p2-m32": {
+    "verdict": "blocked",
+    "method": "browser",
+    "actual": "Browser step (Subscription page card removal) — queued for the browser agent; Stripe isn't configured on this server so the card UI can't be exercised.",
+    "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
+    "at": "2026-09-13T22:52:09.679Z",
+    "agent": "plan2-G"
   }
 }
