@@ -119,6 +119,23 @@ const regionFrom = (l: Lead) => {
   const m = /(?:·|,)\s*([A-Z]{1,2})\d[A-Z\d]?\s*$/i.exec(l.location ?? "") ??/([A-Z]{1,2})\d[A-Z\d]?\s*\d[A-Z]{2}/i.exec(l.location ?? "");
   return m ? REGION_OF[m[1].toUpperCase()] ?? "" : "";
 };
+// One name per booking system, whatever the crawl wrote: "Magicbooking" / "Magic Booking (network-wide: YMCA)" → "Magic Booking";
+// every own-website variant → "Own website"; a sign-up form (Google/Microsoft Forms, JotForm, Typeform) is NOT a booking system → "".
+const SYSTEM_ALIASES: [RegExp, string][] = [
+  [/^(google|microsoft) forms?\b|^jotform\b|^typeform\b|booking form\)?$/i, ""],
+  [/^own (site|website)\b|^own site shop|^own portal|^own booking|own platform/i, "Own website"],
+  [/^magic ?booking/i, "Magic Booking"], [/^class ?4 ?kids|^classforkids/i, "ClassForKids"], [/^famly/i, "Famly"], [/^blossom/i, "Blossom"], [/^tapestry/i, "Tapestry"],
+  [/^eequ/i, "eequ"], [/^pebble/i, "Pebble"], [/^playwaze/i, "Playwaze"], [/^kiplearn/i, "KipLearn (Kip McGrath)"], [/^kidsplan/i, "Kidsplan"], [/^parentpay/i, "ParentPay"],
+  [/^eventbrite/i, "Eventbrite"], [/^calendly/i, "Calendly"], [/^bookwhen/i, "Bookwhen"], [/^woocommerce/i, "WooCommerce"], [/^paypal/i, "PayPal"], [/^connect childcare/i, "Connect Childcare"],
+  [/^amelia/i, "Amelia (WordPress)"], [/^bookly/i, "Bookly (WordPress)"], [/^eylog/i, "eyLog"], [/^parenta/i, "Parenta"], [/^baby'?s days/i, "Baby's Days"], [/^nursery hub/i, "Nursery Hub"],
+  [/^legend/i, "Legend (leisure)"], [/^gladstone/i, "Gladstone (leisure)"], [/^better\b|^gll\b/i, "Better / GLL"], [/^holidayactivities/i, "HolidayActivities"], [/^coordinate/i, "Coordinate"],
+];
+function canonicalSystem(raw?: string): string {
+  const first = (raw || "").split(/;| — /)[0].replace(/\s*\((network-wide|HAF)[^)]*\)/gi, "").replace(/\s*\((nursery app|school payments)\)/gi, "").trim();
+  if (!first) return "";
+  for (const [re, name] of SYSTEM_ALIASES) if (re.test(first)) return name;
+  return first.replace(/\s*\([^)]*\)\s*$/, "").trim();
+}
 function derive(l: Lead): Derived {
   const srcs = l.sources?.length ? l.sources : [l.source || "demo"];
   const onDir = srcs.some((s) => DIRECTORY.includes(s));
@@ -131,7 +148,8 @@ function derive(l: Lead): Derived {
   const size: Size = l.networkKind === "franchise" ? "franchise" : l.networkKind === "group" ? "group" : n >= 10 ? "large" : n >= 2 ? "multi" : l.kind === "person" || l.plan === "freelancer" ? "solo" : "single";
   // "none" is a CLAIM (their site was crawled and only offers enquiry) — a lead with no website, or one the
   // crawler never got proof from, is "unknown", not greenfield.
-  const booking: Booking = onDir || l.bookingSystem ? "platform" : l.comingSoon ? "soon" : l.bookingChecked ? "none" : "unknown";
+  const formOnly = !!l.bookingSystem && !canonicalSystem(l.bookingSystem);
+  const booking: Booking = onDir || (l.bookingSystem && !formOnly) ? "platform" : l.comingSoon ? "soon" : (l.bookingChecked || formOnly) ? "none" : "unknown";
   // (The Ofsted description starts with our own type labels — "Sports & activity classes…" — so skip that clause.)
   const text = `${l.name} ${l.business ?? ""} ${l.sport ?? ""} ${(l.message ?? "").replace(/^Ofsted-registered — [^.]*\./, "")} ${l.network ?? ""} ${(l.website ?? "").replace(/^https?:\/\/(www\.)?/, "")}`;
   const acts = [...new Set([...ACTIVITY.filter(([, , re]) => re.test(text)).map(([k]) => k), ...(l.activityTypes ?? []), ...(l.haf ? ["haf"] : [])])];
@@ -140,7 +158,7 @@ function derive(l: Lead): Derived {
   // a strong signal is being on a booking directory / system, or running a nursery / wraparound / classes.
   const hafPaid = !acts.includes("haf") ? null : typeof l.hafPaid === "boolean" ? l.hafPaid : booking === "platform" || types.some((t) => ["nursery", "preschool", "wraparound", "activity", "tuition"].includes(t)) ? true : null;
   // The one booking system they use (first named), e.g. "Bookwhen", "own portal", "Famly (nursery app)".
-  const system = (l.bookingSystem || "").split(/;|\/| — /)[0].trim();
+  const system = canonicalSystem(l.bookingSystem);
   return { types, fit, size, booking, srcs, region, nation: nationFrom(l, region), acts, hafPaid, system };
 }
 const FIT: Record<Fit, { label: string; hint: string }> = {
