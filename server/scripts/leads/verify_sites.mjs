@@ -8,7 +8,8 @@ const db = admin.firestore();
 const args = Object.fromEntries(process.argv.slice(2).map((a,i,arr)=>a.startsWith("--")?[a.slice(2),arr[i+1]&&!arr[i+1].startsWith("--")?arr[i+1]:true]:[]).filter(x=>x.length));
 const LIMIT = args.limit ? +args.limit : Infinity, KIND = args.kind || "all", ONLY = args.only ? new Set(String(args.only).split(",")) : null;
 const OUT = path.resolve("scripts/leads/out/verify.out.jsonl"); const CONC = 24, TIMEOUT = 12000, MAXBYTES = 1_500_000;
-const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT,"utf8").split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l).id}catch{return null}}) : []);
+// Resume key is id + url: a lead whose old candidate was dropped and that now carries a NEW candidate gets checked again.
+const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT,"utf8").split("\n").filter(Boolean).map(l=>{try{const r=JSON.parse(l);return r.id+"|"+r.url}catch{return null}}) : []);
 
 const CHILD = ["nursery","nurseries","pre-school","preschool","childcare","child care","children","kids","holiday club","holiday camp","after school","after-school","breakfast club","wraparound","wrap around","ofsted","early years","eyfs","toddler","baby","babies","playgroup","childminder","childminding","forest school","summer camp","multi-sport","multi sport","football coaching","gymnastics","swimming lessons","dance school","dance classes","drama","tuition","tutoring","tutor","stay and play","soft play","party","parties","activities for children","kids club","youth","scouts","cubs","beavers","brownies","guides","kindergarten","day care","daycare","montessori","reception","key stage","ks1","ks2","under 5","under-5","ages 4","ages 5","aged 4","aged 5","years old","school holidays","term time","term-time","half term","clubs for kids","sports coaching","coaching for children","little","junior","juniors","mini","minis","tots","play"];
 const OTHER = ["estate agent","letting agent","solicitor","solicitors","accountant","accountants","plumber","plumbing","electrician","roofing","builders","scaffolding","car wash","garage services","mot centre","tyres","dentist","dental practice","opticians","pharmacy","funeral","casino","betting","bookmaker","vape","tattoo","barber","hair salon","beauty salon","nail bar","restaurant","takeaway","public house","bar and grill","hotel rooms","b&b","holiday cottages","caravan park","gym membership","personal trainer","crossfit","bodybuilding","car sales","used cars","van hire","removals","storage units","recruitment agency","it support","web design","seo agency","marketing agency","insurance broker","mortgage","loans","crypto","forex","escort","adult only","dating","cbd","kitchens","bathrooms","flooring","carpets","windows and doors","double glazing","landscaping","tree surgeon","pest control","cleaning services","skip hire","wedding venue","conference centre","office space","coworking","church services","funeral directors","vets","veterinary","dog grooming","kennels","cattery"];
@@ -63,9 +64,9 @@ async function judge(lead, kind, url, r) {
 
 const snap = await db.collection("leads").select("name","location","website","websiteCandidate","excluded").get();
 const jobs = [];
-for (const d of snap.docs) { const l = { id: d.id, ...d.data() }; if (l.excluded || done.has(l.id) || (ONLY && !ONLY.has(l.id))) continue;
-  if (l.website && (KIND==="all"||KIND==="confirmed")) jobs.push({ lead: l, kind: "confirmed", url: l.website });
-  else if (l.websiteCandidate && (KIND==="all"||KIND==="candidate")) jobs.push({ lead: l, kind: "candidate", url: l.websiteCandidate }); }
+for (const d of snap.docs) { const l = { id: d.id, ...d.data() }; if (l.excluded || (ONLY && !ONLY.has(l.id))) continue;
+  if (l.website && (KIND==="all"||KIND==="confirmed") && !done.has(l.id+"|"+l.website)) jobs.push({ lead: l, kind: "confirmed", url: l.website });
+  else if (l.websiteCandidate && (KIND==="all"||KIND==="candidate") && !done.has(l.id+"|"+l.websiteCandidate)) jobs.push({ lead: l, kind: "candidate", url: l.websiteCandidate }); }
 jobs.sort((a,b)=> a.kind===b.kind ? 0 : a.kind==="candidate" ? -1 : 1);
 const todo = jobs.slice(0, LIMIT); console.log(`to check: ${todo.length} (already done ${done.size}, total eligible ${jobs.length})`);
 const out = fs.createWriteStream(OUT, { flags: "a" }); let i = 0, n = 0; const tally = {}; const t0 = Date.now();
