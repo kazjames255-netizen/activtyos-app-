@@ -61,7 +61,7 @@ const HOLIDAY_WORDS = /\b(holiday|camps?|play ?scheme|half[- ]term)\b/i;
 type Fit = "core" | "adjacent" | "nursery";
 type Size = "solo" | "single" | "multi" | "large" | "franchise" | "group";
 type Booking = "none" | "unknown" | "soon" | "platform";
-interface Derived { types: string[]; fit: Fit; size: Size; booking: Booking; srcs: string[]; region: string; nation: string; acts: string[]; hafPaid: boolean | null; system: string }
+interface Derived { types: string[]; fit: Fit; size: Size; booking: Booking; srcs: string[]; region: string; nation: string; acts: string[]; hafPaid: boolean | null; system: string; platforms: string[] }
 // What kind of activity they offer — read from their name, the directory's
 // activity field, the Ofsted site names, and (when research found it) words on
 // their own website (`activityTypes`, `haf`).
@@ -159,7 +159,10 @@ function derive(l: Lead): Derived {
   const hafPaid = !acts.includes("haf") ? null : typeof l.hafPaid === "boolean" ? l.hafPaid : booking === "platform" || types.some((t) => ["nursery", "preschool", "wraparound", "activity", "tuition"].includes(t)) ? true : null;
   // The one booking system they use (first named), e.g. "Bookwhen", "own portal", "Famly (nursery app)".
   const system = canonicalSystem(l.bookingSystem);
-  return { types, fit, size, booking, srcs, region, nation: nationFrom(l, region), acts, hafPaid, system };
+  // One list of the platforms they use, however we learnt it: listed on a directory (source) OR their site sends parents there (bookingSystem).
+  const DIR_NAME: Record<string, string> = { eequ: "eequ", pebble: "Pebble", playwaze: "Playwaze", yellowdays: "Yellow Days" };
+  const platforms = [...new Set([...srcs.filter((v) => DIRECTORY.includes(v)).map((v) => DIR_NAME[v] ?? v), ...(system && !/^own\b/i.test(system) ? [system] : [])])];
+  return { types, fit, size, booking, srcs, region, nation: nationFrom(l, region), acts, hafPaid, system, platforms };
 }
 const FIT: Record<Fit, { label: string; hint: string }> = {
   core: { label: "🎯 Core fit", hint: "Holiday camps, breakfast & after-school clubs, activity classes — what ActivityOS is built for" },
@@ -376,15 +379,14 @@ export function LeadsApp() {
       source: [],
       booking: [
         { value: "none", label: BOOKING.none.label, group: "Overall", hint: BOOKING.none.hint, test: ({ d }: R) => d.booking === "none" },
-        { value: "online", label: "✅ Takes bookings online (any way)", group: "Overall", hint: "On a national directory, or uses booking software, or has its own booking system", test: ({ d }: R) => d.booking === "platform" },
+        { value: "unknown", label: BOOKING.unknown.label, group: "Overall", hint: BOOKING.unknown.hint, test: ({ d }: R) => d.booking === "unknown" },
+        { value: "online", label: "✅ Takes bookings online (any way)", group: "Overall", hint: "Listed on a booking platform, uses booking software, or books through its own website", test: ({ d }: R) => d.booking === "platform" },
         { value: "soon", label: BOOKING.soon.label, group: "Overall", hint: BOOKING.soon.hint, test: ({ d }: R) => d.booking === "soon" },
-        { value: "anyDir", label: "📇 On a national directory (any)", group: "National directories", hint: "Listed on at least one of EEQU, Playwaze, Pebble or Yellow Days — a switch sale", test: ({ d }: R) => d.srcs.some((v) => DIRECTORY.includes(v)) },
-        ...tally((r) => r.d.srcs.filter((v) => DIRECTORY.includes(v))).map((v) => ({ value: `dir:${v}`, label: `${srcMeta(v).emoji} ${srcMeta(v).label}`, group: "National directories", test: ({ d }: R) => d.srcs.includes(v) })),
-        { value: "multi", label: "🔗 On 2+ directories", group: "National directories", hint: "The same provider found on more than one directory — one lead", test: ({ d }: R) => d.srcs.filter((v) => DIRECTORY.includes(v)).length > 1 },
-        { value: "noDir", label: "🚫 Not on any national directory", group: "National directories", hint: "Not on EEQU, Playwaze, Pebble or Yellow Days (may still use booking software or its own system — see below)", test: ({ d }: R) => !d.srcs.some((v) => DIRECTORY.includes(v)) },
-        { value: "own", label: "🏠 Own booking system", group: "Booking software", hint: "Books through its own website, portal or app (e.g. family.premier-education.com) — hardest to switch", test: ({ d }: R) => /^own\b|own (site|portal|platform|booking|council)/i.test(d.system) },
-        { value: "anySoftware", label: "🧾 Uses booking software (any)", group: "Booking software", hint: "A third-party booking or class-management system spotted on their website", test: ({ d }: R) => !!d.system && !/^own\b|own (site|portal|platform|booking|council)/i.test(d.system) && !/\(booking form\)/.test(d.system) },
-        ...tally((r) => r.d.system && !/^own\b|own (site|portal|platform|booking|council)/i.test(r.d.system) ? [r.d.system] : []).slice(0, 40).map((v) => ({ value: `sys:${v}`, label: `🧾 ${v}`, group: "Booking software", test: ({ d }: R) => d.system === v })),
+        { value: "anyPlatform", label: "🧾 On any booking platform / software", group: "Booking platforms", hint: "Listed on eequ / Pebble / Playwaze / Yellow Days, or their website sends parents to a booking system — a switch sale", test: ({ d }: R) => d.platforms.length > 0 },
+        ...tally((r) => r.d.platforms).slice(0, 45).map((v) => ({ value: `plat:${v}`, label: `${DIRECTORY.some((k) => srcMeta(k).label.toLowerCase() === v.toLowerCase()) ? "📇" : "🧾"} ${v}`, group: "Booking platforms", test: ({ d }: R) => d.platforms.includes(v) })),
+        { value: "multi", label: "🔗 On 2+ platforms", group: "Booking platforms", hint: "The same provider on more than one platform or system", test: ({ d }: R) => d.platforms.length > 1 },
+        { value: "own", label: "🏠 Own website booking", group: "Booking platforms", hint: "Books or takes payment through its own website, portal or shop — hardest to switch", test: ({ d }: R) => /^own\b/i.test(d.system) },
+        { value: "noPlatform", label: "🚫 Not on any platform", group: "Booking platforms", hint: "Not on a directory and no booking system seen (includes unchecked sites)", test: ({ d }: R) => d.platforms.length === 0 && !/^own\b/i.test(d.system) },
         { value: "hafList", label: "🍎 Council HAF list", group: "Also found on", hint: "Named on a council Holiday Activities & Food programme list", test: ({ d, l }: R) => d.srcs.includes("haf") || !!l.hafLocalAuthority },
       ],
     } as Record<Dim, Opt[]>;
