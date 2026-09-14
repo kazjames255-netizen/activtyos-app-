@@ -1066,7 +1066,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Find any booking",
         "stage": "List",
-        "line": "Seven tabs sort your bookings by state: All, Approval needed, Confirmed, Waitlisted, Unpaid or invoiced, Cancelled and Refunds, each with a live count. The search box beneath finds a booking by parent, child, reference, booking ID, email or listing.",
+        "line": "Nine tabs sort your bookings by state: All, Booking approvals, Confirmed, Waitlisted, Unpaid / invoiced, Unreconciled, Cancelled, Requests and Refunds, each with a live count. The search box beneath finds a booking by parent, child, reference, booking ID, email or listing.",
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FILTER</div><div class=\"chips\"><span class=\"ochip\">All 42</span><span class=\"ochip\">Approval needed 3</span><span class=\"ochip\">Confirmed 28</span><span class=\"ochip\">Waitlisted 4</span><span class=\"ochip\">Unpaid / invoiced 5</span><span class=\"ochip\">Refunds 2</span></div><div class=\"fl\">SEARCH</div><div class=\"field ph\">Search booker, child, ref, email, listing…</div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">Summer Holiday Camp · Confirmed</span><span class=\"tkp\">£240</span></div></div></div>"
       },
       {
@@ -1096,7 +1096,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Cancel and refund",
         "stage": "Refunds",
-        "line": "When you cancel or refund, you choose full, partial or no refund. ActivityOS never moves money, so you action the refund in your own payment provider, and the same panel is where you approve, decline, promote from the waitlist or mark a booking paid.",
+        "line": "When you cancel or refund, you choose full, partial or no refund. ActivityOS never moves money, so you action the refund in your own payment provider, and those same actions — approve, decline, promote from the waitlist or mark a booking paid — sit as buttons at the top of the booking, right above.",
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">REFUND THE PARENT?</div><div class=\"chips\"><span class=\"ochip\">Yes — full (£240.00)</span><span class=\"ochip\">Partial</span><span class=\"ochip\">No refund</span></div><div class=\"fl\">REFUND AMOUNT (£)</div><div class=\"field ph\">120.00</div><div class=\"hint\">ActivityOS never moves money — action any refund in your own payment provider.</div><div class=\"row2\"><div class=\"btn amber\">Confirm cancellation</div><div class=\"btn ghost\">Keep booking</div></div></div>"
       }
     ]
@@ -1152,7 +1152,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Season first, then narrow",
         "stage": "Filter",
-        "line": "Start by choosing a season — you can pick more than one. The 📅 button opens a pop-up, and whatever you tick then scopes the whole rota so only the locations and listings in those seasons show. From there narrow by 📍 location and 🎟 listing, step weeks with the arrows, and switch the view between By area or By staff and Day / Week / Month.",
+        "line": "Start by choosing a season — you can pick more than one. The season button opens a pop-up, and whatever you tick then scopes the whole rota so only the locations and listings in those seasons show. From there narrow by location and listing, step weeks with the arrows, and switch the view — Day, Week, 2 Weeks, 4 Weeks or Month, by Area or by Team member — from the one dropdown.",
         "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">📅 Summer 1</span><span class=\"chip2\">📍 milton KEYNES</span><span class=\"chip2\">🎟 All listings</span></div><div class=\"chips\"><span class=\"btn ghost\">‹</span><span class=\"btn\">9 – 15 Aug</span><span class=\"btn ghost\">›</span><span class=\"chip2\">Week by area</span></div><div class=\"hint\">The season pop-up is multi-select — it filters the locations and listings you see.</div>"
       },
       {
@@ -1170,7 +1170,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Add & assign a shift",
         "stage": "Build",
-        "line": "If you manage the team, tap the ＋ in any day cell to add a shift, set its time, role, listing and season, then Assign staff. Assigned people show as chips — click the × on a chip to unassign and free the slot back to open. Auto-fill offers available, non-double-booked staff, and you can add a break or a note.",
+        "line": "If you manage the team, tap the plus in any day cell to add a shift, set its time, role, listing and season, then Assign staff. Assigned people show as chips — click the cross on a chip to unassign and free the slot back to open. Auto-fill offers available, non-double-booked staff, and you can add a break or a note.",
         "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">START</div><div class=\"field\">09:00</div></div><div><div class=\"fl\">END</div><div class=\"field\">15:00</div></div></div><div class=\"fl\">ASSIGNED</div><div class=\"chips\"><span class=\"ochip\">Alex Rivera ×</span></div><div class=\"chips\"><span class=\"btn amber\">⚡ Auto-fill available staff</span></div></div>"
       },
       {
@@ -1194,7 +1194,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Rota vs Settings",
         "stage": "Settings",
-        "line": "Two tabs sit at the top: Rota is everything we've walked through; Settings is where you tune it. Under Notifications & automation you choose how staff are told when you publish, a shift reminder before a start, the check-in grace period and whether to auto-flag late staff, plus auto-chasing unconfirmed availability. Basics there set your week start, default shift and break, and the on-cost percentage the wages banner uses.",
+        "line": "Four tabs sit at the top: Rota is everything we've walked through; Attendance shows who's checked in and Availability lists staff availability requests; Settings is where you tune it all. Under Notifications & automation you choose how staff are told when you publish, a shift reminder before a start, and the check-in grace period and whether to auto-flag late staff. Auto-chasing unconfirmed availability has its own Availability section, and Basics sets your week start and default shift and break — the on-cost percentage the wages banner uses lives under Reporting.",
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">SETTINGS · NOTIFICATIONS &amp; AUTOMATION</div><div class=\"tkt\"><div class=\"tkhd\"><b>Notify staff on publish</b> <span class=\"g\">Email + push</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Shift reminder</b> <span class=\"g\">2 hours before</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Check-in grace</b> <span class=\"g\">15 minutes</span></div></div><div class=\"hint\">Basics, swaps &amp; offers and the on-cost % live here too.</div></div>"
       }
     ]
@@ -1213,7 +1213,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Payment method tabs",
         "stage": "Tabs",
-        "line": "Each tab is a payment route. Switch between childcare vouchers, cash, bank transfer and funded places to work one method at a time. The number on each tab tells you how many bookings sit behind it.",
+        "line": "Each tab is a payment route. Switch between childcare vouchers, Tax-Free Childcare, cash, bank transfer and funded places to work one method at a time. The number on each tab tells you how many bookings sit behind it.",
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">METHOD</div><div class=\"chips\"><span class=\"ochip\">All</span><span class=\"ochip\">Childcare vouchers 8</span><span class=\"ochip\">Cash 3</span><span class=\"ochip\">Bank transfer 5</span><span class=\"ochip\">HAF / funded 2</span></div></div>"
       },
       {
