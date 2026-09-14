@@ -1,13 +1,13 @@
 // Website finder for leads with no website: one Brave web search per lead ("<name>" <town>), take the first organic
 // result that isn't a directory/social host and whose host or title carries the provider's name, and store it as a
 // CANDIDATE (websiteCandidate) for verify_sites.mjs --kind candidate to confirm or drop. Resumable, fill-only.
-//   node scripts/leads/find_websites.mjs --sources haf,playwaze,pebble,eequ [--limit N] [--apply]     (from server/)
-import admin from "firebase-admin"; import fs from "fs"; import path from "path";
+//   BRAVE_SEARCH_API_KEY in server/.env (api.search.brave.com) — then: node scripts/leads/find_websites.mjs --sources haf,playwaze,pebble,eequ [--limit N] [--apply]     (from server/)
+import "dotenv/config"; import admin from "firebase-admin"; import fs from "fs"; import path from "path";
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync("./serviceAccountKey.json","utf8"))) });
 const db = admin.firestore();
 const args = Object.fromEntries(process.argv.slice(2).map((a,i,arr)=>a.startsWith("--")?[a.slice(2),arr[i+1]&&!arr[i+1].startsWith("--")?arr[i+1]:true]:[]).filter(x=>x.length));
 const LIMIT = args.limit ? +args.limit : Infinity; const SOURCES = args.sources ? String(args.sources).split(",") : null;
-const OUT = path.resolve("scripts/leads/out/websearch.out.jsonl"); const CONC = 1, GAP_MS = args.gap ? +args.gap : 2500;
+const OUT = path.resolve("scripts/leads/out/websearch.out.jsonl"); const CONC = 1, GAP_MS = args.gap ? +args.gap : (process.env.BRAVE_SEARCH_API_KEY ? 1100 : 2500);
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const SKIP = /(facebook|instagram|twitter|x\.com|tiktok|youtube|linkedin|pinterest|threads\.net|gov\.uk|ofsted|nhs\.uk|yell\.com|yelp|thomsonlocal|192\.com|cylex|hotfrog|freeindex|scoot|childcare\.co\.uk|daynurseries|nurseriesuk|care\.com|careinspectorate|familysupportni|findchildcare|hoop\.co\.uk|eequ|pebble|playwaze|yellowdays|clubspark|footballfoundation|classforkids|bookwhen|kidadl|mumsnet|netmums|indeed|glassdoor|reed\.co\.uk|totaljobs|companieshouse|endole|opencorporates|checkacompany|companycheck|bizstats|find-and-update|charitycommission|register-of-charities|wikipedia|trustpilot|google\.|bing\.|amazon|ebay|etsy|nextdoor|tripadvisor|justgiving|gofundme|eventbrite|meetup|wordpress\.com|blogspot|wixsite|weebly|sites\.google|linktr\.ee|schoolsweb|primaryschool|\.sch\.uk|\.ac\.uk|schoolguide|locrating|getthedata|streetcheck|doogal|postcodearea|activityos|news|echo|gazette|times|mail|express|mirror|standard|chronicle|courier|herald|observer|telegraph|guardian|bbc\.)/i;
 const STOP = new Set("the and of ltd limited cic cio uk plc llp co club clubs school nursery pre preschool childcare children kids day care centre center group holiday camp camps club activities activity community trust academy little happy days playgroup out after".split(" "));
@@ -15,8 +15,17 @@ const tokens = (s) => (s||"").toLowerCase().replace(/[’']/g,"").split(/[^a-z0-
 const squash = (s) => (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
 const town = (l) => { const loc = String(l.location||"").split(/[·|]/)[0].split(",")[0].replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/,"").trim(); return loc && !/^\d+ sites?$/i.test(loc) ? loc : (l.county||l.region||""); };
 const decode = (s) => s.replace(/&amp;/g,"&").replace(/&#(\d+);/g,(m,n)=>String.fromCharCode(+n)).replace(/&quot;/g,'"').replace(/&#x27;|&#39;/g,"'").replace(/<[^>]+>/g,"");
+const API_KEY = process.env.BRAVE_SEARCH_API_KEY || "";
+// Preferred: the Brave Search API (JSON, X-Subscription-Token; free tier 1 req/s, 2k/month). Falls back to the HTML page
+// when no key is set — that endpoint 429s after a handful of requests, so only use it for spot checks.
 async function search(q) { const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 15000);
-  try { const r = await fetch(`https://search.brave.com/search?q=${encodeURIComponent(q)}&source=web`, { signal: ctrl.signal, headers: { "user-agent": UA, accept: "text/html", "accept-language": "en-GB,en;q=0.9" } }); const html = await r.text(); if (r.status !== 200) return { status: r.status, results: [] };
+  try {
+    if (API_KEY) {
+      const r = await fetch(`https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(q)}&country=GB&search_lang=en&count=10&safesearch=moderate`, { signal: ctrl.signal, headers: { accept: "application/json", "accept-encoding": "gzip", "x-subscription-token": API_KEY } });
+      if (r.status !== 200) return { status: r.status, results: [], err: (await r.text()).slice(0, 120) };
+      const j = await r.json(); return { status: 200, results: (j.web?.results ?? []).map(x => ({ url: x.url, title: x.title || "" })) };
+    }
+    const r = await fetch(`https://search.brave.com/search?q=${encodeURIComponent(q)}&source=web`, { signal: ctrl.signal, headers: { "user-agent": UA, accept: "text/html", "accept-language": "en-GB,en;q=0.9" } }); const html = await r.text(); if (r.status !== 200) return { status: r.status, results: [] };
     const parts = html.split(/<div class="snippet [^"]*"[^>]*data-type="web"/).slice(1); const results = [];
     for (const p of parts) { const m = p.match(/href="(https?:\/\/[^"]+)"/); const ti = p.match(/class="title[^"]*"[^>]*>([\s\S]*?)<\//); if (m) results.push({ url: decode(m[1]), title: ti ? decode(ti[1]).trim() : "" }); }
     return { status: 200, results }; } catch (e) { return { status: 0, results: [], err: String(e?.name||e).slice(0,40) }; } finally { clearTimeout(t); } }
