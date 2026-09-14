@@ -1,1 +1,65 @@
-{}
+{
+  "p2-b6": {
+    "verdict": "fail",
+    "method": "browser",
+    "actual": "Company Bookings (HO scoped to West London, 182 rows): Confirmed chip → 160 rows, list scrolled 700px inside <main>. Opening a booking is a master-detail panel with NO history entry, so browser Back left the page (to the dashboard) and Forward came back with the filter reset to All and scroll at 0. /company/bookings?ref=APF-2406 → the detail panel for that booking opened (pass). /company/setup?tab=roles → Roles & permissions tab (pass); ?tab=nonsense → fell back to the first tab, Features (pass).",
+    "notes": "Fails on the first clause only: filters and scroll are not kept — features/bookings/store.ts holds filter in memory, nothing in the URL or sessionStorage, and open() pushes no state. Fix: mirror filter (+range/listing) into the query string and pushState the ref on open. Side note: one cold load of /company/dashboard bounced via /login and landed on the last-visited view (bookings) — AuthProvider timing, seen once, not reproduced twice. Header at 1280px: the Contact button overlaps the Find-a-child label.",
+    "evidence": "Browser pane, in-app Chromium, company portal kazjames80@gmail.co.uk (HO + West London scope), 14 Sept 2026",
+    "at": "2026-09-14T13:48:03.762Z",
+    "agent": "plan2-J"
+  },
+  "p2-b11": {
+    "verdict": "pass",
+    "method": "browser",
+    "actual": "Company dashboard (HO scoped to West London): collapsed Live KPIs and Business-analytics Figures via their Hide chips → localStorage aos.hero.dashboard-kpis=0 and aos.hero.dashboard-money-kpis=0 (one key per card). Reload: both cards still collapsed (both chips read Show), sidebar notch (.side-active) on Dashboard. Cards re-expanded afterwards.",
+    "notes": "Real pointer clicks on the small Hide chips and filter chips missed under the 1280px emulated viewport (twice each); the toggles were driven by a scripted click on the same buttons. Persistence logic in components/OperatorPage.tsx (CollapsibleStats, key aos.hero.<id>).",
+    "evidence": "Browser pane, in-app Chromium, company portal kazjames80@gmail.co.uk (HO + West London scope), 14 Sept 2026",
+    "at": "2026-09-14T13:48:03.762Z",
+    "agent": "plan2-J"
+  },
+  "p2-r10": {
+    "verdict": "pass",
+    "method": "browser",
+    "actual": "Company portal (HO scoped to West London, seeded tenant): Payroll (Run payroll CTA, £0 tiles), Leave & absence (+ Add leave, empty requests), Clock in/out & timesheets (0 on shift, empty boards, no CTA — staff clock themselves), Documents (10 docs, + Add document), Learning Centre (66 courses, + New company course), Inventory (empty Summer 2026, Add item / Start stock check), Task manager (empty day, + New task / Quick add), Support (Message ActivityOS composer, no messages yet), Reconciliation (tiles, list still Loading… at 4s). No page crashed, no error text, no demo-cast names beyond this tenant's own seed. Leads/HQ, Wallet and Memberships not covered here (HQ + parent portals).",
+    "notes": "Timesheets and Reconciliation show no explicit CTA on an empty state — Reconciliation had not finished loading at 4s (re-check on a slow connection). Console showed only stale module-not-found errors from the old activityos-app dev server that sat on port 3000 before this run.",
+    "evidence": "Browser pane, in-app Chromium, company portal kazjames80@gmail.co.uk (HO + West London scope), 14 Sept 2026",
+    "at": "2026-09-14T13:48:03.762Z",
+    "agent": "plan2-J"
+  },
+  "p2-b10": {
+    "verdict": "pass",
+    "method": "browser",
+    "actual": "HO combined view (data-ho-office set, black hero/sidebar): axe-core 4.10.2 color-contrast on /company/dashboard → 49 failing nodes, /company/finance → 17. None are on the black surface: every failure is the muted label token --ink-3 (#8a86a3) on white/light cards at 3.2–3.5:1 (KPI tile labels like 'Network revenue', 'last 30d vs prior', period chips '1 month/6 months', 'Money in (own)'). Chart axis labels: the HO Finance Overview tab rendered no SVG charts for this HO-own scope (empty money), so chart labels were not exercised there; the dashboard's bookings-by-franchise chart labels passed.",
+    "notes": "Portal-wide (not HO-specific): --ink-3 #8a86a3 fails AA for small text on white everywhere it is used (app/globals.css:118, components/OperatorPage.tsx:76). Darkening it to ~#6f6b8a (4.6:1) would clear most of the 60+ nodes at once. Two more: link blue #2f6bd8 on #f1f3f7 (4.48) and amber #b45309 on #fdf0e3 (4.48) sit a hair under 4.5.",
+    "evidence": "Browser pane, in-app Chromium, company portal kazjames80@gmail.co.uk (HO + West London scope), 14 Sept 2026",
+    "at": "2026-09-14T13:48:03.762Z",
+    "agent": "plan2-J"
+  },
+  "p2-b1": {
+    "verdict": "pass",
+    "method": "browser",
+    "actual": "375×812 mobile emulation, company portal (HO): Registers, Bookings list, Schedule grid (Rota tab), Finance (Overview), Setup (4 tab chips wrap to two rows, form reachable), Team & invites (Send invite reachable), Payroll — body/document scrollWidth = 375 on all of them, no element past the right edge, header collapses to a burger. Bookings: the page wrapper (-m-5 min-h-[calc(100vh-3.5rem)]) is 383px inside <main>, an 8px inner overflow that does not move the body. Listing wizard not walked step by step (list page fine, + New listing reachable).",
+    "notes": "Listing wizard steps still to do. Under mobile emulation the Setup/Team/Payroll/Schedule pages sat on Loading…/Checking access… for 10–20s before painting (they took ~4s on desktop moments earlier) — worth a look at PortalGuard's access lookup + the per-page fetch fan-out on a slow device. The Next dev-tools iframe (481px) inflates documentElement.scrollWidth to 480 in dev only; ignore it in measurements.",
+    "evidence": "Browser pane, in-app Chromium, company portal kazjames80@gmail.co.uk (HO + West London scope), 14 Sept 2026",
+    "at": "2026-09-14T13:48:03.762Z",
+    "agent": "plan2-J"
+  },
+  "p2-b5": {
+    "verdict": "pass",
+    "method": "browser",
+    "actual": "Real company portal after many page loads and reloads: localStorage holds 8 keys (aos.rota.v5, aos.hero.*, aos.learn.*, aos.timeclock.v1, aos.team.onboardrecords.v1, activityos.listings-extra.<uid>) — nothing matching demo/fixture/tour; pages showed live tenant data (182 bookings, 10 documents, 66 courses). Code: enableDemoMode( has exactly one call site, app/tour/[portal]/[view]/page.tsx:22.",
+    "notes": "The /tour iframe's own network behaviour is p2-b4 (not run).",
+    "evidence": "Browser pane, in-app Chromium, company portal kazjames80@gmail.co.uk (HO + West London scope), 14 Sept 2026",
+    "at": "2026-09-14T13:48:03.762Z",
+    "agent": "plan2-J"
+  },
+  "p2-i1": {
+    "verdict": "fail",
+    "method": "browser",
+    "actual": "Locale pl (aos.locale), company portal scoped to West London, 1280px. Primary labels (headings, buttons, form labels, table heads, sidebar) scored per page by a Polish/English word heuristic. Translated group — % of labels still English: Dashboard 6% (only the 'Hide' chip), Families 2% ('Hide'), Meals 20% ('2 · Menu' tab), Registers 0%, Schedule 38% ('How availability works', 'Check-in alerts', 'Auto-schedule', 'Copy', 'Add a new role'), Setup 0%, Team 11% ('Hide'), Finance 30% ('Finance & analytics' title, 'Overview' tab, 'Hide'). Untranslated group: Bookings 80% (title, Export, Take a booking, every status chip), Listings 60% (title, Embed, New listing, tabs, Published/Unpublished/Ended), Incidents 50% ('Safeguarding', 'Log a behaviour concern' — 4 labels only), Medication 25% ('Administer a medication'), Tasks 68% (My tasks/Team/Board/Calendar/Quick add/Deadline/Due this week), Payroll 89% (every tab + Run payroll), Documents 73% (Library/Read receipts/Add document/View/Edit), Learning 35% of 85 labels (tabs, course-count chips; course titles are content). Sidebar and header switched fully (Wyloguj się, PL).",
+    "notes": "Handover list = the untranslated-group percentages above. Two things leak into the 'translated' pages: the shared collapsible-card chip ('▴ Hide' / '▾ Show' in components/OperatorPage.tsx) and the Finance hero title/tabs. Schedule's rota toolbar (availability help, check-in alerts, auto-schedule, add-a-role) is the biggest gap in the translated group. Heuristic, not a native review — numbers are indicative.",
+    "evidence": "Browser pane, in-app Chromium, company portal kazjames80@gmail.co.uk (HO + West London scope), 14 Sept 2026",
+    "at": "2026-09-14T13:48:03.762Z",
+    "agent": "plan2-J"
+  }
+}

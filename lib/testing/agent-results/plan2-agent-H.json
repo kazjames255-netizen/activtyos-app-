@@ -151,12 +151,13 @@
     "agent": "H"
   },
   "p2-f18": {
-    "verdict": "blocked",
+    "verdict": "fail",
     "method": "browser",
-    "actual": "Not attempted: needs a signed-in head-office session in a real browser (drill into F1, refresh, back, refresh). No head-office credentials are available to this agent and the harness cannot mint a browser session.",
-    "notes": "Needs: a company (HO) login with at least one franchise, or a dev sign-in bypass for localhost:3000.",
-    "at": "2026-09-13T14:42:00Z",
-    "agent": "H"
+    "actual": "HO combined (black) → picked 'APF Activity Camps · West London' in the header scope picker → portal went blue, dashboard scoped. Reload: scope kept (aos.ho.scope in localStorage), still blue, data-ho-office absent. Back: went to the previous page (/company/bookings) but STILL scoped to West London and blue — never returned to HO combined. Reload again: unchanged.",
+    "notes": "Refresh and theme-matches-scope pass. Back fails: the picker writes localStorage only and pushes no history entry, so the browser's back can never restore the combined view. Fix: mirror the scope in the URL (?franchise=) or pushState on change (components/franchise/HoScope.tsx).",
+    "evidence": "Browser pane, in-app Chromium, company portal kazjames80@gmail.co.uk (HO + West London scope), 14 Sept 2026",
+    "at": "2026-09-14T13:48:03.544Z",
+    "agent": "plan2-H"
   },
   "p2-h1": {
     "verdict": "pass",
