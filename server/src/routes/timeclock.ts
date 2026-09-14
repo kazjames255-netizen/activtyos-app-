@@ -73,6 +73,8 @@ const eventSchema = z.object({
   loc: z.string().trim().max(160).optional(),
   lateMin: z.number().int().min(0).max(24 * 60).optional(),
 });
+class AlreadyIn extends Error { constructor(public since: string) { super("already_in"); } }
+
 timeclock.post("/event", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !(canManage(auth.role) || auth.role === "staff")) { res.status(403).json({ error: "Forbidden" }); return; }
@@ -88,13 +90,17 @@ timeclock.post("/event", async (req, res) => {
   const id = slug(name);
   const ref = db.collection("clockRecords").doc(docId(key, p.day, id));
   const now = new Date().toISOString();
-  const rec = await db.runTransaction(async (tx) => {
+  let rec: ClockRecord;
+  try { rec = await db.runTransaction(async (tx) => {
     const cur = (await tx.get(ref)).data();
     const r: ClockRecord = cur ? strip(cur) : { id, name, status: "out", breakMs: 0, events: [], day: p.day };
     r.events = [...(r.events ?? [])];
     if (p.role && !r.role) r.role = p.role;
     switch (p.kind) {
       case "in":
+        // A second clock-in while already on shift (or on a break) would wipe the
+        // real start time — refuse it; the app should offer clock-out instead.
+        if (r.status !== "out") throw new AlreadyIn(r.clockInAt ?? now);
         r.status = "in"; r.clockInAt = now; r.clockOutAt = undefined; r.breakMs = 0; r.breakStart = undefined;
         if (p.lateMin !== undefined) r.lateMin = p.lateMin;
         if (p.loc) r.loc = p.loc;
@@ -114,7 +120,10 @@ timeclock.post("/event", async (req, res) => {
     const clean = JSON.parse(JSON.stringify(r)) as ClockRecord; // drop undefined
     tx.set(ref, { ...clean, key, tenantId: auth.tenantId, franchiseId: auth.franchiseId ?? null, updatedAt: now, ...(name === self ? { uid: req.user?.uid ?? null } : {}) });
     return clean;
-  });
+  }); } catch (e) {
+    if (e instanceof AlreadyIn) { res.status(409).json({ error: "Already clocked in — clock out first.", code: "already_in", since: e.since }); return; }
+    throw e;
+  }
   res.json(rec);
 });
 

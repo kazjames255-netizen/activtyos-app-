@@ -193,14 +193,19 @@ async function ownPendingInvite(
   const snap = await ref.get();
   if (!snap.exists) { res.status(404).json({ error: "Invite not found" }); return null; }
   const d = snap.data()!;
-  if (d.tenantId !== auth.tenantId || !["company", "franchise", "freelancer"].includes(auth.role)) {
-    res.status(403).json({ error: "Not your invite" }); return null;
+  if (d.tenantId !== auth.tenantId) {
+    // Same answer as a missing invite: another tenant's token should not be
+    // confirmable by probing (acceptance p2-p17).
+    res.status(404).json({ error: "Invite not found" }); return null;
+  }
+  if (!["company", "franchise", "freelancer"].includes(auth.role)) {
+    res.status(403).json({ error: "Only the account holder can change invites" }); return null;
   }
   // Same tenant is NOT the same franchise. Without this, a franchisee could
   // resend head office's unused franchise invite to an address of its own
   // choosing (POST /:token/resend takes an email), or revoke a sibling's.
   if (auth.role === "franchise" && (d.franchiseId ?? null) !== (auth.franchiseId ?? null)) {
-    res.status(403).json({ error: "Not your invite" }); return null;
+    res.status(404).json({ error: "Invite not found" }); return null;
   }
   return { ref, d };
 }

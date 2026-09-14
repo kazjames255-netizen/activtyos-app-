@@ -32,7 +32,7 @@ const V1 = await listingAndBlock(OA, "P2H Perm V1", "v1"); const V2 = await list
 const L = await mkStaff(TA, { franchiseId: null, name: "Perm Lead", staffRole: "Lead", lead: true, assignment: { mode: "locations", ids: ["v1"] } });
 async function child(parent: Actor, name: string) { const r = await api(parent, "POST", "/api/my/children", { name, dob: "2019-05-04" }); return r.json.id as string; }
 const K1 = await child(P, "Perm Kid One"); const K2 = await child(P, "Perm Kid Two");
-async function parentBook(parent: Actor, Lx: { listingId: string; blockId: string }, name: string, childId: string) { const r = await api(parent, "POST", "/api/my/bookings", { listingId: Lx.listingId, blockId: Lx.blockId, method: "Bank transfer", items: [{ pass: "Day", child: name, childId, age: 7, dates: [today] }] }); if (r.status !== 201) throw new Error(`parent booking ${r.status} ${r.text}`); return r.json.ref ?? r.json.refs?.[0]; }
+async function parentBook(parent: Actor, Lx: { listingId: string; blockId: string }, name: string, childId: string) { const r = await api(parent, "POST", "/api/my/bookings", { listingId: Lx.listingId, blockId: Lx.blockId, method: "Bank transfer", items: [{ pass: "Day", child: name, childId, age: 7, dates: [today] }] }); if (r.status !== 201) throw new Error(`parent booking ${r.status} ${r.text}`); return r.json.ref ?? r.json.refs?.[0] ?? r.json.bookings?.[0]?.ref; }
 const R1 = await parentBook(P, V1, "Perm Kid One", K1); const R2 = await parentBook(P, V2, "Perm Kid Two", K2);
 await api(OA, "POST", "/api/incidents", { kind: "accident", date: today, childId: K1, childName: "Perm Kid One", blockId: V1.blockId, listingId: V1.listingId, description: "V1 bump" });
 await api(OA, "POST", "/api/incidents", { kind: "accident", date: today, childId: K2, childName: "Perm Kid Two", blockId: V2.blockId, listingId: V2.listingId, description: "V2 bump" });
@@ -53,7 +53,7 @@ await step("p2-p1", async () => {
     await setRole({ [area]: "view" }); const gV = await api(S, "GET", listPath[area]); const [pp, pb] = postBody[area]; const pV = pp ? await api(S, "POST", pp, pb) : null;
     await setRole({ [area]: "edit" }); const pE = pp ? await api(S, "POST", pp, pb) : null;
     const okN = gate(gN) === "no_access"; const okV = gV.status !== 403 && (!pV || gate(pV) === "view_only"); const okE = !pE || (pE.status !== 403 || pE.json?.code === undefined);
-    const line = `${area}: None GET=${gate(gN)} · View GET=${gV.status}${pV ? ` POST=${gate(pV)}` : ""} · Edit${pE ? ` POST=${pE.status}` : " (read-only area)"}`; rows.push(line);
+    const line = `${area}: None GET=${gate(gN)} · View GET=${gV.status}${pV ? ` POST=${gate(pV)}` : ""} · Edit${pE ? ` POST=${pE.status}${pE.status >= 400 ? " " + JSON.stringify(pE.json?.error ?? pE.json).slice(0, 70) : ""}` : " (read-only area)"}`; rows.push(line);
     if (!(okN && okV && okE)) bad++;
   }
   await setRole({});
@@ -126,13 +126,13 @@ results["p2-p9"] = { verdict: "blocked", actual: "GET /api/events needs a real F
 // ── p2-p10: parent deactivate / reactivate ────────────────────────────────
 await step("p2-p10", async () => {
   const P2 = await mkParent("Perm Closer"); const K = await child(P2, "Closer Kid");
-  const ref = await parentBook(P2, V1, "Closer Kid", K); await api(OA, "POST", `/api/bookings/${ref}/record-payment`, { amount: 10, method: "bank" });
+  const ref = await parentBook(P2, V1, "Closer Kid", K); const rp = await api(OA, "POST", `/api/bookings/${ref}/record-payment`, { amount: 10, method: "bank" });
   const d = await api(P2, "POST", "/api/account/deactivate", { reason: "moving" });
   const my = await api(P2, "GET", "/api/my/bookings"); const pub = await api(P2, "GET", "/api/listings"); const fam1 = await api(OA, "GET", "/api/customers"); const listed1 = JSON.stringify(fam1.json).includes(P2.email.toLowerCase());
   const r0 = await api(P2, "POST", "/api/account/reactivate", {}); const r1 = await api(P2, "POST", "/api/account/reactivate", { confirm: true });
   const my2 = await api(P2, "GET", "/api/my/bookings"); const fam2 = await api(OA, "GET", "/api/customers"); const listed2 = JSON.stringify(fam2.json).includes(P2.email.toLowerCase());
   const ok = d.status === 200 && my.status === 403 && my.json?.code === "account_closed" && pub.status === 200 && r0.status === 400 && r1.status === 200 && my2.status === 200 && listed1 && listed2;
-  results["p2-p10"] = { verdict: ok ? "pass" : "fail", actual: `deactivate → ${d.status}; GET my/bookings → ${my.status} ${my.json?.code ?? ""}; public listings with the token → ${pub.status} (${(pub.json ?? []).length} shown); provider's Families lists them while closed: ${listed1}; reactivate without confirm → ${r0.status}, with confirm → ${r1.status}; my/bookings after → ${my2.status}; Families after: ${listed2}` };
+  results["p2-p10"] = { verdict: ok ? "pass" : "fail", actual: `ref=${ref}; record-payment → ${rp.status} ${rp.status >= 400 ? JSON.stringify(rp.json).slice(0, 80) : ""}; deactivate → ${d.status} ${d.status >= 400 ? JSON.stringify(d.json).slice(0, 90) : ""}; GET my/bookings → ${my.status} ${my.json?.code ?? ""}; public listings with the token → ${pub.status} (${(pub.json ?? []).length} shown); provider's Families lists them while closed: ${listed1}; reactivate without confirm → ${r0.status}, with confirm → ${r1.status}; my/bookings after → ${my2.status}; Families after: ${listed2}` };
 });
 // ── p2-p11 / p12: x-act-as ───────────────────────────────────────────────
 await step("p2-p11", async () => {
@@ -193,8 +193,8 @@ await step("p2-p17", async () => {
 });
 // ── p2-p18: availability ─────────────────────────────────────────────────
 await step("p2-p18", async () => {
-  const req = await api(OA, "POST", "/api/availability/requests", { staffId: S2.uid, staffName: "Perm Other", from: ymd(daysFromNow(7)), to: ymd(daysFromNow(14)), message: "please" });
-  const mine = await api(S, "PUT", "/api/availability/mine", { days: { [ymd(daysFromNow(7))]: "am" } });
+  const req = await api(OA, "POST", "/api/availability/requests", { staffEmail: S2.email, staffName: "Perm Other", window: { kind: "range", label: "Next week", from: ymd(daysFromNow(7)), to: ymd(daysFromNow(14)) }, note: "please" });
+  const mine = await api(S, "PUT", "/api/availability/mine", { days: { mon: { on: true, from: "09:00", to: "17:00" } } });
   const asg = await api(S, "PATCH", `/api/availability/requests/${req.json?.id}/assign`, { staffId: S.uid });
   const sub = await api(S, "GET", `/api/availability/requests/${req.json?.id}/submission`);
   const ok = mine.status === 200 && asg.status === 403 && (sub.status === 403 || sub.status === 404);
@@ -213,6 +213,7 @@ await step("p2-p19", async () => {
 });
 // ── p2-p20: timeclock ────────────────────────────────────────────────────
 await step("p2-p20", async () => {
+  await api(S, "POST", "/api/timeclock/event", { kind: "out", day: today, name: "Perm Staff" }); // p2-p4 left them clocked in
   const e1 = await api(S, "POST", "/api/timeclock/event", { kind: "in", day: today, name: "Perm Staff" }); const e2 = await api(S, "POST", "/api/timeclock/event", { kind: "in", day: today, name: "Perm Staff" });
   const id = e1.json?.id ?? e1.json?.record?.id; const sp = await api(S, "PATCH", `/api/timeclock/${id}?day=${today}`, { breakMs: 0 });
   const mp = await api(OA, "PATCH", `/api/timeclock/${id}?day=${today}`, { breakMs: 600000 });
