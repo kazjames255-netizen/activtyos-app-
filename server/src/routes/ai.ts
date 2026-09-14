@@ -143,8 +143,11 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 const outstandingOf = (b: Booking) => owedNow(b);
 
 // ── Operator snapshot — the dashboard's numbers plus a compact booking list
-// so "who's in today" and "who still owes" have names, not just totals. ──
-async function tenantSnapshot(tenantId: string, forStaff = false, franchiseId: string | null = null) {
+// so "who's in today" and "who still owes" have names, not just totals.
+// Exported so plan2's p2H_day15 harness can assert franchise isolation
+// directly against seeded data, without needing a live GROQ_API_KEY (the
+// /chat route 503s before ever building a snapshot if that's unset). ──
+export async function tenantSnapshot(tenantId: string, forStaff = false, franchiseId: string | null = null) {
   const [bookingsSnap, blocksSnap, listingsSnap, paymentsSnap, tasksSnap, childrenSnap, invitesSnap, incidentsSnap] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("blocks").where("tenantId", "==", tenantId).get(),
