@@ -206,7 +206,7 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
     { value: "haf:any", label: "🍎 HAF provider (any)", group: "HAF (holiday activities & food)", hint: "On a council HAF list or says so on their own website", test: ({ d }: R) => d.acts.includes("haf") },
     { value: "haf:paid", label: "🍎💷 HAF + paid activities", group: "HAF (holiday activities & food)", hint: "Also sells places: confirmed by research, or on a booking platform / runs a nursery, wraparound or classes", test: ({ d }: R) => d.acts.includes("haf") && d.hafPaid === true },
     { value: "haf:only", label: "🍎 HAF only — no paid activities seen", group: "HAF (holiday activities & food)", hint: "Free HAF places and nothing paid found yet (community groups, youth clubs, school-run schemes)", test: ({ d }: R) => d.acts.includes("haf") && d.hafPaid !== true },
-    { value: "haf:none", label: "🚫 No HAF offered (none found)", group: "HAF (holiday activities & food)", hint: "Not on any council HAF list we've read and no HAF mention on their website", test: ({ d }: R) => !d.acts.includes("haf") },
+    { value: "haf:none", label: "🚫 No HAF found", group: "HAF (holiday activities & food)", hint: "Not on any council HAF list we've read, no HAF wording on the pages of their site we could read, none in web-search results for their name — they may still run HAF we haven't seen", test: ({ d }: R) => !d.acts.includes("haf") },
     ...ACTIVITY.filter(([k]) => k !== "haf").map(([k, label]) => ({ value: `act:${k}`, label, group: "Activities", test: ({ d }: R) => d.acts.includes(k) })),
   ],
   activity: [],
