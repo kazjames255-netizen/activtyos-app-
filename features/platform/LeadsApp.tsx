@@ -39,6 +39,12 @@ interface Lead {
   hafFrom?: string; hafText?: string; hafLocalAuthority?: string; hafPaid?: boolean;
   /** Where parents actually book, and which research pass found the booking system. */
   bookingUrl?: string; bookingFrom?: string; bookingChecked?: boolean;
+  /** Their website is confirmed dead (couldn't be found live after alternates + a web search). websiteDeadCategory
+   *  splits WHY: parked/empty/no-match mean the domain still resolves to something — the business likely still
+   *  exists, just with a broken/abandoned web presence, so a rebuild is a sales opportunity. unreachable means
+   *  ENOTFOUND/DNS-dead — no signal the business is still there. */
+  websiteDead?: boolean; websiteDeadAt?: string; websiteDeadWhy?: string;
+  websiteDeadCategory?: "parked" | "empty" | "no-match" | "unreachable";
 }
 
 // ── What we sell vs who they are ─────────────────────────────────────────────
@@ -219,6 +225,12 @@ type R = { l: Lead; d: Derived };
 type Opt = { value: string; label: string; hint?: string; group?: string; test: (r: R) => boolean };
 type Dim = "plan" | "runs" | "activity" | "fit" | "size" | "booking" | "nation" | "region" | "ofsted" | "source" | "contact" | "status";
 const okToEmail = (l: Lead) => !!l.email && !l.personalContact && l.kind !== "person";
+// A dead website whose domain still resolves to *something* (parked/for-sale, an empty page, or reachable
+// content that isn't theirs) means the business likely still exists — just with a broken/abandoned web
+// presence. Plain "unreachable" (DNS/ENOTFOUND or nothing found anywhere) has no such signal.
+const WEBSITE_OPPORTUNITY = new Set(["parked", "empty", "no-match"]);
+const isWebsiteOpportunity = (l: Lead) => !!l.websiteDead && WEBSITE_OPPORTUNITY.has(l.websiteDeadCategory || "");
+const DEAD_CATEGORY_LABEL: Record<string, string> = { parked: "Parked / for-sale domain", empty: "Empty page", "no-match": "Reachable but not theirs", unreachable: "Unreachable (DNS dead)" };
 const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
   plan: [
     { value: "company", label: "🏢 Companies", test: ({ l }) => isCompany(l) },
@@ -254,6 +266,8 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
     { value: "maybeWeb", label: "🌐? Possible website", hint: "A site matching their name that research couldn't confirm is theirs — check it before using", test: ({ l }) => !l.website && !!l.websiteCandidate },
     { value: "noWeb", label: "🚫 No website", hint: "No confirmed website on record (includes possible-website leads and social-page-only leads)", test: ({ l }) => !l.website },
     { value: "socialOnly", label: "📘 Social page only", hint: "A Facebook/Instagram page but no website of their own", test: ({ l }) => !l.website && !!l.socialUrl },
+    { value: "websiteOpportunity", label: "🌐 Website rebuild opportunity", hint: "Their old website is dead but the domain still resolves to something (parked/for-sale, empty, or reachable but not theirs) — the business likely still exists, just needs a new site. Pitch a rebuild as part of the ActivityOS package", test: ({ l }) => isWebsiteOpportunity(l) },
+    { value: "websiteUnreachable", label: "🚫 Website unreachable (DNS dead)", hint: "Confirmed dead with no signal at all — ENOTFOUND or nothing found anywhere. The business may not exist any more", test: ({ l }) => !!l.websiteDead && !isWebsiteOpportunity(l) },
     { value: "soon", label: "🚧 Coming-soon website", hint: "Their site is a holding page — likely no booking platform yet", test: ({ l }) => !!l.comingSoon },
   ],
   status: STATUSES.map((s) => ({ value: s, label: TONE[s].label, test: ({ l }: R) => (l.status || "new") === s })),
@@ -552,7 +566,7 @@ export function LeadsApp() {
                       {l.size && <span>👥 {l.size}</span>}
                       <span className="text-[var(--ink-3)]">{fmt(l.createdAt)}</span>
                     </div>
-                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.haf || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network) && (
+                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.haf || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network || l.websiteDead) && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                         {l.plan && <span className="rounded-full px-2 py-0.5 font-extrabold" style={isFreelancer(l) ? { background: "#f3e8ff", color: "#6b21a8" } : { background: "#e0ecff", color: "#1d3a8f" }} title={l.planReason || undefined}>{isFreelancer(l) ? "🧑 Freelancer" : "🏢 Company"}</span>}
                         {l.legalForm && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">{l.legalForm}</span>}
@@ -570,6 +584,8 @@ export function LeadsApp() {
                         {l.ofstedSites ? <span className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-bold text-[#1d3a8f]" title="Venues registered with Ofsted (Childcare Register)">🏫 {l.ofstedSites} Ofsted-registered site{l.ofstedSites === 1 ? "" : "s"}</span> : null}
                         {srcOf(l).includes("ofsted") && <span className="rounded-full bg-[#e9f7f6] px-2 py-0.5 font-bold text-[#0e7a75]" title="Ofsted-registered childcare can take Tax-Free Childcare payments — ActivityOS handles TFC">💷 Can take Tax-Free Childcare</span>}
                         {l.comingSoon && <span className="rounded-full bg-[#fff4e5] px-2 py-0.5 font-extrabold text-[#9a5a00]" title="Their website is a 'coming soon' / under-construction page — a good sign they have no booking platform yet">🚧 Website coming soon — likely no booking platform</span>}
+                        {isWebsiteOpportunity(l) && <span className="rounded-full bg-[#e8f7ec] px-2 py-0.5 font-extrabold text-[#1c6b3a]" title={`${DEAD_CATEGORY_LABEL[l.websiteDeadCategory || ""] || "Website dead"}: ${l.websiteDeadWhy || ""} — the domain still resolves to something, so the business likely still exists. Sales opportunity: pitch a new website build as part of the ActivityOS package.`}>🌐 Website opportunity — {DEAD_CATEGORY_LABEL[l.websiteDeadCategory || ""] || "dead site"}</span>}
+                        {l.websiteDead && !isWebsiteOpportunity(l) && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-3)] ring-1 ring-[var(--line)]" title={`${l.websiteDeadWhy || "Website unreachable"} — no signal the business is still there.`}>🚫 Website unreachable</span>}
 
                         {l.confidence && l.confidence !== "high" && l.confidence !== "unverified" && <span className="rounded-full bg-[#fdf3d8] px-2 py-0.5 font-bold text-[#9a5a00]" title="How sure the research is that these details are this provider's">⚠ {l.confidence} confidence — check before contacting</span>}
                         {l.personalContact && l.kind !== "person" && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 font-bold text-[#b3123c]" title="UK PECR/GDPR: a named person's or personal mailbox — get their consent before sending marketing email">Personal contact — needs consent before marketing email</span>}
