@@ -69,7 +69,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Sharing & ordering rules",
         "stage": "Rules",
-        "line": "The Sharing tab sets the rules: who sees each day's menu, how late families can order, a standard allergen note, and whether meal swaps need your say-so. Each saved plan can also email its caterer the orders on a schedule.",
+        "line": "The Sharing tab sets the rules: who sees each day's menu, how late families can order, a standard allergen note, and whether meal swaps need your say-so. Each saved plan can also save a caterer's email and a send schedule — the automatic digest isn't built yet, so print the plan for the kitchen until it lands.",
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">WHO SEES THE MENU</div><div class=\"field\">✓ All booked families</div><div class=\"row2\"><div><div class=\"fl\">ORDERING CLOSES</div><div class=\"field\">The day before · 08:00</div></div><div><div class=\"fl\">MEAL CHANGES</div><div class=\"field\">Need my approval</div></div></div><div class=\"fl\">EMAIL THE CATERER THE ORDERS</div><div class=\"field\">orders@freshstartcatering.co.uk · every day at 07:00</div><div class=\"hint\">The cut-off pre-fills from your default — each listing can override it.</div></div>"
       },
       {
@@ -95,7 +95,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "Import & export",
         "stage": "Bringing people in",
         "line": "Two shortcuts sit up top: Import bulk-adds families from a spreadsheet and can invite them in one go, and Export pulls any slice of your list — pick the families, columns and format you want.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">⬇ Export</span><span class=\"ochip\">📥 Import</span><span class=\"ochip\">＋ Add family</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Import families</b> <span class=\"g\">from a spreadsheet · optional invite</span></div></div><div class=\"hint\">Export lets you choose families, columns and a format (CSV or print).</div><div class=\"hint\">Import, Export and Add family show only for company, freelancer or franchise roles — staff see the page read-only.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">⬇ Export</span><span class=\"ochip\">📥 Import</span><span class=\"ochip\">＋ Add family</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Import families</b> <span class=\"g\">from a spreadsheet · optional invite</span></div></div><div class=\"hint\">Export lets you choose families, columns and a format (CSV or print).</div><div class=\"hint\">Import and Add family show only for company, freelancer or franchise roles; Export is available to everyone, including staff.</div></div>"
       },
       {
         "label": "Toggle, filters & search",
@@ -432,13 +432,13 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Give a dose",
         "stage": "Point of care",
-        "line": "On any medicine with consent, tap Yes or No to log a dose against today and now — the parent is told automatically. Need to back-date or add a note? Open 'with time and notes' for the full form.",
+        "line": "On any medicine with consent, tap Yes or No then confirm to log a dose against today and now — the parent is told automatically. Need to back-date or add a note? Open \"with time / notes\" for the full form.",
         "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Ava Okafor</b> <span class=\"g\">Ventolin · one puff</span><span class=\"chip2\">consent on file</span></div><div class=\"g\">🔁 On every booked day · at 12:30</div><div class=\"g\">📋 How to give: shake well; one puff, use spacer if needed</div></div><div class=\"chips\"><span class=\"g\">Given?</span><span class=\"ochip\">✓ Yes</span><span class=\"ochip\">✕ No</span><span class=\"btn ghost\">＋ with time / notes</span></div><div class=\"row2\"><div><div class=\"fl\">DOSE</div><div class=\"field\">one puff</div></div><div><div class=\"fl\">WITNESSED BY</div><div class=\"field ph\">optional</div></div></div><div class=\"hint\">Tapping Yes logs it against today and now, and informs the parent. No consent means no dose can be recorded.</div></div>"
       },
       {
         "label": "Add a medication",
         "stage": "New record",
-        "line": "New medicine? The '＋ Administer a medication' button opens a three-step form — the medicine and dose, when staff should give it, then ticking that the parent has given written consent. The child must already have a booking so it links to their account.",
+        "line": "New medicine? The Administer a medication button opens a three-step form — the medicine and dose, when staff should give it, then ticking that the parent has given written consent. The child must already have a booking so it links to their account.",
         "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">1 Medicine</span><span class=\"ochip\">2 When &amp; how</span><span class=\"ochip\">3 Consent</span></div><div class=\"row2\"><div><div class=\"fl\">CHILD (BOOKED)</div><div class=\"field\">Ava Okafor</div></div><div><div class=\"fl\">MEDICINE</div><div class=\"field\">Ventolin</div></div></div><div class=\"row2\"><div><div class=\"fl\">DOSE</div><div class=\"field\">one puff</div></div><div><div class=\"fl\">FOR (CONDITION)</div><div class=\"field\">asthma</div></div></div><div class=\"chips\"><span class=\"ochip\">📋 On every booked day</span><span class=\"ochip\">📅 Only on the days I pick</span><span class=\"ochip\">🩹 Only when needed</span></div><div class=\"chk\"><span class=\"chkbx\">✓</span>The parent / carer has given written consent to administer this</div></div>"
       },
       {
@@ -450,7 +450,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Safety & archive",
         "stage": "Guardrails",
-        "line": "A few guardrails keep it safe — no consent, or a parent who has withdrawn it, blocks dosing; expired medicines are flagged; and in Setup you can require a witness on every dose or limit recording to leads. Managers can archive a finished medicine — the record is kept, never deleted.",
+        "line": "A few guardrails keep it safe — no consent, or a parent who has withdrawn it, blocks dosing; expired medicines are flagged; and in Setup you can require a witness on every dose or limit recording to leads. Managers can archive a finished medicine — the record is kept, unless it's a mistaken entry with no doses logged, which can be deleted outright.",
         "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Noah Bennett</b> <span class=\"g\">Piriton · 5ml</span><span class=\"chip2\">no consent</span></div><div class=\"g\">Consent needed before a dose can be recorded</div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Mia Patel</b> <span class=\"g\">Calpol · 5ml</span><span class=\"chip2\">⚠️ Expired</span></div><div class=\"g\">📝 Parent note: only if temperature is over 38</div></div><div class=\"chips\"><span class=\"ochip\">History (4)</span><span class=\"btn\">Archive</span></div><div class=\"hint\">Turn on 'require a witness' or 'leads only' in Setup. Archived medicines can be restored — nothing is ever erased.</div></div>"
       }
     ]
@@ -981,7 +981,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   "referrals": {
     "title": "Referrals",
     "introLine": "This is your referrals scoreboard — a running read-out of the families bringing you new bookings, what those bookings are worth, and what the rewards are costing you. It is a report, not a settings page.",
-    "doneLine": "And that is Referrals — see who is bringing you new families, what it is earning, and what the rewards cost. Change the offer itself over in Setup.",
+    "doneLine": "And that is Referrals — see who is bringing you new families, what it is earning, and what the rewards cost. Change the offer itself right here with Edit rewards.",
     "steps": [
       {
         "label": "Hero and headline stats",
