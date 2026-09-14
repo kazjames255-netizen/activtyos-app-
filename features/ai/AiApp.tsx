@@ -36,7 +36,7 @@ const STARTERS: Record<Kind, { label: string; icon: string; qs: string[] }[]> = 
     { label: "Running it", icon: "⚙️", qs: ["Anything low on stock?", "Any unread messages?", "How do I add a new listing?", "How do I turn on childcare vouchers?"] },
   ],
   staff: [
-    { label: "Today", icon: "📋", qs: ["Who's expected in today?", "Who hasn't been signed in?", "Which activity am I on and when?", "How many children are in right now?"] },
+    { label: "Today", icon: "📋", qs: ["Who's expected in today?", "Who hasn't been signed in?", "What sessions are running today and when?", "How many children are in right now?"] },
     { label: "Children & safety", icon: "🛡️", qs: ["Any allergies in my group today?", "Who has SEND in today?", "How do I report a safeguarding concern?"] },
     { label: "My day", icon: "✅", qs: ["What tasks are still open?", "Anything due today?", "How do I take the register?", "How do I clock in and out?"] },
   ],

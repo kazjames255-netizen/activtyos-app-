@@ -409,7 +409,7 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
   // Marketing: coupons, memberships, referrals.
   const codes = scopedByFranchise(couponsSnap.docs.map((d) => d.data() as { code?: string; type?: string; value?: number; usedCount?: number; active?: boolean; expiry?: string; membership?: boolean; referral?: boolean; referralReward?: boolean; franchiseId?: string | null }));
   const mktCodes = codes.filter((c) => !c.membership && !c.referral && !c.referralReward);
-  const coupons = { activeCodes: mktCodes.filter((c) => c.active).length, totalRedemptions: mktCodes.reduce((s, c) => s + (c.usedCount ?? 0), 0), topCodes: [...mktCodes].sort((a, b) => (b.usedCount ?? 0) - (a.usedCount ?? 0)).slice(0, 8).map((c) => ({ code: c.code, type: c.type, value: c.value, usedCount: c.usedCount ?? 0, expiry: c.expiry ?? null })) };
+  const coupons = { activeCodes: mktCodes.filter((c) => c.active).length, totalRedemptions: mktCodes.reduce((s, c) => s + (c.usedCount ?? 0), 0), topCodes: [...mktCodes].sort((a, b) => (b.usedCount ?? 0) - (a.usedCount ?? 0)).slice(0, 8).map((c) => ({ code: c.code, type: c.type, value: c.value, usedCount: c.usedCount ?? 0, expiry: c.expiry ?? null, active: !!c.active })) };
   // Memberships don't carry a franchiseId of their own — ownership follows the
   // family, like messages/customers below (franchiseFamilyEmails).
   const memRows = membersSnap.docs.map((d) => d.data() as { email?: string; tierName?: string; priceMonthly?: number; status?: string })
@@ -587,12 +587,16 @@ async function hasFranchises(tenantId: string): Promise<boolean> {
   return !s.empty;
 }
 async function headOfficeSnapshot(tenantId: string) {
-  const [bookingsSnap, frSnap, tenantDoc, expSnap, incSnap] = await Promise.all([
+  const [bookingsSnap, frSnap, tenantDoc, expSnap, incSnap, incidentsSnap] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("users").where("tenantId", "==", tenantId).where("role", "==", "franchise").get(),
     db.collection("tenants").doc(tenantId).get(),
     db.collection("expenses").where("tenantId", "==", tenantId).get(),
     db.collection("income").where("tenantId", "==", tenantId).get(),
+    // Read-only network safeguarding oversight — the who-text below promises
+    // this, but nothing here ever queried it (the three Oversight STARTERS
+    // chips dead-ended into "I can't see that" every time).
+    db.collection("incidents").where("tenantId", "==", tenantId).get(),
   ]);
   const sf = ((tenantDoc.exists && (tenantDoc.data()!.splitFees as { basis: "revenue" | "perBooking"; rate?: number; perBookingFee?: number })) || null) ?? { basis: "revenue" as const, rate: 10, perBookingFee: 0 };
   const feeOf = (revenue: number, bookings: number) => sf.basis === "perBooking" ? round2(bookings * (sf.perBookingFee ?? 0)) : round2(revenue * ((sf.rate ?? 0) / 100));
@@ -622,13 +626,38 @@ async function headOfficeSnapshot(tenantId: string) {
     if (b.email) agg.families.add(b.email.toLowerCase());
     if (b.child) agg.children.add(b.child);
   }
-  const byFranchise = [...byFr.entries()].map(([fid, a]) => ({ name: frInfo.get(fid)?.name ?? "Franchise", area: frInfo.get(fid)?.area ?? null, territory: frInfo.get(fid)?.territory ?? "none", revenueGBP: a.revenue, revenueThisMonthGBP: a.revenueMonth, collectedGBP: a.collected, bookings: a.bookings, families: a.families.size, children: a.children.size, royaltyGBP: feeOf(a.revenue, a.bookings) }));
-  for (const [fid, info] of frInfo) if (!byFr.has(fid)) byFranchise.push({ name: info.name, area: info.area, territory: info.territory, revenueGBP: 0, revenueThisMonthGBP: 0, collectedGBP: 0, bookings: 0, families: 0, children: 0, royaltyGBP: 0 });
+  const byFranchise = [...byFr.entries()].map(([fid, a]) => ({ name: frInfo.get(fid)?.name ?? "Franchise", area: frInfo.get(fid)?.area ?? null, territory: frInfo.get(fid)?.territory ?? "none", revenueGBP: a.revenue, revenueThisMonthGBP: a.revenueMonth, collectedGBP: a.collected, bookings: a.bookings, families: a.families.size, children: a.children.size, royaltyGBP: feeOf(a.revenue, a.bookings), royaltyThisMonthGBP: feeOf(a.revenueMonth, a.bookings) }));
+  for (const [fid, info] of frInfo) if (!byFr.has(fid)) byFranchise.push({ name: info.name, area: info.area, territory: info.territory, revenueGBP: 0, revenueThisMonthGBP: 0, collectedGBP: 0, bookings: 0, families: 0, children: 0, royaltyGBP: 0, royaltyThisMonthGBP: 0 });
   byFranchise.sort((x, y) => y.revenueGBP - x.revenueGBP);
 
   const royaltyTotal = round2(byFranchise.reduce((s, f) => s + f.royaltyGBP, 0));
-  const ownExp = round2(expSnap.docs.map((d) => d.data() as { amount?: number; franchiseId?: string | null }).filter((e) => !e.franchiseId).reduce((s, e) => s + (e.amount ?? 0), 0));
+  const royaltyThisMonthTotal = round2(byFranchise.reduce((s, f) => s + f.royaltyThisMonthGBP, 0));
+  const expRows = expSnap.docs.map((d) => d.data() as { amount?: number; category?: string; franchiseId?: string | null });
+  const ownExpRows = expRows.filter((e) => !e.franchiseId);
+  const ownExp = round2(ownExpRows.reduce((s, e) => s + (e.amount ?? 0), 0));
   const ownInc = round2(incSnap.docs.map((d) => d.data() as { amount?: number; franchiseId?: string | null }).filter((e) => !e.franchiseId).reduce((s, e) => s + (e.amount ?? 0), 0));
+  const ownExpByCategory = (() => {
+    const m = new Map<string, number>();
+    for (const r of ownExpRows) m.set(r.category || "Uncategorised", (m.get(r.category || "Uncategorised") ?? 0) + (r.amount ?? 0));
+    return [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([category, gbp]) => ({ category, gbp: round2(gbp) }));
+  })();
+
+  // Network safeguarding oversight — read-only, per franchise, mirrors the
+  // operator snapshot's `incidents` block. Confidential/safeguarding-kind
+  // records are still summarised (never the full description) since head
+  // office's own DSL-level review happens on the real Incidents screens —
+  // this is a headline count for "does anything need my attention", not the
+  // dossier.
+  const weekAgoIso = new Date(Date.now() - 7 * 86_400_000).toISOString();
+  const incRows = incidentsSnap.docs.map((d) => d.data() as { kind?: string; date?: string; franchiseId?: string | null; severity?: string });
+  const incByFranchise = new Map<string, number>();
+  for (const r of incRows) { const fid = r.franchiseId ?? "__ho__"; incByFranchise.set(fid, (incByFranchise.get(fid) ?? 0) + 1); }
+  const safeguarding = {
+    openThisWeek: incRows.filter((r) => (r.date ?? "") >= weekAgoIso.slice(0, 10)).length,
+    serious: incRows.filter((r) => r.severity === "serious").length,
+    byFranchise: [...frInfo.entries()].map(([fid, info]) => ({ name: info.name, count: incByFranchise.get(fid) ?? 0 })).sort((a, b) => b.count - a.count),
+    headOfficeOwn: incByFranchise.get("__ho__") ?? 0,
+  };
 
   return {
     network: {
@@ -641,9 +670,11 @@ async function headOfficeSnapshot(tenantId: string) {
     },
     royaltyBasis: sf.basis === "perBooking" ? `£${sf.perBookingFee ?? 0} per booking` : `${sf.rate ?? 0}% of revenue`,
     royaltyIncomeGBP: royaltyTotal,
+    royaltyIncomeThisMonthGBP: royaltyThisMonthTotal,
     byFranchise: byFranchise.slice(0, 30),
     headOfficeDirect: { revenueGBP: own.revenue, bookings: own.bookings, families: own.families.size, children: own.children.size },
-    headOfficeOwnMoney: { ownIncomeGBP: ownInc, ownExpensesGBP: ownExp, netGBP: round2(ownInc + royaltyTotal - ownExp) },
+    headOfficeOwnMoney: { ownIncomeGBP: ownInc, ownExpensesGBP: ownExp, netGBP: round2(ownInc + royaltyTotal - ownExp), expensesByCategory: ownExpByCategory },
+    safeguarding,
     attention: {
       territoriesAwaitingApproval: byFranchise.filter((f) => ["pending", "awaiting", "requested"].includes(f.territory)).map((f) => f.name),
       franchisesWithNoBookings: byFranchise.filter((f) => f.bookings === 0).map((f) => f.name),
