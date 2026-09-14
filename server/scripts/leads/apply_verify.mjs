@@ -4,7 +4,7 @@ admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSy
 const db = admin.firestore(); const FILE = process.argv[2]; const DONE = FILE + ".applied";
 const done = new Set(fs.existsSync(DONE) ? fs.readFileSync(DONE,"utf8").split("\n").filter(Boolean) : []);
 const rows = fs.readFileSync(FILE,"utf8").split("\n").filter(Boolean).map(l=>JSON.parse(l)).filter(r=>!done.has(r.id) && !done.has(r.id+"|"+r.url));
-const cur = new Map(); for (let i=0;i<rows.length;i+=300) { const snaps = await db.getAll(...rows.slice(i,i+300).map(r=>db.collection("leads").doc(r.id)), { fieldMask:["bookingSystem"] }); snaps.forEach(s=>cur.set(s.id, s.exists ? s.data() : {})); }
+const cur = new Map(); for (let i=0;i<rows.length;i+=300) { const snaps = await db.getAll(...rows.slice(i,i+300).map(r=>db.collection("leads").doc(r.id)), { fieldMask:["bookingSystem","haf","hafPaid","hafFrom","providerTypes","activityTypes","ofstedUrn","siteSignals"] }); snaps.forEach(s=>cur.set(s.id, s.exists ? s.data() : {})); }
 const D = admin.firestore.FieldValue.delete; let batch=db.batch(), n=0; const c={}; const bump=(k)=>c[k]=(c[k]||0)+1; const flush=async()=>{ if(n){await batch.commit(); batch=db.batch(); n=0;} };
 const why = (r) => r.sector==="parked" ? "parked / for-sale domain" : r.sector==="other-sector" ? `a different kind of business (${(r.notTerms||[]).slice(0,3).join(", ")})` : r.sector==="empty" ? "empty or placeholder site" : r.verdict==="unreachable" ? "site unreachable" : !r.nameOk ? "their name isn't on the site" : r.sector!=="child" ? "no children's-activity wording on the site" : !r.locOk ? "their town/postcode isn't on the site" : "no children's-activity wording on the site";
 for (const r of rows) { const ref = db.collection("leads").doc(r.id); const stamp = new Date().toISOString(); let upd=null;
@@ -30,6 +30,14 @@ for (const r of rows) { const ref = db.collection("leads").doc(r.id); const stam
   // Booking platform seen in the same fetch (verify_sites bookingOn): fill it on a site we accept; a site with no booking link is "checked, enquiry only".
   const accepted = (r.kind==="candidate" && (r.verdict==="confirm" || r.verdict==="confirm-weak")) || (r.kind!=="candidate" && r.verdict!=="unreachable" && upd.website === undefined);
   if (accepted && "booking" in r) { const have = cur.get(r.id)?.bookingSystem; if (r.booking && !have) { upd.bookingSystem = r.booking.system; upd.bookingUrl = /^https?:/.test(r.booking.url) ? r.booking.url : (r.final || r.url); upd.bookingFrom = `site crawl ${stamp.slice(0,10)} (verifier)`; bump("booking platform found: "+r.booking.system); } if (!r.booking && !have) { upd.bookingChecked = true; bump("booking: none seen (enquiry only)"); } }
+  // Every other dropdown, from the same page (fill-only; ≥2 mentions before a type/activity is added; hand-set fields never overwritten).
+  if (accepted && r.signals) { const g = r.signals, c = cur.get(r.id) || {}; const site = r.final || r.url;
+    if (g.haf >= 1 && !c.haf) { upd.haf = true; upd.hafFrom = c.hafFrom || site; upd.hafText = `their site mentions HAF / free-school-meal funded places (${g.haf} mention${g.haf === 1 ? "" : "s"})`; bump("haf: found on site"); }
+    if ((g.haf >= 1 || c.haf) && g.paid >= 2 && typeof c.hafPaid !== "boolean") { upd.hafPaid = true; bump("haf: paid places too"); }
+    const pt = new Set(c.providerTypes || []); let addedT = 0; for (const k of g.types) if (!pt.has(k)) { pt.add(k); addedT++; } if (addedT) { upd.providerTypes = [...pt]; bump("setting types added from site"); }
+    const at = new Set(c.activityTypes || []); let addedA = 0; for (const k of g.acts) if (!at.has(k)) { at.add(k); addedA++; } if (addedA) { upd.activityTypes = [...at]; bump("activities added from site"); }
+    if (g.ofstedUrn && !c.ofstedUrn) { upd.ofstedUrn = g.ofstedUrn; bump("ofsted URN seen on site"); }
+    upd.siteSignals = { at: stamp.slice(0,10), haf: g.haf, paid: g.paid, ofsted: g.ofsted, franchiseWords: g.franchiseWords, multiSite: g.multiSite }; }
   upd.websiteCheckedAt = stamp; upd.updatedAt = stamp; batch.update(ref, upd); n++; if (n>=400) await flush();
 }
 await flush(); fs.appendFileSync(DONE, rows.map(r=>r.id+"|"+r.url+"\n").join("")); console.log(JSON.stringify(c)); process.exit(0);
