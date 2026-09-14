@@ -237,6 +237,9 @@ documents.post("/library/chase", async (req, res) => {
 documents.post("/files", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canManage(auth.role)) { res.status(403).json({ error: "Requires an operator account" }); return; }
+  // Over the cap is "too large" (413), not a malformed request (acceptance p2-l7).
+  const declared = Number((req.body as { bytes?: unknown })?.bytes);
+  if (Number.isFinite(declared) && declared > FILE_MAX) { res.status(413).json({ error: `Files up to ${Math.round(FILE_MAX / 1_000_000)}MB only — this one is ${(declared / 1_000_000).toFixed(1)}MB.`, code: "too_large", max: FILE_MAX }); return; }
   const parsed = z.object({
     name: z.string().trim().min(1).max(200),
     contentType: z.string().trim().toLowerCase().max(80).refine((t) => FILE_TYPES.has(t), "Upload a PDF or a photo"),

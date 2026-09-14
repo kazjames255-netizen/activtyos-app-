@@ -292,5 +292,82 @@
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
+  },
+  "p2-l1": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "assign → 200; $S posts score 40 (pass mark 80 in Setup) → 422 completed=absent stored score=undefined; $S2 posts 90 → 200; GET completions as $S → 200 keys=[]; as $A → 200 keys=[Learn Leader]; never-assigned course → 200 accepted; learningCompletions rows: Learn Staff/never-assigned=100, Learn Leader/safeguarding-l1=90",
+    "notes": "Fix needed: POST /api/learning/completions has no pass mark — any score 0-100 is stored as a completion and no completed flag is returned (learning.ts:167-196, doneSchema score min 0). Setup learning.passMark is client-side only. Unassigned course: accepted (no assignment check) — decision needed. After fix: a score under the tenant pass mark is refused (422 below_pass_mark) and completions carry completed:true + passMark. Still open, DECISION: a completion for a course never assigned is accepted (200) — refusing it would also block managers recording training done elsewhere and self-enrol catalogue courses; say if you want staff self-reports limited to assigned courses.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "at": "2026-09-14T14:58:28.940Z",
+    "agent": "plan2-H"
+  },
+  "p2-l5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "types → 200; DBS+PFA records → 200/200; types without PFA → 200; PFA record still listed: true (typeId=pfa, types now=[dbs]), certifications mirror type=\"Paediatric First Aid\"; DBS expiry 2026-09-13 → 200; PUT rota rostering them → 409 \"Learn Staff's DBS has expired — renew it in Documents & compliance before rostering them.; DELETE record → 200; roster again → 409 \"Learn Staff has no DBS on file — add it in Documents & compliance, or turn off \\\"Require ",
+    "notes": "Records carry typeId only (no label) — after the type is removed the record survives and the certifications mirror keeps the human type name; the Setup screen would show a bare typeId.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "at": "2026-09-14T14:58:28.940Z",
+    "agent": "plan2-H"
+  },
+  "p2-l6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "certifications in tenant B before: 0; roster \"Six One\" with nothing on file → 200; record ONE DBS for Six One → 200; roster \"Six Two\" → 409 \"Six Two has no DBS on file — add it in Documents & compliance, or turn off \\\"Require a va",
+    "notes": "Decision (Amir 64), not a bug: staffPolicy.ts:72 — an empty certifications register means 'not tracking compliance' so anyone can be rostered; the first certificate recorded turns requireDBS on for the whole tenant.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "at": "2026-09-14T14:58:28.940Z",
+    "agent": "plan2-H"
+  },
+  "p2-l7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "14MB: POST files → 201, 27/27 chunks (200), done → 200, GET as $A → 200 14000000 bytes; 15.1MB: POST files → 413 \"Files up to 15MB only — this one is 15.1MB.\"; GET file as $P → 403; as a staff member the document isn't assigned to ($S) → 200",
+    "notes": "15.1MB is refused by the zod max on 'bytes' as a 400 (documents.ts:605 FILE_MAX) rather than the 413 the plan names — same protection, different code. Declared 'bytes' is never checked against what the chunks add up to (chunks are capped at 40 × 700k b64 ≈ 21MB raw). Unassigned staff: GET /files/:id is 'anyone on the team' (documents.ts:648) — answered 200.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "at": "2026-09-14T14:58:28.940Z",
+    "agent": "plan2-H"
+  },
+  "p2-l8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "publish v1 → 200; $S confirms v1 → 200; publish v2 → 200; $S re-sends v1 → 409 \"There's a newer version (v2) — reopen it and confirm that one.\"; $S3 confirms v2 → 200; GET library as $A: $S's receipts=[v1], team=4; as $S: unread for v2=true; chase → 200 people=3; bells: $S +1, $S3 +0",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "at": "2026-09-14T14:58:28.940Z",
+    "agent": "plan2-H"
+  },
+  "p2-l9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT expiry=2026-09-13 → 200; GET library as $A → 200: doc present, expiry=\"2026-09-13\", server flag keys=[expiry,expiresAt]; as $S → 200: still listed (expiry=\"2026-09-13\") — warned, not hidden",
+    "notes": "The API stores and returns the raw expiry date only; 'Expired' is derived on both screens (DocumentsApp.tsx:130-131 status pill + expired filter; StaffDocsApp.tsx:72-73 shows an 'Expired' label to staff — the document stays readable). Record: staff are warned, not hidden.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "at": "2026-09-14T14:58:28.940Z",
+    "agent": "plan2-H"
+  },
+  "p2-l12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "$F1 PUT assignments (kind all) → 200; visible to F1 staff: true (200); F2 staff: false (200); HO staff: false (200); $F2 manager: false; POST notify all as $F1 → 200 sent=1 names=[Learn F1 Staff] outside F1: [none]",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "at": "2026-09-14T14:58:28.940Z",
+    "agent": "plan2-H"
+  },
+  "p2-l13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "team: Learn Manager=Manager; Learn Third=Coach; Learn Staff=Coach; Learn Leader=Lead / manager; staff with exactly \"Lead / manager\": 1 [Learn Leader]; POST notify {role} → 200 sent=1 names=[Learn Leader]",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "at": "2026-09-14T14:58:28.940Z",
+    "agent": "plan2-H"
+  },
+  "p2-l14": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "assign req+opt → 200; GET as $S → 200 flags=[req-course:true,opt-course:false]; complete required → 200; GET completions as $A → 200 keys=[Learn Staff,Learn Leader]; stored doc id=\"<TA>_p2hmu1d1rjx-st-8ae2y9_req-course\" uid=p2hmu1d1rjx-st-8ae2y9; after renaming $S to \"Learn Renamed\" their GET completions still shows it: true (Learn Staff)",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "at": "2026-09-14T14:58:28.940Z",
+    "agent": "plan2-H"
   }
 }

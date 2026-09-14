@@ -3,6 +3,7 @@ import { z } from "zod";
 import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { notifyTenantMember } from "../lib/notify";
+import { loadSettings } from "../lib/tenantLibrary";
 
 // Learning Centre notifications.
 //
@@ -83,7 +84,10 @@ learning.post("/notify", async (req, res) => {
     if (target.kind === "all" || target.kind === "locs") return true;
     if (target.kind === "staff") return names.has(lc(u.get("name")));
     const jobs = [lc(u.get("jobTitle")), lc(u.get("staffRole"))].filter(Boolean);
-    return roles.some((r) => jobs.some((j) => j.includes(r) || r.includes(j)));
+    // Exact match only (case/space-insensitive): "Manager" must not catch
+    // "Lead / manager" (acceptance p2-l13, s13-so1 regression).
+    const norm = (x: string) => x.replace(/[^a-z0-9]+/g, " ").trim();
+    return roles.some((r) => jobs.some((j) => norm(j) === norm(r)));
   });
 
   const dueTxt = due && due !== "—" ? ` — due ${due}` : "";
@@ -202,12 +206,20 @@ learning.post("/completions", async (req, res) => {
   const p = parsed.data;
   const name = auth.role === "staff" ? await accountName(req.user?.uid) : (p.staffName ?? "").trim();
   if (!name) { res.status(400).json({ error: auth.role === "staff" ? "Your account has no name on it — ask your manager to add one." : "Who completed it?" }); return; }
+  // The pass mark is the tenant's (Setup → Learning), not the client's word:
+  // a score under it is a failed attempt, not a completion (acceptance p2-l1).
+  const learn = ((await loadSettings(auth.tenantId, auth.franchiseId)).learning ?? {}) as { passMark?: number };
+  const passMark = typeof learn.passMark === "number" ? learn.passMark : 80;
+  if (p.score < passMark) { res.status(422).json({ error: `Score ${Math.round(p.score)}% is under the pass mark of ${passMark}% — not recorded as a completion.`, code: "below_pass_mark", passMark }); return; }
   const key = keyOf(auth.tenantId, auth.franchiseId);
-  const ref = db.collection("learningCompletions").doc(`${key}_${nameSlug(name)}_${p.courseId}`.replace(/\//g, "_"));
+  // Staff records are keyed by uid so a renamed account keeps its history;
+  // manager-recorded ones (no account) stay keyed by name.
+  const who = auth.role === "staff" ? req.user?.uid ?? nameSlug(name) : nameSlug(name);
+  const ref = db.collection("learningCompletions").doc(`${key}_${who}_${p.courseId}`.replace(/\//g, "_"));
   const kept = await db.runTransaction(async (tx) => {
     const cur = (await tx.get(ref)).data();
     if (cur && Number(cur.score) > p.score) return cur;
-    const doc = { key, tenantId: auth.tenantId, franchiseId: auth.franchiseId ?? null, staffName: name, uid: auth.role === "staff" ? req.user?.uid ?? null : null, courseId: p.courseId, title: p.title, score: Math.round(p.score), date: p.date, selfReported: auth.role === "staff", recordedAt: new Date().toISOString(), recordedBy: req.user?.email ?? null };
+    const doc = { key, tenantId: auth.tenantId, franchiseId: auth.franchiseId ?? null, staffName: name, uid: auth.role === "staff" ? req.user?.uid ?? null : null, courseId: p.courseId, title: p.title, score: Math.round(p.score), passMark, completed: true, date: p.date, selfReported: auth.role === "staff", recordedAt: new Date().toISOString(), recordedBy: req.user?.email ?? null };
     tx.set(ref, doc);
     return doc;
   });
@@ -221,10 +233,13 @@ learning.get("/completions", async (req, res) => {
   if (!auth.tenantId || !(canManage(auth.role) || auth.role === "staff")) { res.status(403).json({ error: "Forbidden" }); return; }
   const snap = await db.collection("learningCompletions").where("key", "==", keyOf(auth.tenantId, auth.franchiseId)).get();
   const me = auth.role === "staff" ? (await accountName(req.user?.uid)).toLowerCase() : null;
+  const myUid = auth.role === "staff" ? req.user?.uid ?? null : null;
   const out: Record<string, { courseId: string; title: string; score: number; date: string; selfReported: boolean }[]> = {};
   for (const d of snap.docs) {
     const x = d.data();
-    if (me !== null && String(x.staffName).toLowerCase() !== me) continue;
+    // Own records by uid first (survives a rename); name match keeps older
+    // name-keyed records and manager-recorded ones visible.
+    if (me !== null && !(myUid && x.uid === myUid) && String(x.staffName).toLowerCase() !== me) continue;
     (out[x.staffName] ??= []).push({ courseId: x.courseId, title: x.title, score: x.score, date: x.date, selfReported: x.selfReported === true });
   }
   res.json(out);
