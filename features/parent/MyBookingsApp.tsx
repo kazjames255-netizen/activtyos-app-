@@ -831,6 +831,23 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
   const period = detail?.periods.find((p) => p.title === b.timing) ?? (detail?.periods.length === 1 ? detail.periods[0] : undefined);
   const times = period?.start && period?.finish ? `${period.start}–${period.finish}` : null;
 
+  // Today's register mark, if this booking has a child expected today (d10s10:
+  // there was no parent-facing read of the staff attendance mark at all).
+  const cancelledStatus = b.status === "Cancelled" || b.status === "Declined";
+  const [attend, setAttend] = useState<{ status: "in" | "absent" | "not_arrived"; inAt?: string | null; collectedAt?: string | null } | null>(null);
+  useEffect(() => {
+    if (cancelledStatus) { setAttend(null); return; }
+    let live = true;
+    apiGet<{ bookingRef: string; status: "in" | "absent" | "not_arrived"; inAt?: string | null; collectedAt?: string | null }[]>("/api/my/attendance")
+      .then((rows) => { if (live) setAttend(rows.find((r) => r.bookingRef === b.ref) ?? null); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [cancelledStatus, b.ref]);
+  const attendLabel = attend?.status === "in"
+    ? (attend.collectedAt ? `Collected ${new Date(attend.collectedAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : `Signed in${attend.inAt ? ` ${new Date(attend.inAt).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : ""}`)
+    : attend?.status === "absent" ? "Marked absent"
+    : attend ? "Not signed in yet" : null;
+
   // For a voucher booking, the scheme's reference details (Edenred account
   // number etc.) the provider entered — what the parent quotes to pay.
   const isVoucher = !!b.voucherScheme || (b.method ?? "").toLowerCase().includes("voucher");
@@ -927,6 +944,7 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <PCol label={t("parent.datesCol")} w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}{sessCount > 1 ? " · tap to view all" : ""}</span></PCol>
           <PCol label={t("parent.statusCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? t("parent.dateChangeStatus") : b.status}</span></PCol>
           {!cancelled && <PCol label={t("parent.paymentCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={{ background: payTone(b.pay).bg, color: payTone(b.pay).fg }}>{payLabelFor(b)}</span></PCol>}
+          {attendLabel && <PCol label="Today" w="w-[130px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={attend?.status === "in" ? { background: "#dcfce7", color: "#166534" } : attend?.status === "absent" ? { background: "#fee2e2", color: "#991b1b" } : { background: "var(--panel)", color: "var(--ink-3)" }}>{attendLabel}</span></PCol>}
           <div className="ml-auto flex-none text-right">
             <div className="text-[8.5px] font-extrabold uppercase tracking-[0.05em] text-[var(--ink-3)]">{t("parent.amountCol")}</div>
             <div className="text-[15px] font-extrabold text-[var(--ink)]">{money(b.amount)}</div>

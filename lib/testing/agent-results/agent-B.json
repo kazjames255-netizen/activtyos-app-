@@ -2,7 +2,7 @@
   "d7s1": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: throwaway tenant, credit tier £50; parent with a booking there: POST /api/my/memberships/join {tierId:'credit'} → 200 creditAdded:true; wallet balance 50; GET /api/my/wallet lists the provider at £50.",
+    "actual": "Round 3: throwaway tenant, credit tier \u00a350; parent with a booking there: POST /api/my/memberships/join {tierId:'credit'} \u2192 200 creditAdded:true; wallet balance 50; GET /api/my/wallet lists the provider at \u00a350.",
     "notes": "Round-3 re-test, in-process harness (real chain), injected parent auth. Memberships screen not exercised. Phase 1: no Stripe charge behind the credit (Amir).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:27:28Z",
@@ -11,13 +11,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Throwaway tenant A with memberships enabled (credit tier £50). Parent (booked with A) POST /api/my/memberships/join {tierId:'credit'} -> 200 {creditAdded:true}; wallet doc balance = 50; GET /api/my/wallet returns balance 50 with one ledger entry 'Credit club membership credit' +50.",
+        "actual": "Throwaway tenant A with memberships enabled (credit tier \u00a350). Parent (booked with A) POST /api/my/memberships/join {tierId:'credit'} -> 200 {creditAdded:true}; wallet doc balance = 50; GET /api/my/wallet returns balance 50 with one ledger entry 'Credit club membership credit' +50.",
         "notes": "Server side verified through the real memberships + my routers with an injected parent auth; the Memberships screen itself not exercised. Phase 1: credit is delivered on join with no charge behind it (Stripe recurring owed by Amir).",
         "at": "2026-09-12T12:32:59.747Z"
       },
       {
         "verdict": "pass",
-        "actual": "Throwaway tenant, memberships on (credit tier £50). Parent with a booking on it: POST /api/my/memberships/join {tierId:'credit'} → 200 creditAdded:true; wallet balance 50; GET /api/my/wallet lists that provider at £50.",
+        "actual": "Throwaway tenant, memberships on (credit tier \u00a350). Parent with a booking on it: POST /api/my/memberships/join {tierId:'credit'} \u2192 200 creditAdded:true; wallet balance 50; GET /api/my/wallet lists that provider at \u00a350.",
         "notes": "Server via the real routes (in-process harness, injected parent auth). Memberships screen not exercised. Phase 1: no Stripe charge behind the credit (Amir).",
         "at": "2026-09-12T23:30:20Z"
       }
@@ -26,7 +26,7 @@
   "d7s2": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: cancel+join ×3 → 200/200 creditAdded:false each, balance 50,50,50; re-join same tier → 409 'You're already a Credit club member'; credit→percent→credit → 50; cancel then two PARALLEL joins → 200:false/200:false, balance 50; walletEntries for the family = [50] (one entry).",
+    "actual": "Round 3: cancel+join \u00d73 \u2192 200/200 creditAdded:false each, balance 50,50,50; re-join same tier \u2192 409 'You're already a Credit club member'; credit\u2192percent\u2192credit \u2192 50; cancel then two PARALLEL joins \u2192 200:false/200:false, balance 50; walletEntries for the family = [50] (one entry).",
     "notes": "Checked the wallet balance doc + ledger, not a screen message. b14 holds.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:27:31Z",
@@ -35,13 +35,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "After the first join (balance £50): cancel+join x3 -> each cancel 200, each join 200 with creditAdded=false, balance stayed 50 every time. Re-joining the same active tier -> 409 'already a member'. Switch credit->percent->credit -> balance still 50. Cancel then TWO parallel joins -> balance still 50. walletEntries for the tenant: exactly one entry (+50).",
+        "actual": "After the first join (balance \u00a350): cancel+join x3 -> each cancel 200, each join 200 with creditAdded=false, balance stayed 50 every time. Re-joining the same active tier -> 409 'already a member'. Switch credit->percent->credit -> balance still 50. Cancel then TWO parallel joins -> balance still 50. walletEntries for the tenant: exactly one entry (+50).",
         "notes": "Regression of backlog b14 (FIXED 12 Sept) holds: creditPaidUntil survives cancel, transactional check-and-set. Verified on the wallet balance doc, not a screen message.",
         "at": "2026-09-12T12:32:59.829Z"
       },
       {
         "verdict": "pass",
-        "actual": "After the first join (£50): cancel+join ×3 → each 200/200 creditAdded:false, balance 50 each time; re-join same tier → 409 'You're already a Credit club member'; credit→percent→credit → balance 50; cancel then two PARALLEL joins → both 200 creditAdded:false, balance 50; walletEntries for the family = exactly one (+50).",
+        "actual": "After the first join (\u00a350): cancel+join \u00d73 \u2192 each 200/200 creditAdded:false, balance 50 each time; re-join same tier \u2192 409 'You're already a Credit club member'; credit\u2192percent\u2192credit \u2192 balance 50; cancel then two PARALLEL joins \u2192 both 200 creditAdded:false, balance 50; walletEntries for the family = exactly one (+50).",
         "notes": "Checked the wallet balance doc + ledger, not a screen message. b14 fix holds.",
         "at": "2026-09-12T23:30:20Z"
       }
@@ -50,7 +50,7 @@
   "d7s3": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: parent booked only on tenant A: join {tenantId: TENANT_B, tierId:'credit'} → 400 'That membership isn’t available'; percent → 400; unknown tier → 400 identical wording. No wallet, membership or discount-code doc created on B.",
+    "actual": "Round 3: parent booked only on tenant A: join {tenantId: TENANT_B, tierId:'credit'} \u2192 400 'That membership isn\u2019t available'; percent \u2192 400; unknown tier \u2192 400 identical wording. No wallet, membership or discount-code doc created on B.",
     "notes": "Injected parent auth (no real Firebase token). 8 Sept fix holds.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:27:32Z",
@@ -59,13 +59,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Parent with a booking only on tenant A POSTed /api/my/memberships/join {tenantId: TENANT_B, tierId:'credit'} -> 400 'That membership isn’t available'. No wallet doc, no membership doc created on B. Same for the percent tier (400, no discountCode minted on B). Unknown tierId on B gives the identical 400 wording (no enumeration signal).",
-        "notes": "Exercised the real route with injected parent auth (requireAuth/Firebase token verification not in the loop — no real parent token available to this agent). Fix from 8 Sept holds.",
+        "actual": "Parent with a booking only on tenant A POSTed /api/my/memberships/join {tenantId: TENANT_B, tierId:'credit'} -> 400 'That membership isn\u2019t available'. No wallet doc, no membership doc created on B. Same for the percent tier (400, no discountCode minted on B). Unknown tierId on B gives the identical 400 wording (no enumeration signal).",
+        "notes": "Exercised the real route with injected parent auth (requireAuth/Firebase token verification not in the loop \u2014 no real parent token available to this agent). Fix from 8 Sept holds.",
         "at": "2026-09-12T12:32:59.923Z"
       },
       {
         "verdict": "pass",
-        "actual": "Parent booked only on tenant A: POST /api/my/memberships/join {tenantId: TENANT_B, tierId:'credit'} → 400 'That membership isn’t available'; percent tier → 400; unknown tier on B → identical 400 wording. No wallet doc, no membership doc and no discount code created on B.",
+        "actual": "Parent booked only on tenant A: POST /api/my/memberships/join {tenantId: TENANT_B, tierId:'credit'} \u2192 400 'That membership isn\u2019t available'; percent tier \u2192 400; unknown tier on B \u2192 identical 400 wording. No wallet doc, no membership doc and no discount code created on B.",
         "notes": "Injected parent auth (no real Firebase token). 8 Sept fix holds.",
         "at": "2026-09-12T23:30:20Z"
       }
@@ -74,8 +74,8 @@
   "d7s4": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: wallet £50; parent books an £80 place (on a day the child isn't already booked) → 201 walletApplied 50, amount 30, pay Unpaid, total 30; wallet 50 → 0. POST /api/payments/checkout → 503 'Payments aren't configured (no STRIPE_SECRET_KEY on the server)'.",
-    "notes": "Credit deduction verified server-side; the £30 card leg can't be charged here (no Stripe keys, p3) — by code checkout charges booking.amount (£30). Test adapted: the new one-place-per-child-per-day guard (s13-rtE2, my.ts ~1036) now 409s a second booking of the same child on the same day, which my round-2 script did — not a regression. Checkout screen not exercised.",
+    "actual": "Round 3: wallet \u00a350; parent books an \u00a380 place (on a day the child isn't already booked) \u2192 201 walletApplied 50, amount 30, pay Unpaid, total 30; wallet 50 \u2192 0. POST /api/payments/checkout \u2192 503 'Payments aren't configured (no STRIPE_SECRET_KEY on the server)'.",
+    "notes": "Credit deduction verified server-side; the \u00a330 card leg can't be charged here (no Stripe keys, p3) \u2014 by code checkout charges booking.amount (\u00a330). Test adapted: the new one-place-per-child-per-day guard (s13-rtE2, my.ts ~1036) now 409s a second booking of the same child on the same day, which my round-2 script did \u2014 not a regression. Checkout screen not exercised.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:27:35Z",
     "agent": "B",
@@ -83,14 +83,14 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Wallet seeded £50 via lib/wallet creditWallet; parent POST /api/my/bookings for an £80 place -> 201, booking walletApplied=50, amount=30, pay='Unpaid', response total=30; wallet balance 50 -> 0 (spent in the same transaction). POST /api/payments/checkout {refs:[ref]} -> 503 'Payments aren't configured (no STRIPE_SECRET_KEY on the server)'.",
-        "notes": "Credit deduction verified end-to-end on the server. The card leg could NOT be charged (no Stripe keys, prereq p3). By code, payments.ts:299 charges sum(booking.amount) = the £30 net remainder, so the remainder is what would be charged — but no charge was made. Checkout screen not exercised.",
+        "actual": "Wallet seeded \u00a350 via lib/wallet creditWallet; parent POST /api/my/bookings for an \u00a380 place -> 201, booking walletApplied=50, amount=30, pay='Unpaid', response total=30; wallet balance 50 -> 0 (spent in the same transaction). POST /api/payments/checkout {refs:[ref]} -> 503 'Payments aren't configured (no STRIPE_SECRET_KEY on the server)'.",
+        "notes": "Credit deduction verified end-to-end on the server. The card leg could NOT be charged (no Stripe keys, prereq p3). By code, payments.ts:299 charges sum(booking.amount) = the \u00a330 net remainder, so the remainder is what would be charged \u2014 but no charge was made. Checkout screen not exercised.",
         "at": "2026-09-12T12:38:56.082Z"
       },
       {
         "verdict": "pass",
-        "actual": "Wallet £50 (from the membership credit). Parent books an £80 place → 201: walletApplied 50, amount 30, pay 'Unpaid', total 30; wallet 50 → 0. POST /api/payments/checkout for it → 503 'Payments aren't configured (no STRIPE_SECRET_KEY on the server)'.",
-        "notes": "Credit deduction verified server-side; the £30 card leg can't be charged here (no Stripe keys, prereq p3) — by code the checkout charges booking.amount = the £30 remainder. Checkout screen not exercised.",
+        "actual": "Wallet \u00a350 (from the membership credit). Parent books an \u00a380 place \u2192 201: walletApplied 50, amount 30, pay 'Unpaid', total 30; wallet 50 \u2192 0. POST /api/payments/checkout for it \u2192 503 'Payments aren't configured (no STRIPE_SECRET_KEY on the server)'.",
+        "notes": "Credit deduction verified server-side; the \u00a330 card leg can't be charged here (no Stripe keys, prereq p3) \u2014 by code the checkout charges booking.amount = the \u00a330 remainder. Checkout screen not exercised.",
         "at": "2026-09-12T23:30:20Z"
       }
     ]
@@ -98,7 +98,7 @@
   "d7s5": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: fully wallet-paid £40 booking (walletApplied 40, amount 0, pay Funded): parent cancel → cancel.amount 40; operator refund-approve → 200 pay Refunded, refundVia wallet, walletRefunded 40, wallet 0 → 40; second approve → 409, wallet stays 40. Part-wallet booking (£50 wallet + £30 unpaid): cancel quoted £50, approve returned £50 to the wallet (40 → 90).",
+    "actual": "Round 3: fully wallet-paid \u00a340 booking (walletApplied 40, amount 0, pay Funded): parent cancel \u2192 cancel.amount 40; operator refund-approve \u2192 200 pay Refunded, refundVia wallet, walletRefunded 40, wallet 0 \u2192 40; second approve \u2192 409, wallet stays 40. Part-wallet booking (\u00a350 wallet + \u00a330 unpaid): cancel quoted \u00a350, approve returned \u00a350 to the wallet (40 \u2192 90).",
     "notes": "b13 holds. Real my + bookings routers; screens not exercised.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:27:37Z",
@@ -107,13 +107,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Fully wallet-paid £40 booking (walletApplied 40, amount 0, pay 'Funded'): parent cancel >3 weeks out -> cancel.amount £40; operator POST /api/bookings/:ref/actions {type:'refund-approve'} -> 200, wallet balance 0 -> 40, booking pay 'Refunded', cancel.refundVia 'wallet', walletRefunded 40. Second refund-approve -> 409, wallet still 40 (no double credit). Also a part-wallet booking (£50 wallet + £30 unpaid remainder): cancel quoted £50 and approve returned £50 to the wallet (balance 40 -> 90).",
+        "actual": "Fully wallet-paid \u00a340 booking (walletApplied 40, amount 0, pay 'Funded'): parent cancel >3 weeks out -> cancel.amount \u00a340; operator POST /api/bookings/:ref/actions {type:'refund-approve'} -> 200, wallet balance 0 -> 40, booking pay 'Refunded', cancel.refundVia 'wallet', walletRefunded 40. Second refund-approve -> 409, wallet still 40 (no double credit). Also a part-wallet booking (\u00a350 wallet + \u00a330 unpaid remainder): cancel quoted \u00a350 and approve returned \u00a350 to the wallet (balance 40 -> 90).",
         "notes": "Regression of backlog b13 (FIXED 12 Sept) holds. Server verified via real my + bookings routers; screens not exercised.",
         "at": "2026-09-12T12:38:56.179Z"
       },
       {
         "verdict": "pass",
-        "actual": "Fully wallet-paid £40 booking (walletApplied 40, amount 0, pay Funded): parent cancel 24 days out → cancel.amount 40; operator refund-approve → 200, pay Refunded, refundVia 'wallet', walletRefunded 40, wallet 0 → 40; a second approve → 409, wallet stays 40. Part-wallet booking (£50 wallet + £30 unpaid): cancel quoted £50, approve returned £50 to the wallet (40 → 90).",
+        "actual": "Fully wallet-paid \u00a340 booking (walletApplied 40, amount 0, pay Funded): parent cancel 24 days out \u2192 cancel.amount 40; operator refund-approve \u2192 200, pay Refunded, refundVia 'wallet', walletRefunded 40, wallet 0 \u2192 40; a second approve \u2192 409, wallet stays 40. Part-wallet booking (\u00a350 wallet + \u00a330 unpaid): cancel quoted \u00a350, approve returned \u00a350 to the wallet (40 \u2192 90).",
         "notes": "b13 fix holds. Real my + bookings routers; screens not exercised.",
         "at": "2026-09-12T23:30:21Z"
       }
@@ -122,7 +122,7 @@
   "d7s6": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: one-use code: 1st 201 at £95, 2nd (other family) → 400 'This code has reached its usage limit'; per-customer code 2nd use → 400 'You’ve already used code ZZPERCUST' (validate → 'You’ve already used this code'); exclusive + another → 400 'Code ZZEXCL can’t be combined with other codes' (also via split/lower-case fields). Race: 3 parallel checkouts on a usageLimit:1 code → one 201 (£95), two 409 'Code ZZRACE has just been used up — remove it to book without it'; usedCount 1.",
+    "actual": "Round 3: one-use code: 1st 201 at \u00a395, 2nd (other family) \u2192 400 'This code has reached its usage limit'; per-customer code 2nd use \u2192 400 'You\u2019ve already used code ZZPERCUST' (validate \u2192 'You\u2019ve already used this code'); exclusive + another \u2192 400 'Code ZZEXCL can\u2019t be combined with other codes' (also via split/lower-case fields). Race: 3 parallel checkouts on a usageLimit:1 code \u2192 one 201 (\u00a395), two 409 'Code ZZRACE has just been used up \u2014 remove it to book without it'; usedCount 1.",
     "notes": "Wave-3 in-transaction redemption (discountRedemptions.ts redeemCodesInTx) holds. Checkout screen not exercised.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:27:40Z",
@@ -131,20 +131,20 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Sequential reuse: usageLimit:1 code second use -> 400 'This code has reached its usage limit'; perCustomerLimit code second use by the same family -> 400 'You’ve already used code ZZPERCUST'. Exclusive code + another code -> 400 'Code ZZEXCL can’t be combined with other codes' (also refused when split across discountCode + discountCodes fields, lower-case). The checkout preview POST /api/discounts/validate gives the same refusals ('You’ve already used this code' / 'This code has reached its usage limit').",
+        "actual": "Sequential reuse: usageLimit:1 code second use -> 400 'This code has reached its usage limit'; perCustomerLimit code second use by the same family -> 400 'You\u2019ve already used code ZZPERCUST'. Exclusive code + another code -> 400 'Code ZZEXCL can\u2019t be combined with other codes' (also refused when split across discountCode + discountCodes fields, lower-case). The checkout preview POST /api/discounts/validate gives the same refusals ('You\u2019ve already used this code' / 'This code has reached its usage limit').",
         "notes": "ADDITIONAL FINDING (beyond the literal step): the one-use limit is NOT enforced under concurrency. 3 parallel checkouts with a usageLimit:1 code -> all three 201 at the discounted price, usedCount ended at 3 (coderace.test.ts). The limit is checked before the booking transaction and usedCount is incremented fire-and-forget afterwards (my.ts ~1043-1080 + lib/discountRedemptions.ts consumeDiscountCodes). A double-click/two tabs defeats a one-use code. Suggested fix: read+increment usedCount (and the per-customer redemption) inside the booking transaction.",
         "at": "2026-09-12T12:38:56.277Z"
       },
       {
         "verdict": "pass",
-        "actual": "usageLimit:1 code: first checkout 201 (£100 → £95), second family → 400 'This code has reached its usage limit'. perCustomerLimit code: same family's second use → 400 'You’ve already used code ZZPERCUST'. Exclusive + another → 400 'Code ZZEXCL can’t be combined with other codes' (also split across discountCode/discountCodes, lower-case). POST /api/discounts/validate gives the same refusals.",
-        "notes": "STILL OPEN (beyond the literal step, not fixed tonight): the one-use limit is not enforced under concurrency — 3 PARALLEL checkouts with a fresh usageLimit:1 code → all three 201 at £95, usedCount ended at 3. Limit checked before the booking transaction, usedCount incremented afterwards (my.ts checkout + lib/discountRedemptions.ts consumeDiscountCodes). Fix: read+increment usedCount (and the per-customer redemption) inside the booking transaction.",
+        "actual": "usageLimit:1 code: first checkout 201 (\u00a3100 \u2192 \u00a395), second family \u2192 400 'This code has reached its usage limit'. perCustomerLimit code: same family's second use \u2192 400 'You\u2019ve already used code ZZPERCUST'. Exclusive + another \u2192 400 'Code ZZEXCL can\u2019t be combined with other codes' (also split across discountCode/discountCodes, lower-case). POST /api/discounts/validate gives the same refusals.",
+        "notes": "STILL OPEN (beyond the literal step, not fixed tonight): the one-use limit is not enforced under concurrency \u2014 3 PARALLEL checkouts with a fresh usageLimit:1 code \u2192 all three 201 at \u00a395, usedCount ended at 3. Limit checked before the booking transaction, usedCount incremented afterwards (my.ts checkout + lib/discountRedemptions.ts consumeDiscountCodes). Fix: read+increment usedCount (and the per-customer redemption) inside the booking transaction.",
         "at": "2026-09-12T23:30:45Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-test 13 Sept (wave 3, in-process harness, throwaway tenant): the literal step still holds — one-use code second use → 400 'This code has reached its usage limit'. The concurrency hole is closed: 3 PARALLEL checkouts with a fresh usageLimit:1 code → one 201 at £95, the other two 409 'Code ZZRACE has just been used up — remove it to book without it'; usedCount 1, one redemption doc, NO booking written for either loser. Per-customer code, same family, two parallel baskets → one 201 at £95, one 409 'You’ve already used code ZZPC'; usedCount 1, one booking. Cancelling the winner still hands the code back (usedCount 0) and it can be used again.",
-        "notes": "FIXED 13 Sept (wave 3): codes are re-read and spent INSIDE the booking transaction — server/src/lib/discountRedemptions.ts redeemCodesInTx (code doc + a deterministic per-customer redemption doc 'pc_<code>_<hash(email)>' read under the tx; usedCount increment + redemption written with the bookings); server/src/routes/my.ts POST /bookings calls it before the first write and commits with the refs (the old fire-and-forget consumeDiscountCodes after the tx is gone). Loser → 409, nothing booked at the discount.",
+        "actual": "Re-test 13 Sept (wave 3, in-process harness, throwaway tenant): the literal step still holds \u2014 one-use code second use \u2192 400 'This code has reached its usage limit'. The concurrency hole is closed: 3 PARALLEL checkouts with a fresh usageLimit:1 code \u2192 one 201 at \u00a395, the other two 409 'Code ZZRACE has just been used up \u2014 remove it to book without it'; usedCount 1, one redemption doc, NO booking written for either loser. Per-customer code, same family, two parallel baskets \u2192 one 201 at \u00a395, one 409 'You\u2019ve already used code ZZPC'; usedCount 1, one booking. Cancelling the winner still hands the code back (usedCount 0) and it can be used again.",
+        "notes": "FIXED 13 Sept (wave 3): codes are re-read and spent INSIDE the booking transaction \u2014 server/src/lib/discountRedemptions.ts redeemCodesInTx (code doc + a deterministic per-customer redemption doc 'pc_<code>_<hash(email)>' read under the tx; usedCount increment + redemption written with the bookings); server/src/routes/my.ts POST /bookings calls it before the first write and commits with the refs (the old fire-and-forget consumeDiscountCodes after the tx is gone). Loser \u2192 409, nothing booked at the discount.",
         "at": "2026-09-13T00:58:55Z"
       }
     ]
@@ -152,7 +152,7 @@
   "d7s8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: GET /api/my/referral → enabled, own code minted. POST /api/discounts/validate own code → {valid:false, reason:'You can’t use your own referral link'}; checkout with own code → 400 same message (also lower-cased). No referrals doc created.",
+    "actual": "Round 3: GET /api/my/referral \u2192 enabled, own code minted. POST /api/discounts/validate own code \u2192 {valid:false, reason:'You can\u2019t use your own referral link'}; checkout with own code \u2192 400 same message (also lower-cased). No referrals doc created.",
     "notes": "Only same-email self-referral is caught (a second household account with another email is out of scope by design).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:27:44Z",
@@ -161,13 +161,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Parent GET /api/my/referral -> 200 enabled, own code minted. POST /api/discounts/validate with own code -> {valid:false, reason:'You can’t use your own referral link'}. Checkout POST /api/my/bookings with own code -> 400 'You can’t use your own referral link' (also with the token email upper-cased and the code lower-cased). No referrals doc / reward code was created.",
+        "actual": "Parent GET /api/my/referral -> 200 enabled, own code minted. POST /api/discounts/validate with own code -> {valid:false, reason:'You can\u2019t use your own referral link'}. Checkout POST /api/my/bookings with own code -> 400 'You can\u2019t use your own referral link' (also with the token email upper-cased and the code lower-cased). No referrals doc / reward code was created.",
         "notes": "Server verified. Only the same-email self-referral is caught; a second account (different email) of the same household is out of scope of this check by design.",
         "at": "2026-09-12T12:38:56.477Z"
       },
       {
         "verdict": "pass",
-        "actual": "GET /api/my/referral → enabled, own code minted. POST /api/discounts/validate with own code → {valid:false, reason:'You can’t use your own referral link'}; checkout with own code → 400 same message (also lower-cased). No referrals doc / reward code created.",
+        "actual": "GET /api/my/referral \u2192 enabled, own code minted. POST /api/discounts/validate with own code \u2192 {valid:false, reason:'You can\u2019t use your own referral link'}; checkout with own code \u2192 400 same message (also lower-cased). No referrals doc / reward code created.",
         "notes": "Server verified. Only same-email self-referral is caught (a second household account with another email is out of scope by design).",
         "at": "2026-09-12T23:30:45Z"
       }
@@ -176,8 +176,8 @@
   "d7s7": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: before — wallet listed, memberships enabled, referral enabled, 1 trip. Operator Setup PUT /api/library customerArea all OFF → 200. After: /api/my/wallet no longer lists the provider; /api/my/memberships {enabled:false}; direct join → 400 'That membership isn’t available' (wallet unchanged); /api/my/referral {enabled:false}; /api/my/trips []; moments []; meal-days []; messages/threads []. Messaging direct: parent POST /api/messages 201 while ON → 403 'Messaging isn't available from this provider at the moment…' after OFF.",
-    "notes": "Direct API calls are the 'type its URL' attack — refused. Parent /messages URL gated by components/auth/ViewGate.tsx CUSTDASH_AREA (code-read; screen not visually checked).",
+    "actual": "Round 3: before \u2014 wallet listed, memberships enabled, referral enabled, 1 trip. Operator Setup PUT /api/library customerArea all OFF \u2192 200. After: /api/my/wallet no longer lists the provider; /api/my/memberships {enabled:false}; direct join \u2192 400 'That membership isn\u2019t available' (wallet unchanged); /api/my/referral {enabled:false}; /api/my/trips []; moments []; meal-days []; messages/threads []. Messaging direct: parent POST /api/messages 201 while ON \u2192 403 'Messaging isn't available from this provider at the moment\u2026' after OFF.",
+    "notes": "Direct API calls are the 'type its URL' attack \u2014 refused. Parent /messages URL gated by components/auth/ViewGate.tsx CUSTDASH_AREA (code-read; screen not visually checked).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9extra.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9extra.out",
     "at": "2026-09-13T07:27:42Z",
     "agent": "B",
@@ -185,19 +185,19 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Re-tested after fix with settings.customerArea {wallet,memberships,refer,trips,moments,messaging: false} on a throwaway tenant: GET /api/my/wallet no longer lists that provider's balance; GET /api/my/memberships → enabled:false; POST /api/my/memberships/join refused (wallet stays £12, was topped up to £22); GET /api/my/referral → enabled:false. Trips from a provider with Trips off are left out of GET /api/my/trips.",
-        "notes": "Fixed 12 Sept: new server/src/lib/customerArea.ts (simple mode = every optional area off); wallet, memberships (list + join), referral and trips check it. Moments/messaging/meals parent routes not yet gated server-side — sidebar only.",
+        "actual": "Re-tested after fix with settings.customerArea {wallet,memberships,refer,trips,moments,messaging: false} on a throwaway tenant: GET /api/my/wallet no longer lists that provider's balance; GET /api/my/memberships \u2192 enabled:false; POST /api/my/memberships/join refused (wallet stays \u00a312, was topped up to \u00a322); GET /api/my/referral \u2192 enabled:false. Trips from a provider with Trips off are left out of GET /api/my/trips.",
+        "notes": "Fixed 12 Sept: new server/src/lib/customerArea.ts (simple mode = every optional area off); wallet, memberships (list + join), referral and trips check it. Moments/messaging/meals parent routes not yet gated server-side \u2014 sidebar only.",
         "at": "2026-09-12T15:27:19Z"
       },
       {
         "verdict": "pass",
-        "actual": "Throwaway tenant; parent with a booking, £12 wallet, memberships + referral on, a planned trip listing their child. Before: wallet listed, memberships enabled, referral enabled, 1 trip. Operator switched customerArea {wallet, memberships, refer, trips, moments, messaging, meals, newsfeed, timetable: false} through the real Setup save (PUT /api/library → 200, clears the settings cache). After: GET /api/my/wallet no longer lists that provider; GET /api/my/memberships → {enabled:false}; POST /api/my/memberships/join → 400 'That membership isn’t available' (wallet stays £12); GET /api/my/referral → {enabled:false}; GET /api/my/trips → 0. Moments and meal-days are now gated in code too (moments.ts:186, my.ts:289 via customerAreaOn); both returned [] (no data seeded to prove hiding).",
-        "notes": "Run last, after the parent-gating agent's edits (messages.ts touched 04:08). STILL OPEN: parent messaging isn't refused server-side (routes/messages.ts has no customerAreaOn check); and the parent portal (custdash) views have no front-end URL gate (featureKeysForView returns [] for custdash) — typing the URL shows the page, but its data is refused/empty for every gated area. Screens not visually checked.",
+        "actual": "Throwaway tenant; parent with a booking, \u00a312 wallet, memberships + referral on, a planned trip listing their child. Before: wallet listed, memberships enabled, referral enabled, 1 trip. Operator switched customerArea {wallet, memberships, refer, trips, moments, messaging, meals, newsfeed, timetable: false} through the real Setup save (PUT /api/library \u2192 200, clears the settings cache). After: GET /api/my/wallet no longer lists that provider; GET /api/my/memberships \u2192 {enabled:false}; POST /api/my/memberships/join \u2192 400 'That membership isn\u2019t available' (wallet stays \u00a312); GET /api/my/referral \u2192 {enabled:false}; GET /api/my/trips \u2192 0. Moments and meal-days are now gated in code too (moments.ts:186, my.ts:289 via customerAreaOn); both returned [] (no data seeded to prove hiding).",
+        "notes": "Run last, after the parent-gating agent's edits (messages.ts touched 04:08). STILL OPEN: parent messaging isn't refused server-side (routes/messages.ts has no customerAreaOn check); and the parent portal (custdash) views have no front-end URL gate (featureKeysForView returns [] for custdash) \u2014 typing the URL shows the page, but its data is refused/empty for every gated area. Screens not visually checked.",
         "at": "2026-09-13T00:20:23Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-test 13 Sept (fix2staff, throwaway tenant, real chain incl. the real Setup save): ON — family sends/reads 200. Head office PUT /api/library customerArea.messaging=false -> family GET /api/messages/threads -> [] for that provider; GET /threads/<id> -> 403 area_off; POST /api/messages -> 403 \"Messaging isn't available from this provider at the moment — please contact them directly by email or phone.\" The provider's operational messages still go, BY EMAIL ONLY: a staff register late-pickup nudge (POST /api/messages) -> 201 {emailOnly:true, note:'…went by email only…'}, a booking's 'Message family' -> 201 emailOnly, Bookings' 'email these families' (broadcast) -> sent 1, emailOnly 1; 3 'New message' emails handed to the mailer for the family (captured, suppressed); the provider's thread keeps all 5. Franchise-aware: franchise ON while HO OFF -> franchise family sends 201; franchise OFF (or Features → Messages off) -> 403, and the franchise's own note goes email-only. HO back ON -> the family sees the whole thread incl. what was emailed. Earlier areas (wallet/memberships/referral/trips/moments/meals) unchanged from the previous pass.",
+        "actual": "Re-test 13 Sept (fix2staff, throwaway tenant, real chain incl. the real Setup save): ON \u2014 family sends/reads 200. Head office PUT /api/library customerArea.messaging=false -> family GET /api/messages/threads -> [] for that provider; GET /threads/<id> -> 403 area_off; POST /api/messages -> 403 \"Messaging isn't available from this provider at the moment \u2014 please contact them directly by email or phone.\" The provider's operational messages still go, BY EMAIL ONLY: a staff register late-pickup nudge (POST /api/messages) -> 201 {emailOnly:true, note:'\u2026went by email only\u2026'}, a booking's 'Message family' -> 201 emailOnly, Bookings' 'email these families' (broadcast) -> sent 1, emailOnly 1; 3 'New message' emails handed to the mailer for the family (captured, suppressed); the provider's thread keeps all 5. Franchise-aware: franchise ON while HO OFF -> franchise family sends 201; franchise OFF (or Features \u2192 Messages off) -> 403, and the franchise's own note goes email-only. HO back ON -> the family sees the whole thread incl. what was emailed. Earlier areas (wallet/memberships/referral/trips/moments/meals) unchanged from the previous pass.",
         "notes": "FIXED 13 Sept (wave 2): server/src/routes/messages.ts familyMessagingOn/MESSAGING_OFF/EMAIL_ONLY_NOTE ~line 45-64 (customerAreaOn, franchise from the family's bookings); parent GET /threads ~127, GET /threads/:id ~170, POST ~195; email-only delivery POST / ~244-265, from-booking ~338-340, broadcast ~545-589; server/src/lib/emails.ts emailNewMessage emailOnly ~962-987 (no app button, reply-to = the provider's contact address). Parent page gated by URL: components/auth/ViewGate.tsx CUSTDASH_AREA {messages} ~17/34/58 ('Messages isn't available' card, English only), lib/use-customer-area.ts fetchCustomerArea (extracted, same logic) ~33; the nav already hid the link. The operator screens don't show the emailOnly note yet (returned by the API only). Screen not visually checked.",
         "at": "2026-09-13T00:49:28Z"
       }
@@ -206,8 +206,8 @@
   "d8s1": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Unchanged since 12 Sept: TFC is a selectable STUB. features/listings/tfc.ts still has HMRC_CONNECTED=false, linkAccount() builds a reference from the child's name, balance() returns a simulated figure, pay() always {ok:false, failure:'not-connected'}. Server accepts method 'tfc' (POST /api/my/bookings → 201, pay 'Unpaid'); no HMRC/EPP code in server/src.",
-    "notes": "needsBackend (Amir, due 18 Sept); the parent TFC flow is being built separately — recorded, not built. Checkout screen not exercised.",
+    "actual": "Unchanged since 12 Sept: TFC is a selectable STUB. features/listings/tfc.ts still has HMRC_CONNECTED=false, linkAccount() builds a reference from the child's name, balance() returns a simulated figure, pay() always {ok:false, failure:'not-connected'}. Server accepts method 'tfc' (POST /api/my/bookings \u2192 201, pay 'Unpaid'); no HMRC/EPP code in server/src.",
+    "notes": "needsBackend (Amir, due 18 Sept); the parent TFC flow is being built separately \u2014 recorded, not built. Checkout screen not exercised.",
     "evidence": "features/listings/tfc.ts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d8.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d8.run2.out",
     "at": "2026-09-12T23:40:29Z",
     "agent": "B",
@@ -216,7 +216,7 @@
       {
         "verdict": "blocked",
         "actual": "TFC exists only as a selectable STUB. checkout.tsx maps a provider's 'Tax-Free Childcare' payment method to the 'tfc' rail and renders a TFC panel (link per child, balance, split slider). Every HMRC call behind it is simulated in features/listings/tfc.ts: HMRC_CONNECTED=false, linkAccount() fabricates a reference from the child's name, balance() returns a deterministic fake figure flagged simulated, pay() always returns {ok:false, failure:'not-connected'}. The server accepts method 'tfc' (booking created 201) but has no HMRC/EPP code anywhere (grep server/src: no HMRC/EPP/inbound-payment route).",
-        "notes": "needsBackend (Amir, due 18 Sept). Per the plan, work steps 2–10 as a spec review with Amir. Screen not exercised (browser off-limits); established from code + a real POST /api/my/bookings with method 'tfc'.",
+        "notes": "needsBackend (Amir, due 18 Sept). Per the plan, work steps 2\u201310 as a spec review with Amir. Screen not exercised (browser off-limits); established from code + a real POST /api/my/bookings with method 'tfc'.",
         "at": "2026-09-12T12:45:33.068Z"
       }
     ]
@@ -224,8 +224,8 @@
   "d8s2": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "Re-run: default setup (Setup childcare identity, no 'HMRC Tax-Free Childcare' voucherProviders row) → 201 with NO account details in the response, voucherScheme not stored, pay 'Unpaid'. The reference is still whatever the client sends: 'KONE12345TFC' accepted on two bookings for the same child, junk 'Caelan' accepted, no reference accepted. Only with a hand-added HMRC voucherProviders row → details {Provider reference: EY999} and 'Awaiting voucher payment'.",
-    "notes": "needsBackend — nothing server-side mints or validates a per-child+booking reference; details not sourced from settings.childcare. Recorded only (TFC build in progress elsewhere).",
+    "actual": "Re-run: default setup (Setup childcare identity, no 'HMRC Tax-Free Childcare' voucherProviders row) \u2192 201 with NO account details in the response, voucherScheme not stored, pay 'Unpaid'. The reference is still whatever the client sends: 'KONE12345TFC' accepted on two bookings for the same child, junk 'Caelan' accepted, no reference accepted. Only with a hand-added HMRC voucherProviders row \u2192 details {Provider reference: EY999} and 'Awaiting voucher payment'.",
+    "notes": "needsBackend \u2014 nothing server-side mints or validates a per-child+booking reference; details not sourced from settings.childcare. Recorded only (TFC build in progress elsewhere).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d8.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d8.run2.out ; server/src/routes/my.ts:823-864",
     "at": "2026-09-12T23:40:29Z",
     "agent": "B",
@@ -233,7 +233,7 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Real POST /api/my/bookings {method:'tfc', voucherScheme:'HMRC Tax-Free Childcare'}: (a) on a provider with Setup→childcare identity (setting name/Ofsted no./postcode) but no 'HMRC Tax-Free Childcare' row in settings.voucherProviders (the default list doesn't include one) -> 201, response has NO voucher/account details, booking voucherScheme dropped, pay 'Unpaid'; (b) only when the provider hand-adds a voucher row named exactly 'HMRC Tax-Free Childcare' are details returned ({label:'Provider reference', value:'EY999'}) and pay 'Awaiting voucher payment'. The reference is whatever the client sends in items[].paymentRef: the SAME 'KONE12345TFC' accepted on two bookings for the same child, junk 'Caelan' accepted, no reference at all accepted. Nothing server-side mints or validates a reference.",
+        "actual": "Real POST /api/my/bookings {method:'tfc', voucherScheme:'HMRC Tax-Free Childcare'}: (a) on a provider with Setup\u2192childcare identity (setting name/Ofsted no./postcode) but no 'HMRC Tax-Free Childcare' row in settings.voucherProviders (the default list doesn't include one) -> 201, response has NO voucher/account details, booking voucherScheme dropped, pay 'Unpaid'; (b) only when the provider hand-adds a voucher row named exactly 'HMRC Tax-Free Childcare' are details returned ({label:'Provider reference', value:'EY999'}) and pay 'Awaiting voucher payment'. The reference is whatever the client sends in items[].paymentRef: the SAME 'KONE12345TFC' accepted on two bookings for the same child, junk 'Caelan' accepted, no reference at all accepted. Nothing server-side mints or validates a reference.",
         "notes": "needsBackend. Missing: server-generated reference unique per child+booking (or validated HMRC ref shape + uniqueness), and account details sourced from settings.childcare rather than requiring a voucherProviders row. Checkout screen not exercised.",
         "at": "2026-09-12T12:45:33.208Z"
       }
@@ -242,7 +242,7 @@
   "d8s3": {
     "verdict": "fail",
     "method": "api",
-    "actual": "Operator GET /api/bookings/:ref for the default-setup TFC booking → 200, paymentRef 'KONE12345TFC' + method 'tfc' visible, but pay 'Unpaid' (same as an unpaid card booking), voucherScheme null, no voucherReceiveBy — so it joins the card chase list, not the TFC/voucher one. With a hand-added HMRC row it lands 'Awaiting voucher payment'.",
+    "actual": "Operator GET /api/bookings/:ref for the default-setup TFC booking \u2192 200, paymentRef 'KONE12345TFC' + method 'tfc' visible, but pay 'Unpaid' (same as an unpaid card booking), voucherScheme null, no voucherReceiveBy \u2014 so it joins the card chase list, not the TFC/voucher one. With a hand-added HMRC row it lands 'Awaiting voucher payment'.",
     "notes": "Unchanged since 12 Sept (not in tonight's fixes; TFC being built separately, parts depend on Amir). Fix when TFC lands: treat method 'tfc' / scheme 'HMRC Tax-Free Childcare' as a scheme always in my.ts voucher resolution, details from settings.childcare.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d8.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d8.run2.out ; server/src/routes/my.ts:823-864",
     "at": "2026-09-12T23:40:29Z",
@@ -251,8 +251,8 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "Operator GET /api/bookings/:ref for the TFC booking -> 200, it is in the Bookings list and paymentRef 'KONE12345TFC' + method 'tfc' are visible. But pay = 'Unpaid' (same state as an unpaid card booking), voucherScheme not stored, no voucherReceiveBy deadline — because the server only enters 'Awaiting voucher payment' when voucherScheme matches a row in settings.voucherProviders, and 'HMRC Tax-Free Childcare' is not in the default list (lib/settings.ts DEFAULT_VOUCHERS) nor added by Setup→childcare. With a hand-added HMRC row the same booking lands 'Awaiting voucher payment' with the reference.",
-        "notes": "Literal reading: 'Unpaid' is 'awaiting payment', and the reference IS visible — so arguably a pass. Failed because checkout.tsx:2493 states the server keys the awaiting-TFC state off voucherScheme and it silently doesn't for a default setup: the booking joins the card chase list (resend sends a card pay-link) instead of the voucher/TFC one. Suggested fix: in my.ts voucher resolution treat method 'tfc' / scheme 'HMRC Tax-Free Childcare' as a scheme always, with details from settings.childcare.",
+        "actual": "Operator GET /api/bookings/:ref for the TFC booking -> 200, it is in the Bookings list and paymentRef 'KONE12345TFC' + method 'tfc' are visible. But pay = 'Unpaid' (same state as an unpaid card booking), voucherScheme not stored, no voucherReceiveBy deadline \u2014 because the server only enters 'Awaiting voucher payment' when voucherScheme matches a row in settings.voucherProviders, and 'HMRC Tax-Free Childcare' is not in the default list (lib/settings.ts DEFAULT_VOUCHERS) nor added by Setup\u2192childcare. With a hand-added HMRC row the same booking lands 'Awaiting voucher payment' with the reference.",
+        "notes": "Literal reading: 'Unpaid' is 'awaiting payment', and the reference IS visible \u2014 so arguably a pass. Failed because checkout.tsx:2493 states the server keys the awaiting-TFC state off voucherScheme and it silently doesn't for a default setup: the booking joins the card chase list (resend sends a card pay-link) instead of the voucher/TFC one. Suggested fix: in my.ts voucher resolution treat method 'tfc' / scheme 'HMRC Tax-Free Childcare' as a scheme always, with details from settings.childcare.",
         "at": "2026-09-12T12:45:33.334Z"
       }
     ]
@@ -261,7 +261,7 @@
     "verdict": "blocked",
     "method": "code",
     "actual": "Still no inbound payment path: no HMRC EPP feed, bank feed or webhook that can carry a reference; a TFC booking only becomes Paid by hand (record-payment / reconcile / 'paid'). reconcile stamps reconciledBy {auto:false}; nothing sets auto:true.",
-    "notes": "needsBackend — Amir's EPP/settlement feed (due 18 Sept).",
+    "notes": "needsBackend \u2014 Amir's EPP/settlement feed (due 18 Sept).",
     "evidence": "server/src/routes/bookings.ts:849-905",
     "at": "2026-09-12T23:40:29Z",
     "agent": "B",
@@ -270,7 +270,7 @@
       {
         "verdict": "blocked",
         "actual": "There is no inbound payment path at all: no HMRC EPP feed, bank feed, or webhook that can carry a reference to the API. The only ways a TFC booking becomes Paid are operator hand actions: POST /api/bookings/:ref/record-payment, /reconcile, or the 'paid' row action. reconcile stamps reconciledBy {auto:false}; nothing ever sets auto:true (backlog cc5).",
-        "notes": "needsBackend — Amir's HMRC EPP / settlement feed (tfc-build-spec 'Backend work' 4-5). Nothing to send a payment into.",
+        "notes": "needsBackend \u2014 Amir's HMRC EPP / settlement feed (tfc-build-spec 'Backend work' 4-5). Nothing to send a payment into.",
         "at": "2026-09-12T12:45:33.461Z"
       }
     ]
@@ -278,8 +278,8 @@
   "d8s5": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "Still no feed to replay (Amir's HMRC EPP/settlement feed). Manual analogue re-run 13 Sept (wave 3): the SAME £60 with reference KONE12345TFC recorded twice → 200, then 409 possible_duplicate 'This looks like a payment that's already been logged: £60.00 with reference KONE12345TFC was recorded against this booking on 13 Sept by … Only record it again if it's a second, separate payment.' (reference matched ignoring case/spaces). Confirmed as a second payment → 200, amountPaid 120, response overpaid 60, and it shows as overpaid on Reconciliation. Two parallel submits of one payment → one 200, one 409; amountPaid 60. A different payment (£10, other reference) is not flagged.",
-    "notes": "needsBackend for the feed itself (webhook idempotency is Amir's). Manual path FIXED 13 Sept (wave 3): server/src/routes/bookings.ts record-payment — duplicate check (same booking + amount + reference within 24h, read under the transaction, payment record now written in the same transaction) → 409 unless confirmDuplicate; surplus returned as overpaid. ReconciliationApp RecordForm asks 'It's a second payment — record it'. TFC HMRC feed not touched.",
+    "actual": "Still no feed to replay (Amir's HMRC EPP/settlement feed). Manual analogue re-run 13 Sept (wave 3): the SAME \u00a360 with reference KONE12345TFC recorded twice \u2192 200, then 409 possible_duplicate 'This looks like a payment that's already been logged: \u00a360.00 with reference KONE12345TFC was recorded against this booking on 13 Sept by \u2026 Only record it again if it's a second, separate payment.' (reference matched ignoring case/spaces). Confirmed as a second payment \u2192 200, amountPaid 120, response overpaid 60, and it shows as overpaid on Reconciliation. Two parallel submits of one payment \u2192 one 200, one 409; amountPaid 60. A different payment (\u00a310, other reference) is not flagged.",
+    "notes": "needsBackend for the feed itself (webhook idempotency is Amir's). Manual path FIXED 13 Sept (wave 3): server/src/routes/bookings.ts record-payment \u2014 duplicate check (same booking + amount + reference within 24h, read under the transaction, payment record now written in the same transaction) \u2192 409 unless confirmDuplicate; surplus returned as overpaid. ReconciliationApp RecordForm asks 'It's a second payment \u2014 record it'. TFC HMRC feed not touched.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/fix3ops.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/run1.out",
     "at": "2026-09-13T00:59:23Z",
     "agent": "B",
@@ -287,13 +287,13 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "No inbound feed exists to replay (see d8s4). The manual analogue was exercised: the SAME £60 payment with reference 'KONE12345TFC' recorded twice via POST /api/bookings/:ref/record-payment -> both 200; amountPaid 60 -> 120 on a £60 booking, pay 'Paid', no duplicate-reference guard and no credit/overpayment flag. /reconcile called twice -> both 200 and TWO payment records written.",
-        "notes": "needsBackend. When the feed is built it needs idempotency on the payment id/reference; the existing manual record-payment has none either — suggested fix: reject/flag a record-payment whose reference was already recorded on that booking, and cap amountPaid at amount (surplus -> explicit credit).",
+        "actual": "No inbound feed exists to replay (see d8s4). The manual analogue was exercised: the SAME \u00a360 payment with reference 'KONE12345TFC' recorded twice via POST /api/bookings/:ref/record-payment -> both 200; amountPaid 60 -> 120 on a \u00a360 booking, pay 'Paid', no duplicate-reference guard and no credit/overpayment flag. /reconcile called twice -> both 200 and TWO payment records written.",
+        "notes": "needsBackend. When the feed is built it needs idempotency on the payment id/reference; the existing manual record-payment has none either \u2014 suggested fix: reject/flag a record-payment whose reference was already recorded on that booking, and cap amountPaid at amount (surplus -> explicit credit).",
         "at": "2026-09-12T12:45:33.595Z"
       },
       {
         "verdict": "blocked",
-        "actual": "No feed to replay. Manual analogue re-run: the SAME £60 payment (reference KONE12345TFC) recorded twice via record-payment → 200/200, amountPaid 120 on a £60 booking, pay 'Paid', two £60 payment records, no duplicate-reference guard. IMPROVED: /reconcile twice now writes one £60 record (the second finds no balance) — s13-mon1.",
+        "actual": "No feed to replay. Manual analogue re-run: the SAME \u00a360 payment (reference KONE12345TFC) recorded twice via record-payment \u2192 200/200, amountPaid 120 on a \u00a360 booking, pay 'Paid', two \u00a360 payment records, no duplicate-reference guard. IMPROVED: /reconcile twice now writes one \u00a360 record (the second finds no balance) \u2014 s13-mon1.",
         "notes": "needsBackend for the feed; record-payment itself still has no idempotency on reference and no cap at the amount (surplus not turned into explicit credit).",
         "at": "2026-09-12T23:40:30Z"
       }
@@ -303,7 +303,7 @@
     "verdict": "blocked",
     "method": "code",
     "actual": "Still no auto-matching engine and nowhere for an unmatched inbound payment to land (no unmatched/held payments store; GET /api/reconciliation lists bookings + refunds only).",
-    "notes": "needsBackend — Amir. References still unvalidated at booking time (d8s2), so wrong ones will be common.",
+    "notes": "needsBackend \u2014 Amir. References still unvalidated at booking time (d8s2), so wrong ones will be common.",
     "evidence": "server/src/routes/reconciliation.ts",
     "at": "2026-09-12T23:40:30Z",
     "agent": "B",
@@ -311,7 +311,7 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "No auto-matching engine and no store for an unmatched inbound payment exist — a payment with a wrong reference has nowhere to land. Reconciliation (GET /api/reconciliation) lists only bookings; there is no 'unmatched payments' collection or queue.",
+        "actual": "No auto-matching engine and no store for an unmatched inbound payment exist \u2014 a payment with a wrong reference has nowhere to land. Reconciliation (GET /api/reconciliation) lists only bookings; there is no 'unmatched payments' collection or queue.",
         "notes": "needsBackend. Also note the reference is never validated at booking time (d8s2), so wrong references are expected to be common (the spec's 'Caelan' row).",
         "at": "2026-09-12T12:45:33.746Z"
       }
@@ -320,8 +320,8 @@
   "d8s7": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "Still no feed. Manual analogue re-run 13 Sept (wave 3): cancelled a £60 TFC booking (refund none), then record-payment £60 → 200, booking keeps status Cancelled and now carries receivedAfterCancel 60; GET /api/reconciliation LISTS it (was dropped): needsRefund 60, status Cancelled, reconciled false, outstanding 0; summary.needsRefund {count 1, total 60}. The screen shows a red 'Cancelled — £60 needs refund / credit' chip and a banner; no Reconcile/Nudge buttons on it.",
-    "notes": "needsBackend for the feed. Manual path FIXED 13 Sept (wave 3): bookings.ts record-payment stamps receivedAfterCancel on Cancelled/Declined bookings; reconciliation.ts needsRefundOf() (min of that and refundableSoFar, so an approved refund clears it) keeps them on the ledger; ReconciliationApp chip + banner (not visually checked). OPEN for Kaz: there is no one-click 'keep it / credit to wallet' resolution on this row yet — it clears when a refund is approved on the booking.",
+    "actual": "Still no feed. Manual analogue re-run 13 Sept (wave 3): cancelled a \u00a360 TFC booking (refund none), then record-payment \u00a360 \u2192 200, booking keeps status Cancelled and now carries receivedAfterCancel 60; GET /api/reconciliation LISTS it (was dropped): needsRefund 60, status Cancelled, reconciled false, outstanding 0; summary.needsRefund {count 1, total 60}. The screen shows a red 'Cancelled \u2014 \u00a360 needs refund / credit' chip and a banner; no Reconcile/Nudge buttons on it.",
+    "notes": "needsBackend for the feed. Manual path FIXED 13 Sept (wave 3): bookings.ts record-payment stamps receivedAfterCancel on Cancelled/Declined bookings; reconciliation.ts needsRefundOf() (min of that and refundableSoFar, so an approved refund clears it) keeps them on the ledger; ReconciliationApp chip + banner (not visually checked). OPEN for Kaz: there is no one-click 'keep it / credit to wallet' resolution on this row yet \u2014 it clears when a refund is approved on the booking.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/fix3ops.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/run1.out",
     "at": "2026-09-13T00:59:23Z",
     "agent": "B",
@@ -329,14 +329,14 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "No inbound feed (d8s4). Manual analogue: cancelled a £60 TFC booking (operator cancel, refund none), then POST /api/bookings/:ref/record-payment £60 -> 200, booking now status 'Cancelled' + pay 'Paid' + amountPaid 60, no warning. GET /api/reconciliation then does NOT list it (relevant() excludes Cancelled), so money received against a cancelled booking vanishes from the Reconciliation view — the 'silently absorbed' outcome the step forbids.",
+        "actual": "No inbound feed (d8s4). Manual analogue: cancelled a \u00a360 TFC booking (operator cancel, refund none), then POST /api/bookings/:ref/record-payment \u00a360 -> 200, booking now status 'Cancelled' + pay 'Paid' + amountPaid 60, no warning. GET /api/reconciliation then does NOT list it (relevant() excludes Cancelled), so money received against a cancelled booking vanishes from the Reconciliation view \u2014 the 'silently absorbed' outcome the step forbids.",
         "notes": "needsBackend for the feed; the manual path already shows the problem. Suggested fix: record-payment/reconcile on a Cancelled booking should 409 or create a 'to-refund/held for review' item that stays on the Reconciliation ledger.",
         "at": "2026-09-12T12:45:33.885Z"
       },
       {
         "verdict": "blocked",
-        "actual": "No feed. Manual analogue re-run: cancelled a £60 TFC booking (refund none), then record-payment £60 → 200, booking now status 'Cancelled' + pay 'Paid' + amountPaid 60, no warning; GET /api/reconciliation does not list it (relevant() drops Cancelled) — money received on a cancelled booking still vanishes from the ledger.",
-        "notes": "needsBackend for the feed; the manual path still shows the 'silently absorbed' outcome. Suggest: record-payment on a Cancelled booking → 409 or a 'held for review / to refund' item that stays on the ledger.",
+        "actual": "No feed. Manual analogue re-run: cancelled a \u00a360 TFC booking (refund none), then record-payment \u00a360 \u2192 200, booking now status 'Cancelled' + pay 'Paid' + amountPaid 60, no warning; GET /api/reconciliation does not list it (relevant() drops Cancelled) \u2014 money received on a cancelled booking still vanishes from the ledger.",
+        "notes": "needsBackend for the feed; the manual path still shows the 'silently absorbed' outcome. Suggest: record-payment on a Cancelled booking \u2192 409 or a 'held for review / to refund' item that stays on the ledger.",
         "at": "2026-09-12T23:40:30Z"
       }
     ]
@@ -344,8 +344,8 @@
   "d8s8": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "Still no feed. Manual analogue re-run 13 Sept (wave 3): £90 on a £60 booking → 200, pay Paid, response overpaid 30; Reconciliation item overpaid 30 and reconciled false (it stays on the Awaiting list with an 'Overpaid £30 — refund or credit' chip); summary.overpaid counts it. Part £25 on £60 → 'Partially paid', amountPaid 25 (unchanged, correct).",
-    "notes": "needsBackend for the feed. Manual path FIXED 13 Sept (wave 3): reconciliation.ts overpaidOf()/summary.overpaid, bookings.ts record-payment returns overpaid; ReconciliationApp shows the chip/banner and no Reconcile button on money-to-give-back rows (not visually checked). Note: the existing '✓ Reconcile' action would still reset amountPaid to the price if used on an overpaid row — hidden on those rows now.",
+    "actual": "Still no feed. Manual analogue re-run 13 Sept (wave 3): \u00a390 on a \u00a360 booking \u2192 200, pay Paid, response overpaid 30; Reconciliation item overpaid 30 and reconciled false (it stays on the Awaiting list with an 'Overpaid \u00a330 \u2014 refund or credit' chip); summary.overpaid counts it. Part \u00a325 on \u00a360 \u2192 'Partially paid', amountPaid 25 (unchanged, correct).",
+    "notes": "needsBackend for the feed. Manual path FIXED 13 Sept (wave 3): reconciliation.ts overpaidOf()/summary.overpaid, bookings.ts record-payment returns overpaid; ReconciliationApp shows the chip/banner and no Reconcile button on money-to-give-back rows (not visually checked). Note: the existing '\u2713 Reconcile' action would still reset amountPaid to the price if used on an overpaid row \u2014 hidden on those rows now.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/fix3ops.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/run1.out",
     "at": "2026-09-13T00:59:23Z",
     "agent": "B",
@@ -353,13 +353,13 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "No inbound feed (d8s4). Manual analogue: part payment £25 on £60 -> pay 'Partially paid', amountPaid 25, outstanding 35 (correct). Overpayment £90 on £60 -> pay 'Paid', amountPaid 90, outstanding 0, reconciled true — surplus not flagged or credited anywhere. Then /reconcile on the £25 part-paid booking set amountPaid 60 but wrote a payment record for the FULL £60 (not the £35 remainder), and a second /reconcile wrote another £60: payments ledger for that £60 booking = 25+60+60 = £145.",
+        "actual": "No inbound feed (d8s4). Manual analogue: part payment \u00a325 on \u00a360 -> pay 'Partially paid', amountPaid 25, outstanding 35 (correct). Overpayment \u00a390 on \u00a360 -> pay 'Paid', amountPaid 90, outstanding 0, reconciled true \u2014 surplus not flagged or credited anywhere. Then /reconcile on the \u00a325 part-paid booking set amountPaid 60 but wrote a payment record for the FULL \u00a360 (not the \u00a335 remainder), and a second /reconcile wrote another \u00a360: payments ledger for that \u00a360 booking = 25+60+60 = \u00a3145.",
         "notes": "needsBackend for the feed. Manual-path bugs to fix now: reconcile should record only the outstanding remainder and be idempotent; overpayment should be surfaced (credit or refund).",
         "at": "2026-09-12T12:45:33.998Z"
       },
       {
         "verdict": "blocked",
-        "actual": "No feed. Manual analogue re-run: part £25 on £60 → 'Partially paid', outstanding 35 (correct). Over £90 on £60 → 'Paid', amountPaid 90, outstanding 0, reconciled true — surplus not flagged anywhere. IMPROVED since 12 Sept: /reconcile on the £25-part-paid booking now records only the £35 remainder, and a second reconcile adds nothing (records 25 + 35; was 25+60+60) — s13-mon1.",
+        "actual": "No feed. Manual analogue re-run: part \u00a325 on \u00a360 \u2192 'Partially paid', outstanding 35 (correct). Over \u00a390 on \u00a360 \u2192 'Paid', amountPaid 90, outstanding 0, reconciled true \u2014 surplus not flagged anywhere. IMPROVED since 12 Sept: /reconcile on the \u00a325-part-paid booking now records only the \u00a335 remainder, and a second reconcile adds nothing (records 25 + 35; was 25+60+60) \u2014 s13-mon1.",
         "notes": "needsBackend for the feed; overpayment still needs explicit handling (credit or refund).",
         "at": "2026-09-12T23:40:30Z"
       }
@@ -369,7 +369,7 @@
     "verdict": "blocked",
     "method": "code",
     "actual": "Still nothing can receive a payment before its booking exists: no inbound feed, no held/queued payments collection, no later matching job.",
-    "notes": "needsBackend — Amir.",
+    "notes": "needsBackend \u2014 Amir.",
     "evidence": "server/src (no unmatched/held payment store)",
     "at": "2026-09-12T23:40:30Z",
     "agent": "B",
@@ -378,7 +378,7 @@
       {
         "verdict": "blocked",
         "actual": "Nothing can receive a payment before its booking exists: no inbound feed, no held/queued payments collection, no later matching job.",
-        "notes": "needsBackend — Amir.",
+        "notes": "needsBackend \u2014 Amir.",
         "at": "2026-09-12T12:45:34.129Z"
       }
     ]
@@ -387,7 +387,7 @@
     "verdict": "fail",
     "method": "code",
     "actual": "Unchanged: checkout.tsx:2503 builds onBook({tfc:{amount, remainderVia, references}}) but ListingWizard's book() ignores p.tfc (no reference to tfc in ListingWizard.tsx), basketSchema has no TFC-amount/remainder field, and booking.cardPaid is written by no live code. A part-TFC/part-card checkout creates one 'tfc' booking owing the whole amount; the split is lost.",
-    "notes": "Not built (TFC parent flow being built separately; card leg also blocked by missing Stripe keys). Fix when TFC lands: pass p.tfc through book() and store tfcAmount/remainderVia → cardPaid.",
+    "notes": "Not built (TFC parent flow being built separately; card leg also blocked by missing Stripe keys). Fix when TFC lands: pass p.tfc through book() and store tfcAmount/remainderVia \u2192 cardPaid.",
     "evidence": "features/listings/checkout.tsx:2503 ; features/listings/ListingWizard.tsx ; server/src/routes/my.ts basketSchema",
     "at": "2026-09-12T23:40:30Z",
     "agent": "B",
@@ -395,8 +395,8 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "The split is dropped before it reaches the server. checkout.tsx builds onBook({ tfc: { amount, remainderVia, references } }), but every onBook consumer (ListingWizard.tsx:853 and :870 call book(p.basket, …, p.mealSel); TakeBookingModal/BookingOnly types omit tfc) ignores p.tfc. The server basketSchema has no TFC-amount/remainder field, and booking.cardPaid is never written by any live code (only seedTfcDemo.ts). A 'part TFC, rest card' checkout therefore creates one booking with method 'tfc' owing the whole amount; no card leg is created and nothing records the split.",
-        "notes": "Card leg would also be blocked by missing Stripe keys (p3). Checkout comment says 'the server side is Amir's', but the client-side drop in ListingWizard.book() is front-end and will still lose the split after Amir's work. Backlog cc1/cc6 (marketing opt-in wording on the storefront; family linked via /store link) are tagged to this step but are unrelated decisions — not tested here. Suggested fix: pass p.tfc through book() into the POST body and add tfcAmount/remainderVia to basketSchema so the booking stores tfc + cardPaid.",
+        "actual": "The split is dropped before it reaches the server. checkout.tsx builds onBook({ tfc: { amount, remainderVia, references } }), but every onBook consumer (ListingWizard.tsx:853 and :870 call book(p.basket, \u2026, p.mealSel); TakeBookingModal/BookingOnly types omit tfc) ignores p.tfc. The server basketSchema has no TFC-amount/remainder field, and booking.cardPaid is never written by any live code (only seedTfcDemo.ts). A 'part TFC, rest card' checkout therefore creates one booking with method 'tfc' owing the whole amount; no card leg is created and nothing records the split.",
+        "notes": "Card leg would also be blocked by missing Stripe keys (p3). Checkout comment says 'the server side is Amir's', but the client-side drop in ListingWizard.book() is front-end and will still lose the split after Amir's work. Backlog cc1/cc6 (marketing opt-in wording on the storefront; family linked via /store link) are tagged to this step but are unrelated decisions \u2014 not tested here. Suggested fix: pass p.tfc through book() into the POST body and add tfcAmount/remainderVia to basketSchema so the booking stores tfc + cardPaid.",
         "at": "2026-09-12T12:45:34.268Z"
       }
     ]
@@ -404,8 +404,8 @@
   "d8s11": {
     "verdict": "fail",
     "method": "api",
-    "actual": "Re-run 13 Sept (wave 3): (2) FIXED — a £60 booking recorded twice now needs a confirm, and when confirmed it shows overpaid 60 / reconciled false; a £90 overpayment likewise shows overpaid 30. (3) FIXED — money on a cancelled booking stays on the ledger as needsRefund. STILL OPEN: (1) no 'sent' state (nothing records the parent's promise-to-pay); (4) methodCat still files a TFC booking with the HMRC voucher row under Vouchers; (5) the TFC tab still says it 'reconciles automatically' + the developer note for Amir.",
-    "notes": "Items 1/4/5 belong to the TFC build (in progress separately / Amir's feed) — not touched per brief. Changes: server/src/routes/reconciliation.ts (overpaid, needsRefund, summary), features/reconciliation/ReconciliationApp.tsx (chips, banner, duplicate confirm). Screen not visually checked.",
+    "actual": "Re-run 13 Sept (wave 3): (2) FIXED \u2014 a \u00a360 booking recorded twice now needs a confirm, and when confirmed it shows overpaid 60 / reconciled false; a \u00a390 overpayment likewise shows overpaid 30. (3) FIXED \u2014 money on a cancelled booking stays on the ledger as needsRefund. STILL OPEN: (1) no 'sent' state (nothing records the parent's promise-to-pay); (4) methodCat still files a TFC booking with the HMRC voucher row under Vouchers; (5) the TFC tab still says it 'reconciles automatically' + the developer note for Amir.",
+    "notes": "Items 1/4/5 belong to the TFC build (in progress separately / Amir's feed) \u2014 not touched per brief. Changes: server/src/routes/reconciliation.ts (overpaid, needsRefund, summary), features/reconciliation/ReconciliationApp.tsx (chips, banner, duplicate confirm). Screen not visually checked.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/fix3ops.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/run1.out",
     "at": "2026-09-13T00:59:23Z",
     "agent": "B",
@@ -413,13 +413,13 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "GET /api/reconciliation returns per-booking amount/amountPaid/outstanding/reconciled/paymentRef and a summary — but: (1) there is no 'sent' state (the parent's promise-to-pay is not recorded anywhere; 'confirmed' in the UI roll-up is just amountPaid>0); (2) a £60 booking recorded twice shows amountPaid 120, outstanding 0, reconciled true — overpayment invisible; (3) money recorded on a cancelled booking is excluded from the ledger entirely; (4) the client buckets any booking with a voucherScheme as 'Childcare vouchers' BEFORE checking TFC (methodCat), so the one configuration where TFC gets the correct 'Awaiting voucher payment' state (HMRC row in voucherProviders) files TFC under Vouchers, not the TFC tab; (5) the TFC tab banner tells operators TFC 'reconciles automatically… nothing to reconcile by hand' and shows a developer note ('Amir — this is where Tax-Free Childcare is wired') — nothing auto-reconciles (backlog cc2).",
+        "actual": "GET /api/reconciliation returns per-booking amount/amountPaid/outstanding/reconciled/paymentRef and a summary \u2014 but: (1) there is no 'sent' state (the parent's promise-to-pay is not recorded anywhere; 'confirmed' in the UI roll-up is just amountPaid>0); (2) a \u00a360 booking recorded twice shows amountPaid 120, outstanding 0, reconciled true \u2014 overpayment invisible; (3) money recorded on a cancelled booking is excluded from the ledger entirely; (4) the client buckets any booking with a voucherScheme as 'Childcare vouchers' BEFORE checking TFC (methodCat), so the one configuration where TFC gets the correct 'Awaiting voucher payment' state (HMRC row in voucherProviders) files TFC under Vouchers, not the TFC tab; (5) the TFC tab banner tells operators TFC 'reconciles automatically\u2026 nothing to reconcile by hand' and shows a developer note ('Amir \u2014 this is where Tax-Free Childcare is wired') \u2014 nothing auto-reconciles (backlog cc2).",
         "notes": "Server verified via the real reconciliation router; the TFC tab bucketing and banner established from ReconciliationApp.tsx (screen not exercised). Suggested fixes: check /tfc|tax.?free/ before voucherScheme in methodCat; record a parent 'sent' timestamp; flag amountPaid>amount; keep cancelled-with-money rows; remove the dev note and the 'automatically' claim until EPP lands.",
         "at": "2026-09-12T12:45:34.373Z"
       },
       {
         "verdict": "fail",
-        "actual": "GET /api/reconciliation → per-booking amount/amountPaid/outstanding/reconciled + summary. Still: (1) no 'sent' state (nothing records the parent's promise-to-pay); (2) a £60 booking recorded twice shows amountPaid 120, outstanding 0, reconciled true, and a £90 overpayment likewise — overpayment invisible; (3) money on a cancelled booking is left off the ledger; (4) ReconciliationApp methodCat still checks voucherScheme before TFC, so a TFC booking set up with the HMRC row is filed under Vouchers; (5) the TFC tab still says it 'reconciles automatically … nothing to reconcile by hand' plus the developer note 'Amir — this is where Tax-Free Childcare is wired'.",
+        "actual": "GET /api/reconciliation \u2192 per-booking amount/amountPaid/outstanding/reconciled + summary. Still: (1) no 'sent' state (nothing records the parent's promise-to-pay); (2) a \u00a360 booking recorded twice shows amountPaid 120, outstanding 0, reconciled true, and a \u00a390 overpayment likewise \u2014 overpayment invisible; (3) money on a cancelled booking is left off the ledger; (4) ReconciliationApp methodCat still checks voucherScheme before TFC, so a TFC booking set up with the HMRC row is filed under Vouchers; (5) the TFC tab still says it 'reconciles automatically \u2026 nothing to reconcile by hand' plus the developer note 'Amir \u2014 this is where Tax-Free Childcare is wired'.",
         "notes": "Unchanged since 12 Sept (not in tonight's fix list; TFC being built separately). Screen text from ReconciliationApp.tsx:39-47,329-338 (not visually checked).",
         "at": "2026-09-12T23:40:31Z"
       }
@@ -428,7 +428,7 @@
   "d9s1": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: two £100 bookings marked Paid ('paid' → 200/200). Parent cancel: session 22 days out → cancel.amount 100, refund 'full', '…Cancelled 21 days before it starts — your policy gives a full refund.'; 3 days out (09:00) → cancel.amount 50, refund 'partial', '…Cancelled 2 days before it starts — your policy gives 50%.'",
+    "actual": "Round 3: two \u00a3100 bookings marked Paid ('paid' \u2192 200/200). Parent cancel: session 22 days out \u2192 cancel.amount 100, refund 'full', '\u2026Cancelled 21 days before it starts \u2014 your policy gives a full refund.'; 3 days out (09:00) \u2192 cancel.amount 50, refund 'partial', '\u2026Cancelled 2 days before it starts \u2014 your policy gives 50%.'",
     "notes": "Policy maths server-side (lib/cancellation.ts) via the real route. Parent screen not exercised.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:28:42Z",
@@ -437,13 +437,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Two £100 bookings marked Paid by the operator ('paid' action), default policy (100% ≥1 week, 50% ≥48h). Parent POST /api/my/bookings/:ref/cancel: session 5 Oct (22 days out) -> cancel.amount 100, refund 'full', msg '…Cancelled 22 days before it starts — your policy gives a full refund.'; session 15 Sept (~55h out) -> cancel.amount 50, refund 'partial', msg '…Cancelled 2 days before it starts — your policy gives 50%.'",
+        "actual": "Two \u00a3100 bookings marked Paid by the operator ('paid' action), default policy (100% \u22651 week, 50% \u226548h). Parent POST /api/my/bookings/:ref/cancel: session 5 Oct (22 days out) -> cancel.amount 100, refund 'full', msg '\u2026Cancelled 22 days before it starts \u2014 your policy gives a full refund.'; session 15 Sept (~55h out) -> cancel.amount 50, refund 'partial', msg '\u2026Cancelled 2 days before it starts \u2014 your policy gives 50%.'",
         "notes": "Server-side policy maths verified through the real route (policy computed server-side, lib/cancellation.ts). Parent screen not exercised.",
         "at": "2026-09-12T12:56:40.281Z"
       },
       {
         "verdict": "pass",
-        "actual": "Two £100 bookings marked Paid by the operator ('paid' → 200 Paid), default policy. Parent cancel: 5 Oct session (22 days) → cancel.amount 100, refund 'full', '…Cancelled 22 days before it starts — your policy gives a full refund.'; 16 Sept 09:00 (3 days) → cancel.amount 50, refund 'partial', '…your policy gives 50%.'",
+        "actual": "Two \u00a3100 bookings marked Paid by the operator ('paid' \u2192 200 Paid), default policy. Parent cancel: 5 Oct session (22 days) \u2192 cancel.amount 100, refund 'full', '\u2026Cancelled 22 days before it starts \u2014 your policy gives a full refund.'; 16 Sept 09:00 (3 days) \u2192 cancel.amount 50, refund 'partial', '\u2026your policy gives 50%.'",
         "notes": "Policy maths server-side (lib/cancellation.ts) via the real route. Parent screen not exercised.",
         "at": "2026-09-12T23:30:46Z"
       }
@@ -452,7 +452,7 @@
   "d9s2": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: £200 booking, operator record-payment £150 → 200 'Partially paid', amountPaid 150; parent cancel 22 days out → cancel.amount 150, refund 'full'. Operator cancel {refund:'full'} on another £150-of-£200 booking → cancel.amount 150.",
+    "actual": "Round 3: \u00a3200 booking, operator record-payment \u00a3150 \u2192 200 'Partially paid', amountPaid 150; parent cancel 22 days out \u2192 cancel.amount 150, refund 'full'. Operator cancel {refund:'full'} on another \u00a3150-of-\u00a3200 booking \u2192 cancel.amount 150.",
     "notes": "b10 (paidSoFar) holds on both cancel paths.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:28:45Z",
@@ -461,13 +461,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "£200 booking; operator POST /api/bookings/:ref/record-payment {amount:150} -> pay 'Partially paid', amountPaid 150. Parent cancel 22 days out -> cancel.amount 150, refund 'full' (100% of the £150 actually paid, not £0 and not £200). Operator-side cancel {type:'cancel', refund:'full'} on another £150-of-£200 booking -> cancel.amount 150 too.",
+        "actual": "\u00a3200 booking; operator POST /api/bookings/:ref/record-payment {amount:150} -> pay 'Partially paid', amountPaid 150. Parent cancel 22 days out -> cancel.amount 150, refund 'full' (100% of the \u00a3150 actually paid, not \u00a30 and not \u00a3200). Operator-side cancel {type:'cancel', refund:'full'} on another \u00a3150-of-\u00a3200 booking -> cancel.amount 150 too.",
         "notes": "Regression of backlog b10 (FIXED 12 Sept, paidSoFar) holds on both cancel paths.",
         "at": "2026-09-12T12:56:40.536Z"
       },
       {
         "verdict": "pass",
-        "actual": "£200 booking: operator record-payment £150 → 'Partially paid', amountPaid 150. Parent cancel 22 days out → cancel.amount 150, refund 'full'. Operator cancel {refund:'full'} on another £150-of-£200 booking → cancel.amount 150.",
+        "actual": "\u00a3200 booking: operator record-payment \u00a3150 \u2192 'Partially paid', amountPaid 150. Parent cancel 22 days out \u2192 cancel.amount 150, refund 'full'. Operator cancel {refund:'full'} on another \u00a3150-of-\u00a3200 booking \u2192 cancel.amount 150.",
         "notes": "b10 (paidSoFar) holds on both cancel paths.",
         "at": "2026-09-12T23:30:46Z"
       }
@@ -476,8 +476,8 @@
   "d9s3": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "Round 3 failure half: Paid £100 card booking (paymentIntentId set) cancelled, operator refund-approve → 502 'The refund didn't go through: Card payments aren't connected. Nothing was marked refunded — try again, or refund it in Stripe directly.'; afterwards pay 'Paid', cancel.refund 'full' (awaiting approval), refundError stored, refundAttempts 1; second approve → 502, attempts 2, still not Refunded.",
-    "notes": "Still BLOCKED for the success half and a real Stripe refusal: no STRIPE_SECRET_KEY (p3), and tests must not call Stripe. The app's own not-configured refusal runs the same revert path (settleApprovedRefund) — b12 behaviour holds for it.",
+    "actual": "Round 3 failure half: Paid \u00a3100 card booking (paymentIntentId set) cancelled, operator refund-approve \u2192 502 'The refund didn't go through: Card payments aren't connected. Nothing was marked refunded \u2014 try again, or refund it in Stripe directly.'; afterwards pay 'Paid', cancel.refund 'full' (awaiting approval), refundError stored, refundAttempts 1; second approve \u2192 502, attempts 2, still not Refunded.",
+    "notes": "Still BLOCKED for the success half and a real Stripe refusal: no STRIPE_SECRET_KEY (p3), and tests must not call Stripe. The app's own not-configured refusal runs the same revert path (settleApprovedRefund) \u2014 b12 behaviour holds for it.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:28:52Z",
     "agent": "B",
@@ -485,14 +485,14 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Failure half verified: a Paid £100 card booking (paymentIntentId set) cancelled by the parent, then operator refund-approve -> 502 'The refund didn't go through: Card payments aren't connected. Nothing was marked refunded — try again, or refund it in Stripe directly.' Booking afterwards: pay still 'Paid', cancel.refund back to its pre-approval value ('full' = still awaiting approval), refundError stored, refundAttempts 1. A second approve -> 502 again (not a false 409 'already approved'), attempts 2, still not Refunded.",
+        "actual": "Failure half verified: a Paid \u00a3100 card booking (paymentIntentId set) cancelled by the parent, then operator refund-approve -> 502 'The refund didn't go through: Card payments aren't connected. Nothing was marked refunded \u2014 try again, or refund it in Stripe directly.' Booking afterwards: pay still 'Paid', cancel.refund back to its pre-approval value ('full' = still awaiting approval), refundError stored, refundAttempts 1. A second approve -> 502 again (not a false 409 'already approved'), attempts 2, still not Refunded.",
         "notes": "BLOCKED for the success half and the real Stripe refusal: no STRIPE_SECRET_KEY (prereq p3), so a refund can't reach Stripe and 'already-refunded' can't be provoked. The failure here is the app's own 'Stripe not configured' refusal, which runs the same revert path (bookings.ts settleApprovedRefund -> refundStripePayment). Regression b12 behaviour (wait, revert, surface reason) confirmed for that path.",
         "at": "2026-09-12T12:56:40.786Z"
       },
       {
         "verdict": "blocked",
-        "actual": "Failure half: Paid £100 card booking (paymentIntentId set) cancelled by parent, operator refund-approve → 502 'The refund didn't go through: Card payments aren't connected. Nothing was marked refunded — try again, or refund it in Stripe directly.' Afterwards pay still 'Paid', cancel.refund back to 'full' (awaiting approval), refundError stored, refundAttempts 1; second approve → 502 again, attempts 2, still not Refunded.",
-        "notes": "BLOCKED for the success half and a real Stripe refusal (no STRIPE_SECRET_KEY, prereq p3 — can't reach Stripe or provoke 'already refunded'). The app's own not-configured refusal runs the same revert path (settleApprovedRefund); b12 behaviour confirmed for it.",
+        "actual": "Failure half: Paid \u00a3100 card booking (paymentIntentId set) cancelled by parent, operator refund-approve \u2192 502 'The refund didn't go through: Card payments aren't connected. Nothing was marked refunded \u2014 try again, or refund it in Stripe directly.' Afterwards pay still 'Paid', cancel.refund back to 'full' (awaiting approval), refundError stored, refundAttempts 1; second approve \u2192 502 again, attempts 2, still not Refunded.",
+        "notes": "BLOCKED for the success half and a real Stripe refusal (no STRIPE_SECRET_KEY, prereq p3 \u2014 can't reach Stripe or provoke 'already refunded'). The app's own not-configured refusal runs the same revert path (settleApprovedRefund); b12 behaviour confirmed for it.",
         "at": "2026-09-12T23:30:46Z"
       }
     ]
@@ -500,7 +500,7 @@
   "d9s4": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: Edenred voucher booking (Awaiting voucher payment → reconciled Paid £100), parent cancel, approve → 200 refundVia 'offline', pay Refunded, payments record {100, to-reimburse, Edenred}; parent bell '£100.00 refund approved … — returned through Edenred.' TFC booking → refundVia 'offline', to-reimburse £100 (method tfc), parent bell '… your provider will return it the way you paid.'; operator's cancel bell '£100.00 refund requested via Tax-Free Childcare (not a bank card) — approve or decline.' Nothing says 'to your card'.",
+    "actual": "Round 3: Edenred voucher booking (Awaiting voucher payment \u2192 reconciled Paid \u00a3100), parent cancel, approve \u2192 200 refundVia 'offline', pay Refunded, payments record {100, to-reimburse, Edenred}; parent bell '\u00a3100.00 refund approved \u2026 \u2014 returned through Edenred.' TFC booking \u2192 refundVia 'offline', to-reimburse \u00a3100 (method tfc), parent bell '\u2026 your provider will return it the way you paid.'; operator's cancel bell '\u00a3100.00 refund requested via Tax-Free Childcare (not a bank card) \u2014 approve or decline.' Nothing says 'to your card'.",
     "notes": "s13-rtB1 fix holds. Screens not exercised.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:28:57Z",
@@ -509,14 +509,14 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Voucher (Edenred) booking reconciled Paid £100, parent cancelled, operator refund-approve -> 200, cancel.refundVia 'offline', pay 'Refunded', payments record {type:'refund', amount:100, status:'to-reimburse', method:'Edenred'}; parent bell: '£100.00 refund approved … — returned through Edenred.' TFC booking (method 'tfc') same flow -> refundVia 'offline', to-reimburse record {amount:100, method:'tfc'}, parent bell '… your provider will return it the way you paid.' Neither says 'to your card'. Refund-approved email takes the same offline branch (lib/emails.ts:452-456; mail suppressed, not read).",
-        "notes": "ADDITIONAL FINDING: for the TFC booking the OPERATOR's cancellation bell said '£100.00 refund requested back to their CARD' — my.ts:2200 treats only voucherScheme or /voucher/ in method as non-card, so method 'tfc' (no voucherScheme, the default TFC setup — see d8s3) reads as card. Suggested fix: include /tfc|tax.?free|childcare|haf/ in that isVoucher test (as my.ts:1500 already does).",
+        "actual": "Voucher (Edenred) booking reconciled Paid \u00a3100, parent cancelled, operator refund-approve -> 200, cancel.refundVia 'offline', pay 'Refunded', payments record {type:'refund', amount:100, status:'to-reimburse', method:'Edenred'}; parent bell: '\u00a3100.00 refund approved \u2026 \u2014 returned through Edenred.' TFC booking (method 'tfc') same flow -> refundVia 'offline', to-reimburse record {amount:100, method:'tfc'}, parent bell '\u2026 your provider will return it the way you paid.' Neither says 'to your card'. Refund-approved email takes the same offline branch (lib/emails.ts:452-456; mail suppressed, not read).",
+        "notes": "ADDITIONAL FINDING: for the TFC booking the OPERATOR's cancellation bell said '\u00a3100.00 refund requested back to their CARD' \u2014 my.ts:2200 treats only voucherScheme or /voucher/ in method as non-card, so method 'tfc' (no voucherScheme, the default TFC setup \u2014 see d8s3) reads as card. Suggested fix: include /tfc|tax.?free|childcare|haf/ in that isVoucher test (as my.ts:1500 already does).",
         "at": "2026-09-12T12:56:40.961Z"
       },
       {
         "verdict": "pass",
-        "actual": "Edenred voucher booking (Awaiting voucher payment → reconciled Paid £100), parent cancel, operator refund-approve → 200, refundVia 'offline', pay Refunded, payments record {refund £100, to-reimburse, Edenred}; parent bell '£100.00 refund approved … — returned through Edenred.' TFC booking (method 'tfc') same flow → refundVia 'offline', to-reimburse £100 (method tfc), parent bell '… your provider will return it the way you paid.' Neither says 'to your card'. The OPERATOR's cancellation bell for the TFC booking said '£60.00 refund requested back to their CARD' — fixed; after the fix: tfc → 'refund requested via Tax-Free Childcare (not a bank card)', vouchers → 'via their voucher scheme (not a bank card)'.",
-        "notes": "FIXED 13 Sept (re-test): server/src/routes/my.ts ~2246 isVoucher now uses the childcare rule (voucher|tax-?free|tfc|childcare|haf) like isChildcare at :1529 — backlog s13-rtB1. Refund-approved email takes the same offline branch (lib/emails.ts, mail suppressed). Screens not exercised.",
+        "actual": "Edenred voucher booking (Awaiting voucher payment \u2192 reconciled Paid \u00a3100), parent cancel, operator refund-approve \u2192 200, refundVia 'offline', pay Refunded, payments record {refund \u00a3100, to-reimburse, Edenred}; parent bell '\u00a3100.00 refund approved \u2026 \u2014 returned through Edenred.' TFC booking (method 'tfc') same flow \u2192 refundVia 'offline', to-reimburse \u00a3100 (method tfc), parent bell '\u2026 your provider will return it the way you paid.' Neither says 'to your card'. The OPERATOR's cancellation bell for the TFC booking said '\u00a360.00 refund requested back to their CARD' \u2014 fixed; after the fix: tfc \u2192 'refund requested via Tax-Free Childcare (not a bank card)', vouchers \u2192 'via their voucher scheme (not a bank card)'.",
+        "notes": "FIXED 13 Sept (re-test): server/src/routes/my.ts ~2246 isVoucher now uses the childcare rule (voucher|tax-?free|tfc|childcare|haf) like isChildcare at :1529 \u2014 backlog s13-rtB1. Refund-approved email takes the same offline branch (lib/emails.ts, mail suppressed). Screens not exercised.",
         "at": "2026-09-12T23:50:09Z"
       }
     ]
@@ -524,7 +524,7 @@
   "d9s5": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "Round 3: invoice for a £200 Unpaid booking → 201; public GET → 200 (amount 200, reference = the booking, cardEnabled false); pay-link card checkout → 503 'Card payments aren't configured'. Manual paid → booking Paid, amountPaid 200, settledByInvoice; re-save paid and paid→sent→paid → amountPaid stays 200. NEW this round: invoice raised ALREADY 'paid' → booking Paid £200 at once, re-save leaves 200; the paid link then shows {status paid, closed, no pay methods}; a January invoice's link → 410 'This payment link has expired.'",
+    "actual": "Round 3: invoice for a \u00a3200 Unpaid booking \u2192 201; public GET \u2192 200 (amount 200, reference = the booking, cardEnabled false); pay-link card checkout \u2192 503 'Card payments aren't configured'. Manual paid \u2192 booking Paid, amountPaid 200, settledByInvoice; re-save paid and paid\u2192sent\u2192paid \u2192 amountPaid stays 200. NEW this round: invoice raised ALREADY 'paid' \u2192 booking Paid \u00a3200 at once, re-save leaves 200; the paid link then shows {status paid, closed, no pay methods}; a January invoice's link \u2192 410 'This payment link has expired.'",
     "notes": "Still BLOCKED for 'pay it from the link': the link's confirm needs Stripe (p3). It calls the same settleInvoiceBooking() verified here (invoices.ts:120), so the settle-once half of b11 holds, plus paid-on-create and link expiry.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9extra.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9extra.out",
     "at": "2026-09-13T07:29:01Z",
@@ -533,13 +533,13 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Invoice for booking ZZINV1 (£200, Unpaid) created (201, payToken). Public GET /api/public/invoice/:token -> 200 (amount 200, reference ZZINV1, cardEnabled false). Pay-link card checkout POST /api/public/invoice/:token/checkout -> 503 'Card payments aren't configured'. The shared settle function was exercised via the manual route instead: PUT status 'paid' -> booking pay 'Paid', amountPaid 200, settledByInvoice = invoice id. Re-saving 'paid', and paid -> sent -> paid, left amountPaid at 200 (bookingSettledAt guard — counted once). A £50 top-up invoice on a £150-of-£200 booking -> booking Paid, amountPaid 200.",
-        "notes": "BLOCKED for 'pay it from the link': needs Stripe keys (p3) — the link confirm (/confirm/:paymentId) calls stripe.paymentIntents.retrieve. It calls the same settleInvoiceBooking() verified here, so the booking-settle + idempotency half of regression b11 holds server-side. Money-in double counting not checked here (income route not in this step).",
+        "actual": "Invoice for booking ZZINV1 (\u00a3200, Unpaid) created (201, payToken). Public GET /api/public/invoice/:token -> 200 (amount 200, reference ZZINV1, cardEnabled false). Pay-link card checkout POST /api/public/invoice/:token/checkout -> 503 'Card payments aren't configured'. The shared settle function was exercised via the manual route instead: PUT status 'paid' -> booking pay 'Paid', amountPaid 200, settledByInvoice = invoice id. Re-saving 'paid', and paid -> sent -> paid, left amountPaid at 200 (bookingSettledAt guard \u2014 counted once). A \u00a350 top-up invoice on a \u00a3150-of-\u00a3200 booking -> booking Paid, amountPaid 200.",
+        "notes": "BLOCKED for 'pay it from the link': needs Stripe keys (p3) \u2014 the link confirm (/confirm/:paymentId) calls stripe.paymentIntents.retrieve. It calls the same settleInvoiceBooking() verified here, so the booking-settle + idempotency half of regression b11 holds server-side. Money-in double counting not checked here (income route not in this step).",
         "at": "2026-09-12T12:57:57.912Z"
       },
       {
         "verdict": "blocked",
-        "actual": "Invoice for a £200 Unpaid booking → 201 (payToken). Public GET /api/public/invoice/:token → 200 (amount 200, reference = the booking, cardEnabled false). Pay-link card checkout → 503 'Card payments aren't configured'. Shared settle path via manual PUT status 'paid' → booking pay 'Paid', amountPaid 200, settledByInvoice = the invoice; re-saving 'paid' and paid→sent→paid left amountPaid at 200 (counted once).",
+        "actual": "Invoice for a \u00a3200 Unpaid booking \u2192 201 (payToken). Public GET /api/public/invoice/:token \u2192 200 (amount 200, reference = the booking, cardEnabled false). Pay-link card checkout \u2192 503 'Card payments aren't configured'. Shared settle path via manual PUT status 'paid' \u2192 booking pay 'Paid', amountPaid 200, settledByInvoice = the invoice; re-saving 'paid' and paid\u2192sent\u2192paid left amountPaid at 200 (counted once).",
         "notes": "BLOCKED for 'pay it from the link': the link's confirm needs Stripe (p3). It calls the same settleInvoiceBooking() verified here, so the booking-settle + idempotency half of b11 holds.",
         "at": "2026-09-12T23:31:03Z"
       }
@@ -548,7 +548,7 @@
   "d9s6": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: two bookings on a 20 Sept session, each with a placed mealOrder, both children on a planned trip (consent given) and signed IN. Operator cancel + parent cancel → 200/200. mealOrders both 'cancelled' ('Booking … cancelled'); /api/meal-orders/report rows for that day 2 → 0; two bells '<child> — booking cancelled for the trip day'; /api/registers still shows both 'in' + cancelledOnSite; Collect after the cancel → 200 collectedBy 'Gran'.",
+    "actual": "Round 3: two bookings on a 20 Sept session, each with a placed mealOrder, both children on a planned trip (consent given) and signed IN. Operator cancel + parent cancel \u2192 200/200. mealOrders both 'cancelled' ('Booking \u2026 cancelled'); /api/meal-orders/report rows for that day 2 \u2192 0; two bells '<child> \u2014 booking cancelled for the trip day'; /api/registers still shows both 'in' + cancelledOnSite; Collect after the cancel \u2192 200 collectedBy 'Gran'.",
     "notes": "Regression holds on both cancel paths (lib/cancelCleanup.ts). Kitchen report screen / bell UI not exercised.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:29:03Z",
@@ -557,13 +557,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Two bookings on a 20 Sept session, each with a placed mealOrder for that day, a planned trip that day listing the child (consent given), and a register 'in' mark. Cancelled one via operator POST /api/bookings/ZZC1/actions {type:'cancel'} and one via parent POST /api/my/bookings/ZZC2/cancel (both 200). Afterwards: both mealOrders status 'cancelled' (cancelledReason 'Booking ZZCx cancelled'); GET /api/meal-orders/report rows for that day went 2 -> 0; two tenant bells 'Ana Op — booking cancelled for the trip day' / 'Ben Par — …' (trip itself left for the provider to update); register doc still holds both entries and GET /api/registers shows both children status 'in' flagged cancelledOnSite; a Collect after the cancel -> 200 (collectedBy 'Gran').",
-        "notes": "Regression holds on both cancel paths (lib/cancelCleanup.ts). Screens (kitchen report UI, bell) not exercised — verified at API/Firestore level.",
+        "actual": "Two bookings on a 20 Sept session, each with a placed mealOrder for that day, a planned trip that day listing the child (consent given), and a register 'in' mark. Cancelled one via operator POST /api/bookings/ZZC1/actions {type:'cancel'} and one via parent POST /api/my/bookings/ZZC2/cancel (both 200). Afterwards: both mealOrders status 'cancelled' (cancelledReason 'Booking ZZCx cancelled'); GET /api/meal-orders/report rows for that day went 2 -> 0; two tenant bells 'Ana Op \u2014 booking cancelled for the trip day' / 'Ben Par \u2014 \u2026' (trip itself left for the provider to update); register doc still holds both entries and GET /api/registers shows both children status 'in' flagged cancelledOnSite; a Collect after the cancel -> 200 (collectedBy 'Gran').",
+        "notes": "Regression holds on both cancel paths (lib/cancelCleanup.ts). Screens (kitchen report UI, bell) not exercised \u2014 verified at API/Firestore level.",
         "at": "2026-09-12T12:59:49.494Z"
       },
       {
         "verdict": "pass",
-        "actual": "Two bookings on a 20 Sept session, each with a placed mealOrder that day, both children on a planned trip that day (consent given) and signed IN on the register. Operator cancel (POST /api/bookings/:ref/actions cancel) and parent cancel (POST /api/my/bookings/:ref/cancel) → 200/200. Afterwards: both mealOrders 'cancelled' ('Booking … cancelled'); GET /api/meal-orders/report rows for that day 2 → 0; two tenant bells '<child> — booking cancelled for the trip day'; GET /api/registers still shows both children 'in' + cancelledOnSite; Collect after the cancel → 200 (collectedBy 'Gran').",
+        "actual": "Two bookings on a 20 Sept session, each with a placed mealOrder that day, both children on a planned trip that day (consent given) and signed IN on the register. Operator cancel (POST /api/bookings/:ref/actions cancel) and parent cancel (POST /api/my/bookings/:ref/cancel) \u2192 200/200. Afterwards: both mealOrders 'cancelled' ('Booking \u2026 cancelled'); GET /api/meal-orders/report rows for that day 2 \u2192 0; two tenant bells '<child> \u2014 booking cancelled for the trip day'; GET /api/registers still shows both children 'in' + cancelledOnSite; Collect after the cancel \u2192 200 (collectedBy 'Gran').",
         "notes": "Regression holds on both cancel paths (lib/cancelCleanup.ts). Kitchen report screen / bell UI not exercised.",
         "at": "2026-09-12T23:31:03Z"
       }
@@ -572,7 +572,7 @@
   "d9s7": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Round 3: four refunds approved today (wallet £50 + £40, offline Edenred £100 + TFC £100). GET /api/reconciliation summary.refunds today £290 × 4, byVia wallet £90 / offline £200, rows dated 2026-09-13. Bookings list refunded-today (refundedApproved, cancel.refundedAt today UK) = £290 — agrees; payments ledger refunds £290.",
+    "actual": "Round 3: four refunds approved today (wallet \u00a350 + \u00a340, offline Edenred \u00a3100 + TFC \u00a3100). GET /api/reconciliation summary.refunds today \u00a3290 \u00d7 4, byVia wallet \u00a390 / offline \u00a3200, rows dated 2026-09-13. Bookings list refunded-today (refundedApproved, cancel.refundedAt today UK) = \u00a3290 \u2014 agrees; payments ledger refunds \u00a3290.",
     "notes": "s13-mon2 holds. Refunds panel not visually checked.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-B/d7d9.run2.out",
     "at": "2026-09-13T07:29:07Z",
@@ -581,19 +581,19 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "Two refunds approved today: £40 wallet-paid booking (refundVia 'wallet') and £40 bank-transfer booking (refundVia 'offline'). Bookings list: both pay 'Refunded', refundedApproved 40 + 40 = £80. GET /api/reconciliation: returns NO refund data at all — no refund field or summary (keys: count, reconciledCount, outstanding, overdue, awaitingVoucher, byMethod), and both refunded bookings are absent from its items (Cancelled bookings are filtered out). ReconciliationApp.tsx contains no refund figures (grep 'refund' = 0 hits). The payments ledger (GET /api/payments, the Payments page) shows only £40 (the 'to-reimburse' record) — wallet refunds write no payments record (settleApprovedRefund only calls creditWallet).",
-        "notes": "There is no 'today's refunds' figure on Reconciliation to total, and the only refund ledger that exists (payments) disagrees with the bookings list by every wallet refund (£80 vs £40 here). Suggested fix: have settleApprovedRefund write a payments record {type:'refund', via:'wallet'} too, and add a refunds-by-day section to Reconciliation sourced from payments type 'refund'. Screen not exercised.",
+        "actual": "Two refunds approved today: \u00a340 wallet-paid booking (refundVia 'wallet') and \u00a340 bank-transfer booking (refundVia 'offline'). Bookings list: both pay 'Refunded', refundedApproved 40 + 40 = \u00a380. GET /api/reconciliation: returns NO refund data at all \u2014 no refund field or summary (keys: count, reconciledCount, outstanding, overdue, awaitingVoucher, byMethod), and both refunded bookings are absent from its items (Cancelled bookings are filtered out). ReconciliationApp.tsx contains no refund figures (grep 'refund' = 0 hits). The payments ledger (GET /api/payments, the Payments page) shows only \u00a340 (the 'to-reimburse' record) \u2014 wallet refunds write no payments record (settleApprovedRefund only calls creditWallet).",
+        "notes": "There is no 'today's refunds' figure on Reconciliation to total, and the only refund ledger that exists (payments) disagrees with the bookings list by every wallet refund (\u00a380 vs \u00a340 here). Suggested fix: have settleApprovedRefund write a payments record {type:'refund', via:'wallet'} too, and add a refunds-by-day section to Reconciliation sourced from payments type 'refund'. Screen not exercised.",
         "at": "2026-09-12T13:01:15.351Z"
       },
       {
         "verdict": "pass",
-        "actual": "Two refunds approved today on a throwaway tenant: £40 wallet (refundTo wallet) + £40 bank-transfer (offline), plus a £30 refund from July. GET /api/reconciliation now returns refunds[] + summary.refunds: today £80 × 2, total £110 × 3, byVia wallet £40 / offline £70, rows dated 2026-09-12 (UK) / 2026-07-01. Bookings list refunded-today (refundedApproved where cancel.refundedAt is today) = £80 — agrees. Payments ledger refunds now £80 (to-reimburse £40 + wallet credited £40; was £40).",
-        "notes": "server/src/routes/reconciliation.ts: refundsOf()/refundDay() + refunds/summary.refunds (read from refundedApproved + refundLog on every booking in scope, cancelled included); bookings.ts: approval stamps cancel.refundedAt, settleApprovedRefund writes a {type:'refund', method:'wallet', status:'credited'} payments record; features/bookings/types.ts CancelInfo.refundedAt; ReconciliationApp.tsx RefundsPanel (today/all/From-To, listing+season). Panel not visually checked. Parent day-release wallet credit (my.ts) still writes no ledger record — backlog s13-mon5.",
+        "actual": "Two refunds approved today on a throwaway tenant: \u00a340 wallet (refundTo wallet) + \u00a340 bank-transfer (offline), plus a \u00a330 refund from July. GET /api/reconciliation now returns refunds[] + summary.refunds: today \u00a380 \u00d7 2, total \u00a3110 \u00d7 3, byVia wallet \u00a340 / offline \u00a370, rows dated 2026-09-12 (UK) / 2026-07-01. Bookings list refunded-today (refundedApproved where cancel.refundedAt is today) = \u00a380 \u2014 agrees. Payments ledger refunds now \u00a380 (to-reimburse \u00a340 + wallet credited \u00a340; was \u00a340).",
+        "notes": "server/src/routes/reconciliation.ts: refundsOf()/refundDay() + refunds/summary.refunds (read from refundedApproved + refundLog on every booking in scope, cancelled included); bookings.ts: approval stamps cancel.refundedAt, settleApprovedRefund writes a {type:'refund', method:'wallet', status:'credited'} payments record; features/bookings/types.ts CancelInfo.refundedAt; ReconciliationApp.tsx RefundsPanel (today/all/From-To, listing+season). Panel not visually checked. Parent day-release wallet credit (my.ts) still writes no ledger record \u2014 backlog s13-mon5.",
         "at": "2026-09-12T22:51:51Z"
       },
       {
         "verdict": "pass",
-        "actual": "Four refunds approved today on a throwaway tenant (wallet £50 + £40, offline Edenred £100 + TFC £100). GET /api/reconciliation summary.refunds: today £290 × 4, total £290, byVia wallet £90 / offline £200, rows dated 2026-09-13 (UK). Bookings list refunded-today (refundedApproved where cancel.refundedAt is today, UK) = £290 — agrees. Payments ledger refund records = £290.",
+        "actual": "Four refunds approved today on a throwaway tenant (wallet \u00a350 + \u00a340, offline Edenred \u00a3100 + TFC \u00a3100). GET /api/reconciliation summary.refunds: today \u00a3290 \u00d7 4, total \u00a3290, byVia wallet \u00a390 / offline \u00a3200, rows dated 2026-09-13 (UK). Bookings list refunded-today (refundedApproved where cancel.refundedAt is today, UK) = \u00a3290 \u2014 agrees. Payments ledger refund records = \u00a3290.",
         "notes": "s13-mon2 holds. Refunds panel not visually checked.",
         "at": "2026-09-12T23:31:04Z"
       }
@@ -602,7 +602,7 @@
   "d10s1": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Server: staff POST /api/registers/:block/:date/mark {action:'in'} → 200 with inAt; {action:'collect', collectedBy:'Grandma Jo'} → 200, collectedAt set + collectedBy 'Grandma Jo' stored. Screen: RegistersApp mark() still asks registers.collectedByPrompt ('Who collected {name}?', prefilled with the booker) before a Collect and sends collectedBy; cancelling the prompt doesn't sign the child out.",
+    "actual": "Server: staff POST /api/registers/:block/:date/mark {action:'in'} \u2192 200 with inAt; {action:'collect', collectedBy:'Grandma Jo'} \u2192 200, collectedAt set + collectedBy 'Grandma Jo' stored. Screen: RegistersApp mark() still asks registers.collectedByPrompt ('Who collected {name}?', prefilled with the booker) before a Collect and sends collectedBy; cancelling the prompt doesn't sign the child out.",
     "notes": "No change since 12 Sept fix. Screen checked in code (RegistersApp.tsx ~955-963), not on a phone. Bulk 'collect all' still doesn't ask per child.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.out ; features/registers/RegistersApp.tsx",
     "at": "2026-09-13T00:01:51Z",
@@ -611,8 +611,8 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "Server: POST /api/registers/:block/:date/mark {action:'in'} stored inAt; {action:'collect', collectedBy:'Grandma Jo'} stored collectedAt + collectedBy 'Grandma Jo'. But the Registers screen never sends a collector: RegistersApp mark() posts only {ref, action} (line 964), the row's Collect button calls onMark('collect') directly (line 1716), bulk collect and Sign-all-in likewise — no prompt for who collected anywhere (grep collectedBy in features: only reads). A collect sent the way the UI sends it stored collectedBy null.",
-        "notes": "Times are recorded; the collector's name is not, from the actual screen. Server half works if a client sends it. Suggested fix: on Collect, prompt 'Collected by' (prefill the authorised collectors / check the collection password) and send collectedBy. Phone not used — established via API + code.",
+        "actual": "Server: POST /api/registers/:block/:date/mark {action:'in'} stored inAt; {action:'collect', collectedBy:'Grandma Jo'} stored collectedAt + collectedBy 'Grandma Jo'. But the Registers screen never sends a collector: RegistersApp mark() posts only {ref, action} (line 964), the row's Collect button calls onMark('collect') directly (line 1716), bulk collect and Sign-all-in likewise \u2014 no prompt for who collected anywhere (grep collectedBy in features: only reads). A collect sent the way the UI sends it stored collectedBy null.",
+        "notes": "Times are recorded; the collector's name is not, from the actual screen. Server half works if a client sends it. Suggested fix: on Collect, prompt 'Collected by' (prefill the authorised collectors / check the collection password) and send collectedBy. Phone not used \u2014 established via API + code.",
         "at": "2026-09-12T13:07:35.254Z"
       },
       {
@@ -626,8 +626,8 @@
   "d10s2": {
     "verdict": "pass",
     "method": "api",
-    "actual": "GET /api/registers row for a child with allergies 'Peanuts', medical 'Asthma — inhaler', SEND 'ASD', collection password 'pineapple', walkHomeConsent true, emergency 'Gran Zz 07000 000001' — all on the attendee row's child record. RegistersApp renders allergy/medical/medicine/SEND chips and now the '🚶 Walk home' chip (AlertSq kind 'walk', line ~1729) on the row.",
-    "notes": "s13-so5 holds (code-level; row not visually checked — no browser sign-in).",
+    "actual": "GET /api/registers row for a child with allergies 'Peanuts', medical 'Asthma \u2014 inhaler', SEND 'ASD', collection password 'pineapple', walkHomeConsent true, emergency 'Gran Zz 07000 000001' \u2014 all on the attendee row's child record. RegistersApp renders allergy/medical/medicine/SEND chips and now the '\ud83d\udeb6 Walk home' chip (AlertSq kind 'walk', line ~1729) on the row.",
+    "notes": "s13-so5 holds (code-level; row not visually checked \u2014 no browser sign-in).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.out ; features/registers/RegistersApp.tsx:213-218,1729",
     "at": "2026-09-13T00:01:52Z",
     "agent": "B",
@@ -635,14 +635,14 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "GET /api/registers returns, on each attendee row, the child's allergies ('Peanuts'), medical ('Asthma — inhaler'), SEND ('ASD'), collectionPassword ('pineapple') and walkHomeConsent (true). On the row UI (RegistersApp.tsx) allergies/medical/SEND render as AlertSq chips (1707-1710) and the collection password as a tap-to-reveal PIN under the name (1697). walkHomeConsent is rendered only inside the ChildModal card (line 265) — not on the row.",
+        "actual": "GET /api/registers returns, on each attendee row, the child's allergies ('Peanuts'), medical ('Asthma \u2014 inhaler'), SEND ('ASD'), collectionPassword ('pineapple') and walkHomeConsent (true). On the row UI (RegistersApp.tsx) allergies/medical/SEND render as AlertSq chips (1707-1710) and the collection password as a tap-to-reveal PIN under the name (1697). walkHomeConsent is rendered only inside the ChildModal card (line 265) \u2014 not on the row.",
         "notes": "4 of 5 flag on the row; walk-home consent is 'buried a level down', which the step fails. Data setting is by seeding the child record directly (the parent/operator child-edit screens not exercised). Suggested fix: add a 'Walks home' chip to the row beside the alert chips.",
         "at": "2026-09-12T13:07:35.424Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-tested 13 Sept by code: the register row now shows a '🚶 Walk home' chip beside the allergy/medical/medicine/SEND chips whenever child.walkHomeConsent === true (the API already returns walkHomeConsent on each attendee row, per the original test). All five facts now flag on the row. Screen not visually checked (no browser sign-in).",
-        "notes": "features/registers/RegistersApp.tsx AlertSq gains kind 'walk' (~line 213-218) and the row renders it after the SEND chip (~line 1728); label = existing registers.walkHome string (all locales), tooltip 'Walk home: Yes'. Surgical edit — register v2 work untouched. Backlog s13-so5.",
+        "actual": "Re-tested 13 Sept by code: the register row now shows a '\ud83d\udeb6 Walk home' chip beside the allergy/medical/medicine/SEND chips whenever child.walkHomeConsent === true (the API already returns walkHomeConsent on each attendee row, per the original test). All five facts now flag on the row. Screen not visually checked (no browser sign-in).",
+        "notes": "features/registers/RegistersApp.tsx AlertSq gains kind 'walk' (~line 213-218) and the row renders it after the SEND chip (~line 1728); label = existing registers.walkHome string (all locales), tooltip 'Walk home: Yes'. Surgical edit \u2014 register v2 work untouched. Backlog s13-so5.",
         "at": "2026-09-12T23:00:26Z"
       }
     ]
@@ -650,7 +650,7 @@
   "d10s3": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Parent checkout with Sam + Tia → ONE booking with kids[2]. GET /api/registers: 3 rows (single booking + REF#childId per sibling), counts.expected 3.",
+    "actual": "Parent checkout with Sam + Tia \u2192 ONE booking with kids[2]. GET /api/registers: 3 rows (single booking + REF#childId per sibling), counts.expected 3.",
     "notes": "b18 holds. Screen not exercised.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.out",
     "at": "2026-09-13T00:01:52Z",
@@ -668,7 +668,7 @@
   "d10s4": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Sibling booking with Sam + Tia signed in, operator cancel → 200 Cancelled. Both stay on GET /api/registers 'in' + cancelledOnSite; Collect Sam after the cancel → 200; Absent on Tia → 409 'Booking is Cancelled — not expected on the register'.",
+    "actual": "Sibling booking with Sam + Tia signed in, operator cancel \u2192 200 Cancelled. Both stay on GET /api/registers 'in' + cancelledOnSite; Collect Sam after the cancel \u2192 200; Absent on Tia \u2192 409 'Booking is Cancelled \u2014 not expected on the register'.",
     "notes": "b22 holds. counts.expected still includes cancelled-on-site children (arguably right while present).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.out",
     "at": "2026-09-13T00:01:52Z",
@@ -677,8 +677,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Sibling booking cancelled by the operator while Sam and Tia were signed in: both stay on GET /api/registers with status 'in' and cancelledOnSite true (rendered as the '⚠ Booking cancelled — still on site' chip). Collect on Sam after the cancel -> 200, collectedAt set. Any other mark on a cancelled row (e.g. Absent on Tia) -> 409 'Booking is Cancelled — not expected on the register'. Also confirmed for single bookings via both cancel paths in cleanup.test.ts.",
-        "notes": "Regression b22 holds. Minor: counts.expected still includes cancelled-on-site children (3 of 3) — arguably right while they're physically present.",
+        "actual": "Sibling booking cancelled by the operator while Sam and Tia were signed in: both stay on GET /api/registers with status 'in' and cancelledOnSite true (rendered as the '\u26a0 Booking cancelled \u2014 still on site' chip). Collect on Sam after the cancel -> 200, collectedAt set. Any other mark on a cancelled row (e.g. Absent on Tia) -> 409 'Booking is Cancelled \u2014 not expected on the register'. Also confirmed for single bookings via both cancel paths in cleanup.test.ts.",
+        "notes": "Regression b22 holds. Minor: counts.expected still includes cancelled-on-site children (3 of 3) \u2014 arguably right while they're physically present.",
         "at": "2026-09-12T13:07:35.985Z"
       }
     ]
@@ -686,7 +686,7 @@
   "d10s5": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Two staff sessions marked different children In at once (parallel) → 200/200 (register writes are transactions). Refresh from each → identical counts {expected 3, present 2, notArrived 1} and both children in on both.",
+    "actual": "Two staff sessions marked different children In at once (parallel) \u2192 200/200 (register writes are transactions). Refresh from each \u2192 identical counts {expected 3, present 2, notArrived 1} and both children in on both.",
     "notes": "Server-side concurrency; two real phones/realtime push not exercised.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.out",
     "at": "2026-09-13T00:01:52Z",
@@ -695,7 +695,7 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Two staff sessions ('phoneA'/'phoneB') marked different children In concurrently (Promise.all) on the same register doc -> both 200 (register writes are Firestore transactions). Refreshing from each -> identical counts {expected 3, present 3, …} and both children in.",
+        "actual": "Two staff sessions ('phoneA'/'phoneB') marked different children In concurrently (Promise.all) on the same register doc -> both 200 (register writes are Firestore transactions). Refreshing from each -> identical counts {expected 3, present 3, \u2026} and both children in.",
         "notes": "Server-side concurrency verified; two real phones/realtime push not exercised.",
         "at": "2026-09-12T13:07:36.185Z"
       }
@@ -704,16 +704,26 @@
   "d10s6": {
     "verdict": "fail",
     "method": "code",
-    "actual": "Still no offline mode: a mark flips optimistically, the POST fails (ApiError 0 / 408), mark() restores the row and shows the error; nothing is queued — no service worker, IndexedDB or localStorage outbox, no retry on reconnect (grep app/components/features/lib/public: none). What survives reconnecting: nothing marked while offline.",
-    "notes": "Known Phase-2 item (register offline mode) — recorded, not built. Fails safe (no false 'In'). Code-level; no phone used.",
-    "evidence": "features/registers/RegistersApp.tsx:955-985 ; lib/api.ts",
-    "at": "2026-09-13T00:01:52Z",
+    "actual": "Still no full offline mode (no service worker, no general IndexedDB outbox) \u2014 that's a genuinely large PWA-level lift, correctly left unbuilt. Added a small, scoped fix instead: a mark that fails because the API is unreachable (ApiError status 0) or times out (408) is now QUEUED (localStorage aos.registers.outbox) instead of being silently reverted/lost, with a visible '\u23f3 N marks queued offline' banner, and automatically retried on the browser's `online` event and on next visit to the Register. A 409 (someone else marked it since) or any other real server refusal still reverts immediately and is never queued/overwritten.",
+    "notes": "Small scoped fix, not a full offline mode \u2014 features/registers/RegistersApp.tsx (mark(), queueMark/retryOutbox). Still fails safe: the optimistic row is never presented as server-confirmed while queued. Server tsc/client tsc 0. Not verified on a real phone with airplane mode (no device in this environment) \u2014 verified in code that the queue/retry path is reachable and that a 409 is excluded from queueing.",
+    "evidence": "features/registers/RegistersApp.tsx",
+    "at": "2026-09-14T17:23:00Z",
     "agent": "B",
     "retest": true,
     "history": [
       {
         "verdict": "fail",
-        "actual": "There is no offline mode. A mark made with no signal is flipped on screen optimistically, the POST fails (lib/api.ts throws ApiError 0 'We can’t reach ActivityOS right now…', or 408 after the timeout), and mark() puts the row back and shows the error. Nothing is queued: no service worker, no IndexedDB/localStorage outbox, no retry on reconnect. What survives reconnecting: nothing marked while offline — staff must re-tap every child.",
+        "method": "code",
+        "actual": "Still no offline mode: a mark flips optimistically, the POST fails (ApiError 0 / 408), mark() restores the row and shows the error; nothing is queued \u2014 no service worker, IndexedDB or localStorage outbox, no retry on reconnect (grep app/components/features/lib/public: none). What survives reconnecting: nothing marked while offline.",
+        "notes": "Known Phase-2 item (register offline mode) \u2014 recorded, not built. Fails safe (no false 'In'). Code-level; no phone used.",
+        "evidence": "features/registers/RegistersApp.tsx:955-985 ; lib/api.ts",
+        "at": "2026-09-13T00:01:52Z",
+        "agent": "B",
+        "retest": true
+      },
+      {
+        "verdict": "fail",
+        "actual": "There is no offline mode. A mark made with no signal is flipped on screen optimistically, the POST fails (lib/api.ts throws ApiError 0 'We can\u2019t reach ActivityOS right now\u2026', or 408 after the timeout), and mark() puts the row back and shows the error. Nothing is queued: no service worker, no IndexedDB/localStorage outbox, no retry on reconnect. What survives reconnecting: nothing marked while offline \u2014 staff must re-tap every child.",
         "notes": "Established from code; no phone used. It fails safe (no false 'In'), but the step says this screen must work in a hall with no signal. Known Phase-2 item (register offline mode).",
         "at": "2026-09-12T13:07:36.460Z"
       }
@@ -740,7 +750,7 @@
   "d10s9": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Head count 99 on a 3-child register → 400 'That's more children than are on this register (3)…'; head count 2 → 201, stored in heads[] with by/at. With Ava signed in + collected, Sam in, Tia absent, the roll call rule (signed in AND not collected) gives 1 on site; server counts.present stays 2 (signed in today, used by other screens).",
+    "actual": "Head count 99 on a 3-child register \u2192 400 'That's more children than are on this register (3)\u2026'; head count 2 \u2192 201, stored in heads[] with by/at. With Ava signed in + collected, Sam in, Tia absent, the roll call rule (signed in AND not collected) gives 1 on site; server counts.present stays 2 (signed in today, used by other screens).",
     "notes": "12 Sept fix holds; roll-call screen checked in code, not clicked.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.out",
     "at": "2026-09-13T00:02:26Z",
@@ -749,31 +759,41 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "POST /api/registers/:block/:date/headcount {n:3} -> 201, stored on the register doc heads[] with by/at (recorded). But the roll call does not match who is on site: with 3 signed in and one of them (Ava) already COLLECTED, counts.present = 3 and the roll-call dialog ('Roll call — {n} on site now') lists every status 'in' child — collected ones included (st() ignores collectedAt; presentAll/agg.present). Only 2 children were actually on site. The server also accepted a head count of 99 on a 3-child register (201); the '≤ expected' cap is client-only.",
+        "actual": "POST /api/registers/:block/:date/headcount {n:3} -> 201, stored on the register doc heads[] with by/at (recorded). But the roll call does not match who is on site: with 3 signed in and one of them (Ava) already COLLECTED, counts.present = 3 and the roll-call dialog ('Roll call \u2014 {n} on site now') lists every status 'in' child \u2014 collected ones included (st() ignores collectedAt; presentAll/agg.present). Only 2 children were actually on site. The server also accepted a head count of 99 on a 3-child register (201); the '\u2264 expected' cap is client-only.",
         "notes": "In an emergency roll call a child who has gone home is listed as someone to find. Suggested fix: roll call/presentAll = in && !collectedAt (lib/registerRows onSite() already exists), and cap n server-side.",
         "at": "2026-09-12T13:07:36.972Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-tested after fix: head count of 99 on a 3-child register → 400 'more children than are on this register' (was 201). Head count 3 still logs (201, with by/at). With 3 signed in and Ava collected, the roll call now lists and counts only children signed in AND not collected — 2 on site (the register's counts.present stays 3 = signed in today, which other screens use).",
+        "actual": "Re-tested after fix: head count of 99 on a 3-child register \u2192 400 'more children than are on this register' (was 201). Head count 3 still logs (201, with by/at). With 3 signed in and Ava collected, the roll call now lists and counts only children signed in AND not collected \u2014 2 on site (the register's counts.present stays 3 = signed in today, which other screens use).",
         "notes": "Fixed 12 Sept: RegistersApp presentAll + roll-call count exclude collectedAt; registers.ts headcount refuses more than the roster + 10. Roll-call screen checked in code, not clicked through.",
         "at": "2026-09-12T15:09:35Z"
       }
     ]
   },
   "d10s10": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "code",
-    "actual": "Still no parent-facing attendance: no /api/my route reads the registers collection (registers is read only by registers.ts, ratios.ts, meals.ts, ai.ts, events.ts, sweeps.ts), the mark route sends no parent notification, and nothing under features/parent shows signed in / present / collected.",
-    "notes": "Phase-2 feature (parent attendance view) — recorded, not built. Code-level (no endpoint to call).",
-    "evidence": "server/src/routes/my.ts ; features/parent/*",
-    "at": "2026-09-13T00:02:26Z",
+    "actual": "Built: GET /api/my/attendance (server/src/routes/my.ts) \u2014 for the signed-in parent's own bookings, returns each expected-today child's register mark (status in/absent/not_arrived, inAt, collectedAt), reusing registerRows/entryFor exactly as the staff Register does, scoped to the family's own bookings only (bookingsCol.where(email==)). Parent UI: features/parent/MyBookingsApp.tsx's BookingCard now shows a 'Today' badge (Signed in HH:MM / Collected HH:MM / Marked absent / Not signed in yet) fetched per booking card.",
+    "notes": "Scoped as instructed (one read-only endpoint + a small UI panel), not a bigger live-updating attendance timeline. Server tsc 0, client tsc 0. Not yet exercised live end-to-end against a real signed-in parent session + a staff mark in this run (no browser in this environment) \u2014 verified the endpoint compiles and the query logic reuses the same registerRows/entryFor helpers the staff Register already relies on.",
+    "evidence": "server/src/routes/my.ts (GET /attendance); features/parent/MyBookingsApp.tsx",
+    "at": "2026-09-14T17:23:00Z",
     "agent": "B",
     "retest": true,
     "history": [
       {
         "verdict": "fail",
-        "actual": "No parent-facing attendance exists. No /api/my route reads the registers collection (grep: registers is read only by registers.ts, ratios.ts, meals.ts, ai.ts, events.ts, sweeps.ts — all operator/staff), the mark route sends no parent notification, and nothing under features/parent shows 'signed in / present / collected'.",
+        "method": "code",
+        "actual": "Still no parent-facing attendance: no /api/my route reads the registers collection (registers is read only by registers.ts, ratios.ts, meals.ts, ai.ts, events.ts, sweeps.ts), the mark route sends no parent notification, and nothing under features/parent shows signed in / present / collected.",
+        "notes": "Phase-2 feature (parent attendance view) \u2014 recorded, not built. Code-level (no endpoint to call).",
+        "evidence": "server/src/routes/my.ts ; features/parent/*",
+        "at": "2026-09-13T00:02:26Z",
+        "agent": "B",
+        "retest": true
+      },
+      {
+        "verdict": "fail",
+        "actual": "No parent-facing attendance exists. No /api/my route reads the registers collection (grep: registers is read only by registers.ts, ratios.ts, meals.ts, ai.ts, events.ts, sweeps.ts \u2014 all operator/staff), the mark route sends no parent notification, and nothing under features/parent shows 'signed in / present / collected'.",
         "notes": "Parent can't see their child was marked present. Established from code (no endpoint to call). Suggested fix: GET /api/my/attendance (entries for the family's own booking refs/child keys) + a status line on the parent booking card.",
         "at": "2026-09-12T13:07:37.184Z"
       }
@@ -800,8 +820,8 @@
   "d10s12": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Re-test 13 Sept (wave 3): phone A marks In; phone B (stale, still showing not-arrived) taps In too → 200, child stays In with A's original time and marker (was: toggled back to not-arrived). Stale B taps Absent → 409 register_changed 'Pho Zz was signed in by … at 01:50 on another device — the register has been refreshed. Tap again if you still want to change it.', server still In; B re-taps from the refreshed screen → absent. Explicit undo (reset / uncollect) works; a second Collect from a stale phone keeps the first collectedBy/time. Same-moment A In + B Absent → one 200, one 409; both refresh to the same state. No 'from' (API callers) → 'in' twice stays In.",
-    "notes": "FIXED 13 Sept (wave 3): marks are explicit states, not toggles — server/src/routes/registers.ts markSchema (in/absent/collect/uncollect/reset + optional 'from' = the state the device showed), idempotent when already in that state, 409 register_changed when 'from' is stale; the two-phones design is written in the comment above markSchema. features/registers/RegistersApp.tsx: wireFor()/markFrom() send the explicit action + from, applyAction mirrors it, a 409 refreshes the day; bulk Sign-all-in / In / Collect / Absent skip rows changed elsewhere and say so. Register screen not visually checked (no browser sign-in).",
+    "actual": "Re-test 13 Sept (wave 3): phone A marks In; phone B (stale, still showing not-arrived) taps In too \u2192 200, child stays In with A's original time and marker (was: toggled back to not-arrived). Stale B taps Absent \u2192 409 register_changed 'Pho Zz was signed in by \u2026 at 01:50 on another device \u2014 the register has been refreshed. Tap again if you still want to change it.', server still In; B re-taps from the refreshed screen \u2192 absent. Explicit undo (reset / uncollect) works; a second Collect from a stale phone keeps the first collectedBy/time. Same-moment A In + B Absent \u2192 one 200, one 409; both refresh to the same state. No 'from' (API callers) \u2192 'in' twice stays In.",
+    "notes": "FIXED 13 Sept (wave 3): marks are explicit states, not toggles \u2014 server/src/routes/registers.ts markSchema (in/absent/collect/uncollect/reset + optional 'from' = the state the device showed), idempotent when already in that state, 409 register_changed when 'from' is stale; the two-phones design is written in the comment above markSchema. features/registers/RegistersApp.tsx: wireFor()/markFrom() send the explicit action + from, applyAction mirrors it, a 409 refreshes the day; bulk Sign-all-in / In / Collect / Absent skip rows changed elsewhere and say so. Register screen not visually checked (no browser sign-in).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/fix3ops.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/run1.out",
     "at": "2026-09-13T00:58:55Z",
     "agent": "B",
@@ -810,13 +830,13 @@
       {
         "verdict": "pass",
         "actual": "phoneA marked Tia In; phoneB (no refresh) marked Tia Absent -> 200 status absent; both refreshed -> both show 'absent', matching the server.",
-        "notes": "ADDITIONAL FINDING: the marks are TOGGLES on the server. If phoneA taps In and phoneB (stale, still showing not-arrived) also taps In, the second tap un-marks the child — tested: final state 'not arrived (entry removed)'. Both devices then agree, but on the wrong answer. Suggested fix: send the intended target state (e.g. {action:'in', expectPrev}) or make 'in' idempotent and use an explicit 'undo'.",
+        "notes": "ADDITIONAL FINDING: the marks are TOGGLES on the server. If phoneA taps In and phoneB (stale, still showing not-arrived) also taps In, the second tap un-marks the child \u2014 tested: final state 'not arrived (entry removed)'. Both devices then agree, but on the wrong answer. Suggested fix: send the intended target state (e.g. {action:'in', expectPrev}) or make 'in' idempotent and use an explicit 'undo'.",
         "at": "2026-09-12T13:07:37.609Z"
       },
       {
         "verdict": "pass",
-        "actual": "Phone A marked Tia In; phone B (no refresh) marked Tia Absent → 200 absent; both refreshed → both 'absent', matching the server.",
-        "notes": "STILL OPEN (additional finding, not fixed): marks are TOGGLES on the server — A taps In, stale B also taps In → B's tap returns attendance null and both devices end on 'not arrived' (agree with each other and the server, but on the wrong answer). Fix: send the intended target state (or make 'in' idempotent with an explicit undo) — registers.ts:361-366.",
+        "actual": "Phone A marked Tia In; phone B (no refresh) marked Tia Absent \u2192 200 absent; both refreshed \u2192 both 'absent', matching the server.",
+        "notes": "STILL OPEN (additional finding, not fixed): marks are TOGGLES on the server \u2014 A taps In, stale B also taps In \u2192 B's tap returns attendance null and both devices end on 'not arrived' (agree with each other and the server, but on the wrong answer). Fix: send the intended target state (or make 'in' idempotent with an explicit undo) \u2014 registers.ts:361-366.",
         "at": "2026-09-13T00:02:26Z"
       }
     ]
@@ -824,8 +844,8 @@
   "d10s13": {
     "verdict": "pass",
     "method": "code",
-    "actual": "Filter partition galStat(): collected > present > absent > notArrived — mutually exclusive. Over the live API rows: present 1 + collected 1 + absent 1 + notArrived 0 = 3 = total. Menu hints and Photos pills both read the same galCounts / galFilter, so List and Photos agree.",
-    "notes": "Reproduced the client rule over real API data; screen not clicked. Hero tally/roll call use server counts.present (includes collected) — a different number from 'Checked in'.",
+    "actual": "Filter partition galStat(): collected > present > absent > notArrived \u2014 mutually exclusive. Over the live API rows: present 1 + collected 1 + absent 1 + notArrived 0 = 3 = total. Menu hints and Photos pills both read the same galCounts / galFilter, so List and Photos agree.",
+    "notes": "Reproduced the client rule over real API data; screen not clicked. Hero tally/roll call use server counts.present (includes collected) \u2014 a different number from 'Checked in'.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.out ; features/registers/RegistersApp.tsx:1099-1121,1288",
     "at": "2026-09-13T00:02:26Z",
     "agent": "B",
@@ -833,8 +853,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Filter partition is galStat(): collected (collectedAt) > present (status in) > absent > notArrived — mutually exclusive, so the four counts sum to the total. Applied to the live API rows: present 2 + collected 1 + notArrived 0 + absent 0 = 3 = total. The ⚗ Filter menu hints (line 1272) and the Photos pills (1362) both read the same galCounts and filter the same galFilter state, so List and Photos agree.",
-        "notes": "Verified by reproducing the client function over real API data; screen not clicked. Note the hero tally/roll call use server counts.present (3 here, includes collected) — a different number from the filter's 'Checked in' (2); see d10s9.",
+        "actual": "Filter partition is galStat(): collected (collectedAt) > present (status in) > absent > notArrived \u2014 mutually exclusive, so the four counts sum to the total. Applied to the live API rows: present 2 + collected 1 + notArrived 0 + absent 0 = 3 = total. The \u2697 Filter menu hints (line 1272) and the Photos pills (1362) both read the same galCounts and filter the same galFilter state, so List and Photos agree.",
+        "notes": "Verified by reproducing the client function over real API data; screen not clicked. Note the hero tally/roll call use server counts.present (3 here, includes collected) \u2014 a different number from the filter's 'Checked in' (2); see d10s9.",
         "at": "2026-09-12T13:07:37.840Z"
       }
     ]
@@ -842,7 +862,7 @@
   "d10s14": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Phone A: POST /note {Sam: 'Grazed knee at 10:40, cleaned'} → 200 and POST /nappy {Tia} → 201. Phone B GET /api/registers → notes[Sam] {text, by: phone A's email, at} and nappies[Tia] [{by: phone A, at}].",
+    "actual": "Phone A: POST /note {Sam: 'Grazed knee at 10:40, cleaned'} \u2192 200 and POST /nappy {Tia} \u2192 201. Phone B GET /api/registers \u2192 notes[Sam] {text, by: phone A's email, at} and nappies[Tia] [{by: phone A, at}].",
     "notes": "b25 holds server-side; two real phones not used.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.out",
     "at": "2026-09-13T00:02:26Z",
@@ -860,7 +880,7 @@
   "d10s15": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Joint sibling booking: Sam In, Tia Absent → two rows, Sam 'in', Tia 'absent'; each row carries its own record — Sam allergies 'Milk' / password 'rocket', Tia 'Eggs' / 'banana'.",
+    "actual": "Joint sibling booking: Sam In, Tia Absent \u2192 two rows, Sam 'in', Tia 'absent'; each row carries its own record \u2014 Sam allergies 'Milk' / password 'rocket', Tia 'Eggs' / 'banana'.",
     "notes": "Holds on the API; child card screen not opened.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d10.out",
     "at": "2026-09-13T00:02:27Z",
@@ -878,8 +898,8 @@
   "d10s8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Re-test 13 Sept (wave 3): a checkout with phone 07111 222333 → booking.phone '07111 222333' (was '—'); the family's next booking with no phone in the body takes the number from their customer record; staff GET /api/children/<child> parentPhone '07111 222333' (care card still there: allergies 'Nuts'), /lookup and the register row show it too. A legacy booking stamped '—' with a customer record phone → card, lookup and register row all show the customer's 07999… (the placeholder no longer wins). Franchise/cross-provider scoping unchanged (fallback is same-tenant customer records only).",
-    "notes": "FIXED 13 Sept (wave 3, s13-rtB2): features/bookings/mutations.ts buildBooking stores input.phone (never '—'); server/src/routes/my.ts resolves the phone (checkout → on-behalf/customer record → parent's user doc) and passes it; bookings.ts createSchema accepts phone; features/bookings/helpers.ts realPhone() treats the legacy '—' as blank — used in children.ts (card + lookup, with a same-tenant customer-phone fallback), registers.ts (row phone + customer fallback), reconciliation.ts, bookings.ts child-card endpoint; BookingDetail shows 'No phone on file' instead of '—'. No real bookings backfilled.",
+    "actual": "Re-test 13 Sept (wave 3): a checkout with phone 07111 222333 \u2192 booking.phone '07111 222333' (was '\u2014'); the family's next booking with no phone in the body takes the number from their customer record; staff GET /api/children/<child> parentPhone '07111 222333' (care card still there: allergies 'Nuts'), /lookup and the register row show it too. A legacy booking stamped '\u2014' with a customer record phone \u2192 card, lookup and register row all show the customer's 07999\u2026 (the placeholder no longer wins). Franchise/cross-provider scoping unchanged (fallback is same-tenant customer records only).",
+    "notes": "FIXED 13 Sept (wave 3, s13-rtB2): features/bookings/mutations.ts buildBooking stores input.phone (never '\u2014'); server/src/routes/my.ts resolves the phone (checkout \u2192 on-behalf/customer record \u2192 parent's user doc) and passes it; bookings.ts createSchema accepts phone; features/bookings/helpers.ts realPhone() treats the legacy '\u2014' as blank \u2014 used in children.ts (card + lookup, with a same-tenant customer-phone fallback), registers.ts (row phone + customer fallback), reconciliation.ts, bookings.ts child-card endpoint; BookingDetail shows 'No phone on file' instead of '\u2014'. No real bookings backfilled.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/fix3ops.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/run1.out",
     "at": "2026-09-13T00:58:55Z",
     "agent": "B",
@@ -887,20 +907,20 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "GET /api/children/:id (the literal step): head-office staff -> 200 with the care card (allergies, medical, SEND, collection password, emergency contact); franchise-A staff -> own franchise's child 200, franchise-B child 404 'Child not found for this account'; franchise-A owner -> franchise-B child 404; parent role -> 403; parentPhone came back '' — NOT the '07999 OTHER' held on an unrelated provider's customer record. BUT the sibling route leaks: GET /api/children/lookup as franchise-A STAFF returned BOTH children, including franchise B's (name, dob, parent name, email, phone, booking ref). The lookup only narrows by franchise when auth.role === 'franchise' (children.ts:71-83); staff carrying a franchiseId get the whole head-office network.",
-        "notes": "Every expectation on /:id holds, but a franchise's staff can enumerate another franchise's children and their parents' contact details one request away (plan rule 1). Suggested fix: in /lookup use franchiseId = auth.franchiseId for role 'staff' too (and skip the customer fallback). Also observed: an UNRELATED provider (tenant X) whose customers list merely contains the family's email (e.g. created by the /store follow, backlog cc6) gets 200 and the full card incl. collection password via the customer-of-this-tenant fallback (children.ts ~157-175) — worth a decision.",
+        "actual": "GET /api/children/:id (the literal step): head-office staff -> 200 with the care card (allergies, medical, SEND, collection password, emergency contact); franchise-A staff -> own franchise's child 200, franchise-B child 404 'Child not found for this account'; franchise-A owner -> franchise-B child 404; parent role -> 403; parentPhone came back '' \u2014 NOT the '07999 OTHER' held on an unrelated provider's customer record. BUT the sibling route leaks: GET /api/children/lookup as franchise-A STAFF returned BOTH children, including franchise B's (name, dob, parent name, email, phone, booking ref). The lookup only narrows by franchise when auth.role === 'franchise' (children.ts:71-83); staff carrying a franchiseId get the whole head-office network.",
+        "notes": "Every expectation on /:id holds, but a franchise's staff can enumerate another franchise's children and their parents' contact details one request away (plan rule 1). Suggested fix: in /lookup use franchiseId = auth.franchiseId for role 'staff' too (and skip the customer fallback). Also observed: an UNRELATED provider (tenant X) whose customers list merely contains the family's email (e.g. created by the /store follow, backlog cc6) gets 200 and the full card incl. collection password via the customer-of-this-tenant fallback (children.ts ~157-175) \u2014 worth a decision.",
         "at": "2026-09-12T13:09:16.180Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-tested after the d22s2 fix: GET /api/children/lookup as franchise A's staff now returns only franchise A's child ('Alfie Alpha') — B's and head office's children and their parents' contact details are no longer listed. The /:id half already held (B's child 404 to A's staff).",
+        "actual": "Re-tested after the d22s2 fix: GET /api/children/lookup as franchise A's staff now returns only franchise A's child ('Alfie Alpha') \u2014 B's and head office's children and their parents' contact details are no longer listed. The /:id half already held (B's child 404 to A's staff).",
         "notes": "Fixed 12 Sept: children.ts /lookup gives staff carrying a franchiseId the franchise's lens.",
         "at": "2026-09-12T15:27:42Z"
       },
       {
         "verdict": "pass",
-        "actual": "Own-provider staff GET /api/children/<child> → 200 with the care card under record: allergies 'Peanuts', medical 'Asthma — inhaler', SEND 'ASD', collection password 'pineapple', emergency 'Gran Zz 07000 000001'. Company tenant with franchises F1/F2 (bookings stamped franchiseId F1/F2): F1's staff → own child 200 (allergies 'Nuts'); F2's child → 404 'Child not found for this account'; head office's child → 404; /api/children/lookup → only 'Alfie Alpha'. F2's parent phone (07333…) appears in none of F1's responses.",
-        "notes": "Decision of 12 Sept + d22s2 lookup fix hold. SIDE FINDING (not tonight's regression): parentPhone on the card reads '—' even though the family gave 07111… at checkout — every booking is created with phone '—' (features/bookings/mutations.ts:244 buildBooking) and children.ts only falls back to the customer record's phone when contact.phone is empty, so the placeholder wins (also /lookup and the register row's phone). Backlog s13-rtB2.",
+        "actual": "Own-provider staff GET /api/children/<child> \u2192 200 with the care card under record: allergies 'Peanuts', medical 'Asthma \u2014 inhaler', SEND 'ASD', collection password 'pineapple', emergency 'Gran Zz 07000 000001'. Company tenant with franchises F1/F2 (bookings stamped franchiseId F1/F2): F1's staff \u2192 own child 200 (allergies 'Nuts'); F2's child \u2192 404 'Child not found for this account'; head office's child \u2192 404; /api/children/lookup \u2192 only 'Alfie Alpha'. F2's parent phone (07333\u2026) appears in none of F1's responses.",
+        "notes": "Decision of 12 Sept + d22s2 lookup fix hold. SIDE FINDING (not tonight's regression): parentPhone on the card reads '\u2014' even though the family gave 07111\u2026 at checkout \u2014 every booking is created with phone '\u2014' (features/bookings/mutations.ts:244 buildBooking) and children.ts only falls back to the customer record's phone when contact.phone is empty, so the placeholder wins (also /lookup and the register row's phone). Backlog s13-rtB2.",
         "at": "2026-09-13T00:02:26Z"
       }
     ]
@@ -908,8 +928,8 @@
   "d11s1": {
     "verdict": "pass",
     "method": "api",
-    "actual": "9 children aged 6 on today's session, real routes. Before the register: basis 'booked', 9 counted, 2 staff needed, 0 assigned → met false (breach flagged; RatiosApp shows '😟 N staff short'). 5 marked absent → 4 counted, 1 needed. Then signed in one at a time: 1 in → basis 'signed-in', 1 counted; 2 → 2; 3 → 3 (1 needed each, met with 2 staff on the group).",
-    "notes": "12 Sept fix holds; RatiosApp still refreshes on 'registers' realtime (RatiosApp.tsx:760) — screen not clicked. Still open from 12 Sept: server required-staff uses the default bands while the board can use Setup targets.",
+    "actual": "9 children aged 6 on today's session, real routes. Before the register: basis 'booked', 9 counted, 2 staff needed, 0 assigned \u2192 met false (breach flagged; RatiosApp shows '\ud83d\ude1f N staff short'). 5 marked absent \u2192 4 counted, 1 needed. Then signed in one at a time: 1 in \u2192 basis 'signed-in', 1 counted; 2 \u2192 2; 3 \u2192 3 (1 needed each, met with 2 staff on the group).",
+    "notes": "12 Sept fix holds; RatiosApp still refreshes on 'registers' realtime (RatiosApp.tsx:760) \u2014 screen not clicked. Still open from 12 Sept: server required-staff uses the default bands while the board can use Setup targets.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11ratios.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11ratios.out",
     "at": "2026-09-13T00:14:04Z",
     "agent": "B",
@@ -917,13 +937,13 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "9 children (age 6) booked on today's session, 0 staff: GET /api/ratios -> totalChildren 9, requiredStaff 2, met false (breach IS flagged, and RatiosApp shows a red 'N short' pill). Then signed children in one at a time via POST /api/registers/…/mark: after 1, 2 and 3 sign-ins the ratio read was unchanged (totalChildren 9, required 2). Marking 5 of them Absent also left it at 9/2. The ratio counts BOOKED children for the day (registerRows expected || on site), not who is signed in, and the Ratios page's realtime subscription is ['ratioGroups','bookings','blocks','library'] — not 'registers' — so a sign-in never recalculates it.",
-        "notes": "It's a planning ratio off the booking list (conservative before arrival, wrong once absences are known — absent children still demand staff; over-counts, never under-counts). The step expects live recalculation from sign-ins. Also: the server's requiredStaff uses fixed DEFAULT_BANDS while the board computes from settings.ratioGroups targets — two ratio calculations that can disagree. Suggested fix: count in && !collected children (onSite) once the register is open, and subscribe to 'registers'.",
+        "actual": "9 children (age 6) booked on today's session, 0 staff: GET /api/ratios -> totalChildren 9, requiredStaff 2, met false (breach IS flagged, and RatiosApp shows a red 'N short' pill). Then signed children in one at a time via POST /api/registers/\u2026/mark: after 1, 2 and 3 sign-ins the ratio read was unchanged (totalChildren 9, required 2). Marking 5 of them Absent also left it at 9/2. The ratio counts BOOKED children for the day (registerRows expected || on site), not who is signed in, and the Ratios page's realtime subscription is ['ratioGroups','bookings','blocks','library'] \u2014 not 'registers' \u2014 so a sign-in never recalculates it.",
+        "notes": "It's a planning ratio off the booking list (conservative before arrival, wrong once absences are known \u2014 absent children still demand staff; over-counts, never under-counts). The step expects live recalculation from sign-ins. Also: the server's requiredStaff uses fixed DEFAULT_BANDS while the board computes from settings.ratioGroups targets \u2014 two ratio calculations that can disagree. Suggested fix: count in && !collected children (onSite) once the register is open, and subscribe to 'registers'.",
         "at": "2026-09-12T13:12:31.589Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-tested after fix (9 children aged 6 on today's session, real routes): before the register starts → 'booked', 9 counted, 2 staff needed; 5 marked absent → 4 counted, 1 staff; 3 signed in → basis 'signed-in', 3 counted, 1 staff. The Ratios page now also refreshes on register changes, so a sign-in updates it live.",
+        "actual": "Re-tested after fix (9 children aged 6 on today's session, real routes): before the register starts \u2192 'booked', 9 counted, 2 staff needed; 5 marked absent \u2192 4 counted, 1 staff; 3 signed in \u2192 basis 'signed-in', 3 counted, 1 staff. The Ratios page now also refreshes on register changes, so a sign-in updates it live.",
         "notes": "Fixed 12 Sept: ratios.ts counts who's signed in (not collected) once the register has started and never counts absent children; RatiosApp listens to 'registers'. Still open: the server's required-staff uses the default bands while the board can use Setup targets.",
         "at": "2026-09-12T17:09:26Z"
       }
@@ -932,7 +952,7 @@
   "d11s2": {
     "verdict": "pass",
     "method": "api",
-    "actual": "One checkout of 9 children → ONE booking with kids[9]; GET /api/ratios → totalChildren 9 (a row per child), requiredStaff 2 at the 5–7 band.",
+    "actual": "One checkout of 9 children \u2192 ONE booking with kids[9]; GET /api/ratios \u2192 totalChildren 9 (a row per child), requiredStaff 2 at the 5\u20137 band.",
     "notes": "b18 holds for ratios.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11ratios.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11ratios.out",
     "at": "2026-09-13T00:14:04Z",
@@ -941,7 +961,7 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "A single checkout of 9 children -> ONE booking with kids[9]; GET /api/ratios -> totalChildren 9 (one row per child), requiredStaff 2 at the 5–7 band (1:8). In reg.test.ts the 2-sibling booking + 1 single booking gave 3 children on the ratio session.",
+        "actual": "A single checkout of 9 children -> ONE booking with kids[9]; GET /api/ratios -> totalChildren 9 (one row per child), requiredStaff 2 at the 5\u20137 band (1:8). In reg.test.ts the 2-sibling booking + 1 single booking gave 3 children on the ratio session.",
         "notes": "Regression b18 holds for ratios (server). Sign-in doesn't change the count either way (see d11s1).",
         "at": "2026-09-12T13:12:31.692Z"
       }
@@ -950,7 +970,7 @@
   "d11s3": {
     "verdict": "pass",
     "method": "api",
-    "actual": "PUT /api/ratios/:block/:date with one group holding all 9 children and staffIds ['s1'] → staffAssigned 1, required 2, met false, group met false. With ['s1','s2'] → staffAssigned 2, met true, group [2 staff, 2 needed, met]. Day-board PUT /api/ratios/board/:date {groupStaff} → 200 and GET returns it.",
+    "actual": "PUT /api/ratios/:block/:date with one group holding all 9 children and staffIds ['s1'] \u2192 staffAssigned 1, required 2, met false, group met false. With ['s1','s2'] \u2192 staffAssigned 2, met true, group [2 staff, 2 needed, met]. Day-board PUT /api/ratios/board/:date {groupStaff} \u2192 200 and GET returns it.",
     "notes": "Server recovery verified; the board's own within-target maths is client-side (RatiosApp staffForLine), read not clicked.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11ratios.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11ratios.out",
     "at": "2026-09-13T00:14:04Z",
@@ -959,22 +979,32 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "PUT /api/ratios/:block/:date with one group holding all 9 children and staffIds ['s1'] -> staffAssigned 1, required 2, met false, group met false. Adding 's2' -> staffAssigned 2, met true, group met true. The day-board route PUT /api/ratios/board/:date {groupStaff:{…:['s1','s2']}} -> 200 and GET returns it (shared across devices).",
+        "actual": "PUT /api/ratios/:block/:date with one group holding all 9 children and staffIds ['s1'] -> staffAssigned 1, required 2, met false, group met false. Adding 's2' -> staffAssigned 2, met true, group met true. The day-board route PUT /api/ratios/board/:date {groupStaff:{\u2026:['s1','s2']}} -> 200 and GET returns it (shared across devices).",
         "notes": "Server recovery verified; the board's own 'within target' maths is client-side (RatiosApp staffForLine) and was read, not clicked.",
         "at": "2026-09-12T13:12:31.820Z"
       }
     ]
   },
   "d11s4": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "code",
-    "actual": "Still no register group view: RegistersApp's only 'group' filter is the session time window (drop-off/collection, ~line 150) and GET /api/registers never reads ratioGroups or ratioBoards, so a Ratios group can't be picked on the register. Groups themselves can be created and children assigned on Ratios (d11s3).",
-    "notes": "Phase-2 feature (register group/room allocation) — recorded, not built. Code-level.",
-    "evidence": "features/registers/RegistersApp.tsx:150-153 ; server/src/routes/registers.ts",
-    "at": "2026-09-13T00:14:04Z",
+    "actual": "Built: GET /api/registers now also reads ratioGroups/{blockId}_{date} and attaches each attendee's groupId/groupName (and each session's full groups list) alongside the existing time-window data. features/registers/RegistersApp.tsx gained a group/room filter dropdown (next to the existing drop-off/collection time filter) that filters the register down to one Ratios group, only shown when the day's sessions actually have groups set up.",
+    "notes": "Groups themselves are still created/assigned on Ratios (unchanged, d11s3) \u2014 this wires the Register's READ side to that existing data, it doesn't add group management to the Register itself. Server tsc 0, client tsc 0. Not yet exercised live in a browser (no browser in this environment) \u2014 verified in code that groupId flows from ratioGroups through to the attendee row and the filter narrows preAttend correctly.",
+    "evidence": "server/src/routes/registers.ts; features/registers/RegistersApp.tsx",
+    "at": "2026-09-14T17:23:00Z",
     "agent": "B",
     "retest": true,
     "history": [
+      {
+        "verdict": "fail",
+        "method": "code",
+        "actual": "Still no register group view: RegistersApp's only 'group' filter is the session time window (drop-off/collection, ~line 150) and GET /api/registers never reads ratioGroups or ratioBoards, so a Ratios group can't be picked on the register. Groups themselves can be created and children assigned on Ratios (d11s3).",
+        "notes": "Phase-2 feature (register group/room allocation) \u2014 recorded, not built. Code-level.",
+        "evidence": "features/registers/RegistersApp.tsx:150-153 ; server/src/routes/registers.ts",
+        "at": "2026-09-13T00:14:04Z",
+        "agent": "B",
+        "retest": true
+      },
       {
         "verdict": "fail",
         "actual": "Groups can be created and children assigned on Ratios (ratioGroups / ratioBoards docs, verified in ratio.test.ts), but the Register has no group view: RegistersApp's only 'group' filter is the session time window (drop-off/collection, lines 148-151), and GET /api/registers never reads ratioGroups or ratioBoards, so a ratio group can't be selected on the register.",
@@ -986,7 +1016,7 @@
   "d11s5": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Child dob 2018-09-30 booked today (13 Sept, age 7 stamped on the booking) onto the 5 Oct 2026 session → GET /api/ratios?date=2026-10-05 bands her as 8 (age from dob on the session date), requiredStaff 1.",
+    "actual": "Child dob 2018-09-30 booked today (13 Sept, age 7 stamped on the booking) onto the 5 Oct 2026 session \u2192 GET /api/ratios?date=2026-10-05 bands her as 8 (age from dob on the session date), requiredStaff 1.",
     "notes": "12 Sept fix (ratios.ts ageOn from children/{id}.dob) holds.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11ratios.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11ratios.out",
     "at": "2026-09-13T00:14:04Z",
@@ -995,13 +1025,13 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "Child dob 2018-09-30 booked today (12 Sept 2026, aged 7) onto a 5 Oct 2026 session (when she is 8). GET /api/ratios?date=2026-10-05 -> age 7 (band 'Age 5–7', 1:8) instead of 8 ('Age 8+', 1:10). The ratio uses the age stamped on the booking at checkout (ageFromDob at booking time), never the child's dob against the session date — so any birthday between booking and session (or mid-camp) is banded wrong. The 9 other children (dob 2020-01-01) were correctly age 6 today.",
+        "actual": "Child dob 2018-09-30 booked today (12 Sept 2026, aged 7) onto a 5 Oct 2026 session (when she is 8). GET /api/ratios?date=2026-10-05 -> age 7 (band 'Age 5\u20137', 1:8) instead of 8 ('Age 8+', 1:10). The ratio uses the age stamped on the booking at checkout (ageFromDob at booking time), never the child's dob against the session date \u2014 so any birthday between booking and session (or mid-camp) is banded wrong. The 9 other children (dob 2020-01-01) were correctly age 6 today.",
         "notes": "Where it matters most (Under 2 1:3 -> Age 2 1:4, and the 7->8 boundary) the required-staff figure is wrong. RegistersApp ageOf() also prefers the booking age over dob. Suggested fix: in ratios.ts derive age from children/{id}.dob at `date` when a childId exists, falling back to the booking age.",
         "at": "2026-09-12T13:12:32.235Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-tested after fix: a child with dob 2018-09-30 booked on 12 Sept (aged 7) onto a 5 Oct 2026 session → GET /api/ratios?date=2026-10-05 now bands her as 8 (from her date of birth on the session date), not the age stamped at checkout.",
+        "actual": "Re-tested after fix: a child with dob 2018-09-30 booked on 12 Sept (aged 7) onto a 5 Oct 2026 session \u2192 GET /api/ratios?date=2026-10-05 now bands her as 8 (from her date of birth on the session date), not the age stamped at checkout.",
         "notes": "Fixed 12 Sept: ratios.ts works out each child's age on the session date from children/{id}.dob, falling back to the booking's age.",
         "at": "2026-09-12T16:43:33Z"
       }
@@ -1010,7 +1040,7 @@
   "d11s6": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Re-run 13 Sept on the REAL clock inside the window, no fake time: UTC 2026-09-12T23:29Z = 00:29 BST Sun 13 Sept (UTC date still 12 Sept). Throwaway tenant, listing with sessions 12 + 13 Sept, a booking for 13 Sept. GET /api/dashboard → today.date '2026-09-13' with the 13 Sept session (1 booked); GET /api/ratios (no date) → date '2026-09-13', 1 session, 1 child; GET /api/registers (no date) → the 13 Sept register.",
+    "actual": "Re-run 13 Sept on the REAL clock inside the window, no fake time: UTC 2026-09-12T23:29Z = 00:29 BST Sun 13 Sept (UTC date still 12 Sept). Throwaway tenant, listing with sessions 12 + 13 Sept, a booking for 13 Sept. GET /api/dashboard \u2192 today.date '2026-09-13' with the 13 Sept session (1 booked); GET /api/ratios (no date) \u2192 date '2026-09-13', 1 session, 1 child; GET /api/registers (no date) \u2192 the 13 Sept register.",
     "notes": "No code change. ukToday() (server/src/lib/ukDate.ts) holds across dashboard/ratios/registers. Screens not opened (no browser sign-in).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11s6.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11s6.out",
     "at": "2026-09-12T23:30:20Z",
@@ -1019,13 +1049,13 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "With the process clock set to 2026-09-12T23:30Z (= 00:30 BST on Sun 13 Sept) GET /api/dashboard returned today.date '2026-09-12', today.sessions = the 12 Sept session with 9 booked, and next = 13 Sept — i.e. yesterday's figures presented as today's. dashboard.ts computes today = new Date().toISOString().slice(0,10) (UTC) and the Dashboard client sends no date. Ratios is fine: RatiosApp sends ?date= from the device's local date (todayIso uses getFullYear/getMonth/getDate).",
+        "actual": "With the process clock set to 2026-09-12T23:30Z (= 00:30 BST on Sun 13 Sept) GET /api/dashboard returned today.date '2026-09-12', today.sessions = the 12 Sept session with 9 booked, and next = 13 Sept \u2014 i.e. yesterday's figures presented as today's. dashboard.ts computes today = new Date().toISOString().slice(0,10) (UTC) and the Dashboard client sends no date. Ratios is fine: RatiosApp sends ?date= from the device's local date (todayIso uses getFullYear/getMonth/getDate).",
         "notes": "Dashboard half fails, Ratios half passes. Verified by patching Date() in the test process only (Date.now left real). Suggested fix: compute 'today' in Europe/London on the server (Intl.DateTimeFormat('en-CA',{timeZone:'Europe/London'})) or have the client pass its local date.",
         "at": "2026-09-12T13:12:32.430Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-tested after fix with the process clock at 2026-09-12T23:30Z (00:30 BST Sun 13 Sept): GET /api/dashboard → today.date '2026-09-13' with the 13 Sept session (was '2026-09-12' — yesterday's figures). Ratios half already passed.",
+        "actual": "Re-tested after fix with the process clock at 2026-09-12T23:30Z (00:30 BST Sun 13 Sept): GET /api/dashboard \u2192 today.date '2026-09-13' with the 13 Sept session (was '2026-09-12' \u2014 yesterday's figures). Ratios half already passed.",
         "notes": "Fixed 12 Sept: new server/src/lib/ukDate.ts ukToday(); 20 routes that took 'today' from the UTC date now use UK time (dashboard, registers, ratios, meals, moments, compliance, invoices, reconciliation, my, leave, listings, emails, ai, growth, purchasing, platformNotifications).",
         "at": "2026-09-12T15:11:51Z"
       }
@@ -1034,7 +1064,7 @@
   "d11s7": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Ran the REAL parseQuick() + @name resolution (extracted verbatim from TasksApp.tsx, transpiled, run): 'Check first-aid kits @Sam !urgent tomorrow' with team [Sam Taylor, Jess Moore] → saved {t:'Check first-aid kits', who:'Sam Taylor', whoEmail:'sam@example.test', prio:'urgent', due:'2026-09-14'} with no prompt. '@Zed' (not on the team) → asks '\"@Zed\" isn't anyone on your team. Save the task for \"Zed\" anyway?' before saving (Cancel → nothing saved). Ambiguous '@Sam' (Sam Taylor + Sam Reid) → asks before saving.",
+    "actual": "Ran the REAL parseQuick() + @name resolution (extracted verbatim from TasksApp.tsx, transpiled, run): 'Check first-aid kits @Sam !urgent tomorrow' with team [Sam Taylor, Jess Moore] \u2192 saved {t:'Check first-aid kits', who:'Sam Taylor', whoEmail:'sam@example.test', prio:'urgent', due:'2026-09-14'} with no prompt. '@Zed' (not on the team) \u2192 asks '\"@Zed\" isn't anyone on your team. Save the task for \"Zed\" anyway?' before saving (Cancel \u2192 nothing saved). Ambiguous '@Sam' (Sam Taylor + Sam Reid) \u2192 asks before saving.",
     "notes": "12 Sept fix holds. Minor: a full name with a space ('@Jess Moore') resolves on the first name and leaves 'Moore' in the title; and with an EMPTY roster (team not loaded) an unknown name is accepted without asking. Not clicked through.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11s7.logic.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11s7.out",
     "at": "2026-09-13T00:09:13Z",
@@ -1043,13 +1073,13 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "The real parseQuick() (extracted from TasksApp.tsx and run) parses 'Check first-aid kits @Sam !urgent tomorrow' -> {t:'Check first-aid kits', who:'Sam', prio:'urgent', due:'2026-09-13'} — all three parsed. But '@Zed' (nobody in the team) is also just accepted: addQuick() (583-590) calls create() immediately with who:'Zed', no team check, no warning, and POST /api/tasks -> 201 who 'Zed'. Quick-add also never sets whoEmail, so the saved task is keyed on the bare token 'Sam': a staff member whose account name is 'Sam Taylor' did NOT see it in GET /api/tasks (assignedTo() falls back to exact name match). '@Sam Taylor' parses who 'Sam' and leaves 'Taylor' in the title.",
+        "actual": "The real parseQuick() (extracted from TasksApp.tsx and run) parses 'Check first-aid kits @Sam !urgent tomorrow' -> {t:'Check first-aid kits', who:'Sam', prio:'urgent', due:'2026-09-13'} \u2014 all three parsed. But '@Zed' (nobody in the team) is also just accepted: addQuick() (583-590) calls create() immediately with who:'Zed', no team check, no warning, and POST /api/tasks -> 201 who 'Zed'. Quick-add also never sets whoEmail, so the saved task is keyed on the bare token 'Sam': a staff member whose account name is 'Sam Taylor' did NOT see it in GET /api/tasks (assignedTo() falls back to exact name match). '@Sam Taylor' parses who 'Sam' and leaves 'Taylor' in the title.",
         "notes": "Parsing passes; 'a name NOT in your team must be flagged before you save' fails, and the parsed @name doesn't actually reach the person. Suggested fix: resolve @token against /api/tasks/assignees (first-name/prefix match), set whoEmail, and show an 'unknown person' chip that blocks Enter until confirmed.",
         "at": "2026-09-12T13:17:04.440Z"
       },
       {
         "verdict": "pass",
-        "actual": "Fixed (code-level): quick-add now resolves @name against the real team list — an exact name, else a unique first-name/prefix match ('@Sam' → 'Sam Taylor') — and saves their email with the task, so it reaches them. '@Zed' (nobody on the team) or an ambiguous '@Sam' asks before saving instead of silently creating a task for a stranger. Parsing (@who, !urgent, tomorrow) unchanged.",
+        "actual": "Fixed (code-level): quick-add now resolves @name against the real team list \u2014 an exact name, else a unique first-name/prefix match ('@Sam' \u2192 'Sam Taylor') \u2014 and saves their email with the task, so it reaches them. '@Zed' (nobody on the team) or an ambiguous '@Sam' asks before saving instead of silently creating a task for a stranger. Parsing (@who, !urgent, tomorrow) unchanged.",
         "notes": "Fixed 12 Sept in features/tasks/TasksApp.tsx addQuick. Not clicked through.",
         "at": "2026-09-12T17:37:44Z"
       }
@@ -1058,8 +1088,8 @@
   "d11s8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Re-test 13 Sept (wave 3): task for Jo with 4 steps, 2 given to Sam (one picked with his email, one legacy name-only). Sam (staff) GET /api/tasks → the task is listed, flagged subtaskOnly. He ticks both his steps → 200 (stored [false,true,false,true]), unticks one → 200; ticking someone else's step → 403, renaming his step → 403, editing the title → 403, marking the task done → 403, delete → 403; comment → 200, stamped 'Sam Taylor' whatever name was sent; rewriting comment history → 409. An unrelated staff member doesn't see it (PUT → 404); Jo (owner) still edits normally. Web My tasks now includes tasks with a step assigned to you (taskDisplay.hasMySub) — code-read + tsc, screen not visually checked.",
-    "notes": "FIXED 13 Sept (wave 3), least-privilege default — decision for Kaz (backlog s13-fx3-tasks): server/src/routes/tasks.ts whoAmI/subIsMine/mySubs, GET lists step-only tasks for staff with subtaskOnly, ownTask returns stepsOnly, saveOwnSteps (transaction) allows only own-step done flips + appended comments; subSchema keeps whoEmail. features/tasks/taskDisplay.ts hasMySub; TasksApp.tsx mineOf includes it, subOwner() attaches the picked person's email to a step, StepsOnlyDrawer (own steps tickable + comments only); StaffDashApp shows a link, not a tick, for step-only tasks.",
+    "actual": "Re-test 13 Sept (wave 3): task for Jo with 4 steps, 2 given to Sam (one picked with his email, one legacy name-only). Sam (staff) GET /api/tasks \u2192 the task is listed, flagged subtaskOnly. He ticks both his steps \u2192 200 (stored [false,true,false,true]), unticks one \u2192 200; ticking someone else's step \u2192 403, renaming his step \u2192 403, editing the title \u2192 403, marking the task done \u2192 403, delete \u2192 403; comment \u2192 200, stamped 'Sam Taylor' whatever name was sent; rewriting comment history \u2192 409. An unrelated staff member doesn't see it (PUT \u2192 404); Jo (owner) still edits normally. Web My tasks now includes tasks with a step assigned to you (taskDisplay.hasMySub) \u2014 code-read + tsc, screen not visually checked.",
+    "notes": "FIXED 13 Sept (wave 3), least-privilege default \u2014 decision for Kaz (backlog s13-fx3-tasks): server/src/routes/tasks.ts whoAmI/subIsMine/mySubs, GET lists step-only tasks for staff with subtaskOnly, ownTask returns stepsOnly, saveOwnSteps (transaction) allows only own-step done flips + appended comments; subSchema keeps whoEmail. features/tasks/taskDisplay.ts hasMySub; TasksApp.tsx mineOf includes it, subOwner() attaches the picked person's email to a step, StepsOnlyDrawer (own steps tickable + comments only); StaffDashApp shows a link, not a tick, for step-only tasks.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/fix3ops.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/fix-fix3ops/run1.out",
     "at": "2026-09-13T00:58:56Z",
     "agent": "B",
@@ -1067,20 +1097,20 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "PUT /api/tasks/:id {subs:[{t:'Print registers',done:true},{t:'Buy cones',done:false,who:'Sam Taylor'},{t:'Email parents',done:false}]} -> 200, but the stored subs are [{t,done},{t,done},{t,done}] — the subtask's who was DROPPED. The server's subSchema is z.object({t, done}) (tasks.ts:37), which strips unknown keys, while the client sends and renders sub.who (TasksApp.tsx:35, 1692, 1875). Ticked state survives (done:true). The subtask assignee (Sam Taylor, staff) does not see the parent task in their GET /api/tasks either (staff see only tasks whose own assignee is them).",
-        "notes": "Assignee does not survive a reload and never reaches the person — both halves of the expectation fail. Card-face % is client-side from subs.done (would show 1/3). Suggested fix: add who/whoEmail to subSchema and include tasks where any sub is assigned to the caller in the staff GET.",
+        "actual": "PUT /api/tasks/:id {subs:[{t:'Print registers',done:true},{t:'Buy cones',done:false,who:'Sam Taylor'},{t:'Email parents',done:false}]} -> 200, but the stored subs are [{t,done},{t,done},{t,done}] \u2014 the subtask's who was DROPPED. The server's subSchema is z.object({t, done}) (tasks.ts:37), which strips unknown keys, while the client sends and renders sub.who (TasksApp.tsx:35, 1692, 1875). Ticked state survives (done:true). The subtask assignee (Sam Taylor, staff) does not see the parent task in their GET /api/tasks either (staff see only tasks whose own assignee is them).",
+        "notes": "Assignee does not survive a reload and never reaches the person \u2014 both halves of the expectation fail. Card-face % is client-side from subs.done (would show 1/3). Suggested fix: add who/whoEmail to subSchema and include tasks where any sub is assigned to the caller in the staff GET.",
         "at": "2026-09-12T13:17:04.841Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-tested after fix: POST /api/tasks with a checklist step assigned to Sam → 201; PUT re-assigning it to Cara → 200; Firestore holds [{t:'Buy cones',who:'Cara'},{t:'Book hall',done:true}] — the assignee is kept.",
+        "actual": "Re-tested after fix: POST /api/tasks with a checklist step assigned to Sam \u2192 201; PUT re-assigning it to Cara \u2192 200; Firestore holds [{t:'Buy cones',who:'Cara'},{t:'Book hall',done:true}] \u2014 the assignee is kept.",
         "notes": "Fixed 12 Sept: tasks.ts subSchema accepts who.",
         "at": "2026-09-12T15:04:32Z"
       },
       {
         "verdict": "fail",
-        "actual": "Subtasks: POST/PUT with three subtasks, one assigned to 'Sam Taylor' (a different person from the task's assignee Jo), one ticked → stored [{Print registers, done}, {Buy cones, who:'Sam Taylor'}, {Email parents}] — the assignee survives the save/reload and the card shows 33% (TasksApp.tsx:968-975). BUT the subtask does not reach Sam: Sam's GET /api/tasks (staff) returns 0 tasks — the task isn't listed for him — and his PUT to tick his own subtask → 404. The web 'My tasks' view uses isMine() on the parent task's who/whoEmail only (taskDisplay.ts:37), so an operator given a subtask doesn't see it either.",
-        "notes": "NEWLY FAILED on re-test (12 Sept retest only checked that the assignee saves; the plan says record whether it reaches them — it doesn't). Not a few-line fix: the server GET/ownTask for staff (tasks.ts:101,369) and My tasks would need to include tasks with a sub assigned to the caller (subs carry a name only, no email), and it needs a decision on what a subtask assignee may edit (only their own subtask? the whole task?). Listed for Kaz.",
+        "actual": "Subtasks: POST/PUT with three subtasks, one assigned to 'Sam Taylor' (a different person from the task's assignee Jo), one ticked \u2192 stored [{Print registers, done}, {Buy cones, who:'Sam Taylor'}, {Email parents}] \u2014 the assignee survives the save/reload and the card shows 33% (TasksApp.tsx:968-975). BUT the subtask does not reach Sam: Sam's GET /api/tasks (staff) returns 0 tasks \u2014 the task isn't listed for him \u2014 and his PUT to tick his own subtask \u2192 404. The web 'My tasks' view uses isMine() on the parent task's who/whoEmail only (taskDisplay.ts:37), so an operator given a subtask doesn't see it either.",
+        "notes": "NEWLY FAILED on re-test (12 Sept retest only checked that the assignee saves; the plan says record whether it reaches them \u2014 it doesn't). Not a few-line fix: the server GET/ownTask for staff (tasks.ts:101,369) and My tasks would need to include tasks with a sub assigned to the caller (subs carry a name only, no email), and it needs a decision on what a subtask assignee may edit (only their own subtask? the whole task?). Listed for Kaz.",
         "at": "2026-09-13T00:09:14Z"
       }
     ]
@@ -1088,7 +1118,7 @@
   "d11s9": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Both routes send the same write: Board drop → onDrop → patch(id,{status}); card dropdown → setStatus → patch(id,{status}) (TasksApp.tsx:576). Via API: PUT {status:'prog'} and {status:'done'} on two tasks, re-read → 'prog' and 'done'.",
+    "actual": "Both routes send the same write: Board drop \u2192 onDrop \u2192 patch(id,{status}); card dropdown \u2192 setStatus \u2192 patch(id,{status}) (TasksApp.tsx:576). Via API: PUT {status:'prog'} and {status:'done'} on two tasks, re-read \u2192 'prog' and 'done'.",
     "notes": "Server + code path; drag-and-drop not physically performed.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11tasks.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11tasks.out ; features/tasks/TasksApp.tsx:576",
     "at": "2026-09-13T00:09:14Z",
@@ -1106,8 +1136,8 @@
   "d11s10": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Rule written BEFORE testing: an operator/manager may complete anyone's task; a staff colleague may NOT complete or delete someone else's. API: staff Kim PUT {status:'done'} on Jo's task → 404; a lead → 404; Kim DELETE → 403 'Only an operator can delete a task. Mark it complete instead.'; Jo (the assignee, staff) DELETE → 403; task still 'todo'; a second operator (company role, same tenant) PUT done → 200 'done'. Server agreed with the rule in every case.",
-    "notes": "Second operator modelled as another company-role user on the tenant (injected auth, no Firebase account created). Leads get no extra rights; a staff member can create a task for someone else (201) — consistent with the rule.",
+    "actual": "Rule written BEFORE testing: an operator/manager may complete anyone's task; a staff colleague may NOT complete or delete someone else's. API: staff Kim PUT {status:'done'} on Jo's task \u2192 404; a lead \u2192 404; Kim DELETE \u2192 403 'Only an operator can delete a task. Mark it complete instead.'; Jo (the assignee, staff) DELETE \u2192 403; task still 'todo'; a second operator (company role, same tenant) PUT done \u2192 200 'done'. Server agreed with the rule in every case.",
+    "notes": "Second operator modelled as another company-role user on the tenant (injected auth, no Firebase account created). Leads get no extra rights; a staff member can create a task for someone else (201) \u2014 consistent with the rule.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11tasks.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11tasks.out",
     "at": "2026-09-13T00:09:14Z",
     "agent": "B",
@@ -1116,7 +1146,7 @@
       {
         "verdict": "pass",
         "actual": "Rule written down BEFORE testing: an operator/manager may complete anyone's task; a staff colleague may NOT complete (or delete) a task assigned to someone else. API: staff Kim PUT {status:'done'} on Jo's task -> 404; Kim flagged as a lead -> 404 as well; a second operator (company role) -> 200; staff DELETE -> 403 'Only an operator can delete a task'. Server agreed with the rule in every case.",
-        "notes": "'Second operator account' was modelled as a second company-role user on the same tenant (injected auth; no second Firebase account created). Observation: leads get no extra rights here, and a staff member CAN create a task assigned to someone else (201) — both consistent with the written rule.",
+        "notes": "'Second operator account' was modelled as a second company-role user on the same tenant (injected auth; no second Firebase account created). Observation: leads get no extra rights here, and a staff member CAN create a task assigned to someone else (201) \u2014 both consistent with the written rule.",
         "at": "2026-09-12T13:17:05.905Z"
       }
     ]
@@ -1124,8 +1154,8 @@
   "d11s11": {
     "verdict": "pass",
     "method": "api",
-    "actual": "POST /api/tasks {repeat:{freq:'daily', until:+1 month}} → 201, 30 dated tasks, one seriesId. PUT status 'done' on 19 Sept → only that date done (1 of 30). Title edit on 21 Sept via PUT /:id (the 'just this one' path) → only that date retitled. Open count: 32 open rows (29 series + 3 one-offs) → foldRepeats() gives 4 jobs, not 32.",
-    "notes": "Server + foldRepeats (verbatim copy of taskDisplay.ts:76-88 — the module's @/ imports don't resolve under tsx). The 'just this one / all' dialog not clicked. Note: a repeat with no due date starts from the UTC date (tasks.ts:216), not ukToday.",
+    "actual": "POST /api/tasks {repeat:{freq:'daily', until:+1 month}} \u2192 201, 30 dated tasks, one seriesId. PUT status 'done' on 19 Sept \u2192 only that date done (1 of 30). Title edit on 21 Sept via PUT /:id (the 'just this one' path) \u2192 only that date retitled. Open count: 32 open rows (29 series + 3 one-offs) \u2192 foldRepeats() gives 4 jobs, not 32.",
+    "notes": "Server + foldRepeats (verbatim copy of taskDisplay.ts:76-88 \u2014 the module's @/ imports don't resolve under tsx). The 'just this one / all' dialog not clicked. Note: a repeat with no due date starts from the UTC date (tasks.ts:216), not ukToday.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11tasks.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11tasks.out",
     "at": "2026-09-13T00:09:15Z",
     "agent": "B",
@@ -1142,7 +1172,7 @@
   "d11s12": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Tenant B's operator GET /api/tasks → 200 with exactly its own 1 task; tenantIds in the response = [tenant B] only, none of tenant A's 35. Cross-tenant writes by id refused: PUT A's task → 404, DELETE → 404, PUT A's series → 404.",
+    "actual": "Tenant B's operator GET /api/tasks \u2192 200 with exactly its own 1 task; tenantIds in the response = [tenant B] only, none of tenant A's 35. Cross-tenant writes by id refused: PUT A's task \u2192 404, DELETE \u2192 404, PUT A's series \u2192 404.",
     "notes": "Real router, injected auth for two throwaway tenants.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11tasks.test.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11tasks.out",
     "at": "2026-09-13T00:09:15Z",
@@ -1151,7 +1181,7 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Operator of tenant B GET /api/tasks -> 200 with exactly 1 task (its own); tenantIds in the response = [tenant B] only — none of tenant A's 38 tasks. Cross-tenant writes by id also refused: PUT /api/tasks/<A's task> -> 404, DELETE -> 404, PUT /api/tasks/series/<A's series> -> 404. A platform (HQ) session's GET returned none of tenant A's tasks (separate '__platform__' bucket).",
+        "actual": "Operator of tenant B GET /api/tasks -> 200 with exactly 1 task (its own); tenantIds in the response = [tenant B] only \u2014 none of tenant A's 38 tasks. Cross-tenant writes by id also refused: PUT /api/tasks/<A's task> -> 404, DELETE -> 404, PUT /api/tasks/series/<A's series> -> 404. A platform (HQ) session's GET returned none of tenant A's tasks (separate '__platform__' bucket).",
         "notes": "Exercised the real router with injected auth for two throwaway tenants; a real $B token/requireAuth not in the loop.",
         "at": "2026-09-12T13:17:07.397Z"
       }
@@ -1160,7 +1190,7 @@
   "d11s13": {
     "verdict": "pass",
     "method": "live-read",
-    "actual": "END-TO-END on the RUNNING API's own reminder sweep this time (no in-process sweep). Real Firestore had 44 open HQ ('__platform__') tasks, 6 due today/overdue — the condition that used to abort the sweep. Created a throwaway-tenant task due today (13 Sept UK) at 00:05, assigned + created by a @example.test address, email delivery off for that tenant. The live sweep ran at 23:44:46Z (schedulerLocks/task-reminders lastRunAt, next 23:49:46Z) and at 23:45:08Z the assignee's bell had 'Due today: ZZ sweep probe' · 'Due today at 00:05 · Jo Zz.'; schedulerFired marker status 'done'. The API server log (read via the Browser pane's preview_logs for 'real-api') shows no sweep error, no '[sweep task-reminders] skipped' line and no server errors across the run — only tsx restarts from other agents' edits.",
+    "actual": "END-TO-END on the RUNNING API's own reminder sweep this time (no in-process sweep). Real Firestore had 44 open HQ ('__platform__') tasks, 6 due today/overdue \u2014 the condition that used to abort the sweep. Created a throwaway-tenant task due today (13 Sept UK) at 00:05, assigned + created by a @example.test address, email delivery off for that tenant. The live sweep ran at 23:44:46Z (schedulerLocks/task-reminders lastRunAt, next 23:49:46Z) and at 23:45:08Z the assignee's bell had 'Due today: ZZ sweep probe' \u00b7 'Due today at 00:05 \u00b7 Jo Zz.'; schedulerFired marker status 'done'. The API server log (read via the Browser pane's preview_logs for 'real-api') shows no sweep error, no '[sweep task-reminders] skipped' line and no server errors across the run \u2014 only tsx restarts from other agents' edits.",
     "notes": "No code change; sweeps.ts:731 skip of the HQ bucket + per-task try/catch hold. Probe data removed (0 leftovers). Mail not live (only the allowlisted address would receive).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11s13.live.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-B/d11s13.out ; preview_logs real-api",
     "at": "2026-09-12T23:46:26Z",
@@ -1169,7 +1199,7 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "READ-ONLY on the live Firestore the running API uses: schedulerLocks/task-reminders lastRunAt 2026-09-12T13:13Z, nextRunAt 13:18Z (sweep running every 5 min). There are 52 open HQ ('__platform__') tasks, 1 of them due today/overdue — exactly the condition that used to throw and abort the sweep. Despite that, 33 task fireOnce markers exist with status 'done' (e.g. task_over_…_2026-09-12, done 07:13Z = 08:13 UK) and 11 category:'task' bell notifications were created today ('Overdue: Reconcile last week's cash payments', …). Code: sweeps.ts:731 skips the HQ bucket and each task is wrapped in its own try/catch (747-775).",
+        "actual": "READ-ONLY on the live Firestore the running API uses: schedulerLocks/task-reminders lastRunAt 2026-09-12T13:13Z, nextRunAt 13:18Z (sweep running every 5 min). There are 52 open HQ ('__platform__') tasks, 1 of them due today/overdue \u2014 exactly the condition that used to throw and abort the sweep. Despite that, 33 task fireOnce markers exist with status 'done' (e.g. task_over_\u2026_2026-09-12, done 07:13Z = 08:13 UK) and 11 category:'task' bell notifications were created today ('Overdue: Reconcile last week's cash payments', \u2026). Code: sweeps.ts:731 skips the HQ bucket and each task is wrapped in its own try/catch (747-775).",
         "notes": "The API server's stdout log is not readable from here (server belongs to the user), so 'the log shows no sweep failure' is inferred from successful deliveries after an open HQ task, not read. No new task was created on real data and I did not wait on a timed task. Regression holds on this evidence.",
         "at": "2026-09-12T13:17:08.192Z"
       }

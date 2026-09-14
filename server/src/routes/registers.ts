@@ -115,7 +115,7 @@ registers.get("/", async (req, res) => {
     return;
   }
 
-  const [bookingSnaps, regSnaps, listingSnaps] = await Promise.all([
+  const [bookingSnaps, regSnaps, listingSnaps, ratioGroupSnaps] = await Promise.all([
     Promise.all(
       todays.map(({ id }) => db.collection("bookings").where("blockId", "==", id).get()),
     ),
@@ -123,10 +123,26 @@ registers.get("/", async (req, res) => {
     db.getAll(...[...new Set(todays.map(({ block }) => block.listingId))].map((lid) =>
       db.collection("listings").doc(lid),
     )),
+    // Ratios & groups sorts children into named groups per session
+    // (ratioGroups/{blockId}_{date}) — surface that grouping here too, so the
+    // register can be filtered/viewed by group/room (d11s4), not just by the
+    // drop-off/collection time window.
+    db.getAll(...todays.map(({ id }) => db.collection("ratioGroups").doc(`${id}_${date}`))),
   ]);
   const listingName = new Map(
     listingSnaps.map((s) => [s.id, s.exists ? ((s.data()!.name as string) ?? "") : "(deleted listing)"]),
   );
+  const groupsByBlock = new Map<string, { id: string; name: string }[]>();
+  const groupIdByChild = new Map<string, Map<string, { id: string; name: string }>>();
+  ratioGroupSnaps.forEach((s, i) => {
+    if (!s.exists) return;
+    const blockId = todays[i].id;
+    const groups = ((s.data()?.groups ?? []) as { id: string; name: string; childIds?: string[] }[]);
+    groupsByBlock.set(blockId, groups.map((g) => ({ id: g.id, name: g.name })));
+    const byChild = new Map<string, { id: string; name: string }>();
+    for (const g of groups) for (const cid of g.childIds ?? []) byChild.set(cid, { id: g.id, name: g.name });
+    groupIdByChild.set(blockId, byChild);
+  });
 
   // Resolve each booking's child record (by id) so the register can show the
   // face, allergies, SEND plan and collection password — a safeguarding read,
@@ -200,6 +216,7 @@ registers.get("/", async (req, res) => {
   const out = todays.map(({ id, block, session }, i) => {
     const reg = regSnaps[i].exists ? (regSnaps[i].data() as RegisterDoc) : null;
     const entries = reg?.entries ?? {};
+    const childGroup = groupIdByChild.get(id);
     const attendees = bookingSnaps[i].docs
       .map((d) => fromDoc(d.data() as BookingDoc))
       .flatMap((b) => registerRows(b, date).map((r) => ({ b, r, att: entryFor(entries, r) ?? null })))
@@ -230,6 +247,8 @@ registers.get("/", async (req, res) => {
         child: r.childId ? childById.get(r.childId) ?? null : null,
         childId: r.childId ?? null,
         attendance: att,
+        groupId: (r.childId && childGroup?.get(r.childId)?.id) ?? null,
+        groupName: (r.childId && childGroup?.get(r.childId)?.name) ?? null,
         ...(r.expected ? {} : { cancelledOnSite: true }),
       }))
       .sort((a, b) => (a.children[0].name < b.children[0].name ? -1 : 1));
@@ -251,6 +270,7 @@ registers.get("/", async (req, res) => {
       listingId: block.listingId,
       listingName: listingName.get(block.listingId) ?? "",
       attendees,
+      groups: groupsByBlock.get(id) ?? [],
       counts,
       heads: reg?.heads ?? [],
       takenBy: reg?.takenBy ?? null,

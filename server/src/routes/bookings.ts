@@ -576,8 +576,15 @@ bookings.post("/:ref/actions", async (req, res) => {
               m.approved = ok;
               if (ok && m.from && m.to) {
                 const kid = b.kids?.find((k) => (m.childId && k.childId === m.childId) || k.name === m.childName);
-                if (kid?.dates?.length) kid.dates = kid.dates.map((d) => (d === m.from ? m.to! : d));
-                else if (b.days?.length) b.days = b.days.map((d) => (d === m.from ? m.to! : d));
+                // Some kids[] rows (merged-basket bookings) only ever had `days`
+                // written, not `dates` — treat either as the child's booked days
+                // and always keep both in sync afterwards, or the child's own row
+                // goes stale (register/partial-cancel read `dates`).
+                const kidDays = kid?.dates?.length ? kid.dates : kid?.days;
+                if (kid && kidDays?.length) {
+                  const moved = kidDays.map((d) => (d === m.from ? m.to! : d));
+                  kid.dates = moved; kid.days = moved;
+                } else if (b.days?.length) b.days = b.days.map((d) => (d === m.from ? m.to! : d));
                 // Bookings whose dates live only in `sessions` strings — move the
                 // matching label, keeping its time suffix, so the change shows.
                 if (b.sessions?.length) {
@@ -674,7 +681,20 @@ bookings.post("/:ref/actions", async (req, res) => {
       if (moved.partial) updated.pay = "Partially refunded";
       updated.refundedApproved = Math.round(((updated.refundedApproved ?? 0) + moved.owed) * 100) / 100;
       updated.walletRefunded = Math.round(((updated.walletRefunded ?? 0) + moved.walletPart) * 100) / 100;
-      await ref.set({ cancel: { ...updated.cancel, refundError: FieldValue.delete() }, pay: updated.pay, refundedApproved: updated.refundedApproved, walletRefunded: updated.walletRefunded }, { merge: true });
+      // The parent Payments page builds its Refunds list (and refundTotal)
+      // from refundLog only (PaymentsApp.tsx:145) — a whole-booking approved
+      // refund used to write cancel.refundedAt/refundedApproved/walletRefunded
+      // but no refundLog entry, so it never showed there (only per-day
+      // releases, my.ts partialCancel, did). Add one here too.
+      const refundLabel = moved.partial ? "Refund approved (partial)" : "Refund approved";
+      (updated.refundLog = updated.refundLog ?? []).push({
+        label: refundLabel,
+        amount: moved.owed,
+        on: new Date().toISOString().slice(0, 10),
+        by: "Provider",
+        source: moved.via === "wallet" ? "Wallet" : moved.via === "offline" ? "Offline" : "Card",
+      });
+      await ref.set({ cancel: { ...updated.cancel, refundError: FieldValue.delete() }, pay: updated.pay, refundedApproved: updated.refundedApproved, walletRefunded: updated.walletRefunded, refundLog: updated.refundLog }, { merge: true });
     }
 
     // Status-change emails to the booker (fire-and-forget).

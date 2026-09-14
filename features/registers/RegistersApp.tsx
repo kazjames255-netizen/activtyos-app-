@@ -58,9 +58,10 @@ interface SGRec { photo?: string; dob?: string; school?: string; allergies?: str
 // ref#child); `bookingRef` is the booking they belong to. `cancelledOnSite`:
 // the booking was cancelled while they were signed in, so they stay listed
 // until someone signs them out.
-interface Attendee { ref: string; bookingRef?: string; cancelledOnSite?: boolean; childId?: string | null; booker: string; email: string; phone?: string; note?: string; addons?: string[]; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null }
+interface Attendee { ref: string; bookingRef?: string; cancelledOnSite?: boolean; childId?: string | null; booker: string; email: string; phone?: string; note?: string; addons?: string[]; bookingStatus: string; seats: number; children: { name: string; age?: number }[]; child: SGRec | null; attendance: Attendance | null; groupId?: string | null; groupName?: string | null }
 interface Head { n: number; by: string; at: string }
-interface Session { blockId: string; date: string; start: string; end: string; blockName: string; listingId: string; listingName: string; attendees: Attendee[]; counts: { expected: number; present: number; notArrived: number; absent: number; collected: number }; heads: Head[]; takenBy: { name: string; at: string } | null;
+interface RatioGroup { id: string; name: string }
+interface Session { blockId: string; date: string; start: string; end: string; blockName: string; listingId: string; listingName: string; attendees: Attendee[]; groups?: RatioGroup[]; counts: { expected: number; present: number; notArrived: number; absent: number; collected: number }; heads: Head[]; takenBy: { name: string; at: string } | null;
   // The day's staff jottings, keyed by attendee ref — server-held since 12 Sept.
   notes?: Record<string, RegNote>; nappies?: Record<string, NappyChange[]>; nudges?: Record<string, string> }
 // What a button MEANS on screen ("In" on a signed-in row = undo it)…
@@ -787,6 +788,9 @@ export function RegistersApp() {
   const [q, setQ] = useState("");
   const [sort, setSort] = useState<"young" | "old" | "start">("young");
   const [pass, setPass] = useState("");
+  // Filter the register by a Ratios & groups room/group (d11s4) — separate
+  // from the drop-off/collection time-window filter above ("pass").
+  const [groupFilter, setGroupFilter] = useState("");
   const [flag, setFlag] = useState<FlagKind>("");
   const [addonsOnly, setAddonsOnly] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -964,6 +968,50 @@ export function RegistersApp() {
   useEffect(() => { apiGet<{ role: string; name?: string }>("/api/me").then((me) => { setReadOnly(me.role === "platform"); setRole(me.role); if (me.name?.trim()) setMeName(me.name.trim()); }).catch(() => {}); }, []);
   useRealtime(["registers", "bookings", "blocks"], refresh);
 
+  // A network-level failure (offline, can't reach the API — ApiError status 0,
+  // or a request timeout, 408) queues the mark instead of just reverting it —
+  // small, scoped fix for d10s6: the register used to have no offline mode at
+  // all (no queue, no retry), so a mark made with no signal was simply lost
+  // and staff had to re-tap every child once back online. This queues ONLY
+  // the failed mark itself (not a full PWA/service-worker rewrite) and
+  // retries it the moment the browser comes back online or this screen is
+  // revisited. Still fails safe: the row shows the optimistic state with a
+  // "queued — will retry" note, never a false confirmed state from the server.
+  const OUTBOX_KEY = "aos.registers.outbox";
+  type OutboxItem = { blockId: string; date: string; ref: string; action: WireAction; from?: string | null; collectedBy?: string; queuedAt: string };
+  const [outboxRefs, setOutboxRefs] = useState<Set<string>>(new Set());
+  const readOutbox = (): OutboxItem[] => { try { return JSON.parse(localStorage.getItem(OUTBOX_KEY) ?? "[]") as OutboxItem[]; } catch { return []; } };
+  const writeOutbox = (items: OutboxItem[]) => {
+    try { localStorage.setItem(OUTBOX_KEY, JSON.stringify(items)); } catch { /* ignore */ }
+    setOutboxRefs(new Set(items.map((i) => `${i.blockId}|${i.date}|${i.ref}`)));
+  };
+  const queueMark = (item: OutboxItem) => writeOutbox([...readOutbox().filter((i) => !(i.blockId === item.blockId && i.date === item.date && i.ref === item.ref)), item]);
+  const retryOutbox = useCallback(async () => {
+    const items = readOutbox();
+    if (!items.length) return;
+    const left: OutboxItem[] = [];
+    for (const it of items) {
+      try {
+        await apiPost(`/api/registers/${encodeURIComponent(it.blockId)}/${it.date}/mark`, { ref: it.ref, action: it.action, from: it.from, ...(it.collectedBy ? { collectedBy: it.collectedBy } : {}) });
+      } catch (e) {
+        // Still offline / still unreachable — keep it queued. A 409 (someone
+        // else marked it since) or any other server refusal drops it — a
+        // stale queued mark must not clobber what actually happened.
+        if (e instanceof ApiError && e.status !== 0 && e.status !== 408) continue;
+        left.push(it);
+      }
+    }
+    writeOutbox(left);
+    if (left.length !== items.length) void refreshDay(date).catch(() => {});
+  }, [date, refreshDay]);
+  useEffect(() => {
+    setOutboxRefs(new Set(readOutbox().map((i) => `${i.blockId}|${i.date}|${i.ref}`)));
+    void retryOutbox();
+    window.addEventListener("online", retryOutbox);
+    return () => window.removeEventListener("online", retryOutbox);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function mark(blockId: string, ref: string, action: Action) {
     // Collecting (not un-collecting): ask who took the child — the register
     // recorded the time but never the person (acceptance test d10s1).
@@ -993,11 +1041,20 @@ export function RegistersApp() {
       await apiPost(`/api/registers/${encodeURIComponent(blockId)}/${date}/mark`, { ref, action: wire, from, ...(collectedBy ? { collectedBy } : {}) });
       await refreshDay(date);
     } catch (e) {
-      if (before) setDays((prev) => ({ ...prev, [date]: before }));   // put the row back
-      setError(e instanceof Error ? e.message : t("registers.couldntUpdate"));
-      // Someone else marked this child since this screen loaded — show what
-      // the register really says now, rather than our stale copy.
-      if (e instanceof ApiError && e.status === 409) void refreshDay(date).catch(() => {});
+      // No signal / can't reach the API at all (status 0) or the request
+      // timed out (408): queue this exact mark and keep the optimistic row —
+      // it'll retry the moment the browser is back online (or this screen is
+      // revisited). Any other failure (validation, 403, 409…) reverts as before.
+      if (e instanceof ApiError && (e.status === 0 || e.status === 408)) {
+        queueMark({ blockId, date, ref, action: wire, from, collectedBy, queuedAt: now });
+        setError("No connection — this mark is queued and will send automatically once you're back online.");
+      } else {
+        if (before) setDays((prev) => ({ ...prev, [date]: before }));   // put the row back
+        setError(e instanceof Error ? e.message : t("registers.couldntUpdate"));
+        // Someone else marked this child since this screen loaded — show what
+        // the register really says now, rather than our stale copy.
+        if (e instanceof ApiError && e.status === 409) void refreshDay(date).catch(() => {});
+      }
     }
     setBusyRef(null);
   }
@@ -1112,6 +1169,13 @@ export function RegistersApp() {
     return [...m.entries()].map(([v, label]) => ({ v, label })).sort((a, b) => passTime(a.v).localeCompare(passTime(b.v)) || a.v.localeCompare(b.v));
   }, [daySessions]);
   const inPass = (r: FlatRow) => matchPass(pass, r);
+  // Every Ratios & groups room/group set up for today's sessions, deduped by
+  // id (the same group can span several blocks/sessions in a day).
+  const groupOpts = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of daySessions) for (const g of s.groups ?? []) m.set(g.id, g.name);
+    return [...m.entries()].map(([id, name]) => ({ id, name }));
+  }, [daySessions]);
   const term = q.trim().toLowerCase();
   // Pick the comparator from `sort` HERE in the render body (not buried inside a
   // .sort() callback) so the React Compiler tracks `sort` as a dependency and the
@@ -1132,6 +1196,7 @@ export function RegistersApp() {
   // number to zero and you couldn't see what you were switching to.
   const preAttend = flat
     .filter((r) => matchPass(pass, r))
+    .filter(({ a }) => !groupFilter || a.groupId === groupFilter)
     .filter(({ a }) => !flag || hasFlag(a, flag))
     .filter(({ a }) => !addonsOnly || (a.addons?.length ?? 0) > 0)
     .filter(({ a }) => !term || a.children.some((c) => c.name.toLowerCase().includes(term)) || a.booker.toLowerCase().includes(term))
@@ -1215,6 +1280,7 @@ export function RegistersApp() {
   return (
     <div className="-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]" style={LIGHT_PALETTE}>
       {error && <div className="mb-3 rounded-lg border border-[#f6c9cc] bg-[#fdebec] px-3 py-2 text-[12.5px] text-[#c02636]">{error}</div>}
+      {outboxRefs.size > 0 && <div className="mb-3 rounded-lg border border-[#fdd9a0] bg-[#fff6e6] px-3 py-2 text-[12.5px] font-semibold text-[#8a5300]">⏳ {outboxRefs.size} mark{outboxRefs.size === 1 ? "" : "s"} queued offline — sending automatically once you're back online.</div>}
       {listingsAll.length === 0 ? (
         loadFailed ? (
           <div className="rounded-2xl border border-[#f6c9cc] bg-[#fdebec] px-4 py-12 text-center">
@@ -1302,6 +1368,15 @@ export function RegistersApp() {
                       <select value={pass} onChange={(e) => setPass(e.target.value)} aria-label={t("registers.filterDropoffCollection")} className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 pl-3 pr-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
                         <option value="">🕒 {t("registers.allSessions")}</option>
                         {passOpts.map((o) => <option key={o.v} value={o.v}>🕒 {o.label}</option>)}
+                      </select>
+                      <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-white/70">▾</span>
+                    </span>
+                  )}
+                  {groupOpts.length > 0 && (
+                    <span className="relative inline-flex items-center">
+                      <select value={groupFilter} onChange={(e) => setGroupFilter(e.target.value)} aria-label="Filter by group / room" className="appearance-none rounded-lg border border-white/30 bg-white/10 py-1.5 pl-3 pr-7 text-[12.5px] font-bold text-white outline-none [&>option]:text-[var(--ink)]">
+                        <option value="">🏷 All groups</option>
+                        {groupOpts.map((o) => <option key={o.id} value={o.id}>🏷 {o.name}</option>)}
                       </select>
                       <span aria-hidden className="pointer-events-none absolute right-2.5 text-[9px] text-white/70">▾</span>
                     </span>

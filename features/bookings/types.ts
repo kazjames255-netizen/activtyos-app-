@@ -33,6 +33,10 @@ export interface Kid {
   age?: number;
   dob?: string;
   dates?: string[];
+  /** Legacy/alias for `dates` — some writers (merged-basket bookings) set
+   *  this instead; readers should treat `dates ?? days` as the child's booked
+   *  days. Kept in sync with `dates` wherever both are written. */
+  days?: string[];
   cancelledDays?: string[];
   cancelled?: boolean;
 }

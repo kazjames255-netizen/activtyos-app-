@@ -8,7 +8,7 @@ import { creditWallet, spendWalletInTx, walletRef, walletsForFamily } from "../l
 import { notify } from "../lib/notify";
 import { ensureReferralCode, rewardReferrer } from "./referral";
 import { fromDoc, toDoc, type BookingDoc } from "../lib/bookingDoc";
-import { registerRows } from "../lib/registerRows";
+import { entryFor, registerRows } from "../lib/registerRows";
 import { mealDayPlan, dishesForDay } from "../lib/mealPlan";
 import { resolveCutoff, canOrderMeal, cutoffLabel, closesToday } from "../lib/mealCutoff";
 import { money, paidSoFar as totalPaid, realPhone, refundableSoFar } from "../../../features/bookings/helpers";
@@ -267,6 +267,44 @@ my.get("/bookings", async (req, res) => {
   const list = snap.docs.map((d) => fromDoc(d.data() as BookingDoc));
   list.sort((a, b) => (a.ref < b.ref ? 1 : -1));
   res.json(list);
+});
+
+// GET /api/my/attendance — has my child actually been signed in today? (d10s10:
+// there was no parent-facing read of the Registers staff mark at all — a
+// family had no way to see "signed in / present / collected" short of asking.)
+// Read-only join over the family's own bookings for the date: for each child
+// expected that day, the current register mark (or "not arrived yet" if none).
+my.get("/attendance", async (req, res) => {
+  const email = tokenEmail(req);
+  if (!email) { res.status(400).json({ error: "Account has no email address" }); return; }
+  const date = typeof req.query.date === "string" && req.query.date ? req.query.date : ukToday();
+  const snap = await bookingsCol.where("email", "==", email).get();
+  const bookings = snap.docs.map((d) => fromDoc(d.data() as BookingDoc));
+  const rowsByBooking = bookings.map((b) => ({ b, rows: registerRows(b, date).filter((r) => r.expected) })).filter((x) => x.rows.length);
+  if (!rowsByBooking.length) { res.json([]); return; }
+
+  const blockIds = [...new Set(rowsByBooking.map(({ b }) => b.blockId).filter((id): id is string => !!id))];
+  const regSnaps = blockIds.length ? await db.getAll(...blockIds.map((id) => db.collection("registers").doc(`${id}_${date}`))) : [];
+  const entriesByBlock = new Map(blockIds.map((id, i) => [id, (regSnaps[i]?.exists ? (regSnaps[i].data()?.entries as Record<string, { status?: string; inAt?: string | null; collectedAt?: string | null }>) : {}) ?? {}]));
+
+  const out = rowsByBooking.flatMap(({ b, rows }) =>
+    rows.map((r) => {
+      const entries = b.blockId ? entriesByBlock.get(b.blockId) ?? {} : {};
+      const entry = entryFor(entries, r);
+      const status: "in" | "absent" | "not_arrived" = entry?.status === "in" ? "in" : entry?.status === "absent" ? "absent" : "not_arrived";
+      return {
+        bookingRef: b.ref,
+        childId: r.childId ?? null,
+        childName: r.name,
+        listing: b.listing,
+        date,
+        status,
+        inAt: entry?.inAt ?? null,
+        collectedAt: entry?.collectedAt ?? null,
+      };
+    }),
+  );
+  res.json(out);
 });
 
 // GET /api/my/meal-days — the family's booked days that OFFER meals, each with
@@ -1450,11 +1488,16 @@ my.post("/bookings", async (req, res) => {
         if (grp.length === 1) { merged.push(grp[0]); refRemap.set(grp[0].ref, grp[0].ref); continue; }
         const { paymentRef: _drop, ...first } = grp[0];
         // One entry per child, carrying the union of the days they're booked on.
-        const kidMap = new Map<string, { name: string; childId?: string; age?: number; days: string[] }>();
+        const kidMap = new Map<string, { name: string; childId?: string; age?: number; days: string[]; dates: string[] }>();
         for (const g of grp) {
           const k = (g.childId ?? g.child).trim().toLowerCase();
-          const cur = kidMap.get(k) ?? { name: g.child, ...(g.childId ? { childId: g.childId } : {}), ...(g.age != null ? { age: g.age } : {}), days: [] };
+          const cur = kidMap.get(k) ?? { name: g.child, ...(g.childId ? { childId: g.childId } : {}), ...(g.age != null ? { age: g.age } : {}), days: [], dates: [] };
           cur.days = [...new Set([...cur.days, ...(g.days ?? [])])].sort();
+          // Every other kids[] consumer (materialiseKids, partial-cancel,
+          // move-approve, registers) reads `dates`, not `days` — keep both in
+          // sync so a merged basket booking's child row isn't stale the moment
+          // it's touched again (was: only `days` written here).
+          cur.dates = cur.days;
           kidMap.set(k, cur);
         }
         const kids = [...kidMap.values()];
