@@ -7,7 +7,7 @@ admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSy
 const db = admin.firestore();
 const args = Object.fromEntries(process.argv.slice(2).map((a,i,arr)=>a.startsWith("--")?[a.slice(2),arr[i+1]&&!arr[i+1].startsWith("--")?arr[i+1]:true]:[]).filter(x=>x.length));
 const LIMIT = args.limit ? +args.limit : Infinity, KIND = args.kind || "all", ONLY = args.only ? new Set(String(args.only).split(",")) : null;
-const OUT = path.resolve("scripts/leads/out/verify.out.jsonl"); const CONC = 24, TIMEOUT = 12000, MAXBYTES = 1_500_000;
+const OUT = path.resolve("scripts/leads/out/verify.out.jsonl"); const CONC = args.render ? 6 : 24, TIMEOUT = 12000, MAXBYTES = 1_500_000;
 // Resume key is id + url: a lead whose old candidate was dropped and that now carries a NEW candidate gets checked again.
 const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT,"utf8").split("\n").filter(Boolean).map(l=>{try{const r=JSON.parse(l);return r.id+"|"+r.url}catch{return null}}) : []);
 
@@ -22,7 +22,19 @@ const locBits = (loc) => { const out=[]; for (const part of String(loc||"").spli
 const RX = new Map(); const rx = (t) => { if(!RX.has(t)) RX.set(t, new RegExp("(^|[^a-z])"+t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(s|es|'s)?([^a-z]|$)","i")); return RX.get(t); };
 const count = (text, list) => list.filter(t => rx(t).test(text));
 
+// --render: read pages with a real (headless Chromium) browser so Wix/Squarespace/React sites and 403 bot walls give up their text.
+let browser = null;
+async function browserFetch(url) {
+  if (!browser) { const { createRequire } = await import("module"); const req = createRequire(import.meta.url); const { chromium } = req(path.resolve("../node_modules/playwright-core")); browser = await chromium.launch({ headless: true }); }
+  const ctx = await browser.newContext({ userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36", locale: "en-GB", viewport: { width: 1280, height: 900 } });
+  const page = await ctx.newPage(); await page.route(/\.(png|jpe?g|gif|webp|svg|woff2?|ttf|mp4|webm)(\?|$)/i, (r) => r.abort());
+  try { const resp = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 20000 }); await page.waitForTimeout(1800); const html = await page.content(); return { status: resp?.status() ?? 0, final: page.url() || url, html }; }
+  catch (e) { return { status: 0, final: url, html: "", err: String(e?.message || e).slice(0, 60) }; }
+  finally { await ctx.close().catch(() => {}); }
+}
+const RENDER = !!args.render;
 async function fetchSite(url, _noRetry = false) {
+  if (RENDER) return browserFetch(/^https?:/.test(url) ? url : "https://" + url);
   const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), TIMEOUT);
   try {
     const res = await fetch(url, { redirect:"follow", signal: ctrl.signal, headers: { "user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36", "accept":"text/html,*/*;q=0.8", "accept-language":"en-GB,en;q=0.9" } });
@@ -98,10 +110,11 @@ async function judge(lead, kind, url, r) {
   return { ...row, verdict, sector, nameOk: nameOk || hostHasName, locOk, locs, locHits, notTerms, childTerms, textLen: text.length, ...(() => { return {}; })(), booking: undefined, signals: undefined, ...(await (async () => { const booking = await bookingScan(r.html, r.final || url); const extraText = booking.extraText || ""; delete booking.extraText; return { booking, signals: signals(text + " " + extraText, r.html), pagesForSignals: 1 + (booking.pagesRead ? booking.pagesRead - 1 : 0) }; })()) };
 }
 
-if (args["test-url"]) { for (const u of String(args["test-url"]).split(",")) { const r = await fetchSite(u); console.log(u, r.status, JSON.stringify(await bookingScan(r.html, r.final || u))); } process.exit(0); }
+if (args["test-url"]) { for (const u of String(args["test-url"]).split(",")) { const r = await fetchSite(u); console.log(u, r.status, JSON.stringify(await bookingScan(r.html, r.final || u))); } if (browser) await browser.close().catch(() => {}); process.exit(0); }
 const snap = await db.collection("leads").select("name","location","website","websiteCandidate","excluded","comingSoon","websiteDown","websiteCheckedAt","bookingChecked","bookingSystem","websiteRejected","websiteRejectedWhy").get();
 const jobs = [];
 for (const d of snap.docs) { const l = { id: d.id, ...d.data() }; if (l.excluded || (ONLY && !ONLY.has(l.id))) continue;
+  if (args["render-set"]) { if (l.website && !l.bookingSystem && !l.bookingChecked && l.websiteCheckedAt) jobs.push({ lead: l, kind: "confirmed", url: l.website }); else if (!l.website && l.websiteRejected && /unreachable/i.test(l.websiteRejectedWhy || "")) jobs.push({ lead: l, kind: "candidate", url: l.websiteRejected }); continue; }
   if (args["retry-unreachable"]) { if (!l.website && l.websiteRejected && /unreachable/i.test(l.websiteRejectedWhy || "")) jobs.push({ lead: l, kind: "candidate", url: l.websiteRejected }); continue; }
   if (args["recheck-all"]) { if (l.website) jobs.push({ lead: l, kind: "confirmed", url: l.website }); continue; }
   if (args["recheck-booking"]) { if (l.website && l.bookingChecked && !l.bookingSystem) jobs.push({ lead: l, kind: "confirmed", url: l.website }); continue; }
@@ -113,4 +126,4 @@ const todo = jobs.slice(0, LIMIT); console.log(`to check: ${todo.length} (alread
 const out = fs.createWriteStream(OUT, { flags: "a" }); let i = 0, n = 0; const tally = {}; const t0 = Date.now();
 async function worker() { while (i < todo.length) { const j = todo[i++]; const url = /^https?:\/\//i.test(j.url) ? j.url : "https://" + j.url; const r = await fetchSite(url); const row = await judge(j.lead, j.kind, url, r); out.write(JSON.stringify(row)+"\n"); const k = j.kind+":"+row.verdict; tally[k]=(tally[k]||0)+1; n++; if (n % 200 === 0) console.log(`${n}/${todo.length} ${Math.round((Date.now()-t0)/1000)}s`, JSON.stringify(tally)); } }
 await Promise.all(Array.from({length: CONC}, worker));
-out.end(); console.log("done", n, JSON.stringify(tally)); process.exit(0);
+out.end(); console.log("done", n, JSON.stringify(tally)); if (browser) await browser.close().catch(() => {}); process.exit(0);
