@@ -81,13 +81,12 @@
     "agent": "plan2-M"
   },
   "p2-t4": {
-    "verdict": "blocked",
+    "verdict": "pass",
     "method": "code",
-    "actual": "Read documents/finance/expenses/purchasing tours against DocumentsApp.tsx, FinanceAnalyticsApp.tsx, MoneyOutApp.tsx, MoneyInApp.tsx.",
-    "evidence": "features/common/tourConfigs.ts",
-    "at": "2026-09-14T18:04:36.443388Z",
-    "agent": "plan2-M",
-    "notes": "Sub-agent report for this group did not return a usable finding set within this pass despite two follow-ups; no fixes were made to these 4 tours. Needs a follow-up pass \u2014 treat as NOT yet re-audited, same as it was before this round."
+    "actual": "Read documents/finance/expenses/purchasing tours against DocumentsApp.tsx, FinanceAnalyticsApp.tsx, ExpensesApp.tsx, IncomeApp.tsx, InvoicesApp.tsx (the delegated sub-agent for this group did not return a usable report; completed directly instead). Fixed: documents was badly stale (6 invented category names vs the real 8: Policy/Risk assessment/Handbook/Procedure/Insurance/Form/Certificate/Other; flat everyone-sees-everything model vs real role/job-title/listing assignment; no versioning/review-date status tiles mentioned; the whole Read receipts screen \u2014 a per-person x per-document confirmation grid with Chase unread \u2014 was missing entirely) \u2014 fully rewritten. Finance & analytics' 5th tab is 'Insights' with 3 sub-tabs (Customers & learners/Add-ons/Value & mix, per the component's own comment 'was three separate top tabs') \u2014 tour called it 'Customers & learners' as the whole tab and never mentioned Add-ons or Value & mix. Also fixed a leftover draft title 'Money out \u2014 corrected guided tour (expenses)' -> 'Money out'. Expenses' 7 sub-tabs (Overview/All/Pending/Paid/Receipts/Categories/Suppliers) and purchasing's Income (Overview/All income/Categories) and Invoices (Overview/All invoices/Sent/Customers) sub-tabs were checked and confirmed already accurate, no changes needed.",
+    "evidence": "features/common/tourConfigs.ts (commit 9c9ef5b)",
+    "at": "2026-09-14T18:10:12.446030Z",
+    "agent": "plan2-M"
   },
   "p2-t5": {
     "verdict": "pass",
