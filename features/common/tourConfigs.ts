@@ -253,13 +253,13 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Publish",
         "stage": "Publish",
-        "line": "Nothing goes live until you publish — flick it out to staff and parents, choose whether everyone or just booked families gets to see it, and tick whether to email them or ping their in-app bell that the week's ready.",
+        "line": "Nothing goes live until you publish — flick it out to staff and parents, choose whether everyone or just booked families gets to see it, and tick whether to email them or ping their in-app bell — that choice is saved with the timetable, though the actual send isn't wired up yet, so tell families via Newsfeed or Email in the meantime.",
         "bodyHtml": "<div class=\"frm\"><div class=\"chk\"><span class=\"chkbx\">✓</span>Publish to the Staff portal</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Share with Parents</div><div class=\"fl\">PARENT AUDIENCE</div><div class=\"chips\"><span class=\"ochip\">✓ Booked families only</span><span class=\"ochip\">Everyone viewing the listing</span></div><div class=\"fl\">NOTIFY FAMILIES</div><div class=\"chips\"><span class=\"ochip\">✉️ Email</span><span class=\"ochip\">🔔 In-app notification</span></div><span class=\"btn amber\">Publish timetable</span><div class=\"hint\">Published to staff + parents · 19 days</div></div>"
       },
       {
         "label": "My timetables",
         "stage": "Saved",
-        "line": "Every week you build auto-saves under My timetables at the top, tagged draft or published — reopen a past week to duplicate and re-publish it, download it, or clear it out, so next season you're never starting from a blank page.",
+        "line": "Every week you build auto-saves under My timetables at the top, tagged draft or published — reopen a past week to tweak and re-publish it, download it, or clear it out, so next season you're never starting from a blank page.",
         "bodyHtml": "<div class=\"frm\"><div class=\"fl\">MY TIMETABLES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Loughton Multi-Activity Camp</b> <span class=\"g\">28 Jul to 22 Aug · 19 days</span><span class=\"tkp\">Shared with parents</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>February Half-Term Camp</b> <span class=\"g\">16 to 20 Feb · 5 days</span><span class=\"tkp\">Draft</span></div></div><div class=\"chips\"><span class=\"ochip\">Open</span><span class=\"ochip\">↓ Download</span><span class=\"ochip\">Delete</span></div></div>"
       }
     ]
