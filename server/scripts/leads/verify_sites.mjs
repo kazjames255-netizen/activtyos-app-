@@ -97,6 +97,7 @@ if (args["test-url"]) { for (const u of String(args["test-url"]).split(",")) { c
 const snap = await db.collection("leads").select("name","location","website","websiteCandidate","excluded","comingSoon","websiteDown","websiteCheckedAt","bookingChecked","bookingSystem").get();
 const jobs = [];
 for (const d of snap.docs) { const l = { id: d.id, ...d.data() }; if (l.excluded || (ONLY && !ONLY.has(l.id))) continue;
+  if (args["recheck-all"]) { if (l.website) jobs.push({ lead: l, kind: "confirmed", url: l.website }); continue; }
   if (args["recheck-booking"]) { if (l.website && l.bookingChecked && !l.bookingSystem) jobs.push({ lead: l, kind: "confirmed", url: l.website }); continue; }
   if (args.recheck) { if (l.website && (l.comingSoon || l.websiteDown)) jobs.push({ lead: l, kind: "confirmed", url: l.website }); continue; }
   if (l.website && (KIND==="all"||KIND==="confirmed") && !done.has(l.id+"|"+l.website)) jobs.push({ lead: l, kind: "confirmed", url: l.website });
