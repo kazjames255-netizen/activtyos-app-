@@ -35,6 +35,9 @@ async function fetchSite(url) {
 }
 
 async function contactPage(html, base) { const m = [...html.matchAll(/href=["']([^"']*(contact|about|find-us|findus|location|where)[^"']*)["']/gi)].map(x=>x[1]).filter(h=>!/^(mailto|tel|javascript|#)/i.test(h)); for (const h of m.slice(0,2)) { try { const u = new URL(h, base).href; if (new URL(u).hostname !== new URL(base).hostname) continue; const r = await fetchSite(u); if (r.status===200 && r.html) return strip(r.html)+" "+r.html.toLowerCase(); } catch {} } return ""; }
+// Booking systems a site links parents to — found in the same fetch, so the Platform filter gets filled for free.
+const BOOKING_SYSTEMS = [["ClassForKids", /classforkids\.io/i], ["Bookwhen", /bookwhen\.com/i], ["eequ", /eequ\.org/i], ["Pebble", /(bookpebble\.co\.uk|pebble\.co\b)/i], ["Playwaze", /playwaze\.com/i], ["ClubSpark", /clubspark\.(net|lta\.org\.uk)/i], ["Coordinate", /coordinate\.cloud/i], ["HolidayActivities", /holidayactivities\.com/i], ["Yellow Days", /yellowdays/i], ["Hoop", /hoop\.co\.uk/i], ["Kidzcamp", /kidzcamp/i], ["iPAL", /ipal\.(co\.uk|app)/i], ["Magicbooking", /magicbooking/i], ["Famly", /famly\.co/i], ["Kinderly", /kinderly/i], ["Blossom", /blossomeducational/i], ["Connect Childcare", /connectchildcare/i], ["Nursery in a Box", /nurseryinabox/i], ["ParentPay", /parentpay\.com/i], ["SchoolsBuddy", /schoolsbuddy/i], ["Arbor", /arbor-education|arbor\.sc/i], ["Gymcatch", /gymcatch\.com/i], ["TeamUp", /goteamup\.com/i], ["Glofox", /glofox\.com/i], ["Mindbody", /mindbodyonline/i], ["Acuity", /acuityscheduling/i], ["Calendly", /calendly\.com/i], ["Eventbrite", /eventbrite/i], ["TicketSource", /ticketsource/i], ["TryBooking", /trybooking/i], ["Stripe checkout", /(buy\.stripe\.com|checkout\.stripe\.com)/i], ["Shopify", /myshopify\.com/i], ["Sumup", /sumup\.(com|io)/i], ["Square", /square\.site|squareup\.com/i], ["Wix Bookings", /wix\.com\/bookings|wixbookings/i], ["LoveAdmin", /loveadmin/i], ["Pitchero", /pitchero\.com/i], ["Spond", /spond\.com/i], ["Sportsuite", /sportsuite/i], ["Kids Club HQ", /kidsclubhq/i], ["Class4Kids", /class4kids/i], ["Nursery Story", /nurserystory/i], ["Tapestry", /tapestryjournal/i], ["Baby's Days", /babysdays/i]];
+function bookingOn(html) { const hrefs = [...html.matchAll(/href=["']([^"']+)["']/gi)].map(m=>m[1]); for (const h of hrefs) { const sys = BOOKING_SYSTEMS.find(([, re]) => re.test(h)); if (sys) return { system: sys[0], url: h.slice(0, 300) }; } const own = hrefs.find(h => /\/(book|booking|bookings|book-now|book-online|enrol|enroll|register|sign-up|signup)(\/|\.|\?|$)/i.test(h) && !/^(mailto|tel|#)/i.test(h)); return own ? { system: "own site (booking page)", url: own.slice(0, 300) } : null; }
 async function judge(lead, kind, url, r) {
   const row = { id: lead.id, kind, url, final: r.final, status: r.status, err: r.err };
   if (r.status === 0 || r.status >= 400) return { ...row, verdict: "unreachable", sector: "unreachable", nameOk: false, locOk: false, locHits: [], notTerms: [] };
@@ -59,7 +62,7 @@ async function judge(lead, kind, url, r) {
     else if (sector === "child" && (nameOk || hostHasName)) verdict = "keep-candidate";
     else verdict = "drop";
   } else verdict = sector === "child" ? "ok" : sector;
-  return { ...row, verdict, sector, nameOk: nameOk || hostHasName, locOk, locs, locHits, notTerms, childTerms, textLen: text.length };
+  return { ...row, verdict, sector, nameOk: nameOk || hostHasName, locOk, locs, locHits, notTerms, childTerms, textLen: text.length, booking: bookingOn(r.html) };
 }
 
 const snap = await db.collection("leads").select("name","location","website","websiteCandidate","excluded").get();
