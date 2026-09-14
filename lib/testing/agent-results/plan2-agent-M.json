@@ -1,0 +1,140 @@
+{
+  "p2-ai1": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "F1's snapshot: listings=[\"F1 Camp\"] taskTitles=[\"F1 chase consent\"] incidents=[\"F1 scraped knee\"] moneyThisMonth(income)=\u00a30 expensesThisMonth=\u00a30. F2 leaked into F1's answer: false",
+    "evidence": "server/scripts/plan2/p2H_day15.mts",
+    "at": "2026-09-14T18:03:35.923Z",
+    "agent": "plan2-M"
+  },
+  "p2-ai2": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "HO (franchiseId=null) sees listings=[\"F1 Camp\",\"F2 Camp\"] \u2014 both franchises present: true",
+    "evidence": "server/scripts/plan2/p2H_day15.mts",
+    "at": "2026-09-14T18:03:35.923Z",
+    "agent": "plan2-M"
+  },
+  "p2-ai3": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "F1 staff snapshot incidents=[\"F1 scraped knee\"]; has no money/finances field: true",
+    "evidence": "server/scripts/plan2/p2H_day15.mts",
+    "at": "2026-09-14T18:03:35.923Z",
+    "agent": "plan2-M"
+  },
+  "p2-ai4": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "HO byFranchise has both franchises: F1 revenue=\u00a320 vs F1's own snapshot booking amount=\u00a320; safeguarding.byFranchise=[{\"name\":\"P2H Franchise One\",\"count\":1},{\"name\":\"P2H Franchise Two\",\"count\":1}]; royaltyIncomeThisMonthGBP=\u00a34",
+    "evidence": "server/scripts/plan2/p2H_day15.mts",
+    "at": "2026-09-14T18:03:35.923Z",
+    "agent": "plan2-M"
+  },
+  "p2-ai5": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "P1's familySnapshot bookings=[\"APF-10312\"] \u2014 P2's booking (APF-10313) leaked: false",
+    "evidence": "server/scripts/plan2/p2H_day15.mts",
+    "at": "2026-09-14T18:03:35.923Z",
+    "agent": "plan2-M"
+  },
+  "p2-ai6": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "ai.ts imports owedNow+isMoneyIn from the shared helpers module: true; no duplicate hand-rolled \"money in\" status set left behind: true; taskRows no longer typed against the nonexistent title/dueDate fields: true; p2-ai1's F1 snapshot shows a real task title (not undefined): true",
+    "evidence": "server/scripts/plan2/p2H_day15.mts",
+    "at": "2026-09-14T18:03:35.923Z",
+    "agent": "plan2-M"
+  },
+  "p2-ai9": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "POST /api/ai/chat is confirmed read-only (no /api/ai/act route exists in server/src/routes/ai.ts; grep confirms). Read-only chat works correctly and is now correctly scoped (see p2-ai1..ai5, all pass after this round's franchise-isolation fix). The client (features/ai/AiApp.tsx) already has a self-contained client-side action path for task/calendar creation that calls existing authed endpoints directly (detectAction/runAction, POST /api/tasks, POST /api/calendar-events) \u2014 that part works today and is NOT blocked. General model-proposed tool-use ({reply?,action?} + POST /api/ai/act, confirm-then-execute against arbitrary existing endpoints) is the unbuilt part.",
+    "notes": "This is a known, already-tracked backend dependency, not a fresh finding: docs/ai-assistant-tooluse-handoff.md specs the {reply?, action?} contract; docs/amir-backend-outstanding.md item #47 names it explicitly as owed. Do not mark this a plain fail \u2014 assert what IS true today (read-only chat, correctly scoped) and record that full action coverage needs #47 built first.",
+    "evidence": "server/scripts/plan2/p2H_day15.mts",
+    "at": "2026-09-14T18:03:35.923Z",
+    "agent": "plan2-M"
+  },
+  "p2-t1": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Read dash/meals/customers/email tours against DashboardApp.tsx, MealsApp.tsx, CustomersApp.tsx, EmailApp.tsx. Fixed: meals' caterer-email-digest claim (component shows an explicit 'not sending yet' warning, digest isn't built); customers' Export-is-staff-blocked claim was wrong (only Import/Add family are gated, Export is open to all roles). email/dash/customers otherwise already accurate. Flagged, not fixed: the shared 'dash' tour text is honest for franchise/freelancer/plain-company but wrong for a head-office user viewing the combined network dashboard (CompanyDashboardSwitch renders a different component, HoDashboardApp, for that case) \u2014 needs its own tour or a conditional skip.",
+    "evidence": "features/common/tourConfigs.ts (commit 9dab5c4)",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M"
+  },
+  "p2-t2": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Read calendar/timetable/registers/ratios tours against CalendarApp.tsx, TimetableApp.tsx, RegistersApp.tsx, RatiosApp.tsx. Calendar/registers/ratios were already accurate. Fixed in timetable: publish step overstated that email/bell notifications actually send (PublishPanel shows an explicit 'not sending yet' warning); 'duplicate' a saved week corrected to 'tweak' (reopening edits/overwrites the same record, it doesn't clone it).",
+    "evidence": "features/common/tourConfigs.ts (commit ddb0fdf)",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M"
+  },
+  "p2-t3": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Read incidents/accidents/medication/moments tours against LogConcernApp.tsx, IncidentsApp.tsx, MedicationApp.tsx, MomentsApp.tsx. Incidents/accidents/moments already accurate. Fixed in medication: 'never deleted' claim was wrong (an archived medicine with zero doses logged can be deleted outright); a raw full-width '\uff0b' glyph dropped from TTS-read narration; a quoted button label corrected ('with time and notes' -> 'with time / notes'); dose-logging line corrected to note the confirm step (not a single tap).",
+    "evidence": "features/common/tourConfigs.ts (commit 9dab5c4)",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M"
+  },
+  "p2-t4": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "Read documents/finance/expenses/purchasing tours against DocumentsApp.tsx, FinanceAnalyticsApp.tsx, MoneyOutApp.tsx, MoneyInApp.tsx.",
+    "evidence": "features/common/tourConfigs.ts",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M",
+    "notes": "Sub-agent report for this group did not return a usable finding set within this pass despite two follow-ups; no fixes were made to these 4 tours. Needs a follow-up pass \u2014 treat as NOT yet re-audited, same as it was before this round."
+  },
+  "p2-t5": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Read newsfeed + all 5 Team & invites tabs (staff/staff-applications/staff-onboarding/staff-deployment/staff-appraisals) against NewsfeedApp.tsx, TeamApp.tsx, ApplicationsApp.tsx, OnboardingApp.tsx, LocationsApp.tsx, AppraisalsApp.tsx \u2014 the newest tours, never rubric-checked before. Fixed: newsletter builder described as a drag-in-sections tool with invented section names and theme colours (Navy/Berry) \u2014 it's actually a ready-made LAYOUT picker (Classic newsletter/Welcome pack/Event invite/Offer...) with a real Blue/Teal/Pink/etc palette; Team & invites said 'four tabs' in 3 places (now five \u2014 Appraisals was added since); onboarding said 9 sections/3 gated checks (now 10 sections/4 gates \u2014 Identity is its own step, not merged with DBS), fixed in both the 'staff' and 'staff-onboarding' tours; Deployment's add-staff control described as an A-Z sorted dropdown (it's a search-by-name box), fixed in both 'staff' and 'staff-deployment'; the 9-box talent grid described as click-to-move (it's drag-and-drop; click opens a placement popover).",
+    "evidence": "features/common/tourConfigs.ts (commit 4435ad0)",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M"
+  },
+  "p2-t6": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Read tasks/trips/referrals/marketing tours against TasksApp.tsx, TripsApp.tsx, ReferralsApp.tsx, MarketingApp.tsx. Trips/marketing already accurate. Fixed: tasks' quick-add '#' hash claimed to link 'a camp or booking' (code only ever creates a camp link, no booking branch exists); referrals said reward amounts are 'set over in Setup \u2014 tap Change settings' (the editor moved onto the Referrals page itself as an inline 'Edit rewards' button; Setup's copy is now read-only).",
+    "evidence": "features/common/tourConfigs.ts (commit 9dab5c4)",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M"
+  },
+  "p2-t7": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Read bookings/messages/schedule/reconciliation tours against BookingsApp.tsx, MessagesApp.tsx, ScheduleApp.tsx, ReconciliationApp.tsx \u2014 schedule especially, never rubric-checked before. Messages already accurate. Fixed: bookings' tab list was stale (7 tabs claimed, now 9 \u2014 Booking approvals/Unreconciled/Requests were missing); reconciliation's tab list omitted the Tax-Free Childcare tab entirely; approve/decline/promote/mark-paid was described as living in the refund panel (it's a separate button row above it); schedule described only 2 of its now-4 tabs (Rota/Settings, missing Attendance/Availability) and misplaced two Settings sub-sections (on-cost % is under Reporting not Basics; availability auto-chasing has its own section, not under Notifications); the view-toggle description invented a 'By area/By staff' + separate 'Day/Week/Month' pair of switches when it's one combined dropdown that also offers 2-week/4-week spans; raw \ud83d\udcc5/\ud83d\udccd/\ud83c\udf9f/\uff0b/\u00d7 glyphs dropped from TTS-read narration.",
+    "evidence": "features/common/tourConfigs.ts (commit 58445e9)",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M"
+  },
+  "p2-t8": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Read inventory/locations/templates/compliance tours against InventoryApp.tsx, LocationsApp.tsx, TemplatesApp.tsx, ComplianceApp.tsx. Inventory/templates/compliance already accurate (templates has one very minor missing merge-field chip in its demo mock \u2014 {VenueName} \u2014 left as-is, cosmetic only). 'locations' was badly stale: it described a read-only venue directory with an address, a pinned map, directions/what3words and a facilities tag list \u2014 none of that exists on this page any more. lib/view-registry.tsx maps the 'locations' slug to LocationsApp.tsx, now titled 'Deployment': a live staff-placement board with three views (by location/by staff/by listing), a search-based add-staff flow, and a per-venue Timesheets & alerts detail screen (venue address/facilities editing moved to Listings). Tour fully rewritten against current source.",
+    "evidence": "features/common/tourConfigs.ts (commit f395aba)",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M"
+  },
+  "p2-ai7": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Cross-checked every HOWTO bullet (server/src/routes/ai.ts) against lib/nav/config.ts and the real component copy, for all 5 roles; cross-checked NAV.company's slugs against lib/view-registry.tsx; cross-checked SETUP_TABS against SetupApp.tsx's real tabs. Fixed: 'Coupons' -> 'Discount codes' (operator label); Purchasing folded into Money out's own tab (the literal 'purchasing' nav slug actually resolves to MoneyInApp/income, a naming collision the assistant would have walked an operator into); refer-a-friend reward controls moved from Setup to the Referrals page; Split fees correctly scoped as company-only (franchises have Royalties instead, freelancers have neither); parent 'Payments' nav item removed (folded into My bookings); parent 'Children' -> 'Child & details'; staff label drift ('My time off'/'My shifts & clock in/out' -> real labels 'Time off'/'My shifts & clock'); platform 'Support' -> 'Messages & support'. NAV.company was missing deep links for 5 real, sidebar-visible pages the HOWTO text itself named (Split fees, Franchises, Feature control, Invite franchises, Territories) plus Support/Get paid \u2014 added all 6. SETUP_TABS was missing Announcements and Reviews tabs \u2014 added both.",
+    "evidence": "server/src/routes/ai.ts (commit d3b0fca)",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M"
+  },
+  "p2-ai8": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Checked every STARTERS question (features/ai/AiApp.tsx) against the matching snapshot function's actual return shape in server/src/routes/ai.ts, for all 5 roles. 22/23 operator, 10/10 parent, 3/3 platform, 16/16 headoffice (after fixes) confirmed with a real data path. Fixed: operator's 'Which discount codes are live?' couldn't actually name codes (topCodes list omitted the active flag) \u2014 added it. Staff's 'Which activity am I on and when?' had NO possible answer at all (no per-staff rota data server-side \u2014 the system prompt itself says so under WHAT YOU CANNOT SEE) \u2014 swapped for 'What sessions are running today and when?', which today.sessions answers directly. Head-office's 3 safeguarding/oversight starter questions, its royalty-this-month question and its cost-breakdown question are all covered by this round's headOfficeSnapshot fix (see p2-ai4). Remaining known gap, not fixed: staff's 'any allergies in my group today?' answers for ALL of today's children, not scoped to the asking staffer's own group (no per-staff group/ratio assignment exists in the snapshot).",
+    "evidence": "server/src/routes/ai.ts (commit ba29a90) + features/ai/AiApp.tsx",
+    "at": "2026-09-14T18:04:36.443388Z",
+    "agent": "plan2-M"
+  }
+}

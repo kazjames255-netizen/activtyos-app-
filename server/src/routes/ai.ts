@@ -264,14 +264,18 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
       .reduce((s, p) => s + (p.amount ?? 0), 0),
   );
 
+  // Tasks store their title as `t` and their due date as `due` (server/src/
+  // routes/tasks.ts taskSchema) — this snapshot was reading `.title`/
+  // `.dueDate`, fields that don't exist on the doc, so every task the AI
+  // quoted showed no title and open/overdue/due-today counts were always 0.
   const taskRows = tasksSnap.docs
-    .map((d) => d.data() as { title?: string; done?: boolean; dueDate?: string; status?: string; who?: string; franchiseId?: string | null })
+    .map((d) => d.data() as { t?: string; due?: string | null; status?: string; who?: string; franchiseId?: string | null })
     // Tasks created before franchiseId was stamped have none — same "no stamp
     // means head office's" convention tasks.ts itself uses.
     .filter((t) => !franchiseId || (t.franchiseId ?? null) === franchiseId);
-  const openR = taskRows.filter((t) => !t.done && t.status !== "done");
-  const openTasks = openR.slice(0, 15).map((t) => ({ title: t.title, due: t.dueDate ?? null, who: t.who ?? null }));
-  const taskSummary = { open: openR.length, overdue: openR.filter((t) => !!t.dueDate && t.dueDate < today).length, dueToday: openR.filter((t) => t.dueDate === today).length };
+  const openR = taskRows.filter((t) => t.status !== "done");
+  const openTasks = openR.slice(0, 15).map((t) => ({ title: t.t, due: t.due ?? null, who: t.who ?? null }));
+  const taskSummary = { open: openR.length, overdue: openR.filter((t) => !!t.due && t.due < today).length, dueToday: openR.filter((t) => t.due === today).length };
 
   // Today's meals (menu for the day) + how many children in have dietary/allergy needs.
   const menuMeals = (menuDoc.data()?.meals as { type?: string; description?: string; allergens?: string[] }[] | undefined) ?? [];
@@ -476,7 +480,7 @@ export async function tenantSnapshot(tenantId: string, forStaff = false, franchi
 }
 
 // ── Parent snapshot — the family's own world: bookings, children, credit. ──
-async function familySnapshot(email: string, uid: string) {
+export async function familySnapshot(email: string, uid: string) {
   const [bookingsSnap, childrenSnap, wallets, threadsSnap, memSnap, paymentsSnap] = await Promise.all([
     db.collection("bookings").where("email", "==", email).get(),
     db.collection("children").where("parentUid", "==", uid).get(),
@@ -586,7 +590,7 @@ async function hasFranchises(tenantId: string): Promise<boolean> {
   const s = await db.collection("users").where("tenantId", "==", tenantId).where("role", "==", "franchise").limit(1).get();
   return !s.empty;
 }
-async function headOfficeSnapshot(tenantId: string) {
+export async function headOfficeSnapshot(tenantId: string) {
   const [bookingsSnap, frSnap, tenantDoc, expSnap, incSnap, incidentsSnap] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("users").where("tenantId", "==", tenantId).where("role", "==", "franchise").get(),
