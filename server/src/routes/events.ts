@@ -1,6 +1,7 @@
+import { randomBytes } from "node:crypto";
 import { Router } from "express";
 import { db } from "../firebase";
-import { verifyFresh } from "../middleware/auth";
+import { requireAuth } from "../middleware/auth";
 
 // Realtime invalidation stream (SSE) — the first slice of the product
 // spec's realtime layer. Each connected client gets Firestore listeners
@@ -9,26 +10,52 @@ import { verifyFresh } from "../middleware/auth";
 // authorized endpoints. Data never flows through this channel — only
 // "something you can see changed" nudges.
 //
-// EventSource cannot send an Authorization header, so the Firebase ID token
-// arrives as ?token= (verified exactly like the header variant).
+// EventSource cannot send an Authorization header, and a raw Firebase ID
+// token in the URL leaks into server/proxy access logs and browser history —
+// a real bearer credential sitting in plaintext logs. Instead: the client
+// authenticates normally (Authorization header) against POST /ticket to mint
+// a short-lived, single-use ticket, then opens the EventSource with THAT in
+// the query string. The ticket is worthless after ~20s or first use, so
+// logging it exposes nothing reusable.
 //
 // Scale note: one set of listeners per connection is fine for now; at real
 // scale this becomes shared listeners + fan-out.
 export const events = Router();
 
+const TICKET_TTL_MS = 20_000;
+type Ticket = { uid: string; email: string | null; expiresAt: number };
+const tickets = new Map<string, Ticket>();
+
+function pruneTickets() {
+  const now = Date.now();
+  for (const [id, t] of tickets) if (t.expiresAt < now) tickets.delete(id);
+}
+
+// Mint a one-time SSE ticket. Authenticated the normal way (Authorization
+// header) so it never rides in a URL; the ticket that DOES ride in the
+// EventSource URL is short-lived and single-use, so it's not a reusable
+// credential even if it ends up in a log line.
+events.post("/ticket", requireAuth, (req, res) => {
+  pruneTickets();
+  if (tickets.size > 5_000) tickets.clear(); // defensive cap; tickets expire in 20s anyway
+  const id = randomBytes(24).toString("base64url");
+  tickets.set(id, { uid: req.user!.uid, email: req.user!.email ?? null, expiresAt: Date.now() + TICKET_TTL_MS });
+  res.json({ ticket: id, expiresIn: TICKET_TTL_MS });
+});
+
 events.get("/", async (req, res) => {
-  const token = req.query.token;
-  if (typeof token !== "string" || !token) {
-    res.status(401).json({ error: "Missing token" });
+  const ticketId = req.query.ticket;
+  if (typeof ticketId !== "string" || !ticketId) {
+    res.status(401).json({ error: "Missing ticket" });
     return;
   }
-  let decoded;
-  try {
-    decoded = await verifyFresh(token);
-  } catch {
-    res.status(401).json({ error: "Invalid or expired token" });
+  const ticket = tickets.get(ticketId);
+  tickets.delete(ticketId); // single-use, whether or not it was valid
+  if (!ticket || ticket.expiresAt < Date.now()) {
+    res.status(401).json({ error: "Invalid or expired ticket" });
     return;
   }
+  const decoded = { uid: ticket.uid, email: ticket.email };
   const userSnap = await db.collection("users").doc(decoded.uid).get();
   const u = userSnap.exists ? userSnap.data()! : {};
   // A switched-off or closed account gets no live updates either — every other

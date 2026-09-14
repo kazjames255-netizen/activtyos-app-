@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { firebaseAuth } from "./firebase/client";
-import { isDemoMode } from "./api";
+import { isDemoMode, post } from "./api";
 
 const BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:4000";
 
@@ -52,17 +52,22 @@ async function connect() {
   try {
     const user = firebaseAuth.currentUser;
     if (!user) return scheduleRetry();
-    let token: string;
+    // A raw Firebase ID token in the URL would leak into server/proxy access
+    // logs and browser history — EventSource can't send an Authorization
+    // header, so instead mint a short-lived, single-use ticket over a normal
+    // authenticated POST (token goes in the header, as everywhere else) and
+    // put ONLY that ticket in the EventSource URL.
+    let ticket: string;
     try {
-      token = await user.getIdToken();
+      ({ ticket } = await post<{ ticket: string }>("/api/events/ticket", {}));
     } catch {
       return scheduleRetry();
     }
-    // Everyone may have unsubscribed while we awaited the token.
+    // Everyone may have unsubscribed while we awaited the ticket.
     if (listeners.size === 0 || es) return;
     attachedCols = neededCols();
     const cols = [...attachedCols].sort().join(",");
-    es = new EventSource(`${BASE}/api/events?token=${encodeURIComponent(token)}${cols ? `&collections=${encodeURIComponent(cols)}` : ""}`);
+    es = new EventSource(`${BASE}/api/events?ticket=${encodeURIComponent(ticket)}${cols ? `&collections=${encodeURIComponent(cols)}` : ""}`);
     es.onmessage = (e) => {
       try {
         const { collection } = JSON.parse(e.data) as { collection: string };

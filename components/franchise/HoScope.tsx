@@ -11,6 +11,8 @@ import { get as apiGet } from "@/lib/api";
 import { getMe } from "@/components/auth/PortalGuard";
 
 const KEY = "aos.ho.scope";
+// The scope also rides in the URL under this query param — see below.
+const PARAM = "hoScope";
 // Sentinel scope: the head office's OWN direct operation (listings it owns, no franchise).
 export const HO_OWN = "__ho__";
 let scopeId: string | null = null;
@@ -18,15 +20,67 @@ let loaded = false;
 const subs = new Set<() => void>();
 const emit = () => subs.forEach((f) => f());
 
+function readUrlScope(): string | null {
+  if (typeof window === "undefined") return null;
+  return new URLSearchParams(window.location.search).get(PARAM);
+}
+
+// Keep the address bar in step with the scope, WITHOUT going through
+// next/navigation (this module is a plain singleton reachable from anywhere,
+// not a hook) — a query-only pushState/replaceState doesn't touch the route,
+// so it doesn't fight the app router. `push` adds a Back-able entry; use it
+// for a genuine scope CHANGE. A page just adopting its already-remembered
+// scope on load uses replace, so it doesn't leave a no-op entry in history.
+function writeUrlScope(id: string | null, push: boolean) {
+  if (typeof window === "undefined") return;
+  const url = new URL(window.location.href);
+  if (id) url.searchParams.set(PARAM, id); else url.searchParams.delete(PARAM);
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  const current = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+  if (next === current) return;
+  if (push) window.history.pushState({}, "", next);
+  else window.history.replaceState({}, "", next);
+}
+
 function ensureLoaded() {
   if (loaded) return;
   loaded = true;
-  try { scopeId = localStorage.getItem(KEY); } catch { /* ignore */ }
+  try {
+    const fromUrl = readUrlScope();
+    if (fromUrl) {
+      scopeId = fromUrl;
+      localStorage.setItem(KEY, fromUrl);
+    } else {
+      scopeId = localStorage.getItem(KEY);
+      // A remembered-from-last-time scope with no `?hoScope=` on THIS load
+      // (a fresh tab, or a page reached by a plain nav link) — reflect it in
+      // the address bar too, so refreshing from here still agrees, without
+      // spending a history entry on it.
+      if (scopeId) writeUrlScope(scopeId, false);
+    }
+  } catch { /* ignore */ }
+  // Back/Forward: the URL is the source of truth for what you were just
+  // looking at — HQ's franchise drill-in used to never touch the URL at all
+  // (same route throughout, no history entry), so Back left the portal
+  // unchanged instead of returning to the combined view.
+  if (typeof window !== "undefined") {
+    window.addEventListener("popstate", () => {
+      const fromUrl = readUrlScope();
+      if (fromUrl === scopeId) return;
+      scopeId = fromUrl;
+      try { fromUrl ? localStorage.setItem(KEY, fromUrl) : localStorage.removeItem(KEY); } catch { /* ignore */ }
+      emit();
+    });
+  }
 }
 export function getHoScopeId(): string | null { ensureLoaded(); return scopeId; }
 export function setHoScopeId(id: string | null) {
-  scopeId = id || null;
+  ensureLoaded();
+  const next = id || null;
+  if (next === scopeId) return;
+  scopeId = next;
   try { scopeId ? localStorage.setItem(KEY, scopeId) : localStorage.removeItem(KEY); } catch { /* ignore */ }
+  writeUrlScope(scopeId, true);
   emit();
 }
 /** Subscribe to scope changes and get the current franchiseId (or null = head office). */

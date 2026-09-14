@@ -560,6 +560,8 @@ listings.post("/", async (req, res) => {
     // franchise, so every booking on it (whoever makes it) is attributed to
     // them (split-fees, territory). HO/company/freelancer listings = null.
     franchiseId: auth.role === "franchise" ? auth.franchiseId : null,
+    // Optimistic-concurrency stamp — see PUT /:id below.
+    updatedAt: Date.now(),
   };
   const ref = await col.add(doc);
   await syncListingBlocks(ref.id, auth.tenantId, runRecipeOf(doc));
@@ -592,6 +594,23 @@ listings.put("/:id", async (req, res) => {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
+  // Optimistic concurrency: two tabs autosaving the SAME listing used to be
+  // silent last-writer-wins on the WHOLE document — Tab B's stale save could
+  // revert Tab A's title change with no warning. The wizard sends back the
+  // `updatedAt` it last loaded/saved (not part of baseListingSchema, read
+  // raw); if the document has since moved on, refuse the write instead of
+  // clobbering it. A doc saved before this stamp existed has no updatedAt —
+  // nothing to compare against, so that first save always goes through.
+  const clientUpdatedAt = (req.body as Record<string, unknown>).expectedUpdatedAt;
+  const serverUpdatedAt = own.snap.data()!.updatedAt;
+  if (typeof clientUpdatedAt === "number" && typeof serverUpdatedAt === "number" && clientUpdatedAt !== serverUpdatedAt) {
+    res.status(409).json({
+      error: "This listing changed elsewhere since you last loaded it. Refresh to see the latest version before saving.",
+      code: "stale_listing",
+      current: { id: own.snap.id, ...own.snap.data()! },
+    });
+    return;
+  }
   const data: ListingInput = parsed.data;
   if (data.status === "live") {
     const problems = publishProblems({ ...own.snap.data()!, ...data });
@@ -600,7 +619,7 @@ listings.put("/:id", async (req, res) => {
       return;
     }
   }
-  const patch: Record<string, unknown> = { ...data };
+  const patch: Record<string, unknown> = { ...data, updatedAt: Date.now() };
   // Head office (company) / platform can ASSIGN or reassign a listing to a
   // franchise (or back to "own" with null). A franchise can never change ownership.
   if ((req.auth!.role === "company" || req.auth!.role === "platform") && "franchiseId" in (req.body as Record<string, unknown>)) {

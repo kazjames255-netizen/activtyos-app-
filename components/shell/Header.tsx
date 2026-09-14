@@ -189,6 +189,18 @@ export function Header({ portal }: { portal: PortalKey }) {
           container, no panel fill; the bar itself is the background. */}
       {(tabs.length > 0 || commItems.length > 0) && (
         <nav className="flex min-w-0 items-center gap-4 px-1 sm:gap-6">
+        {/* overflow-x-auto on just the plain tabs (not the Contact dropdown
+            below): the tabs are shrink-0 (see below) so they never squeeze to
+            an unreadable sliver, but that means a crowded bar (several tabs +
+            Contact) can be WIDER than the space between the network picker
+            and "Find a child" — around 1280px on the Company portal that
+            overflow used to paint straight past this row and land on top of
+            "Find a child" next to it instead of wrapping or making room.
+            Scrolling it inside its own box keeps every tab reachable without
+            colliding with its neighbours. Contact stays OUTSIDE this scroll
+            box (its dropdown panel is absolutely positioned off it — nesting
+            it inside an overflow-x-auto ancestor would clip the popover). */}
+        <div className="flex min-w-0 items-center gap-4 overflow-x-auto sm:gap-6">
           {tabs.map((t) => {
             const active = view === t.view;
             // The Memberships tab stays a solid pill so it draws the eye whether
@@ -226,6 +238,7 @@ export function Header({ portal }: { portal: PortalKey }) {
               </Link>
             );
           })}
+        </div>
           {/* Head office runs comms centrally — they live in the sidebar as a
               "Communication" group, so the top-bar dropdown is hidden for HO. */}
           {!hoCombined && commItems.length > 0 && (

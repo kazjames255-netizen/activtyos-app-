@@ -2504,6 +2504,16 @@ export function SetupApp() {
         const optional = all.filter((it) => !CORE_VIEWS.has(it.view));
         return (
           <>
+            {/* The header pill already shows save state, but it's easy to miss while
+                scanning a long toggle list — a save that failed (a stale token, a
+                permissions refusal, a dropped connection…) used to revert the toggle
+                silently a moment later, which reads exactly like "the click did
+                nothing". Repeat the error right where the toggles are. */}
+            {error && (
+              <div className="mb-3 rounded-xl border border-[#f3b9b9] bg-[#fdeeee] px-4 py-3 text-[12.5px] font-semibold text-[#8a1c1c]">
+                ⚠️ {error} — your last change didn’t save and has been reverted.
+              </div>
+            )}
             <Section
               title="Always on"
               lede="The essentials for running — including the pieces that go into setting up a listing (availability, locations). These can't be switched off."

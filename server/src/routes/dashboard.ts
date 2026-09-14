@@ -68,7 +68,11 @@ dashboard.get("/", async (req, res) => {
   const sessions: Sess[] = [];
   let openCapacity = 0, openBooked = 0;
   // Overall occupancy per LISTING across its open runs (not per pass/session).
-  const perListing = new Map<string, { capacity: number; booked: number; spotsLeft: number; nextDate: string }>();
+  // Keyed by listingId, NOT the title string — two different listings can
+  // share a name (e.g. two "After-School Football Club" sessions at
+  // different venues/times), and keying by name silently merged their
+  // capacity/booked/spotsLeft into one row and dropped the other entirely.
+  const perListing = new Map<string, { listing: string; capacity: number; booked: number; spotsLeft: number; nextDate: string }>();
   for (const d of blocksSnap.docs) {
     const doc = d.data() as BlockDoc;
     if (!inVenue(doc.listingId)) continue;
@@ -78,18 +82,18 @@ dashboard.get("/", async (req, res) => {
     // Occupancy counts only runs still selling with sessions yet to happen.
     if (sum.open && future.length) {
       openCapacity += sum.capacity; openBooked += sum.bookedCount;
-      const cur = perListing.get(listing) ?? { capacity: 0, booked: 0, spotsLeft: 0, nextDate: "9999-99-99" };
+      const cur = perListing.get(doc.listingId) ?? { listing, capacity: 0, booked: 0, spotsLeft: 0, nextDate: "9999-99-99" };
       cur.capacity += sum.capacity; cur.booked += sum.bookedCount; cur.spotsLeft += sum.spotsLeft;
       const nd = future.map((s) => s.date).sort()[0];
       if (nd < cur.nextDate) cur.nextDate = nd;
-      perListing.set(listing, cur);
+      perListing.set(doc.listingId, cur);
     }
     for (const s of sum.sessions) sessions.push({ date: s.date, start: s.start, end: s.end, capacity: s.capacity, booked: s.bookedCount, spotsLeft: s.spotsLeft, listing, open: sum.open });
   }
   sessions.sort((a, b) => (`${a.date} ${a.start}` < `${b.date} ${b.start}` ? -1 : 1));
 
   const byListing = [...perListing.entries()]
-    .map(([listing, v]) => ({ listing, capacity: v.capacity, booked: v.booked, spotsLeft: v.spotsLeft, pct: v.capacity ? Math.round((v.booked / v.capacity) * 100) : 0, nextDate: v.nextDate }))
+    .map(([listingId, v]) => ({ listingId, listing: v.listing, capacity: v.capacity, booked: v.booked, spotsLeft: v.spotsLeft, pct: v.capacity ? Math.round((v.booked / v.capacity) * 100) : 0, nextDate: v.nextDate }))
     .sort((a, b) => (a.nextDate < b.nextDate ? -1 : 1))
     .slice(0, 8);
 

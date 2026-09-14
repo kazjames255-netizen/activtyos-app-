@@ -882,22 +882,45 @@ paths:
                 properties:
                   ok: { type: boolean }
 
+  /api/events/ticket:
+    post:
+      tags: [meta]
+      summary: Mint a one-time SSE ticket
+      description: |
+        Authenticated the normal way (Authorization header). Returns a
+        short-lived (20s), single-use `ticket` for opening the `/api/events`
+        stream — this exists so the real Firebase ID token never has to ride
+        in a URL (a raw bearer token in the query string would leak into
+        server/proxy access logs and browser history; the ticket is worthless
+        after 20s or first use, so logging it exposes nothing reusable).
+      responses:
+        "200":
+          description: A one-time ticket
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ticket: { type: string }
+                  expiresIn: { type: integer, description: "ms" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+
   /api/events:
     get:
       tags: [meta]
       summary: Realtime invalidation stream (SSE)
       description: |
-        Server-Sent Events. Because `EventSource` can't set headers, pass the
-        Firebase ID token as `?token=`. Emits `data: {"collection":"…"}`
-        whenever something within the caller's scope changes
-        (`bookings` / `listings` / `customers` / `invites` / `children` /
-        `tenants` — scoped by role and tenant exactly like the REST access).
-        No data flows through this channel — on an event, refetch the
-        relevant endpoint. Reconnect with a fresh token on error (tokens
-        expire hourly). Includes `:ping` heartbeats every 25s.
+        Server-Sent Events. Because `EventSource` can't set headers, pass a
+        ticket minted from `POST /api/events/ticket` as `?ticket=` (NOT the
+        raw ID token). Emits `data: {"collection":"…"}` whenever something
+        within the caller's scope changes (`bookings` / `listings` /
+        `customers` / `invites` / `children` / `tenants` — scoped by role and
+        tenant exactly like the REST access). No data flows through this
+        channel — on an event, refetch the relevant endpoint. Reconnect with
+        a fresh ticket on error. Includes `:ping` heartbeats every 25s.
       security: []
       parameters:
-        - name: token
+        - name: ticket
           in: query
           required: true
           schema: { type: string }
@@ -1457,6 +1480,12 @@ paths:
         Accepts the full draft or a partial patch (e.g. just `{visibility}`
         or `{archived}`). Changing any run-recipe field re-syncs the
         generated blocks.
+
+        Optimistic concurrency: pass `expectedUpdatedAt` (the `updatedAt` you
+        last loaded/saved this listing with) to guard against two tabs
+        autosaving the same listing — if the stored `updatedAt` has since
+        moved on, the write is refused with 409 rather than silently
+        clobbering the other tab's change. Omit it to save unconditionally.
       parameters:
         - name: id
           in: path
@@ -1466,7 +1495,12 @@ paths:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/ListingDraft" }
+            schema:
+              allOf:
+                - $ref: "#/components/schemas/ListingDraft"
+                - type: object
+                  properties:
+                    expectedUpdatedAt: { type: number, description: "The updatedAt this edit was based on — omit to skip the conflict check" }
       responses:
         "200":
           description: The updated listing
@@ -1477,6 +1511,16 @@ paths:
         "401": { $ref: "#/components/responses/Unauthorized" }
         "403": { $ref: "#/components/responses/Forbidden" }
         "404": { $ref: "#/components/responses/NotFound" }
+        "409":
+          description: Someone else's write landed first — refresh and reapply
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error: { type: string }
+                  code: { type: string, enum: [stale_listing] }
+                  current: { $ref: "#/components/schemas/Listing" }
     delete:
       tags: [listings]
       summary: Delete one of my tenant's listings

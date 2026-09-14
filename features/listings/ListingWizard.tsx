@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { api, get as apiGet, post as apiPost, isDemoMode } from "@/lib/api";
+import { api, get as apiGet, post as apiPost, isDemoMode, ApiError } from "@/lib/api";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { money } from "@/features/bookings/helpers";
 import { Button, Card, FieldLabel, Input, Select } from "@/components/ui";
@@ -553,6 +553,10 @@ export interface ServerListing extends Omit<Partial<WizardDraft>, "id"> {
   name: string;
   tenantId?: string;
   tenantName?: string;
+  /** Optimistic-concurrency stamp (server-set) — send back as `expectedUpdatedAt`
+   *  on PUT so a stale tab's autosave is refused instead of silently reverting
+   *  someone else's more recent edit. */
+  updatedAt?: number;
   passes: { name: string; price: number; days?: number }[];
   blocks?: { id: string; name: string; startDate: string; endDate: string; capacity: number; spotsLeft: number; open: boolean }[];
   bundle?: {
@@ -983,7 +987,21 @@ export function ListingWizard({
 
   useEffect(() => { saveDraft(wizardKey, d); }, [d, wizardKey]);
 
+  // Optimistic-concurrency stamp for /api/listings/:id PUT — tracks the
+  // `updatedAt` this tab last loaded/saved. Two tabs editing the SAME listing
+  // used to autosave the WHOLE object last-writer-wins: Tab B's stale save
+  // (still holding its old form state) could silently revert Tab A's more
+  // recent edit. Now each PUT sends the version it was based on; if the
+  // server has moved on, it's refused with 409 instead of clobbering it.
+  const updatedAtRef = useRef<number | undefined>((initial as WizardDraft & { updatedAt?: number }).updatedAt);
+  // Once a save is refused as stale, stop autosaving blind — the operator's
+  // further edits would just keep bouncing off the same conflict, and quiet
+  // retries would eventually give up and look like they'd saved when they
+  // hadn't. They have to explicitly reload to pick a side.
+  const [conflicted, setConflicted] = useState(false);
+
   async function syncApi(status: "draft" | "live", quiet = false): Promise<boolean> {
+    if (conflicted) { setMsg("This listing changed elsewhere — reload the page before saving again."); return false; }
     if (!quiet) setBusy(true);
     setMsg(null);
     try {
@@ -998,10 +1016,12 @@ export function ListingWizard({
       // The WHOLE draft persists server-side — the listing doc IS the draft,
       // so the customer page renders identically on any machine.
       const { id: draftId, ...draftBody } = { ...d, images, gallery };
-      const body = { ...draftBody, status, name: d.title.trim() || "Untitled listing", passes };
+      const body = { ...draftBody, status, name: d.title.trim() || "Untitled listing", passes, expectedUpdatedAt: updatedAtRef.current };
       let id = draftId;
-      if (id) await api(`/api/listings/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
-      else id = (await apiPost<{ id: string }>("/api/listings", body)).id;
+      let saved: { updatedAt?: number };
+      if (id) saved = await api<{ updatedAt?: number }>(`/api/listings/${encodeURIComponent(id)}`, { method: "PUT", body: JSON.stringify(body) });
+      else { const created = await apiPost<{ id: string; updatedAt?: number }>("/api/listings", body); id = created.id; saved = created; }
+      if (typeof saved.updatedAt === "number") updatedAtRef.current = saved.updatedAt;
       const next = { ...d, images, gallery, id, status };
       selfUpdate.current = true; // this setD is our own save result — don't let it re-trigger autosave
       setD(next);
@@ -1009,6 +1029,12 @@ export function ListingWizard({
       if (!quiet) setBusy(false);
       return true;
     } catch (e) {
+      if (e instanceof ApiError && e.status === 409 && e.message.includes("changed elsewhere")) {
+        setConflicted(true);
+        setMsg("This listing changed in another tab. Reload the page to see the latest version before saving again.");
+        if (!quiet) setBusy(false);
+        return false;
+      }
       // Autosaves fail silently — the blockers strip already says what's missing,
       // and a half-built draft failing validation shouldn't nag mid-typing.
       // EXCEPT a refused date removal: children are booked on it, and the
@@ -1047,6 +1073,21 @@ export function ListingWizard({
     return () => { if (timerRef.current) clearTimeout(timerRef.current); };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [d]);
+
+  // The wizard is a full-screen overlay with no URL of its own (it opens over
+  // /freelancer/listings without a route change) and, unlike the app's other
+  // modals (see features/parent/QuickBookModal.tsx for the same pattern),
+  // Escape didn't close it. Closes the topmost layer first — the full-screen
+  // preview, if that's open — same as clicking its own × / backdrop.
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (fullPreview) setFullPreview(false);
+      else onClose();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [fullPreview, onClose]);
 
   const saveDraftAction = async () => { if (await syncApi("draft")) { setSaveState("saved"); onSaved(); } };
   const blockers = publishBlockers(d, tickets.length, tickets.filter((t) => d.ticketOverrides[t.name]?.hidden !== true).length);
