@@ -1,0 +1,100 @@
+{
+  "p2-c3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "basket K1[2026-09-15,2026-09-16] + K2[2026-09-15] → 201 → ONE merged booking [APF-10312] status=Approval needed kids on 2026-09-15=2; block dayCounts 2026-09-15=2 bookedCount=2 (two seats); same child twice in one basket (2026-09-19) → 400 \"Cust Kid One is in this basket twice for Sat 19 Sept — remove one of them.\"; K1 again on 2026-09-15 (already holds a place, separate basket) → 409 \"Cust Kid One already has a place on Tue 15 Sept (booking APF-10312).\"",
+    "notes": "A basket becomes one booking per family with kids[] (my.ts:1437-1478), not one per child; the second guard (a child who already holds that day) answers 409 rather than the in-basket 400.",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c5": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "fill 2026-09-17 (cap 2/day) → 201; amend 2026-09-15→2026-09-17 (full) → 400 \"Thu 17 Sept is full\"; amend 2026-09-15→2026-09-18 → 201 dateChangeRequest=pending; wallet before 0; /amend/withdraw → 200 request cleared=true days=[2026-09-15,2026-09-16]; re-ask → 201; $A move-approve → 200; booking-level days now [2026-09-15,2026-09-16,2026-09-18] and kids[K1].days=[2026-09-18,2026-09-16] (child row stale: false) request=approved; parent 'Date change approved' bells: 1 (was 0 date-change bells), emails 1→2; second booking R2 (K2 2026-09-19,2026-09-20) → 201, amend 2026-09-19→2026-09-21 → 201; $A move-deny → 200 request=denied; 'declined' bells: 1, emails 2→4 (after R2's confirmation); wallet after 0 (no credit — a Day pass is one flat price per child, there is no cheaper day)",
+    "notes": "Full day refused as 400 \"Thu 17 Sept is full\" (my.ts:1823) rather than the plan's 409 — same gate, different code, accepted as either. \"Cheaper day → wallet credit\": not applicable — the amend route moves dates only (my.ts:1771-1869); no price is recomputed and no wallet movement exists for a date change (bookings.ts:562-606 move-approve). Decision needed if per-day pricing ever lands. FIXED: the parent basket merge (my.ts:1453-1470) now writes both kids[].days AND kids[].dates (kept in sync) — the Kid type gained a `days?` alias (features/bookings/types.ts) — and move-approve (bookings.ts) now reads kid.dates ?? kid.days and writes back to both, so the child's own row no longer goes stale after a date-change approval; partial cancel on a merged-basket booking now works too (see p2-c6, previously refused every day).",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "menu → 201; mealPlan 2026-09-15..2026-09-20 → 200; GET meal-days before → 200 days=[2026-09-15,2026-09-16,2026-09-19,2026-09-20]; partial cancel 2026-09-20 on the single-child booking R2 (wallet) → 200 kids=[{\"n\":\"Cust Kid Two\",\"cancelledDays\":[\"2026-09-20\"]}]; partial cancel 2026-09-16 on the TWO-child booking R1 → 200 ; after → 200 days=[2026-09-15,2026-09-19] both cancelled days gone: true",
+    "notes": "FIXED: partial (per-day) cancel on a multi-child basket booking used to be refused — my.ts:2059 read kid.dates but the basket merge only stored kids[].days (my.ts:1453-1458). The merge now writes both fields (see p2-c5), so this now succeeds; single-child bookings already worked (materialiseKids builds dates from days).",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "codes: public 201, reserved-for-P 201, reserved-for-P2 201, expired 201, tenant B 201, inactive 201; GET /api/my/coupons as $P → 200 [P2HMINE,P2HPUBLIC] (public ✓true mine ✓true other's ✗true expired ✗true tenant B ✗true inactive ✗true); as a parent with no bookings → 0 codes",
+    "notes": "The Coupon ticker (features/parent/CouponTicker.tsx) reads the same GET /api/my/coupons — browser half not exercised here.",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/my/feedback → 201 id=set; a parent who never booked → 403 \"You can review a provider once you've booked with them\"; GET /api/reviews as $A → 200 in-house items=1 ours listed=true only ours=true; /inhouse/:id/reply → 200; reply from tenant B → 404; GET /api/my/feedback as $P shows reply=\"Thanks so much!\"; NO TOKEN: GET /public/:tenantId (widget on) → 401 \"Missing Authorization bearer token\"; /invite/:tenantId → 401 \"Missing Authorization bearer token\"; widget off → 401",
+    "notes": "The two \"no token\" routes sit behind requireAuth in src/index.ts:234 (app.use(\"/api/reviews\", reviews) is mounted after the /api auth middleware) — an anonymous widget/parent gets 401 before reviews.ts:236/254 run; the embeddable widget and the post-feedback Google prompt can't be reached signed-out. \"Excludes unpublished\": there is no published/approved flag on feedback (feedback.ts:33-45; reviews.ts:90-99 lists every row) — every in-house review is public the moment it's left; only the tenant-wide publicWidget switch hides them all. Decision needed.",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c10": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "GET /api/my/referral → 200 code=P2HMU1I31L4 friendOff=£2 reward=£5; at signup: P wallet £0 P3 wallet £0 reward codes 0 referrals 0; $P uses own code → 400 \"You can’t use your own referral link\"; $P3 UNPAID booking with the code → 201 pay=Unpaid amount=£8; after booking (unpaid): reward codes 1, referrals 1, wallets P £0 / P3 £0; mark paid → 200; after payment: reward codes 1, referrals 1; second booking with the code → 400 \"Code P2HMU1I31L4 is for new customers only\"",
+    "notes": "Fix needed / decision: the referrer is rewarded when the friend's booking is CREATED, not when it is paid — my.ts:1500-1505 fires rewardReferrer straight after the booking transaction regardless of pay status, so an unpaid (later declined/cancelled) booking still mints the THANKS code. The reward is a one-use discount code reserved to the referrer (referral.ts:196-206), not wallet credit — wallets stay £0 on both sides by design. Once-only holds (referrals dedupe on referrer+friend, referral.ts:180; newCustomerOnly refuses the friend's second use).",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c11": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "posts → 201/201; $P react {on:true} ×2 → 200/200 reactions=2 (toggle would leave 1); {on:false} → 200 reactions=1; RSVP yes ×4 on the event → [200,200,200,200] rsvp={\"no\":0,\"maybe\":0,\"yes\":4} (no capacity field exists on a post — postSchema posts.ts:37-70); ack ×2 → 200/200 seen=2; operator view of who acked: keys=[ackRequired] (seen is a bare counter); $P2 (never booked A, can't see the post: true) react → 200; tenant B's owner react → 200",
+    "notes": "Fix needed: posts.ts:224-251 — react/rsvp/ack take no ownership check (any signed-in account can bump any post by id, incl. a parent who can't see it and another tenant's owner) and keep no per-person state: react is a counter the CLIENT toggles (on:true twice = +2), RSVP has no capacity and can be sent repeatedly, ack is a bare `seen` counter so the operator can't see WHO acknowledged (docs/newsfeed-handoff.md lists per-parent state as a follow-up). Plan expectations (toggle / capacity refusal / who-acked / 404 for $P2) all unmet.",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "photoConsent on K1 → 200; $A posts a moment tagging K1 → 201; comment as $P4 (child not tagged) → 403 \"You can't comment on this moment\"; comment as $P (tagged) '<b>hi</b>' → 200 stored text=\"<b>hi</b>\" (raw, not HTML-encoded); $P /comment/0/marketing → 403 \"Requires an operator account\"; $A → 200 marketing=true",
+    "notes": "Stored raw and rendered as a React text node (features/moments/ParentMomentsApp.tsx:71 and MomentsApp.tsx:249-253 quote picker) — React escapes it, no dangerouslySetInnerHTML on the comment path; the newsletter builder takes the chosen quote as a string block (nlBlockSchema, posts.ts:27) which the designed HTML renderer escapes per block. Browser check of the rendered newsletter is the browser agent's.",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "seed: $P message → 201, $P2 booking → 201; GET /api/privacy/export → 200 sections={\"notifications\":3,\"deletionRequests\":0,\"children\":2,\"bookings\":2,\"payments\":0,\"mealOrders\":0,\"medications\":0,\"medicationDoses\":0,\"register\":0,\"moments\":1,\"incidents\":0,\"tripConsents\":0,\"uploadedFiles\":0,\"messageThreads\":1,\"messages\":3,\"memberships\":0,\"wallet\":0,\"walletEntries\":0,\"providerFamilyRecords\":1,\"feedback\":1,\"referrals\":1}; required present=[children,bookings,payments,medicationDoses,register,messages,tripConsents] missing=[none]; any other family's row: false; POST delete-request → 201; operator 'Data deletion request' bells 0→1; HQ bell (GET /api/platform/notifications as $H) has privacy entry: true (\"Data deletion request — p2hmu1i3cwe-pa-x1c78o@p2h.test\"); second request → 200 alreadyRequested=true",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c16": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "card booking → 201, mark paid → 200: parent row pay=Paid amount=£10 amountPaid=£10 paidAt=- paymentRef=-; second card booking paid → 200, parent cancel → 200 cancel.amount=£5 refund=partial, $A refund-approve → 200 : parent row pay=Partially refunded status=Cancelled refundLog=[{\"label\":\"Refund approved (partial)\",\"amount\":5,\"on\":\"2026-09-14\",\"by\":\"Provider\",\"source\":\"Wallet\"}] (amounts 5); TFC booking (voucherScheme tfc) → 201 pay=Awaiting voucher payment voucherScheme=Tax-Free Childcare sendBy=2026-09-14; operator GET /api/payments rows for these refs: 3",
+    "notes": "Receipts are generated client-side from the booking row (features/parent/paymentReceipt.ts, jsPDF) for every pay=Paid/Funded row — there is no per-payment receipt URL from Stripe on the booking. Refunds show from booking.refundLog (PaymentsApp.tsx:145) as POSITIVE amounts under a \"Refunds\" heading, not negative rows. Mail/Stripe are not live so the card path here is \"mark paid\", not a Stripe charge; the refund-approve moved £5 to wallet.",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  },
+  "p2-c17": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT name ×300 chars → 400 (zod max 120 — refused, not trimmed); emoji name → 200 stored=\"Cust 🎉 Parent 👨‍👩‍👧\"; RTL name → 200; GET /api/account name=\"والدة الاختبار\"; Families as $A: row name=\"Cust Parent\" (customer record) — booking R1 booker=\"Cust Parent\"",
+    "notes": "A 300-char name is refused with a 400 validation error (account.ts:15 z.string().max(120)), not trimmed to the limit as the plan expects — decision (trim vs refuse); the UI's field should cap at 120. Families and bookings keep the name the family had when they BOOKED (booker from the token at checkout, customerUpsert) — renaming the account does not rename the customer record or past bookings, so an emoji/RTL account name only reaches Families on the next booking. Emails escape names (notify.ts escapeHtml; emailSend.ts escMerge).",
+    "evidence": "server/scripts/plan2/p2H_day9.mts",
+    "at": "2026-09-14T17:15:46.448Z",
+    "agent": "plan2-K"
+  }
+}
