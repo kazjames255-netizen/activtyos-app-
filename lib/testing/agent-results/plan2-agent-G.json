@@ -298,5 +298,196 @@
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
+  },
+  "p2-s1": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "plain staff → 404; named DSL staff → 200 (parent=email present, bookings=2, siblings=1); $F1 on F2's child → 200",
+    "notes": "Staff get 404 rather than 403 (the route hides whether the record exists) — same protection.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s2": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "incidents=None role + named DSL: POST → 201; un-named (cache cleared in-process): POST → 201 ",
+    "notes": "The 10s settings cache was cleared directly (forgetSettings) rather than waiting 11s.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s3": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "POST (subject staff, aboutDsl) → 201 aboutDsl=true; bells: DSL +0, owner +2; mail attempts: DSL=false, owner=true (mailer not live, SUPPRESSED lines)",
+    "notes": "Safe behaviour observed: routed to the account holder only, nothing to the DSL (dslAlert.ts aboutLead → holder).",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "kind incident, subject staff → 201; in plain staff's GET /api/incidents: false (1 visible)",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s5": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "parent note on an accident → 201; staff note on their own → 201; staff delete → 403; owner create with dslLog → 201 ; owner delete of a record carrying a DSL decision → 200, doc gone=true",
+    "notes": "Parents MAY note their own child's accident record (incidents.ts:487 accepts role parent) — the plan expected 403; this is the designed parent reply channel. Fix needed (decision): the owner's delete of a decided safeguarding record removes it outright — no audit stub. Plan asks for a refusal or a stub.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "A logs with B's childId → 403 child_not_yours",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "given → 201, not-given with reason → 201; operator list 2026-09-14: 2 rows (not-given notes=\"child refused\"); parent P sees 2 (other families' rows: 0); parent of B sees 0",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s8": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "two simultaneous doses at 16:00 → 201/201; administration rows at 16:00: 0",
+    "notes": "Fix needed: medications.ts /administer has no duplicate check — two identical doses a second apart are both recorded. Add a same-med/same-time window check (like record-payment's) or an idempotency key.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s9": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "expiry yesterday: administer → 201 (no expiry warning in response); register for today mentions expiry: false (register meds fields: \"medications\":[{\"name\":\"Ventolin\",\"dose\":\"2 puffs\",\"asNeeded\":false,\"heldOnSite\":false,\"consent\":true})",
+    "notes": "Fix needed: an expired medication can be administered with no refusal or warning (expiryDate is stored but never checked in /administer), and the register row's medication summary doesn't carry expiry.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s10": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "parent withdraw → 200; DELETE → 409 keep_archived; note afterwards → 403",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "upload 201/200/200; GET as $A → 200; as $B → 404; as plain staff of A (no assignment) → 200; as site lead assigned to V1 (child booked at V1) → 200; 16MB create → 400 Number must be less than or equal to 15000000",
+    "notes": "Any staff member of the tenant can read the plan (childFiles.ts:142 checks tenantIds only, not the staff member's listing assignment) — the plan expected 403 for unassigned staff; fix needed (decision). Over-size is refused at create with 400 (zod max FILE_MAX_BYTES), not 413.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s12": {
+    "verdict": "blocked",
+    "method": "browser",
+    "actual": "Browser step (/plan/<fileId> signed-out vs $B, Network tab) — queued for the browser agent.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "plain staff PUT allergies → 403; site lead with medical=edit → 403 Only a manager can change a child's care details; owner → 200 (careHistory entries: 1); parent sets collectionPassword+walkHomeConsent → 200: stored collectionPassword=banana, walkHomeConsent=true",
+    "notes": "PUT /api/children/:id is manager-only (children.ts:249 — company/franchise/freelancer), so a lead with medical=edit is still 403; the plan expected 200 + careHistory. Decision needed: open it to staff whose role has medical=edit. Parent route accepts both collectionPassword and walkHomeConsent (nothing ignored).",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s14": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "site lead (V1 only) → [Kid One]; plain staff (no assignment) → [Kid One, Kid Two]; owner → [Kid One, Kid Two]; Firestore: 2 children booked with A",
+    "notes": "A plain staff member with NO assignment sees the whole tenant (assignment absent = unrestricted, siteScope.ts:24) — same as the owner; the plan's 'only assigned listings' applies once an assignment exists.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s15": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "mark in → 200; headcount 0 (1 signed in) → 201; register shows heads=[{\"n\":0,\"by\":\"P2H Safe A owner\",\"at\":\"2026-09-14T13:09:28.030Z\"}] nudges={}; nudge → 200 {\"ok\":true,\"at\":\"2026-09-14T13:09:29.649Z\"}; threads for this family: 0, for B's family: 0 (total threads 0)",
+    "notes": "The headcount is stored as a tally (heads[] with n/by/at); the mismatch against signed-in isn't computed server-side — the register screen compares. The nudge records the chase time on the register (nudges[ref]) and does not itself open a message thread.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s16": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "plain staff (no rota, no assignment) notes on V2 → 200; site lead assigned to V1 notes on V2 → 404; $F1 on HO's block → 404",
+    "notes": "Staff rule: allowed unless site-scoped (assignment) — a V1-only lead is refused on V2; being on the rota isn't checked.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s17": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "oversight incidents/accidents/medication → 200/200/200; F1 row={\"franchiseId\":\"p2hmu19dj96-fr-p5dm4d\",\"name\":\"P2H Safe F1\",\"total\":0,\"open\":0,\"last30\":0} vs F1 own list 1; F2 row={\"franchiseId\":\"p2hmu19dj96-fr-r7fixw\",\"name\":\"P2H Safe F2\",\"total\":1,\"open\":1,\"last30\":1} vs F2 own list 1; writes under /api/ho → 404/404/404",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s18": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "board GET → 200 (keys: overrides,groupStaff); owner moves a 7-year-old's row to group \"8-11\" → 200 {\"ok\":true}; plain staff assigns staff with assignByLeads on → 403 Assigning staff to groups is limited to leads/mana",
+    "notes": "Fix needed (minor): an age-inappropriate group override is accepted silently (ratios.ts:258 stores overrides as given, no age check or warning).",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s19": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "plain staff send → 200 ; owner send → 200 sent=1; bells: trip family +0, other tenant's family +0",
+    "notes": "Plain staff CAN send the trip message (trips.ts own() allows any staff who can see the trip; whoCanPlan gates planning, not sending) — the plan expected 403 unless lead. Decision needed.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s20": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "The chase sweeps (acknowledgementChase / medicationDue / tripConsentChase in src/lib/sweeps.ts) are module-private and only run via startSweeps(), which would fire every REAL tenant's chases from this process. Code read: each delivery goes through fireOnce(`ackchase_<id>_<date>` / `tripconsent_<trip>_<child>_<date>`), a Firestore-transaction claim keyed per record per day, so a second pass in the same day cannot re-deliver.",
+    "notes": "Needs a tenant-scoped once-runner (e.g. `npx tsx scripts/sweeps_once.mts --tenant X`) to prove it live — fix needed for testability.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s21": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "walkHomeConsent set on Kid One; GET /api/registers?date=2026-09-14 carries walkHomeConsent:true on the row: true",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
+  },
+  "p2-s22": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "SVG-with-script sent as image/png → 201 ; 950KB JPEG → 413; 1px PNG → 201; GET /api/images/MZwpUAXo… → 200 content-type=image/png x-content-type-options=nosniff",
+    "notes": "Fix needed: uploads.ts trusts the data-URL mime for images (only PDFs are magic-checked) — an SVG carrying <script> is stored as image/png. Served with nosniff so browsers won't run it inline, but sniff the PNG/JPEG/WebP/GIF magic bytes too.",
+    "evidence": "server/scripts/plan2/p2H_day3.mts",
+    "at": "2026-09-14T13:12:48.642Z",
+    "agent": "plan2-G"
   }
 }

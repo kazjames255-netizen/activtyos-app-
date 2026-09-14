@@ -23,7 +23,7 @@ const C = await mkTenant("company", "P2H Safe HO"); const HO = C.owner; const TC
 async function listingAndBlock(actor: Actor, title: string, start = 30) {
   const l = await api(actor, "POST", "/api/listings", { title, passes: [{ name: "Day", price: 10 }] }); if (l.status !== 201) throw new Error(`listing ${l.status} ${l.text}`);
   await db.collection("listings").doc(l.json.id).set({ status: "live" }, { merge: true });
-  const b = await api(actor, "POST", "/api/blocks", { listingId: l.json.id, name: `${title} wk`, startDate: ymd(daysFromNow(start)), endDate: ymd(daysFromNow(start + 4)), capacity: 50, schedule: { startTime: "09:00", endTime: "15:30" } }); if (b.status !== 201) throw new Error(`block ${b.status} ${b.text}`);
+  const b = await api(actor, "POST", "/api/blocks", { listingId: l.json.id, name: `${title} wk`, startDate: ymd(daysFromNow(start)), endDate: ymd(daysFromNow(start + 4)), capacity: 50, schedule: { startTime: "09:00", endTime: "15:30", weekdays: [0, 1, 2, 3, 4, 5, 6] } }); // every day, so days[3] is never a weekend if (b.status !== 201) throw new Error(`block ${b.status} ${b.text}`);
   return { listingId: l.json.id as string, blockId: b.json.id as string, title, days: [0, 1, 2, 3, 4].map((n) => ymd(daysFromNow(start + n))) };
 }
 const V1 = await listingAndBlock(OA, "P2H Safe V1"); const V2 = await listingAndBlock(OA, "P2H Safe V2"); const T0 = await listingAndBlock(OA, "P2H Safe Today", 0);
@@ -83,11 +83,11 @@ await step("p2-s5", async () => {
   const pn = await api(P, "POST", `/api/incidents/${mine.json?.id}/note`, { text: "Thanks" });
   const sn = await api(S, "POST", `/api/incidents/${mine.json?.id}/note`, { text: "Checked again at 3pm" });
   const sd = await api(S, "DELETE", `/api/incidents/${mine.json?.id}`);
-  const decided = await api(OA, "POST", "/api/incidents", { kind: "safeguarding", date: today, childId: K1, childName: "Kid One", description: "Decided", dslLog: [{ at: new Date().toISOString(), by: "Safe Dsl", action: "Referred to MASH", note: "ref 123" }] });
-  const od = await api(OA, "DELETE", `/api/incidents/${decided.json?.id}`);
-  const gone = !(await db.collection("incidents").doc(decided.json?.id).get()).exists;
+  const decided = await api(OA, "POST", "/api/incidents", { kind: "safeguarding", date: today, childId: K1, childName: "Kid One", description: "Decided", dslLog: [{ id: "dsl1", key: "referred_mash", label: "Referred to MASH", at: new Date().toISOString(), by: "Safe Dsl", note: "ref 123" }] });
+  const od = decided.json?.id ? await api(OA, "DELETE", `/api/incidents/${decided.json.id}`) : { status: 0, json: null };
+  const gone = decided.json?.id ? !(await db.collection("incidents").doc(decided.json.id).get()).exists : false;
   const ok = pn.status !== 201 && sn.status === 201 && sd.status === 403;
-  results["p2-s5"] = { verdict: ok ? "pass" : "fail", actual: `parent note on an accident → ${pn.status}; staff note on their own → ${sn.status}; staff delete → ${sd.status}; owner delete of a record carrying a DSL decision → ${od.status}, doc gone=${gone}`, notes: `${pn.status === 201 ? "Parents MAY note their own child's accident record (incidents.ts:487 accepts role parent) — the plan expected 403; this is the designed parent reply channel. " : ""}${gone ? "Fix needed (decision): the owner's delete of a decided safeguarding record removes it outright — no audit stub. Plan asks for a refusal or a stub." : ""}` };
+  results["p2-s5"] = { verdict: ok ? "pass" : "fail", actual: `parent note on an accident → ${pn.status}; staff note on their own → ${sn.status}; staff delete → ${sd.status}; owner create with dslLog → ${decided.status} ${decided.status !== 201 ? JSON.stringify(decided.json).slice(0, 100) : ""}; owner delete of a record carrying a DSL decision → ${od.status}, doc gone=${gone}`, notes: `${pn.status === 201 ? "Parents MAY note their own child's accident record (incidents.ts:487 accepts role parent) — the plan expected 403; this is the designed parent reply channel. " : ""}${gone ? "Fix needed (decision): the owner's delete of a decided safeguarding record removes it outright — no audit stub. Plan asks for a refusal or a stub." : ""}` };
 });
 // ── p2-s6: child id from another tenant ───────────────────────────────────
 await step("p2-s6", async () => {
@@ -136,7 +136,7 @@ await step("p2-s11", async () => {
   const c = await api(P, "PUT", `/api/my/files/${f.json?.id}/chunks/0`, { b64 });
   const dn = await api(P, "POST", `/api/my/files/${f.json?.id}/done`, {});
   await api(P, "PUT", `/api/my/children/${K1}`, { name: "Kid One", dob: "2019-05-04", sendPlanId: f.json?.id, sendPlanName: "plan.pdf" });
-  await parentBook(P, V1, "Kid One", K1, [V1.days[3]]); // a new booking grants the plan to the tenant
+  await parentBook(P, V1, "Kid One", K1, [V1.days[3]]); await wait(2000); // a new booking grants the plan to the tenant (fire-and-forget in my.ts, so give it a moment)
   const gA = await api(OA, "GET", `/api/my/files/${f.json?.id}`); const gB = await api(OB, "GET", `/api/my/files/${f.json?.id}`);
   const gS = await api(S, "GET", `/api/my/files/${f.json?.id}`); const gL2 = await api(L, "GET", `/api/my/files/${f.json?.id}`);
   const big = await api(P, "POST", "/api/my/files", { name: "huge.pdf", contentType: "application/pdf", bytes: 16_000_000, total: 23 });
