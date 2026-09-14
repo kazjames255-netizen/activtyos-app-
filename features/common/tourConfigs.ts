@@ -1286,39 +1286,39 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
     ]
   },
   "locations": {
-    "title": "Locations",
-    "introLine": "This is your Locations page. It gives you every venue you run at a glance, with the address, how to get there and a map, all in one place so you can run the day without opening a listing.",
-    "doneLine": "That is Locations. It is a read only view, so to add a venue or change its details you edit it under Listings and then Locations.",
+    "title": "Deployment",
+    "introLine": "This is Deployment — not a venue directory but a live staff-placement board. It shows every location you run, who's deployed there and to which listings, so you can move your team around fast. Venue details like address and facilities are edited under Listings, not here.",
+    "doneLine": "And that's Deployment — locations, staff and listings, three ways to look at the same placements, all editable right here without opening a listing.",
     "steps": [
       {
-        "label": "Every venue at a glance",
+        "label": "Three tiles, three views",
         "stage": "Overview",
-        "line": "This page pulls in all of your saved venues from the listing library. It updates on its own as venues change, and each one shows as a card so you can scan your whole estate quickly.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">YOUR VENUES</div><div class=\"tkt\"><div class=\"tkhd\"><b>St Mary's Primary Hall</b> <span class=\"g\">Bristol</span><span class=\"tkp\">Cap 60</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Redland Community Centre</b> <span class=\"g\">Bristol</span><span class=\"tkp\">Cap 40</span></div></div></div>"
+        "line": "The tiles up top count your locations, how many staff are actually deployed against your whole team, and how many listings are in play. Switch the whole page between By location, By staff and By listing — same data, three angles on it.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">LOCATIONS</div><div class=\"field\">📍 4 venues you run</div></div><div><div class=\"fl\">STAFF DEPLOYED</div><div class=\"field\">👥 6 of 8 on the team</div></div></div><div class=\"chips\"><span class=\"ochip\">By location</span><span class=\"chip2\">By staff</span><span class=\"chip2\">By listing</span></div></div>"
       },
       {
-        "label": "Map for each venue",
-        "stage": "Map",
-        "line": "For any physical venue that has a pinned location, a small map sits at the top of its card. That gives you and your team a quick sense of exactly where you are heading before the session.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">LOCATION MAP</div><div class=\"tkt\"><div class=\"tkhd\"><b>St Mary's Primary Hall</b> <span class=\"g\">51.4621, -2.6031</span></div></div><div class=\"hint\">Pinned map shown for physical venues</div></div>"
+        "label": "By location",
+        "stage": "By location",
+        "line": "Each venue is a card: who's deployed there under Team here, and which of your listings actually run at that address. Type into Add staff to search anyone on your team by name or role and place them there in one tap.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">📍 MILTON KEYNES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Site Manager · all listings here</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Shah</b> <span class=\"g\">First Aider · all listings here</span></div></div><div class=\"field ph\">＋ Add staff — search any name…</div><div class=\"fl\">LISTINGS HERE · 2</div><div class=\"tkt\"><div class=\"tkhd\"><b>🎟 Summer Multi-Sports Camp</b> <span class=\"g\">📅 Summer 2026</span></div></div></div>"
       },
       {
-        "label": "Name and address",
-        "stage": "Details",
-        "line": "Each card leads with the venue name and its full address. Venues that run online instead of in person are flagged with an online tag rather than a map, so you can tell the two apart at a glance.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">VENUE</div><div class=\"field\">St Mary's Primary Hall</div><div class=\"fl\">ADDRESS</div><div class=\"field\">Elm Grove, Redland, Bristol, BS6 6TR</div><div class=\"chips\"><span class=\"ochip\">online</span></div></div>"
+        "label": "By staff",
+        "stage": "By staff",
+        "line": "One card per person, A to Z. Mark them Rostered or None for office / admin, then narrow it in two steps — which locations they cover, then which listings at those locations, or leave it at All listings here to cover whatever runs there.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Jordan Lee</b> <span class=\"g\">Activity Instructor</span><span class=\"tkp\">2 locations · 2 listings</span></div></div><div class=\"chips\"><span class=\"chip2\">✓ Rostered</span><span class=\"ochip\">None — office / admin</span></div><div class=\"fl\">① LOCATIONS</div><div class=\"chips\"><span class=\"ochip\">🌍 All locations</span><span class=\"chip2\">✓ Milton Keynes</span><span class=\"chip2\">✓ Bletchley</span></div><div class=\"fl\">② LISTINGS AT THOSE LOCATIONS</div><div class=\"chips\"><span class=\"ochip\">🎟 All listings here</span></div></div>"
       },
       {
-        "label": "How to get there",
-        "stage": "Directions",
-        "line": "Under the address you get the practical arrival notes. There is a transport line for parking and public transport, a free text directions note, and a what3words reference for pinpointing the exact entrance.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TRANSPORT</div><div class=\"field\">Car park on Elm Grove, 5 min from Redland station</div><div class=\"fl\">DIRECTIONS</div><div class=\"field\">Side gate on Cranbrook Road, hall is at the rear</div><div class=\"fl\">WHAT3WORDS</div><div class=\"field\">///spoon.local.chair</div></div>"
+        "label": "By listing",
+        "stage": "By listing",
+        "line": "Flip it round to see one listing's own team — its season and venue, who's already assigned as a chip you can tap off, and a picker underneath to add anyone else who isn't on it yet.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>🎟 Summer Multi-Sports Camp</b> <span class=\"g\">📅 Summer 2026 · 📍 Milton Keynes</span></div></div><div class=\"chips\"><span class=\"chip2\">Alex Rivera ×</span><span class=\"chip2\">Priya Shah ×</span></div><div class=\"field ph\">＋ Add staff to this listing…</div></div>"
       },
       {
-        "label": "Facilities",
-        "stage": "Facilities",
-        "line": "Finally each venue lists its facilities as tags, so you know what is on site before you arrive. Things like accessible access, a kitchen or an outdoor space show here at a glance.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FACILITIES</div><div class=\"chips\"><span class=\"ochip\">Wheelchair access</span><span class=\"ochip\">Kitchen</span><span class=\"ochip\">Outdoor space</span><span class=\"ochip\">Parking</span></div></div>"
+        "label": "Timesheets & alerts per venue",
+        "stage": "Per-venue detail",
+        "line": "Open a location's Timesheets & alerts link and you're in that venue's own detail screen — hours from check-in and check-out roll up under Timesheets, and Notifications & extensions is where you flip on shift-published, missed-check-in and weekly-summary alerts for that site.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">Timesheets</span><span class=\"chip2\">Notifications &amp; extensions</span></div><div class=\"hint\">Once staff check in and out on the register, their hours here roll up and feed Payroll.</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Shifts published</div><div class=\"chk\"><span class=\"chkbx\">✓</span>Missed check-in</div></div>"
       }
     ]
   },
