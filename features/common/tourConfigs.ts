@@ -494,38 +494,44 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   },
   "documents": {
     "title": "Documents",
-    "introLine": "This is your document store — one tidy place for the policies, risk assessments, insurance and certificates your setting needs, so the right paperwork is always a click away.",
-    "doneLine": "And that's Documents — add a file or a link, tag it with a category, and it's saved to the shared list for your team to open any time.",
+    "introLine": "This is your document store — the policies, risk assessments, handbooks and insurance your setting needs, versioned, with review dates, and assigned to whoever actually needs to read them — a role, a job title or a specific listing — plus a Read receipts view proving who has.",
+    "doneLine": "And that's Documents — add a file or a link, version it as it changes, assign it to the right people, and Read receipts shows you exactly who's confirmed and who still needs chasing.",
     "steps": [
       {
-        "label": "The page",
+        "label": "Library & Read receipts",
         "stage": "Overview",
-        "line": "Everything lives on one simple page — a running list of your paperwork, with an Add a document button top-right for anyone who can manage the setting.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div class=\"fl\">DOCUMENTS</div><span class=\"btn amber\">＋ Add a document</span></div><div class=\"hint\">Policies, risk assessments and certificates — the paperwork in one place.</div><div class=\"tkt\"><div class=\"tkhd\"><b>📄 Safeguarding Policy</b> <span class=\"g\">Policies · 2 Jun 2026</span><span class=\"tkp\">Open</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📄 Public Liability Insurance</b> <span class=\"g\">Insurance · 14 Jan 2026</span><span class=\"tkp\">Open</span></div></div></div>"
+        "line": "Two modes at the top: Library is the document list itself, and Read receipts flips to a grid of every assigned person against every document, so you can see who's confirmed and chase anyone who hasn't in one tap.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">📁 Library</span><span class=\"chip2\">✅ Read receipts</span></div><div class=\"row2\"><div class=\"fl\">DOCUMENTS</div><div class=\"fl\">REVIEW SOON</div><div class=\"fl\">OUT OF DATE</div></div><div class=\"row2\"><div class=\"field\">📁 14</div><div class=\"field\">⏳ 2</div><div class=\"field\">⛔ 1</div></div></div>"
       },
       {
         "label": "Add a document",
         "stage": "Add files",
-        "line": "Managers add a document by filling four quick fields — give it a title, pick a category, then either choose a file to upload or just paste a link, with an optional note. Only company, freelancer or franchise accounts can add or delete; everyone else just reads and opens.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">TITLE</div><div class=\"field\">Autumn Half-Term Camp - Risk Assessment</div></div><div><div class=\"fl\">CATEGORY</div><div class=\"field\">Risk assessments</div></div></div><div><div class=\"fl\">FILE OR LINK</div><div class=\"chips\"><span class=\"btn\">Choose file</span><span class=\"g\">or paste a link:</span></div><div class=\"field ph\">https://…</div></div><div><div class=\"fl\">NOTES</div><div class=\"field\">Reviewed for the Oct half-term dates.</div></div><div class=\"chips\"><span class=\"btn amber\">Save</span><span class=\"btn ghost\">Cancel</span></div></div>"
+        "line": "Managers add a document with a title, one of eight categories, then either choose a file to upload or paste a link, and an optional review date. Only company, freelancer or franchise accounts can add, edit or delete; everyone else reads and confirms.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">TITLE</div><div class=\"field\">Autumn Half-Term Camp — Risk Assessment</div><div class=\"row2\"><div><div class=\"fl\">CATEGORY</div><div class=\"field\">Risk assessment</div></div><div><div class=\"fl\">REVIEW BY</div><div class=\"field\">1 Oct 2026</div></div></div><div><div class=\"fl\">FILE OR LINK</div><div class=\"chips\"><span class=\"btn\">Choose file</span><span class=\"g\">or paste a link:</span></div><div class=\"field ph\">https://…</div></div><div class=\"chips\"><span class=\"btn amber\">Save</span><span class=\"btn ghost\">Cancel</span></div></div>"
       },
       {
         "label": "Categories",
         "stage": "Organise",
-        "line": "When you add a file you tag it with one category, and that category shows as a badge on its row — so an inspector's request for your insurance is easy to spot at a glance.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">CATEGORY</div><div class=\"field\">Policies</div><div class=\"chips\"><span class=\"ochip\">Policies</span><span class=\"ochip\">Risk assessments</span><span class=\"ochip\">Insurance</span><span class=\"ochip\">Certificates</span><span class=\"ochip\">Procedures</span><span class=\"ochip\">Other</span></div><div class=\"hint\">These six are the only categories — pick one per document.</div></div>"
+        "line": "Every document carries one of eight categories — Policy, Risk assessment, Handbook, Procedure, Insurance, Form, Certificate or Other — shown as a badge on its row, so an inspector's request for your insurance is easy to spot at a glance.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">CATEGORY</div><div class=\"field\">Policy</div><div class=\"chips\"><span class=\"ochip\">Policy</span><span class=\"ochip\">Risk assessment</span><span class=\"ochip\">Handbook</span><span class=\"ochip\">Procedure</span><span class=\"ochip\">Insurance</span><span class=\"ochip\">Form</span><span class=\"ochip\">Certificate</span><span class=\"ochip\">Other</span></div><div class=\"hint\">These eight are the only categories — pick one per document.</div></div>"
       },
       {
-        "label": "The document list",
-        "stage": "The library",
-        "line": "The list itself — each row shows the file's category, its title as a link, the date it was added, an Open link, and a delete cross for managers.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Policies</span><b>Safeguarding Policy</b> <span class=\"g\">2 Jun 2026</span><span class=\"tkp\">Open ✕</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Insurance</span><b>Public Liability Certificate</b> <span class=\"g\">14 Jan 2026</span><span class=\"tkp\">Open ✕</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Risk assessments</span><b>Summer Camp Risk Assessment</b> <span class=\"g\">28 May 2026</span><span class=\"tkp\">Open ✕</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Certificates</span><b>Paediatric First Aid Certificate</b> <span class=\"g\">3 Mar 2026</span><span class=\"tkp\">Open ✕</span></div></div></div>"
+        "label": "Who it's assigned to",
+        "stage": "Targeting",
+        "line": "Every document is assigned — to all staff by default, or narrowed to specific roles, job titles or a listing. A risk assessment for one activity only needs assigning to that listing, and it'll only ever chase the people who actually need to read it.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>Autumn Half-Term Camp — Risk Assessment</b> <span class=\"g\">v1 · updated 5 Sep 2026 · review by 1 Oct 2026</span></div><div class=\"chips\"><span class=\"chip2\">📋 Autumn Half-Term Camp</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Safeguarding Policy</b> <span class=\"g\">v2 · 1 past version</span></div><div class=\"chips\"><span class=\"chip2\">All staff</span></div></div><div class=\"hint\">🔑 role · 🧑‍🏫 job title · 📋 listing — or 'All staff' if none are picked.</div></div>"
       },
       {
-        "label": "Open & manage",
-        "stage": "Everyday use",
-        "line": "Click a title or its Open link and the file opens in a new tab. Managers also get a delete cross, which asks you to confirm before the document is removed.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><span class=\"chip2\">Procedures</span><b>Fire Evacuation Procedure</b> <span class=\"g\">Opens in a new tab ↗</span><span class=\"tkp\">Open</span></div></div><div class=\"chk\"><span class=\"chkbx\">✓</span>Only company, freelancer and franchise roles see Add a document and the delete cross.</div><div class=\"hint\">Deleting asks 'Delete this document?' before it's removed.</div></div>"
+        "label": "Versions and status",
+        "stage": "Keeping it current",
+        "line": "Upload a new file over an existing document and it becomes a new version — the old one is kept in its history, not lost — and every review date drives the status tiles up top: on track, review soon, or out of date.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>📄 Public Liability Insurance</b> <span class=\"g\">v3 · 2 past versions · review by 14 Jan 2027</span><span class=\"tkp\">On track</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>📄 First Aid Certificate</b> <span class=\"g\">v1 · review by 20 Sep 2026</span><span class=\"tkp\">⏳ Review soon</span></div></div><div class=\"chips\"><span class=\"btn\">📄 View</span><span class=\"btn\">Edit</span><span class=\"btn\">🗑 Delete</span></div><div class=\"hint\">Deleting asks 'Delete this document?' before it's removed.</div></div>"
+      },
+      {
+        "label": "Read receipts",
+        "stage": "Proving it",
+        "line": "Flip to Read receipts for a grid of every assigned person against every document — a green tick and the date once they've confirmed, a red Unread if they haven't — and Chase unread nudges everyone still outstanding in one go.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"hint\">11 of 14 confirmations across the team · 3 outstanding</div><span class=\"btn amber\">Chase unread</span><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Shah</b> <span class=\"g\">Coach</span></div><span class=\"chip2\">✓ Safeguarding Policy — 3 Sep</span> <span class=\"chip2\" style=\"background:#fdecec;color:#c0392b\">Unread — Fire Evacuation Procedure</span></div><div class=\"hint\">Staff confirm reading from their own Documents area.</div></div>"
       }
     ]
   },
@@ -538,7 +544,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "Period toggle + five tabs",
         "stage": "The frame",
         "line": "Pick a window at the top — 3, 6 or 12 months — and every figure on the page recalculates, with the five tabs simply slicing that same data different ways.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FINANCE & ANALYTICS &nbsp;£</div><div class=\"field\">10 Feb 2026 – 9 Aug 2026</div><div class=\"chips\"><span class=\"ochip\">3m</span><span class=\"ochip\">✓ 6m</span><span class=\"ochip\">12m</span></div><div class=\"chips\"><span class=\"chip2\">Overview</span><span class=\"chip2\">Revenue</span><span class=\"chip2\">Payouts</span><span class=\"chip2\">Debts</span><span class=\"chip2\">Customers & learners</span></div><div class=\"hint\">Opens on Payouts first if your payout account isn't set up yet.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"fl\">FINANCE & ANALYTICS &nbsp;£</div><div class=\"field\">10 Feb 2026 – 9 Aug 2026</div><div class=\"chips\"><span class=\"ochip\">3m</span><span class=\"ochip\">✓ 6m</span><span class=\"ochip\">12m</span></div><div class=\"chips\"><span class=\"chip2\">Overview</span><span class=\"chip2\">Revenue</span><span class=\"chip2\">Payouts</span><span class=\"chip2\">Debts</span><span class=\"chip2\">Insights</span></div><div class=\"hint\">Opens on Payouts first if your payout account isn't set up yet.</div></div>"
       },
       {
         "label": "Overview",
@@ -565,15 +571,15 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">OWED BY FAMILIES</div><div class=\"field\">£2,630 <span class=\"g\">unpaid bookings</span></div></div><div><div class=\"fl\">UNPAID INVOICES</div><div class=\"field\">£1,180 <span class=\"g\">4 open</span></div></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Priya Sharma</b> <span class=\"g\">Overdue · due 1 Aug</span><span class=\"tkp\">£180.00</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>Daniel O'Brien</b> <span class=\"g\">due 12 Aug</span><span class=\"tkp\">£95.00</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>The Whitfield family</b> <span class=\"g\">Overdue · due 28 Jul</span><span class=\"tkp\">£250.00</span></div></div></div>"
       },
       {
-        "label": "Customers & learners",
+        "label": "Insights",
         "stage": "Who's booking",
-        "line": "Beyond the cash, this tab shows loyalty, value per family and which age bands fill up — the demand signal sitting behind your revenue.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"row2\"><div><div class=\"fl\">TOTAL BOOKERS</div><div class=\"field\">74 <span class=\"g\">last 6 months</span></div></div><div><div class=\"fl\">TOTAL LEARNERS</div><div class=\"field\">96 <span class=\"g\">children booked in</span></div></div></div><div class=\"row2\"><div><div class=\"fl\">RETURNING BOOKERS</div><div class=\"field\">41 <span class=\"g\">55% · 33 new</span></div></div><div><div class=\"fl\">SPEND PER CUSTOMER</div><div class=\"field\">£249 <span class=\"g\">collected ÷ bookers</span></div></div></div><div class=\"chips\"><span class=\"ochip\">Under 5 · 8</span><span class=\"ochip\">5–7 · 34</span><span class=\"ochip\">8–10 · 29</span><span class=\"ochip\">11–13 · 19</span><span class=\"ochip\">14+ · 6</span></div><div class=\"hint\">Paid vs free sessions: 512 paid · 44 free.</div></div>"
+        "line": "Beyond the cash, Insights has three sub-tabs: Customers & learners for loyalty, returning bookers and spend per family; Add-ons for which extras sell; and Value & mix for your median booking and paid-versus-free split — the demand signal sitting behind your revenue.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">👤 Customers & learners</span><span class=\"chip2\">🧩 Add-ons</span><span class=\"chip2\">📊 Value & mix</span></div><div class=\"row2\"><div><div class=\"fl\">TOTAL BOOKERS</div><div class=\"field\">74 <span class=\"g\">last 6 months</span></div></div><div><div class=\"fl\">TOTAL LEARNERS</div><div class=\"field\">96 <span class=\"g\">children booked in</span></div></div></div><div class=\"row2\"><div><div class=\"fl\">RETURNING BOOKERS</div><div class=\"field\">41 <span class=\"g\">55% · 33 new</span></div></div><div><div class=\"fl\">SPEND PER CUSTOMER</div><div class=\"field\">£249 <span class=\"g\">collected ÷ bookers</span></div></div></div><div class=\"chips\"><span class=\"ochip\">Under 5 · 8</span><span class=\"ochip\">5–7 · 34</span><span class=\"ochip\">8–10 · 29</span><span class=\"ochip\">11–13 · 19</span><span class=\"ochip\">14+ · 6</span></div><div class=\"hint\">Value & mix: median booking £68 · 512 paid sessions · 44 free.</div></div>"
       }
     ]
   },
   "expenses": {
-    "title": "Money out — corrected guided tour (expenses)",
+    "title": "Money out",
     "introLine": "This is your spending hub — pop in everything the business pays out, mark each one as owed or gone, and watch it all roll up into tidy monthly and yearly totals.",
     "doneLine": "Keep your spending logged and your receipts attached, and come tax time everything is sitting neat and ready for the accountant.",
     "steps": [
