@@ -22,7 +22,7 @@ const locBits = (loc) => { const out=[]; for (const part of String(loc||"").spli
 const RX = new Map(); const rx = (t) => { if(!RX.has(t)) RX.set(t, new RegExp("(^|[^a-z])"+t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"(s|es|'s)?([^a-z]|$)","i")); return RX.get(t); };
 const count = (text, list) => list.filter(t => rx(t).test(text));
 
-async function fetchSite(url) {
+async function fetchSite(url, _noRetry = false) {
   const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), TIMEOUT);
   try {
     const res = await fetch(url, { redirect:"follow", signal: ctrl.signal, headers: { "user-agent":"Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36", "accept":"text/html,*/*;q=0.8", "accept-language":"en-GB,en;q=0.9" } });
@@ -30,7 +30,10 @@ async function fetchSite(url) {
     const reader = res.body?.getReader(); let got = 0, chunks = [];
     if (reader) { while (got < MAXBYTES) { const { done, value } = await reader.read(); if (done) break; chunks.push(value); got += value.length; } try { reader.cancel(); } catch {} }
     return { status: res.status, final, html: Buffer.concat(chunks).toString("utf8") };
-  } catch (e) { return { status: 0, final: url, html: "", err: String(e?.cause?.code || e?.name || e).slice(0,60) }; }
+  } catch (e) { const err = String(e?.cause?.code || e?.name || e).slice(0,60);
+    // A broken certificate is not a dead site: try plain http once (many small providers never renewed their TLS).
+    if (!_noRetry && /SSL|TLS|CERT|ALTNAME|ISSUER|LEAF/i.test(err) && /^https:/i.test(url)) return fetchSite(url.replace(/^https:/i, "http:"), true);
+    return { status: 0, final: url, html: "", err }; }
   finally { clearTimeout(t); }
 }
 
