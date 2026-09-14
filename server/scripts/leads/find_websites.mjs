@@ -41,12 +41,15 @@ function pick(lead, results) { const nt = tokens(lead.name); const nsq = squash(
   return null; }
 const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT,"utf8").split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l).id}catch{return null}}) : []);
 if (args.apply) { const rows = fs.readFileSync(OUT,"utf8").split("\n").filter(Boolean).map(l=>JSON.parse(l)); let n=0, s=0; let batch=db.batch(), inB=0;
-  const ids = rows.map(r=>r.id); const cur = new Map(); for (let i=0;i<ids.length;i+=300) { const snaps = await db.getAll(...ids.slice(i,i+300).map(id=>db.collection("leads").doc(id)), { fieldMask:["website","websiteCandidate","websiteSearchedAt"] }); for (const x of snaps) if (x.exists) cur.set(x.id, x.data()); }
-  for (const r of rows) { const c = cur.get(r.id); if (!c || c.websiteSearchedAt) continue; const upd = { websiteSearchedAt: new Date().toISOString(), websiteSearchedBy: "brave web search (find_websites.mjs)" }; if (r.url && !c.website && !c.websiteCandidate) { upd.websiteCandidate = r.url; upd.websiteCandidateWhy = `web search: ${r.why} — unverified`; n++; } batch.update(db.collection("leads").doc(r.id), upd); inB++; s++; if (inB>=400) { await batch.commit(); batch=db.batch(); inB=0; } }
+  const ids = rows.map(r=>r.id); const cur = new Map(); for (let i=0;i<ids.length;i+=300) { const snaps = await db.getAll(...ids.slice(i,i+300).map(id=>db.collection("leads").doc(id)), { fieldMask:["website","websiteCandidate","websiteSearchedAt","comingSoon","websiteDown"] }); for (const x of snaps) if (x.exists) cur.set(x.id, x.data()); }
+  for (const r of rows) { const c = cur.get(r.id); if (!c || c.websiteSearchedAt) continue; const upd = { websiteSearchedAt: new Date().toISOString(), websiteSearchedBy: "brave web search (find_websites.mjs)" }; const sameHost = (a,b) => { try { return new URL(a).hostname.replace(/^www\./,"") === new URL(/^https?:/.test(b)?b:"https://"+b).hostname.replace(/^www\./,""); } catch { return false; } };
+    if (r.url && !c.websiteCandidate && (!c.website || ((c.comingSoon || c.websiteDown) && !sameHost(r.url, c.website)))) { upd.websiteCandidate = r.url; upd.websiteCandidateWhy = `web search: ${r.why} — unverified${c.website ? ` (their recorded site is ${c.comingSoon ? "a holding page" : "down"})` : ""}`; n++; } batch.update(db.collection("leads").doc(r.id), upd); inB++; s++; if (inB>=400) { await batch.commit(); batch=db.batch(); inB=0; } }
   if (inB) await batch.commit(); console.log(JSON.stringify({ stamped: s, candidatesSet: n })); process.exit(0); }
-const snap = await db.collection("leads").select("name","location","county","region","source","website","websiteCandidate","websiteSearchedAt","excluded").get();
+const snap = await db.collection("leads").select("name","location","county","region","source","website","websiteCandidate","websiteSearchedAt","excluded","comingSoon","websiteDown","socialUrl","websiteRejected").get();
 const ORDER = ["haf","playwaze","pebble","eequ","yellowdays","ciw","ofsted","cis","fsni"];
-const todo = snap.docs.filter(d => { const x=d.data(); return !x.excluded && !x.website && !x.websiteCandidate && !x.websiteSearchedAt && !done.has(d.id) && (!SOURCES || SOURCES.includes(x.source)); })
+// No website at all, OR a doubtful one (holding page / dead / social page only / an earlier candidate that was rejected) — a search may find the real site.
+const doubtful = (x) => !x.website || x.comingSoon || x.websiteDown;
+const todo = snap.docs.filter(d => { const x=d.data(); return !x.excluded && doubtful(x) && !x.websiteCandidate && !x.websiteSearchedAt && !done.has(d.id) && (!SOURCES || SOURCES.includes(x.source)); })
   .sort((a,b)=>ORDER.indexOf(a.data().source)-ORDER.indexOf(b.data().source)).slice(0, LIMIT);
 console.log("to search", todo.length, "(already done", done.size, ")");
 const out = fs.createWriteStream(OUT, { flags: "a" }); let i = 0, found = 0, blocked = 0;

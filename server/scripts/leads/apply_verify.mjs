@@ -23,7 +23,8 @@ for (const r of rows) { const ref = db.collection("leads").doc(r.id); const stam
     else if (r.sector==="other-sector" || r.sector==="parked") { upd = { website: D(), websiteCandidate: r.url, websiteCandidateWhy: `demoted 13 Sept 2026: looks like ${why(r)}` , websiteFoundBy: D() }; bump("confirmed→demoted: "+r.sector); }
     else if (r.sector==="empty") { bump("confirmed: near-empty page (JS site?) — left alone"); }
     else if ((r.sector==="no-signal") && !r.nameOk) { upd = { website: D(), websiteCandidate: r.url, websiteCandidateWhy: "demoted 13 Sept 2026: neither their name nor any children's wording is on the site", websiteFoundBy: D() }; bump("confirmed→demoted: no name, no signal"); }
-    else { upd = { websiteDown: D(), websiteDownWhy: D() }; bump("confirmed ok"); }
+    else { upd = { websiteDown: D(), websiteDownWhy: D() }; bump("confirmed ok"); if (r.comingSoon && r.nameOk && (r.textLen ?? 0) > 1500) { upd.comingSoon = false; upd.comingSoonCleared = `re-checked ${stamp.slice(0,10)}: a real site with their name on it (${r.textLen} chars of text)`; bump("coming-soon cleared"); } else if (r.comingSoon) bump("coming-soon kept"); }
+    if (r.sector==="parked" && r.comingSoon) bump("coming-soon kept (parked)");
   }
   if (!upd) upd = {};
   // Booking platform seen in the same fetch (verify_sites bookingOn): fill it on a site we accept; a site with no booking link is "checked, enquiry only".

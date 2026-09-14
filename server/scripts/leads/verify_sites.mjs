@@ -39,7 +39,7 @@ async function contactPage(html, base) { const m = [...html.matchAll(/href=["'](
 const BOOKING_SYSTEMS = [["ClassForKids", /classforkids\.io/i], ["Bookwhen", /bookwhen\.com/i], ["eequ", /eequ\.org/i], ["Pebble", /(bookpebble\.co\.uk|pebble\.co\b)/i], ["Playwaze", /playwaze\.com/i], ["ClubSpark", /clubspark\.(net|lta\.org\.uk)/i], ["Coordinate", /coordinate\.cloud/i], ["HolidayActivities", /holidayactivities\.com/i], ["Yellow Days", /yellowdays/i], ["Hoop", /hoop\.co\.uk/i], ["Kidzcamp", /kidzcamp/i], ["iPAL", /ipal\.(co\.uk|app)/i], ["Magicbooking", /magicbooking/i], ["Famly", /famly\.co/i], ["Kinderly", /kinderly/i], ["Blossom", /blossomeducational/i], ["Connect Childcare", /connectchildcare/i], ["Nursery in a Box", /nurseryinabox/i], ["ParentPay", /parentpay\.com/i], ["SchoolsBuddy", /schoolsbuddy/i], ["Arbor", /arbor-education|arbor\.sc/i], ["Gymcatch", /gymcatch\.com/i], ["TeamUp", /goteamup\.com/i], ["Glofox", /glofox\.com/i], ["Mindbody", /mindbodyonline/i], ["Acuity", /acuityscheduling/i], ["Calendly", /calendly\.com/i], ["Eventbrite", /eventbrite/i], ["TicketSource", /ticketsource/i], ["TryBooking", /trybooking/i], ["Stripe checkout", /(buy\.stripe\.com|checkout\.stripe\.com)/i], ["Shopify", /myshopify\.com/i], ["Sumup", /sumup\.(com|io)/i], ["Square", /square\.site|squareup\.com/i], ["Wix Bookings", /wix\.com\/bookings|wixbookings/i], ["LoveAdmin", /loveadmin/i], ["Pitchero", /pitchero\.com/i], ["Spond", /spond\.com/i], ["Sportsuite", /sportsuite/i], ["Kids Club HQ", /kidsclubhq/i], ["Class4Kids", /class4kids/i], ["Nursery Story", /nurserystory/i], ["Tapestry", /tapestryjournal/i], ["Baby's Days", /babysdays/i]];
 function bookingOn(html) { const hrefs = [...html.matchAll(/href=["']([^"']+)["']/gi)].map(m=>m[1]); for (const h of hrefs) { const sys = BOOKING_SYSTEMS.find(([, re]) => re.test(h)); if (sys) return { system: sys[0], url: h.slice(0, 300) }; } const own = hrefs.find(h => /\/(book|booking|bookings|book-now|book-online|enrol|enroll|register|sign-up|signup)(\/|\.|\?|$)/i.test(h) && !/^(mailto|tel|#)/i.test(h)); return own ? { system: "own site (booking page)", url: own.slice(0, 300) } : null; }
 async function judge(lead, kind, url, r) {
-  const row = { id: lead.id, kind, url, final: r.final, status: r.status, err: r.err };
+  const row = { id: lead.id, kind, url, final: r.final, status: r.status, err: r.err, comingSoon: lead.comingSoon === true || undefined, wasDown: lead.websiteDown === true || undefined };
   if (r.status === 0 || r.status >= 400) return { ...row, verdict: "unreachable", sector: "unreachable", nameOk: false, locOk: false, locHits: [], notTerms: [] };
   const text = strip(r.html); const host = (()=>{ try { return new URL(r.final).hostname.replace(/^www\./,""); } catch { return ""; } })();
   const title = (r.html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1]||"").toLowerCase();
@@ -65,9 +65,10 @@ async function judge(lead, kind, url, r) {
   return { ...row, verdict, sector, nameOk: nameOk || hostHasName, locOk, locs, locHits, notTerms, childTerms, textLen: text.length, booking: bookingOn(r.html) };
 }
 
-const snap = await db.collection("leads").select("name","location","website","websiteCandidate","excluded").get();
+const snap = await db.collection("leads").select("name","location","website","websiteCandidate","excluded","comingSoon","websiteDown","websiteCheckedAt").get();
 const jobs = [];
 for (const d of snap.docs) { const l = { id: d.id, ...d.data() }; if (l.excluded || (ONLY && !ONLY.has(l.id))) continue;
+  if (args.recheck) { if (l.website && (l.comingSoon || l.websiteDown)) jobs.push({ lead: l, kind: "confirmed", url: l.website }); continue; }
   if (l.website && (KIND==="all"||KIND==="confirmed") && !done.has(l.id+"|"+l.website)) jobs.push({ lead: l, kind: "confirmed", url: l.website });
   else if (l.websiteCandidate && (KIND==="all"||KIND==="candidate") && !done.has(l.id+"|"+l.websiteCandidate)) jobs.push({ lead: l, kind: "candidate", url: l.websiteCandidate }); }
 jobs.sort((a,b)=> a.kind===b.kind ? 0 : a.kind==="candidate" ? -1 : 1);
