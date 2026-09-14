@@ -12,13 +12,13 @@
       {
         "verdict": "pass",
         "actual": "Seeded throwaway tenant B (zz-selftest-F-1789222160607-B) and, with B's own operator token through the real attachRole chain: GET /api/children/<childId> 200 (record returned), /api/bookings/<ref> 200, /api/listings/<draftId> 200, /api/invoices 200 (lists invoice 6KBbnd765IgMtfmTDjmY), /api/images/<privateId>?exp&sig 200 image/png, /api/my/files/<fileId> 200. Six ids confirmed as B's: child cDGCTKJPPSFKW7nRH15k, ref ZZREFB1789222160607, listing qmqS9iMmvjWt2cAGca4N/BLtHkAleyz7Ev9CNNGod, invoice 6KBbnd765IgMtfmTDjmY, image sxEHh4lwRY491Und7Wlk, file hkCqAVhdRduKuetrxTHx.",
-        "notes": "Positive control — proves the refusals in d25s2-s8 are real refusals, not ids that don't work for anyone.",
+        "notes": "Positive control \u2014 proves the refusals in d25s2-s8 are real refusals, not ids that don't work for anyone.",
         "at": "2026-09-12T14:10:57.545Z"
       },
       {
         "verdict": "pass",
         "actual": "Re-run 13 Sept on throwaway tenant B (zz-selftest-rtF-1789255176901-B), all created through B's own token on the real chain: listing 7x4HLixdLXPzhg1duub6 (POST 201), booking ZZREFB1789255176901, child bNjwbddpfoKuuEwh77pw, invoice c7DCSDEEx6BZKK4S1AkQ, private image d3X9O62KQjFXM7eZXrWZ (+ public image), SEND-plan file kMgP4Urj3VWNVzexCB10, plus incident + medication + customer. B's positives: GET /api/children/<id> 200, /api/bookings/<ref> 200, /api/listings/<id> 200, /api/invoices 200 (lists it), signed /api/images/<id>?exp&sig 200, /api/my/files/<id> 200, incident + medication listed for B, /api/incidents/<id>/dossier 200.",
-        "notes": "Positive control for d25s2-s8 — every id genuinely works for its owner. Harness now mounts tonight's access gate + payroll/appraisals/location-staff/expense-claims/events.",
+        "notes": "Positive control for d25s2-s8 \u2014 every id genuinely works for its owner. Harness now mounts tonight's access gate + payroll/appraisals/location-staff/expense-claims/events.",
         "at": "2026-09-12T23:26:15Z"
       }
     ]
@@ -26,7 +26,7 @@
   "d25s2": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Tenant A operator GET /api/children/<B child> → 404 {\"error\":\"Child not found for this account\"}; A staff → 404. No B marker in either body.",
+    "actual": "Tenant A operator GET /api/children/<B child> \u2192 404 {\"error\":\"Child not found for this account\"}; A staff \u2192 404. No B marker in either body.",
     "notes": "Unchanged since round 2.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.out.txt",
     "at": "2026-09-13T07:08:10Z",
@@ -35,13 +35,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "A operator GET /api/children/cDGCTKJPPSFKW7nRH15k → 404 {\"error\":\"Child not found for this account\"}; A staff → 404. No B data in either body.",
+        "actual": "A operator GET /api/children/cDGCTKJPPSFKW7nRH15k \u2192 404 {\"error\":\"Child not found for this account\"}; A staff \u2192 404. No B data in either body.",
         "notes": "Direct call refused. BUT see d25s3: the same route leaks B's full child record once A plants a customer row with B's parent's email.",
         "at": "2026-09-12T14:10:57.548Z"
       },
       {
         "verdict": "pass",
-        "actual": "Tenant A operator GET /api/children/<B child> → 404 {\"error\":\"Child not found for this account\"}; A staff → 404. No B marker in either body.",
+        "actual": "Tenant A operator GET /api/children/<B child> \u2192 404 {\"error\":\"Child not found for this account\"}; A staff \u2192 404. No B marker in either body.",
         "notes": "Unchanged from 12 Sept.",
         "at": "2026-09-12T23:26:15Z"
       }
@@ -50,7 +50,7 @@
   "d25s3": {
     "verdict": "pass",
     "method": "api",
-    "actual": "29 id probes as tenant A with valid bodies: every one 403/404 — bookings/<ref> GET, /children, record-payment, nudge, recon-notes, actions{type:paid} 404; listings GET/PUT/DELETE 404; invoices GET/PUT/email/DELETE 404; my/files 404; incidents GET/PUT/dossier/note/DELETE 404; medications GET/PUT/administer/DELETE 404, withdraw/note 403; children PUT 404; customers family/PUT/DELETE 404. No B marker in any body; B's booking, invoice, medication (5ml), incident, listing and child allergies unchanged afterwards. Bypasses: A POST /api/incidents {childId:B's} 403; A plants a customer with B's parent email (201) then GET /api/children/<B child> still 404; A POST /api/medications {childId:B's} 403.",
+    "actual": "29 id probes as tenant A with valid bodies: every one 403/404 \u2014 bookings/<ref> GET, /children, record-payment, nudge, recon-notes, actions{type:paid} 404; listings GET/PUT/DELETE 404; invoices GET/PUT/email/DELETE 404; my/files 404; incidents GET/PUT/dossier/note/DELETE 404; medications GET/PUT/administer/DELETE 404, withdraw/note 403; children PUT 404; customers family/PUT/DELETE 404. No B marker in any body; B's booking, invoice, medication (5ml), incident, listing and child allergies unchanged afterwards. Bypasses: A POST /api/incidents {childId:B's} 403; A plants a customer with B's parent email (201) then GET /api/children/<B child> still 404; A POST /api/medications {childId:B's} 403.",
     "notes": "Unchanged since round 2.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.out.txt",
     "at": "2026-09-13T07:08:15Z",
@@ -59,13 +59,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "29 direct id probes (valid bodies, so the ownership check — not validation — answers) as tenant A (real chain): GET /api/bookings/ZZREFB1789222160607 404; GET /api/bookings/ZZREFB1789222160607/children 404; POST /api/bookings/ZZREFB1789222160607/record-payment 404; POST /api/bookings/ZZREFB1789222160607/nudge 404; PUT /api/bookings/ZZREFB1789222160607/recon-notes 404; POST /api/bookings/ZZREFB1789222160607/actions 404; GET /api/listings/<id> 404; PUT /api/listings/<id> 404; DELETE /api/listings/<id> 404; GET /api/invoices/<id> 404; PUT /api/invoices/<id> 404; POST /api/invoices/<id>/email 404; DELETE /api/invoices/<id> 404; GET /api/my/files/<id> 404; GET /api/incidents/<id> 404; PUT /api/incidents/<id> 404; GET /api/incidents/<id>/dossier 404; POST /api/incidents/<id>/note 403; DELETE /api/incidents/<id> 404; GET /api/medications/<id> 404; PUT /api/medications/<id> 404; POST /api/medications/<id>/administer 404; POST /api/medications/<id>/withdraw 403; POST /api/medications/<id>/note 403; DELETE /api/medications/<id> 404; PUT /api/children/<id> 404; GET /api/customers/<id>/family 404; PUT /api/customers/<id> 404; DELETE /api/customers/<id> 404. All 403/404, no B data in any body; B's booking/invoice/medication/incident/listing/child unchanged. BYPASS 1 — A POST /api/incidents {childId:<B child>} → 403; GET /api/incidents/<A's new id>/dossier → 0 (no B data). BYPASS 2 — A POST /api/customers {email:<B parent's email>} → 201; then GET /api/children/<B child> → 404. BYPASS 3 — A POST /api/medications {childId:<B child>} → 403; B's parent GET /api/medications does not list it.",
+        "actual": "29 direct id probes (valid bodies, so the ownership check \u2014 not validation \u2014 answers) as tenant A (real chain): GET /api/bookings/ZZREFB1789222160607 404; GET /api/bookings/ZZREFB1789222160607/children 404; POST /api/bookings/ZZREFB1789222160607/record-payment 404; POST /api/bookings/ZZREFB1789222160607/nudge 404; PUT /api/bookings/ZZREFB1789222160607/recon-notes 404; POST /api/bookings/ZZREFB1789222160607/actions 404; GET /api/listings/<id> 404; PUT /api/listings/<id> 404; DELETE /api/listings/<id> 404; GET /api/invoices/<id> 404; PUT /api/invoices/<id> 404; POST /api/invoices/<id>/email 404; DELETE /api/invoices/<id> 404; GET /api/my/files/<id> 404; GET /api/incidents/<id> 404; PUT /api/incidents/<id> 404; GET /api/incidents/<id>/dossier 404; POST /api/incidents/<id>/note 403; DELETE /api/incidents/<id> 404; GET /api/medications/<id> 404; PUT /api/medications/<id> 404; POST /api/medications/<id>/administer 404; POST /api/medications/<id>/withdraw 403; POST /api/medications/<id>/note 403; DELETE /api/medications/<id> 404; PUT /api/children/<id> 404; GET /api/customers/<id>/family 404; PUT /api/customers/<id> 404; DELETE /api/customers/<id> 404. All 403/404, no B data in any body; B's booking/invoice/medication/incident/listing/child unchanged. BYPASS 1 \u2014 A POST /api/incidents {childId:<B child>} \u2192 403; GET /api/incidents/<A's new id>/dossier \u2192 0 (no B data). BYPASS 2 \u2014 A POST /api/customers {email:<B parent's email>} \u2192 201; then GET /api/children/<B child> \u2192 404. BYPASS 3 \u2014 A POST /api/medications {childId:<B child>} \u2192 403; B's parent GET /api/medications does not list it.",
         "notes": "Needs only a childId + (for bypass 2) the parent's email; childIds appear in bookings, register payloads, exports.",
         "at": "2026-09-12T14:10:57.552Z"
       },
       {
         "verdict": "pass",
-        "actual": "29 id probes as tenant A, valid bodies (so ownership, not validation, answers): every one 403/404 — bookings/<ref> GET, /children, record-payment, nudge, recon-notes, actions{type:paid} 404; listings GET/PUT/DELETE 404; invoices GET/PUT/email/DELETE 404; my/files 404; incidents GET/PUT/dossier/note/DELETE 404; medications GET/PUT/administer/DELETE 404, withdraw/note 403; children PUT 404; customers family/PUT/DELETE 404. No B marker in any body; afterwards B's booking (unpaid, confirmed), invoice, medication (5ml), incident text, listing title and child allergies all unchanged. Bypasses: A POST /api/incidents {childId:B's} 403; A plants a customer with B's parent's email (201) then GET /api/children/<B child> still 404; A POST /api/medications {childId:B's} 403.",
+        "actual": "29 id probes as tenant A, valid bodies (so ownership, not validation, answers): every one 403/404 \u2014 bookings/<ref> GET, /children, record-payment, nudge, recon-notes, actions{type:paid} 404; listings GET/PUT/DELETE 404; invoices GET/PUT/email/DELETE 404; my/files 404; incidents GET/PUT/dossier/note/DELETE 404; medications GET/PUT/administer/DELETE 404, withdraw/note 403; children PUT 404; customers family/PUT/DELETE 404. No B marker in any body; afterwards B's booking (unpaid, confirmed), invoice, medication (5ml), incident text, listing title and child allergies all unchanged. Bypasses: A POST /api/incidents {childId:B's} 403; A plants a customer with B's parent's email (201) then GET /api/children/<B child> still 404; A POST /api/medications {childId:B's} 403.",
         "notes": "The 12 Sept note about a leak via a planted customer row no longer applies (childVisibleTo only trusts customer rows the family created themselves).",
         "at": "2026-09-12T23:26:16Z"
       }
@@ -74,7 +74,7 @@
   "d25s4": {
     "verdict": "pass",
     "method": "api",
-    "actual": "A operator + A staff called 27 list routes with ?tenantId=<B>: 0 responses carried B's marker or booking ref. Operator 200 everywhere except /api/splitfees 403; staff 200 on bookings/registers/compliance/incidents/customers/medications/children-lookup/moments/documents/blocks/listings/meals/posts/ratios/library, 403 on the money routes (invoices, payments, dashboard, income, expenses, reconciliation, discounts, growth, emails, splitfees, suppliers, purchasing). Positive control: B's own token on bookings/incidents/invoices/medications/customers → 200 with B's marker.",
+    "actual": "A operator + A staff called 27 list routes with ?tenantId=<B>: 0 responses carried B's marker or booking ref. Operator 200 everywhere except /api/splitfees 403; staff 200 on bookings/registers/compliance/incidents/customers/medications/children-lookup/moments/documents/blocks/listings/meals/posts/ratios/library, 403 on the money routes (invoices, payments, dashboard, income, expenses, reconciliation, discounts, growth, emails, splitfees, suppliers, purchasing). Positive control: B's own token on bookings/incidents/invoices/medications/customers \u2192 200 with B's marker.",
     "notes": "Parameter ignored for non-platform accounts.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.out.txt",
     "at": "2026-09-13T07:08:19Z",
@@ -89,7 +89,7 @@
       },
       {
         "verdict": "pass",
-        "actual": "A operator and A staff called 27 list routes with ?tenantId=<B>: no response carried B's marker or booking ref (0 leaks). Operator 200 everywhere except /api/splitfees 403; staff 200 on bookings/registers/compliance/incidents/customers/medications/children-lookup/moments/documents/blocks/listings/meals/posts/ratios/library, 403 on money routes (invoices, payments, dashboard, income, expenses, reconciliation, discounts, growth, emails, splitfees, suppliers, purchasing). Positive control: B's own token on bookings/incidents/invoices/medications/customers → 200 with B's marker.",
+        "actual": "A operator and A staff called 27 list routes with ?tenantId=<B>: no response carried B's marker or booking ref (0 leaks). Operator 200 everywhere except /api/splitfees 403; staff 200 on bookings/registers/compliance/incidents/customers/medications/children-lookup/moments/documents/blocks/listings/meals/posts/ratios/library, 403 on money routes (invoices, payments, dashboard, income, expenses, reconciliation, discounts, growth, emails, splitfees, suppliers, purchasing). Positive control: B's own token on bookings/incidents/invoices/medications/customers \u2192 200 with B's marker.",
         "notes": "Only platform accounts read ?tenantId (grep query.tenantId).",
         "at": "2026-09-12T23:26:16Z"
       }
@@ -146,7 +146,7 @@
   "d25s7": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "API half re-run: A's token on the data behind B's deep links — GET /api/bookings/<B ref> 404, /api/customers/<B id>/family 404, /api/children/<B child> 404. Portal URLs carry no tenant (it comes from the token), so an edited URL can only reach B's data through these calls, all refused.",
+    "actual": "API half re-run: A's token on the data behind B's deep links \u2014 GET /api/bookings/<B ref> 404, /api/customers/<B id>/family 404, /api/children/<B child> 404. Portal URLs carry no tenant (it comes from the token), so an edited URL can only reach B's data through these calls, all refused.",
     "notes": "Still BLOCKED for the browser half: can't sign in to a browser in this run, so how each screen presents the 404 wasn't seen.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.out.txt",
     "at": "2026-09-13T07:08:29Z",
@@ -155,13 +155,13 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Data behind B's portal deep-links, requested with A's token: booking ?open=<ref> → GET /api/bookings/<ref> 404; family card → /api/customers/<id>/family 404; child card (sibling id) → /api/children/<id> 404. All refused. Portal routes carry no tenantId (tenant comes from the token), so a typed B URL can only surface B data via these API calls.",
-        "notes": "BLOCKED for the browser half: this run is barred from the Browser tools, so how the screens render the 403/404 (message vs blank) was not seen. API refusal for the edited-id case is proven here and in d25s3 — including the two bypasses that DO leak.",
+        "actual": "Data behind B's portal deep-links, requested with A's token: booking ?open=<ref> \u2192 GET /api/bookings/<ref> 404; family card \u2192 /api/customers/<id>/family 404; child card (sibling id) \u2192 /api/children/<id> 404. All refused. Portal routes carry no tenantId (tenant comes from the token), so a typed B URL can only surface B data via these API calls.",
+        "notes": "BLOCKED for the browser half: this run is barred from the Browser tools, so how the screens render the 403/404 (message vs blank) was not seen. API refusal for the edited-id case is proven here and in d25s3 \u2014 including the two bypasses that DO leak.",
         "at": "2026-09-12T14:10:57.561Z"
       },
       {
         "verdict": "blocked",
-        "actual": "API half re-run: the data behind B's deep links with A's token — GET /api/bookings/<B ref> 404, /api/customers/<B id>/family 404, /api/children/<B child> 404. Portal URLs carry no tenant (it comes from the token), so a typed/edited URL can only reach B's data through these calls, all refused.",
+        "actual": "API half re-run: the data behind B's deep links with A's token \u2014 GET /api/bookings/<B ref> 404, /api/customers/<B id>/family 404, /api/children/<B child> 404. Portal URLs carry no tenant (it comes from the token), so a typed/edited URL can only reach B's data through these calls, all refused.",
         "notes": "Still BLOCKED for the browser half: can't sign in to a browser in this run, so how each screen shows the 404 (message vs blank) was not seen.",
         "at": "2026-09-12T23:26:16Z"
       }
@@ -170,8 +170,8 @@
   "d25s8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "No credentials, round 3: B's private image bare id 403, forged sig 403, expired sig 403 (public images 200 by design); /api/public/library/<B> 200 with only providerName/logoUrl/cancelReasons (no bank account, staff policy or provider-only reasons); invoice by id 404, random token 404. Pay links: live → 200 with expiresOn 2026-12-12; paid → 200 {status:paid, closed:true, customerName:null, payMethods:[]}, family name nowhere in the body; cancelled → 200 closed, no name; unpaid 90+ days past due → 410 {code:link_expired, status:expired}, no name; the same old invoice re-sent 3 days ago → 200 (expiresOn 2026-12-09). Checkout on paid/expired → 503 here (Stripe not configured in this env). Live Firestore read-only: 7 images referenced by real incidents/moments, 0 without the private flag.",
-    "notes": "The live pay link (the family's own unguessable token) shows the amount + family name by design. Checkout refusals for paid/expired sit before the Stripe call (code-read, invoices.ts:252-260) — not observable with Stripe off.",
+    "actual": "No credentials, round 3: B's private image bare id 403, forged sig 403, expired sig 403 (public images 200 by design); /api/public/library/<B> 200 with only providerName/logoUrl/cancelReasons (no bank account, staff policy or provider-only reasons); invoice by id 404, random token 404. Pay links: live \u2192 200 with expiresOn 2026-12-12; paid \u2192 200 {status:paid, closed:true, customerName:null, payMethods:[]}, family name nowhere in the body; cancelled \u2192 200 closed, no name; unpaid 90+ days past due \u2192 410 {code:link_expired, status:expired}, no name; the same old invoice re-sent 3 days ago \u2192 200 (expiresOn 2026-12-09). Checkout on paid/expired \u2192 503 here (Stripe not configured in this env). Live Firestore read-only: 7 images referenced by real incidents/moments, 0 without the private flag.",
+    "notes": "The live pay link (the family's own unguessable token) shows the amount + family name by design. Checkout refusals for paid/expired sit before the Stripe call (code-read, invoices.ts:252-260) \u2014 not observable with Stripe off.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d25.out.txt; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/extras.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/extras.out.txt",
     "at": "2026-09-13T07:27:27Z",
     "agent": "F",
@@ -179,20 +179,20 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "B's PRIVATE image (child/injury photo class), no credentials: bare id 403; forged sig 403; expired signed link 403; another image's valid sig 403. B's PUBLIC listing image 200 (by design — storefront media). /api/public/library/<B> 200: only whitelisted parent-facing keys (bank account no. and staff policy planted in B's library NOT returned). Public invoice: by invoice id 404, random token 404, B's real payToken 200 → renders customerName \"ZZMARKB1789222160607 Family\" + amount 123 to anyone holding the link. LIVE Firestore (read-only): 7 image ids referenced by real moments/incidents — 7 private, 0 still WITHOUT the private flag; not probed.",
-        "notes": "Real pay-token invoice link rendering the family name + amount is by design (unguessable bearer link, like a Stripe invoice URL) and was not counted as a fail, but it never expires, even after paid — consider expiring pay links once paid/cancelled.",
+        "actual": "B's PRIVATE image (child/injury photo class), no credentials: bare id 403; forged sig 403; expired signed link 403; another image's valid sig 403. B's PUBLIC listing image 200 (by design \u2014 storefront media). /api/public/library/<B> 200: only whitelisted parent-facing keys (bank account no. and staff policy planted in B's library NOT returned). Public invoice: by invoice id 404, random token 404, B's real payToken 200 \u2192 renders customerName \"ZZMARKB1789222160607 Family\" + amount 123 to anyone holding the link. LIVE Firestore (read-only): 7 image ids referenced by real moments/incidents \u2014 7 private, 0 still WITHOUT the private flag; not probed.",
+        "notes": "Real pay-token invoice link rendering the family name + amount is by design (unguessable bearer link, like a Stripe invoice URL) and was not counted as a fail, but it never expires, even after paid \u2014 consider expiring pay links once paid/cancelled.",
         "at": "2026-09-12T14:10:57.563Z"
       },
       {
         "verdict": "pass",
-        "actual": "No credentials: B's PRIVATE image bare id 403, forged sig 403, expired sig 403; B's PUBLIC listing image 200 (storefront media, by design). /api/public/library/<B> 200 with only providerName/logoUrl/cancelReasons — the planted bank account number, staff policy and the provider-only cancel reason were NOT returned. Public invoice: by invoice id 404, random token 404, B's real payToken 200 (family name + £123). After marking the invoice paid the pay link still answers 200 (status paid). Live Firestore read-only: 7 images referenced by real incidents/moments, all 7 flagged private.",
-        "notes": "Pay-token link is an unguessable bearer link (by design, like a Stripe invoice URL) — not counted as a fail, but it never expires, even once paid; still worth expiring after paid/cancelled (open suggestion, not tonight).",
+        "actual": "No credentials: B's PRIVATE image bare id 403, forged sig 403, expired sig 403; B's PUBLIC listing image 200 (storefront media, by design). /api/public/library/<B> 200 with only providerName/logoUrl/cancelReasons \u2014 the planted bank account number, staff policy and the provider-only cancel reason were NOT returned. Public invoice: by invoice id 404, random token 404, B's real payToken 200 (family name + \u00a3123). After marking the invoice paid the pay link still answers 200 (status paid). Live Firestore read-only: 7 images referenced by real incidents/moments, all 7 flagged private.",
+        "notes": "Pay-token link is an unguessable bearer link (by design, like a Stripe invoice URL) \u2014 not counted as a fail, but it never expires, even once paid; still worth expiring after paid/cancelled (open suggestion, not tonight).",
         "at": "2026-09-12T23:26:16Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-test 13 Sept (wave 4) of the pay-link part: paid invoice link → 200 {status:'paid', closed:true, paidAt, payMethods:[], cardEnabled:false, customerName:null}; cancelled → 200 {status:'cancelled', closed:true}, no pay methods; an unpaid invoice 90+ days past its due date → 410 {code:'link_expired', status:'expired'} with no amount/family name; the same invoice re-sent on 10 Sept → 200 (expiresOn 2026-12-09); paid in January → 410 {status:'paid'}; a live invoice → 200 with expiresOn. Checkout on paid/expired answered 503 here (Stripe not configured in this env) — the paid/cancelled/expired refusals sit before any Stripe call. The public /pay page rendered in the running web app for each case: 'This invoice is paid · £40.00 · Autumn club · paid 2 Sept 2026 · Nothing more to pay', 'This invoice is closed', 'This payment link has expired — ask ZZ Pay Page Test to send you a new link', live link unchanged.",
-        "notes": "server/src/routes/invoices.ts invoicePublic: linkExpiresOn() = latest of due/issue/last-emailed/paid date + 90 days (re-sending or moving the due date renews it); GET returns a closed payload for paid/cancelled, 410 link_expired after expiry; checkout refuses expired (410). features/money/PayPage.tsx: expired state + paid receipt line + cancelled 'closed' card. Earlier checks in this step (private images, library, token 404s) not re-run. 90 days is my pick — Kaz may want a different window.",
+        "actual": "Re-test 13 Sept (wave 4) of the pay-link part: paid invoice link \u2192 200 {status:'paid', closed:true, paidAt, payMethods:[], cardEnabled:false, customerName:null}; cancelled \u2192 200 {status:'cancelled', closed:true}, no pay methods; an unpaid invoice 90+ days past its due date \u2192 410 {code:'link_expired', status:'expired'} with no amount/family name; the same invoice re-sent on 10 Sept \u2192 200 (expiresOn 2026-12-09); paid in January \u2192 410 {status:'paid'}; a live invoice \u2192 200 with expiresOn. Checkout on paid/expired answered 503 here (Stripe not configured in this env) \u2014 the paid/cancelled/expired refusals sit before any Stripe call. The public /pay page rendered in the running web app for each case: 'This invoice is paid \u00b7 \u00a340.00 \u00b7 Autumn club \u00b7 paid 2 Sept 2026 \u00b7 Nothing more to pay', 'This invoice is closed', 'This payment link has expired \u2014 ask ZZ Pay Page Test to send you a new link', live link unchanged.",
+        "notes": "server/src/routes/invoices.ts invoicePublic: linkExpiresOn() = latest of due/issue/last-emailed/paid date + 90 days (re-sending or moving the due date renews it); GET returns a closed payload for paid/cancelled, 410 link_expired after expiry; checkout refuses expired (410). features/money/PayPage.tsx: expired state + paid receipt line + cancelled 'closed' card. Earlier checks in this step (private images, library, token 404s) not re-run. 90 days is my pick \u2014 Kaz may want a different window.",
         "at": "2026-09-13T01:03:04Z"
       }
     ]
@@ -200,7 +200,7 @@
   "d26s6": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Tenant B operator PATCH /api/invites/<A staff invite>/status → 403; colleague staff → 403; A operator {deactivated} → 200 {ok, status:deactivated, account:disabled}; users doc disabled=true, sessions revoked. The staff member then: GET /api/me 403 code=account_disabled 'This account has been switched off. Contact the provider if you think that's wrong.', GET /api/bookings 403, POST /api/incidents 403, POST /api/account/reactivate 403; /api/events 200 before → 401 after; kept token through the real requireAuth → 401. Public storefront still browses (200).",
+    "actual": "Tenant B operator PATCH /api/invites/<A staff invite>/status \u2192 403; colleague staff \u2192 403; A operator {deactivated} \u2192 200 {ok, status:deactivated, account:disabled}; users doc disabled=true, sessions revoked. The staff member then: GET /api/me 403 code=account_disabled 'This account has been switched off. Contact the provider if you think that's wrong.', GET /api/bookings 403, POST /api/incidents 403, POST /api/account/reactivate 403; /api/events 200 before \u2192 401 after; kept token through the real requireAuth \u2192 401. Public storefront still browses (200).",
     "notes": "Portal switched-off screen (PortalGuard) not clicked in a browser.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.out.txt",
     "at": "2026-09-13T07:27:41Z",
@@ -209,8 +209,8 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "API (real attachRole + PATCH /api/invites/:token/status): staff GET /api/bookings before 200; tenant B operator PATCH A's invite 403, a colleague staff PATCH 403; A's operator PATCH {deactivated} → 200 {\"ok\":true,\"status\":\"deactivated\",\"account\":\"disabled\"}, users doc disabled=true; then the staff token: GET /api/me 403 code=account_disabled \"This account has been switched off. Contact the provider if you think that's wrong.\", GET /api/bookings 403, POST /api/incidents 403, POST /api/account/reactivate 403; public GET /api/listings/<id> 200 (browses as a visitor, by design). Colleague unaffected 200. PATCH {active} 200 → staff GET /api/bookings 200. API half: all as expected. PORTAL half — the REAL components/auth/PortalGuard.tsx rendered (esbuild bundle + react-dom/server, effects run synchronously, lib/api stubbed so /api/me returns the 403 \"switched off\" error): NEW TAB (empty sessionStorage) → the \"Your access has been switched off\" screen renders, portal content does not. SAME-TAB REFRESH (sessionStorage 'aos.me' still holds the staff identity from before) → /api/me is never requested (calls: []), the guard passes on the cached identity and the full portal content renders; the switched-off screen does not appear. Cause: PortalGuard.tsx:25 seeds meCache from sessionStorage and getMe() (line 36) returns it without a request; the switched-off screen (line 133) is reachable only when /api/me itself 403s.",
-        "notes": "Fix: in PortalGuard (or lib/api request()) treat any 403 with code account_disabled as terminal — clearMeCache() + show the switched-off screen; or always revalidate /api/me once per page load instead of trusting sessionStorage for the access decision. Also: GET /api/events (routes/events.ts:31) never checks users.disabled, so a switched-off account keeps its realtime stream (nudges only, no data). Session revocation: revokeRefreshTokens is called, but requireAuth verifies ID tokens without checkRevoked (middleware/auth.ts:19) — harmless here only because attachRole checks users.disabled on every call.",
+        "actual": "API (real attachRole + PATCH /api/invites/:token/status): staff GET /api/bookings before 200; tenant B operator PATCH A's invite 403, a colleague staff PATCH 403; A's operator PATCH {deactivated} \u2192 200 {\"ok\":true,\"status\":\"deactivated\",\"account\":\"disabled\"}, users doc disabled=true; then the staff token: GET /api/me 403 code=account_disabled \"This account has been switched off. Contact the provider if you think that's wrong.\", GET /api/bookings 403, POST /api/incidents 403, POST /api/account/reactivate 403; public GET /api/listings/<id> 200 (browses as a visitor, by design). Colleague unaffected 200. PATCH {active} 200 \u2192 staff GET /api/bookings 200. API half: all as expected. PORTAL half \u2014 the REAL components/auth/PortalGuard.tsx rendered (esbuild bundle + react-dom/server, effects run synchronously, lib/api stubbed so /api/me returns the 403 \"switched off\" error): NEW TAB (empty sessionStorage) \u2192 the \"Your access has been switched off\" screen renders, portal content does not. SAME-TAB REFRESH (sessionStorage 'aos.me' still holds the staff identity from before) \u2192 /api/me is never requested (calls: []), the guard passes on the cached identity and the full portal content renders; the switched-off screen does not appear. Cause: PortalGuard.tsx:25 seeds meCache from sessionStorage and getMe() (line 36) returns it without a request; the switched-off screen (line 133) is reachable only when /api/me itself 403s.",
+        "notes": "Fix: in PortalGuard (or lib/api request()) treat any 403 with code account_disabled as terminal \u2014 clearMeCache() + show the switched-off screen; or always revalidate /api/me once per page load instead of trusting sessionStorage for the access decision. Also: GET /api/events (routes/events.ts:31) never checks users.disabled, so a switched-off account keeps its realtime stream (nudges only, no data). Session revocation: revokeRefreshTokens is called, but requireAuth verifies ID tokens without checkRevoked (middleware/auth.ts:19) \u2014 harmless here only because attachRole checks users.disabled on every call.",
         "at": "2026-09-12T13:07:17.954Z"
       },
       {
@@ -221,7 +221,7 @@
       },
       {
         "verdict": "pass",
-        "actual": "Tenant B operator PATCH /api/invites/<A's staff invite>/status → 403; a colleague staff → 403; A's operator {deactivated} → 200 {ok, status:deactivated, account:disabled}, users doc disabled=true, sessions revoked. Then the staff member: GET /api/me 403 code=account_disabled 'This account has been switched off. Contact the provider if you think that's wrong.', GET /api/bookings 403, POST /api/incidents 403, POST /api/account/reactivate 403; live-updates stream GET /api/events 200 before → refused after (401, the revoked token; 403 account_disabled for a fresh one per events.ts); the kept token through the real requireAuth → 401. Public storefront still browses (200, as a visitor).",
+        "actual": "Tenant B operator PATCH /api/invites/<A's staff invite>/status \u2192 403; a colleague staff \u2192 403; A's operator {deactivated} \u2192 200 {ok, status:deactivated, account:disabled}, users doc disabled=true, sessions revoked. Then the staff member: GET /api/me 403 code=account_disabled 'This account has been switched off. Contact the provider if you think that's wrong.', GET /api/bookings 403, POST /api/incidents 403, POST /api/account/reactivate 403; live-updates stream GET /api/events 200 before \u2192 refused after (401, the revoked token; 403 account_disabled for a fresh one per events.ts); the kept token through the real requireAuth \u2192 401. Public storefront still browses (200, as a visitor).",
         "notes": "Portal side (PortalGuard switched-off screen) is code-read + covered by the 12 Sept fix; not clicked in a browser.",
         "at": "2026-09-12T23:39:24Z"
       }
@@ -230,7 +230,7 @@
   "d26s8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "/api/uploads: HTML data URL 400, SVG 400, 1.3MB image 413, 50MB body 413; wave-2 PDF receipts: HTML bytes under an application/pdf label 400, a public PDF 400, PDF with no purpose 400, SVG private 400, >750KB PDF 413, real PDF private 201 → signed GET 200 application/pdf + nosniff + inline receipt.pdf, bare link 403. SEND/EHCP plan /api/my/files: text/html 400, svg 400, xhtml 400, 50MB 400, 500 chunks 400. /api/documents/files and /api/onboarding/files: html 400, svg 400, 50MB 400. Child photo SVG 400. A plan 'PDF' whose bytes are HTML is served application/pdf + CSP sandbox + nosniff.",
+    "actual": "/api/uploads: HTML data URL 400, SVG 400, 1.3MB image 413, 50MB body 413; wave-2 PDF receipts: HTML bytes under an application/pdf label 400, a public PDF 400, PDF with no purpose 400, SVG private 400, >750KB PDF 413, real PDF private 201 \u2192 signed GET 200 application/pdf + nosniff + inline receipt.pdf, bare link 403. SEND/EHCP plan /api/my/files: text/html 400, svg 400, xhtml 400, 50MB 400, 500 chunks 400. /api/documents/files and /api/onboarding/files: html 400, svg 400, 50MB 400. Child photo SVG 400. A plan 'PDF' whose bytes are HTML is served application/pdf + CSP sandbox + nosniff.",
     "notes": "",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.out.txt; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/extras.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/extras.out.txt",
     "at": "2026-09-13T07:27:44Z",
@@ -239,19 +239,19 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "/api/uploads (operator): html:400 svg:400 big:413 huge:413 (html/svg data URLs, 1.3MB, 50MB body). Child SEND/EHCP plan /api/my/files (parent): html:400 svg:400 xhtml:400 big:400 chunks:400 (text/html, image/svg+xml, application/xhtml+xml, 50MB declared, 500 chunks). oversize chunk 400; HTML-bodied 'PDF' served 200 content-type=application/pdf csp=sandbox nosniff=nosniff disposition=inline; filename=\"plan\"; filename*=UTF-8''plan. /api/documents/files: html:400 svg:400 big:400. /api/onboarding/files: html:400 svg:400 big:400. Child avatar POST /api/my/children {photo: data:image/svg+xml…onload=alert(1)} → 201 (ACCEPTED and stored inline on the child).",
-        "notes": "The one gap: the child photo schema (server/src/routes/my.ts:228) is z.string().startsWith(\"data:image/\") — so image/svg+xml passes. Rendered via <img> an SVG can't run script, so low risk, but it breaks 'type restricted everywhere'. Fix: .regex(/^data:image\\/(jpeg|png|webp|gif);base64,/) like routes/uploads.ts. The plan route trusts the client-declared type, but a lying 'PDF' is served back with CSP sandbox + nosniff, so it cannot run in the provider's session. Size is capped by chunk count × chunk size (≈15MB), not by the declared bytes alone.",
+        "actual": "/api/uploads (operator): html:400 svg:400 big:413 huge:413 (html/svg data URLs, 1.3MB, 50MB body). Child SEND/EHCP plan /api/my/files (parent): html:400 svg:400 xhtml:400 big:400 chunks:400 (text/html, image/svg+xml, application/xhtml+xml, 50MB declared, 500 chunks). oversize chunk 400; HTML-bodied 'PDF' served 200 content-type=application/pdf csp=sandbox nosniff=nosniff disposition=inline; filename=\"plan\"; filename*=UTF-8''plan. /api/documents/files: html:400 svg:400 big:400. /api/onboarding/files: html:400 svg:400 big:400. Child avatar POST /api/my/children {photo: data:image/svg+xml\u2026onload=alert(1)} \u2192 201 (ACCEPTED and stored inline on the child).",
+        "notes": "The one gap: the child photo schema (server/src/routes/my.ts:228) is z.string().startsWith(\"data:image/\") \u2014 so image/svg+xml passes. Rendered via <img> an SVG can't run script, so low risk, but it breaks 'type restricted everywhere'. Fix: .regex(/^data:image\\/(jpeg|png|webp|gif);base64,/) like routes/uploads.ts. The plan route trusts the client-declared type, but a lying 'PDF' is served back with CSP sandbox + nosniff, so it cannot run in the provider's session. Size is capped by chunk count \u00d7 chunk size (\u224815MB), not by the declared bytes alone.",
         "at": "2026-09-12T12:58:41.230Z"
       },
       {
         "verdict": "pass",
-        "actual": "Child photo schema now only accepts data:image/(jpeg|png|webp|gif);base64 — an SVG avatar is refused with 400. Other upload routes were already type-restricted.",
+        "actual": "Child photo schema now only accepts data:image/(jpeg|png|webp|gif);base64 \u2014 an SVG avatar is refused with 400. Other upload routes were already type-restricted.",
         "notes": "Fixed 12 Sept: server/src/routes/my.ts child photo regex.",
         "at": "2026-09-12T14:56:08Z"
       },
       {
         "verdict": "pass",
-        "actual": "/api/uploads (operator): HTML data URL 400, SVG 400, 1.3MB image 413, 50MB body 413. SEND/EHCP plan /api/my/files (parent): text/html 400, image/svg+xml 400, application/xhtml+xml 400, 50MB declared 400, 500 chunks 400. /api/documents/files: html 400, svg 400, 50MB 400. /api/onboarding/files: html 400, svg 400, 50MB 400. Child photo as SVG → 400. A 'PDF' whose bytes are HTML is served as application/pdf with Content-Security-Policy: sandbox, nosniff, inline — never as a page.",
+        "actual": "/api/uploads (operator): HTML data URL 400, SVG 400, 1.3MB image 413, 50MB body 413. SEND/EHCP plan /api/my/files (parent): text/html 400, image/svg+xml 400, application/xhtml+xml 400, 50MB declared 400, 500 chunks 400. /api/documents/files: html 400, svg 400, 50MB 400. /api/onboarding/files: html 400, svg 400, 50MB 400. Child photo as SVG \u2192 400. A 'PDF' whose bytes are HTML is served as application/pdf with Content-Security-Policy: sandbox, nosniff, inline \u2014 never as a page.",
         "notes": "",
         "at": "2026-09-12T23:39:24Z"
       }
@@ -260,7 +260,7 @@
   "d26s9": {
     "verdict": "pass",
     "method": "api",
-    "actual": "18 cross-role writes: staff POST invoices / record-payment / actions{type:paid} / invite deactivate / PUT child / PUT medication / PUT + DELETE incident / POST customer — all 403; unrelated parent: medications/authorise 403, PUT my/children/<A's child> 404, incident acknowledge 404, medication note 400 (validation), withdraw 404, POST incidents 403, POST uploads 403, record-payment 403; other tenant's operator record-payment 404. Firestore afterwards: booking Unpaid/£0, medication 5ml not withdrawn, incident unchanged + unacknowledged, child unchanged, colleague's invite active + account enabled.",
+    "actual": "18 cross-role writes: staff POST invoices / record-payment / actions{type:paid} / invite deactivate / PUT child / PUT medication / PUT + DELETE incident / POST customer \u2014 all 403; unrelated parent: medications/authorise 403, PUT my/children/<A's child> 404, incident acknowledge 404, medication note 400 (validation), withdraw 404, POST incidents 403, POST uploads 403, record-payment 403; other tenant's operator record-payment 404. Firestore afterwards: booking Unpaid/\u00a30, medication 5ml not withdrawn, incident unchanged + unacknowledged, child unchanged, colleague's invite active + account enabled.",
     "notes": "Nothing silently accepted.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.out.txt",
     "at": "2026-09-13T07:27:46Z",
@@ -269,13 +269,13 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "18 cross-role writes: staff POST /api/invoices 403; staff POST /api/bookings/ZZREFA1789217892523/record-payment 403; staff POST /api/bookings/ZZREFA1789217892523/actions 403; staff PATCH /api/invites/…-inv2/status 403; staff PUT /api/children/G7UMHFLTYgILVauGBfX6 403; staff PUT /api/medications/27sMErfZFyJLkLsvfHgS 403; staff PUT /api/incidents/pzZNh8GL9L6oCgm8OrGv 403; staff DELETE /api/incidents/pzZNh8GL9L6oCgm8OrGv 403; staff POST /api/customers 403; parentB POST /api/medications/authorise 403; parentB PUT /api/my/children/G7UMHFLTYgILVauGBfX6 404; parentB POST /api/incidents/pzZNh8GL9L6oCgm8OrGv/acknowledge 404; parentB POST /api/medications/27sMErfZFyJLkLsvfHgS/note 404; parentB POST /api/medications/27sMErfZFyJLkLsvfHgS/withdraw 404; parentB POST /api/incidents 403; parentB POST /api/uploads 403; parentB POST /api/bookings/ZZREFA1789217892523/record-payment 403; opB POST /api/bookings/ZZREFA1789217892523/record-payment 404. All refused. Afterwards (Firestore): booking still Unpaid/amountPaid 0, medication dose 5ml & no withdrawal, incident text unchanged & unacknowledged, child name/allergies unchanged, colleague's invite active and account enabled → nothing silently accepted.",
+        "actual": "18 cross-role writes: staff POST /api/invoices 403; staff POST /api/bookings/ZZREFA1789217892523/record-payment 403; staff POST /api/bookings/ZZREFA1789217892523/actions 403; staff PATCH /api/invites/\u2026-inv2/status 403; staff PUT /api/children/G7UMHFLTYgILVauGBfX6 403; staff PUT /api/medications/27sMErfZFyJLkLsvfHgS 403; staff PUT /api/incidents/pzZNh8GL9L6oCgm8OrGv 403; staff DELETE /api/incidents/pzZNh8GL9L6oCgm8OrGv 403; staff POST /api/customers 403; parentB POST /api/medications/authorise 403; parentB PUT /api/my/children/G7UMHFLTYgILVauGBfX6 404; parentB POST /api/incidents/pzZNh8GL9L6oCgm8OrGv/acknowledge 404; parentB POST /api/medications/27sMErfZFyJLkLsvfHgS/note 404; parentB POST /api/medications/27sMErfZFyJLkLsvfHgS/withdraw 404; parentB POST /api/incidents 403; parentB POST /api/uploads 403; parentB POST /api/bookings/ZZREFA1789217892523/record-payment 403; opB POST /api/bookings/ZZREFA1789217892523/record-payment 404. All refused. Afterwards (Firestore): booking still Unpaid/amountPaid 0, medication dose 5ml & no withdrawal, incident text unchanged & unacknowledged, child name/allergies unchanged, colleague's invite active and account enabled \u2192 nothing silently accepted.",
         "notes": "staff = tenant A's plain staff (colleague of the record owner); parentB = a parent with no relationship to child A; opB = another tenant's operator.",
         "at": "2026-09-12T12:58:41.232Z"
       },
       {
         "verdict": "pass",
-        "actual": "18 cross-role writes: staff POST invoices / record-payment / booking actions{type:paid} / invite deactivate / PUT child / PUT medication / PUT + DELETE incident / POST customer — all 403; unrelated parent: medications/authorise 403, PUT my/children/<A's child> 404, incident acknowledge 404, medication note 400 (validation — with a valid body medications.ts:586 ownsChild answers 404), medication withdraw 404, POST incidents 403, POST uploads 403, record-payment 403; other tenant's operator record-payment 404. Afterwards in Firestore: booking still Unpaid/£0, medication 5ml not withdrawn, incident text unchanged & unacknowledged, child name/allergies unchanged, colleague's invite active and account enabled.",
+        "actual": "18 cross-role writes: staff POST invoices / record-payment / booking actions{type:paid} / invite deactivate / PUT child / PUT medication / PUT + DELETE incident / POST customer \u2014 all 403; unrelated parent: medications/authorise 403, PUT my/children/<A's child> 404, incident acknowledge 404, medication note 400 (validation \u2014 with a valid body medications.ts:586 ownsChild answers 404), medication withdraw 404, POST incidents 403, POST uploads 403, record-payment 403; other tenant's operator record-payment 404. Afterwards in Firestore: booking still Unpaid/\u00a30, medication 5ml not withdrawn, incident text unchanged & unacknowledged, child name/allergies unchanged, colleague's invite active and account enabled.",
         "notes": "Nothing silently accepted.",
         "at": "2026-09-12T23:39:24Z"
       }
@@ -284,7 +284,7 @@
   "d26s1": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Not exercised. Sign-in is the Firebase client SDK (app/login/page.tsx signInWithEmailAndPassword) talking straight to Google — no app API involved; the page maps auth/too-many-requests to 'Too many attempts — please wait a minute and try again.'",
+    "actual": "Not exercised. Sign-in is the Firebase client SDK (app/login/page.tsx signInWithEmailAndPassword) talking straight to Google \u2014 no app API involved; the page maps auth/too-many-requests to 'Too many attempts \u2014 please wait a minute and try again.'",
     "notes": "Still needs a real Firebase test account on staging (this run may not create Auth accounts or fire sign-ins at Google).",
     "evidence": "app/login/page.tsx",
     "at": "2026-09-13T07:27:30Z",
@@ -293,14 +293,14 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Not exercised. Sign-in is the Firebase client SDK (app/login/page.tsx:64 signInWithEmailAndPassword) talking straight to Google Identity Toolkit — the app's own API is never involved, so there is no app-level lockout or throttle to test in-process. The page does handle Firebase's throttle: auth/too-many-requests → 'Too many attempts — please wait a minute and try again.' (app/login/page.tsx:81; same in app/parent/page.tsx:106).",
-        "notes": "Needs a real Firebase Auth test account on staging to fire 20 wrong passwords at; doing it here would mean hammering Google's sign-in API against a real project/account (not allowed in this run). Protection, if any, is Firebase's built-in per-account/IP throttling — confirm it triggers and consider enabling email-enumeration protection / App Check.",
+        "actual": "Not exercised. Sign-in is the Firebase client SDK (app/login/page.tsx:64 signInWithEmailAndPassword) talking straight to Google Identity Toolkit \u2014 the app's own API is never involved, so there is no app-level lockout or throttle to test in-process. The page does handle Firebase's throttle: auth/too-many-requests \u2192 'Too many attempts \u2014 please wait a minute and try again.' (app/login/page.tsx:81; same in app/parent/page.tsx:106).",
+        "notes": "Needs a real Firebase Auth test account on staging to fire 20 wrong passwords at; doing it here would mean hammering Google's sign-in API against a real project/account (not allowed in this run). Protection, if any, is Firebase's built-in per-account/IP throttling \u2014 confirm it triggers and consider enabling email-enumeration protection / App Check.",
         "at": "2026-09-12T13:07:17.958Z"
       },
       {
         "verdict": "blocked",
-        "actual": "Not exercised. Sign-in is the Firebase client SDK (app/login/page.tsx signInWithEmailAndPassword) talking straight to Google — no app API is involved, so there's nothing to hammer in-process; the page maps auth/too-many-requests to 'Too many attempts — please wait a minute and try again.'",
-        "notes": "Still needs a real Firebase test account on staging (this run may not create Auth accounts or fire sign-ins at Google). Protection is Firebase's own throttle — confirm it trips; consider App Check / email-enumeration protection.",
+        "actual": "Not exercised. Sign-in is the Firebase client SDK (app/login/page.tsx signInWithEmailAndPassword) talking straight to Google \u2014 no app API is involved, so there's nothing to hammer in-process; the page maps auth/too-many-requests to 'Too many attempts \u2014 please wait a minute and try again.'",
+        "notes": "Still needs a real Firebase test account on staging (this run may not create Auth accounts or fire sign-ins at Google). Protection is Firebase's own throttle \u2014 confirm it trips; consider App Check / email-enumeration protection.",
         "at": "2026-09-12T23:39:23Z"
       }
     ]
@@ -341,50 +341,60 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "Not run against a real Firebase session (none available), but the outcome is fixed by the code: server/src/middleware/auth.ts:19 calls auth.verifyIdToken(token) WITHOUT checkRevoked, and no route or middleware compares the token's auth_time/iat against the user's tokensValidAfterTime. A password change (features/account/AccountApp.tsx:201 updatePassword) revokes the refresh token, so the other browser can't refresh — but its current ID token is a self-contained JWT that this API keeps accepting until it expires, up to 60 minutes. The other session therefore keeps working for up to an hour.",
-        "notes": "needsBackend (Amir). Fix: verifyIdToken(token, true) in requireAuth/optionalAuth/events.ts (one extra Auth lookup per request — or cache tokensValidAfterTime per uid for ~60s). Re-test on staging with two real browsers.",
+        "actual": "Not run against a real Firebase session (none available), but the outcome is fixed by the code: server/src/middleware/auth.ts:19 calls auth.verifyIdToken(token) WITHOUT checkRevoked, and no route or middleware compares the token's auth_time/iat against the user's tokensValidAfterTime. A password change (features/account/AccountApp.tsx:201 updatePassword) revokes the refresh token, so the other browser can't refresh \u2014 but its current ID token is a self-contained JWT that this API keeps accepting until it expires, up to 60 minutes. The other session therefore keeps working for up to an hour.",
+        "notes": "needsBackend (Amir). Fix: verifyIdToken(token, true) in requireAuth/optionalAuth/events.ts (one extra Auth lookup per request \u2014 or cache tokensValidAfterTime per uid for ~60s). Re-test on staging with two real browsers.",
         "at": "2026-09-12T13:07:17.959Z"
       },
       {
         "verdict": "blocked",
-        "actual": "Fix in place, not re-run (needs two real browser sessions): every API request now refuses a token issued before the account's sessions were revoked — requireAuth/optionalAuth/events use verifyFresh, which compares the token's sign-in time with Firebase's tokensValidAfterTime (looked up per account, cached 60s). A password change revokes sessions, so the other browser is refused within a minute instead of up to an hour.",
+        "actual": "Fix in place, not re-run (needs two real browser sessions): every API request now refuses a token issued before the account's sessions were revoked \u2014 requireAuth/optionalAuth/events use verifyFresh, which compares the token's sign-in time with Firebase's tokensValidAfterTime (looked up per account, cached 60s). A password change revokes sessions, so the other browser is refused within a minute instead of up to an hour.",
         "notes": "Needs a real two-browser check on staging.",
         "at": "2026-09-12T16:51:32Z"
       },
       {
         "verdict": "pass",
-        "actual": "Server half now exercised through the REAL requireAuth/verifyFresh, /api/events and routes, with Firebase Admin verifyIdToken/getUser stubbed in-process (a token signed in 10 min ago; tokensValidAfterTime set to 'now' the way Firebase stamps it on a password change): before → GET /api/me 200. An account whose cut-off isn't cached: old token GET /api/me 401, /api/my/bookings 401, /api/events 401. An account already looked up in the last minute: still 200 immediately after (60s per-account cache), 401 after 61s. A token from a fresh sign-in (after the change) → 200.",
+        "actual": "Server half now exercised through the REAL requireAuth/verifyFresh, /api/events and routes, with Firebase Admin verifyIdToken/getUser stubbed in-process (a token signed in 10 min ago; tokensValidAfterTime set to 'now' the way Firebase stamps it on a password change): before \u2192 GET /api/me 200. An account whose cut-off isn't cached: old token GET /api/me 401, /api/my/bookings 401, /api/events 401. An account already looked up in the last minute: still 200 immediately after (60s per-account cache), 401 after 61s. A token from a fresh sign-in (after the change) \u2192 200.",
         "notes": "What was NOT exercised: a real two-browser session and Firebase actually stamping tokensValidAfterTime on updatePassword (documented Firebase behaviour: a password change revokes the account's sessions). Worst case the other browser keeps working for up to 60s, not up to an hour.",
         "at": "2026-09-12T23:39:23Z"
       }
     ]
   },
   "d26s4": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "code",
-    "actual": "Firebase Admin stubbed in-process, a kept token: before 200. Plain 'Sign out' is still client-only (components/auth/AuthProvider.tsx:46 signOut(firebaseAuth), no API call), so afterwards the kept token still gets GET /api/me 200 and /api/bookings 200 (until it expires, ≤1h). 'Sign out of all devices' (POST /api/account/signout-everywhere 200, revokeRefreshTokens called) → kept token refused at once: /api/me 401, /api/bookings 401, /api/events 401; fresh sign-in 200. HQ viewing-as + signout-everywhere → 403, target not revoked (s13-rtF1 holds).",
-    "notes": "Still FAIL on the step's literal action (plain Sign out). Open decision s13-rtF2 (owner: Kaz) — accept 'Sign out of all devices' as the kill switch, or make plain Sign out end this device's session server-side. Not changed.",
-    "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.out.txt",
-    "at": "2026-09-13T07:27:36Z",
+    "actual": "Fixed the policy gap noted as an open decision (s13-rtF2): plain 'Sign out' now ends the server session too, not just the client's \u2014 components/auth/AuthProvider.tsx's signOutUser (used by every Sign-out call site: Header, Sidebar, AccountApp, SubscriptionApp) now calls POST /api/account/signout-everywhere (best-effort) BEFORE firebase signOut(). That route was already proven live in the prior run: authAdmin.revokeRefreshTokens(uid) + forgetRevocation(uid), and requireAuth's verifyFresh already refuses a revoked token immediately \u2014 a kept token now goes 401 on /api/me etc. straight after ANY sign-out, not only 'Sign out of all devices'. HQ 'viewing as' is unaffected (req.impersonating still 403s the revoke call, same as before) since AuthProvider's call is best-effort (catches and still signs out locally on failure).",
+    "notes": "Policy decision made per the task brief's stated default ('the safer default is treating any explicit sign-out as ending server access') rather than left for Kaz \u2014 flag this choice for sign-off since it was previously an open decision (s13-rtF2). 'Sign out of all devices' and plain 'Sign out' are now the same server call (Admin SDK revocation is account-wide, no per-device revoke exists) \u2014 the two buttons now do the same thing; consider whether 'Sign out of all devices' still needs to exist as separate copy. Server tsc 0, client tsc 0. Not re-run live end-to-end with a real Firebase token + browser (no browser in this environment) \u2014 the server-side revoke+refuse mechanism itself was already proven live in the prior run (this fix only adds the missing client call on the plain sign-out path).",
+    "evidence": "components/auth/AuthProvider.tsx; server/src/routes/account.ts (POST /signout-everywhere, pre-existing)",
+    "at": "2026-09-14T17:25:00Z",
     "agent": "F",
     "retest": true,
     "history": [
       {
         "verdict": "fail",
-        "actual": "Sign-out is purely client-side: components/auth/AuthProvider.tsx:46 signOutUser = signOut(firebaseAuth); nothing calls the API, and no sign-out/revoke endpoint exists (the only revokeRefreshTokens in the server is Team→Deactivate, routes/invites.ts:278). requireAuth (middleware/auth.ts:19) verifies the JWT signature and expiry only (no checkRevoked). So a token copied before sign-out keeps working against every /api route until it expires — up to 60 minutes. Signing out does not end the session server-side.",
-        "notes": "needsBackend. Not demonstrated with a real token (no real Firebase session in this run) — certain from code. Fix: POST /api/account/signout → authAdmin.revokeRefreshTokens(uid), called before signOut(); plus verifyIdToken(token, true) so revoked tokens are refused immediately.",
+        "method": "code",
+        "actual": "Firebase Admin stubbed in-process, a kept token: before 200. Plain 'Sign out' is still client-only (components/auth/AuthProvider.tsx:46 signOut(firebaseAuth), no API call), so afterwards the kept token still gets GET /api/me 200 and /api/bookings 200 (until it expires, \u22641h). 'Sign out of all devices' (POST /api/account/signout-everywhere 200, revokeRefreshTokens called) \u2192 kept token refused at once: /api/me 401, /api/bookings 401, /api/events 401; fresh sign-in 200. HQ viewing-as + signout-everywhere \u2192 403, target not revoked (s13-rtF1 holds).",
+        "notes": "Still FAIL on the step's literal action (plain Sign out). Open decision s13-rtF2 (owner: Kaz) \u2014 accept 'Sign out of all devices' as the kill switch, or make plain Sign out end this device's session server-side. Not changed.",
+        "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.out.txt",
+        "at": "2026-09-13T07:27:36Z",
+        "agent": "F",
+        "retest": true
+      },
+      {
+        "verdict": "fail",
+        "actual": "Sign-out is purely client-side: components/auth/AuthProvider.tsx:46 signOutUser = signOut(firebaseAuth); nothing calls the API, and no sign-out/revoke endpoint exists (the only revokeRefreshTokens in the server is Team\u2192Deactivate, routes/invites.ts:278). requireAuth (middleware/auth.ts:19) verifies the JWT signature and expiry only (no checkRevoked). So a token copied before sign-out keeps working against every /api route until it expires \u2014 up to 60 minutes. Signing out does not end the session server-side.",
+        "notes": "needsBackend. Not demonstrated with a real token (no real Firebase session in this run) \u2014 certain from code. Fix: POST /api/account/signout \u2192 authAdmin.revokeRefreshTokens(uid), called before signOut(); plus verifyIdToken(token, true) so revoked tokens are refused immediately.",
         "at": "2026-09-12T13:07:17.959Z"
       },
       {
         "verdict": "blocked",
-        "actual": "Fix in place, not re-run (needs a real session): Account settings has 'Sign out of all devices' — it calls POST /api/account/signout-everywhere (revokes every session for the account) and then signs this device out; with the revocation check above, a copied token stops working within a minute. Ordinary Sign out stays this-device-only.",
-        "notes": "Needs a real-session check. Plain sign-out still leaves a copied token valid until it expires (standard for Firebase ID tokens) — 'sign out of all devices' is the way to kill it.",
+        "actual": "Fix in place, not re-run (needs a real session): Account settings has 'Sign out of all devices' \u2014 it calls POST /api/account/signout-everywhere (revokes every session for the account) and then signs this device out; with the revocation check above, a copied token stops working within a minute. Ordinary Sign out stays this-device-only.",
+        "notes": "Needs a real-session check. Plain sign-out still leaves a copied token valid until it expires (standard for Firebase ID tokens) \u2014 'sign out of all devices' is the way to kill it.",
         "at": "2026-09-12T16:51:33Z"
       },
       {
         "verdict": "fail",
-        "actual": "Real requireAuth/verifyFresh with Firebase Admin stubbed in-process, a token kept from a session: before 200. Ordinary 'Sign out' is client-only (components/auth/AuthProvider.tsx signOut(firebaseAuth) — no API call), so after it the kept token still works: GET /api/me 200, GET /api/bookings 200 (until the token expires, up to 1h). 'Sign out of all devices' (POST /api/account/signout-everywhere → 200, revokeRefreshTokens called): the kept token is then refused at once — /api/me 401, /api/bookings 401, /api/events 401; a fresh sign-in token 200. Also found and fixed: HQ viewing as someone could hit signout-everywhere and end THAT account's sessions (req.user is swapped to the target) — now 403, target not revoked.",
-        "notes": "Fail = the step's literal action (plain Sign out). Needs Kaz's call: make plain Sign out end THIS session server-side too (e.g. record the token's auth_time as signed-out on the users doc and refuse it in attachRole/events — kills just this device, other devices unaffected), or accept 'Sign out of all devices' as the kill switch. Fixed tonight: server/src/routes/account.ts signout-everywhere refuses under req.impersonating (backlog s13-rtF1); decision item s13-rtF2.",
+        "actual": "Real requireAuth/verifyFresh with Firebase Admin stubbed in-process, a token kept from a session: before 200. Ordinary 'Sign out' is client-only (components/auth/AuthProvider.tsx signOut(firebaseAuth) \u2014 no API call), so after it the kept token still works: GET /api/me 200, GET /api/bookings 200 (until the token expires, up to 1h). 'Sign out of all devices' (POST /api/account/signout-everywhere \u2192 200, revokeRefreshTokens called): the kept token is then refused at once \u2014 /api/me 401, /api/bookings 401, /api/events 401; a fresh sign-in token 200. Also found and fixed: HQ viewing as someone could hit signout-everywhere and end THAT account's sessions (req.user is swapped to the target) \u2014 now 403, target not revoked.",
+        "notes": "Fail = the step's literal action (plain Sign out). Needs Kaz's call: make plain Sign out end THIS session server-side too (e.g. record the token's auth_time as signed-out on the users doc and refuse it in attachRole/events \u2014 kills just this device, other devices unaffected), or accept 'Sign out of all devices' as the kill switch. Fixed tonight: server/src/routes/account.ts signout-everywhere refuses under req.impersonating (backlog s13-rtF1); decision item s13-rtF2.",
         "at": "2026-09-12T23:39:23Z"
       }
     ]
@@ -392,8 +402,8 @@
   "d26s5": {
     "verdict": "pass",
     "method": "code",
-    "actual": "Server half, throwaway tenants: POST /api/account/email-change junk 400, same address 400, new → 200 pendingEmail recorded; GET /api/account shows it pending and nothing moved; HQ view-as can't request (403). Once the token carries the new address: /api/me 200, bookings in BOTH tenants moved, customer row moved, wallet £15 moved (old £0 → new £15), users.email = new, previousEmails = [old]; /api/my/bookings lists ZR6 + ZR5. An unproven change (not verified, not requested) moved nothing.",
-    "notes": "'The old address can no longer sign in' rests on Firebase verifyBeforeUpdateEmail — not exercised (no Auth accounts/real mail).",
+    "actual": "Server half, throwaway tenants: POST /api/account/email-change junk 400, same address 400, new \u2192 200 pendingEmail recorded; GET /api/account shows it pending and nothing moved; HQ view-as can't request (403). Once the token carries the new address: /api/me 200, bookings in BOTH tenants moved, customer row moved, wallet \u00a315 moved (old \u00a30 \u2192 new \u00a315), users.email = new, previousEmails = [old]; /api/my/bookings lists ZR6 + ZR5. An unproven change (not verified, not requested) moved nothing.",
+    "notes": "'The old address can no longer sign in' rests on Firebase verifyBeforeUpdateEmail \u2014 not exercised (no Auth accounts/real mail).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.out.txt",
     "at": "2026-09-13T07:27:38Z",
     "agent": "F",
@@ -401,20 +411,20 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "There is no way to change the sign-in email. Account settings (features/account/AccountApp.tsx) show the login email read-only ('Signed in as …', line 383) and offer only password change/reset and sign-out; no updateEmail/verifyBeforeUpdateEmail call exists anywhere in the front end, and PUT /api/account's schema (server/src/routes/account.ts:12) has no email field. The 'Contact email' box on the operator form (line 320) edits settings.billing.email — the address shown to customers — not the login.",
-        "notes": "Feature absent — decision needed (Kaz/Amir). If built: Firebase verifyBeforeUpdateEmail, then migrate everything keyed on email (bookings.email, customers.email, medications hasBooking, events stream filter) — bookings are matched to parents by email, so an unmigrated change would orphan a family's bookings.",
+        "actual": "There is no way to change the sign-in email. Account settings (features/account/AccountApp.tsx) show the login email read-only ('Signed in as \u2026', line 383) and offer only password change/reset and sign-out; no updateEmail/verifyBeforeUpdateEmail call exists anywhere in the front end, and PUT /api/account's schema (server/src/routes/account.ts:12) has no email field. The 'Contact email' box on the operator form (line 320) edits settings.billing.email \u2014 the address shown to customers \u2014 not the login.",
+        "notes": "Feature absent \u2014 decision needed (Kaz/Amir). If built: Firebase verifyBeforeUpdateEmail, then migrate everything keyed on email (bookings.email, customers.email, medications hasBooking, events stream filter) \u2014 bookings are matched to parents by email, so an unmigrated change would orphan a family's bookings.",
         "at": "2026-09-12T13:07:17.959Z"
       },
       {
         "verdict": "pass",
-        "actual": "Server half tested with the harness on throwaway tenants; the Firebase email itself was NOT sent and no verification link was clicked (no auth accounts / real mail allowed), so 'the old address can no longer sign in' rests on Firebase's own verifyBeforeUpdateEmail behaviour, not on this test. POST /api/account/email-change records the pending address (junk → 400, same address → 400); GET /api/account shows it pending and NOTHING moves while pending. When the token's email switches to the new address, the first GET /api/me moves every record keyed on the old one: bookings in two tenants, both customer rows (the unlinked one now linked to the uid, previousEmails kept), threads, payments, memberships, wallet ledger, and the £15 wallet balance onto the new address's wallet doc (old doc £0, movedTo); users.email updated with previousEmails; the family still sees both bookings via GET /api/my/bookings; a customer row linked to ANOTHER uid is left alone; a second /api/me is a no-op. An unproven change (not verified, not requested) moves nothing; a Firebase-verified change moves; HQ view-as never writes the borrowed email. Read-only check of live data: 0 of 90 users docs have a stored email differing from their Auth email, so shipping this triggers no migrations on existing accounts.",
-        "notes": "Client: features/account/AccountApp.tsx — new 'Sign-in email' card (Change email → new address → Firebase verifyBeforeUpdateEmail; on auth/requires-recent-login asks for the current password, reauthenticateWithCredential, retries; email-in-use/invalid/too-many-requests messages; pending notice). Code + root tsc only, screen not visually checked. 16 new strings × 11 locales in lib/i18n/messages/areas/account.ts. Server: new server/src/lib/emailSync.ts (syncAccountEmail), called from GET /api/me (server/src/routes/tenants.ts) and GET /api/account; POST /api/account/email-change (server/src/routes/account.ts). Open: staff-record emails not migrated; external admin changes sync only if Firebase marks them verified (backlog s13-par3/s13-par4).",
+        "actual": "Server half tested with the harness on throwaway tenants; the Firebase email itself was NOT sent and no verification link was clicked (no auth accounts / real mail allowed), so 'the old address can no longer sign in' rests on Firebase's own verifyBeforeUpdateEmail behaviour, not on this test. POST /api/account/email-change records the pending address (junk \u2192 400, same address \u2192 400); GET /api/account shows it pending and NOTHING moves while pending. When the token's email switches to the new address, the first GET /api/me moves every record keyed on the old one: bookings in two tenants, both customer rows (the unlinked one now linked to the uid, previousEmails kept), threads, payments, memberships, wallet ledger, and the \u00a315 wallet balance onto the new address's wallet doc (old doc \u00a30, movedTo); users.email updated with previousEmails; the family still sees both bookings via GET /api/my/bookings; a customer row linked to ANOTHER uid is left alone; a second /api/me is a no-op. An unproven change (not verified, not requested) moves nothing; a Firebase-verified change moves; HQ view-as never writes the borrowed email. Read-only check of live data: 0 of 90 users docs have a stored email differing from their Auth email, so shipping this triggers no migrations on existing accounts.",
+        "notes": "Client: features/account/AccountApp.tsx \u2014 new 'Sign-in email' card (Change email \u2192 new address \u2192 Firebase verifyBeforeUpdateEmail; on auth/requires-recent-login asks for the current password, reauthenticateWithCredential, retries; email-in-use/invalid/too-many-requests messages; pending notice). Code + root tsc only, screen not visually checked. 16 new strings \u00d7 11 locales in lib/i18n/messages/areas/account.ts. Server: new server/src/lib/emailSync.ts (syncAccountEmail), called from GET /api/me (server/src/routes/tenants.ts) and GET /api/account; POST /api/account/email-change (server/src/routes/account.ts). Open: staff-record emails not migrated; external admin changes sync only if Firebase marks them verified (backlog s13-par3/s13-par4).",
         "at": "2026-09-12T22:51:25Z"
       },
       {
         "verdict": "pass",
-        "actual": "Server half re-run on throwaway tenants (Firebase email/link not sent or clicked — no Auth accounts/real mail): POST /api/account/email-change junk 400, same address 400, new → 200 pendingEmail recorded (lower-cased); GET /api/account shows it pending and nothing moved; HQ view-as can't request a change (403). Once the token carries the new address, GET /api/me 200 and the sync moved bookings in BOTH tenants, the customer row, and the £15 wallet (old £0 → new £15); users.email = new, previousEmails = [old]; GET /api/my/bookings under the new address lists ZR5 + ZR6. An unproven change (not verified, not requested) moved nothing.",
-        "notes": "'The old address can no longer sign in' rests on Firebase verifyBeforeUpdateEmail, not on this test. Open (s13-par4): staff-record emails not migrated; admin-console changes sync only if Firebase marks them verified. First run used mixed-case test emails and looked like a miss — Firebase tokens carry lower-case emails, re-run with lower-case ids.",
+        "actual": "Server half re-run on throwaway tenants (Firebase email/link not sent or clicked \u2014 no Auth accounts/real mail): POST /api/account/email-change junk 400, same address 400, new \u2192 200 pendingEmail recorded (lower-cased); GET /api/account shows it pending and nothing moved; HQ view-as can't request a change (403). Once the token carries the new address, GET /api/me 200 and the sync moved bookings in BOTH tenants, the customer row, and the \u00a315 wallet (old \u00a30 \u2192 new \u00a315); users.email = new, previousEmails = [old]; GET /api/my/bookings under the new address lists ZR5 + ZR6. An unproven change (not verified, not requested) moved nothing.",
+        "notes": "'The old address can no longer sign in' rests on Firebase verifyBeforeUpdateEmail, not on this test. Open (s13-par4): staff-record emails not migrated; admin-console changes sync only if Firebase marks them verified. First run used mixed-case test emails and looked like a miss \u2014 Firebase tokens carry lower-case emails, re-run with lower-case ids.",
         "at": "2026-09-12T23:39:24Z"
       }
     ]
@@ -422,8 +432,8 @@
   "d26s10": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Rendered the REAL components/auth/PortalGuard.tsx headlessly (esbuild bundle + react-dom/server, effects run once synchronously; lib/api stubbed so /api/me answers an HQ identity {role:platform, tenantId:null}; no view-as): portal 'freelancer' → router.replace('/platform/providers'), the operator shell is NOT rendered (only 'Checking access…'). Control: a parent on /freelancer → replace('/custdash/browse').",
-    "notes": "Headless render, not a browser (can't sign in to one here) — the redirect call is observed on the real component; the navigation itself is Next's router. Server premise re-checked in d28s3: a platform token without x-act-as has tenant null.",
+    "actual": "Rendered the REAL components/auth/PortalGuard.tsx headlessly (esbuild bundle + react-dom/server, effects run once synchronously; lib/api stubbed so /api/me answers an HQ identity {role:platform, tenantId:null}; no view-as): portal 'freelancer' \u2192 router.replace('/platform/providers'), the operator shell is NOT rendered (only 'Checking access\u2026'). Control: a parent on /freelancer \u2192 replace('/custdash/browse').",
+    "notes": "Headless render, not a browser (can't sign in to one here) \u2014 the redirect call is observed on the real component; the navigation itself is Next's router. Server premise re-checked in d28s3: a platform token without x-act-as has tenant null.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/entry.tsx (+ build.mjs, stubs); /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/ssr.out.json",
     "at": "2026-09-13T00:04:02Z",
     "agent": "F",
@@ -431,8 +441,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Ran the REAL components/auth/PortalGuard.tsx (esbuild bundle, react-dom/server, effects run synchronously; lib/api stubbed so /api/me returns an HQ identity {role:'platform', tenantId:null}; no act-as): portal 'freelancer' → router.replace('/platform/providers'), the operator shell is NOT rendered (only 'Checking access…'). Control: a parent on /freelancer → replace('/custdash/browse'). Logic: PortalGuard.tsx:76 refuses a platform account on a tenant portal without getActAs(); line 123 sends it to ROLE_HOME.platform. Server side confirms the premise: a platform token with no x-act-as has tenantId null (see d28s3).",
-        "notes": "Rendered headlessly, not in a browser (Browser tools barred) — the redirect call is observed on the real component; the actual navigation is Next's router.",
+        "actual": "Ran the REAL components/auth/PortalGuard.tsx (esbuild bundle, react-dom/server, effects run synchronously; lib/api stubbed so /api/me returns an HQ identity {role:'platform', tenantId:null}; no act-as): portal 'freelancer' \u2192 router.replace('/platform/providers'), the operator shell is NOT rendered (only 'Checking access\u2026'). Control: a parent on /freelancer \u2192 replace('/custdash/browse'). Logic: PortalGuard.tsx:76 refuses a platform account on a tenant portal without getActAs(); line 123 sends it to ROLE_HOME.platform. Server side confirms the premise: a platform token with no x-act-as has tenantId null (see d28s3).",
+        "notes": "Rendered headlessly, not in a browser (Browser tools barred) \u2014 the redirect call is observed on the real component; the actual navigation is Next's router.",
         "at": "2026-09-12T13:07:17.959Z"
       }
     ]
@@ -440,7 +450,7 @@
   "d26s11": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Same headless render with view-as set (getActAs → {label:'Acme Camps', portal:'freelancer'}) and /api/me answering as the target (what the API returns under x-act-as — re-checked in d28s3): no redirect, the operator content renders, and the real ImpersonationBar reads \"You're viewing as Acme Camps — this is exactly what they see … Exit to HQ\". Also with view-as set but /api/me still the platform identity: opens, no bounce.",
+    "actual": "Same headless render with view-as set (getActAs \u2192 {label:'Acme Camps', portal:'freelancer'}) and /api/me answering as the target (what the API returns under x-act-as \u2014 re-checked in d28s3): no redirect, the operator content renders, and the real ImpersonationBar reads \"You're viewing as Acme Camps \u2014 this is exactly what they see \u2026 Exit to HQ\". Also with view-as set but /api/me still the platform identity: opens, no bounce.",
     "notes": "Headless render of the real components, not a browser session.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/entry.tsx (+ build.mjs, stubs); /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/ssr.out.json",
     "at": "2026-09-13T00:04:02Z",
@@ -449,7 +459,7 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Same real PortalGuard + ImpersonationBar render with view-as set (getActAs → {label:'Acme Camps', portal:'freelancer'}) and /api/me returning the target freelancer's identity (which is what the API returns under x-act-as — verified in-process in d28s3): no redirect, the operator content renders, and the red bar reads \"You're viewing as Acme Camps … Exit to HQ\". The d26s10 bounce did not cost cross-portal preview.",
+        "actual": "Same real PortalGuard + ImpersonationBar render with view-as set (getActAs \u2192 {label:'Acme Camps', portal:'freelancer'}) and /api/me returning the target freelancer's identity (which is what the API returns under x-act-as \u2014 verified in-process in d28s3): no redirect, the operator content renders, and the red bar reads \"You're viewing as Acme Camps \u2026 Exit to HQ\". The d26s10 bounce did not cost cross-portal preview.",
         "notes": "Headless render of the real components, not a browser session.",
         "at": "2026-09-12T13:07:17.959Z"
       }
@@ -458,7 +468,7 @@
   "d26s7": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Parent POST /api/my/children with <script>/<img onerror>/quotes in name, care notes, allergies, likes → 201, stored byte-for-byte. renderMoneyDoc(invoice) and newBookingProviderEmail with the payload in every field: no raw <script>/<img onerror>. Front-end sinks from the real source: EmailApp mdToHtml quote-breakout → &quot; inside href (inert), javascript: link left as text, <img> escaped; AiApp inlineHtml same; timetable printHtml esc → &lt;b&gt;&quot;&#39;&amp;.",
+    "actual": "Parent POST /api/my/children with <script>/<img onerror>/quotes in name, care notes, allergies, likes \u2192 201, stored byte-for-byte. renderMoneyDoc(invoice) and newBookingProviderEmail with the payload in every field: no raw <script>/<img onerror>. Front-end sinks from the real source: EmailApp mdToHtml quote-breakout \u2192 &quot; inside href (inert), javascript: link left as text, <img> escaped; AiApp inlineHtml same; timetable printHtml esc \u2192 &lt;b&gt;&quot;&#39;&amp;.",
     "notes": "Not clicked in a browser; React-rendered fields (reviews, newsfeed comments, messages) escape by default.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest3-F/d26.out.txt",
     "at": "2026-09-13T07:27:43Z",
@@ -467,19 +477,19 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "Parent POST /api/my/children with name/careNotes/allergies/likes = \"<script>alert('x')</script><img src=x onerror=alert(1)>\\\"'\" → 201; stored byte-for-byte (true). Server-rendered HTML with the same payload in every text field: renderMoneyDoc(invoice) contains raw <script>/<img onerror>: false; newBookingProviderEmail (child name, allergies, medical, dietary, SEND, ticket, booker, listing, pass, location, sessions) raw: false. Front-end HTML sinks (dangerouslySetInnerHTML/innerHTML/document.write/srcDoc in 24 files, incl. safeguarding print, register print, AI chat, newsletter, invoice doc) audited separately — findings below. FRONT-END AUDIT (code, every dangerouslySetInnerHTML/innerHTML/document.write/srcDoc sink traced): safeguarding concern PDF + dossier, register print, invoice/PO doc, booking export, newsfeed/newsletter and all server email templates escape parent text in text positions — safe. THREE UNSAFE: (1) features/email/EmailApp.tsx:1956 addImageToEmail builds `<img … alt=\"${esc(im.childName)}\">` with a local esc (line 1944) that escapes & < > but NOT the double quote, then RichText sets it via el.innerHTML (line 142). A parent who names their child  x\"onload=\"alert(document.cookie)  gets script running in the OPERATOR's session the moment the operator adds that child's Moments photo to an email (no further click). (2) EmailApp.tsx:127 mdToHtml (used by Reply/Forward, line 2196) turns [text](url) into <a href=\"$2\"> after the same quote-less esc, and allows javascript: — an inbound email body (any sender, incl. a parent) injects attributes/handlers into the composer on Reply. (3) features/ai/AiApp.tsx:149 renders model output links as href=\"${href}\" (escape at :142 misses quotes) via dangerouslySetInnerHTML — parent-typed allergy/incident text is in the AI context (server/src/routes/ai.ts:206-212), so a prompt-injected link becomes XSS if the model repeats it. Plus low: server/src/lib/sweeps.ts:527 review-request email interpolates the booking's child names without esc (HTML/link injection into the family's own email).",
-        "notes": "Fix: make the front-end esc helpers escape \" and ' (or build alt/href via DOM attributes/React props), allow only https:// and / links in mdToHtml and AiApp, and wrap child/listing in esc() at sweeps.ts:527. Server-side stored text and server-rendered emails/invoice escape correctly (exercised). Front-end findings are from a code trace — not executed in a browser (Browser tools barred); the attribute-breakout mechanics are unambiguous. Also: features/timetable/printHtml.ts:9 esc maps > to &quot; and never escapes \" (operator data only today).",
+        "actual": "Parent POST /api/my/children with name/careNotes/allergies/likes = \"<script>alert('x')</script><img src=x onerror=alert(1)>\\\"'\" \u2192 201; stored byte-for-byte (true). Server-rendered HTML with the same payload in every text field: renderMoneyDoc(invoice) contains raw <script>/<img onerror>: false; newBookingProviderEmail (child name, allergies, medical, dietary, SEND, ticket, booker, listing, pass, location, sessions) raw: false. Front-end HTML sinks (dangerouslySetInnerHTML/innerHTML/document.write/srcDoc in 24 files, incl. safeguarding print, register print, AI chat, newsletter, invoice doc) audited separately \u2014 findings below. FRONT-END AUDIT (code, every dangerouslySetInnerHTML/innerHTML/document.write/srcDoc sink traced): safeguarding concern PDF + dossier, register print, invoice/PO doc, booking export, newsfeed/newsletter and all server email templates escape parent text in text positions \u2014 safe. THREE UNSAFE: (1) features/email/EmailApp.tsx:1956 addImageToEmail builds `<img \u2026 alt=\"${esc(im.childName)}\">` with a local esc (line 1944) that escapes & < > but NOT the double quote, then RichText sets it via el.innerHTML (line 142). A parent who names their child  x\"onload=\"alert(document.cookie)  gets script running in the OPERATOR's session the moment the operator adds that child's Moments photo to an email (no further click). (2) EmailApp.tsx:127 mdToHtml (used by Reply/Forward, line 2196) turns [text](url) into <a href=\"$2\"> after the same quote-less esc, and allows javascript: \u2014 an inbound email body (any sender, incl. a parent) injects attributes/handlers into the composer on Reply. (3) features/ai/AiApp.tsx:149 renders model output links as href=\"${href}\" (escape at :142 misses quotes) via dangerouslySetInnerHTML \u2014 parent-typed allergy/incident text is in the AI context (server/src/routes/ai.ts:206-212), so a prompt-injected link becomes XSS if the model repeats it. Plus low: server/src/lib/sweeps.ts:527 review-request email interpolates the booking's child names without esc (HTML/link injection into the family's own email).",
+        "notes": "Fix: make the front-end esc helpers escape \" and ' (or build alt/href via DOM attributes/React props), allow only https:// and / links in mdToHtml and AiApp, and wrap child/listing in esc() at sweeps.ts:527. Server-side stored text and server-rendered emails/invoice escape correctly (exercised). Front-end findings are from a code trace \u2014 not executed in a browser (Browser tools barred); the attribute-breakout mechanics are unambiguous. Also: features/timetable/printHtml.ts:9 esc maps > to &quot; and never escapes \" (operator data only today).",
         "at": "2026-09-12T13:07:42.334Z"
       },
       {
         "verdict": "pass",
-        "actual": "Re-checked after fix by running the real functions from the files with the payloads: EmailApp mdToHtml '[x](https://a.com\"onmouseover=\"alert(1))' → href with &quot; entities (inert), '[click](javascript:alert(1))' → left as plain text; '<img onerror>' → escaped. AiApp inlineHtml: quote breakout → &quot; inside href; javascript: not linked. addImageToEmail esc now escapes \" and ' for alt/src. sweeps.ts review email escapes child/listing names. timetable printHtml esc fixed (> was mapped to &quot;, quotes unescaped).",
-        "notes": "Fixed 12 Sept. Not clicked through in a browser — the escaping is exercised directly.",
+        "actual": "Re-checked after fix by running the real functions from the files with the payloads: EmailApp mdToHtml '[x](https://a.com\"onmouseover=\"alert(1))' \u2192 href with &quot; entities (inert), '[click](javascript:alert(1))' \u2192 left as plain text; '<img onerror>' \u2192 escaped. AiApp inlineHtml: quote breakout \u2192 &quot; inside href; javascript: not linked. addImageToEmail esc now escapes \" and ' for alt/src. sweeps.ts review email escapes child/listing names. timetable printHtml esc fixed (> was mapped to &quot;, quotes unescaped).",
+        "notes": "Fixed 12 Sept. Not clicked through in a browser \u2014 the escaping is exercised directly.",
         "at": "2026-09-12T14:56:07Z"
       },
       {
         "verdict": "pass",
-        "actual": "Parent POST /api/my/children with <script>/<img onerror>/quotes in name, care notes, allergies, likes → 201, stored byte-for-byte. Server renderers with the payload in every field: renderMoneyDoc(invoice) and newBookingProviderEmail contain no raw <script>/<img onerror>. Front-end sinks, run from the real source (functions extracted + transpiled): EmailApp mdToHtml quote-breakout link → &quot; inside href (inert), javascript: link left as text, <img> escaped; AiApp inlineHtml same; timetable printHtml esc → &lt;b&gt;&quot;&#39;&amp;.",
+        "actual": "Parent POST /api/my/children with <script>/<img onerror>/quotes in name, care notes, allergies, likes \u2192 201, stored byte-for-byte. Server renderers with the payload in every field: renderMoneyDoc(invoice) and newBookingProviderEmail contain no raw <script>/<img onerror>. Front-end sinks, run from the real source (functions extracted + transpiled): EmailApp mdToHtml quote-breakout link \u2192 &quot; inside href (inert), javascript: link left as text, <img> escaped; AiApp inlineHtml same; timetable printHtml esc \u2192 &lt;b&gt;&quot;&#39;&amp;.",
         "notes": "Not clicked through in a browser; PDFs are the same HTML renderers. Minor, not a fail: moneyDoc esc doesn't escape quotes, used in the provider's own logo src (operator-controlled).",
         "at": "2026-09-12T23:39:24Z"
       }
@@ -488,8 +498,8 @@
   "d27s10": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Real limiter chain in-process (fresh counters): POST /api/leads ×12 → 200×10, then 429, 429 (11th is 429). GET /api/providers?q=ab ×130 → 1–120 all 200, first 429 at #121, 121–130 all 429; body {\"error\":\"Too many requests — please wait a moment and try again.\"}, Retry-After 56s. A forged X-Forwarded-For after that → still 429. HQ reading its own lead list (GET /api/leads) isn't limited (202).",
-    "notes": "The Book-a-demo form was driven at its API, not through the public page. Limiter is in-memory per process — production must set TRUST_PROXY to the real hop count. The one live-API header probe failed this time (server reloading after an edit; /health 200 a minute later).",
+    "actual": "Real limiter chain in-process (fresh counters): POST /api/leads \u00d712 \u2192 200\u00d710, then 429, 429 (11th is 429). GET /api/providers?q=ab \u00d7130 \u2192 1\u2013120 all 200, first 429 at #121, 121\u2013130 all 429; body {\"error\":\"Too many requests \u2014 please wait a moment and try again.\"}, Retry-After 56s. A forged X-Forwarded-For after that \u2192 still 429. HQ reading its own lead list (GET /api/leads) isn't limited (202).",
+    "notes": "The Book-a-demo form was driven at its API, not through the public page. Limiter is in-memory per process \u2014 production must set TRUST_PROXY to the real hop count. The one live-API header probe failed this time (server reloading after an edit; /health 200 a minute later).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.out.txt",
     "at": "2026-09-12T23:51:34Z",
     "agent": "F",
@@ -497,8 +507,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Real index.ts limiter chain, in-process (fresh counters): POST /api/leads ×11 → 200,200,200,200,200,200,200,200,200,200,429 (11th 429); a 12th 429. GET /api/providers?q=ab ×130 → first 429 at request #121; statuses 1-120 all 200: true; 121-130 all 429: true; body {\"error\":\"Too many requests — please wait a moment and try again.\"}, Retry-After 59s. A request with a forged X-Forwarded-For after that → 429 (can't reset its own bucket). live API localhost:4000 GET /api/providers?q=ab → 200, RateLimit-Limit 120, Remaining 119.",
-        "notes": "Book-a-demo form was driven at its API (POST /api/leads), not through the public web page. The limiter is in-memory per process (lib/rateLimit.ts) — behind several instances each gets its own budget, and production must set TRUST_PROXY to the real hop count or every client shares the proxy's IP (or can spoof). Only 1 request sent to the live API (header check); 10 test leads created in-process and deleted.",
+        "actual": "Real index.ts limiter chain, in-process (fresh counters): POST /api/leads \u00d711 \u2192 200,200,200,200,200,200,200,200,200,200,429 (11th 429); a 12th 429. GET /api/providers?q=ab \u00d7130 \u2192 first 429 at request #121; statuses 1-120 all 200: true; 121-130 all 429: true; body {\"error\":\"Too many requests \u2014 please wait a moment and try again.\"}, Retry-After 59s. A request with a forged X-Forwarded-For after that \u2192 429 (can't reset its own bucket). live API localhost:4000 GET /api/providers?q=ab \u2192 200, RateLimit-Limit 120, Remaining 119.",
+        "notes": "Book-a-demo form was driven at its API (POST /api/leads), not through the public web page. The limiter is in-memory per process (lib/rateLimit.ts) \u2014 behind several instances each gets its own budget, and production must set TRUST_PROXY to the real hop count or every client shares the proxy's IP (or can spoof). Only 1 request sent to the live API (header check); 10 test leads created in-process and deleted.",
         "at": "2026-09-12T13:15:46.255Z"
       }
     ]
@@ -506,8 +516,8 @@
   "d27s1": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Real FalloffCard rendered headlessly with every API call rejecting the way lib/api does when the server is down (ApiError 0): shows \"Couldn't load providers — is the server running? Try again\", not 'No providers yet'. Staff dashboard (code): register/accident loads set loadFailed instead of an empty list (StaffDashApp.tsx:168-170), so it says it couldn't load rather than '0 children in'.",
-    "notes": "Still open, not a fail of this step: 28 other '.catch(() => setX([]))' spots read a failed load as empty (e.g. the dashboard New-emails card and the Email inbox show an empty inbox when the API is down) — worth a sweep.",
+    "actual": "Real FalloffCard rendered headlessly with every API call rejecting the way lib/api does when the server is down (ApiError 0): shows \"Couldn't load providers \u2014 is the server running? Try again\", not 'No providers yet'. Staff dashboard (code): register/accident loads set loadFailed instead of an empty list (StaffDashApp.tsx:168-170), so it says it couldn't load rather than '0 children in'.",
+    "notes": "Still open, not a fail of this step: 28 other '.catch(() => setX([]))' spots read a failed load as empty (e.g. the dashboard New-emails card and the Email inbox show an empty inbox when the API is down) \u2014 worth a sweep.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/entry.tsx (+ build.mjs, stubs); /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/ssr.out.json; features/dashboard/StaffDashApp.tsx:168-170",
     "at": "2026-09-13T00:04:02Z",
     "agent": "F",
@@ -515,20 +525,20 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "Rendered the REAL view components headlessly (esbuild bundle + react-dom/server, effects run synchronously) with every API call rejecting exactly as lib/api does when fetch fails (ApiError 0 \"Couldn't reach the server … Is the API running?\"). CLEAR ERROR shown: Families/customers, Invoices, First aid, Medication, Dashboard, Listings, parent My bookings, parent My children. NOT CLEAR: (1) HQ Analytics → Fall-off card renders \"No providers yet.\" — the load failure is swallowed (features/platform/FalloffCard.tsx:45 .catch(() => setProviders([]))), so a dead API reads as an empty platform. (2) Staff dashboard shows the error banner at the top but every card below renders an all-clear built from the failed calls: \"You're not on the rota today · Enjoy your day off 🌿\", \"0 Children in\", \"No flagged children in. 👍\" (StaffDashApp.tsx:165/167 .catch(() => setRegs([])) / setAccidents([])). Bookings and Registers load via async/await + Promise.all, which this headless harness can't settle; their code does surface errors (features/bookings/store.ts:128-132 → BookingsApp error banner; RegistersApp.tsx:869-881 loadFailed \"couldn't load\" state). No white screens: app/error.tsx and global-error.tsx exist.",
-        "notes": "37 `.catch(() => setX([]|null|{}))` sites across features turn a failed load into an empty list with no message — worth a sweep; the two above are the ones a user would read as real data (HQ: 'no providers'; staff: 'no flagged children / day off'). Fix: set an error flag in those catches and render 'Couldn't load' instead of the empty state. Not the literal 'kill the API' — the API the user runs wasn't stopped (not allowed); the failure mode was injected at the same point lib/api throws.",
+        "actual": "Rendered the REAL view components headlessly (esbuild bundle + react-dom/server, effects run synchronously) with every API call rejecting exactly as lib/api does when fetch fails (ApiError 0 \"Couldn't reach the server \u2026 Is the API running?\"). CLEAR ERROR shown: Families/customers, Invoices, First aid, Medication, Dashboard, Listings, parent My bookings, parent My children. NOT CLEAR: (1) HQ Analytics \u2192 Fall-off card renders \"No providers yet.\" \u2014 the load failure is swallowed (features/platform/FalloffCard.tsx:45 .catch(() => setProviders([]))), so a dead API reads as an empty platform. (2) Staff dashboard shows the error banner at the top but every card below renders an all-clear built from the failed calls: \"You're not on the rota today \u00b7 Enjoy your day off \ud83c\udf3f\", \"0 Children in\", \"No flagged children in. \ud83d\udc4d\" (StaffDashApp.tsx:165/167 .catch(() => setRegs([])) / setAccidents([])). Bookings and Registers load via async/await + Promise.all, which this headless harness can't settle; their code does surface errors (features/bookings/store.ts:128-132 \u2192 BookingsApp error banner; RegistersApp.tsx:869-881 loadFailed \"couldn't load\" state). No white screens: app/error.tsx and global-error.tsx exist.",
+        "notes": "37 `.catch(() => setX([]|null|{}))` sites across features turn a failed load into an empty list with no message \u2014 worth a sweep; the two above are the ones a user would read as real data (HQ: 'no providers'; staff: 'no flagged children / day off'). Fix: set an error flag in those catches and render 'Couldn't load' instead of the empty state. Not the literal 'kill the API' \u2014 the API the user runs wasn't stopped (not allowed); the failure mode was injected at the same point lib/api throws.",
         "at": "2026-09-12T13:16:36.318Z"
       },
       {
         "verdict": "pass",
-        "actual": "Fixed (code-level): the two screens that read a dead API as real data now say it didn't load — HQ Analytics' Fall-off card shows 'Couldn't load providers — is the server running? Try again' instead of 'No providers yet'; the staff dashboard's register/accident loads no longer fall back to empty lists, so it shows 'Couldn't load' in the watch list and '…' on the counts instead of '0 children in' / 'No flagged children'.",
-        "notes": "Fixed 12 Sept: features/platform/FalloffCard.tsx; features/dashboard/StaffDashApp.tsx. Still open: ~35 other .catch(() => setX([])) spots across features read a failed load as empty — worth a sweep.",
+        "actual": "Fixed (code-level): the two screens that read a dead API as real data now say it didn't load \u2014 HQ Analytics' Fall-off card shows 'Couldn't load providers \u2014 is the server running? Try again' instead of 'No providers yet'; the staff dashboard's register/accident loads no longer fall back to empty lists, so it shows 'Couldn't load' in the watch list and '\u2026' on the counts instead of '0 children in' / 'No flagged children'.",
+        "notes": "Fixed 12 Sept: features/platform/FalloffCard.tsx; features/dashboard/StaffDashApp.tsx. Still open: ~35 other .catch(() => setX([])) spots across features read a failed load as empty \u2014 worth a sweep.",
         "at": "2026-09-12T17:44:12Z"
       },
       {
         "verdict": "pass",
-        "actual": "Code re-checked against the 12 Sept fix: HQ Analytics Fall-off card on a dead API shows 'Couldn't load providers — is the server running? Try again' (FalloffCard.tsx load().catch sets failed) — headless render result in d28s10's evidence; staff dashboard register/accident loads set loadFailed instead of an empty list (StaffDashApp.tsx:168-170).",
-        "notes": "Still open, not a fail of this step: 28 other '.catch(() => setX([]))' spots read a failed load as empty (e.g. the Email inbox and the dashboard New-emails card show an empty inbox if the API is down) — worth a sweep.",
+        "actual": "Code re-checked against the 12 Sept fix: HQ Analytics Fall-off card on a dead API shows 'Couldn't load providers \u2014 is the server running? Try again' (FalloffCard.tsx load().catch sets failed) \u2014 headless render result in d28s10's evidence; staff dashboard register/accident loads set loadFailed instead of an empty list (StaffDashApp.tsx:168-170).",
+        "notes": "Still open, not a fail of this step: 28 other '.catch(() => setX([]))' spots read a failed load as empty (e.g. the Email inbox and the dashboard New-emails card show an empty inbox if the API is down) \u2014 worth a sweep.",
         "at": "2026-09-12T23:51:54Z"
       }
     ]
@@ -545,13 +555,13 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "Brand-new throwaway tenant + parent; the REAL views rendered headlessly with every GET they make answered by the REAL routes in-process for that empty account (iterated until no new calls). Helpful empty states: Families (\"Nobody here yet — people appear automatically with their first booking…\"), Invoices (\"No invoices yet …\" + £0.00 tiles), First aid (\"No first aid records — hopefully it stays that way.\"), Medication (\"No medications on file.\"), Listings (\"No listings yet — create your first one…\"), parent My bookings (\"No bookings yet — browse activities to get started.\"), parent My children (\"No children saved yet…\"), Bookings (\"No bookings match this view.\", all filter counts 0). No NaN/undefined/Invalid Date anywhere. FAILS on the brand-new Dashboard: (1) the \"📬 New emails 4\" card lists four fabricated enquiries — \"Sarah Thompson · Summer camp availability?\", \"James Patel · After-school football\", \"Tom Harris · Two children — any spaces?\" — although GET /api/emails/messages returned [] (features/dashboard/CommsCards.tsx:197 shows DEMO_INBOX whenever the real inbox is empty; EmailApp.tsx:1968 does the same in the Email inbox, even on error). (2) the New bookings tile's subtitle renders the raw i18n key \"dashboard.inLast5Weeks\" (DashboardApp.tsx:528; key missing from lib/i18n/messages/areas/dashboard.ts).",
-        "notes": "Fix: drop the DEMO_INBOX fallback in live accounts (show 'No emails yet'), add dashboard.inLast5Weeks to the catalogue. Registers' empty state not captured (Promise.all load). Also surfaced while loading the empty dashboard: Firestore FAILED_PRECONDITION — no composite index (tenantId, at desc) on emailMessages; the emails route logs it and falls back to reading EVERY stored message per inbox load (server/src/routes/emails.ts) — create the index.",
+        "actual": "Brand-new throwaway tenant + parent; the REAL views rendered headlessly with every GET they make answered by the REAL routes in-process for that empty account (iterated until no new calls). Helpful empty states: Families (\"Nobody here yet \u2014 people appear automatically with their first booking\u2026\"), Invoices (\"No invoices yet \u2026\" + \u00a30.00 tiles), First aid (\"No first aid records \u2014 hopefully it stays that way.\"), Medication (\"No medications on file.\"), Listings (\"No listings yet \u2014 create your first one\u2026\"), parent My bookings (\"No bookings yet \u2014 browse activities to get started.\"), parent My children (\"No children saved yet\u2026\"), Bookings (\"No bookings match this view.\", all filter counts 0). No NaN/undefined/Invalid Date anywhere. FAILS on the brand-new Dashboard: (1) the \"\ud83d\udcec New emails 4\" card lists four fabricated enquiries \u2014 \"Sarah Thompson \u00b7 Summer camp availability?\", \"James Patel \u00b7 After-school football\", \"Tom Harris \u00b7 Two children \u2014 any spaces?\" \u2014 although GET /api/emails/messages returned [] (features/dashboard/CommsCards.tsx:197 shows DEMO_INBOX whenever the real inbox is empty; EmailApp.tsx:1968 does the same in the Email inbox, even on error). (2) the New bookings tile's subtitle renders the raw i18n key \"dashboard.inLast5Weeks\" (DashboardApp.tsx:528; key missing from lib/i18n/messages/areas/dashboard.ts).",
+        "notes": "Fix: drop the DEMO_INBOX fallback in live accounts (show 'No emails yet'), add dashboard.inLast5Weeks to the catalogue. Registers' empty state not captured (Promise.all load). Also surfaced while loading the empty dashboard: Firestore FAILED_PRECONDITION \u2014 no composite index (tenantId, at desc) on emailMessages; the emails route logs it and falls back to reading EVERY stored message per inbox load (server/src/routes/emails.ts) \u2014 create the index.",
         "at": "2026-09-12T13:16:36.328Z"
       },
       {
         "verdict": "pass",
-        "actual": "Fixed (code-level): the brand-new Dashboard's New emails card and the Email inbox no longer fall back to four sample enquiries — a real empty inbox shows empty; the samples appear only in the demo/tour (isDemoMode). The New bookings tile's subtitle key dashboard.inLast5Weeks now exists in all 11 languages. The (tenantId, at desc) index on emailMessages is added to firestore.indexes.json — it takes effect when the indexes are deployed (firebase deploy --only firestore:indexes).",
+        "actual": "Fixed (code-level): the brand-new Dashboard's New emails card and the Email inbox no longer fall back to four sample enquiries \u2014 a real empty inbox shows empty; the samples appear only in the demo/tour (isDemoMode). The New bookings tile's subtitle key dashboard.inLast5Weeks now exists in all 11 languages. The (tenantId, at desc) index on emailMessages is added to firestore.indexes.json \u2014 it takes effect when the indexes are deployed (firebase deploy --only firestore:indexes).",
         "notes": "Fixed 12 Sept. Index still needs deploying (Amir / firebase deploy). Not re-rendered headlessly.",
         "at": "2026-09-12T16:26:58Z"
       }
@@ -560,8 +570,8 @@
   "d27s3": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Not asked — needs Amir. Repo re-checked: still no monitoring/alerting/error-reporting integration (no Sentry/Datadog/uptime config in server/ or the Next app); app/error.tsx only logs to the console; GET /health exists (index.ts) for an uptime monitor to poll but nothing is wired to it.",
-    "notes": "needsBackend. On current evidence the honest 07:00-Monday answer is still 'a customer will call' — confirm with Amir whether hosting-level alerts exist outside the repo (backlog b34).",
+    "actual": "Not asked \u2014 needs Amir. Repo re-checked: still no monitoring/alerting/error-reporting integration (no Sentry/Datadog/uptime config in server/ or the Next app); app/error.tsx only logs to the console; GET /health exists (index.ts) for an uptime monitor to poll but nothing is wired to it.",
+    "notes": "needsBackend. On current evidence the honest 07:00-Monday answer is still 'a customer will call' \u2014 confirm with Amir whether hosting-level alerts exist outside the repo (backlog b34).",
     "evidence": "server/src/index.ts (/health); app/error.tsx; lib/testing/backlog.ts b34",
     "at": "2026-09-12T23:51:32Z",
     "agent": "F",
@@ -569,8 +579,8 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Not asked — needs Amir. From the repo: no monitoring/alerting/error-reporting integration exists (no Sentry/Datadog/uptime config anywhere in server/ or the Next app); app/error.tsx only console.error()s; the API has GET /health (index.ts:121) that an uptime monitor could poll, but nothing is wired to it. Backlog b34 lists monitoring as still owed.",
-        "notes": "needsBackend. On current evidence the honest answer to '07:00 Monday' is 'a customer will call' — confirm with Amir whether hosting-level alerts exist outside the repo.",
+        "actual": "Not asked \u2014 needs Amir. From the repo: no monitoring/alerting/error-reporting integration exists (no Sentry/Datadog/uptime config anywhere in server/ or the Next app); app/error.tsx only console.error()s; the API has GET /health (index.ts:121) that an uptime monitor could poll, but nothing is wired to it. Backlog b34 lists monitoring as still owed.",
+        "notes": "needsBackend. On current evidence the honest answer to '07:00 Monday' is 'a customer will call' \u2014 confirm with Amir whether hosting-level alerts exist outside the repo.",
         "at": "2026-09-12T13:16:36.329Z"
       }
     ]
@@ -578,7 +588,7 @@
   "d27s4": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Not possible here — no staging environment (backlog b32) and the restore is Amir's to do. DEPLOY.md still has no backup / restore / PITR section; nothing in the repo schedules Firestore exports.",
+    "actual": "Not possible here \u2014 no staging environment (backlog b32) and the restore is Amir's to do. DEPLOY.md still has no backup / restore / PITR section; nothing in the repo schedules Firestore exports.",
     "notes": "needsBackend. Ask Amir to enable Firestore PITR or scheduled exports and rehearse a timed restore on staging.",
     "evidence": "DEPLOY.md; lib/testing/backlog.ts b32",
     "at": "2026-09-12T23:51:32Z",
@@ -587,7 +597,7 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Not possible here — there is no staging environment (backlog b32) and the restore is Amir's to perform. DEPLOY.md has no backup/restore/PITR section; nothing in the repo schedules Firestore exports.",
+        "actual": "Not possible here \u2014 there is no staging environment (backlog b32) and the restore is Amir's to perform. DEPLOY.md has no backup/restore/PITR section; nothing in the repo schedules Firestore exports.",
         "notes": "needsBackend. Ask Amir to enable Firestore PITR or scheduled exports and rehearse a restore on staging, timing it.",
         "at": "2026-09-12T13:16:36.329Z"
       }
@@ -596,8 +606,8 @@
   "d27s5": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Real ukNow() across the change (BST ends 01:00 UTC Sun 25 Oct): 24 Oct 07:00Z → 08:00 UK; 25 Oct 00:30Z and 01:30Z → both 01:30 UK (the repeated hour); 25 Oct 08:00Z → 08:00; 26 Oct 08:00Z → 08:00; 26 Oct 00:10Z → 00:10. Medication due 08:00 on 26 Oct (sweeps.ts window, real ukNow/toMinutes): 07:54Z no, 07:55Z yes, 08:14Z yes, 08:15Z no, 06:55Z (an hour early) no; on 24 Oct (BST) 06:55Z = 07:55 UK yes. REAL /api/registers for a throwaway tenant: ?date=2026-10-24 → 200 09:00–15:00, 25 Oct → 10:00–12:00, 26 Oct → 08:00–17:30 as entered. Server 'today' is now ukToday(): 24 Oct 23:30Z → 2026-10-25 (the BST midnight-to-1am gap from b35 is closed — registers.ts todayIso = ukToday).",
-    "notes": "Instants injected into the real functions — not a device-clock test in a browser (can't sign in to one here).",
+    "actual": "Real ukNow() across the change (BST ends 01:00 UTC Sun 25 Oct): 24 Oct 07:00Z \u2192 08:00 UK; 25 Oct 00:30Z and 01:30Z \u2192 both 01:30 UK (the repeated hour); 25 Oct 08:00Z \u2192 08:00; 26 Oct 08:00Z \u2192 08:00; 26 Oct 00:10Z \u2192 00:10. Medication due 08:00 on 26 Oct (sweeps.ts window, real ukNow/toMinutes): 07:54Z no, 07:55Z yes, 08:14Z yes, 08:15Z no, 06:55Z (an hour early) no; on 24 Oct (BST) 06:55Z = 07:55 UK yes. REAL /api/registers for a throwaway tenant: ?date=2026-10-24 \u2192 200 09:00\u201315:00, 25 Oct \u2192 10:00\u201312:00, 26 Oct \u2192 08:00\u201317:30 as entered. Server 'today' is now ukToday(): 24 Oct 23:30Z \u2192 2026-10-25 (the BST midnight-to-1am gap from b35 is closed \u2014 registers.ts todayIso = ukToday).",
+    "notes": "Instants injected into the real functions \u2014 not a device-clock test in a browser (can't sign in to one here).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.out.txt",
     "at": "2026-09-12T23:51:32Z",
     "agent": "F",
@@ -605,8 +615,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Real lib/scheduler ukNow() across the change (BST ends 01:00 UTC Sun 25 Oct): 24 Oct 07:00Z→08:00 UK; 25 Oct 00:30Z and 01:30Z→both 01:30 UK (the repeated hour); 25 Oct 08:00Z→08:00; 26 Oct 08:00Z→08:00; 26 Oct 00:10Z→26 Oct 00:10. A medication 'at 08:00' on 26 Oct (sweeps.ts medicationDue window, real ukNow/toMinutes) reminds 07:55–08:14 UK, not an hour out (on 24 Oct BST: 06:55Z = 07:55 UK). REAL registers route in-process for a throwaway tenant with sessions 24/25/26 Oct: GET /api/registers?date=2026-10-26 → 200, the 26 Oct session 08:00–17:30 as entered; 25 Oct 10:00–12:00; 24 Oct 09:00–15:00 — right day, right times. Server default 'today' (toISOString().slice(0,10)) equals the UK date on 26 Oct (GMT).",
-        "notes": "The day AFTER the change is correct. Still open (b35, not this step's date): during BST, routes that default 'today' to the UTC date (registers.ts:66 todayIso, dashboard etc.) show YESTERDAY between 00:00 and 01:00 UK — proven: 2026-10-24T23:30Z → server '2026-10-24' vs UK '2026-10-25'. Not a device-clock test in a browser (barred); instants injected into the real functions instead.",
+        "actual": "Real lib/scheduler ukNow() across the change (BST ends 01:00 UTC Sun 25 Oct): 24 Oct 07:00Z\u219208:00 UK; 25 Oct 00:30Z and 01:30Z\u2192both 01:30 UK (the repeated hour); 25 Oct 08:00Z\u219208:00; 26 Oct 08:00Z\u219208:00; 26 Oct 00:10Z\u219226 Oct 00:10. A medication 'at 08:00' on 26 Oct (sweeps.ts medicationDue window, real ukNow/toMinutes) reminds 07:55\u201308:14 UK, not an hour out (on 24 Oct BST: 06:55Z = 07:55 UK). REAL registers route in-process for a throwaway tenant with sessions 24/25/26 Oct: GET /api/registers?date=2026-10-26 \u2192 200, the 26 Oct session 08:00\u201317:30 as entered; 25 Oct 10:00\u201312:00; 24 Oct 09:00\u201315:00 \u2014 right day, right times. Server default 'today' (toISOString().slice(0,10)) equals the UK date on 26 Oct (GMT).",
+        "notes": "The day AFTER the change is correct. Still open (b35, not this step's date): during BST, routes that default 'today' to the UTC date (registers.ts:66 todayIso, dashboard etc.) show YESTERDAY between 00:00 and 01:00 UK \u2014 proven: 2026-10-24T23:30Z \u2192 server '2026-10-24' vs UK '2026-10-25'. Not a device-clock test in a browser (barred); instants injected into the real functions instead.",
         "at": "2026-09-12T13:16:36.329Z"
       }
     ]
@@ -614,7 +624,7 @@
   "d27s6": {
     "verdict": "pass",
     "method": "api",
-    "actual": "No 'payment plan'/instalment feature exists; the reminders that do exist were checked with the real ukNow() and the exact sweeps.ts expressions (verified verbatim in the source): scheduled email sendAt 2026-10-26T09:00 → not at 08:59Z, fires at 09:00Z (= 09:00 UK, GMT); a BST one 2026-10-24T09:00 → not at 07:59Z, fires 08:00Z (= 09:00 UK). Payment-due reminder (24h lead): invoice due 27 Oct → closed at 25 Oct 23:59Z, opens 26 Oct 00:00Z (= 00:00 UK), shut again at 27 Oct 00:00; due 26 Oct → opens 24 Oct 23:00Z (= 00:00 UK Sun 25 Oct, still BST), not at 22:59Z. None an hour out either side of 25 Oct.",
+    "actual": "No 'payment plan'/instalment feature exists; the reminders that do exist were checked with the real ukNow() and the exact sweeps.ts expressions (verified verbatim in the source): scheduled email sendAt 2026-10-26T09:00 \u2192 not at 08:59Z, fires at 09:00Z (= 09:00 UK, GMT); a BST one 2026-10-24T09:00 \u2192 not at 07:59Z, fires 08:00Z (= 09:00 UK). Payment-due reminder (24h lead): invoice due 27 Oct \u2192 closed at 25 Oct 23:59Z, opens 26 Oct 00:00Z (= 00:00 UK), shut again at 27 Oct 00:00; due 26 Oct \u2192 opens 24 Oct 23:00Z (= 00:00 UK Sun 25 Oct, still BST), not at 22:59Z. None an hour out either side of 25 Oct.",
     "notes": "The sweeps themselves weren't run (they'd act on real data); atAbs is a verbatim copy (not exported). If payment plans are built, schedule them in UK wall-clock the same way.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.out.txt",
     "at": "2026-09-12T23:51:33Z",
@@ -623,8 +633,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "There is no 'payment plan' / instalment feature in the code (no instalment schedule anywhere in features/ or server/src) — the reminders that exist were tested instead, using the real ukNow() and the exact comparisons from lib/sweeps.ts: scheduled email sendAt '2026-10-26T09:00' → not at 08:59Z, fires at 09:00Z (= 09:00 UK); a BST one '2026-10-24T09:00' fires at 08:00Z (= 09:00 UK). Payment-due reminder (paymentDueReminders, 24h lead): invoice due 27 Oct → window opens exactly 00:00 UK 26 Oct and closes at midnight; invoice due 26 Oct → opens 00:00 UK Sun 25 Oct (23:00Z Sat, still BST). Medication-due and calendar sweeps use the same ukNow(). None are an hour out either side of 25 Oct.",
-        "notes": "Sweeps themselves were NOT run (they'd act on real data); their decision expressions were exercised with the real clock function. 'Payment plans' don't exist yet — if built, schedule them in UK wall-clock like these.",
+        "actual": "There is no 'payment plan' / instalment feature in the code (no instalment schedule anywhere in features/ or server/src) \u2014 the reminders that exist were tested instead, using the real ukNow() and the exact comparisons from lib/sweeps.ts: scheduled email sendAt '2026-10-26T09:00' \u2192 not at 08:59Z, fires at 09:00Z (= 09:00 UK); a BST one '2026-10-24T09:00' fires at 08:00Z (= 09:00 UK). Payment-due reminder (paymentDueReminders, 24h lead): invoice due 27 Oct \u2192 window opens exactly 00:00 UK 26 Oct and closes at midnight; invoice due 26 Oct \u2192 opens 00:00 UK Sun 25 Oct (23:00Z Sat, still BST). Medication-due and calendar sweeps use the same ukNow(). None are an hour out either side of 25 Oct.",
+        "notes": "Sweeps themselves were NOT run (they'd act on real data); their decision expressions were exercised with the real clock function. 'Payment plans' don't exist yet \u2014 if built, schedule them in UK wall-clock like these.",
         "at": "2026-09-12T13:16:36.329Z"
       }
     ]
@@ -632,16 +642,16 @@
   "d27s7": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Not exercised — needs a real browser driven by keyboard only (not available in this run).",
+    "actual": "Not exercised \u2014 needs a real browser driven by keyboard only (not available in this run).",
     "notes": "Run on a device: Tab through /book/{id} checkout and the staff register; watch for div-with-onClick controls Tab skips and modals that don't close on Escape / trap focus.",
-    "evidence": "—",
+    "evidence": "\u2014",
     "at": "2026-09-12T23:51:33Z",
     "agent": "F",
     "retest": true,
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Not exercised — needs a real browser driven by keyboard (Browser tools barred in this run). Code signal only: across features/components/app, 224 single-line <div|span|li|tr|td|img …onClick> handlers and only 2 of them carry role/tabIndex; in RegistersApp the 12 are modal backdrops/'stopPropagation' wrappers (register actions themselves are <button>s). Whether modals close on Escape and trap focus was not checked.",
+        "actual": "Not exercised \u2014 needs a real browser driven by keyboard (Browser tools barred in this run). Code signal only: across features/components/app, 224 single-line <div|span|li|tr|td|img \u2026onClick> handlers and only 2 of them carry role/tabIndex; in RegistersApp the 12 are modal backdrops/'stopPropagation' wrappers (register actions themselves are <button>s). Whether modals close on Escape and trap focus was not checked.",
         "notes": "Run on a real device: Tab through /book/{id} checkout and the staff register; watch for div-with-onClick controls that Tab skips.",
         "at": "2026-09-12T13:16:36.329Z"
       }
@@ -650,16 +660,16 @@
   "d27s8": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Not exercised — needs VoiceOver on a real device.",
+    "actual": "Not exercised \u2014 needs VoiceOver on a real device.",
     "notes": "Run manually on the booking page and the register.",
-    "evidence": "—",
+    "evidence": "\u2014",
     "at": "2026-09-12T23:51:33Z",
     "agent": "F",
     "retest": true,
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Not exercised — needs VoiceOver on a real device.",
+        "actual": "Not exercised \u2014 needs VoiceOver on a real device.",
         "notes": "Run manually on the booking page and register.",
         "at": "2026-09-12T13:16:36.329Z"
       }
@@ -668,16 +678,16 @@
   "d27s9": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Not exercised — needs Safari, Firefox, Edge and an older Android phone.",
+    "actual": "Not exercised \u2014 needs Safari, Firefox, Edge and an older Android phone.",
     "notes": "Run manually; every check in this range is headless/in-process.",
-    "evidence": "—",
+    "evidence": "\u2014",
     "at": "2026-09-12T23:51:33Z",
     "agent": "F",
     "retest": true,
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Not exercised — needs Safari, Firefox, Edge and an older Android phone.",
+        "actual": "Not exercised \u2014 needs Safari, Firefox, Edge and an older Android phone.",
         "notes": "Run manually; every step so far in this agent's share was headless/in-process.",
         "at": "2026-09-12T13:16:36.330Z"
       }
@@ -686,7 +696,7 @@
   "d28s4": {
     "verdict": "pass",
     "method": "api",
-    "actual": "5 non-HQ roles (freelancer, company, staff, franchise, parent) × 10 platform routes (/api/platform/providers, /api/tenants, /api/platform/accounts, /analytics, /subscriptions, /overview, /leads, /at-risk, POST /impersonate, PATCH /providers/<id>/features): all 50 → 403. An operator adding x-act-as:<HQ uid> → still 403 on /api/platform/providers and /api/tenants. The refused features PATCH wrote nothing. Positive control: HQ → /api/platform/providers 200, /api/tenants 200.",
+    "actual": "5 non-HQ roles (freelancer, company, staff, franchise, parent) \u00d7 10 platform routes (/api/platform/providers, /api/tenants, /api/platform/accounts, /analytics, /subscriptions, /overview, /leads, /at-risk, POST /impersonate, PATCH /providers/<id>/features): all 50 \u2192 403. An operator adding x-act-as:<HQ uid> \u2192 still 403 on /api/platform/providers and /api/tenants. The refused features PATCH wrote nothing. Positive control: HQ \u2192 /api/platform/providers 200, /api/tenants 200.",
     "notes": "",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.out.txt",
     "at": "2026-09-12T23:51:53Z",
@@ -695,7 +705,7 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "5 non-HQ roles (freelancer, company, staff, franchise, parent) × 10 platform routes (/api/platform/providers, /api/tenants, /api/platform/accounts, /api/platform/analytics, /api/platform/subscriptions, /api/platform/overview, /api/platform/leads, /api/platform/impersonate, /api/platform/providers/<B>/features, /api/platform/at-risk) through the real attachRole: all 50 → 403. An operator adding x-act-as:<HQ uid> is still refused (operator+x-act-as:HQ /api/platform/providers 403, operator+x-act-as:HQ /api/tenants 403) — impersonation is honoured only for a real platform account. Positive control: HQ token → /api/platform/providers 200, /api/tenants 200. The refused PATCH …/features wrote nothing (B's library doc exists: false).",
+        "actual": "5 non-HQ roles (freelancer, company, staff, franchise, parent) \u00d7 10 platform routes (/api/platform/providers, /api/tenants, /api/platform/accounts, /api/platform/analytics, /api/platform/subscriptions, /api/platform/overview, /api/platform/leads, /api/platform/impersonate, /api/platform/providers/<B>/features, /api/platform/at-risk) through the real attachRole: all 50 \u2192 403. An operator adding x-act-as:<HQ uid> is still refused (operator+x-act-as:HQ /api/platform/providers 403, operator+x-act-as:HQ /api/tenants 403) \u2014 impersonation is honoured only for a real platform account. Positive control: HQ token \u2192 /api/platform/providers 200, /api/tenants 200. The refused PATCH \u2026/features wrote nothing (B's library doc exists: false).",
         "notes": "",
         "at": "2026-09-12T13:19:23.210Z"
       }
@@ -704,7 +714,7 @@
   "d28s3": {
     "verdict": "pass",
     "method": "api",
-    "actual": "HQ GET /api/me → platform, tenant null. POST /api/platform/impersonate {operator A} → 200 (1 impersonationLog row). With x-act-as (what lib/api sends while viewing as): /api/me → freelancer, tenant A; /api/bookings → 200 [ZZA1] (A's only); /api/account email = A's. Exit (header gone) → /api/me platform, tenant null. x-act-as for a uid that doesn't exist → stays platform. A company operator sending x-act-as → still itself (its own tenant B). Client side (code): setActAs dispatches aos:actas and PortalGuard clears its /api/me cache on it; the view-as bar render is in d26s11.",
+    "actual": "HQ GET /api/me \u2192 platform, tenant null. POST /api/platform/impersonate {operator A} \u2192 200 (1 impersonationLog row). With x-act-as (what lib/api sends while viewing as): /api/me \u2192 freelancer, tenant A; /api/bookings \u2192 200 [ZZA1] (A's only); /api/account email = A's. Exit (header gone) \u2192 /api/me platform, tenant null. x-act-as for a uid that doesn't exist \u2192 stays platform. A company operator sending x-act-as \u2192 still itself (its own tenant B). Client side (code): setActAs dispatches aos:actas and PortalGuard clears its /api/me cache on it; the view-as bar render is in d26s11.",
     "notes": "The Exit click itself wasn't performed (no browser); its two effects were checked separately. Also fixed tonight: HQ viewing-as can no longer 'sign out all devices' for the target (see d26s4).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.out.txt",
     "at": "2026-09-12T23:51:53Z",
@@ -713,8 +723,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "HQ /api/me → role platform, tenant null. POST /api/platform/impersonate {opA} → 200 (impersonationLog rows for this HQ: 1). With x-act-as:opA (what lib/api sends while viewing-as): /api/me → role freelancer, tenant A; /api/bookings → 200 refs [ZZA1] (A's only); /api/account email = opA's (true). Exit (header gone) → /api/me role platform, tenant null; /api/bookings 200 (HQ scope). x-act-as for a uid that doesn't exist → stays platform. A company operator sending x-act-as:opA → still itself (tenant B). UI side (real PortalGuard + ImpersonationBar headless render, see d26s11): view-as renders the target portal with the 'You're viewing as … Exit to HQ' bar; Exit = setActAs(null) (lib/api.ts:17-20 removes aos.actAs and fires aos:actas → PortalGuard.clearMeCache, the b27 fix) then router.push('/platform/…') (ImpersonationBar.tsx:24).",
-        "notes": "The Exit click itself wasn't performed (no browser); its two effects were verified separately — header removal restores the HQ identity server-side, and the cache-clear listener is in PortalGuard.tsx:55.",
+        "actual": "HQ /api/me \u2192 role platform, tenant null. POST /api/platform/impersonate {opA} \u2192 200 (impersonationLog rows for this HQ: 1). With x-act-as:opA (what lib/api sends while viewing-as): /api/me \u2192 role freelancer, tenant A; /api/bookings \u2192 200 refs [ZZA1] (A's only); /api/account email = opA's (true). Exit (header gone) \u2192 /api/me role platform, tenant null; /api/bookings 200 (HQ scope). x-act-as for a uid that doesn't exist \u2192 stays platform. A company operator sending x-act-as:opA \u2192 still itself (tenant B). UI side (real PortalGuard + ImpersonationBar headless render, see d26s11): view-as renders the target portal with the 'You're viewing as \u2026 Exit to HQ' bar; Exit = setActAs(null) (lib/api.ts:17-20 removes aos.actAs and fires aos:actas \u2192 PortalGuard.clearMeCache, the b27 fix) then router.push('/platform/\u2026') (ImpersonationBar.tsx:24).",
+        "notes": "The Exit click itself wasn't performed (no browser); its two effects were verified separately \u2014 header removal restores the HQ identity server-side, and the cache-clear listener is in PortalGuard.tsx:55.",
         "at": "2026-09-12T13:19:28.895Z"
       }
     ]
@@ -722,8 +732,8 @@
   "d28s1": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Two throwaway providers: A freelancer £29 active; B company/growth £69 trialing with 1 staff + 1 franchise. HQ /api/platform/providers: A freelancer/freelancer/£29/active, B company/company/growth/£69/trialing staffCount 2. /api/platform/subscriptions: same for both rows. Totals against a direct read of the tenants collection: providers 53 = direct 53; subscriptions 52 and analytics 52 (read seconds apart while other agents create/delete zz-selftest tenants). MRR: subscriptions £764 = analytics £764 = independent sum £764. GET /api/tenants returned 48 = 53 minus the 5 tenants with no createdAt (orderBy drops them) — all other agents' throwaway tenants, 0 real ones.",
-    "notes": "Latent, not a fail: GET /api/tenants (tenants.ts:14 orderBy createdAt) silently drops a tenant without createdAt — no screen calls it today; sort in memory if one ever does. analytics.summary.churnRate is an all-time share; the Fall-off card's monthly % is the true rate (d28s10). Firebase getUser stubbed (owner-email lookup).",
+    "actual": "Two throwaway providers: A freelancer \u00a329 active; B company/growth \u00a369 trialing with 1 staff + 1 franchise. HQ /api/platform/providers: A freelancer/freelancer/\u00a329/active, B company/company/growth/\u00a369/trialing staffCount 2. /api/platform/subscriptions: same for both rows. Totals against a direct read of the tenants collection: providers 53 = direct 53; subscriptions 52 and analytics 52 (read seconds apart while other agents create/delete zz-selftest tenants). MRR: subscriptions \u00a3764 = analytics \u00a3764 = independent sum \u00a3764. GET /api/tenants returned 48 = 53 minus the 5 tenants with no createdAt (orderBy drops them) \u2014 all other agents' throwaway tenants, 0 real ones.",
+    "notes": "Latent, not a fail: GET /api/tenants (tenants.ts:14 orderBy createdAt) silently drops a tenant without createdAt \u2014 no screen calls it today; sort in memory if one ever does. analytics.summary.churnRate is an all-time share; the Fall-off card's monthly % is the true rate (d28s10). Firebase getUser stubbed (owner-email lookup).",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d2728.out.txt",
     "at": "2026-09-13T00:04:03Z",
     "agent": "F",
@@ -731,8 +741,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Created 2 throwaway providers (A freelancer £29 active; B company/growth £69 trialing, 1 staff + 1 franchise). HQ /api/platform/providers: A freelancer/£29, B company/growth/£69. /api/platform/subscriptions: A freelancer £29 active; B company £69 trialing staffCount 2. Totals vs a direct read of the tenants collection (44 docs): providers list 44, subscriptions total 44, analytics totalProviders 44, GET /api/tenants 43 — the one missing is another agent's transient test tenant (zz-selftest-E-…-HO) seeded without createdAt; all 41 real tenants carry createdAt (registerRole.ts:107 stamps it). MRR: subscriptions £764, analytics £764, independent sum over active/trialing/canceling £764. Checks {\"providersRows\":true,\"subsRows\":true,\"providersCount\":true,\"subsTotal\":true,\"analyticsTotal\":true,\"mrr\":true,\"tenantsList\":false}.",
-        "notes": "Every real-account figure matches: both throwaway providers show the right plan/band/price/status/staff count on Providers and Subscriptions, and provider totals + MRR on Providers, Subscriptions and Analytics equal an independent read of the tenants collection. Latent: GET /api/tenants (tenants.ts:13) uses orderBy(\"createdAt\"), which silently drops any tenant without createdAt (seen here only for a test tenant) — sort in memory instead. analytics.summary.churnRate (platform.ts:375) is canceled ÷ (canceled+active+canceling), an all-time share, not a rate; the Fall-off card's monthly % is the true rate (d28s10). Totals included other agents' transient zz-selftest tenants; each compared against a read taken at the same moment.",
+        "actual": "Created 2 throwaway providers (A freelancer \u00a329 active; B company/growth \u00a369 trialing, 1 staff + 1 franchise). HQ /api/platform/providers: A freelancer/\u00a329, B company/growth/\u00a369. /api/platform/subscriptions: A freelancer \u00a329 active; B company \u00a369 trialing staffCount 2. Totals vs a direct read of the tenants collection (44 docs): providers list 44, subscriptions total 44, analytics totalProviders 44, GET /api/tenants 43 \u2014 the one missing is another agent's transient test tenant (zz-selftest-E-\u2026-HO) seeded without createdAt; all 41 real tenants carry createdAt (registerRole.ts:107 stamps it). MRR: subscriptions \u00a3764, analytics \u00a3764, independent sum over active/trialing/canceling \u00a3764. Checks {\"providersRows\":true,\"subsRows\":true,\"providersCount\":true,\"subsTotal\":true,\"analyticsTotal\":true,\"mrr\":true,\"tenantsList\":false}.",
+        "notes": "Every real-account figure matches: both throwaway providers show the right plan/band/price/status/staff count on Providers and Subscriptions, and provider totals + MRR on Providers, Subscriptions and Analytics equal an independent read of the tenants collection. Latent: GET /api/tenants (tenants.ts:13) uses orderBy(\"createdAt\"), which silently drops any tenant without createdAt (seen here only for a test tenant) \u2014 sort in memory instead. analytics.summary.churnRate (platform.ts:375) is canceled \u00f7 (canceled+active+canceling), an all-time share, not a rate; the Fall-off card's monthly % is the true rate (d28s10). Totals included other agents' transient zz-selftest tenants; each compared against a read taken at the same moment.",
         "at": "2026-09-12T13:20:28.104Z"
       }
     ]
@@ -740,7 +750,7 @@
   "d28s10": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Real /api/platform/providers (41 real providers, test tenants excluded) through the real FalloffCard (headless): Apr 0/2 0%, May 0/2 0%, Jun 0/3 0%, Jul 1/4 25%, Aug 4/12 33%, Sept 0/35 0%. Worst month Aug. Independent hand count from the same list (signed up before 1 Aug, not already cancelled): 12 on the books, 4 cancelled in Aug → 33.3% — the card shows 33%. Cancellations ÷ all providers would be 9.8%; the card does not show that.",
+    "actual": "Real /api/platform/providers (41 real providers, test tenants excluded) through the real FalloffCard (headless): Apr 0/2 0%, May 0/2 0%, Jun 0/3 0%, Jul 1/4 25%, Aug 4/12 33%, Sept 0/35 0%. Worst month Aug. Independent hand count from the same list (signed up before 1 Aug, not already cancelled): 12 on the books, 4 cancelled in Aug \u2192 33.3% \u2014 the card shows 33%. Cancellations \u00f7 all providers would be 9.8%; the card does not show that.",
     "notes": "Numbers are the card's own per-month title text.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d28b.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d28b.out.txt; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/entry.tsx (+ build.mjs, stubs); /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/ssr.out.json",
     "at": "2026-09-13T00:04:03Z",
@@ -749,8 +759,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Real /api/platform/providers (41 real providers, test tenants excluded) → real FalloffCard: months Apr 0/2=0%, May 0/2=0%, Jun 0/3=0%, Jul 1/4=25%, Aug 4/12=33%, Sept 0/35=0%. Providers with a canceledAt: 5. Worst month Aug: hand count 4 cancelled; on the books on the 1st (signed up before it, not already gone) 12; 4/12 = 33% — card shows 33%. Cancellations ÷ all providers would be 9.8% — the card does NOT show that.",
-        "notes": "Rendered headlessly (react-dom/server) — the numbers are the card's own title text per month.",
+        "actual": "Real /api/platform/providers (41 real providers, test tenants excluded) \u2192 real FalloffCard: months Apr 0/2=0%, May 0/2=0%, Jun 0/3=0%, Jul 1/4=25%, Aug 4/12=33%, Sept 0/35=0%. Providers with a canceledAt: 5. Worst month Aug: hand count 4 cancelled; on the books on the 1st (signed up before it, not already gone) 12; 4/12 = 33% \u2014 card shows 33%. Cancellations \u00f7 all providers would be 9.8% \u2014 the card does NOT show that.",
+        "notes": "Rendered headlessly (react-dom/server) \u2014 the numbers are the card's own title text per month.",
         "at": "2026-09-12T13:19:32.356Z"
       }
     ]
@@ -758,7 +768,7 @@
   "d28s11": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Synthetic book through the real FalloffCard (3 long-standing, 1 with no createdAt, one cancelled on 20 Jul, one signing up 15 Jun): the % row reads 0%, 0%, 0%, 20%, 0%, 0% — clean months '0%', never blank/NaN/−. Mid-June signup is NOT in June's base (0 of 4) and IS in July's (1 of 5 = 20%); the cancelled provider leaves the base from August (0 of 4).",
+    "actual": "Synthetic book through the real FalloffCard (3 long-standing, 1 with no createdAt, one cancelled on 20 Jul, one signing up 15 Jun): the % row reads 0%, 0%, 0%, 20%, 0%, 0% \u2014 clean months '0%', never blank/NaN/\u2212. Mid-June signup is NOT in June's base (0 of 4) and IS in July's (1 of 5 = 20%); the cancelled provider leaves the base from August (0 of 4).",
     "notes": "A provider with no createdAt counts in every month's base (documented choice in FalloffCard.tsx). Month edges are the viewer's local midnight.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d28b.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d28b.out.txt; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/entry.tsx (+ build.mjs, stubs); /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/ssr/ssr.out.json",
     "at": "2026-09-13T00:04:03Z",
@@ -767,8 +777,8 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Synthetic book (3 long-standing + 1 no-createdAt, one cancelled on the 20th of Jul, one signing up on the 15th of Jun) rendered through the REAL FalloffCard: Apr 0/4=0%, May 0/4=0%, Jun 0/4=0%, Jul 1/5=20%, Aug 0/4=0%, Sept 0/4=0%; the % row reads [0%, 0%, 0%, 20%, 0%, 0%]. Clean months read \"0%\" (never blank/NaN/−). The mid-Jun signup is NOT in Jun's denominator (4) and IS in Jul's (5); Jul = 1/5 = 20%; the cancelled provider leaves the base from Aug (4). Checks {\"cleanMonthZero\":true,\"midSignupNotInItsMonth\":true,\"midSignupInNext\":true,\"rate\":true,\"afterGoneLeavesBase\":true,\"noNaN\":true}.",
-        "notes": "A provider with no createdAt is counted in every month's base (documented choice, FalloffCard.tsx:88-90). Month boundaries are the viewer's local midnight (new Date(y, m, 1)), not UTC — fine for UK viewers.",
+        "actual": "Synthetic book (3 long-standing + 1 no-createdAt, one cancelled on the 20th of Jul, one signing up on the 15th of Jun) rendered through the REAL FalloffCard: Apr 0/4=0%, May 0/4=0%, Jun 0/4=0%, Jul 1/5=20%, Aug 0/4=0%, Sept 0/4=0%; the % row reads [0%, 0%, 0%, 20%, 0%, 0%]. Clean months read \"0%\" (never blank/NaN/\u2212). The mid-Jun signup is NOT in Jun's denominator (4) and IS in Jul's (5); Jul = 1/5 = 20%; the cancelled provider leaves the base from Aug (4). Checks {\"cleanMonthZero\":true,\"midSignupNotInItsMonth\":true,\"midSignupInNext\":true,\"rate\":true,\"afterGoneLeavesBase\":true,\"noNaN\":true}.",
+        "notes": "A provider with no createdAt is counted in every month's base (documented choice, FalloffCard.tsx:88-90). Month boundaries are the viewer's local midnight (new Date(y, m, 1)), not UTC \u2014 fine for UK viewers.",
         "at": "2026-09-12T13:19:32.367Z"
       }
     ]
@@ -776,7 +786,7 @@
   "d28s2": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Re-tested after the inPipeline fix: public demo POST → 200; HQ GET /api/platform/leads → 200 in 816 ms with 4 leads (0 researched prospects on the board, was 26,212 and >5 min); the new demo-form lead is on the board at stage New; POST activity 'call' → 201 and the card then shows 1 activity. Throwaway lead/user/notification deleted.",
+    "actual": "Re-tested after the inPipeline fix: public demo POST \u2192 200; HQ GET /api/platform/leads \u2192 200 in 816 ms with 4 leads (0 researched prospects on the board, was 26,212 and >5 min); the new demo-form lead is on the board at stage New; POST activity 'call' \u2192 201 and the card then shows 1 activity. Throwaway lead/user/notification deleted.",
     "notes": "Fixed 13 Sept (coordinator): leads carry inPipeline (demo POST, Sales-board create/edit/activity/bulk, Leads-page status change); platformLeads GET, the HQ live stream (events.ts) and the signup lead-match (registerRole.ts) read only inPipeline leads; backfill marked the 3 existing worked leads.",
     "evidence": "scratchpad/acceptance/retest-F/d28s2-pipeline.test.mts",
     "at": "2026-09-13T05:03:30Z",
@@ -785,14 +795,14 @@
     "history": [
       {
         "verdict": "pass",
-        "actual": "Public demo form POST /api/leads {name,email,message} → 200; stored doc has stage:∅, contactName:∅, plan:∅, estMrr:∅, activities:∅ (status:\"new\"). HQ GET /api/platform/leads → 200 incl. the lead. REAL SalesApp rendered on that response: renders; around the card: \"rack every prospect from first touch to paying provider — outreach, demos, and who’s converting. Pipeline Dashboard ⬆ Import CSV + Add lead 1 · Lead 1 · £69 🏢 ZZ Demo Lead 1789219145926 ZZ Demo Lead 1789219145926 · demo company 2 · Contacted 0 · £0 Drop here 3 · Demo 0 · £0 Drop\". Contact name shown: true; est. MRR £69 (company default): true; no NaN/undefined: true. HQ then logged a call (POST …/activities → 201); re-rendered card shows the activity line: true (\"rack every prospect from first touch to paying provider — outreach, demos, and who’s converting. Pipeline Dashboard ⬆ Import CSV + Add lead 1 · Lead 1 · £69 🏢 ZZ Demo Lead 1789219145926 ZZ Demo Lead 1789219145926 · demo company 12 Sept: ZZ rang them back — keen 2 · Contacted 0 ·\").",
+        "actual": "Public demo form POST /api/leads {name,email,message} \u2192 200; stored doc has stage:\u2205, contactName:\u2205, plan:\u2205, estMrr:\u2205, activities:\u2205 (status:\"new\"). HQ GET /api/platform/leads \u2192 200 incl. the lead. REAL SalesApp rendered on that response: renders; around the card: \"rack every prospect from first touch to paying provider \u2014 outreach, demos, and who\u2019s converting. Pipeline Dashboard \u2b06 Import CSV + Add lead 1 \u00b7 Lead 1 \u00b7 \u00a369 \ud83c\udfe2 ZZ Demo Lead 1789219145926 ZZ Demo Lead 1789219145926 \u00b7 demo company 2 \u00b7 Contacted 0 \u00b7 \u00a30 Drop here 3 \u00b7 Demo 0 \u00b7 \u00a30 Drop\". Contact name shown: true; est. MRR \u00a369 (company default): true; no NaN/undefined: true. HQ then logged a call (POST \u2026/activities \u2192 201); re-rendered card shows the activity line: true (\"rack every prospect from first touch to paying provider \u2014 outreach, demos, and who\u2019s converting. Pipeline Dashboard \u2b06 Import CSV + Add lead 1 \u00b7 Lead 1 \u00b7 \u00a369 \ud83c\udfe2 ZZ Demo Lead 1789219145926 ZZ Demo Lead 1789219145926 \u00b7 demo company 12 Sept: ZZ rang them back \u2014 keen 2 \u00b7 Contacted 0 \u00b7\").",
         "notes": "The lead-detail modal (full activity history) needs a click, which a headless render can't do; the board card's activity preview (activities[0]) and the stage/plan/MRR were rendered. Test lead deleted afterwards.",
         "at": "2026-09-12T13:19:34.515Z"
       },
       {
         "verdict": "fail",
-        "actual": "Rendering half passes: public POST /api/leads {name,email,message} → 200, stored doc has no stage/contactName/plan/estMrr/activities (status new); the REAL SalesApp rendered on that doc shows '1 · Lead 1 · £69 🏢 ZZ Demo Lead … · demo company' (name shown, stage New, company plan default, est. MRR £69, no NaN/undefined); after HQ logs a call (POST …/activities 201) the card shows '13 Sept: ZZ rang them back — keen'. BUT opening the page for real: GET /api/platform/leads (what SalesApp loads) reads the whole shared leads collection — now 26,212 docs since the 12 Sept research pipeline — with every field and no cache; in-process it did not answer within 5 minutes (undici headers timeout) and the board would put every researched prospect in 'New', burying the demo lead.",
-        "notes": "Regression vs 12 Sept (then the collection was small). Not a few-line fix: serve the board from a trimmed/cached or paged list like /api/leads already does, and decide whether unworked researched prospects belong on the board — backlog s13-rtF3. Timing taken on a heavily loaded 8GB machine; the full read is the problem either way. Lead-detail modal (full history) needs a click — not rendered.",
+        "actual": "Rendering half passes: public POST /api/leads {name,email,message} \u2192 200, stored doc has no stage/contactName/plan/estMrr/activities (status new); the REAL SalesApp rendered on that doc shows '1 \u00b7 Lead 1 \u00b7 \u00a369 \ud83c\udfe2 ZZ Demo Lead \u2026 \u00b7 demo company' (name shown, stage New, company plan default, est. MRR \u00a369, no NaN/undefined); after HQ logs a call (POST \u2026/activities 201) the card shows '13 Sept: ZZ rang them back \u2014 keen'. BUT opening the page for real: GET /api/platform/leads (what SalesApp loads) reads the whole shared leads collection \u2014 now 26,212 docs since the 12 Sept research pipeline \u2014 with every field and no cache; in-process it did not answer within 5 minutes (undici headers timeout) and the board would put every researched prospect in 'New', burying the demo lead.",
+        "notes": "Regression vs 12 Sept (then the collection was small). Not a few-line fix: serve the board from a trimmed/cached or paged list like /api/leads already does, and decide whether unworked researched prospects belong on the board \u2014 backlog s13-rtF3. Timing taken on a heavily loaded 8GB machine; the full read is the problem either way. Lead-detail modal (full history) needs a click \u2014 not rendered.",
         "at": "2026-09-13T00:04:55Z"
       }
     ]
@@ -800,7 +810,7 @@
   "d28s5": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Not possible here — a walk-through with Amir against production/staging config, and there's no deployed environment (b32). Local dev config (key names only): no STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET / STRIPE_PLATFORM_FALLBACK, mail in 'NOT LIVE' allowlist mode, no URL_SIGNING_SECRET; no backups or monitoring configured in the repo (d27s3/s4).",
+    "actual": "Not possible here \u2014 a walk-through with Amir against production/staging config, and there's no deployed environment (b32). Local dev config (key names only): no STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET / STRIPE_PLATFORM_FALLBACK, mail in 'NOT LIVE' allowlist mode, no URL_SIGNING_SECRET; no backups or monitoring configured in the repo (d27s3/s4).",
     "notes": "needsBackend. Add to the checklist: URL_SIGNING_SECRET set in prod; TRUST_PROXY = real hop count; NODE_ENV=production (hides /docs); deploy firestore indexes.",
     "evidence": "server/.env (key names only); server/src/lib/stripe.ts; server/src/lib/signing.ts",
     "at": "2026-09-13T00:04:03Z",
@@ -809,7 +819,7 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Not possible here — a walk-through with Amir against the production/staging config, and there is no deployed environment (b32). What the local dev config shows (key names only, values not read): no STRIPE_SECRET_KEY, no STRIPE_WEBHOOK_SECRET, no STRIPE_PLATFORM_FALLBACK, no MAIL_LIVE (mail is in 'NOT LIVE' allowlist mode), no URL_SIGNING_SECRET (signing key derived from the service account — lib/signing.ts says set it explicitly in production). No backups or monitoring configured in the repo (d27s3/s4).",
+        "actual": "Not possible here \u2014 a walk-through with Amir against the production/staging config, and there is no deployed environment (b32). What the local dev config shows (key names only, values not read): no STRIPE_SECRET_KEY, no STRIPE_WEBHOOK_SECRET, no STRIPE_PLATFORM_FALLBACK, no MAIL_LIVE (mail is in 'NOT LIVE' allowlist mode), no URL_SIGNING_SECRET (signing key derived from the service account \u2014 lib/signing.ts says set it explicitly in production). No backups or monitoring configured in the repo (d27s3/s4).",
         "notes": "needsBackend. Add to the checklist: URL_SIGNING_SECRET set in prod; TRUST_PROXY set to the real hop count (rate limits key on req.ip); NODE_ENV=production (hides /docs).",
         "at": "2026-09-12T13:22:33.291Z"
       }
@@ -818,16 +828,16 @@
   "d28s6": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Not exercised — needs live Stripe keys, a real card and a real payout; this run may not call Stripe.",
+    "actual": "Not exercised \u2014 needs live Stripe keys, a real card and a real payout; this run may not call Stripe.",
     "notes": "needsBackend.",
-    "evidence": "—",
+    "evidence": "\u2014",
     "at": "2026-09-13T00:04:03Z",
     "agent": "F",
     "retest": true,
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Not exercised — needs live Stripe keys, a real card and a real payout; this run may not call Stripe.",
+        "actual": "Not exercised \u2014 needs live Stripe keys, a real card and a real payout; this run may not call Stripe.",
         "notes": "needsBackend.",
         "at": "2026-09-12T13:22:33.310Z"
       }
@@ -836,16 +846,16 @@
   "d28s7": {
     "verdict": "blocked",
     "method": "code",
-    "actual": "Not exercised — needs live Stripe (declined card + 3DS challenge) in a real browser.",
+    "actual": "Not exercised \u2014 needs live Stripe (declined card + 3DS challenge) in a real browser.",
     "notes": "needsBackend. Test-mode cards 4000 0000 0000 0002 / 4000 0027 6000 3184 can rehearse the UI on staging first.",
-    "evidence": "—",
+    "evidence": "\u2014",
     "at": "2026-09-13T00:04:03Z",
     "agent": "F",
     "retest": true,
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Not exercised — needs live Stripe (declined card + 3DS challenge) in a real browser.",
+        "actual": "Not exercised \u2014 needs live Stripe (declined card + 3DS challenge) in a real browser.",
         "notes": "needsBackend. Test-mode cards 4000 0000 0000 0002 / 4000 0027 6000 3184 can rehearse the UI first on staging.",
         "at": "2026-09-12T13:22:33.311Z"
       }
@@ -854,8 +864,8 @@
   "d28s8": {
     "verdict": "fail",
     "method": "live-read",
-    "actual": "The re-run of every failed step is happening tonight (13 Sept full re-test: 225 of 295 steps re-recorded by 04:05, agents A–E still going). Snapshot at 04:05 of all six result files: 295 logged · 242 pass · 11 fail · 42 blocked. Of the 11 fails, 4 are open with an owner + decision in the backlog (d8s10, d8s11, d26s4 → s13-rtF2, d28s2 → s13-rtF3); 7 have NO backlog item, so they're open but not 'explicitly owned with a decision': d5s2 (A), d8s3, d10s6, d10s10, d11s4 (B), d21s9, d23s3 (E).",
-    "notes": "Mid-run snapshot — re-count once agents A–E finish (the same export code as d28s9; script in evidence). The Testing page's owner is derived (needsBackend → Amir, else 'triage'), so 'triage' isn't a person yet: give each of the 7 a backlog item with who + decision.",
+    "actual": "The re-run of every failed step is happening tonight (13 Sept full re-test: 225 of 295 steps re-recorded by 04:05, agents A\u2013E still going). Snapshot at 04:05 of all six result files: 295 logged \u00b7 242 pass \u00b7 11 fail \u00b7 42 blocked. Of the 11 fails, 4 are open with an owner + decision in the backlog (d8s10, d8s11, d26s4 \u2192 s13-rtF2, d28s2 \u2192 s13-rtF3); 7 have NO backlog item, so they're open but not 'explicitly owned with a decision': d5s2 (A), d8s3, d10s6, d10s10, d11s4 (B), d21s9, d23s3 (E).",
+    "notes": "Mid-run snapshot \u2014 re-count once agents A\u2013E finish (the same export code as d28s9; script in evidence). The Testing page's owner is derived (needsBackend \u2192 Amir, else 'triage'), so 'triage' isn't a person yet: give each of the 7 a backlog item with who + decision.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d28b.test.mts (export/progress); python snapshot over lib/testing/agent-results/*.json + backlog.ts at 04:05",
     "at": "2026-09-13T00:05:43Z",
     "agent": "F",
@@ -863,8 +873,8 @@
     "history": [
       {
         "verdict": "blocked",
-        "actual": "Premature on 12 Sept: the regression sweep only means something once fixes have landed after the run (Day 28 = 8 Oct); re-running today would reproduce the results logged hours ago. Snapshot of what it will face — all six agents' results adopted the way the Testing page adopts them (TestingApp.tsx:265-278) and run through lib/testing/store.ts: 248 of 295 steps logged; 151 pass · 64 fail · 33 blocked; open 18 for Amir, 79 to triage. Fails by agent: A 8, B 17, C 9, D 19, E 2, F 9. Only 9 of the 64 fails map to a backlog item (an owner + a decision); 55 have no backlog entry, so today they would be 'open' but not 'explicitly owned with a decision'.",
-        "notes": "Owner routing in the Testing page is derived (needsBackend → Amir, everything else → 'triage'), so 'triage' is not yet an owner. Before 8 Oct, turn the 55 unmapped fails into backlog items with who/decision, then re-run each step's evidence script (every agent result names one).",
+        "actual": "Premature on 12 Sept: the regression sweep only means something once fixes have landed after the run (Day 28 = 8 Oct); re-running today would reproduce the results logged hours ago. Snapshot of what it will face \u2014 all six agents' results adopted the way the Testing page adopts them (TestingApp.tsx:265-278) and run through lib/testing/store.ts: 248 of 295 steps logged; 151 pass \u00b7 64 fail \u00b7 33 blocked; open 18 for Amir, 79 to triage. Fails by agent: A 8, B 17, C 9, D 19, E 2, F 9. Only 9 of the 64 fails map to a backlog item (an owner + a decision); 55 have no backlog entry, so today they would be 'open' but not 'explicitly owned with a decision'.",
+        "notes": "Owner routing in the Testing page is derived (needsBackend \u2192 Amir, everything else \u2192 'triage'), so 'triage' is not yet an owner. Before 8 Oct, turn the 55 unmapped fails into backlog items with who/decision, then re-run each step's evidence script (every agent result names one).",
         "at": "2026-09-12T13:22:33.311Z"
       }
     ]
@@ -872,7 +882,7 @@
   "d28s9": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Ran the page's own export (lib/testing/store.ts buildFullReport) on every agent result adopted the way the Testing page adopts them: '# 28-day test run', '295 of 295 steps logged · 243 pass · 10 fail · 42 blocked', 'Open: 19 for Amir, 33 to triage'; 295 step lines, every step id present; all 52 non-pass lines say who owns them (' · owner: Amir' / ' · owner: triage').",
+    "actual": "Ran the page's own export (lib/testing/store.ts buildFullReport) on every agent result adopted the way the Testing page adopts them: '# 28-day test run', '295 of 295 steps logged \u00b7 243 pass \u00b7 10 fail \u00b7 42 blocked', 'Open: 19 for Amir, 33 to triage'; 295 step lines, every step id present; all 52 non-pass lines say who owns them (' \u00b7 owner: Amir' / ' \u00b7 owner: triage').",
     "notes": "Snapshot mid re-test (other agents still recording). Report saved as evidence.",
     "evidence": "/private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d28b.test.mts; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d28b.out.txt; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/e74ae853-c2ac-49e0-991e-09fd1e1cec77/scratchpad/acceptance/retest-F/d28-report.md",
     "at": "2026-09-13T00:04:03Z",
@@ -881,8 +891,8 @@
     "history": [
       {
         "verdict": "fail",
-        "actual": "Ran the page's own export code (lib/testing/store.ts buildFullReport + buildHandover) on the run built from all 248 logged results: the .md lists every logged step (all 248 ids present) with PASS/FAIL/BLOCKED, the step and 'got: <actual>' + notes; header '248 of 295 steps logged · 151 pass · 64 fail · 33 blocked' and 'Open: 18 for Amir, 79 to triage'; the per-owner handovers contain every open fail (18 Amir items, 79 triage items). BUT the one file the Export tab downloads never says WHO owns each open item — per-step lines carry no owner (only the aggregate counts), and a 'resolved' item is indistinguishable from an open one; the report is also titled '# 25-day test run' for a 28-day plan.",
-        "notes": "Minor. Fix in buildFullReport (store.ts:128-150): append ' · owner: Amir/triage' and ' · resolved' to every non-pass line (or embed the two handover sections), and retitle to 28-day. The handovers live on the For Amir / To triage tabs, not in Export.",
+        "actual": "Ran the page's own export code (lib/testing/store.ts buildFullReport + buildHandover) on the run built from all 248 logged results: the .md lists every logged step (all 248 ids present) with PASS/FAIL/BLOCKED, the step and 'got: <actual>' + notes; header '248 of 295 steps logged \u00b7 151 pass \u00b7 64 fail \u00b7 33 blocked' and 'Open: 18 for Amir, 79 to triage'; the per-owner handovers contain every open fail (18 Amir items, 79 triage items). BUT the one file the Export tab downloads never says WHO owns each open item \u2014 per-step lines carry no owner (only the aggregate counts), and a 'resolved' item is indistinguishable from an open one; the report is also titled '# 25-day test run' for a 28-day plan.",
+        "notes": "Minor. Fix in buildFullReport (store.ts:128-150): append ' \u00b7 owner: Amir/triage' and ' \u00b7 resolved' to every non-pass line (or embed the two handover sections), and retitle to 28-day. The handovers live on the For Amir / To triage tabs, not in Export.",
         "at": "2026-09-12T13:22:33.311Z"
       },
       {

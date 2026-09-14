@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { onAuthStateChanged, signOut, type User } from "firebase/auth";
 import { firebaseAuth } from "@/lib/firebase/client";
 import { clearMeCache } from "@/components/auth/PortalGuard";
+import { post } from "@/lib/api";
 
 interface AuthState {
   user: User | null;
@@ -43,11 +44,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, signOutUser: () => signOut(firebaseAuth) }}
+      value={{ user, loading, signOutUser: () => signOutEverywhere() }}
     >
       {children}
     </AuthContext.Provider>
   );
+}
+
+// Any explicit "Sign out" ends the server session too, not just this device's
+// client state — a copied bearer token must stop working the moment someone
+// signs out, not linger until it expires (up to 1h). Firebase Admin's
+// revokeRefreshTokens is account-wide (there's no per-device revoke), so
+// plain Sign out and "Sign out of all devices" are now the same server call;
+// that's the safer default (see docs/qa-findings.md d26s4). The API call is
+// best-effort: if it fails (offline, etc.) we still sign the client out.
+async function signOutEverywhere() {
+  try {
+    await post("/api/account/signout-everywhere", {});
+  } catch {
+    /* best-effort — still sign out locally below */
+  }
+  await signOut(firebaseAuth);
 }
 
 /**
