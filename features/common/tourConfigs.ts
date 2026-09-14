@@ -678,8 +678,8 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Design a newsletter",
         "stage": "Newsletter",
-        "line": "For a richer, branded update, tap Design a newsletter — drag in sections like a welcome, dates for the diary or a booking offer, pick a colour theme, and your provider name, logo and contact details fill the banner and footer for you.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>✨ Newsletter builder</b> <span class=\"g\">Autumn Term Update</span></div></div><div class=\"fl\">SECTIONS</div><div class=\"chips\"><span class=\"ochip\">👋 Welcome</span><span class=\"ochip\">📅 Dates for the diary</span><span class=\"ochip\">🎟️ Booking offer</span><span class=\"ochip\">📸 Photo gallery</span></div><div class=\"fl\">THEME</div><div class=\"chips\"><span class=\"ochip\">Navy</span><span class=\"ochip\">Teal ✓</span><span class=\"ochip\">Berry</span></div><div class=\"hint\">Your provider name, logo and contact details auto-fill the banner and footer — every field stays editable, then save to the page, email, or both.</div></div>"
+        "line": "For a richer, branded update, tap Design a newsletter — pick a ready-made layout like a welcome pack, event invite or offer, pick a colour theme, and your provider name, logo and contact details fill it in for you.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"tkt\"><div class=\"tkhd\"><b>✨ Newsletter builder</b> <span class=\"g\">Autumn Term Update</span></div></div><div class=\"fl\">LAYOUT</div><div class=\"chips\"><span class=\"ochip\">Classic newsletter</span><span class=\"ochip\">Welcome pack</span><span class=\"ochip\">Event invite</span><span class=\"ochip\">Offer / discount</span></div><div class=\"fl\">THEME</div><div class=\"chips\"><span class=\"ochip\">Blue</span><span class=\"ochip\">Teal ✓</span><span class=\"ochip\">Pink</span></div><div class=\"hint\">Your provider name, logo and contact details auto-fill the banner and footer — every field stays editable, then save to the page, email, or both.</div></div>"
       },
       {
         "label": "Who sees it",
@@ -709,14 +709,14 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
   },
   "staff": {
     "title": "Team & invites — hire to deploy",
-    "introLine": "This is your whole people hub, laid out across four tabs that follow one person's journey — Team members, Applications, Onboarding and Deployment. Let's walk a single hire all the way through: they apply, you review, they onboard, they're cleared, and you deploy them.",
+    "introLine": "This is your whole people hub, laid out across five tabs — Team members, Applications, Onboarding, Deployment and Appraisals. Let's walk a single hire all the way through: they apply, you review, they onboard, they're cleared, and you deploy them.",
     "doneLine": "That's the full loop — recruit in Applications, run the safer-recruitment record in Onboarding, then place them in Deployment. Everything they give you flows forward, so nobody ever types the same thing twice.",
     "steps": [
       {
         "label": "Four tabs, one journey",
         "stage": "Overview",
-        "line": "Everything about your people lives here across four tabs. Team members is your roster and invites. Applications is where you recruit. Onboarding is the safer-recruitment record they complete. Deployment places them on your locations and listings. The tiles up top count your team, your pending invites and how many staff seats your plan allows.",
-        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">Team members</span><span class=\"chip2\">Applications</span><span class=\"chip2\">Onboarding</span><span class=\"chip2\">Deployment</span></div><div class=\"chips\"><span class=\"ochip\">👥 Team · 6</span><span class=\"ochip\">⏳ Pending · 2</span><span class=\"ochip\">🎫 Seats · 6 / 10</span></div><div class=\"hint\">The four tabs follow one person: recruit → onboard → deploy.</div>"
+        "line": "Everything about your people lives here across five tabs. Team members is your roster and invites. Applications is where you recruit. Onboarding is the safer-recruitment record they complete. Deployment places them on your locations and listings. Appraisals runs their ongoing performance reviews. The tiles up top count your active team, your pending invites and how many staff seats your plan allows.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">Team members</span><span class=\"chip2\">Applications</span><span class=\"chip2\">Onboarding</span><span class=\"chip2\">Deployment</span><span class=\"chip2\">Appraisals</span></div><div class=\"chips\"><span class=\"ochip\">👥 Active · 6</span><span class=\"ochip\">⏳ Pending · 2</span><span class=\"ochip\">🎫 Seats · 6 / 10</span></div><div class=\"hint\">Four of the five tabs follow one person: recruit → onboard → deploy → review.</div>"
       },
       {
         "label": "Build & send an application",
@@ -733,8 +733,8 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "The onboarding record",
         "stage": "Onboarding",
-        "line": "Onboarding is a colour-coded slideshow they work through — personal details, right to work, identity and DBS, references, qualifications, payroll, availability, and the policies they sign. Each section shows what's done. Right-to-work, DBS and references are gated: until all three are verified the person reads Start on hold and cannot work in regulated activity — then it flips to Cleared to start.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">👤 Personal</span><span class=\"ochip\">🛂 Right to work</span><span class=\"ochip\">🪪 DBS</span><span class=\"ochip\">📋 References</span><span class=\"chip2\">💷 Payroll</span><span class=\"chip2\">📅 Availability</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Step 3 of 9 · Identity &amp; DBS</b> <span class=\"g\">6 / 8 complete</span><span class=\"tkp\">⏳ On hold</span></div></div><div class=\"hint\">On hold until Right to work, DBS &amp; References are all Verified — then ✓ Cleared to start.</div></div>"
+        "line": "Onboarding is a colour-coded slideshow they work through — personal details, right to work, identity, DBS check, references, qualifications, payroll, emergency contacts, availability, and the policies they sign. Each section shows what's done. Right-to-work, identity, DBS and references are gated: until all four are verified the person reads Start on hold and cannot work in regulated activity — then it flips to Cleared to start.",
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">👤 Personal</span><span class=\"ochip\">🛂 Right to work</span><span class=\"ochip\">🪪 Identity</span><span class=\"ochip\">🔎 DBS check</span><span class=\"chip2\">📋 References</span><span class=\"chip2\">💷 Payroll</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Step 3 of 10 · Identity</b> <span class=\"g\">6 / 8 complete</span><span class=\"tkp\">⏳ On hold</span></div></div><div class=\"hint\">On hold until Right to work, Identity, DBS &amp; References are all Verified — then ✓ Cleared to start.</div></div>"
       },
       {
         "label": "You decide what's required",
@@ -764,7 +764,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "Deploy them to work",
         "stage": "Deployment",
         "line": "Finally, Deployment. Once someone's activated, place them on your locations and the listings inside them — flip between By location, By staff and By listing. This is what decides whose registers, ratios and schedule each person sees, and it's the moment any listing-specific risk assessment reaches them. Apply, accept, onboard, clear, deploy — that's the whole journey.",
-        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">By location</span><span class=\"chip2\">By staff</span><span class=\"chip2\">By listing</span></div><div class=\"frm\"><div class=\"fl\">📍 MILTON KEYNES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Summer camp · 📅 Summer 1</span></div></div><div class=\"field ph\">＋ Add staff (A–Z)…</div><div class=\"hint\">Deployment decides whose registers, ratios &amp; schedule they see — and delivers listing-specific risk assessments.</div></div>"
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">By location</span><span class=\"chip2\">By staff</span><span class=\"chip2\">By listing</span></div><div class=\"frm\"><div class=\"fl\">📍 MILTON KEYNES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Summer camp · 📅 Summer 1</span></div></div><div class=\"field ph\">＋ Add staff — search any name…</div><div class=\"hint\">Deployment decides whose registers, ratios &amp; schedule they see — and delivers listing-specific risk assessments.</div></div>"
       }
     ]
   },
@@ -802,7 +802,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
         "label": "The onboarding record",
         "stage": "Record",
         "line": "Onboarding is a colour-coded slideshow — personal details, right to work, identity and DBS, references, qualifications, payroll, availability and the policies they sign. Right-to-work, DBS and references are gated: until all three are verified the person is On hold and cannot work in regulated activity, then it flips to Cleared to start.",
-        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">👤 Personal</span><span class=\"ochip\">🛂 Right to work</span><span class=\"ochip\">🪪 DBS</span><span class=\"ochip\">📋 References</span><span class=\"chip2\">💷 Payroll</span><span class=\"chip2\">📅 Availability</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Step 3 of 9 · Identity &amp; DBS</b> <span class=\"g\">6 / 8 complete</span><span class=\"tkp\">⏳ On hold</span></div></div><div class=\"hint\">On hold until Right to work, DBS &amp; References are Verified — then ✓ Cleared to start.</div></div>"
+        "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"ochip\">👤 Personal</span><span class=\"ochip\">🛂 Right to work</span><span class=\"ochip\">🪪 Identity</span><span class=\"ochip\">🔎 DBS check</span><span class=\"chip2\">📋 References</span><span class=\"chip2\">💷 Payroll</span></div><div class=\"tkt\"><div class=\"tkhd\"><b>Step 3 of 10 · Identity</b> <span class=\"g\">6 / 8 complete</span><span class=\"tkp\">⏳ On hold</span></div></div><div class=\"hint\">On hold until Right to work, Identity, DBS &amp; References are Verified — then ✓ Cleared to start.</div></div>"
       },
       {
         "label": "You decide what's required",
@@ -832,8 +832,8 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Place people on work",
         "stage": "Deploy",
-        "line": "Once someone's activated, place them on your locations and the listings inside them — flip between By location, By staff and By listing, and add someone from the dropdown. Each listing shows the season it belongs to.",
-        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">By location</span><span class=\"chip2\">By staff</span><span class=\"chip2\">By listing</span></div><div class=\"frm\"><div class=\"fl\">📍 MILTON KEYNES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Summer camp · 📅 Summer 1</span></div></div><div class=\"field ph\">＋ Add staff (A–Z)…</div></div>"
+        "line": "Once someone's activated, place them on your locations and the listings inside them — flip between By location, By staff and By listing, and add someone by searching or picking from the list. Each listing shows the season it belongs to.",
+        "bodyHtml": "<div class=\"chips\"><span class=\"ochip\">By location</span><span class=\"chip2\">By staff</span><span class=\"chip2\">By listing</span></div><div class=\"frm\"><div class=\"fl\">📍 MILTON KEYNES</div><div class=\"tkt\"><div class=\"tkhd\"><b>Alex Rivera</b> <span class=\"g\">Summer camp · 📅 Summer 1</span></div></div><div class=\"field ph\">＋ Add staff — search any name…</div></div>"
       },
       {
         "label": "What deployment controls",
@@ -875,7 +875,7 @@ export const TOUR_CONFIGS: Record<string, TourConfig> = {
       {
         "label": "Feedback, talent & PIPs",
         "stage": "Between reviews",
-        "line": "Don't wait for review day. Log kudos, concerns and supervision notes any time on 'Feedback & 1:1s'. Place people on the 9-box 'Talent grid' (performance × potential — click a name to move them). And when needed, open a structured PIP with concern, actions, support and dates on the PIP sub-tab.",
+        "line": "Don't wait for review day. Log kudos, concerns and supervision notes any time on 'Feedback & 1:1s'. Place people on the 9-box 'Talent grid' (performance times potential — drag a card to move it, or click it to place, add a note or open their review). And when needed, open a structured PIP with concern, actions, support and dates on the PIP sub-tab.",
         "bodyHtml": "<div class=\"frm\"><div class=\"chips\"><span class=\"chip2\">🌟 Kudos</span><span class=\"chip2\">⚠️ Concern</span><span class=\"chip2\">🗒️ Supervision</span></div><div class=\"row2\"><div class=\"tkt\"><div class=\"tkhd\"><b>9-box</b> <span class=\"g\">Star · High potential · Core…</span></div></div><div class=\"tkt\"><div class=\"tkhd\"><b>PIP</b> <span class=\"g\">concern · actions · support · dates</span></div></div></div><div class=\"hint\">Notes logged here surface in the person's next review.</div></div>"
       },
       {
