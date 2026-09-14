@@ -1,0 +1,153 @@
+{
+  "p2-n1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST folders → 201; PUT B's thread into A's folder → 404 \"Conversation not found\" (B thread untouched: true); file A's thread → 200 folderId=true; file into B's folder id → 400 \"Unknown folder\"; DELETE the folder holding it → 200; thread still exists: true, back in inbox (no folderId): true, listed in GET /threads: true",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n2": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "template with all seven fields → 201; /from-booking preview → 200: \"Hi Comms Parent, Kid of Comms Parent is on P2H Comms Camp on Comms week at  (ref APF-10312) — P2H Comms A\" (tokens left: [none], VenueName empty: true); /from-booking send → 201; plain POST /api/messages with the same body → 201: \"Hi {ParentName}, {ChildName} is on {ListingName} on {SessionDate} at {VenueName} (ref {BookingRef}) — {Provide\" ({SessionDate} left literal: true)",
+    "notes": "Owed (Amir 29): the plain composer never resolves merge fields — messages.ts:180-275 sends the body verbatim, so a template with {SessionDate} reaches the family as a raw token; only /from-booking (messages.ts:277-349) and /broadcast ({ParentName}/{ChildName}/{ProviderName}/{ListingName} only) merge. Also: {VenueName} resolves EMPTY on /from-booking — messages.ts:300-302 reads tenants/<id>.venues, but venues live on the library doc (libraries/<id>.venues — listings.ts:483, emailSend.ts:122 read it from there), so six of seven resolve.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n3": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "5 families booked on the listing, $P5 cancelled; POST /listing-recipients → 200 5 recipients (cancelled family included: true); POST /broadcast → 200 sent=5; HO listing + $PH booking → 201; as $F1: /listing-recipients for the HO listing → 200 1 families; /broadcast → 400 \"No matching families to message\"",
+    "notes": "Fix needed: messages.ts:469-484 (listing-recipients) and :493-501 (broadcast) match bookings by listing NAME with no status filter — a family whose booking was cancelled is still listed and messaged (5, not 4). Fix needed: /listing-recipients has no franchise scoping (messages.ts:469-484) — a franchise previews head office's families; /broadcast does drop them (messages.ts:530-533).",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n4": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "GET /threads as plain staff $S → 200 0 threads (owner sees 1); $S writes to $P2 → 201; now sees [<TA>__p2hmu1i3x2f-pa-uo8ni2@p2h.test]; GET $P's thread by id as $S → 404; Customer area → Messaging OFF: $P POST /api/messages → 403 code=area_off; $P's thread list shows A: false; operator send while off → 201 emailOnly=true",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n5": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "schedule +2min → 201, +3min → 201, in the past → 400 \"Pick a time in the future — or just press Send\"; DELETE the second → 200; tenant B deleting the first → 404; GET /scheduled statuses {\"Sched one\":\"scheduled\",\"Sched two\":\"cancelled\"}; direct /send (audience one) → 201 mail lines to $P 4→5 (SUPPRESSED — mail not live); open pixel ×2 → 200/200; GET /api/emails openedBy=[\"p2hmu1i3x2f-pa-4mwph8@p2h.test\"] delivered=1; GET /mailbox → 200 configured=true received=0",
+    "notes": "Blocked: 'first arrives once / second never' needs the scheduled-emails sweep (module-private scheduledEmailSends in src/lib/sweeps.ts:650, fired by startSweeps() every 60s in the API process) and a real inbox (MAIL_LIVE is off — every send is logged SUPPRESSED). The queue/cancel/open-pixel halves verified here; the first schedule was cancelled at the end so the live API's sweep doesn't fire it at a deleted tenant.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n6": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "before: /recipients count=4, audience 'all'=4; suppress $P2 → 200; after: /recipients count=4, 'all'=3; dry-run blast includes $P2: false (recipientCount=3); UNSIGNED token for $P3 → 400 ('Link not valid'); signed token for $P4 → 200; suppressions now [p2hmu1i3x2f-pa-uo8ni2,p2hmu1i3x2f-pa-rltnne]",
+    "notes": "Today is 2026-09-14: an unsigned token is still inside the legacy window (readUnsubToken, emailSend.ts:44-46 accepts it until 2026-10-12) but emails.ts:800-810 additionally requires that this provider sent a marketing blast before 2026-09-12 AND the address is one of its families — a fresh tenant fails that, so it is refused now; from 12 Oct it is refused unconditionally (item 45). Fix needed: GET /api/emails/recipients (emails.ts:240-245 familyRecipients) ignores suppressions/opt-outs — the 'all families' count shown next to the composer does not drop, while the audience cards and the actual send do.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /inbound without x-inbound-secret → 401; with the secret from an unknown From → 201 id=set: lands in emailMessages folder=inbox tenant=A from=\"Stranger\" (visible in GET /api/emails/messages: true); customers 5→5 (no family created); To nobody owns → 404; /inbound/resend with a bad Svix signature → 400 \"Bad signature\"",
+    "notes": "An unknown sender lands in the provider's Inbox folder as an ordinary message (emails.ts:597-640 storeInbound) — no customer/family is created. Note INBOUND_EMAIL_SECRET falls back to 'dev-inbound' when unset (emails.ts:498).",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "GET /api/emails/sender → 200 fromName=\"P2H Comms A\" fromAddress=no-reply@activityos.uk (platform's: true) replyTo=p2hmu1i3x2f-own-qe3ad0@p2h.test; POST /send with a spoof 'from' field → 201 (field ignored — not in sendSchema) history row fromName=\"P2H Comms A\" replyTo=p2hmu1i3x2f-own-qe3ad0@p2h.test; mail line: \"From test\" → p2hmu1i3x2f-pa-mqty6i@p2h.test SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it)",
+    "notes": "There is no per-tenant sending domain or 'verified' state to show — the envelope is always the platform's authenticated address (lib/sender.ts; MAIL_PER_TENANT_FROM only varies the local part), the provider's name goes on From and their billing/account email on Reply-To, and the history doc records both. Nothing to 'fall back' from.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n9": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "$P mutes 'accident' → 200 muted={\"accident\":true}; $A logs an accident on $P's child → 201: parent accident bells 0→1, emails 5→5; unmute → 200; second accident → 201: bells 1→2, emails 5→6; POST /read with two tenant-B ids as $P → 200 marked=0, as $A → marked=0; B docs readAt after: null/null (untouched); PUT prefs as an operator → 200",
+    "notes": "Design is the INVERSE of the plan's wording: a mute silences the EMAIL and the bell entry is still written (notify.ts:11-15, :310 'bell yes, email no'; notifications.ts:64-66) — so 'no bell entry for the muted type' is not what the code intends. Observed: bell written, email suppressed while muted; both on unmute. Prefs are keyed by the caller's email, so an operator can set them too, but only parent-addressed alerts consult them.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n10": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "HO listings at v1 (+booking, accident, meal order → 201) and v2 (booking → 201, accident → 201); F2 listing (booking → 201, accident → 201, meal order → 201); tenant bells written for these: 5 [booking:F2:Comms F2 Parent ordered a meal for | booking:HO:Booking request · APF-10314 · Comm | booking:F2:Booking request · APF-10313 · Comm | booking:HO:Booking request · APF-10312 · Comm | booking:HO:Comms HO Parent ordered a meal for]; GET /api/notifications — $F1 sees 0; $L (site lead, locations [v1]) sees 0 [] of which v2's: 0, F2's: 0; $C sees 5/5; $F2 sees 2 (own: true)",
+    "notes": "Staff see only the STAFF_CATEGORIES (accident/medication/trip/calendar/moment/register/task — notify.ts:366): bookings and meal orders (category 'booking') never reach a staff bell by design.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "HQ task due today → 201; GET bell: task entry task_<id>_2026-09-14, signup entry for tenant A (created 111s ago): true \"New freelancer signed up\"; dismiss → 200; gone after dismiss: true; gone after /read: true; mute 'support' → 200; $F1 POST /api/messages/support → 201; support entry hidden while off: true; unmute → 200; entry now: \"New support message — P2H Comms F1 · P2H Comms F1 area\" — P2H franchise question",
+    "notes": "The bell is aggregated on read (platformNotifications.ts:38-140): a signup shows the moment the tenant doc exists; the support entry names the franchise because messages.ts:735 labels a franchise's support thread with franchiseLabel(). HQ prefs are one shared platform/notifPrefs doc — restored to its prior state at the end of this run.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n12": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "Not runnable from this harness: it needs the API process (startSweeps() in src/index.ts) killed mid-sweep and restarted, plus MAIL_LIVE=1 and a real mailbox to count — mail is NOT live here (every send logs SUPPRESSED) and sessionReminders/paymentDueReminders are module-private (src/lib/sweeps.ts:353, :423). Code reading: each sweep runs under a Firestore transactional lock (scheduler.ts:44-70 claimSweep — one winner per interval, a crashed winner just means the next poll wins) and every delivery inside it is wrapped in fireOnce (scheduler.ts:95-130: a schedulerFired/<key> marker claimed in a transaction with a 5-min lease, 'done' after success, released on throw) — so a restart re-runs the sweep but re-sends nothing already marked done; a delivery that died mid-flight is retried only after its lease expires.",
+    "notes": "Needs a real-mail environment + process control to record the mailbox count.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "GET /api/events?token=<$S id token>&collections=tasks,listings → 200 text/event-stream; task in tenant B → 201: events received 0; task in tenant A → 201: event {\"collection\":\"tasks\"}; garbage token → 401. Expiry: not waited (a Firebase ID token lives 1h)",
+    "notes": "Expiry half by code: events.ts verifies the token ONCE at connect (:26-31) and never re-checks — the stream keeps running and pinging (:166) after the token expires or is revoked; it ends only when the client disconnects. It does not 'end with 401 after expiry' — the client's reconnect is what gets the 401 (the front-end reconnects every 3s per the header comment). Decision: re-verify on a timer or cap the stream at the token's exp.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n14": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "$S (staff): 200 \"I can’t see any payment or invoice details for families—those are managed by your manager. You can view the Smith family’s account (including any outstanding balance) in the Families screen: [Families](/staff/customers)\" (money figure present: false); $A: 200 \"**The Smith Family currently owes £10** for their booking of the “P2H Comms Camp” session. - Booking reference: **APF‑10313** - Status: **Approval needed** (still unpaid) - Amount: **£10** You can view or manage this boo\" (figure present: true); $P about the Smiths: 200 \"I don’t see any Smith family records in the data I can view right now, so I can’t tell you what they owe or list their children. You can check the details for any family in the portal: - **Payments** \" (other family's money leaked: false); injected note → $S asks about care/dietary: 502 \"The assistant couldn't reach its model just now — try again in a moment.\" (instruction followed — emails/balances listed: false)",
+    "notes": "The staff snapshot (ai.ts:147-215 tenantSnapshot forStaff) never includes money, and a child's careNotes field isn't sent at all (only send/allergies/medical/dietary — ai.ts:191), so a care-note injection can't reach the model; the dietary probe is what the model actually saw. Owner figure = owedNow (ai.ts:10, the reconciliation rule). Replies are model output — re-run to check stability.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n15": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Meals OFF (features.meals=false): /compose announce → 200 title=\"Term Start Reminder\" body=\"Term starts Monday – please ensure your child brings a water bottle.\"; /compose-newsletter → 200; GROQ_API_KEY unset: /compose → 503 \"The AI writer isn't configured on this server (GROQ_API_KEY is missing).\"; /chat → 503",
+    "notes": "Compose is not gated by any feature switch (accessMap.ts:58-65 only lists /api/ai/chat under the 'ai' feature), so Meals off changes nothing; the 503 text is the server's own 'isn't configured' message, which the UI shows verbatim.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n16": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "$S portal=staff: 502 \"The assistant couldn't reach its model just now — try again in a moment.\" links=[none] off-portal=[none]; $S sending portal=company: links=[none]",
+    "notes": "The portal comes from the client (ai.ts:643) with no role check — staff sending portal:'company' would get company paths; observed links listed.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  },
+  "p2-n17": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "two staff named Sarah (assignee list offers both: [p2hmu1i3x2f-st-1bq06z,p2hmu1i3x2f-st-szdiia]); POST task who=Sarah whoEmail=<Sarah #1> due today 00:01 → 201 stored whoEmail=#1; visible in My tasks: Sarah #1 true, Sarah #2 false; reminder bells without a sweep: #1 0, #2 0",
+    "notes": "Blocked: the reminder sweep is module-private (taskReminders, src/lib/sweeps.ts:716; only startSweeps() reaches it and that would run every production sweep in-process). By code the sweep addresses the reminder to t.whoEmail + t.createdBy (sweeps.ts:749) — the email, never the name — via fireOnce keyed task_<id>_<date>_<email> (once per person per day), so the other Sarah gets nothing.",
+    "evidence": "server/scripts/plan2/p2H_day10.mts",
+    "at": "2026-09-14T17:24:59.138Z",
+    "agent": "plan2-L"
+  }
+}
