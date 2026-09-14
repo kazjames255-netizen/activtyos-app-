@@ -953,7 +953,7 @@ my.post("/bookings", async (req, res) => {
         // is closed to families. The operator adding a place by hand may override.
         if (cutoffH) {
           const late = days.find((d) => pastCutoff(cutoffH, d, (periodId && periodStart.get(periodId)) || sessionStartOf.get(d)));
-          if (late) throw new HttpError(400, `Bookings for ${prettyDay(late)} have closed — ${listing.name || "this activity"} stops taking bookings ${bookingCutoffLabel(cutoffH)} before each session. Please pick a later date, or contact the provider.`);
+          if (late) throw new HttpError(409, `Bookings for ${prettyDay(late)} have closed — ${listing.name || "this activity"} stops taking bookings ${bookingCutoffLabel(cutoffH)} before each session. Please pick a later date, or contact the provider.`);
         }
       }
       const missing = days.find((d) => !blockOfDate.has(d));

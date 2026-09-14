@@ -92,6 +92,8 @@ export interface Booking {
   /** Waiting-list offer window (status "Offered") — ISO timestamps. */
   offeredAt?: string;
   offerExpiresAt?: string;
+  /** Set when an offer lapsed: the family goes to the BACK of the queue instead of being re-offered first (p2-o15). */
+  requeuedAt?: string;
   /** Childcare voucher booking (§Q): the scheme the family pays through, and
    *  the dates they must send by / it must arrive by. pay is
    *  "Awaiting voucher payment" until the money lands. */

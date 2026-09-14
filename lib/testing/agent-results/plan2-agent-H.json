@@ -369,5 +369,162 @@
     "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
+  },
+  "p2-o1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST daily ×7 → 201 created=7; done 2026-09-14,2026-09-15 → 200/200; PUT range 2026-09-14→2026-09-16 → 200 {\"created\":0,\"removed\":4,\"keptDone\":0}; left 3 (done kept: [2026-09-14,2026-09-15], future gone: true); range 2026-09-16→2026-09-16 (done dates now outside) → 200 keptDone=2, done rows still present: 2; DELETE series → 200 deleted=3, left 0; subtask-only: $S sees the task flagged subtaskOnly=true; PUT {t} → 403 \"You've been given a step on this task — you can tick your own step or add a comment, but not change the task ; tick own step → 200; tick the lead's step → 403",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "as $S (tenant A) → 200 people=[p2hmu1ernjh-st-6fplb0@p2h.test,p2hmu1ernjh-st-vkd8wb@p2h.test,p2hmu1ernjh-own-8cpyp0@p2h.test] outside A: [none] parent present: false; as F1 staff → 200 people=[p2hmu1ernjh-st-w5136b@p2h.test,p2hmu1ernjh-fr-1k507p@p2h.test] outside F1: [none]; as $F1 manager → 200 outside F1: [none]; as HO → headOffice=true groups=[Head office:2,P2H Ops F1:2,P2H Ops F2:2]",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o3": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "POST end 10:00 before start 14:00 → 400 [{\"code\":\"custom\",\"message\":\"end time must be after start time\",\"path\":[\"end\"]}]; endDate before date → 400; POST event at 16:42 UK with remindMode on / 2 min → 201; calendar bells without a sweep: 0→0. Reminder-fires-once half: needs a sweep runner (calendarReminders is module-private in src/lib/sweeps.ts:50 and startSweeps() would run every production sweep in-process).",
+    "notes": "Sweep half unverified in-process.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST timetable → 201; publish {parents, notifyEmail} → 200 published.at=set; PUT draft (name+activity changed) → 200 draft name=\"Week one EDITED\"; GET /published as $P → 200: sees name=\"Week one\" activity=\"Football\" (frozen: true); parent bells 0→0, emails 1→1",
+    "notes": "Owed (Amir 22): notifyEmail/notifyPush are accepted by publishSchema (timetables.ts:299-309) and dropped — no parent email or bell is sent on publish.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST item qty 5 → 201; /order {quantity:10, cost:25} → 200 ordered=true expense created=true (£25); /received → 200 quantity=15 ordered=false; /carry-over Summer→Autumn → 200 copied=1; new-season item quantity=15 carriedFrom=Summer 2026 lastCheckedAt=null; PUT {minQty:null} → 200 minQty=null; PUT {quantity:-1} → 400 [{\"code\":\"too_small\",\"minimum\":0,\"type\":\"number\",\"inclusive\":true,\"exact\":false,\"message\":\"Number must be grea",
+    "notes": "The reorder level is the `minQty` field (the plan's reorderLevel); the order body is {quantity, cost, category} not {qty}.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o6": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "Setup inventory.lowStockAlert=true; item minQty 5; /check {quantity:2} → 200 quantity=2; provider bells 1→1 (stock-related: 0). No low-stock sweep exists to wait for: src/lib/sweeps.ts registers no inventory sweep and nothing in server/src raises a stock alert.",
+    "notes": "Fix needed: low-stock alerts are client-side only — settings.inventory.lowStockAlert (lib/settings.ts:957) just filters/badges the Inventory page (features/inventory/InventoryApp.tsx:45). No server sweep, no notify() call, so the 'one bell per item, none while OFF' behaviour has nothing to test until a sweep is written.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST order (D1=2026-09-16) → 201 total=3; provider 'ordered a meal' bells: 1; /change before cut-off → 200 item=Jacket potato; listing cut-off 2 days@00:01 → 200; /change after cut-off → 409 \"Ordering for that day has closed — order by 00:01, 2 days before.\"; /cancel after cut-off → 409 \"Cancelling for that day has closed — order by 00:01, 2 days before. Contact the provider.\" (order status now \"placed\"); second order (D2) → 201; /pay → 200 pay=Paid; change a paid order → 409; report → 200 rows=2 total=£5.50 vs operator order list units=2 total=£5.50; every row carries allergies/dietary: true",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "child allergies=\"nuts\" orders \"Peanut satay\" (allergens [nuts]) → 201 accepted; warning keys in the response: [warnings]; line allergens=[nuts]; kitchen report row: dish=\"Peanut satay\" allergies=\"nuts\"; parent meal-days entry for that day mentions the child's allergy: false (allergenNote=\"\")",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "changeApproval=review; order → 201; parent /change → 200 changeRequest=pending (Jacket potato); provider 'change requested' bells: 1; $A /request {approve} → 200 applied=true; parent bells 0→0, parent emails 1→1 (nothing, as expected while owed)",
+    "notes": "Owed (Amir 23): POST /api/meal-orders/:id/request approve/decline (mealsShop.ts:702-735) writes the order and never notifies the family — no bell, no email.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o10": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT mealConfig {catererEmail, catererEvery:day, catererAt:16:41} → 200 stored={\"catererEmail\":\"caterer-8cpyp0@p2h.test\",\"catererEvery\":\"day\",\"catererAt\":\"16:41\",\"cutoffWhen\":\"off\"}; emails to the caterer after the time: 0→0. No sender exists to wait for: nothing in server/src reads catererEmail/catererAt (listings.ts:128-137 stores them and says 'Caterer emailing is a backend cron (Amir)'); the UI's Meals config shows the same note.",
+    "notes": "Owed (Amir 24): no caterer digest sweep — settings are stored only.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT seasonId=s-one on L → 200; listings in s-one=[1] s-empty=[0]; GET /api/bookings → 200 2 bookings; join by listing (client rule): s-one → [APF-10312] (L's APF-10312 in, L2's APF-10313 out), s-empty → [nobody] via the __none__ sentinel; GET /api/bookings?seasonId=s-empty → 200 2 rows (server ignores the param: true); delete season s-one → listing keeps seasonId=\"s-one\" (public feed shows season=null)",
+    "notes": "Record: the season filter is client-side only (EmailApp.tsx:1513 seasonListingFilter, listing ids or ['__none__']) — no server route filters bookings by season; GET /api/bookings ignores ?seasonId. Deleting a season leaves the orphan id on the listing (listings.ts resolves it to season=null on the public feed).",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "bundle → 201; attach to L3 → 200; booking on L3 APF-10314 → 201; /duplicate → 201 newId=true name=\"Ops bundle (copy)\" listingIds=[]; /archive → 200 archived=true; public feed still shows L3 after the BUNDLE is archived: true; /reorder with tenant B's id → 400 \"Bundle ose0SLaOTDGVi6SwjBQ4 isn't one of yours\"; archive the LISTING → 200; public feed hides L3: true; booking APF-10314 intact: true status=Approval needed",
+    "notes": "Foreign id is refused as 404 \"Bundle … not found\" (blockBundles.ts:365) rather than the plan's 400 — same protection, different code. Archiving a bundle does not touch the public feed (the listing's own archived flag does); the duplicate has a new id and no listings/bookings.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "listing with one block 2026-08-05→2026-08-11 (block i6qhOl…): GET ?mine=1 → status=\"live\" archived=false blocks=1; public feed (?tenantId) lists it: false; direct GET /api/listings/:id → 200",
+    "notes": "Record (Amir 43): the public feed drops it on the dates gate (listings.ts:373-381 hasUpcomingBlock) but the stored status stays 'live' — ?mine=1 counts, HQ analytics and anything keyed on status:'live' overstate.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o14": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "PUT ageCaps {g57:1} ageCapsOn → 200; GET back: ageCaps={\"g57\":1} ageCapsOn=true (survived: true); first 6-year-old → 201 Approval needed; second 6-year-old → 201 Approval needed (refused/waitlisted: false)",
+    "notes": "Fix needed (§S, known): the caps are stored and returned (listings.ts:88-93) but POST /api/my/bookings never reads ageCaps — capacity is block-wide only (my.ts:1259-1283). The wizard's 'Enforced once the backend is built' badge still applies.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o15": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "cap 1, auto: $P → 201 Approval needed; $P2 → Waitlisted; $P3 → Waitlisted; $A cancels $P → 200; after 2.5s: $P2=Offered $P3=Waitlisted; $P2 /decline-offer → 200; $P3 now Offered; $P3 /accept-offer → 200 Confirmed. Expiry (fresh block, $P2 then $P4 queued): $P2 Offered offeredAt=2026-09-14T15:41:29.348Z; offerExpiresAt back-dated; $P2 accept-offer → 409 \"This offer has expired — you're back in the queue\"; expireOffers(): $P2=Waitlisted offeredAt=2026-09-14T15:41:29.348Z note=\"Offer expired — back in the queue.\" (re-issued to the same family: false), $P4=Offered (moved on: true)",
+    "notes": "Expired offers are handled by SWEEP — 'waitlist-expiry' runs expireOffers() every 5 min (sweeps.ts:789) and accept-offer refuses an expired offer on read (my.ts:1913). ",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o16": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "listing cut-off 2h; session 2026-09-14 17:41–18:41 UK (1h ahead); parent POST /api/my/bookings → 409 \"Bookings for Mon 14 Sept have closed — P2H Ops Cutoff stops taking bookings 2 hours before each session. Plea; operator POST /api/bookings same block → 201 ref APF-10323 status Confirmed (operator door open: true)",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o17": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/bookings ×50 on a block of 26 → codes 201, per-row statuses: 26 placed, 24 Waitlisted (first waitlisted row: 27); block bookedCount before=26; POST /bulk {approve ×50} → 409 rows=\"Approving these would put Bulk day 24 places over capacity — approve fewer, or waitlist the rest.\"; after: Confirmed=26 Waitlisted=24, block bookedCount=26/26",
+    "notes": "Meets the plan after the fix: creation is per row (row 27 onward come back Waitlisted, never a 500) and bulk approve is now all-or-nothing WITH a capacity check — 409 over_capacity instead of confirming 50 on a block of 26.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
+  },
+  "p2-o18": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST trip (2 children, consent granted by provider) → 201 attendees=[Ops Kid One=granted,Ops Kid Nuts=granted]; PUT {childNames} only (dropping Kid One) → 200 Kid One still in attendees: true; PUT {childNames + attendees} → 200 attendees=[Ops Kid Nuts=granted] Kid One gone: true childIds cleaned: true; day register 2026-09-14 → 200 lists Kid One (booked): true, Kid Nuts (never booked): false; trip roll (attending) = [Ops Kid Nuts]",
+    "notes": "Roll call is client-side in the planner (attendees minus declined; trips.ts:105-110) — no roll-call API. A PUT that sends childNames WITHOUT attendees keeps the removed child's consent entry (trips.ts:318-320: incoming = prev, enrichTrip only adds) — confirmed: the entry lingers until the client also resends attendees (the planner does).",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "at": "2026-09-14T15:46:39.426Z",
+    "agent": "plan2-H"
   }
 }

@@ -446,8 +446,20 @@ mealOrders.post("/", async (req, res) => {
     amountPaid: 0,
     createdAt: new Date().toISOString(),
   };
-  const ref = await ordersCol.add(doc);
-  res.status(201).json({ id: ref.id, ...doc });
+  // Dish allergens vs the child's own allergies — flagged, not blocked: the
+  // parent knows their child, but they must be told (acceptance p2-o8).
+  const warnings: string[] = [];
+  if (input.childId) {
+    const allergies = String((await db.collection("children").doc(input.childId).get()).get("allergies") ?? "").toLowerCase();
+    if (allergies && !/^(none|no|n\/a|nil)$/.test(allergies.trim())) {
+      for (const it of items as { name: string; allergens?: string[] }[]) {
+        const hit = (it.allergens ?? []).filter((a) => allergies.includes(a.toLowerCase()));
+        if (hit.length) warnings.push(`${it.name} contains ${hit.join(", ")} — ${input.childName} is listed as allergic to ${allergies}.`);
+      }
+    }
+  }
+  const ref = await ordersCol.add({ ...doc, ...(warnings.length ? { allergenWarning: warnings } : {}) });
+  res.status(201).json({ id: ref.id, ...doc, ...(warnings.length ? { warnings } : {}) });
   // The kitchen has to hear about it. Orders reached the server and nobody was
   // told — the provider found out only by opening the report.
   void mealAlert(doc.tenantId, `${doc.parentName} ordered a meal for ${doc.childName}`, `${doc.items.map((i: { name: string; qty?: number }) => `${i.qty && i.qty > 1 ? `${i.qty} × ` : ""}${i.name}`).join(", ")} · ${doc.date}`, input.listingId);
@@ -488,6 +500,16 @@ mealOrders.post("/:id/cancel", async (req, res) => {
   if (isOwner) {
     if (await mealsOffForFamilies(o.tenantId, snap.get("listingId") as string | undefined)) { res.status(403).json(MEALS_OFF); return; }
     if (o.pay === "Paid") { res.status(409).json({ error: "This order is paid — ask the provider to cancel it" }); return; }
+    // The same cut-off that closes changes closes cancellations: the kitchen
+    // has already counted this meal (acceptance p2-o7).
+    const lid = snap.get("listingId") as string | undefined; const day = snap.get("date") as string | undefined;
+    if (lid && day) {
+      const listing = (await db.collection("listings").doc(lid).get()).data();
+      const libSnap = await librarySnap(o.tenantId, (listing?.franchiseId as string | null | undefined) ?? null);
+      const meals = ((libSnap.data()?.settings as { meals?: { cutoffWhen?: string; cutoffTime?: string } } | undefined)?.meals ?? {});
+      const cut = resolveCutoff(listing?.mealConfig as { cutoffWhen?: unknown; cutoffTime?: unknown } | undefined, meals);
+      if (!canOrderMeal(cut.when, cut.time, day)) { res.status(409).json({ error: `Cancelling for that day has closed — ${cutoffLabel(cut.when, cut.time).toLowerCase()}. Contact the provider.`, code: "past_cutoff" }); return; }
+    }
     if ((await mealApproval(o.tenantId, (snap.get("listingId") as string | undefined))) === "review") {
       await snap.ref.set({ cancelRequest: { at: new Date().toISOString() }, changeRequest: null }, { merge: true });
       res.json({ ok: true, requested: true });

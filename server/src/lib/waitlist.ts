@@ -23,7 +23,10 @@ async function queuedBookings(blockId: string): Promise<Booking[]> {
   return snap.docs
     .map((d) => fromDoc(d.data() as BookingDoc))
     .filter((b) => b.status === "Waitlisted")
-    .sort((a, b) => refNum(a.ref) - refNum(b.ref));
+    // FIFO by ref, except a family whose offer lapsed re-joins at the back
+    // (otherwise the oldest ref is re-offered every sweep and nobody else
+    // ever gets the place — p2-o15).
+    .sort((a, b) => (Date.parse(a.requeuedAt ?? "") || 0) - (Date.parse(b.requeuedAt ?? "") || 0) || refNum(a.ref) - refNum(b.ref));
 }
 
 /** Per-date queue positions for the given refs ("2nd in line for 12 Aug"). */
@@ -151,6 +154,7 @@ export async function expireOffers(): Promise<void> {
           }
         }
         cur.status = "Waitlisted";
+        cur.requeuedAt = new Date().toISOString();
         cur.note = "Offer expired — back in the queue.";
         tx.set(fresh.ref, toDoc(cur));
         if (blockUpdate) tx.update(blockUpdate.ref, { ...blockUpdate.counts });

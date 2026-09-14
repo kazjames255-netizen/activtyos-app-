@@ -1110,6 +1110,8 @@ bookings.put("/:ref/payment-ref", async (req, res) => {
   }
 });
 
+class BulkOverCapacity extends Error { constructor(public block: string, public over: number) { super("over_capacity"); } }
+
 bookings.post("/bulk", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope || !requireWrite(req, res)) return;
@@ -1155,13 +1157,22 @@ bookings.post("/bulk", async (req, res) => {
         const counts = countsUpdate(blockData, entry.delta, bookingDays({ days: entry.days }, blockData));
         blockData = { ...blockData, ...counts };
       }
+      // Approving is all-or-nothing, so it must not overshoot the block:
+      // 50 approvals on a block of 26 used to confirm all 50 (p2-o17).
+      if (action === "approve" && (blockData.capacityScope ?? "listing") !== "day" && blockData.bookedCount > blockData.capacity) {
+        throw new BulkOverCapacity(blockData.name ?? blockSnap.id, blockData.bookedCount - blockData.capacity);
+      }
       tx.update(blockSnap.ref, {
         bookedCount: blockData.bookedCount,
         dayCounts: blockData.dayCounts ?? {},
       });
     }
     return out.map((x) => x.b);
-  });
+  }).catch((e: unknown) => { if (e instanceof BulkOverCapacity) return e; throw e; });
+  if (updated instanceof BulkOverCapacity) {
+    res.status(409).json({ error: `Approving these would put ${updated.block} ${updated.over} place${updated.over === 1 ? "" : "s"} over capacity — approve fewer, or waitlist the rest.`, code: "over_capacity", over: updated.over });
+    return;
+  }
   // Bulk declines/cancellations free seats — let the queues know.
   if (action === "decline" || action === "cancel" || action === "waitlist") {
     for (const blockId of new Set(updated.map((b) => b.blockId).filter(Boolean) as string[]))

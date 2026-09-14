@@ -364,7 +364,7 @@ blockBundles.post("/reorder", async (req, res) => {
   const batch = db.batch();
   for (const [i, snap] of snaps.entries()) {
     if (!snap.exists || snap.data()!.tenantId !== tenantId) {
-      res.status(404).json({ error: `Bundle ${parsed.data.orderedIds[i]} not found` });
+      res.status(400).json({ error: `Bundle ${parsed.data.orderedIds[i]} isn't one of yours` });
       return;
     }
     batch.update(snap.ref, { order: i });

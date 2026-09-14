@@ -13,7 +13,7 @@ const col = db.collection("calendarEvents");
 const canUse = (role: Role) => role === "staff" || role === "company" || role === "freelancer" || role === "franchise";
 const canManage = (role: Role) => role === "company" || role === "freelancer" || role === "franchise";
 
-const eventSchema = z.object({
+const eventBase = z.object({
   title: z.string().trim().min(1).max(160),
   date: z.string().max(10),
   endDate: z.string().max(10).optional(),
@@ -29,6 +29,10 @@ const eventSchema = z.object({
   remindMode: z.enum(["default", "on", "off"]).optional(),
   remindMinutes: z.number().int().nonnegative().max(1440).optional(),
 });
+const eventSchema = eventBase
+  // A backwards event is a typo, not a booking of negative length (p2-o3).
+  .refine((e) => !e.endDate || e.endDate >= e.date, { message: "endDate must not be before date", path: ["endDate"] })
+  .refine((e) => !(e.start && e.end && !e.allDay && (!e.endDate || e.endDate === e.date)) || e.end > e.start, { message: "end time must be after start time", path: ["end"] });
 
 /** A franchise's calendar: events stamped with its franchiseId, and older
  *  unstamped ones its own people created. Head office's and siblings' stay theirs. */
@@ -73,7 +77,7 @@ async function own(req: Request, id: string) {
 calendarEvents.put("/:id", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Forbidden" : "Event not found" }); return; }
-  const parsed = eventSchema.partial().safeParse(req.body);
+  const parsed = eventBase.partial().safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   await o.snap.ref.set({ ...parsed.data, updatedAt: new Date().toISOString() }, { merge: true });
   const after = await o.snap.ref.get();

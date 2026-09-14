@@ -191,8 +191,11 @@ tasks.get("/assignees", async (req, res) => {
     [...(m?.values() ?? [])].sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
   const isHeadOffice = auth.role === "company" && franchises.size > 0;
   if (!isHeadOffice) {
-    // Flat team = everyone we found (any bucket), sorted & de-duped.
-    const flat = [...new Map([...buckets.values()].flatMap((m) => [...m])).values()]
+    // Flat team = everyone we found, sorted & de-duped. A franchise (manager or
+    // staff) sees ITS bucket only — never head office's people or a sibling
+    // franchise's (acceptance p2-o2).
+    const mine = auth.franchiseId ? [buckets.get(auth.franchiseId)].filter(Boolean) as Map<string, { name: string; email: string }>[] : [...buckets.values()];
+    const flat = [...new Map(mine.flatMap((m) => [...m])).values()]
       .sort((a, b) => (a.name || a.email).localeCompare(b.name || b.email));
     res.json({ headOffice: false, groups: [{ franchiseId: null, name: "Team", people: flat }] });
     return;
