@@ -7,8 +7,9 @@ import { blockSummary, type BlockDoc } from "../lib/blockDomain";
 import { walletsForFamily } from "../lib/wallet";
 import { entryFor, registerRows } from "../lib/registerRows";
 import type { Booking } from "../../../features/bookings/types";
-import { owedNow } from "../../../features/bookings/helpers";
+import { owedNow, isMoneyIn } from "../../../features/bookings/helpers";
 import { ukToday } from "../lib/ukDate";
+import { isFranchise, franchiseChildIds, franchiseFamilyEmails } from "../lib/franchiseScope";
 
 // ─────────────────────────────────────────────────────────────────────────
 // AI assistant — answers plain-English questions from the account's LIVE
@@ -140,11 +141,10 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 // The same "still owed" rule the Dashboard and Finance use (d19s7) — so the
 // co-pilot quotes the figure the operator sees on screen.
 const outstandingOf = (b: Booking) => owedNow(b);
-const RECEIVED = new Set(["recorded", "succeeded"]);
 
 // ── Operator snapshot — the dashboard's numbers plus a compact booking list
 // so "who's in today" and "who still owes" have names, not just totals. ──
-async function tenantSnapshot(tenantId: string, forStaff = false) {
+async function tenantSnapshot(tenantId: string, forStaff = false, franchiseId: string | null = null) {
   const [bookingsSnap, blocksSnap, listingsSnap, paymentsSnap, tasksSnap, childrenSnap, invitesSnap, incidentsSnap] = await Promise.all([
     db.collection("bookings").where("tenantId", "==", tenantId).get(),
     db.collection("blocks").where("tenantId", "==", tenantId).get(),
@@ -159,12 +159,22 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   const now = new Date();
   const today = ukToday(now);
   const weekAgo = new Date(now.getTime() - 7 * 86_400_000).toISOString();
-  const title = new Map(listingsSnap.docs.map((d) => [d.id, (d.data() as { title?: string }).title ?? "Untitled"]));
+
+  // A franchise (or its staff) must only ever "know" its own franchise's slice
+  // of the tenant — the same isolation rule bookings/listings/tasks/income
+  // etc. enforce at their own routes (server/src/lib/franchiseScope.ts). Head
+  // office and freelancers pass franchiseId = null and see the whole tenant.
+  const scopedListingDocs = franchiseId
+    ? listingsSnap.docs.filter((d) => ((d.data() as { franchiseId?: string | null }).franchiseId ?? null) === franchiseId)
+    : listingsSnap.docs;
+  const scopedListingIds = new Set(scopedListingDocs.map((d) => d.id));
+  const title = new Map(scopedListingDocs.map((d) => [d.id, (d.data() as { title?: string }).title ?? "Untitled"]));
 
   type Sess = { date: string; start: string; end: string; capacity: number; booked: number; spotsLeft: number; listing: string; open: boolean };
   const sessions: Sess[] = [];
   let openCapacity = 0, openBooked = 0;
-  for (const d of blocksSnap.docs) {
+  const scopedBlockDocs = franchiseId ? blocksSnap.docs.filter((d) => scopedListingIds.has((d.data() as BlockDoc).listingId)) : blocksSnap.docs;
+  for (const d of scopedBlockDocs) {
     const doc = d.data() as BlockDoc;
     const sum = blockSummary(d.id, doc);
     const listing = title.get(doc.listingId) ?? "Untitled";
@@ -173,11 +183,26 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   }
   sessions.sort((a, b) => (`${a.date} ${a.start}` < `${b.date} ${b.start}` ? -1 : 1));
 
-  const bookings = bookingsSnap.docs.map((d) => {
-    const b = fromDoc(d.data() as BookingDoc);
-    return { ...b, createdAt: b.createdAt ?? d.createTime?.toDate().toISOString() ?? "" };
-  });
+  const bookings = bookingsSnap.docs
+    .filter((d) => !franchiseId || ((d.data() as { franchiseId?: string | null }).franchiseId ?? null) === franchiseId)
+    .map((d) => {
+      const b = fromDoc(d.data() as BookingDoc);
+      return { ...b, createdAt: b.createdAt ?? d.createTime?.toDate().toISOString() ?? "" };
+    });
   const live = bookings.filter((b) => b.status !== "Cancelled" && b.status !== "Declined");
+
+  // The children this franchise looks after (any child booked on ITS
+  // bookings) — mirrors franchiseChildIds, computed locally to avoid a
+  // second query since bookingsSnap is already in hand.
+  const scopedChildIds = franchiseId
+    ? new Set(
+        bookingsSnap.docs.flatMap((d) => {
+          const b = d.data() as { franchiseId?: string | null; childId?: string; kids?: { childId?: string }[] };
+          if ((b.franchiseId ?? null) !== franchiseId) return [];
+          return [b.childId, ...(b.kids ?? []).map((k) => k.childId)].filter(Boolean) as string[];
+        }),
+      )
+    : null;
 
   // Expected today: bookings holding a place whose chosen days include today
   // (bookings without `days` cover every session of their block).
@@ -189,8 +214,9 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   // actually signed in from today's registers — so the assistant can answer
   // "any children with allergies in?", "who's not arrived?", "who has SEND?".
   type CDoc = { name?: string; send?: string; sendPlanId?: string; sendPlanName?: string; allergies?: string; medical?: string; dietary?: string };
-  const childByName = new Map(childrenSnap.docs.map((d) => [((d.data() as CDoc).name ?? "").trim().toLowerCase(), d.data() as CDoc]));
-  const childById = new Map(childrenSnap.docs.map((d) => [d.id, d.data() as CDoc]));
+  const scopedChildDocs = franchiseId ? childrenSnap.docs.filter((d) => scopedChildIds!.has(d.id)) : childrenSnap.docs;
+  const childByName = new Map(scopedChildDocs.map((d) => [((d.data() as CDoc).name ?? "").trim().toLowerCase(), d.data() as CDoc]));
+  const childById = new Map(scopedChildDocs.map((d) => [d.id, d.data() as CDoc]));
   const [registersSnap, menuDoc] = await Promise.all([
     db.collection("registers").where("tenantId", "==", tenantId).where("date", "==", today).get(),
     db.collection("menus").doc(`${tenantId}_${today}`).get(),
@@ -224,14 +250,22 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   const sendChildrenToday = childrenTodayDetailed.filter((k) => k.care.includes("SEND")).map((k) => k.child);
 
   const owing = live.filter((b) => outstandingOf(b) > 0);
+  // A payment carries the booking refs it settles, not a franchiseId of its
+  // own (payments.ts scopes a franchise the same way — by its bookings' refs).
+  const scopedRefs = franchiseId ? new Set(bookings.map((b) => b.ref)) : null;
+  const inFranchiseScope = (p: { refs?: string[] }) => !scopedRefs || (p.refs ?? []).some((r) => scopedRefs.has(r));
   const takenThisWeek = round2(
     paymentsSnap.docs
-      .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string })
-      .filter((p) => p.type !== "refund" && RECEIVED.has(p.status ?? "") && (p.createdAt ?? "") >= weekAgo)
+      .map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string; refs?: string[] })
+      .filter((p) => isMoneyIn(p) && inFranchiseScope(p) && (p.createdAt ?? "") >= weekAgo)
       .reduce((s, p) => s + (p.amount ?? 0), 0),
   );
 
-  const taskRows = tasksSnap.docs.map((d) => d.data() as { title?: string; done?: boolean; dueDate?: string; status?: string; who?: string });
+  const taskRows = tasksSnap.docs
+    .map((d) => d.data() as { title?: string; done?: boolean; dueDate?: string; status?: string; who?: string; franchiseId?: string | null })
+    // Tasks created before franchiseId was stamped have none — same "no stamp
+    // means head office's" convention tasks.ts itself uses.
+    .filter((t) => !franchiseId || (t.franchiseId ?? null) === franchiseId);
   const openR = taskRows.filter((t) => !t.done && t.status !== "done");
   const openTasks = openR.slice(0, 15).map((t) => ({ title: t.title, due: t.dueDate ?? null, who: t.who ?? null }));
   const taskSummary = { open: openR.length, overdue: openR.filter((t) => !!t.dueDate && t.dueDate < today).length, dueToday: openR.filter((t) => t.dueDate === today).length };
@@ -249,19 +283,23 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   });
 
   // Team roster — invited accounts (NOT the live day rota, which lives client-side).
-  const team = invitesSnap.docs.map((d) => d.data() as { name?: string; email?: string; role?: string; status?: string })
+  const team = invitesSnap.docs.map((d) => d.data() as { name?: string; email?: string; role?: string; status?: string; franchiseId?: string | null })
+    .filter((t) => !franchiseId || (t.franchiseId ?? null) === franchiseId)
     .map((t) => ({ name: t.name || t.email || "—", role: t.role || "staff", status: t.status || "invited" })).slice(0, 50);
 
-  // Recent accidents / incidents / safeguarding records.
-  const incidents = incidentsSnap.docs.map((d) => d.data() as { kind?: string; childName?: string; severity?: string; date?: string; description?: string; confidential?: boolean; subject?: string })
+  // Recent accidents / incidents / safeguarding records — a franchise (or its
+  // staff) only ever sees its OWN franchise's records, or ones tied to a
+  // child it looks after (mirrors routes/incidents.ts franchise scoping).
+  const incidents = incidentsSnap.docs.map((d) => d.data() as { kind?: string; childId?: string; childName?: string; severity?: string; date?: string; description?: string; confidential?: boolean; subject?: string; franchiseId?: string | null })
     // Staff don't read safeguarding concerns, confidential records or concerns
     // about a colleague on the log (routes/incidents.ts staffAccess) — nor here.
     .filter((r) => !forStaff || (r.kind !== "safeguarding" && r.confidential !== true && r.subject !== "staff"))
+    .filter((r) => !franchiseId || r.franchiseId === franchiseId || (!!r.childId && scopedChildIds!.has(r.childId)))
     .sort((a, b) => ((a.date ?? "") < (b.date ?? "") ? 1 : -1)).slice(0, 12)
     .map((r) => ({ kind: r.kind || "incident", child: r.childName, severity: r.severity, date: r.date, summary: (r.description || "").slice(0, 160) }));
 
-  // Care-flag totals across ALL of the setting's children (not just today's).
-  const allChildren = childrenSnap.docs.map((d) => d.data() as CDoc);
+  // Care-flag totals across ALL of the setting's children (not just today's) — scoped to the franchise's own children when applicable.
+  const allChildren = scopedChildDocs.map((d) => d.data() as CDoc);
   const childrenSummary = {
     total: allChildren.length,
     withSEND: allChildren.filter((c) => c.send || c.sendPlanId || c.sendPlanName).length,
@@ -272,14 +310,14 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
 
   // Listings, with how full each one is right now.
   const fillByListing = new Map<string, { cap: number; booked: number }>();
-  for (const d of blocksSnap.docs) {
+  for (const d of scopedBlockDocs) {
     const doc = d.data() as BlockDoc; const sum = blockSummary(d.id, doc);
     const nm = title.get(doc.listingId) ?? "Untitled";
     const f = fillByListing.get(nm) ?? { cap: 0, booked: 0 };
     if (sum.open) { f.cap += sum.capacity; f.booked += sum.bookedCount; }
     fillByListing.set(nm, f);
   }
-  const listings = listingsSnap.docs.map((d) => {
+  const listings = scopedListingDocs.map((d) => {
     const l = d.data() as { title?: string; name?: string; status?: string; visibility?: string };
     const nm = l.title || l.name || "Untitled"; const f = fillByListing.get(nm);
     return { name: nm, status: l.status || "live", visibility: l.visibility || "public", fillPct: f && f.cap ? Math.round((f.booked / f.cap) * 100) : null };
@@ -323,7 +361,7 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   // ── Operator-only: money, marketing & wider ops (staff never reach here) ──
   const year = today.slice(0, 4);
   const monthKey = today.slice(0, 7);
-  const [incomeSnap, expensesSnap, invoicesSnap, couponsSnap, membersSnap, referralsSnap, poSnap, inventorySnap, threadsSnap, postsSnap, momentsSnap, customersSnap] = await Promise.all([
+  const [incomeSnap, expensesSnap, invoicesSnap, couponsSnap, membersSnap, referralsSnap, poSnap, inventorySnap, threadsSnap, postsSnap, momentsSnap, customersSnap, famEmails] = await Promise.all([
     db.collection("income").where("tenantId", "==", tenantId).get(),
     db.collection("expenses").where("tenantId", "==", tenantId).get(),
     db.collection("invoices").where("tenantId", "==", tenantId).get(),
@@ -336,15 +374,21 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
     db.collection("posts").where("tenantId", "==", tenantId).get(),
     db.collection("moments").where("tenantId", "==", tenantId).get(),
     db.collection("customers").where("tenantId", "==", tenantId).get(),
+    // The family emails this franchise deals with — used to scope memberships,
+    // messages and families below (those collections don't carry franchiseId
+    // directly; ownership follows the family, same as franchiseFamilyEmails'
+    // other callers, e.g. messages.ts/customers.ts).
+    franchiseId ? franchiseFamilyEmails(tenantId, franchiseId) : Promise.resolve<Set<string> | null>(null),
   ]);
   const sumBy = <T,>(rows: T[], amt: (r: T) => number, keep: (r: T) => boolean) => round2(rows.filter(keep).reduce((s, r) => s + amt(r), 0));
+  const scopedByFranchise = <T extends { franchiseId?: string | null }>(rows: T[]) => franchiseId ? rows.filter((r) => (r.franchiseId ?? null) === franchiseId) : rows;
 
   // Payments received (from the base paymentsSnap), income ledger, expenses, invoices.
-  const payRows = paymentsSnap.docs.map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string });
-  const gotIn = (from: string) => sumBy(payRows, (p) => p.amount ?? 0, (p) => p.type !== "refund" && RECEIVED.has(p.status ?? "") && (p.createdAt ?? "") >= from);
-  const incomeRows = incomeSnap.docs.map((d) => d.data() as { date?: string; category?: string; amount?: number });
-  const expRows = expensesSnap.docs.map((d) => d.data() as { date?: string; category?: string; amount?: number; supplier?: string; status?: string });
-  const invRows = invoicesSnap.docs.map((d) => d.data() as { customerName?: string; amount?: number; status?: string; dueDate?: string });
+  const payRows = paymentsSnap.docs.map((d) => d.data() as { amount?: number; status?: string; type?: string; createdAt?: string; refs?: string[] }).filter(inFranchiseScope);
+  const gotIn = (from: string) => sumBy(payRows, (p) => p.amount ?? 0, (p) => isMoneyIn(p) && (p.createdAt ?? "") >= from);
+  const incomeRows = scopedByFranchise(incomeSnap.docs.map((d) => d.data() as { date?: string; category?: string; amount?: number; franchiseId?: string | null }));
+  const expRows = scopedByFranchise(expensesSnap.docs.map((d) => d.data() as { date?: string; category?: string; amount?: number; supplier?: string; status?: string; franchiseId?: string | null }));
+  const invRows = scopedByFranchise(invoicesSnap.docs.map((d) => d.data() as { customerName?: string; amount?: number; status?: string; dueDate?: string; franchiseId?: string | null }));
   const groupSum = (rows: { category?: string; amount?: number }[]) => {
     const m = new Map<string, number>();
     for (const r of rows) m.set(r.category || "Uncategorised", (m.get(r.category || "Uncategorised") ?? 0) + (r.amount ?? 0));
@@ -360,27 +404,36 @@ async function tenantSnapshot(tenantId: string, forStaff = false) {
   };
 
   // Marketing: coupons, memberships, referrals.
-  const codes = couponsSnap.docs.map((d) => d.data() as { code?: string; type?: string; value?: number; usedCount?: number; active?: boolean; expiry?: string; membership?: boolean; referral?: boolean; referralReward?: boolean });
+  const codes = scopedByFranchise(couponsSnap.docs.map((d) => d.data() as { code?: string; type?: string; value?: number; usedCount?: number; active?: boolean; expiry?: string; membership?: boolean; referral?: boolean; referralReward?: boolean; franchiseId?: string | null }));
   const mktCodes = codes.filter((c) => !c.membership && !c.referral && !c.referralReward);
   const coupons = { activeCodes: mktCodes.filter((c) => c.active).length, totalRedemptions: mktCodes.reduce((s, c) => s + (c.usedCount ?? 0), 0), topCodes: [...mktCodes].sort((a, b) => (b.usedCount ?? 0) - (a.usedCount ?? 0)).slice(0, 8).map((c) => ({ code: c.code, type: c.type, value: c.value, usedCount: c.usedCount ?? 0, expiry: c.expiry ?? null })) };
-  const memRows = membersSnap.docs.map((d) => d.data() as { tierName?: string; priceMonthly?: number; status?: string });
+  // Memberships don't carry a franchiseId of their own — ownership follows the
+  // family, like messages/customers below (franchiseFamilyEmails).
+  const memRows = membersSnap.docs.map((d) => d.data() as { email?: string; tierName?: string; priceMonthly?: number; status?: string })
+    .filter((m) => !famEmails || famEmails.has((m.email ?? "").toLowerCase()));
   const memberships = { activeMembers: memRows.filter((m) => m.status === "active").length, mrrGBP: sumBy(memRows, (m) => m.priceMonthly ?? 0, (m) => m.status === "active") };
+  // Referrals carry no franchise ownership anywhere in the product yet (a
+  // known, tracked gap — see plan2 p2-f15) — left unscoped like every other
+  // route reads it today, rather than silently inventing a rule here.
   const refRows = referralsSnap.docs.map((d) => d.data() as { referrerEmail?: string; friendSpend?: number; reward?: number });
   const referrals = { friendsBooked: refRows.length, referredRevenueGBP: round2(refRows.reduce((s, r) => s + (r.friendSpend ?? 0), 0)), rewardsPaidGBP: round2(refRows.reduce((s, r) => s + (r.reward ?? 0), 0)) };
 
   // Ops: purchase orders, inventory, messages, newsfeed, moments, customers.
-  const poRows = poSnap.docs.map((d) => d.data() as { supplier?: string; amount?: number; status?: string; dueDate?: string });
+  const poRows = scopedByFranchise(poSnap.docs.map((d) => d.data() as { supplier?: string; amount?: number; status?: string; dueDate?: string; franchiseId?: string | null }));
   const purchaseOrders = { outstandingGBP: sumBy(poRows, (p) => p.amount ?? 0, (p) => p.status === "sent" || p.status === "received"), overdueCount: poRows.filter((p) => (p.status === "sent" || p.status === "received") && (p.dueDate ?? "9999") < today).length };
-  const invItems = inventorySnap.docs.map((d) => d.data() as { name?: string; quantity?: number; minQty?: number; location?: string });
+  const invItems = scopedByFranchise(inventorySnap.docs.map((d) => d.data() as { name?: string; quantity?: number; minQty?: number; location?: string; franchiseId?: string | null }));
   const inventory = { items: invItems.length, lowStock: invItems.filter((i) => typeof i.quantity === "number" && typeof i.minQty === "number" && (i.quantity as number) <= (i.minQty as number)).slice(0, 12).map((i) => ({ name: i.name, quantity: i.quantity, minQty: i.minQty, location: i.location })) };
-  const threads = threadsSnap.docs.map((d) => d.data() as { parentName?: string; subject?: string; lastFrom?: string; lastAt?: string; operatorUnread?: number });
+  const threads = threadsSnap.docs.map((d) => d.data() as { parentEmail?: string; parentName?: string; subject?: string; lastFrom?: string; lastAt?: string; operatorUnread?: number })
+    .filter((t) => !famEmails || famEmails.has((t.parentEmail ?? "").toLowerCase()));
   const messages = { threads: threads.length, unreadThreads: threads.filter((t) => (t.operatorUnread ?? 0) > 0).length, unreadMessages: threads.reduce((s, t) => s + (t.operatorUnread ?? 0), 0), recent: [...threads].filter((t) => (t.operatorUnread ?? 0) > 0).sort((a, b) => (b.lastAt ?? "").localeCompare(a.lastAt ?? "")).slice(0, 6).map((t) => ({ parent: t.parentName, subject: t.subject, from: t.lastFrom, unread: t.operatorUnread })) };
-  const postRows = postsSnap.docs.map((d) => d.data() as { title?: string; status?: string; createdAt?: string });
+  const postRows = scopedByFranchise(postsSnap.docs.map((d) => d.data() as { title?: string; status?: string; createdAt?: string; franchiseId?: string | null }));
   const newsfeed = { published: postRows.filter((p) => p.status === "published").length, drafts: postRows.filter((p) => p.status === "draft").length, scheduled: postRows.filter((p) => p.status === "scheduled").length, recent: postRows.filter((p) => p.status === "published").sort((a, b) => (b.createdAt ?? "").localeCompare(a.createdAt ?? "")).slice(0, 5).map((p) => ({ title: p.title, createdAt: p.createdAt })) };
   const weekAgoDate = new Date(now.getTime() - 7 * 86_400_000).toISOString();
-  const momentRows = momentsSnap.docs.map((d) => d.data() as { createdAt?: string });
+  const momentRows = scopedByFranchise(momentsSnap.docs.map((d) => d.data() as { createdAt?: string; franchiseId?: string | null }));
   const moments = { total: momentRows.length, last7d: momentRows.filter((m) => (m.createdAt ?? "") >= weekAgoDate).length };
-  const customersCount = customersSnap.size;
+  const customersCount = franchiseId
+    ? customersSnap.docs.filter((d) => famEmails!.has(((d.data() as { email?: string }).email ?? "").toLowerCase())).length
+    : customersSnap.size;
 
   return {
     today: todayBlock,
@@ -630,7 +683,13 @@ ai.post("/chat", async (req, res) => {
     const scope = operatorScope(req, res);
     if (!scope || !scope.tenantId) return; // operatorScope has already responded
     const isStaff = auth.role === "staff";
-    snapshot = await tenantSnapshot(scope.tenantId, isStaff);
+    // A franchise (or its own staff) must only ever see ITS OWN franchise's
+    // slice of the tenant — the same isolation rule every other franchise-
+    // scoped route applies (server/src/lib/franchiseScope.ts isFranchise).
+    // Before this, the co-pilot handed a franchise the WHOLE company's
+    // bookings, money and children — a real cross-franchise data leak.
+    const fid = isFranchise(scope) ? scope.franchiseId : null;
+    snapshot = await tenantSnapshot(scope.tenantId, isStaff, fid);
     howtoKey = isStaff ? "staff" : "operator";
     who = isStaff
       ? "a front-line staff member (e.g. a coach or activity leader) at an activity provider. The data is TODAY's operational picture only — the sessions running, the children expected in, and the team's tasks. You do NOT have their finances, revenue, who owes money, or booking approvals: those are the manager's, not a staff member's. If they ask about money, payments, owing families or approving bookings, say that's handled by their manager and you can't see it. Their portal's areas are: Dashboard, Timetable, Registers, Tasks, Messages."
