@@ -52,6 +52,7 @@ const TYPE: Record<string, { label: string; emoji: string }> = {
   tuition: { label: "Tuition & learning", emoji: "📚" },
   preschool: { label: "Pre-school / playgroup", emoji: "🧸" },
   nursery: { label: "Nursery / day care", emoji: "🍼" },
+  childminder: { label: "Childminder", emoji: "🏠" },
   other: { label: "Other childcare", emoji: "🏫" },
 };
 const CORE = ["holiday", "wraparound", "activity"];
@@ -122,7 +123,9 @@ function derive(l: Lead): Derived {
   const srcs = l.sources?.length ? l.sources : [l.source || "demo"];
   const onDir = srcs.some((s) => DIRECTORY.includes(s));
   // Directory providers (EEQU, Pebble…) are activity providers; holiday camps by their words.
-  const types = l.providerTypes?.length ? l.providerTypes : onDir ? [HOLIDAY_WORDS.test(`${l.name} ${l.sport ?? ""} ${l.message ?? ""}`) ? "holiday" : "activity"] : [];
+  const baseTypes = l.providerTypes?.length ? l.providerTypes : onDir ? [HOLIDAY_WORDS.test(`${l.name} ${l.sport ?? ""} ${l.message ?? ""}`) ? "holiday" : "activity"] : [];
+  // Registers (Ofsted / CIW / Care Inspectorate / NI) describe childminders in the record text — surface them as their own setting.
+  const types = /childmind/i.test(`${l.providerType ?? ""} ${l.message ?? ""} ${(l.providerTypes ?? []).join(" ")}`) && !baseTypes.includes("childminder") ? [...baseTypes, "childminder"] : baseTypes;
   const fit: Fit = !types.length || types.some((t) => CORE.includes(t)) ? "core" : types.some((t) => t === "tuition" || t === "preschool") ? "adjacent" : "nursery";
   const n = l.ofstedSites ?? 0;
   const size: Size = l.networkKind === "franchise" ? "franchise" : l.networkKind === "group" ? "group" : n >= 10 ? "large" : n >= 2 ? "multi" : l.kind === "person" || l.plan === "freelancer" ? "solo" : "single";
