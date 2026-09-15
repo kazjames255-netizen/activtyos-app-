@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
-import { Card, Panel, Select, SectionHead, Badge } from "@/components/ui";
+import { Card, Panel, Select, Input, SectionHead, Badge } from "@/components/ui";
 
 // VENTURE CYCLE PROJECT (Phase 1) — a separate business venture Kaz and
 // Cameron are exploring: lake/country-park cycle hire, benchmarked against
@@ -72,6 +72,75 @@ const DRIVE_TIME_OPTIONS = [
   { label: "Within 90 min drive of Milton Keynes", value: "90" },
 ];
 
+// --- Phase 2 filter derivations ---------------------------------------------
+// These mirror the exact string patterns server/scripts/ventureLakes/
+// phase2_research.mjs writes to Firestore — read from there, not guessed.
+
+// Cycle-hire status: only meaningful once a site has been researched
+// (phase2CheckedAt set); `hasCycleHireAlready` is a plain boolean.
+type CycleHireFilter = "" | "opportunity" | "competitor" | "unresearched";
+const CYCLE_HIRE_OPTIONS: { value: CycleHireFilter; label: string }[] = [
+  { value: "", label: "Any" },
+  { value: "opportunity", label: "No cycle hire found (opportunity)" },
+  { value: "competitor", label: "Already has cycle hire (competitor)" },
+  { value: "unresearched", label: "Not yet researched" },
+];
+
+// buildVerdict() in phase2_research.mjs always writes one of these three
+// prefixes, e.g. "Good fit: managed by X; no existing cycle hire found...".
+type VerdictQuality = "" | "good" | "possible" | "weaker" | "unresearched";
+const VERDICT_OPTIONS: { value: VerdictQuality; label: string }[] = [
+  { value: "", label: "Any" },
+  { value: "good", label: "Good fit" },
+  { value: "possible", label: "Possible fit" },
+  { value: "weaker", label: "Weaker fit" },
+  { value: "unresearched", label: "Not researched" },
+];
+function verdictQuality(verdict?: string): Exclude<VerdictQuality, ""> {
+  if (!verdict) return "unresearched";
+  if (verdict.startsWith("Good fit")) return "good";
+  if (verdict.startsWith("Possible fit")) return "possible";
+  if (verdict.startsWith("Weaker fit")) return "weaker";
+  return "unresearched";
+}
+
+// extractOwner() in phase2_research.mjs matches OWNER_PATTERNS and writes one
+// of its exact labels (e.g. "City Council", "National Trust", "Trust
+// (unspecified)", "Private estate"...), or "Unknown — not identified from
+// search" when nothing matched. Grouped here into broad buckets; anything not
+// explicitly named (RSPB, Woodland Trust, Environment Agency, unspecified
+// trusts, private estates...) falls into "Private / other".
+type OwnerCategory = "" | "council" | "national-trust" | "wildlife-trust" | "forestry-england" | "canal-river-trust" | "private-other" | "unknown";
+const OWNER_OPTIONS: { value: OwnerCategory; label: string }[] = [
+  { value: "", label: "Any" },
+  { value: "council", label: "Council" },
+  { value: "national-trust", label: "National Trust" },
+  { value: "wildlife-trust", label: "Wildlife Trust" },
+  { value: "forestry-england", label: "Forestry England" },
+  { value: "canal-river-trust", label: "Canal & River Trust" },
+  { value: "private-other", label: "Private / other" },
+  { value: "unknown", label: "Unknown / not researched" },
+];
+function ownerCategory(owner?: string): Exclude<OwnerCategory, ""> {
+  const o = owner || "";
+  if (!o || o.startsWith("Unknown")) return "unknown";
+  if (/national trust/i.test(o)) return "national-trust";
+  if (/wildlife trust/i.test(o)) return "wildlife-trust";
+  if (/forestry england/i.test(o)) return "forestry-england";
+  if (/canal (&|and) river trust/i.test(o)) return "canal-river-trust";
+  if (/council/i.test(o)) return "council";
+  return "private-other";
+}
+
+// pricingNotes/protectedStatus carry a "nothing found" placeholder string
+// rather than being empty/absent — check against those, not just truthiness.
+function hasPricingInfo(r: VentureLake): boolean {
+  return !!r.pricingNotes && r.pricingNotes !== "No pricing found in search results";
+}
+function isProtected(r: VentureLake): boolean {
+  return !!r.protectedStatus && r.protectedStatus.length > 0 && r.protectedStatus[0] !== "None found";
+}
+
 // Badge palette matches the house convention (features/bookings/helpers.ts
 // statusTone/payTone) — amber = caution/unknown, red = direct competitor,
 // blue = neutral/positive fact. No green in this app's palette.
@@ -89,6 +158,32 @@ export function VentureLakesApp() {
   const [minAcres, setMinAcres] = useState("60");
   const [expanded, setExpanded] = useState<string | null>(null); // row whose Phase 2 detail panel is open
 
+  // Phase 2 filters — only meaningful for the top-150 researched subset, but
+  // compose (AND) with the Phase 1 acres/drive-time filters above.
+  const [cycleHireFilter, setCycleHireFilter] = useState<CycleHireFilter>("");
+  const [verdictFilter, setVerdictFilter] = useState<VerdictQuality>("");
+  const [ownerFilter, setOwnerFilter] = useState<OwnerCategory>("");
+  const [pricingOnly, setPricingOnly] = useState(false);
+  const [hideProtected, setHideProtected] = useState(false);
+  const [minReviews, setMinReviews] = useState("");
+  const [researchedOnly, setResearchedOnly] = useState(false);
+
+  const phase2FiltersActive =
+    !!cycleHireFilter || !!verdictFilter || !!ownerFilter || pricingOnly || hideProtected || !!minReviews || researchedOnly;
+  const filtersActive = phase2FiltersActive || minAcres !== "60" || !!maxDriveMinutes;
+
+  const clearFilters = () => {
+    setMinAcres("60");
+    setMaxDriveMinutes("");
+    setCycleHireFilter("");
+    setVerdictFilter("");
+    setOwnerFilter("");
+    setPricingOnly(false);
+    setHideProtected(false);
+    setMinReviews("");
+    setResearchedOnly(false);
+  };
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -102,11 +197,34 @@ export function VentureLakesApp() {
   const rows = useMemo(() => {
     const min = Number(minAcres) || 0;
     const maxDrive = maxDriveMinutes ? Number(maxDriveMinutes) : Infinity;
+    const minRev = minReviews ? Number(minReviews) : 0;
     return items
       .filter((it) => it.acres >= min && (it.driveTimeMinutes ?? Infinity) <= maxDrive)
+      .filter((it) => {
+        const researched = !!it.phase2CheckedAt;
+        if (researchedOnly && !researched) return false;
+
+        if (cycleHireFilter) {
+          if (cycleHireFilter === "unresearched" && researched) return false;
+          if (cycleHireFilter === "opportunity" && !(researched && !it.hasCycleHireAlready)) return false;
+          if (cycleHireFilter === "competitor" && !(researched && it.hasCycleHireAlready)) return false;
+        }
+
+        if (verdictFilter && verdictQuality(it.verdict) !== verdictFilter) return false;
+
+        if (ownerFilter && ownerCategory(it.owner) !== ownerFilter) return false;
+
+        if (pricingOnly && !hasPricingInfo(it)) return false;
+
+        if (hideProtected && isProtected(it)) return false;
+
+        if (minRev > 0 && (it.reviewCountApprox ?? 0) < minRev) return false;
+
+        return true;
+      })
       .slice()
       .sort(SORTS[sort].cmp);
-  }, [items, sort, maxDriveMinutes, minAcres]);
+  }, [items, sort, maxDriveMinutes, minAcres, cycleHireFilter, verdictFilter, ownerFilter, pricingOnly, hideProtected, minReviews, researchedOnly]);
 
   return (
     <div className="flex flex-col gap-3.5 p-4">
@@ -146,9 +264,74 @@ export function VentureLakesApp() {
             <option value="150">150+ (Willen Lake size or larger)</option>
           </Select>
         </label>
+      </Card>
+
+      <Card className="flex flex-wrap items-center gap-3 p-3">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-[var(--ink-3)]">Phase 2 research</span>
+
+        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
+          Cycle hire status
+          <Select value={cycleHireFilter} onChange={(e) => setCycleHireFilter(e.target.value as CycleHireFilter)}>
+            {CYCLE_HIRE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+        </label>
+
+        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
+          Best fit
+          <Select value={verdictFilter} onChange={(e) => setVerdictFilter(e.target.value as VerdictQuality)}>
+            {VERDICT_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+        </label>
+
+        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
+          Owner
+          <Select value={ownerFilter} onChange={(e) => setOwnerFilter(e.target.value as OwnerCategory)}>
+            {OWNER_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>{o.label}</option>
+            ))}
+          </Select>
+        </label>
+
+        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
+          Min reviews (footfall)
+          <Input
+            type="number"
+            min={0}
+            inputMode="numeric"
+            placeholder="Any"
+            value={minReviews}
+            onChange={(e) => setMinReviews(e.target.value)}
+            className="w-[90px]"
+          />
+        </label>
+
+        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]">
+          <input type="checkbox" checked={pricingOnly} onChange={(e) => setPricingOnly(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
+          Has pricing info
+        </label>
+
+        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]">
+          <input type="checkbox" checked={hideProtected} onChange={(e) => setHideProtected(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
+          Hide protected sites
+        </label>
+
+        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]">
+          <input type="checkbox" checked={researchedOnly} onChange={(e) => setResearchedOnly(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
+          Researched only
+        </label>
+
+        {filtersActive && (
+          <button type="button" onClick={clearFilters} className="text-[12px] font-bold text-[var(--brand)] underline">
+            Clear filters
+          </button>
+        )}
 
         <span className="ml-auto text-[12px] text-[var(--ink-3)]">
-          {loading ? "Loading…" : `${rows.length} of ${items.length} sites`}
+          {loading ? "Loading…" : `${rows.length} of ${items.length} sites match`}
         </span>
       </Card>
 
