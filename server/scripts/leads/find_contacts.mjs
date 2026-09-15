@@ -1,11 +1,11 @@
 // Contact-details pass: for leads that have a website but no email AND no phone, read the homepage and its
 // contact/about page and pull out an email (mailto: first) and a UK phone number. Fill-only, resumable.
-//   node scripts/leads/find_contacts.mjs [--limit N] [--apply]      (from server/; state in scripts/leads/out/contacts.out.jsonl)
+//   node scripts/leads/find_contacts.mjs [--limit N] [--only id1,id2] [--apply]      (from server/; state in scripts/leads/out/contacts.out.jsonl)
 import admin from "firebase-admin"; import fs from "fs"; import path from "path";
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync("./serviceAccountKey.json","utf8"))) });
 const db = admin.firestore();
 const args = Object.fromEntries(process.argv.slice(2).map((a,i,arr)=>a.startsWith("--")?[a.slice(2),arr[i+1]&&!arr[i+1].startsWith("--")?arr[i+1]:true]:[]).filter(x=>x.length));
-const LIMIT = args.limit ? +args.limit : Infinity; const OUT = path.resolve("scripts/leads/out/contacts.out.jsonl"); const CONC = 16, TIMEOUT = 12000, MAXBYTES = 800_000;
+const LIMIT = args.limit ? +args.limit : Infinity; const ONLY = args.only ? new Set(String(args.only).split(",")) : null; const OUT = path.resolve("scripts/leads/out/contacts.out.jsonl"); const CONC = 16, TIMEOUT = 12000, MAXBYTES = 800_000;
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const BAD_MAIL = /(example\.com|sentry|wixpress|wordpress|godaddy|\.png|\.jpg|\.gif|\.svg|\.webp|noreply|no-reply|donotreply|privacy@|abuse@|dmca@|jscomp|schema\.org|w3\.org|@2x|@3x|u003e|sitemap)/i;
 const GENERIC_HOSTS = /(gmail|hotmail|outlook|yahoo|icloud|live|btinternet|aol|me)\.(com|co\.uk)$/i;
@@ -30,8 +30,11 @@ if (args.apply) { let n=0, e=0, p=0; let batch=db.batch(), inB=0; const rows = f
   const ids = rows.map(r=>r.id); const cur = new Map(); for (let i=0;i<ids.length;i+=300) { const snaps = await db.getAll(...ids.slice(i,i+300).map(id=>db.collection("leads").doc(id)), { fieldMask:["email","phone"] }); for (const s of snaps) if (s.exists) cur.set(s.id, s.data()); }
   for (const r of rows) { const c = cur.get(r.id); if (!c) continue; const upd = {}; if (r.email && !c.email) { upd.email = r.email; e++; } if (r.phone && !c.phone) { upd.phone = r.phone; p++; } if (Object.keys(upd).length) { upd.contactFoundBy = "site scrape"; upd.contactFoundAt = new Date().toISOString(); batch.update(db.collection("leads").doc(r.id), upd); inB++; n++; if (inB>=400) { await batch.commit(); batch=db.batch(); inB=0; } } }
   if (inB) await batch.commit(); console.log(JSON.stringify({ leadsUpdated:n, emailsSet:e, phonesSet:p })); process.exit(0); }
+// --any-missing: widen the target from "no email AND no phone" to "no email OR no phone" — a scrape still only
+// ever fills the field(s) actually missing (apply above is fill-only per-field), so this is safe to broaden.
+const ANY_MISSING = !!args["any-missing"];
 const snap = await db.collection("leads").select("website","email","phone","excluded","websiteDown").get();
-const todo = snap.docs.filter(d => { const x=d.data(); return !x.excluded && x.website && !x.email && !x.phone && !x.websiteDown && !done.has(d.id); }).slice(0, LIMIT);
+const todo = snap.docs.filter(d => { if (ONLY && !ONLY.has(d.id)) return false; const x=d.data(); const missing = ANY_MISSING ? (!x.email || !x.phone) : (!x.email && !x.phone); return !x.excluded && x.website && missing && !x.websiteDown && !done.has(d.id); }).slice(0, LIMIT);
 console.log("to scrape", todo.length, "(already done", done.size, ")");
 const out = fs.createWriteStream(OUT, { flags: "a" }); let i = 0, found = 0;
 async function one(d) { const url = /^https?:/.test(d.data().website) ? d.data().website : "https://" + d.data().website; const home = await get(url); let html = home.html; let pages = [home.final];

@@ -45,6 +45,11 @@ interface Lead {
    *  ENOTFOUND/DNS-dead — no signal the business is still there. */
   websiteDead?: boolean; websiteDeadAt?: string; websiteDeadWhy?: string;
   websiteDeadCategory?: "parked" | "empty" | "no-match" | "unreachable";
+  /** For a confirmed website with NO detected booking system: did we actually find explicit "call/phone/email
+   *  to book" language on the site ("confirmed-manual" — a genuinely great lead, no incumbent to displace), or
+   *  did we check and find neither a system nor manual-booking wording ("unconfirmed" — don't claim either way)? */
+  bookingMethod?: "confirmed-manual" | "unconfirmed";
+  bookingMethodEvidence?: string;
 }
 
 // ── What we sell vs who they are ─────────────────────────────────────────────
@@ -393,14 +398,33 @@ export function LeadsApp() {
       source: [],
       booking: [
         { value: "none", label: BOOKING.none.label, group: "Overall", hint: BOOKING.none.hint, test: ({ d }: R) => d.booking === "none" },
+        { value: "manualBooking", label: "📞 Books by phone/email only — hot lead", group: "Overall", hint: "Their site was actually checked and explicitly says to call/phone/email to book — genuinely no online booking system to displace. The best kind of lead.", test: ({ l }: R) => l.bookingMethod === "confirmed-manual" },
         { value: "unknown", label: BOOKING.unknown.label, group: "Overall", hint: BOOKING.unknown.hint, test: ({ d }: R) => d.booking === "unknown" },
         { value: "online", label: "✅ Takes bookings online (any way)", group: "Overall", hint: "Listed on a booking platform, uses booking software, or books through its own website", test: ({ d }: R) => d.booking === "platform" },
         { value: "soon", label: BOOKING.soon.label, group: "Overall", hint: BOOKING.soon.hint, test: ({ d }: R) => d.booking === "soon" },
         { value: "anyPlatform", label: "🧾 On any booking platform / software", group: "Booking platforms", hint: "Listed on eequ / Pebble / Playwaze / Yellow Days, or their website sends parents to a booking system — a switch sale", test: ({ d }: R) => d.platforms.length > 0 },
-        ...tally((r) => r.d.platforms).slice(0, 45).map((v) => ({ value: `plat:${v}`, label: `${DIRECTORY.some((k) => srcMeta(k).label.toLowerCase() === v.toLowerCase()) ? "📇" : "🧾"} ${v}`, group: "Booking platforms", test: ({ d }: R) => d.platforms.includes(v) })),
+        // Below used to hard-cap at the top 45 platforms by lead count — anything past that cutoff had NO filter
+        // option at all (not grouped, silently unfindable). Now: recognizable UK activity-booking platforms stay
+        // individually listed regardless of count (ClassForKids etc. are worth targeting even with modest counts
+        // in this database), everything else needs 10+ leads to earn its own row, and the remainder — however
+        // small — is still reachable as a group via "Other / niche platform" rather than dropped.
+        ...(() => {
+          const WELL_KNOWN = new Set(["ClassForKids", "Bookwhen", "Famly", "eequ", "Pebble", "Playwaze", "Yellow Days", "Magic Booking", "Blossom", "Tapestry", "ParentPay", "Connect Childcare", "Eventbrite", "Calendly", "Glofox", "Mindbody", "TeamUp", "Acuity", "HolidayActivities", "KipLearn (Kip McGrath)", "Legend (leisure)", "Gladstone (leisure)", "Better / GLL", "Everyone Active", "ActiveMe360", "1Life", "Fusion Lifestyle", "Places Leisure", "Freedom Leisure", "Parkwood Leisure"]);
+          const counts = new Map<string, number>();
+          for (const r of rows) for (const v of r.d.platforms) counts.set(v, (counts.get(v) ?? 0) + 1);
+          const sorted = [...counts.entries()].sort((a, b) => b[1] - a[1]);
+          const big = sorted.filter(([v, n]) => n >= 10 || WELL_KNOWN.has(v));
+          const niche = sorted.filter(([v, n]) => !(n >= 10 || WELL_KNOWN.has(v)));
+          const nicheSet = new Set(niche.map(([v]) => v));
+          const nicheLeadIds = new Set<string>();
+          for (const r of rows) if (r.d.platforms.some((p) => nicheSet.has(p))) nicheLeadIds.add(r.l.id);
+          const bigOpts = big.map(([v]) => ({ value: `plat:${v}`, label: `${DIRECTORY.some((k) => srcMeta(k).label.toLowerCase() === v.toLowerCase()) ? "📇" : "🧾"} ${v}`, group: "Booking platforms", test: ({ d }: R) => d.platforms.includes(v) }));
+          const nicheOpt = niche.length ? [{ value: "plat:__other", label: `🗂️ Other / niche platform (${niche.length} platform${niche.length === 1 ? "" : "s"}, ${nicheLeadIds.size} lead${nicheLeadIds.size === 1 ? "" : "s"})`, group: "Booking platforms", hint: `Everything not individually listed above: ${niche.map(([v]) => v).slice(0, 25).join(", ")}${niche.length > 25 ? "…" : ""} — still filterable as a group; use search for one specific niche platform by name`, test: ({ d }: R) => d.platforms.some((p) => nicheSet.has(p)) }] : [];
+          return [...bigOpts, ...nicheOpt];
+        })(),
         { value: "multi", label: "🔗 On 2+ platforms", group: "Booking platforms", hint: "The same provider on more than one platform or system", test: ({ d }: R) => d.platforms.length > 1 },
         { value: "own", label: "🏠 Own website booking", group: "Booking platforms", hint: "Books or takes payment through its own website, portal or shop — hardest to switch", test: ({ d }: R) => /^own\b/i.test(d.system) },
-        { value: "noPlatform", label: "🚫 Not on any platform", group: "Booking platforms", hint: "Not on a directory and no booking system seen (includes unchecked sites)", test: ({ d }: R) => d.platforms.length === 0 && !/^own\b/i.test(d.system) },
+        { value: "noPlatform", label: "🚫 Not on any platform (confirmed)", group: "Booking platforms", hint: "Their site was actually read and no booking system or manual-booking wording was found — this is the checked/confirmed 'none' state, not merely unchecked (see ❔ Not yet checked for those)", test: ({ d }: R) => d.booking === "none" },
         { value: "hafList", label: "🍎 Council HAF list", group: "Also found on", hint: "Named on a council Holiday Activities & Food programme list", test: ({ d, l }: R) => d.srcs.includes("haf") || !!l.hafLocalAuthority },
       ],
     } as Record<Dim, Opt[]>;
@@ -566,7 +590,7 @@ export function LeadsApp() {
                       {l.size && <span>👥 {l.size}</span>}
                       <span className="text-[var(--ink-3)]">{fmt(l.createdAt)}</span>
                     </div>
-                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.haf || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network || l.websiteDead) && (
+                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.haf || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network || l.websiteDead || l.bookingMethod === "confirmed-manual") && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                         {l.plan && <span className="rounded-full px-2 py-0.5 font-extrabold" style={isFreelancer(l) ? { background: "#f3e8ff", color: "#6b21a8" } : { background: "#e0ecff", color: "#1d3a8f" }} title={l.planReason || undefined}>{isFreelancer(l) ? "🧑 Freelancer" : "🏢 Company"}</span>}
                         {l.legalForm && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">{l.legalForm}</span>}
@@ -575,6 +599,7 @@ export function LeadsApp() {
                         {l.bookingSystem && (l.bookingUrl
                           ? <a href={l.bookingUrl} target="_blank" rel="noreferrer" className="rounded-full bg-[#fff4e5] px-2 py-0.5 font-bold text-[#9a5a00] underline-offset-2 hover:underline" title={`The booking system their website sends parents to${l.bookingFrom ? ` · found by ${l.bookingFrom}` : ""} — opens where parents book`}>🧾 Books via {l.bookingSystem} ↗</a>
                           : <span className="rounded-full bg-[#fff4e5] px-2 py-0.5 font-bold text-[#9a5a00]" title={`The booking system their website sends parents to${l.bookingFrom ? ` · found by ${l.bookingFrom}` : ""}`}>🧾 Books via {l.bookingSystem}</span>)}
+                        {!l.bookingSystem && l.bookingMethod === "confirmed-manual" && <span className="rounded-full bg-[#e8f7ec] px-2 py-0.5 font-extrabold text-[#1c6b3a]" title={`Their site was checked and explicitly says to book by phone/email${l.bookingMethodEvidence ? ` ("${l.bookingMethodEvidence}")` : ""} — no online booking system to displace, a genuinely great lead.`}>📞 Books by phone/email only — hot lead</span>}
                         {l.haf && (l.hafFrom
                           ? <a href={l.hafFrom} target="_blank" rel="noreferrer" className="rounded-full bg-[#e8f7ec] px-2 py-0.5 font-extrabold text-[#1c6b3a] underline-offset-2 hover:underline" title={`Their website mentions the Holiday Activities & Food programme${l.hafText ? ` ("${l.hafText}")` : ""}${l.hafLocalAuthority ? ` · listed by ${l.hafLocalAuthority}` : ""} — opens the page`}>🍎 HAF provider{l.hafLocalAuthority ? ` · ${l.hafLocalAuthority}` : ""}{l.hafPaid === true ? " · also sells paid places" : l.hafPaid === false ? " · free places only" : ""} ↗</a>
                           : <span className="rounded-full bg-[#e8f7ec] px-2 py-0.5 font-extrabold text-[#1c6b3a]" title="Listed as a Holiday Activities & Food programme provider">🍎 HAF provider{l.hafLocalAuthority ? ` · ${l.hafLocalAuthority}` : ""}{l.hafPaid === true ? " · also sells paid places" : l.hafPaid === false ? " · free places only" : ""}</span>)}

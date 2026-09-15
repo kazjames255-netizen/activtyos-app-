@@ -2,12 +2,21 @@
 // result that isn't a directory/social host and whose host or title carries the provider's name, and store it as a
 // CANDIDATE (websiteCandidate) for verify_sites.mjs --kind candidate to confirm or drop. Resumable, fill-only.
 //   BRAVE_SEARCH_API_KEY in server/.env (api.search.brave.com) — then: node scripts/leads/find_websites.mjs --sources haf,playwaze,pebble,eequ [--limit N] [--apply]     (from server/)
+//   --rescan: deliberate second pass over leads already searched once with no candidate found (separate out file
+//   scripts/leads/out/websearch.rescan.out.jsonl, separate done-tracking); apply only ever writes a lead when THIS
+//   pass found something — a repeat "nothing found" never touches the lead.
 import "dotenv/config"; import admin from "firebase-admin"; import fs from "fs"; import path from "path";
 admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync("./serviceAccountKey.json","utf8"))) });
 const db = admin.firestore();
 const args = Object.fromEntries(process.argv.slice(2).map((a,i,arr)=>a.startsWith("--")?[a.slice(2),arr[i+1]&&!arr[i+1].startsWith("--")?arr[i+1]:true]:[]).filter(x=>x.length));
 const LIMIT = args.limit ? +args.limit : Infinity; const SOURCES = args.sources ? String(args.sources).split(",") : null;
-const OUT = path.resolve("scripts/leads/out/websearch.out.jsonl"); const CONC = process.env.BRAVE_SEARCH_API_KEY ? (args.conc ? +args.conc : 4) : 1, GAP_MS = args.gap ? +args.gap : (process.env.BRAVE_SEARCH_API_KEY ? 300 : 2500);
+// --rescan: deliberate second attempt at leads we already searched and found nothing for (15 Sept 2026 — Brave credit
+// topped up, worth retrying the "searched, no candidate" pile). Writes to its OWN out file so it never collides with
+// the original pass's done-tracking, and — unlike the normal apply below — a rescan that ALSO finds nothing never
+// touches the lead (no re-stamp, no field writes) so it can't clobber anything. Only a genuine new find gets applied.
+const RESCAN = !!args.rescan;
+const OUT = path.resolve(RESCAN ? "scripts/leads/out/websearch.rescan.out.jsonl" : "scripts/leads/out/websearch.out.jsonl");
+const CONC = process.env.BRAVE_SEARCH_API_KEY ? (args.conc ? +args.conc : 4) : 1, GAP_MS = args.gap ? +args.gap : (process.env.BRAVE_SEARCH_API_KEY ? 300 : 2500);
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const SKIP = /(maps\.apple|maps\.google|goo\.gl|waze|what3words|openstreetmap|facebook|instagram|twitter|x\.com|tiktok|youtube|linkedin|pinterest|threads\.net|gov\.uk|ofsted|nhs\.uk|yell\.com|yelp|thomsonlocal|192\.com|cylex|hotfrog|freeindex|scoot|childcare\.co\.uk|daynurseries|nurseriesuk|care\.com|careinspectorate|familysupportni|findchildcare|hoop\.co\.uk|eequ|pebble|playwaze|yellowdays|clubspark|footballfoundation|classforkids|bookwhen|kidadl|mumsnet|netmums|indeed|glassdoor|reed\.co\.uk|totaljobs|companieshouse|endole|opencorporates|checkacompany|companycheck|bizstats|find-and-update|charitycommission|register-of-charities|wikipedia|trustpilot|google\.|bing\.|amazon|ebay|etsy|nextdoor|tripadvisor|justgiving|gofundme|eventbrite|meetup|wordpress\.com|blogspot|wixsite|weebly|sites\.google|linktr\.ee|schoolsweb|primaryschool|\.sch\.uk|\.ac\.uk|schoolguide|locrating|getthedata|streetcheck|doogal|postcodearea|activityos|news|echo|gazette|times|mail|express|mirror|standard|chronicle|courier|herald|observer|telegraph|guardian|bbc\.)/i;
 const STOP = new Set("the and of ltd limited cic cio uk plc llp co club clubs school nursery pre preschool childcare children kids day care centre center group holiday camp camps club activities activity community trust academy little happy days playgroup out after".split(" "));
@@ -43,20 +52,33 @@ function pick(lead, results) { const nt = tokens(lead.name); const nsq = squash(
     if (hostHit || (titleHit && depth <= 1)) return { url: `https://${host}/`, why: hostHit ? `host carries the name (${host})` : `result title matched the name (${r.title.slice(0,60)})`, title: r.title }; }
   return null; }
 const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT,"utf8").split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l).id}catch{return null}}) : []);
+const sameHost = (a,b) => { try { return new URL(a).hostname.replace(/^www\./,"") === new URL(/^https?:/.test(b)?b:"https://"+b).hostname.replace(/^www\./,""); } catch { return false; } };
 if (args.apply) { const rows = fs.readFileSync(OUT,"utf8").split("\n").filter(Boolean).map(l=>JSON.parse(l)); let n=0, s=0; let batch=db.batch(), inB=0;
   const ids = rows.map(r=>r.id); const cur = new Map(); for (let i=0;i<ids.length;i+=300) { const snaps = await db.getAll(...ids.slice(i,i+300).map(id=>db.collection("leads").doc(id)), { fieldMask:["website","websiteCandidate","websiteSearchedAt","comingSoon","websiteDown","haf","hafPaid"] }); for (const x of snaps) if (x.exists) cur.set(x.id, x.data()); }
   let hafSet = 0;
-  for (const r of rows) { const c = cur.get(r.id); if (!c || c.websiteSearchedAt) continue; const upd = { websiteSearchedAt: new Date().toISOString(), websiteSearchedBy: "brave web search (find_websites.mjs)" };
-    if (r.haf && !c.haf) { upd.haf = true; upd.hafFrom = r.haf.url; upd.hafText = `web search result: ${r.haf.text}`; if (r.haf.paid && typeof c.hafPaid !== "boolean") upd.hafPaid = true; hafSet++; } const sameHost = (a,b) => { try { return new URL(a).hostname.replace(/^www\./,"") === new URL(/^https?:/.test(b)?b:"https://"+b).hostname.replace(/^www\./,""); } catch { return false; } };
+  for (const r of rows) { const c = cur.get(r.id); if (!c) continue;
+    if (RESCAN) {
+      // Rescan apply: never touches a lead unless THIS pass found a real candidate, and only if nothing else
+      // resolved it in the meantime. A repeat "nothing found" is a pure no-op — no re-stamp, no field writes.
+      if (c.website || c.websiteCandidate) continue;
+      if (!r.url) continue;
+      const upd = { websiteCandidate: r.url, websiteCandidateWhy: `web search rescan 15 Sept 2026: ${r.why} — unverified (first search found nothing)`, websiteSearchedAt: new Date().toISOString(), websiteSearchedBy: "brave web search rescan (find_websites.mjs --rescan)" };
+      if (r.haf && !c.haf) { upd.haf = true; upd.hafFrom = r.haf.url; upd.hafText = `web search result: ${r.haf.text}`; if (r.haf.paid && typeof c.hafPaid !== "boolean") upd.hafPaid = true; hafSet++; }
+      batch.update(db.collection("leads").doc(r.id), upd); n++; s++; inB++; if (inB>=400) { await batch.commit(); batch=db.batch(); inB=0; }
+      continue;
+    }
+    if (c.websiteSearchedAt) continue; const upd = { websiteSearchedAt: new Date().toISOString(), websiteSearchedBy: "brave web search (find_websites.mjs)" };
+    if (r.haf && !c.haf) { upd.haf = true; upd.hafFrom = r.haf.url; upd.hafText = `web search result: ${r.haf.text}`; if (r.haf.paid && typeof c.hafPaid !== "boolean") upd.hafPaid = true; hafSet++; }
     if (r.url && !c.websiteCandidate && (!c.website || ((c.comingSoon || c.websiteDown) && !sameHost(r.url, c.website)))) { upd.websiteCandidate = r.url; upd.websiteCandidateWhy = `web search: ${r.why} — unverified${c.website ? ` (their recorded site is ${c.comingSoon ? "a holding page" : "down"})` : ""}`; n++; } batch.update(db.collection("leads").doc(r.id), upd); inB++; s++; if (inB>=400) { await batch.commit(); batch=db.batch(); inB=0; } }
-  if (inB) await batch.commit(); console.log(JSON.stringify({ stamped: s, candidatesSet: n, hafFromSearch: hafSet })); process.exit(0); }
+  if (inB) await batch.commit(); console.log(JSON.stringify({ stamped: s, candidatesSet: n, hafFromSearch: hafSet, rescan: RESCAN })); process.exit(0); }
 const snap = await db.collection("leads").select("name","location","county","region","source","website","websiteCandidate","websiteSearchedAt","excluded","comingSoon","websiteDown","socialUrl","websiteRejected").get();
 const ORDER = ["haf","playwaze","pebble","eequ","yellowdays","ciw","ofsted","cis","fsni"];
 // No website at all, OR a doubtful one (holding page / dead / social page only / an earlier candidate that was rejected) — a search may find the real site.
 const doubtful = (x) => !x.website || x.comingSoon || x.websiteDown;
-const todo = snap.docs.filter(d => { const x=d.data(); return !x.excluded && doubtful(x) && !x.websiteCandidate && !x.websiteSearchedAt && !done.has(d.id) && (!SOURCES || SOURCES.includes(x.source)); })
+const todo = snap.docs.filter(d => { const x=d.data(); if (x.excluded || x.websiteCandidate || done.has(d.id) || (SOURCES && !SOURCES.includes(x.source))) return false;
+  return RESCAN ? (!x.website && !!x.websiteSearchedAt) : (doubtful(x) && !x.websiteSearchedAt); })
   .sort((a,b)=>ORDER.indexOf(a.data().source)-ORDER.indexOf(b.data().source)).slice(0, LIMIT);
-console.log("to search", todo.length, "(already done", done.size, ")");
+console.log("to search", todo.length, "(already done", done.size, ")", RESCAN ? "[RESCAN mode]" : "");
 const out = fs.createWriteStream(OUT, { flags: "a" }); let i = 0, found = 0, blocked = 0;
 const sleep = (ms) => new Promise(r=>setTimeout(r,ms));
 async function one(d) { const l = d.data(); const q = `"${l.name}" ${town(l)}`.trim(); const r = await search(q); if (r.status === 429 || r.status === 403 || r.status === 402) { blocked++; console.log("blocked", r.status, r.err || "", "— backing off 30s"); await sleep(30000); return; }

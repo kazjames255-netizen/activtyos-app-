@@ -66,7 +66,12 @@ const LIST_FIELDS = ["name", "email", "phone", "business", "size", "message", "s
   // A site that matches their name but couldn't be confirmed as theirs (no contacts taken from it).
   "websiteCandidate", "websiteCandidateWhy",
   // Activities / HAF read from their own website.
-  "activityTypes", "haf"];
+  "activityTypes", "haf",
+  // Confirmed-dead website tracking (was missing from the list — the UI's "website opportunity" badge needs these).
+  "websiteDead", "websiteDeadAt", "websiteDeadWhy", "websiteDeadCategory",
+  // Manual-booking-language classification: for a confirmed site with no detected booking system, did we find
+  // explicit "call/email to book" wording (a great lead — no incumbent system) or check and find neither?
+  "bookingMethod", "bookingMethodEvidence"];
 const FRESH_MS = 3 * 60_000;
 type Row = Record<string, unknown> & { id: string; createdAt?: string };
 let cache: { at: number; items: Row[] } | null = null;
