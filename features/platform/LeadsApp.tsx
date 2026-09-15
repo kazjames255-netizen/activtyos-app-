@@ -572,8 +572,9 @@ export function LeadsApp() {
   const clearAll = () => { setF(NO_FILTERS); setQ(""); setLimit(60); };
 
   const exportCsv = () => {
-    const head = ["Name", "Registered name", "Email", "OK to email (PECR)", "Phone", "Website", "Possible website (unconfirmed)", "Indirect contact", "Indirect contact type", "Indirect contact note", "Location", "Region", "Nation", "Runs", "Fit", "Size", "Franchise / group", "Booking", "Directories", "Status", "Listing link"];
-    const lines = shown.map(({ l, d }) => [l.name, l.business, l.email, okToEmail(l) ? "yes" : l.email ? "needs consent" : "", l.phone, l.website, l.website ? "" : l.websiteCandidate, l.secondaryContact ?? "", l.secondaryContactType ?? "", l.secondaryContactNote ?? "", l.location, d.region, d.nation, d.types.map((t) => TYPE[t]?.label).join("; "), FIT[d.fit].label.replace(/^\S+ /, ""), SIZE[d.size].replace(/^\S+ /, ""), l.network ?? "", BOOKING[d.booking].label.replace(/^\S+ /, ""), d.srcs.map((s) => srcMeta(s).label).join("; "), TONE[l.status]?.label ?? l.status, l.sourceUrl ?? ""].map(csvCell).join(","));
+    const head = ["Name", "Registered name", "Company number", "Review status", "Email", "OK to email (PECR)", "Phone", "Website", "Possible website (unconfirmed)", "Indirect contact", "Indirect contact type", "Indirect contact note", "Postcode/location", "Region", "Nation", "Runs", "Fit", "Size", "Franchise / group", "Booking", "Directories", "Status", "Listing link"];
+    const reviewLabel = (l: Lead) => l.reviewTier === "likely_fit" ? "Likely fit" : l.reviewTier === "uncertain" ? "Needs a glance" : "";
+    const lines = shown.map(({ l, d }) => [l.name, l.business, l.companyNumber ?? "", reviewLabel(l), l.email, okToEmail(l) ? "yes" : l.email ? "needs consent" : "", l.phone, l.website, l.website ? "" : l.websiteCandidate, l.secondaryContact ?? "", l.secondaryContactType ?? "", l.secondaryContactNote ?? "", l.location, d.region, d.nation, d.types.map((t) => TYPE[t]?.label).join("; "), FIT[d.fit].label.replace(/^\S+ /, ""), SIZE[d.size].replace(/^\S+ /, ""), l.network ?? "", BOOKING[d.booking].label.replace(/^\S+ /, ""), d.srcs.map((s) => srcMeta(s).label).join("; "), TONE[l.status]?.label ?? l.status, l.sourceUrl ?? ""].map(csvCell).join(","));
     const url = URL.createObjectURL(new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `leads-${view}-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -643,8 +644,8 @@ export function LeadsApp() {
               {(Object.keys(SORTS) as SortKey[]).map((k) => <option key={k} value={k}>{SORTS[k]}</option>)}
             </select>
           </label>
-          <button type="button" onClick={exportCsv} disabled={!shown.length} title="Download exactly these leads as a spreadsheet (CSV)"
-            className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-50">⬇ Export CSV</button>
+          <button type="button" onClick={exportCsv} disabled={!shown.length} title="Downloads exactly the leads currently shown — every active view tab, filter and search term applies"
+            className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-50">⬇ Export CSV ({shown.length.toLocaleString()})</button>
           <button type="button" onClick={() => { setLoading(true); void load(true, true); }} title="Load the latest research"
             className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">↻ Refresh</button>
         </div>
