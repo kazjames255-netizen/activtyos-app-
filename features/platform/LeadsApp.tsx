@@ -292,6 +292,11 @@ const NO_FILTERS: Filters = { plan: [], runs: [], activity: [], fit: [], size: [
 // deals, no platform yet…) is a filter, so the filter bar is the one place to narrow down.
 const reachable = (l: Lead) => !!l.email || !!l.phone;
 const VIEWS: { key: string; label: string; hint: string; test: (r: R) => boolean }[] = [
+  // A genuine "everything, no view-level restriction" tab — every other tab below
+  // (including the confusingly-named "all" key, which is actually reachable-only)
+  // applies some test; this one doesn't, so counts/exports from here are the true
+  // unfiltered total (still subject to whatever dropdown filters are separately picked).
+  { key: "everyLead", label: "🗂️ All leads", hint: "Every lead in the database, no view restriction — combine with the filters below to narrow down", test: () => true },
   { key: "best", label: "⭐ Best prospects", hint: "Run holiday camps, after-school clubs or activity classes, can be contacted, and aren't on a booking platform yet", test: ({ l, d }) => reachable(l) && d.fit === "core" && d.booking !== "platform" },
   { key: "all", label: "📇 Ready to contact", hint: "Every lead with an email or a phone number", test: ({ l }) => reachable(l) },
   { key: "demo", label: "📩 Demo requests", hint: "Asked for a demo on the website", test: ({ d }) => d.srcs.includes("demo") },
