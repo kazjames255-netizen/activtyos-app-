@@ -720,7 +720,14 @@ export function LeadsApp() {
                         {l.kind === "person" && <span className="rounded-full bg-[#fdebec] px-2 py-0.5 font-bold text-[#b3123c]" title="UK PECR: sole traders count as individuals — marketing email needs their consent first">Sole trader — needs consent before marketing email</span>}
                       </div>
                     )}
-                    {l.message && <div className="mt-2 max-w-[80ch] rounded-lg bg-[var(--panel)] p-2.5" title={l.message}><p className="line-clamp-2 text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{l.message}</p></div>}
+                    {l.message && (
+                      <details className="mt-2 max-w-[80ch] rounded-lg bg-[var(--panel)] p-2.5 [&_summary::-webkit-details-marker]:hidden">
+                        <summary className="line-clamp-2 cursor-pointer list-none text-[12.5px] leading-[1.5] text-[var(--ink-2)]" title="Click to show the full text">
+                          {l.message} <span className="ml-1 font-bold text-[var(--brand)]">— show more</span>
+                        </summary>
+                        <p className="mt-1.5 whitespace-pre-wrap text-[12.5px] leading-[1.5] text-[var(--ink-2)]">{l.message}</p>
+                      </details>
+                    )}
                   </div>
                   <div className="flex flex-none flex-wrap gap-1.5">
                     {STATUSES.filter((s) => s !== l.status).map((s) => (
