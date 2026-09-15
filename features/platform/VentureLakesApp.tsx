@@ -141,6 +141,40 @@ function isProtected(r: VentureLake): boolean {
   return !!r.protectedStatus && r.protectedStatus.length > 0 && r.protectedStatus[0] !== "None found";
 }
 
+// extractTrail() writes a plain boolean into a fixed pathSuitability string
+// (not a raw boolean field) — the two exact strings the script writes:
+const TRAIL_FOUND_TEXT = "Path/trail infrastructure referenced in search results";
+const TRAIL_NONE_TEXT = "No clear path/trail evidence found";
+type TrailFilter = "" | "has" | "none";
+function hasTrail(r: VentureLake): boolean {
+  return r.pathSuitability === TRAIL_FOUND_TEXT;
+}
+function noTrailFound(r: VentureLake): boolean {
+  return r.pathSuitability === TRAIL_NONE_TEXT;
+}
+
+// extractTender() returns matched descriptive text or null; the script writes
+// that text into concessionInfo, or this exact placeholder when null — so
+// filter on presence/non-placeholder, not a boolean.
+const CONCESSION_NONE_TEXT = "No concession/tender process found in search results";
+type ConcessionFilter = "" | "has" | "none";
+function hasConcessionInfo(r: VentureLake): boolean {
+  return !!r.concessionInfo && r.concessionInfo !== CONCESSION_NONE_TEXT;
+}
+function noConcessionInfo(r: VentureLake): boolean {
+  return r.concessionInfo === CONCESSION_NONE_TEXT;
+}
+
+// pricingNotes and reviewCountApprox are both noisy extractions (see
+// extractPricing()/extractReviewCount() in phase2_research.mjs — pricing
+// matches ANY "£X" near the site's name with no context on what it's for;
+// review count is regex-picked out of snippet text and easily confused with
+// unrelated numbers). Shown as a hover caveat wherever either field appears.
+const PRICING_CAVEAT =
+  "⚠ Any £ mention found near this site in search results — not verified to be cycle-hire specific. Treat as “worth checking”, not a confirmed price.";
+const FOOTFALL_CAVEAT =
+  "⚠ Approximate, extracted from search snippets — low numbers (under ~20–30) are likely extraction noise, not real visitor counts.";
+
 // Badge palette matches the house convention (features/bookings/helpers.ts
 // statusTone/payTone) — amber = caution/unknown, red = direct competitor,
 // blue = neutral/positive fact. No green in this app's palette.
@@ -167,9 +201,12 @@ export function VentureLakesApp() {
   const [hideProtected, setHideProtected] = useState(false);
   const [minReviews, setMinReviews] = useState("");
   const [researchedOnly, setResearchedOnly] = useState(false);
+  const [trailFilter, setTrailFilter] = useState<TrailFilter>("");
+  const [concessionFilter, setConcessionFilter] = useState<ConcessionFilter>("");
 
   const phase2FiltersActive =
-    !!cycleHireFilter || !!verdictFilter || !!ownerFilter || pricingOnly || hideProtected || !!minReviews || researchedOnly;
+    !!cycleHireFilter || !!verdictFilter || !!ownerFilter || pricingOnly || hideProtected || !!minReviews ||
+    researchedOnly || !!trailFilter || !!concessionFilter;
   const filtersActive = phase2FiltersActive || minAcres !== "60" || !!maxDriveMinutes;
 
   const clearFilters = () => {
@@ -182,6 +219,8 @@ export function VentureLakesApp() {
     setHideProtected(false);
     setMinReviews("");
     setResearchedOnly(false);
+    setTrailFilter("");
+    setConcessionFilter("");
   };
 
   useEffect(() => {
@@ -220,11 +259,20 @@ export function VentureLakesApp() {
 
         if (minRev > 0 && (it.reviewCountApprox ?? 0) < minRev) return false;
 
+        if (trailFilter === "has" && !hasTrail(it)) return false;
+        if (trailFilter === "none" && !noTrailFound(it)) return false;
+
+        if (concessionFilter === "has" && !hasConcessionInfo(it)) return false;
+        if (concessionFilter === "none" && !noConcessionInfo(it)) return false;
+
         return true;
       })
       .slice()
       .sort(SORTS[sort].cmp);
-  }, [items, sort, maxDriveMinutes, minAcres, cycleHireFilter, verdictFilter, ownerFilter, pricingOnly, hideProtected, minReviews, researchedOnly]);
+  }, [
+    items, sort, maxDriveMinutes, minAcres, cycleHireFilter, verdictFilter, ownerFilter, pricingOnly,
+    hideProtected, minReviews, researchedOnly, trailFilter, concessionFilter,
+  ]);
 
   return (
     <div className="flex flex-col gap-3.5 p-4">
@@ -297,7 +345,26 @@ export function VentureLakesApp() {
         </label>
 
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
+          Footpath/trail
+          <Select value={trailFilter} onChange={(e) => setTrailFilter(e.target.value as TrailFilter)}>
+            <option value="">Any</option>
+            <option value="has">Has trail</option>
+            <option value="none">No trail found</option>
+          </Select>
+        </label>
+
+        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
+          Concession/tender
+          <Select value={concessionFilter} onChange={(e) => setConcessionFilter(e.target.value as ConcessionFilter)}>
+            <option value="">Any</option>
+            <option value="has">Has concession info</option>
+            <option value="none">None found</option>
+          </Select>
+        </label>
+
+        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]" title={FOOTFALL_CAVEAT}>
           Min reviews (footfall)
+          <span className="cursor-help text-[var(--ink-3)]" aria-hidden>⚠</span>
           <Input
             type="number"
             min={0}
@@ -309,9 +376,9 @@ export function VentureLakesApp() {
           />
         </label>
 
-        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]">
+        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]" title={PRICING_CAVEAT}>
           <input type="checkbox" checked={pricingOnly} onChange={(e) => setPricingOnly(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
-          Has pricing info
+          Has pricing info <span className="cursor-help text-[var(--ink-3)]" aria-hidden>⚠</span>
         </label>
 
         <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]">
@@ -419,7 +486,11 @@ export function VentureLakesApp() {
                                   <Badge tone={AMBER}>{r.protectedStatus.join(", ")}</Badge>
                                 )}
                                 {r.reviewCountApprox != null && (
-                                  <Badge tone={GREY}>~{r.reviewCountApprox.toLocaleString()} reviews (footfall proxy)</Badge>
+                                  <span title={FOOTFALL_CAVEAT} className="cursor-help">
+                                    <Badge tone={GREY}>
+                                      ~{r.reviewCountApprox.toLocaleString()} reviews (footfall proxy) <span aria-hidden>⚠</span>
+                                    </Badge>
+                                  </span>
                                 )}
                               </div>
 
@@ -437,7 +508,9 @@ export function VentureLakesApp() {
                                   {(r.competitionOnsite && r.competitionOnsite.join(", ")) || "—"}
                                 </div>
                                 <div>
-                                  <span className="font-semibold text-[var(--ink-3)]">Pricing notes: </span>
+                                  <span className="font-semibold text-[var(--ink-3)]" title={PRICING_CAVEAT}>
+                                    Pricing notes <span className="cursor-help" aria-hidden>⚠</span>:{" "}
+                                  </span>
                                   {r.pricingNotes || "—"}
                                 </div>
                                 <div>
