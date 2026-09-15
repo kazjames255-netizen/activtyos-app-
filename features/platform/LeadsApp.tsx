@@ -324,19 +324,42 @@ const SORTS: Record<SortKey, string> = { best: "Best prospects first", reach: "M
 /** A dropdown of ticks with live counts. Counts are only worked out while it's open. */
 function FilterMenu({ dim, opts, value, onChange, countFor }: { dim: Dim; opts: Opt[]; value: string[]; onChange: (v: string[]) => void; countFor: (o: Opt) => number }) {
   const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  // Which groups are expanded — keyed by group name ("" = ungrouped options, always shown flat).
+  // Lazily initialised (and re-initialised each time the modal opens) so a group that already
+  // has a ticked option in it starts open — the user should never have their own active
+  // filter hidden behind a collapsed header.
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
   const box = useRef<HTMLDivElement>(null);
+  const groups = useMemo(() => { const seen: string[] = []; for (const o of opts) if (o.group && !seen.includes(o.group)) seen.push(o.group); return seen; }, [opts]);
   useEffect(() => {
     if (!open) return;
+    // Default: first group open, the rest collapsed — except any group that already has a
+    // ticked option in it, which opens too so an active filter is never hidden.
+    setOpenGroups(() => {
+      const init: Record<string, boolean> = {};
+      groups.forEach((g, i) => { init[g] = i === 0 || opts.some((o) => o.group === g && value.includes(o.value)); });
+      return init;
+    });
+    setSearch("");
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
     document.addEventListener("keydown", esc);
     // A full-page modal locks background scroll while it's open.
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.removeEventListener("keydown", esc); document.body.style.overflow = prevOverflow; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
   const on = value.length > 0;
   const summary = !on ? "Any" : value.length === 1 ? (opts.find((o) => o.value === value[0])?.label ?? value[0]) : `${value.length} selected`;
   const toggle = (v: string) => onChange(value.includes(v) ? value.filter((x) => x !== v) : [...value, v]);
+  const term = search.trim().toLowerCase();
+  // Search narrows by label/hint/group text — client-side substring match, so typing "email" or
+  // "companies house" cuts a 90-option list down to the handful that matter instead of scrolling.
+  const visible = useMemo(() => !term ? opts : opts.filter((o) => o.label.toLowerCase().includes(term) || o.hint?.toLowerCase().includes(term) || o.group?.toLowerCase().includes(term)), [opts, term]);
+  // While actively searching, force every group open — collapsing defeats the point of search.
+  const groupOpen = (g: string) => !!term || openGroups[g];
+  const toggleGroup = (g: string) => setOpenGroups((s) => ({ ...s, [g]: !s[g] }));
   return (
     <div ref={box} className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
@@ -359,19 +382,39 @@ function FilterMenu({ dim, opts, value, onChange, countFor }: { dim: Dim; opts: 
               <button type="button" onClick={() => setOpen(false)} aria-label="Close"
                 className="rounded-full p-2 text-[16px] font-bold text-[var(--ink-3)] hover:bg-[var(--panel)]">✕</button>
             </div>
+            {opts.length > 8 && (
+              <div className="border-b-2 border-[var(--line)] px-5 py-3">
+                <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder={`Search ${DIM_LABEL[dim].toLowerCase()} options…`} autoFocus
+                  className="w-full rounded-lg border-2 px-3 py-2 text-[14px] font-semibold outline-none"
+                  style={{ borderColor: "var(--line)", background: "var(--panel)", color: "var(--ink)" }} />
+              </div>
+            )}
             <div className="flex-1 overflow-y-auto p-3">
-              {opts.map((o, i) => { const n = countFor(o); const ticked = value.includes(o.value); const heading = o.group && o.group !== opts[i - 1]?.group; return (<div key={o.value}>
-                {heading && <div className="mt-3 mb-1 border-b-2 border-[var(--brand)]/25 px-3 pb-1.5 pt-2 text-[13px] font-extrabold uppercase tracking-wide text-[var(--brand)] first:mt-0.5">{o.group}</div>}
-                <label title={o.hint} className="flex cursor-pointer items-center gap-3.5 rounded-xl px-3.5 py-3 text-[15px] transition-colors hover:bg-[#eaf0ff]" style={{ opacity: n || ticked ? 1 : 0.45, background: ticked ? "#eaf0ff" : undefined }}>
-                  <input type="checkbox" checked={ticked} onChange={() => toggle(o.value)} className="sr-only" />
-                  <span aria-hidden className="flex h-6 w-6 flex-none items-center justify-center rounded-md border-2 transition-colors"
-                    style={{ borderColor: ticked ? "var(--brand)" : "var(--line)", background: ticked ? "var(--brand)" : "var(--surface)" }}>
-                    {ticked && <span className="text-[14px] font-extrabold leading-none text-white">✓</span>}
-                  </span>
-                  <span className="min-w-0 flex-1 font-bold text-[var(--ink)]">{o.label}{o.hint && <span className="mt-0.5 block truncate text-[12.5px] font-normal text-[var(--ink-3)]">{o.hint}</span>}</span>
-                  <span className="rounded-full px-2.5 py-1 text-[13px] font-extrabold tabular-nums" style={{ background: ticked ? "var(--brand)" : n ? "#eaf0ff" : "var(--panel)", color: ticked ? "#fff" : n ? "var(--brand)" : "var(--ink-3)" }}>{n.toLocaleString()}</span>
-                </label>
-              </div>); })}
+              {visible.length === 0 && <div className="px-3.5 py-6 text-center text-[14px] font-semibold text-[var(--ink-3)]">No options match "{search}"</div>}
+              {visible.map((o, i) => {
+                const n = countFor(o); const ticked = value.includes(o.value);
+                const heading = o.group && o.group !== visible[i - 1]?.group;
+                const collapsed = !!o.group && !groupOpen(o.group);
+                return (<div key={o.value}>
+                  {heading && o.group && (() => { const count = opts.filter((x) => x.group === o.group).length; const g = o.group; return (
+                    <button type="button" onClick={() => toggleGroup(g)}
+                      className="mt-3 mb-1 flex w-full items-center justify-between border-b-2 border-[var(--brand)]/25 px-3 pb-1.5 pt-2 text-left text-[13px] font-extrabold uppercase tracking-wide text-[var(--brand)] first:mt-0.5">
+                      <span>{g} <span className="font-semibold text-[var(--ink-3)] normal-case">({count} option{count === 1 ? "" : "s"})</span></span>
+                      {!term && <span aria-hidden className="text-[11px]">{groupOpen(g) ? "▾" : "▸"}</span>}
+                    </button>
+                  ); })()}
+                  {!collapsed && (
+                    <label title={o.hint} className="flex cursor-pointer items-center gap-3.5 rounded-xl px-3.5 py-3 text-[15px] transition-colors hover:bg-[#eaf0ff]" style={{ opacity: n || ticked ? 1 : 0.45, background: ticked ? "#eaf0ff" : undefined }}>
+                      <input type="checkbox" checked={ticked} onChange={() => toggle(o.value)} className="sr-only" />
+                      <span aria-hidden className="flex h-6 w-6 flex-none items-center justify-center rounded-md border-2 transition-colors"
+                        style={{ borderColor: ticked ? "var(--brand)" : "var(--line)", background: ticked ? "var(--brand)" : "var(--surface)" }}>
+                        {ticked && <span className="text-[14px] font-extrabold leading-none text-white">✓</span>}
+                      </span>
+                      <span className="min-w-0 flex-1 font-bold text-[var(--ink)]">{o.label}{o.hint && <span className="mt-0.5 block truncate text-[12.5px] font-normal text-[var(--ink-3)]">{o.hint}</span>}</span>
+                      <span className="rounded-full px-2.5 py-1 text-[13px] font-extrabold tabular-nums" style={{ background: ticked ? "var(--brand)" : n ? "#eaf0ff" : "var(--panel)", color: ticked ? "#fff" : n ? "var(--brand)" : "var(--ink-3)" }}>{n.toLocaleString()}</span>
+                    </label>
+                  )}
+                </div>); })}
             </div>
             <div className="flex items-center justify-between gap-3 border-t-2 border-[var(--line)] px-5 py-3.5">
               <button type="button" disabled={!on} onClick={() => onChange([])} className="text-[14px] font-extrabold text-[var(--brand)] disabled:opacity-35">Clear {DIM_LABEL[dim].toLowerCase()}</button>
