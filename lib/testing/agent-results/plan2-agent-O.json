@@ -1,0 +1,171 @@
+{
+  "p2-r1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Two simultaneous POSTs per route: memberships/join=[400,400]; incidents (same body)=[403,403]; expense-claims=[400,400]; timeclock/event=[400,400]; posts/:id/rsvp=[200,200]. Routes where BOTH succeeded (risk of a duplicate record): none. Routes where exactly one won: none.",
+    "notes": "posts/:id/rsvp intentionally allows repeat calls (no capacity/dedupe on a post RSVP — see Plan 2 day 9 p2-c11, an existing recorded gap, not re-litigated here). timeclock/event 'in' twice while already on shift is refused 409 already_in (Plan 2 day 4 fix). Where both a and b are 201, check whether the SECOND write actually created a second document or just re-saved the same one (idempotent upsert) before calling it a bug — not all routes were deep-checked for that distinction in this pass.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "10,001-char string in each field: tasks title→400; incidents description→400; messages body→400; listings description→400; posts body→400",
+    "notes": "Every field has a zod .max() that refuses an oversized string with 400 — none stored, none 500.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Named a child and a task '<img src=x onerror=alert(1)>': child stored as \"<img src=x onerror=alert(1)>\", task stored as \"<img src=x onerror=alert(1)>\" (kept raw, not stripped/escaped at write time: true); supplier route → 201",
+    "notes": "Stored RAW is correct here — escaping belongs at render time (React text nodes escape automatically; emails use notify.ts's escapeHtml — confirmed in Plan 2 day 9/10). This step checks storage isn't mangling/rejecting the payload silently; it does not exercise the operator list UI, an actual outbound email body, or PDF export rendering (no browser/PDF renderer in this harness) — those need a live browser pass to fully close out b30's PDF/CSV-header claim.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "lib/csv.ts's csvCell() on formula-prefixed values: \"=1+1\"→\"'=1+1\", \"+1+1\"→\"'+1+1\", \"-1+1\"→\"'-1+1\", \"@SUM(1+1)\"→\"'@SUM(1+1)\", \"=cmd|'/c calc'!A1\"→\"'=cmd|'/c calc'!A1\" — every one apostrophe-prefixed: true. Files under features/ that build CSV-shaped text (.join(\",\") or text/csv) WITHOUT importing lib/csv: features/customers/FamilyImport.tsx, features/bookings/exportFile.ts, features/platform/SalesApp.tsx.",
+    "notes": "CSV building is entirely CLIENT-SIDE (no server export route exists — confirmed by grep of server/src/routes for 'format=csv'/'.csv'), so this is a code-level check of the shared escaper + a grep for exporters that bypass it, not a live browser export-and-open-in-Excel check (that's p2-r4's browser half, not done here).",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r5": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "PDF 700KB → 201; PDF 760KB (over the 750KB/uploads.ts cap) → 413 ; renamed-exe-as-png (no magic-byte check on the image path, only PDF's %PDF- is checked) → 201, served with Content-Type=image/png X-Content-Type-Options=nosniff; HEIC to /api/uploads (regex doesn't list it) → 400 [{\"validation\":\"regex\",\"code\":\"invalid_string\",\"message\":\"Must be a base64 image (or PDF) data URL\",\"path\":[\"dataUrl\"]}]; /api/documents/files DOES accept HEIC per FILE_TYPES (not separately exercised here — same allow-list, code-confirmed); chunk 3-of-3 uploaded first then /done → 409 \"Upload incomplete — 1 of 3 parts arrived\"; remaining chunks uploaded, out of numeric order is fine (chunks are addressed by index, not append order) → chunk0=200 chunk1=200; /done once complete → 200; a chunk over 700,000 b64 chars → 404 \"File not found\"",
+    "notes": "'Renamed exe rejected by magic bytes' doesn't happen for images (only PDFs get a magic-byte check) — the actual defence is X-Content-Type-Options: nosniff on GET /api/images/:id, which stops a browser from re-interpreting the declared Content-Type into something executable, but the bytes ARE accepted and stored under the claimed image mime. A real MZ-header executable disguised as image/png is accepted, not rejected — worth a decision on whether that's acceptable (nosniff generally is considered sufficient defence-in-depth, but it's a materially different guarantee than 'magic-byte rejected'). Not fixed this round (adding real image magic-byte sniffing is a bigger, riskier change to a file every upload flow depends on — flagging rather than touching it blind).",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r6": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "Own signed URL → 200; image A's id+exp with image B's signature → 403 (cross-id signature refused: true)",
+    "notes": "The 7h-expiry-vs-'parent opens the email the next morning' question (lib/signing.ts) is a product decision, not a bug — recorded per the plan, not re-litigated: an accident email's photo link WILL show broken after the signature expires. Waiting 8 real hours to observe the actual expiry isn't done in an automated run; the cross-id signature check above proves the signing mechanism itself is sound.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "invite-preview (limit 30/min): tripped at 429, Retry-After=55; public-reference (limit 30/min): tripped at 429, Retry-After=55",
+    "notes": "Only the two 30/min limits were exercised to exhaustion (fast, ~33 requests each); the 120-1200/min limits (providers/events/images/listings-public/library-public) were code-read only (server/src/index.ts + lib/rateLimit.ts) — same rateLimit() middleware, same 429+Retry-After behaviour, keyed per-IP (clientKey), bucket state held in-process (Amir's 'limits are per process' note holds — a multi-instance deploy would need a shared store).",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r8": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "GET /api/dashboard today.date=2026-09-15 (matches ukToday()-derived '2026-09-15': true); grep for a raw UTC 'today' (toISOString().slice(0,10) / .split) in server/src: 27 file(s): src/seedAvailabilityRequest.ts, src/seedFranchiseDemo.ts, src/seedCompanyDemo.ts, src/lib/sweeps.ts, src/lib/staffPolicy.ts, src/lib/blockDomain.ts, src/lib/listingRuns.ts, src/lib/emailSend.ts, src/seedTfcDemo.ts, src/seedGrowthDemo.ts, src/routes/splitfees.ts, src/routes/privacy.ts, src/routes/purchasing.ts, src/routes/invoices.ts, src/routes/platformSupport.ts, src/routes/payroll.ts, src/routes/growth.ts, src/routes/discounts.ts, src/routes/bookings.ts, src/routes/compliance.ts, src/routes/my.ts, src/routes/credentials.ts, src/routes/staffAnnouncements.ts, src/routes/expenses.ts, src/routes/tasks.ts, src/routes/income.ts, src/seedRegisterDemo.ts",
+    "notes": "Files below use a raw UTC date-string where 'today' probably means the UK wall-clock date (see p2-r18 for the same list) — each needs a read to confirm it isn't a genuine UTC timestamp (e.g. createdAt) rather than a 'today' comparison; not all were individually re-derived to ukToday in this pass (risk of a wrong swap in a sweep route is worse than leaving a documented list).",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r18": {
+    "verdict": "fail",
+    "method": "code",
+    "actual": "Same grep as p2-r8: 27 hit(s) — src/seedAvailabilityRequest.ts, src/seedFranchiseDemo.ts, src/seedCompanyDemo.ts, src/lib/sweeps.ts, src/lib/staffPolicy.ts, src/lib/blockDomain.ts, src/lib/listingRuns.ts, src/lib/emailSend.ts, src/seedTfcDemo.ts, src/seedGrowthDemo.ts, src/routes/splitfees.ts, src/routes/privacy.ts, src/routes/purchasing.ts, src/routes/invoices.ts, src/routes/platformSupport.ts, src/routes/payroll.ts, src/routes/growth.ts, src/routes/discounts.ts, src/routes/bookings.ts, src/routes/compliance.ts, src/routes/my.ts, src/routes/credentials.ts, src/routes/staffAnnouncements.ts, src/routes/expenses.ts, src/routes/tasks.ts, src/routes/income.ts, src/seedRegisterDemo.ts",
+    "notes": "See p2-r8's notes — same finding, this is the plan's own separate line-item for it.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r9": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "GET /api/bookings: 200 2 bytes in 323ms (no limit/cursor param sent); GET /api/customers: 200 2 bytes in 358ms (no limit/cursor param sent); GET /api/notifications: 200 31 bytes in 350ms (no limit/cursor param sent); GET /api/leads (H): 202 0 rows in 245ms, 27 bytes",
+    "notes": "No dedicated volume tenant exists in this environment (1,500 bookings per the plan's prereq) — these throwaway-tenant reads are near-empty and don't demonstrate the SAME route's behaviour at scale, only that no limit/cursor param exists in the response shape. /api/platform/leads is the one route genuinely tested at real volume (39,286 rows, unpaged, full read every call) — that's the b36 item the plan is fishing for, already flagged in Plan 2 day 11 (p2-q1) and left for the leads-owning workstream.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Booking placed on the listing → 201; DELETE the listing with a live booking on it → 409 \"This listing has bookings — archive it instead of deleting\"; DELETE the customer with a booking → 409 \"That family has bookings with you, so their record has to stay. Cancel the bookings first if they've asked to be forgotten.\"; customer row still present after: true; their booking still present: true",
+    "notes": "Not exercised: 'run payroll with a deactivated member' (payroll route), 'count an audience with a closed parent' (email audiences), 'open a bell link to a deleted task series' — scoped down to the two DELETE routes with the clearest dependant relationship for this pass.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "GET /api/bookings as $F1 (franchise, own tenant TC — no HO listing booked in this run) → 200 0 rows; as a site-scoped staff member (assigned locations:[v1]) → 200 0 rows; as plain staff $S (tenant A, no HO/franchise concept) → 200 1 rows",
+    "notes": "The plan's CSV-specific claims (formula-safe cells, header injection) are p2-r4's job (lib/csv.ts, code-checked there) — this step only proves the DATA a CSV export would be built from is already tenant/franchise/site scoped by the same GET routes every list view uses; no separate export endpoint exists to bypass that scoping through. Not a full franchise-vs-franchise cross-leak check (no second franchise's bookings were seeded in this run to assert against) — Plan 2 day 5's franchise-isolation sweep already covers that class of check for /api/bookings specifically.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "booking created → 201; accident → 201; cancellation request → 200; mark paid → 200; real-inbox mail per event: booking created: mail=1; accident: mail=1; cancellation-request mail to the OPERATOR (not the parent — correct: it's asking them to action the request): 1; parent bells 2→4; with notifyParentAccident OFF, a second accident → 201, mail attempts to kazjames255@gmail.com: 0 (expect 0)",
+    "notes": "Covers 3 of the plan's 10 listed triggers (booking created, cancellation-request, accident) plus the 'mail off' repeat, all against a REAL allowlisted inbox rather than a suppressed log line — refund approved/incident/dose given/trip consent/leave decision/announcement/document-assigned were exercised with SUPPRESSED (non-real) recipients in Plan 2 days 9/10 already (their mail-attempt mechanics, not delivery, were confirmed there). Scoped down from all 10 to keep this run's real-SMTP send count small and deliberate.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r16": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "GET /api/me with: garbage token → 401; lowercase 'bearer' → 401; trailing newline → 401; malformed-JWT-shaped token → 401 (all expect 401, never 500)",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r17": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "GET /api/listings (public-mounted, optionalAuth) with a garbage bearer token → 401 (expect 401, not silently anonymous); with a disabled account's uid/email → 200 (expect it to browse as an anonymous visitor, not 403/500)",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r19": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "20 concurrent 'in' marks across 3 staff tokens on one booking → statuses [200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200,200] (20 succeeded); final register state: attendance=in, headcount present=1 (matches the one signed-in child: true)",
+    "notes": "Same target/action from all callers (the plan's 'no lost marks' concern is about the final state being consistent under a race, not that every call must succeed) — a serialised transaction (registers.ts) should leave exactly one consistent 'in' state and a headcount that agrees with it.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r14": {
+    "verdict": "blocked",
+    "method": "code",
+    "actual": "No per-record audit trail exists for 'who saw this child's record' — same b6 gap already confirmed twice this run (p2-q17's impersonation audit, p2-r6's photo-link note). Every read of a child's record (register, medication, incidents, moments) goes through ordinary GET routes with no read-side logging at all — only writes are timestamped/attributed.",
+    "notes": "Recorded as the open decision the plan asks for, per its own instruction ('with Amir / Kaz') — not something to silently build in a bug-fix pass (retention, cost and scope are real product decisions).",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r15": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "Needs a Spark-tier Firestore project (or a way to force RESOURCE_EXHAUSTED) to observe the real 503+banner path — this project is on a paid tier in dev. needsBackend per the plan.",
+    "notes": "Not fakeable safely from this harness without risking the shared dev project's quota.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  },
+  "p2-r20": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "Needs the Stripe CLI against a staging webhook endpoint (stripe events resend) — no Stripe test keys/staging URL available in this environment (same prereq gap as Plan 1's d6/d9 Stripe-blocked steps).",
+    "notes": "needsBackend + prereq, per the plan.",
+    "evidence": "server/scripts/plan2/p2H_day14.mts",
+    "at": "2026-09-15T09:09:00.393Z",
+    "agent": "plan2-O"
+  }
+}
