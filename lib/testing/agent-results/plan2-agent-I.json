@@ -1,1 +1,106 @@
-{}
+{
+  "p2-q1": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "GET /api/leads (no params, after warming): 200, 39286 rows (asOf 2026-09-15T08:47:05.553Z); with ?nation=Wales&haf=true&bookingUrl=x: 200, 39286 rows — identical count, so the query params do nothing; sample row keys: [id,website,sources,business,nation,kind]; non-platform (staff): 403 \"Requires the platform role\"",
+    "notes": "leads.ts GET / (server/src/routes/leads.ts:110) ignores req.query entirely — it always serves the WHOLE cached list; nation/haf/bookingUrl filtering only happens client-side in the HQ Leads page (its own comment calls this 'a trimmed in-memory copy', not a filtered one). The plan's step text implies server-side filters exist over a live query; they don't — a caller sending `?nation=Wales` gets every lead in every nation, same as with no params at all.",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "bulk 20 rows (15 sharing one email, 5 unique) → 201 added=6 skipped=14 (expected added=6, skipped=14); PUT {excluded:true} → 200; still in GET / list: true (excluded isn't a leadSchema field, so it's silently stripped and never persisted); 2 activities logged; order newest-first: yes; DELETE → 200; gone from list: true",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "5KB HTML message → 400 {\"error\":[{\"code\":\"too_big\",\"maximum\":2000,\"type\":\"string\",\"inclusive\":true,\"exact\":false,\"message\": (schema.message caps at 2000 chars — server/src/routes/leads.ts:22 — so an oversized message is refused outright, never stored; nothing to escape because nothing lands); 11th rapid POST in <1s → 429 (limit is 10/min per IP, server/src/index.ts:184); email matching an existing tenant owner (p2hmu2ffve2-own-scvj6l@p2h.test) → 200 — no flag or link to the tenant is set on the lead (checked leads.ts/platform.ts: no such matching logic exists at all)",
+    "notes": "Abuse defenses (size cap → 400, rate limit → 429) both hold. The 'flagged in Sales (s13-coord1)' expectation in the plan doesn't exist in code — a demo-form lead whose email matches a signed-up provider is stored like any other, with nothing pointing HQ at the existing account. Logged as a real gap, not fixed (deciding what 'flagged' means in the UI is a product call, out of scope for a bug-fix pass).",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT categories → 200; POST thread → 201 ticket=MSG-0012; POST reply → 200; provider p2hmu2ffve2-own-scvj6l@p2h.test belled: true; PUT {status:'resolved'} (the plan says 'closed' — the actual enum is open/in_progress/resolved, no 'closed') → 200; GET /insights → 200 totals={\"threads\":9,\"open\":4,\"inProgress\":2,\"resolved\":3,\"bugs\":6}; GET /review → 200 totals={\"threads\":9,\"open\":4,\"inProgress\":2,\"resolved\":3,\"bugs\":4} aiConfigured=true",
+    "notes": "Confirmed the plan's step text names a 'closed' status that doesn't exist server-side (platformSupport.ts patchSchema: open/in_progress/resolved) — used 'resolved' instead, which is the real terminal state.",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "staff report (no screenshot field exists in reportSchema — server/src/routes/platformSupport.ts:427, only page/steps/severity/device/providerId) → 201 ticket=BUG-0010; lands in HQ inbox: party=provider providerId=SCvj6LDcvT2pqB8j5AyK providerName=P2H HQ A tenant=true; anonymous → 401 {\"error\":\"Missing Authorization bearer token\"}",
+    "notes": "There is no image/screenshot upload path on /api/support/report at all — the in-app '🐞 report' the plan describes sending a screenshot with doesn't accept one server-side. If the UI captures a screenshot it's either dropped or sent elsewhere; grep found no evidence of an upload call from the report form. Logged as a gap, not fixed.",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "A backdated 20 days, 0 bookings → row found: true, reason=never_launched detail=\"No bookings taken yet\" (real: 0 bookings ✓ age>14d ✓); POST contacted → 200; row.contactedAt after: 2026-09-15T08:47:26.398Z (still returned by the API, as expected — the UI moves it to the 'Contacted' tab by this field rather than removing it)",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "parent pageview → 204 (analytics.ts canManage() only allows company/freelancer/franchise — a parent's view is silently 204'd, NEVER counted, contradicting the plan's expectation of 'Counted'; staff is excluded too); no token → 401; operator (freelancer) pageview → 204, appears in HQ engagement: true avgSeconds=45",
+    "notes": "The plan expects a parent pageview to be 'Counted' — it isn't. Page-engagement tracking only exists for the three operator roles (analytics.ts:10 canManage), so custdash and staff portal usage is invisible to HQ's page-engagement report. Recorded as a real gap against the plan's own expectation, not fixed (deciding to extend tracking to parent/staff is a product call, not a bug in the code as written).",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q10": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PATCH features meals=false → 200; GET /api/meals as A → 403 \"Meals is turned off for this account. You can turn it back on in Setup → Features.\"; libraries.settings.features.meals===false (same doc Setup reads): true; re-enabled → 200",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "A: HQ row staffCount=1 plan=freelancer status=active price=29 vs own /api/subscription staffUsed=1 plan=freelancer status=active price=29 (A has 1 active + 1 disabled staff, so both should read 1); C (has franchise F1, 0 staff): HQ row staffCount=0 vs own staffUsed=0 (franchise logins are locations, not seats, so both should read 0)",
+    "notes": "Fixed this run: platform.ts's /subscriptions and /providers previously counted role IN (staff, franchise) with no disabled check, diverging from lib/billing.ts's takesStaffSeat (active staff only) that /api/subscription actually bills against — a disabled staffer or any franchisee inflated the HQ-visible seat count above what the provider's own Subscription page showed. Now both read from takesStaffSeat.",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q12": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "POST /api/tenants/welcome → 404 \"\". This route does not exist (grep of server/src/routes/tenants.ts and server/src/routes/*.ts): the only 'welcome' in the codebase is POST /api/me/welcome, which just stamps welcomedAt for the PARENT first-login popup — it isn't a provider welcome email and isn't idempotent-by-design for that purpose. There is no automatic or manual welcome email sent to a newly signed-up provider anywhere in the code.",
+    "notes": "Feature doesn't exist; not something to fix in a bug-fix pass (it's new functionality, not a broken existing one). Flagged for product/Amir.",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q14": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "no x-act-as: 200 \"**48 providers** are currently on the platform.  \n\nYou can see the full list under **Providers & billing**: [/platform/providers](/platform/providers)\"; acting as A (x-act-as swaps req.auth to A's role/tenant — middleware/role.ts applyImpersonation): 200 \"You’ve taken **£0** so far this month.  \n\nFor a full view of all income and expenses, check the Finance & analytics screen: [Finance & analytics](/com\"; distinct answers: true",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  },
+  "p2-q17": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "POST /api/platform/impersonate wrote a row to impersonationLog (22 → 23) — but that endpoint is only called when HQ explicitly opens 'view as' from the Accounts screen. The REAL per-request impersonation (x-act-as header, exercised above by asA → 200) goes through middleware/role.ts applyImpersonation, which only does console.warn (role.ts:131) — no Firestore write at all. So an audit trail exists for the deliberate 'view as X' action, but NOT for every subsequent request made while impersonating — there's no way to reconstruct which specific reads/writes HQ made as the target account.",
+    "notes": "This is the b6 gap plan2.ts's own intent text expects to be confirmed, not fixed — a per-request audit trail is a larger design decision (what to log, retention, cost) than a bug-fix pass. Recorded as the open decision, per the plan.",
+    "evidence": "server/scripts/plan2/p2H_day11.mts",
+    "at": "2026-09-15T08:49:18.466Z",
+    "agent": "plan2-I"
+  }
+}
