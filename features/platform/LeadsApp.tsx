@@ -12,6 +12,8 @@ interface Lead {
   // Researched prospects (e.g. from the EEQU directory) also carry:
   website?: string; socialUrl?: string; location?: string; kind?: string; legalForm?: string;
   companyNumber?: string; charityNumber?: string; bookingSystem?: string;
+  /** From a Companies House SIC-code sweep: how confident the name-only classifier was. "uncertain" needs a human glance before treating as a real lead. */
+  reviewTier?: "likely_fit" | "uncertain"; needsHumanReview?: boolean;
   sourceUrl?: string; confidence?: string; researchSources?: string[]; listingsOnSource?: number;
   /** Which plan they'd buy: one person running it themselves, or an organisation. */
   plan?: "freelancer" | "company" | "franchise"; planReason?: string;
@@ -50,6 +52,10 @@ interface Lead {
    *  did we check and find neither a system nor manual-booking wording ("unconfirmed" — don't claim either way)? */
   bookingMethod?: "confirmed-manual" | "unconfirmed";
   bookingMethodEvidence?: string;
+  /** A genuine but INDIRECT contact route for leads with no email/phone/website/social of their own —
+   *  e.g. the council HAF programme page that lists them, or an email/phone found by re-reading the
+   *  original register/directory page. Never a substitute for a direct channel; see the note for why. */
+  secondaryContact?: string; secondaryContactType?: "council-haf-programme" | "venue-school" | "sourceUrl-refetch" | string; secondaryContactNote?: string;
 }
 
 // ── What we sell vs who they are ─────────────────────────────────────────────
@@ -241,6 +247,10 @@ const okToEmail = (l: Lead) => !!l.email && !l.personalContact && l.kind !== "pe
 const WEBSITE_OPPORTUNITY = new Set(["parked", "empty", "no-match"]);
 const isWebsiteOpportunity = (l: Lead) => !!l.websiteDead && WEBSITE_OPPORTUNITY.has(l.websiteDeadCategory || "");
 const DEAD_CATEGORY_LABEL: Record<string, string> = { parked: "Parked / for-sale domain", empty: "Empty page", "no-match": "Reachable but not theirs", unreachable: "Unreachable (DNS dead)" };
+// No email/phone/website/social AT ALL — the true dead-end set (secondary_contact.mjs's starting point).
+const hasNoContact = (l: Lead) => !l.email && !l.phone && !l.website && !l.socialUrl;
+const isHttpUrl = (s?: string) => !!s && /^https?:\/\//i.test(s);
+const SECONDARY_TYPE_LABEL: Record<string, string> = { "council-haf-programme": "council HAF programme", "venue-school": "venue / school", "sourceUrl-refetch": "original listing page" };
 const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
   plan: [
     { value: "company", label: "🏢 Companies", test: ({ l }) => isCompany(l) },
@@ -267,6 +277,8 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
     { value: "no", label: "🚫 No — not Ofsted-registered", hint: "Directory / HAF / other-nation leads with no Ofsted record. Wales, Scotland and NI have their own registers (see Nation)", test: ({ l, d }) => !d.srcs.includes("ofsted") && !((l.ofstedSites ?? 0) > 0) },
   ],
   contact: [
+    { value: "chLikelyFit", label: "✅ Likely fit — ready to treat", group: "Review status (Companies House sweep)", hint: "Name-matched by a keyword classifier against a real kids/coaching signal — a reasonable shortlist, still not manually verified", test: ({ l }) => l.reviewTier === "likely_fit" },
+    { value: "chUncertain", label: "❔ Needs a glance", group: "Review status (Companies House sweep)", hint: "Matched the SIC code but the name is ambiguous (e.g. \"Academy\" could be kids' coaching or a pro club's academy) — check before treating as a lead", test: ({ l }) => l.needsHumanReview === true },
     { value: "okEmail", label: "✅ OK to email", hint: "A business mailbox — not a sole trader or a named person's address (UK PECR)", test: ({ l }) => okToEmail(l) },
     { value: "email", label: "✉️ Has email", test: ({ l }) => !!l.email },
     { value: "phone", label: "📞 Has phone", hint: "UK PECR: screen numbers against the TPS / CTPS before sales calls", test: ({ l }) => !!l.phone },
@@ -279,6 +291,9 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
     { value: "websiteOpportunity", label: "🌐 Website rebuild opportunity", hint: "Their old website is dead but the domain still resolves to something (parked/for-sale, empty, or reachable but not theirs) — the business likely still exists, just needs a new site. Pitch a rebuild as part of the ActivityOS package", test: ({ l }) => isWebsiteOpportunity(l) },
     { value: "websiteUnreachable", label: "🚫 Website unreachable (DNS dead)", hint: "Confirmed dead with no signal at all — ENOTFOUND or nothing found anywhere. The business may not exist any more", test: ({ l }) => !!l.websiteDead && !isWebsiteOpportunity(l) },
     { value: "soon", label: "🚧 Coming-soon website", hint: "Their site is a holding page — likely no booking platform yet", test: ({ l }) => !!l.comingSoon },
+    { value: "noContactAtAll", label: "❌ No contact found", hint: "No email, phone, website or social page on record — the true dead-end set", test: ({ l }) => hasNoContact(l) },
+    { value: "hasSecondaryContact", label: "📞 Indirect contact found", hint: "No direct channel, but a secondary route was found — a council HAF programme page, or an email/phone read off the original listing page. See the badge on the row", test: ({ l }) => hasNoContact(l) && !!l.secondaryContact },
+    { value: "noContactWhatsoever", label: "⛔ No contact — not even indirect", hint: "No email, phone, website or social, and no secondary route found either — a genuine dead end", test: ({ l }) => hasNoContact(l) && !l.secondaryContact },
   ],
   status: STATUSES.map((s) => ({ value: s, label: TONE[s].label, test: ({ l }: R) => (l.status || "new") === s })),
 };
@@ -557,8 +572,8 @@ export function LeadsApp() {
   const clearAll = () => { setF(NO_FILTERS); setQ(""); setLimit(60); };
 
   const exportCsv = () => {
-    const head = ["Name", "Registered name", "Email", "OK to email (PECR)", "Phone", "Website", "Possible website (unconfirmed)", "Location", "Region", "Nation", "Runs", "Fit", "Size", "Franchise / group", "Booking", "Directories", "Status", "Listing link"];
-    const lines = shown.map(({ l, d }) => [l.name, l.business, l.email, okToEmail(l) ? "yes" : l.email ? "needs consent" : "", l.phone, l.website, l.website ? "" : l.websiteCandidate, l.location, d.region, d.nation, d.types.map((t) => TYPE[t]?.label).join("; "), FIT[d.fit].label.replace(/^\S+ /, ""), SIZE[d.size].replace(/^\S+ /, ""), l.network ?? "", BOOKING[d.booking].label.replace(/^\S+ /, ""), d.srcs.map((s) => srcMeta(s).label).join("; "), TONE[l.status]?.label ?? l.status, l.sourceUrl ?? ""].map(csvCell).join(","));
+    const head = ["Name", "Registered name", "Email", "OK to email (PECR)", "Phone", "Website", "Possible website (unconfirmed)", "Indirect contact", "Indirect contact type", "Indirect contact note", "Location", "Region", "Nation", "Runs", "Fit", "Size", "Franchise / group", "Booking", "Directories", "Status", "Listing link"];
+    const lines = shown.map(({ l, d }) => [l.name, l.business, l.email, okToEmail(l) ? "yes" : l.email ? "needs consent" : "", l.phone, l.website, l.website ? "" : l.websiteCandidate, l.secondaryContact ?? "", l.secondaryContactType ?? "", l.secondaryContactNote ?? "", l.location, d.region, d.nation, d.types.map((t) => TYPE[t]?.label).join("; "), FIT[d.fit].label.replace(/^\S+ /, ""), SIZE[d.size].replace(/^\S+ /, ""), l.network ?? "", BOOKING[d.booking].label.replace(/^\S+ /, ""), d.srcs.map((s) => srcMeta(s).label).join("; "), TONE[l.status]?.label ?? l.status, l.sourceUrl ?? ""].map(csvCell).join(","));
     const url = URL.createObjectURL(new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `leads-${view}-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -666,7 +681,10 @@ export function LeadsApp() {
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-0.5 text-[12.5px] text-[var(--ink-2)]">
                       {l.email && <a href={`mailto:${l.email}`} className="font-semibold hover:underline" style={{ color: "var(--brand)" }} title={l.emailFrom ? `Published at ${l.emailFrom}` : undefined}>✉️ {l.email}</a>}
                       {l.phone && <a href={`tel:${l.phone}`} className="hover:underline" title={`${l.phoneFrom ? `Published at ${l.phoneFrom}. ` : ""}Screen against the TPS / CTPS before a sales call (UK PECR).`}>📞 {l.phone}</a>}
-                      {!l.email && !l.phone && <span className="text-[var(--ink-3)]" title="Research is still looking for their email / phone">🔎 contact details being researched</span>}
+                      {!l.email && !l.phone && !l.secondaryContact && <span className="text-[var(--ink-3)]" title="Research is still looking for their email / phone">🔎 contact details being researched</span>}
+                      {l.secondaryContact && (isHttpUrl(l.secondaryContact)
+                        ? <a href={l.secondaryContact} target="_blank" rel="noopener noreferrer" title={l.secondaryContactNote || undefined} className="rounded-full border border-dashed border-[#9a5a00] bg-[#fff4e5] px-2 py-0.5 text-[11.5px] font-bold text-[#9a5a00] hover:underline">📞 Indirect contact via {SECONDARY_TYPE_LABEL[l.secondaryContactType || ""] || "secondary route"} ↗</a>
+                        : <span title={l.secondaryContactNote || undefined} className="rounded-full border border-dashed border-[#9a5a00] bg-[#fff4e5] px-2 py-0.5 text-[11.5px] font-bold text-[#9a5a00]">📞 Indirect contact via {SECONDARY_TYPE_LABEL[l.secondaryContactType || ""] || "secondary route"}: {l.secondaryContact}</span>)}
                       {l.website && <a href={l.website} target="_blank" rel="noopener noreferrer" className="font-semibold hover:underline" style={{ color: "var(--brand)" }}>🌐 {l.website.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")} ↗</a>}
                       {l.socialUrl && <a href={l.socialUrl} target="_blank" rel="noopener noreferrer" className="font-semibold text-[#1d4ed8] hover:underline" title="Their social page — not counted as a website">{/instagram/i.test(l.socialUrl) ? "📸" : /linktr/i.test(l.socialUrl) ? "🔗" : "📘"} {l.socialUrl.replace(/^https?:\/\/(www\.|m\.|en-gb\.|business\.)?/, "").replace(/\/$/, "").slice(0, 40)} ↗</a>}
                       {!l.website && l.websiteCandidate && <a href={l.websiteCandidate} target="_blank" rel="noopener noreferrer" className="rounded-md border border-dashed border-[#d9a84e] px-1.5 font-semibold text-[#9a5a00] hover:underline" title={`Possible website — not confirmed as theirs: ${l.websiteCandidateWhy ?? ""}`}>🌐? {l.websiteCandidate.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, "")} · possible, not confirmed ↗</a>}
