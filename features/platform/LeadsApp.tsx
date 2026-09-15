@@ -386,7 +386,18 @@ export function LeadsApp() {
     .then((r) => {
       if (later.current) clearTimeout(later.current);
       if (r.warming) { later.current = setTimeout(() => void load(), 4000); return; }
-      setLeads(r.leads || []); setLoadError(false); setLoading(false);
+      const next = r.leads || [];
+      // The background poll re-fetches every 45s even when nothing changed. Bail out of the
+      // state update (keep the same array reference) when the payload is byte-for-byte the
+      // same as what's already loaded, so `rows` below doesn't re-derive all ~41,500 leads
+      // for no reason. A JSON comparison can only ever say "same" when the data really is the
+      // same — it never masks a real change, it can only (rarely, on key-order noise) miss a
+      // pointless-optimization opportunity, which is a safe failure mode.
+      setLeads((prev) => {
+        try { if (prev.length === next.length && JSON.stringify(prev) === JSON.stringify(next)) return prev; } catch { /* fall through */ }
+        return next;
+      });
+      setLoadError(false); setLoading(false);
       if (r.refreshing) later.current = setTimeout(() => void load(), 45_000);
     })
     // The API restarts whenever server code changes (and takes a few seconds to come
@@ -403,8 +414,22 @@ export function LeadsApp() {
     await api(`/api/leads/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }).catch(() => {});
   };
 
-  // Tens of thousands of leads: work out each one's fit / size / booking / region once.
-  const rows: R[] = useMemo(() => leads.map((l) => ({ l, d: derive(l) })), [leads]);
+  // Tens of thousands of leads: work out each one's fit / size / booking / region once, and
+  // remember it across polls keyed by id + a content signature — `leads` gets a brand-new array
+  // (and brand-new lead objects) on every poll that DOES carry a real change, but usually only a
+  // handful of the ~41,500 leads actually changed, so re-running derive()'s ~19 regex tests on
+  // every lead every time is the freeze. Unchanged leads are served from cache; only new/changed
+  // ones pay the cost.
+  const deriveCache = useRef(new Map<string, { sig: string; d: Derived }>());
+  const rows: R[] = useMemo(() => leads.map((l) => {
+    let sig: string;
+    try { sig = JSON.stringify(l); } catch { sig = ""; }
+    const cached = sig && deriveCache.current.get(l.id);
+    if (cached && cached.sig === sig) return { l, d: cached.d };
+    const d = derive(l);
+    if (sig) deriveCache.current.set(l.id, { sig, d });
+    return { l, d };
+  }), [leads]);
   const term = useDeferredValue(q.trim().toLowerCase());
   // Options that come from the data: regions and directories, biggest first.
   const opts = useMemo(() => {
@@ -415,7 +440,9 @@ export function LeadsApp() {
       region: tally((r) => [r.d.region || "Not known"]).sort((a, b) => Number(a === "Not known") - Number(b === "Not known")).map((v) => ({ value: v, label: v === "Not known" ? "📍 Not known" : `📍 ${v}`, test: ({ d }: R) => (d.region || "Not known") === v })),
       source: [],
       booking: [
-        { value: "none", label: BOOKING.none.label, group: "Overall", hint: BOOKING.none.hint, test: ({ d }: R) => d.booking === "none" },
+        // "none" (confirmed no platform) lives once, under "Booking platforms" below
+        // (value: "noPlatform") — it used to also appear here under "Overall" with
+        // an identical test, which showed as the same option twice in the list.
         { value: "manualBooking", label: "📞 Books by phone/email only — hot lead", group: "Overall", hint: "Their site was actually checked and explicitly says to call/phone/email to book — genuinely no online booking system to displace. The best kind of lead.", test: ({ l }: R) => l.bookingMethod === "confirmed-manual" },
         { value: "unknown", label: BOOKING.unknown.label, group: "Overall", hint: BOOKING.unknown.hint, test: ({ d }: R) => d.booking === "unknown" },
         { value: "online", label: "✅ Takes bookings online (any way)", group: "Overall", hint: "Listed on a booking platform, uses booking software, or books through its own website", test: ({ d }: R) => d.booking === "platform" },
