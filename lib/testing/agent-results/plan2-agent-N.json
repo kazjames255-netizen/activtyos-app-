@@ -1,0 +1,11 @@
+{
+  "p2-i10": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "English catalogue: 3523 leaf keys across 21 namespaces (common, header, dashboard, parent, customers, meals, setup, team, registers, schedule, tasks, money, marketing, comms, workforce, listings, care, franchise, account, feed, staffp). Missing-key count per locale (falls back to English at read time): pl: 10/3523 (0.3%); ro: 10/3523 (0.3%); ur: 11/3523 (0.3%); pa: 10/3523 (0.3%); bn: 10/3523 (0.3%); ar: 10/3523 (0.3%); pt: 10/3523 (0.3%); es: 10/3523 (0.3%); fr: 10/3523 (0.3%); cy: 10/3523 (0.3%). Worst: ur (11 missing) — sample missing keys: [dashboard.urgent, meals.catererNotSending, registers.cancelledOnSite, registers.cancelledOnSiteTip, schedule.notDeployedHere, schedule.showNotDeployed, schedule.hideNotDeployed, money.subStaffPending].",
+    "notes": "pa/bn/pt/cy were noted (docs/qa-findings.md) as 'mapped to en for the shell' — confirmed here: every area namespace falls back through buildLocale()'s byLocale.en when the locale key is absent from an area file entirely, and any INDIVIDUAL missing key inside a present area object falls back per-key via translate(). This script counts the end result (what a user actually sees) rather than which mechanism produced it. This is a measurement, not a bug — recorded as the handover list the plan asks for; not attempting to fill in ~thousands of translated strings in this pass.",
+    "evidence": "server/scripts/plan2/p2H_day12.mts",
+    "at": "2026-09-15T08:48:28.061Z",
+    "agent": "plan2-N"
+  }
+}
