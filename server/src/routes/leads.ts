@@ -71,7 +71,12 @@ const LIST_FIELDS = ["name", "email", "phone", "business", "size", "message", "s
   "websiteDead", "websiteDeadAt", "websiteDeadWhy", "websiteDeadCategory",
   // Manual-booking-language classification: for a confirmed site with no detected booking system, did we find
   // explicit "call/email to book" wording (a great lead — no incumbent system) or check and find neither?
-  "bookingMethod", "bookingMethodEvidence"];
+  "bookingMethod", "bookingMethodEvidence",
+  // Companies House SIC-code sweep leads: name-only classifier tier, plus the registered-address fields
+  // those leads carry instead of the usual `location` (was missing — every filter/count using these read 0).
+  "reviewTier", "needsHumanReview", "postcode", "regAddress",
+  // Free secondary-contact pass (council HAF page / re-read source page) for leads with no direct channel.
+  "secondaryContact", "secondaryContactType", "secondaryContactNote"];
 const FRESH_MS = 3 * 60_000;
 type Row = Record<string, unknown> & { id: string; createdAt?: string };
 let cache: { at: number; items: Row[] } | null = null;
