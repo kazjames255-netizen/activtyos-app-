@@ -299,16 +299,15 @@ const SORTS: Record<SortKey, string> = { best: "Best prospects first", reach: "M
 /** A dropdown of ticks with live counts. Counts are only worked out while it's open. */
 function FilterMenu({ dim, opts, value, onChange, countFor }: { dim: Dim; opts: Opt[]; value: string[]; onChange: (v: string[]) => void; countFor: (o: Opt) => number }) {
   const [open, setOpen] = useState(false);
-  // Anchor the menu to whichever side keeps it on screen (the right-hand filters were clipping their counts).
-  const [alignRight, setAlignRight] = useState(false);
   const box = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const r = box.current?.getBoundingClientRect(); if (r) setAlignRight(r.left + 320 > window.innerWidth - 12);
-    const off = (e: MouseEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
     const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(false); };
-    document.addEventListener("mousedown", off); document.addEventListener("keydown", esc);
-    return () => { document.removeEventListener("mousedown", off); document.removeEventListener("keydown", esc); };
+    document.addEventListener("keydown", esc);
+    // A full-page modal locks background scroll while it's open.
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.removeEventListener("keydown", esc); document.body.style.overflow = prevOverflow; };
   }, [open]);
   const on = value.length > 0;
   const summary = !on ? "Any" : value.length === 1 ? (opts.find((o) => o.value === value[0])?.label ?? value[0]) : `${value.length} selected`;
@@ -323,18 +322,37 @@ function FilterMenu({ dim, opts, value, onChange, countFor }: { dim: Dim; opts: 
         <span aria-hidden className="text-[10px]">▾</span>
       </button>
       {open && (
-        // Fits the window: at most 60% of its height, scrolling inside; hints are a
-        // single line (hover for the whole thing) so every option is visible.
-        <div className={`absolute ${alignRight ? "right-0" : "left-0"} top-[calc(100%+6px)] z-30 w-[320px] max-w-[calc(100vw-24px)] overflow-y-auto rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-1.5 shadow-[0_18px_40px_-18px_rgba(15,23,42,.45)]`} style={{ maxHeight: "min(60vh, 520px)" }}>
-          {opts.map((o, i) => { const n = countFor(o); const ticked = value.includes(o.value); const heading = o.group && o.group !== opts[i - 1]?.group; return (<div key={o.value}>
-            {heading && <div className="mt-1.5 px-2.5 pb-0.5 pt-1.5 text-[10px] font-extrabold uppercase tracking-wide text-[var(--ink-3)] first:mt-0">{o.group}</div>}
-            <label title={o.hint} className="flex cursor-pointer items-center gap-2.5 rounded-lg px-2.5 py-1.5 text-[12.5px] hover:bg-[var(--panel)]" style={{ opacity: n || ticked ? 1 : 0.45 }}>
-              <input type="checkbox" checked={ticked} onChange={() => toggle(o.value)} className="h-4 w-4 flex-none accent-[var(--brand)]" />
-              <span className="min-w-0 flex-1 font-semibold text-[var(--ink)]">{o.label}{o.hint && <span className="block truncate text-[10.5px] font-normal text-[var(--ink-3)]">{o.hint}</span>}</span>
-              <span className="text-[11.5px] font-bold tabular-nums text-[var(--ink-3)]">{n.toLocaleString()}</span>
-            </label>
-          </div>); })}
-          {on && <button type="button" onClick={() => onChange([])} className="mt-1 w-full rounded-lg px-2.5 py-1.5 text-left text-[12px] font-bold text-[var(--brand)] hover:bg-[var(--panel)]">Clear {DIM_LABEL[dim].toLowerCase()}</button>}
+        // Whole-page modal, not an anchored dropdown — plenty of room, no clipping.
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/45 p-4 sm:p-8" onClick={() => setOpen(false)}>
+          <div
+            className="flex w-full max-w-[760px] flex-col overflow-hidden rounded-2xl border-2 border-[var(--line)] bg-[var(--surface)] shadow-[0_32px_80px_-20px_rgba(15,23,42,.6)]"
+            style={{ maxHeight: "88vh" }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b-2 border-[var(--line)] px-5 py-4">
+              <h2 className="text-[19px] font-extrabold text-[var(--ink)]">{DIM_LABEL[dim]}</h2>
+              <button type="button" onClick={() => setOpen(false)} aria-label="Close"
+                className="rounded-full p-2 text-[16px] font-bold text-[var(--ink-3)] hover:bg-[var(--panel)]">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-3">
+              {opts.map((o, i) => { const n = countFor(o); const ticked = value.includes(o.value); const heading = o.group && o.group !== opts[i - 1]?.group; return (<div key={o.value}>
+                {heading && <div className="mt-3 mb-1 border-b-2 border-[var(--brand)]/25 px-3 pb-1.5 pt-2 text-[13px] font-extrabold uppercase tracking-wide text-[var(--brand)] first:mt-0.5">{o.group}</div>}
+                <label title={o.hint} className="flex cursor-pointer items-center gap-3.5 rounded-xl px-3.5 py-3 text-[15px] transition-colors hover:bg-[#eaf0ff]" style={{ opacity: n || ticked ? 1 : 0.45, background: ticked ? "#eaf0ff" : undefined }}>
+                  <input type="checkbox" checked={ticked} onChange={() => toggle(o.value)} className="sr-only" />
+                  <span aria-hidden className="flex h-6 w-6 flex-none items-center justify-center rounded-md border-2 transition-colors"
+                    style={{ borderColor: ticked ? "var(--brand)" : "var(--line)", background: ticked ? "var(--brand)" : "var(--surface)" }}>
+                    {ticked && <span className="text-[14px] font-extrabold leading-none text-white">✓</span>}
+                  </span>
+                  <span className="min-w-0 flex-1 font-bold text-[var(--ink)]">{o.label}{o.hint && <span className="mt-0.5 block truncate text-[12.5px] font-normal text-[var(--ink-3)]">{o.hint}</span>}</span>
+                  <span className="rounded-full px-2.5 py-1 text-[13px] font-extrabold tabular-nums" style={{ background: ticked ? "var(--brand)" : n ? "#eaf0ff" : "var(--panel)", color: ticked ? "#fff" : n ? "var(--brand)" : "var(--ink-3)" }}>{n.toLocaleString()}</span>
+                </label>
+              </div>); })}
+            </div>
+            <div className="flex items-center justify-between gap-3 border-t-2 border-[var(--line)] px-5 py-3.5">
+              <button type="button" disabled={!on} onClick={() => onChange([])} className="text-[14px] font-extrabold text-[var(--brand)] disabled:opacity-35">Clear {DIM_LABEL[dim].toLowerCase()}</button>
+              <button type="button" onClick={() => setOpen(false)} className="rounded-xl px-4 py-2 text-[14px] font-extrabold text-white" style={{ background: "var(--brand)" }}>Done{on ? ` (${value.length})` : ""}</button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -459,7 +477,6 @@ export function LeadsApp() {
     return out.sort(cmp[sort]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, view, f, term, sort, opts]);
-  const countWith = (skip: Dim | "view", test: (r: R) => boolean) => { let n = 0; for (const r of rows) if (test(r) && pass(r, skip)) n++; return n; };
   // One pass over the list for every view's count (not one pass per view).
   const viewCounts = useMemo(() => {
     const c: Record<string, number> = Object.fromEntries(VIEWS.map((v) => [v.key, 0]));
@@ -467,6 +484,22 @@ export function LeadsApp() {
     return c;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, f, term, opts]);
+  // The filter dropdowns: one pass over the list PER DIMENSION for all of that
+  // dimension's option counts (not one pass per option — a dimension with 20
+  // options used to mean 20 full scans of the list on every render).
+  const MENU_DIMS: Dim[] = ["runs", "nation", "region", "ofsted", "size", "booking", "contact", "status"];
+  const dropdownCounts = useMemo(() => {
+    const maps = Object.fromEntries(MENU_DIMS.map((dim) => [dim, new Map<string, number>()])) as Record<Dim, Map<string, number>>;
+    for (const dim of MENU_DIMS) {
+      const map = maps[dim];
+      for (const r of rows) {
+        if (!pass(r, dim)) continue;
+        for (const o of opts[dim]) if (o.test(r)) map.set(o.value, (map.get(o.value) ?? 0) + 1);
+      }
+    }
+    return maps;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, view, f, term, opts]);
   const planTabs: [string, string][] = [["", "All plans"], ["company", "🏢 Companies"], ["freelancer", "🧑 Freelancers"]];
   const setDim = (dim: Dim, v: string[]) => { setF((cur) => ({ ...cur, [dim]: v })); setLimit(60); };
   const active = DIMS.filter((dim) => dim !== "plan").flatMap((dim) => f[dim].map((v) => ({ dim, v, label: opts[dim].find((o) => o.value === v)?.label ?? v })));
@@ -521,7 +554,7 @@ export function LeadsApp() {
         </div>
         {(["runs", "nation", "region", "ofsted", "size", "booking", "contact", "status"] as Dim[]).map((dim) => (
           <FilterMenu key={dim} dim={dim} opts={opts[dim]} value={f[dim]} onChange={(v) => setDim(dim, v)}
-            countFor={(o) => countWith(dim, o.test)} />
+            countFor={(o) => dropdownCounts[dim].get(o.value) ?? 0} />
         ))}
         {(active.length > 0 || q || f.plan.length > 0) && <button type="button" onClick={clearAll} className="ml-auto px-1.5 text-[12px] font-bold text-[var(--brand)] underline">Clear filters</button>}
       </div>
