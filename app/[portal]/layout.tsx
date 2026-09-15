@@ -5,6 +5,7 @@ import { PORTALS, type PortalKey } from "@/lib/nav/config";
 import { Sidebar } from "@/components/shell/Sidebar";
 import { Header } from "@/components/shell/Header";
 import { ImpersonationBar } from "@/components/shell/ImpersonationBar";
+import { PlatformViewBar } from "@/components/shell/PlatformViewBar";
 import { RequireAuth } from "@/components/auth/AuthProvider";
 import { PortalGuard } from "@/components/auth/PortalGuard";
 import { SubscriptionGate, SubscriptionLock } from "@/components/auth/SubscriptionGate";
@@ -44,8 +45,14 @@ export default async function PortalLayout(props: LayoutProps<"/[portal]">) {
         <PageTracker portal={portalKey} />
         <SubscriptionGate portal={portalKey}>
         <div className="flex h-screen flex-col">
-          {/* HQ impersonation bar — full width across the top when viewing-as. */}
+          {/* HQ impersonation bar — full width across the top when viewing-as.
+              PlatformViewBar covers the OTHER case: a platform account
+              previewing an operator portal WITHOUT impersonating anyone —
+              the data routes still answer with every tenant's rows merged
+              together, so say so just as loudly. The two are mutually
+              exclusive. */}
           <ImpersonationBar />
+          <PlatformViewBar portal={portalKey} />
           <div className="flex min-h-0 flex-1">
           {/* Desktop-only rail; on mobile the Header's hamburger opens the same
               Sidebar as a slide-over drawer. */}
