@@ -477,7 +477,12 @@ export function LeadsApp() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, []);
 
-  const setStatus = async (id: string, status: string) => {
+  const [undo, setUndo] = useState<{ id: string; name: string; prev: string; next: string } | null>(null);
+  const setStatus = async (id: string, status: string, name?: string, prevStatus?: string) => {
+    if (name && prevStatus) {
+      setUndo({ id, name, prev: prevStatus, next: status });
+      setTimeout(() => setUndo((u) => (u?.id === id && u.next === status ? null : u)), 8000);
+    }
     setLeads((ls) => ls.map((l) => (l.id === id ? { ...l, status } : l)));
     await api(`/api/leads/${id}`, { method: "PATCH", body: JSON.stringify({ status }) }).catch(() => {});
   };
@@ -506,7 +511,15 @@ export function LeadsApp() {
       ...STATIC_OPTS,
       nation: tally((r) => [r.d.nation || "Not known"]).sort((a, b) => Number(a === "Not known") - Number(b === "Not known")).map((v) => ({ value: v, label: v === "Not known" ? "❓ Not known" : `${NATION_FLAG[v] ?? "🇬🇧"} ${v}`, hint: v === "England" ? "Ofsted register + UK directories" : v === "Wales" ? "Care Inspectorate Wales register" : v === "Scotland" ? "Care Inspectorate (Scotland) register" : v === "Northern Ireland" ? "Family Support NI / HSC Trust registers" : undefined, test: ({ d }: R) => (d.nation || "Not known") === v })),
       region: tally((r) => [r.d.region || "Not known"]).sort((a, b) => Number(a === "Not known") - Number(b === "Not known")).map((v) => ({ value: v, label: v === "Not known" ? "📍 Not known" : `📍 ${v}`, test: ({ d }: R) => (d.region || "Not known") === v })),
-      source: [],
+      // Which import batch/category a lead came from — was a defined dimension with
+      // zero options ever populated, so this filter silently did nothing until now.
+      source: tally((r) => [r.l.source || "unknown"]).map((v) => {
+        const CH_LABEL: Record<string, string> = {
+          "companiesHouse-sports": "🏢 Companies House — sports", "companiesHouse-daycare": "🏢 Companies House — day-care",
+          "companiesHouse-performingarts": "🏢 Companies House — performing arts", "unknown": "❓ Unknown source",
+        };
+        return { value: v, label: CH_LABEL[v] || srcMeta(v).label, group: v.startsWith("companiesHouse") ? "Companies House sweeps" : "Other sources", test: ({ l }: R) => (l.source || "unknown") === v };
+      }),
       booking: [
         // "none" (confirmed no platform) lives once, under "Booking platforms" below
         // (value: "noPlatform") — it used to also appear here under "Overall" with
@@ -628,6 +641,13 @@ export function LeadsApp() {
 
   return (
     <div>
+      {undo && (
+        <div className="fixed bottom-5 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-xl bg-[var(--ink)] px-4 py-2.5 text-[13px] text-white shadow-[0_12px_32px_-8px_rgba(0,0,0,.5)]">
+          <span>Marked <strong>{undo.name}</strong> as {TONE[undo.next]?.label ?? undo.next}</span>
+          <button type="button" onClick={() => { setStatus(undo.id, undo.prev); setUndo(null); }}
+            className="font-extrabold text-[var(--brand)] underline">Undo</button>
+        </div>
+      )}
       <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "var(--hero-grad)" }}>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
           <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💬</span>Leads
@@ -662,7 +682,7 @@ export function LeadsApp() {
               style={on ? { background: "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
           ); })}
         </div>
-        {(["runs", "nation", "region", "ofsted", "size", "booking", "contact", "status"] as Dim[]).map((dim) => (
+        {(["runs", "nation", "region", "ofsted", "size", "booking", "contact", "status", "source"] as Dim[]).map((dim) => (
           <FilterMenu key={dim} dim={dim} opts={opts[dim]} value={f[dim]} onChange={(v) => setDim(dim, v)}
             countFor={(o) => dropdownCounts[dim].get(o.value) ?? 0} />
         ))}
@@ -774,7 +794,7 @@ export function LeadsApp() {
                   </div>
                   <div className="flex flex-none flex-wrap gap-1.5">
                     {STATUSES.filter((s) => s !== l.status).map((s) => (
-                      <button key={s} type="button" onClick={() => setStatus(l.id, s)}
+                      <button key={s} type="button" onClick={() => setStatus(l.id, s, l.name, l.status)}
                         className="rounded-lg px-2.5 py-1.5 text-[11.5px] font-extrabold transition-colors"
                         style={{ background: "var(--panel)", color: TONE[s].fg, border: "1px solid var(--line)" }}>
                         → {TONE[s].label}
