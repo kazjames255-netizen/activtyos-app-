@@ -133,7 +133,12 @@ const regionFrom = (l: Lead) => {
 // One name per booking system, whatever the crawl wrote: "Magicbooking" / "Magic Booking (network-wide: YMCA)" → "Magic Booking";
 // every own-website variant → "Own website"; a sign-up form (Google/Microsoft Forms, JotForm, Typeform) is NOT a booking system → "".
 const SYSTEM_ALIASES: [RegExp, string][] = [
-  [/^(google|microsoft) forms?\b|^jotform\b|^typeform\b|booking form\)?$/i, ""],
+  // The last alternative used to be the unanchored `booking form\)?$`, which
+  // matched anything ENDING in "booking form)" — including "own site
+  // (booking form)", wrongly nulling out a real self-hosted booking system
+  // to "" and making it look unchecked/no-platform. Anchored to the specific
+  // sign-up-form services this was meant to catch instead.
+  [/^(google|microsoft) forms?\b|^jotform\b|^typeform\b/i, ""],
   [/^own (site|website)\b|^own site shop|^own portal|^own booking|own platform/i, "Own website"],
   [/^magic ?booking/i, "Magic Booking"], [/^class ?4 ?kids|^classforkids/i, "ClassForKids"], [/^famly/i, "Famly"], [/^blossom/i, "Blossom"], [/^tapestry/i, "Tapestry"],
   [/^eequ/i, "eequ"], [/^pebble/i, "Pebble"], [/^playwaze/i, "Playwaze"], [/^kiplearn/i, "KipLearn (Kip McGrath)"], [/^kidsplan/i, "Kidsplan"], [/^parentpay/i, "ParentPay"],
@@ -142,7 +147,7 @@ const SYSTEM_ALIASES: [RegExp, string][] = [
   [/^legend/i, "Legend (leisure)"], [/^gladstone/i, "Gladstone (leisure)"], [/^better\b|^gll\b/i, "Better / GLL"], [/^holidayactivities/i, "HolidayActivities"], [/^coordinate/i, "Coordinate"],
 ];
 function canonicalSystem(raw?: string): string {
-  const first = (raw || "").split(/;| — /)[0].replace(/\s*\((network-wide|HAF)[^)]*\)/gi, "").replace(/\s*\((nursery app|school payments)\)/gi, "").trim();
+  const first = (raw || "").split(/;| — /)[0].replace(/\s*\((network-wide|HAF)[^)]*\)/gi, "").replace(/\s*\((nursery app|school payments|booking form|booking page|online checkout)\)/gi, "").trim();
   if (!first) return "";
   for (const [re, name] of SYSTEM_ALIASES) if (re.test(first)) return name;
   return first.replace(/\s*\([^)]*\)\s*$/, "").trim();
@@ -477,12 +482,26 @@ export function LeadsApp() {
   const viewTest = VIEWS.find((v) => v.key === view)?.test ?? (() => true);
   const okTerm = ({ l }: R) => !term || [l.name, l.business, l.location, l.county, l.region, l.nation, l.email, l.phone, l.message, l.bookingSystem, l.website, l.websiteCandidate, l.sport, l.network].some((x) => (x ?? "").toLowerCase().includes(term));
   const DIMS = Object.keys(NO_FILTERS) as Dim[];
+  // pass() only ever needs to know, per active dimension, whether the row matches one of the
+  // few TICKED option values (f[dim], typically 1-3) — not whether it matches any of the up-to-
+  // ~90 options that dimension HAS (the "Platform" dropdown alone). Testing every option per row
+  // to find a match in a small selected set was the freeze: up to ~41,500 rows × ~90 `.test()`
+  // calls per active filter, synchronously, on every checkbox click. A value→option lookup lets
+  // pass() iterate the small selected set instead and test only those directly. `value` is a
+  // dimension-scoped key (never reused within one dim — see the "noPlatform"/"none" dedupe above),
+  // so building a Map per dimension is safe and can't silently drop a same-value option.
+  const optsByValue = useMemo(() => {
+    const m = {} as Record<Dim, Map<string, Opt>>;
+    for (const dim of DIMS) m[dim] = new Map(opts[dim].map((o) => [o.value, o]));
+    return m;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opts]);
   /** Passes every filter except `skip` (so a dropdown's counts are "if you ticked this"). */
   const pass = (r: R, skip: Dim | "view" | null = null) => {
     if (skip !== "view" && !viewTest(r)) return false;
     for (const dim of DIMS) {
       if (dim === skip || !f[dim].length) continue;
-      if (!opts[dim].some((o) => f[dim].includes(o.value) && o.test(r))) return false;
+      if (!f[dim].some((v) => optsByValue[dim].get(v)?.test(r))) return false;
     }
     return okTerm(r);
   };
