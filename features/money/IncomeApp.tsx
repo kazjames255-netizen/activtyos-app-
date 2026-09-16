@@ -123,9 +123,26 @@ export function IncomeApp({ embedded = false }: { embedded?: boolean } = {}) {
 
   const hoScope = useHoScope(); // head office: read only this network's own money
   const refresh = useCallback(() => {
-    apiGet<Payload>(withHoNet("/api/income")).then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-    apiGet<InvPayload>(withHoNet("/api/invoices")).then((p) => setInvoices(p.items ?? [])).catch(() => {});
-    apiGet<Booking[]>(withHoNet("/api/bookings")).then((b) => setBookings(Array.isArray(b) ? b : [])).catch(() => {});
+    // Realtime refires this on every income/invoices/bookings change tenant-wide; bail out of
+    // each state update (keep the old array reference) when the payload is content-identical to
+    // what's loaded, so allItems/trend/filtered/etc useMemos below don't re-derive for nothing.
+    apiGet<Payload>(withHoNet("/api/income")).then((p) => {
+      setData((prev) => {
+        try { if (prev && prev.items.length === p.items.length && JSON.stringify(prev) === JSON.stringify(p)) return prev; } catch { /* fall through */ }
+        return p;
+      });
+      setError(null);
+    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<InvPayload>(withHoNet("/api/invoices")).then((p) => setInvoices((prev) => {
+      const next = p.items ?? [];
+      try { if (prev.length === next.length && JSON.stringify(prev) === JSON.stringify(next)) return prev; } catch { /* fall through */ }
+      return next;
+    })).catch(() => {});
+    apiGet<Booking[]>(withHoNet("/api/bookings")).then((b) => setBookings((prev) => {
+      const next = Array.isArray(b) ? b : [];
+      try { if (prev.length === next.length && JSON.stringify(prev) === JSON.stringify(next)) return prev; } catch { /* fall through */ }
+      return next;
+    })).catch(() => {});
   }, [hoScope]);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["income", "invoices", "bookings"], refresh);

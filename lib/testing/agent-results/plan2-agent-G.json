@@ -3,7 +3,7 @@
     "verdict": "fail",
     "method": "code",
     "actual": "stripeWebhook.ts handles: customer.subscription.updated, customer.subscription.deleted, customer.subscription.trial_will_end, invoice.payment_succeeded, invoice.payment_failed. payment_intent.* handler: ABSENT",
-    "notes": "As the plan predicts: a booking paid with the tab closed is settled only by the browser's confirm call (backlog b7 / Amir). Fix needed: add payment_intent.succeeded → settle booking(s) in refs by paymentIntentId.",
+    "notes": "As the plan predicts: a booking paid with the tab closed is settled only by the browser's confirm call (backlog b7 / Amir). Fix needed: add payment_intent.succeeded \u2192 settle booking(s) in refs by paymentIntentId.",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -11,8 +11,8 @@
   "p2-m2": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "STRIPE_SECRET_KEY not set in server/.env; POST /api/payments/checkout → 503 {\"error\":\"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\"}",
-    "notes": "Needs Stripe test keys (prereq q4, Amir). Also depends on p2-m1 (no payment_intent webhook) — even with keys this would fail today.",
+    "actual": "STRIPE_SECRET_KEY not set in server/.env; POST /api/payments/checkout \u2192 503 {\"error\":\"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\"}",
+    "notes": "Needs Stripe test keys (prereq q4, Amir). Also depends on p2-m1 (no payment_intent webhook) \u2014 even with keys this would fail today.",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -20,8 +20,8 @@
   "p2-m3": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "confirm without Stripe → 503 {\"error\":\"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\"}",
-    "notes": "Needs Stripe test keys (q4). Code read: confirm is idempotent by design — payments doc status 'succeeded' short-circuits the second write (payments.ts:370-420), but the 'paid' notification/email path was not observable.",
+    "actual": "confirm without Stripe \u2192 503 {\"error\":\"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\"}",
+    "notes": "Needs Stripe test keys (q4). Code read: confirm is idempotent by design \u2014 payments doc status 'succeeded' short-circuits the second write (payments.ts:370-420), but the 'paid' notification/email path was not observable.",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -29,8 +29,8 @@
   "p2-m4": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "P2 confirms P's payment doc → 503 {\"error\":\"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\"}; A's booking pay=Invoice sent",
-    "notes": "Stripe not configured so needStripe() answers first (503). Code read: the email check (snap.data().email !== req.user.email → 404) sits before any Stripe call, so with keys this passes. Re-run with q4.",
+    "actual": "P2 confirms P's payment doc \u2192 503 {\"error\":\"Payments aren't configured (no STRIPE_SECRET_KEY on the server)\"}; A's booking pay=Invoice sent",
+    "notes": "Stripe not configured so needStripe() answers first (503). Code read: the email check (snap.data().email !== req.user.email \u2192 404) sits before any Stripe call, so with keys this passes. Re-run with q4.",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -38,25 +38,25 @@
   "p2-m5": {
     "verdict": "pass",
     "method": "api",
-    "actual": "two simultaneous record-payment £50 BACS-1 → 200/409; booking amountPaid=50 pay=Paid; reconciliation row paid=50 outstanding=0",
-    "notes": "409 body: This looks like a payment that's already been logged: £50.00 with reference BACS-1 was recorded against this booking on ",
+    "actual": "two simultaneous record-payment \u00a350 BACS-1 \u2192 200/409; booking amountPaid=50 pay=Paid; reconciliation row paid=50 outstanding=0",
+    "notes": "409 body: This looks like a payment that's already been logged: \u00a350.00 with reference BACS-1 was recorded against this booking on ",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
   },
   "p2-m6": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "api",
-    "actual": "amount -10 → 400; amount 99999 on £40 → 200 (accepted; amountPaid now 99999, overpaid=99959); amount \"ten\" → 400; amountPaid before 0 after 99999",
-    "notes": "Fix needed (minor): record-payment accepts any positive amount — £99,999 on a £40 booking is stored (flagged as overpaid in the response, not refused). Plan expects a 400 with a readable message. Also the 400 bodies are raw zod issue arrays, not a sentence.",
+    "actual": "Retested live 16 Sept via server/scripts/plan2/p2H_day16.mts (p2-rt1): amount -10 \u2192 400; amount 99999 on a \u00a320 booking \u2192 400 (refused, not stored); amount \"ten\" \u2192 400; amountPaid unchanged before/after all three attempts.",
+    "notes": "FIXED since this was recorded \u2014 server/src/routes/bookings.ts record-payment now throws an Overpay error (class defined ~line 849, thrown at 890) and 400s when a payment would exceed the booking's own total, unless the booking is Cancelled/Declined (tracked separately via receivedAfterCancel). Confirmed present in source and via live retest.",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
-    "at": "2026-09-13T22:42:47.257Z",
-    "agent": "plan2-G"
+    "at": "2026-09-16T04:38:14.052049Z",
+    "agent": "plan2-P-retest"
   },
   "p2-m7": {
     "verdict": "pass",
     "method": "api",
-    "actual": "refund-approve with no cancellation → 409 There's no cancellation on this booking to refund; parent cancel → 200 (cancel.refund=pending, amount=undefined); staff refund-approve on it → 403 Your account is read-only for bookings; refund payment docs written: 0",
+    "actual": "refund-approve with no cancellation \u2192 409 There's no cancellation on this booking to refund; parent cancel \u2192 200 (cancel.refund=pending, amount=undefined); staff refund-approve on it \u2192 403 Your account is read-only for bookings; refund payment docs written: 0",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -64,7 +64,7 @@
   "p2-m8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "3-day booking with £4/day add-on: amount £22 (addons stored as [\"Lunch × 3 — £12.00\"]); cancel one day (3 weeks' notice) → 200 {\"createdAt\":\"2026-09-13T22:41:00.780Z\",\"ref\":\"APF-10316\",\"bid\":\"0307310316\",\"booker\":\"Money Parent\",\"email\":\"p2hmu0edjej-pa-5axbi9@p2h.test\",\"phone\":\"\",\"child\"; quoted refund=7.33 vs one day's share £7.33",
+    "actual": "3-day booking with \u00a34/day add-on: amount \u00a322 (addons stored as [\"Lunch \u00d7 3 \u2014 \u00a312.00\"]); cancel one day (3 weeks' notice) \u2192 200 {\"createdAt\":\"2026-09-13T22:41:00.780Z\",\"ref\":\"APF-10316\",\"bid\":\"0307310316\",\"booker\":\"Money Parent\",\"email\":\"p2hmu0edjej-pa-5axbi9@p2h.test\",\"phone\":\"\",\"child\"; quoted refund=7.33 vs one day's share \u00a37.33",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -72,8 +72,8 @@
   "p2-m9": {
     "verdict": "pass",
     "method": "api",
-    "actual": "invoice aged to 100 days past due: GET public → 410 {\"error\":\"This payment link has expired.\",\"code\":\"link_expired\",\"provider\":\"P2H Money A\",\"status\":\"expired\"}; POST checkout → 503 {\"error\":\"Card payments aren't configured\"}",
-    "notes": "/pay/<token> page not opened (browser); the API it renders from answers 410 link_expired. Checkout refuses with 503 here because Stripe isn't configured — the 410 branch sits right after it in invoices.ts.",
+    "actual": "invoice aged to 100 days past due: GET public \u2192 410 {\"error\":\"This payment link has expired.\",\"code\":\"link_expired\",\"provider\":\"P2H Money A\",\"status\":\"expired\"}; POST checkout \u2192 503 {\"error\":\"Card payments aren't configured\"}",
+    "notes": "/pay/<token> page not opened (browser); the API it renders from answers 410 link_expired. Checkout refuses with 503 here because Stripe isn't configured \u2014 the 410 branch sits right after it in invoices.ts.",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -81,7 +81,7 @@
   "p2-m10": {
     "verdict": "pass",
     "method": "api",
-    "actual": "DELETE → 200; GET public → 404; POST checkout (no account) → 503 Card payments aren't configured",
+    "actual": "DELETE \u2192 200; GET public \u2192 404; POST checkout (no account) \u2192 503 Card payments aren't configured",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -89,7 +89,7 @@
   "p2-m11": {
     "verdict": "pass",
     "method": "api",
-    "actual": "HO invoice 201; F1 emails it → 404 Invoice not found; staff → 403 Requires an operator account",
+    "actual": "HO invoice 201; F1 emails it \u2192 404 Invoice not found; staff \u2192 403 Requires an operator account",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -97,7 +97,7 @@
   "p2-m12": {
     "verdict": "pass",
     "method": "api",
-    "actual": "wallet/summary.outstanding=17.5; sum of family balances at A: 17.5 (Money Parent=10, Money Parent Two=7.5, Money Parent Three=0); B's £3 for P excluded",
+    "actual": "wallet/summary.outstanding=17.5; sum of family balances at A: 17.5 (Money Parent=10, Money Parent Two=7.5, Money Parent Three=0); B's \u00a33 for P excluded",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -105,8 +105,8 @@
   "p2-m13": {
     "verdict": "pass",
     "method": "api",
-    "actual": "£30 basket (3 × £10 pass) with £10 credit and walletCap 500 → 201; 1 booking(s); walletApplied total=10; amounts still to pay=20; first booking pay=Funded; balance after=0",
-    "notes": "walletCap is clamped to the real balance (my.ts:1303). Side finding (fix needed, minor): a basket with £20 still to pay after £10 credit is stored with pay=\"Funded\" — the wallet-part path stamps Funded even when a cash balance remains (should be Partially paid / awaiting the rest).",
+    "actual": "\u00a330 basket (3 \u00d7 \u00a310 pass) with \u00a310 credit and walletCap 500 \u2192 201; 1 booking(s); walletApplied total=10; amounts still to pay=20; first booking pay=Funded; balance after=0",
+    "notes": "walletCap is clamped to the real balance (my.ts:1303). Side finding (fix needed, minor): a basket with \u00a320 still to pay after \u00a310 credit is stored with pay=\"Funded\" \u2014 the wallet-part path stamps Funded even when a cash balance remains (should be Partially paid / awaiting the rest).",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -114,7 +114,7 @@
   "p2-m14": {
     "verdict": "pass",
     "method": "api",
-    "actual": "P2 (£10 at A) books at B with walletCap 10 → 201; walletApplied=0; B booking amount=10; balances after A=10 B=0",
+    "actual": "P2 (\u00a310 at A) books at B with walletCap 10 \u2192 201; walletApplied=0; B booking amount=10; balances after A=10 B=0",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -122,7 +122,7 @@
   "p2-m15": {
     "verdict": "pass",
     "method": "api",
-    "actual": "two simultaneous £20 baskets, £20 credit → 201/201; walletApplied total=20; ledger spent=20; balance after=0",
+    "actual": "two simultaneous \u00a320 baskets, \u00a320 credit \u2192 201/201; walletApplied total=20; ledger spent=20; balance after=0",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -130,7 +130,7 @@
   "p2-m16": {
     "verdict": "fail",
     "method": "api",
-    "actual": "monthly series from 2026-06-13: 7 rows (4 past); DELETE series → 200 deleted=7; rows of the series left: 0",
+    "actual": "monthly series from 2026-06-13: 7 rows (4 past); DELETE series \u2192 200 deleted=7; rows of the series left: 0",
     "notes": "Fix needed: DELETE /api/income/series/:id removes every occurrence including past ones (income.ts:102-110 deletes the whole query). Plan expects past receipts to survive. Same shape in expenses.ts:113.",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
@@ -139,7 +139,7 @@
   "p2-m17": {
     "verdict": "pass",
     "method": "api",
-    "actual": "weekly series 5 rows; PUT one → 200; rows at £45: 1, still £30: 4; DELETE series → 200 deleted=5; left=0",
+    "actual": "weekly series 5 rows; PUT one \u2192 200; rows at \u00a345: 1, still \u00a330: 4; DELETE series \u2192 200 deleted=5; left=0",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -147,7 +147,7 @@
   "p2-m18": {
     "verdict": "pass",
     "method": "api",
-    "actual": "HO row for F1: {\"franchiseId\":\"p2hmu0edjej-fr-o5k6ed\",\"name\":\"P2H Money F1 · P2H Money F1 area\",\"count\":2,\"revenue\":100,\"collected\":0,\"fee\":10}; F1 /mine: revenue=100 count=2 fee=10; F1 PUT settings → 403",
+    "actual": "HO row for F1: {\"franchiseId\":\"p2hmu0edjej-fr-o5k6ed\",\"name\":\"P2H Money F1 \u00b7 P2H Money F1 area\",\"count\":2,\"revenue\":100,\"collected\":0,\"fee\":10}; F1 /mine: revenue=100 count=2 fee=10; F1 PUT settings \u2192 403",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -155,8 +155,8 @@
   "p2-m20": {
     "verdict": "pass",
     "method": "api",
-    "actual": "dashboard.money.outstanding=25; reconciliation summary.outstanding=25; Σ owedNow(bookings)=25 over 8 bookings; growth has no outstanding field (keys matching owed/outstanding: none)",
-    "notes": "Reconciliation and Dashboard agree with financeFigures owedNow. /api/growth reports revenue/bookings only — nothing to compare.",
+    "actual": "dashboard.money.outstanding=25; reconciliation summary.outstanding=25; \u03a3 owedNow(bookings)=25 over 8 bookings; growth has no outstanding field (keys matching owed/outstanding: none)",
+    "notes": "Reconciliation and Dashboard agree with financeFigures owedNow. /api/growth reports revenue/bookings only \u2014 nothing to compare.",
     "evidence": "server/scripts/plan2/p2H_day1.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day1.mts)",
     "at": "2026-09-13T22:42:47.257Z",
     "agent": "plan2-G"
@@ -164,8 +164,8 @@
   "p2-m21": {
     "verdict": "pass",
     "method": "api",
-    "actual": "two simultaneous joins → 200/200; wallet balance 5; wallet entries 1; creditPaidUntil=set",
-    "notes": "Both requests answered 200 (the 409 only fires once the first has written 'active'); the credit itself is transactional (creditPaidUntil read+set inside runTransaction), so the wallet was credited once — the money is right, the second response is just not a 409.",
+    "actual": "two simultaneous joins \u2192 200/200; wallet balance 5; wallet entries 1; creditPaidUntil=set",
+    "notes": "Both requests answered 200 (the 409 only fires once the first has written 'active'); the credit itself is transactional (creditPaidUntil read+set inside runTransaction), so the wallet was credited once \u2014 the money is right, the second response is just not a 409.",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -173,7 +173,7 @@
   "p2-m22": {
     "verdict": "pass",
     "method": "api",
-    "actual": "cancel 200 → join % 200 → cancel 200 → join credit 200 (creditAdded=false); balance 5 → 5",
+    "actual": "cancel 200 \u2192 join % 200 \u2192 cancel 200 \u2192 join credit 200 (creditAdded=false); balance 5 \u2192 5",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -181,7 +181,7 @@
   "p2-m23": {
     "verdict": "pass",
     "method": "api",
-    "actual": "$A → 200 1 member(s); $S → 403 Requires an operator account; $F1 → 200 members=[p2hmu0eo0oi-pa-fdahmc@p2h.test] (HO sees 2)",
+    "actual": "$A \u2192 200 1 member(s); $S \u2192 403 Requires an operator account; $F1 \u2192 200 members=[p2hmu0eo0oi-pa-fdahmc@p2h.test] (HO sees 2)",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -189,8 +189,8 @@
   "p2-m24": {
     "verdict": "pass",
     "method": "api",
-    "actual": "B's code at A → {\"valid\":false,\"reason\":\"That code isn’t recognised\"}; expired → {\"valid\":false,\"reason\":\"This code has expired\"}; valid code with a 10% membership active → {\"valid\":true,\"code\":\"SUMMER20\",\"off\":6,\"exclusive\":false}",
-    "notes": "Fix needed (spec gap): /validate knows nothing about the member's percentage perk — it validates the code alone and never says whether the membership or the code wins; the stacking rule is only applied inside POST /api/my/bookings (my.ts:1131, codes stack unless `exclusive`). A parent can't see the combined effect before booking.",
+    "actual": "B's code at A \u2192 {\"valid\":false,\"reason\":\"That code isn\u2019t recognised\"}; expired \u2192 {\"valid\":false,\"reason\":\"This code has expired\"}; valid code with a 10% membership active \u2192 {\"valid\":true,\"code\":\"SUMMER20\",\"off\":6,\"exclusive\":false}",
+    "notes": "Fix needed (spec gap): /validate knows nothing about the member's percentage perk \u2014 it validates the code alone and never says whether the membership or the code wins; the stacking rule is only applied inside POST /api/my/bookings (my.ts:1131, codes stack unless `exclusive`). A parent can't see the combined effect before booking.",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -198,7 +198,7 @@
   "p2-m25": {
     "verdict": "pass",
     "method": "api",
-    "actual": "' summer20 ' → {\"valid\":true,\"code\":\"SUMMER20\",\"off\":6,\"exclusive\":false}",
+    "actual": "' summer20 ' \u2192 {\"valid\":true,\"code\":\"SUMMER20\",\"off\":6,\"exclusive\":false}",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -206,8 +206,8 @@
   "p2-m26": {
     "verdict": "fail",
     "method": "api",
-    "actual": "supplier 201; PO 201 £20; email → 200 (mailer not live: 1 'Purchase order' send attempted, no attachment concept in purchasing.ts — the PO is the email body); mark received → 200 then again 200; Money-out rows before/after receiving: 0 → 0; delete supplier with a PO → 200; PO still lists supplier name \"Cones R Us\"",
-    "notes": "Fix needed: (1) receiving a PO writes NO Money-out entry (expenses count unchanged) — the plan expects one, once; (2) the PO email carries no PDF attachment (HTML body only); (3) the supplier delete is allowed and the PO keeps the free-text name (acceptable). Whether the email ARRIVES can't be seen — mailer not live.",
+    "actual": "supplier 201; PO 201 \u00a320; email \u2192 200 (mailer not live: 1 'Purchase order' send attempted, no attachment concept in purchasing.ts \u2014 the PO is the email body); mark received \u2192 200 then again 200; Money-out rows before/after receiving: 0 \u2192 0; delete supplier with a PO \u2192 200; PO still lists supplier name \"Cones R Us\"",
+    "notes": "Fix needed: (1) receiving a PO writes NO Money-out entry (expenses count unchanged) \u2014 the plan expects one, once; (2) the PO email carries no PDF attachment (HTML body only); (3) the supplier delete is allowed and the PO keeps the free-text name (acceptable). Whether the email ARRIVES can't be seen \u2014 mailer not live.",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -215,26 +215,26 @@
   "p2-m27": {
     "verdict": "pass",
     "method": "api",
-    "actual": "staff raises → 201; other staff approves → 403; manager approves → 200; then 'paid' → 200; Money-out rows for the claim: 1; payroll: not in payroll (payroll ignores claims)",
-    "notes": "The approved claim lands in Money out once (expenseId guard). It is NOT a payroll adjustment — payroll runs store the lines the browser sends (see p2-h1); the plan's 'and as a payroll adjustment once' half is not implemented (design gap, not a bug).",
+    "actual": "staff raises \u2192 201; other staff approves \u2192 403; manager approves \u2192 200; then 'paid' \u2192 200; Money-out rows for the claim: 1; payroll: not in payroll (payroll ignores claims)",
+    "notes": "The approved claim lands in Money out once (expenseId guard). It is NOT a payroll adjustment \u2014 payroll runs store the lines the browser sends (see p2-h1); the plan's 'and as a payroll adjustment once' half is not implemented (design gap, not a bug).",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
   },
   "p2-m28": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "api",
-    "actual": "access.mode=readonly; POST listing → 201; operator POST booking → 402; staff register mark → 200 ; parent new booking → 409 This provider isn't taking online bookings right now — please contact ",
-    "notes": "Fix needed: POST /api/listings is mounted BEFORE the subscription wall (index.ts mounts /api/listings with its own optional-auth chain so parents can browse) — so a read-only/locked tenant can still create and edit listings. The wall should also sit on the listings router's writes.",
+    "actual": "Retested live 16 Sept via p2H_day16.mts (p2-rt2/p2-rt3): tenant subscription.status=past_due (readonly) \u2192 POST /api/listings \u2192 402; subscription.status=canceled (locked) \u2192 POST /api/listings \u2192 402. The specific gap this step flagged (a locked/readonly tenant could still POST /api/listings because that router is mounted before the global enforceSubscription wall) is closed.",
+    "notes": "FIXED since this was recorded \u2014 server/src/routes/listings.ts now has its own subscriptionRefusal() check (defined line 23, called before POST/PUT/DELETE at lines 577/637/714) rather than relying solely on the global wall. Confirmed present in source and via live retest. (Other parts of the original m28 step \u2014 operator booking 402, parent-facing 409 \u2014 were already correct and unaffected.)",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
-    "at": "2026-09-13T22:52:09.679Z",
-    "agent": "plan2-G"
+    "at": "2026-09-16T04:38:14.052049Z",
+    "agent": "plan2-P-retest"
   },
   "p2-m29": {
     "verdict": "fail",
     "method": "api",
-    "actual": "canceled: GET bookings 200, customers 200, listings?mine=1 200; staff POST incident 201; staff POST task 402; POST invite 402; deactivate a team member → 404 Invite not found",
-    "notes": "Note: GET /api/listings is mounted BEFORE enforceSubscription in src/index.ts (public listings route), so listing reads stay open while locked — the plan says 'listings refused'; reads being open is arguably right (parents browse them).",
+    "actual": "canceled: GET bookings 200, customers 200, listings?mine=1 200; staff POST incident 201; staff POST task 402; POST invite 402; deactivate a team member \u2192 404 Invite not found",
+    "notes": "Note: GET /api/listings is mounted BEFORE enforceSubscription in src/index.ts (public listings route), so listing reads stay open while locked \u2014 the plan says 'listings refused'; reads being open is arguably right (parents browse them).",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -242,7 +242,7 @@
   "p2-m30": {
     "verdict": "pass",
     "method": "api",
-    "actual": "cap 3, 2 staff: invite → 201/403 (used 2, pending 1); cap lowered to 2: new invite → 403 Your plan covers 2 team members — you have 2 and 1 invite st; accepting an old pending invite → 409 P2H Money2 A's ActivityOS plan is full right now, so you can't join ju",
+    "actual": "cap 3, 2 staff: invite \u2192 201/403 (used 2, pending 1); cap lowered to 2: new invite \u2192 403 Your plan covers 2 team members \u2014 you have 2 and 1 invite st; accepting an old pending invite \u2192 409 P2H Money2 A's ActivityOS plan is full right now, so you can't join ju",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -250,7 +250,7 @@
   "p2-m31": {
     "verdict": "pass",
     "method": "api",
-    "actual": "$A PUT → 403, GET → 403; $H raises freelancer £29→£30 → 200; $A's own subscription price before/after: 29/30 (plan card shows 30)",
+    "actual": "$A PUT \u2192 403, GET \u2192 403; $H raises freelancer \u00a329\u2192\u00a330 \u2192 200; $A's own subscription price before/after: 29/30 (plan card shows 30)",
     "notes": "A stored sub.price wins over the plan list (subscription.ts:195 `sub?.price ?? lim.price`) and /start stores the price at signup, so a real subscription's amount doesn't move; this throwaway tenant was seeded without a stored price, so its displayed price followed the list. The platform PUT itself never touches tenants.",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
@@ -260,7 +260,7 @@
     "verdict": "blocked",
     "method": "api",
     "actual": "GET subscription=403; GET subscription/access=200; POST subscription/checkout=403; POST subscription/card=403; DELETE subscription/card=403; POST subscription/start=403; PUT subscription=403; POST subscription/cancel=403; POST subscription/reactivate=403; GET subscription/pricing=403; POST payments/connect=503; POST payments/dashboard=503",
-    "notes": "GET /api/subscription/access is deliberately open to every team role (it drives the read-only banner). /api/payments/connect and /dashboard answer 503 here because needStripe() runs before the role check (payments.ts:57) — the franchise 403 can only be seen with Stripe keys (q4); every /api/subscription/* write and read is 403 for the franchise.",
+    "notes": "GET /api/subscription/access is deliberately open to every team role (it drives the read-only banner). /api/payments/connect and /dashboard answer 503 here because needStripe() runs before the role check (payments.ts:57) \u2014 the franchise 403 can only be seen with Stripe keys (q4); every /api/subscription/* write and read is 403 for the franchise.",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -268,8 +268,8 @@
   "p2-m34": {
     "verdict": "pass",
     "method": "api",
-    "actual": "status 'unpaid' set directly → access.mode=locked; billing.ts syncFromStripe folds Stripe 'unpaid' into 'past_due': true",
-    "notes": "So a stored 'unpaid' locks (accessFor), but syncFromStripe never stores it — a lapsed card stays past_due → read-only after 14 days until Stripe cancels the subscription (then 'canceled' → locked). Documented behaviour, not a bug.",
+    "actual": "status 'unpaid' set directly \u2192 access.mode=locked; billing.ts syncFromStripe folds Stripe 'unpaid' into 'past_due': true",
+    "notes": "So a stored 'unpaid' locks (accessFor), but syncFromStripe never stores it \u2014 a lapsed card stays past_due \u2192 read-only after 14 days until Stripe cancels the subscription (then 'canceled' \u2192 locked). Documented behaviour, not a bug.",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -277,7 +277,7 @@
   "p2-m35": {
     "verdict": "fail",
     "method": "api",
-    "actual": "cancel → 200 (status=canceling, cancelAt=set, canceledAt=none); reactivate → 200 (status=active, cancelAt=null, canceledAt=none, history=no); HQ row status=active",
+    "actual": "cancel \u2192 200 (status=canceling, cancelAt=set, canceledAt=none); reactivate \u2192 200 (status=active, cancelAt=null, canceledAt=none, history=no); HQ row status=active",
     "notes": "As the plan predicts (Amir 46a): reactivation wipes cancelAt and keeps no record that a cancellation happened, so the churn/Fall-off numbers lose that month. Fix needed: keep a cancel history array on the subscription (or a platform events log) and have platform churn read it.",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
@@ -286,7 +286,7 @@
   "p2-m36": {
     "verdict": "pass",
     "method": "api",
-    "actual": "TFC booking paid £40; parent cancel → 200 (refund=pending, amount=undefined); refund-approve → 200 ; payments refund doc: type=refund offline=true status=to-reimburse amount=40; reconciliation refunds row: via=offline amount=40 (refunds listed: 1)",
+    "actual": "TFC booking paid \u00a340; parent cancel \u2192 200 (refund=pending, amount=undefined); refund-approve \u2192 200 ; payments refund doc: type=refund offline=true status=to-reimburse amount=40; reconciliation refunds row: via=offline amount=40 (refunds listed: 1)",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
@@ -294,24 +294,24 @@
   "p2-m32": {
     "verdict": "blocked",
     "method": "browser",
-    "actual": "Browser step (Subscription page card removal) — queued for the browser agent; Stripe isn't configured on this server so the card UI can't be exercised.",
+    "actual": "Browser step (Subscription page card removal) \u2014 queued for the browser agent; Stripe isn't configured on this server so the card UI can't be exercised.",
     "evidence": "server/scripts/plan2/p2H_day2.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day2.mts)",
     "at": "2026-09-13T22:52:09.679Z",
     "agent": "plan2-G"
   },
   "p2-s1": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "api",
-    "actual": "plain staff → 404; named DSL staff → 200 (parent=email present, bookings=2, siblings=1); $F1 on F2's child → 200",
-    "notes": "Staff get 404 rather than 403 (the route hides whether the record exists) — same protection.",
+    "actual": "Retested live 16 Sept via p2H_day16.mts (p2-rt4): plain staff (not assigned/lead) GET /api/incidents/:id/dossier on a record that exists in their own tenant but they can't see \u2192 403 \"You don't have access to this record\" (a genuinely missing/foreign-tenant record still 404s, unchanged).",
+    "notes": "FIXED since this was recorded \u2014 server/src/routes/incidents.ts dossier route (~line 572) now splits the !exists/wrong-tenant case (stays 404, hides existence) from the exists-but-not-visible-to-this-staffer case (now 403, an honest permissions gate). Confirmed present in source and via live retest.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
-    "at": "2026-09-14T13:12:48.642Z",
-    "agent": "plan2-G"
+    "at": "2026-09-16T04:38:14.052049Z",
+    "agent": "plan2-P-retest"
   },
   "p2-s2": {
     "verdict": "fail",
     "method": "api",
-    "actual": "incidents=None role + named DSL: POST → 201; un-named (cache cleared in-process): POST → 201 ",
+    "actual": "incidents=None role + named DSL: POST \u2192 201; un-named (cache cleared in-process): POST \u2192 201 ",
     "notes": "The 10s settings cache was cleared directly (forgetSettings) rather than waiting 11s.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
@@ -320,8 +320,8 @@
   "p2-s3": {
     "verdict": "fail",
     "method": "api",
-    "actual": "POST (subject staff, aboutDsl) → 201 aboutDsl=true; bells: DSL +0, owner +2; mail attempts: DSL=false, owner=true (mailer not live, SUPPRESSED lines)",
-    "notes": "Safe behaviour observed: routed to the account holder only, nothing to the DSL (dslAlert.ts aboutLead → holder).",
+    "actual": "POST (subject staff, aboutDsl) \u2192 201 aboutDsl=true; bells: DSL +0, owner +2; mail attempts: DSL=false, owner=true (mailer not live, SUPPRESSED lines)",
+    "notes": "Safe behaviour observed: routed to the account holder only, nothing to the DSL (dslAlert.ts aboutLead \u2192 holder).",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -329,7 +329,7 @@
   "p2-s4": {
     "verdict": "pass",
     "method": "api",
-    "actual": "kind incident, subject staff → 201; in plain staff's GET /api/incidents: false (1 visible)",
+    "actual": "kind incident, subject staff \u2192 201; in plain staff's GET /api/incidents: false (1 visible)",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -337,8 +337,8 @@
   "p2-s5": {
     "verdict": "fail",
     "method": "api",
-    "actual": "parent note on an accident → 201; staff note on their own → 201; staff delete → 403; owner create with dslLog → 201 ; owner delete of a record carrying a DSL decision → 200, doc gone=true",
-    "notes": "Parents MAY note their own child's accident record (incidents.ts:487 accepts role parent) — the plan expected 403; this is the designed parent reply channel. Fix needed (decision): the owner's delete of a decided safeguarding record removes it outright — no audit stub. Plan asks for a refusal or a stub.",
+    "actual": "parent note on an accident \u2192 201; staff note on their own \u2192 201; staff delete \u2192 403; owner create with dslLog \u2192 201 ; owner delete of a record carrying a DSL decision \u2192 200, doc gone=true",
+    "notes": "Parents MAY note their own child's accident record (incidents.ts:487 accepts role parent) \u2014 the plan expected 403; this is the designed parent reply channel. Fix needed (decision): the owner's delete of a decided safeguarding record removes it outright \u2014 no audit stub. Plan asks for a refusal or a stub.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -346,7 +346,7 @@
   "p2-s6": {
     "verdict": "pass",
     "method": "api",
-    "actual": "A logs with B's childId → 403 child_not_yours",
+    "actual": "A logs with B's childId \u2192 403 child_not_yours",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -354,33 +354,33 @@
   "p2-s7": {
     "verdict": "pass",
     "method": "api",
-    "actual": "given → 201, not-given with reason → 201; operator list 2026-09-14: 2 rows (not-given notes=\"child refused\"); parent P sees 2 (other families' rows: 0); parent of B sees 0",
+    "actual": "given \u2192 201, not-given with reason \u2192 201; operator list 2026-09-14: 2 rows (not-given notes=\"child refused\"); parent P sees 2 (other families' rows: 0); parent of B sees 0",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
   },
   "p2-s8": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "api",
-    "actual": "two simultaneous doses at 16:00 → 201/201; administration rows at 16:00: 0",
-    "notes": "Fix needed: medications.ts /administer has no duplicate check — two identical doses a second apart are both recorded. Add a same-med/same-time window check (like record-payment's) or an idempotency key.",
+    "actual": "Retested live 16 Sept via p2H_day16.mts (p2-rt5): first administer of a dose \u2192 201; a second identical dose (same med, same time) within the same window without confirmDuplicate \u2192 409.",
+    "notes": "FIXED since this was recorded \u2014 server/src/routes/medications.ts /administer now checks parsed.data.confirmDuplicate (schema field ~line 325) and refuses a repeat dose of the same medication within a short window with 409 (~line 375) unless the caller explicitly confirms. Confirmed present in source and via live retest.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
-    "at": "2026-09-14T13:12:48.642Z",
-    "agent": "plan2-G"
+    "at": "2026-09-16T04:38:14.052049Z",
+    "agent": "plan2-P-retest"
   },
   "p2-s9": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "api",
-    "actual": "expiry yesterday: administer → 201 (no expiry warning in response); register for today mentions expiry: false (register meds fields: \"medications\":[{\"name\":\"Ventolin\",\"dose\":\"2 puffs\",\"asNeeded\":false,\"heldOnSite\":false,\"consent\":true})",
-    "notes": "Fix needed: an expired medication can be administered with no refusal or warning (expiryDate is stored but never checked in /administer), and the register row's medication summary doesn't carry expiry.",
+    "actual": "Retested live 16 Sept via p2H_day16.mts (p2-rt6): medication with expiryDate=yesterday, administer \u2192 409 \"<name> expired on <date> \u2014 check the medication before recording a dose.\"",
+    "notes": "FIXED since this was recorded \u2014 server/src/routes/medications.ts /administer now reads med.expiryDate and refuses (409, ~line 362) when it's before the dose date. Confirmed present in source and via live retest. (The register row's medication summary still doesn't separately surface expiry \u2014 not re-checked this pass, minor.)",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
-    "at": "2026-09-14T13:12:48.642Z",
-    "agent": "plan2-G"
+    "at": "2026-09-16T04:38:14.052049Z",
+    "agent": "plan2-P-retest"
   },
   "p2-s10": {
     "verdict": "fail",
     "method": "api",
-    "actual": "parent withdraw → 200; DELETE → 409 keep_archived; note afterwards → 403",
+    "actual": "parent withdraw \u2192 200; DELETE \u2192 409 keep_archived; note afterwards \u2192 403",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -388,8 +388,8 @@
   "p2-s11": {
     "verdict": "pass",
     "method": "api",
-    "actual": "upload 201/200/200; GET as $A → 200; as $B → 404; as plain staff of A (no assignment) → 200; as site lead assigned to V1 (child booked at V1) → 200; 16MB create → 400 Number must be less than or equal to 15000000",
-    "notes": "Any staff member of the tenant can read the plan (childFiles.ts:142 checks tenantIds only, not the staff member's listing assignment) — the plan expected 403 for unassigned staff; fix needed (decision). Over-size is refused at create with 400 (zod max FILE_MAX_BYTES), not 413.",
+    "actual": "upload 201/200/200; GET as $A \u2192 200; as $B \u2192 404; as plain staff of A (no assignment) \u2192 200; as site lead assigned to V1 (child booked at V1) \u2192 200; 16MB create \u2192 400 Number must be less than or equal to 15000000",
+    "notes": "Any staff member of the tenant can read the plan (childFiles.ts:142 checks tenantIds only, not the staff member's listing assignment) \u2014 the plan expected 403 for unassigned staff; fix needed (decision). Over-size is refused at create with 400 (zod max FILE_MAX_BYTES), not 413.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -397,7 +397,7 @@
   "p2-s12": {
     "verdict": "blocked",
     "method": "browser",
-    "actual": "Browser step (/plan/<fileId> signed-out vs $B, Network tab) — queued for the browser agent.",
+    "actual": "Browser step (/plan/<fileId> signed-out vs $B, Network tab) \u2014 queued for the browser agent.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -405,8 +405,8 @@
   "p2-s13": {
     "verdict": "pass",
     "method": "api",
-    "actual": "plain staff PUT allergies → 403; site lead with medical=edit → 403 Only a manager can change a child's care details; owner → 200 (careHistory entries: 1); parent sets collectionPassword+walkHomeConsent → 200: stored collectionPassword=banana, walkHomeConsent=true",
-    "notes": "PUT /api/children/:id is manager-only (children.ts:249 — company/franchise/freelancer), so a lead with medical=edit is still 403; the plan expected 200 + careHistory. Decision needed: open it to staff whose role has medical=edit. Parent route accepts both collectionPassword and walkHomeConsent (nothing ignored).",
+    "actual": "plain staff PUT allergies \u2192 403; site lead with medical=edit \u2192 403 Only a manager can change a child's care details; owner \u2192 200 (careHistory entries: 1); parent sets collectionPassword+walkHomeConsent \u2192 200: stored collectionPassword=banana, walkHomeConsent=true",
+    "notes": "PUT /api/children/:id is manager-only (children.ts:249 \u2014 company/franchise/freelancer), so a lead with medical=edit is still 403; the plan expected 200 + careHistory. Decision needed: open it to staff whose role has medical=edit. Parent route accepts both collectionPassword and walkHomeConsent (nothing ignored).",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -414,8 +414,8 @@
   "p2-s14": {
     "verdict": "pass",
     "method": "api",
-    "actual": "site lead (V1 only) → [Kid One]; plain staff (no assignment) → [Kid One, Kid Two]; owner → [Kid One, Kid Two]; Firestore: 2 children booked with A",
-    "notes": "A plain staff member with NO assignment sees the whole tenant (assignment absent = unrestricted, siteScope.ts:24) — same as the owner; the plan's 'only assigned listings' applies once an assignment exists.",
+    "actual": "site lead (V1 only) \u2192 [Kid One]; plain staff (no assignment) \u2192 [Kid One, Kid Two]; owner \u2192 [Kid One, Kid Two]; Firestore: 2 children booked with A",
+    "notes": "A plain staff member with NO assignment sees the whole tenant (assignment absent = unrestricted, siteScope.ts:24) \u2014 same as the owner; the plan's 'only assigned listings' applies once an assignment exists.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -423,8 +423,8 @@
   "p2-s15": {
     "verdict": "pass",
     "method": "api",
-    "actual": "mark in → 200; headcount 0 (1 signed in) → 201; register shows heads=[{\"n\":0,\"by\":\"P2H Safe A owner\",\"at\":\"2026-09-14T13:09:28.030Z\"}] nudges={}; nudge → 200 {\"ok\":true,\"at\":\"2026-09-14T13:09:29.649Z\"}; threads for this family: 0, for B's family: 0 (total threads 0)",
-    "notes": "The headcount is stored as a tally (heads[] with n/by/at); the mismatch against signed-in isn't computed server-side — the register screen compares. The nudge records the chase time on the register (nudges[ref]) and does not itself open a message thread.",
+    "actual": "mark in \u2192 200; headcount 0 (1 signed in) \u2192 201; register shows heads=[{\"n\":0,\"by\":\"P2H Safe A owner\",\"at\":\"2026-09-14T13:09:28.030Z\"}] nudges={}; nudge \u2192 200 {\"ok\":true,\"at\":\"2026-09-14T13:09:29.649Z\"}; threads for this family: 0, for B's family: 0 (total threads 0)",
+    "notes": "The headcount is stored as a tally (heads[] with n/by/at); the mismatch against signed-in isn't computed server-side \u2014 the register screen compares. The nudge records the chase time on the register (nudges[ref]) and does not itself open a message thread.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -432,8 +432,8 @@
   "p2-s16": {
     "verdict": "pass",
     "method": "api",
-    "actual": "plain staff (no rota, no assignment) notes on V2 → 200; site lead assigned to V1 notes on V2 → 404; $F1 on HO's block → 404",
-    "notes": "Staff rule: allowed unless site-scoped (assignment) — a V1-only lead is refused on V2; being on the rota isn't checked.",
+    "actual": "plain staff (no rota, no assignment) notes on V2 \u2192 200; site lead assigned to V1 notes on V2 \u2192 404; $F1 on HO's block \u2192 404",
+    "notes": "Staff rule: allowed unless site-scoped (assignment) \u2014 a V1-only lead is refused on V2; being on the rota isn't checked.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -441,7 +441,7 @@
   "p2-s17": {
     "verdict": "pass",
     "method": "api",
-    "actual": "oversight incidents/accidents/medication → 200/200/200; F1 row={\"franchiseId\":\"p2hmu19dj96-fr-p5dm4d\",\"name\":\"P2H Safe F1\",\"total\":0,\"open\":0,\"last30\":0} vs F1 own list 1; F2 row={\"franchiseId\":\"p2hmu19dj96-fr-r7fixw\",\"name\":\"P2H Safe F2\",\"total\":1,\"open\":1,\"last30\":1} vs F2 own list 1; writes under /api/ho → 404/404/404",
+    "actual": "oversight incidents/accidents/medication \u2192 200/200/200; F1 row={\"franchiseId\":\"p2hmu19dj96-fr-p5dm4d\",\"name\":\"P2H Safe F1\",\"total\":0,\"open\":0,\"last30\":0} vs F1 own list 1; F2 row={\"franchiseId\":\"p2hmu19dj96-fr-r7fixw\",\"name\":\"P2H Safe F2\",\"total\":1,\"open\":1,\"last30\":1} vs F2 own list 1; writes under /api/ho \u2192 404/404/404",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -449,7 +449,7 @@
   "p2-s18": {
     "verdict": "fail",
     "method": "api",
-    "actual": "board GET → 200 (keys: overrides,groupStaff); owner moves a 7-year-old's row to group \"8-11\" → 200 {\"ok\":true}; plain staff assigns staff with assignByLeads on → 403 Assigning staff to groups is limited to leads/mana",
+    "actual": "board GET \u2192 200 (keys: overrides,groupStaff); owner moves a 7-year-old's row to group \"8-11\" \u2192 200 {\"ok\":true}; plain staff assigns staff with assignByLeads on \u2192 403 Assigning staff to groups is limited to leads/mana",
     "notes": "Fix needed (minor): an age-inappropriate group override is accepted silently (ratios.ts:258 stores overrides as given, no age check or warning).",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
@@ -458,8 +458,8 @@
   "p2-s19": {
     "verdict": "fail",
     "method": "api",
-    "actual": "plain staff send → 200 ; owner send → 200 sent=1; bells: trip family +0, other tenant's family +0",
-    "notes": "Plain staff CAN send the trip message (trips.ts own() allows any staff who can see the trip; whoCanPlan gates planning, not sending) — the plan expected 403 unless lead. Decision needed.",
+    "actual": "plain staff send \u2192 200 ; owner send \u2192 200 sent=1; bells: trip family +0, other tenant's family +0",
+    "notes": "Plain staff CAN send the trip message (trips.ts own() allows any staff who can see the trip; whoCanPlan gates planning, not sending) \u2014 the plan expected 403 unless lead. Decision needed.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -468,7 +468,7 @@
     "verdict": "blocked",
     "method": "api",
     "actual": "The chase sweeps (acknowledgementChase / medicationDue / tripConsentChase in src/lib/sweeps.ts) are module-private and only run via startSweeps(), which would fire every REAL tenant's chases from this process. Code read: each delivery goes through fireOnce(`ackchase_<id>_<date>` / `tripconsent_<trip>_<child>_<date>`), a Firestore-transaction claim keyed per record per day, so a second pass in the same day cannot re-deliver.",
-    "notes": "Needs a tenant-scoped once-runner (e.g. `npx tsx scripts/sweeps_once.mts --tenant X`) to prove it live — fix needed for testability.",
+    "notes": "Needs a tenant-scoped once-runner (e.g. `npx tsx scripts/sweeps_once.mts --tenant X`) to prove it live \u2014 fix needed for testability.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
     "at": "2026-09-14T13:12:48.642Z",
     "agent": "plan2-G"
@@ -482,20 +482,20 @@
     "agent": "plan2-G"
   },
   "p2-s22": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "api",
-    "actual": "SVG-with-script sent as image/png → 201 ; 950KB JPEG → 413; 1px PNG → 201; GET /api/images/MZwpUAXo… → 200 content-type=image/png x-content-type-options=nosniff",
-    "notes": "Fix needed: uploads.ts trusts the data-URL mime for images (only PDFs are magic-checked) — an SVG carrying <script> is stored as image/png. Served with nosniff so browsers won't run it inline, but sniff the PNG/JPEG/WebP/GIF magic bytes too.",
+    "actual": "Retested live 16 Sept via p2H_day16.mts (p2-rt8, p2-rt14): an SVG carrying <script>, sent labelled image/png \u2192 400 (magic bytes don't match); raw MZ/PE .exe bytes sent labelled image/png \u2192 400. Both refused instead of the earlier 201.",
+    "notes": "FIXED since this was recorded \u2014 server/src/routes/uploads.ts now magic-byte-sniffs all four accepted image mimes (PNG/JPEG/GIF/WEBP \u2014 IMAGE_MAGIC table ~line 43, checked ~line 97-100), not just PDF's %PDF- signature. Confirmed present in source and via live retest.",
     "evidence": "server/scripts/plan2/p2H_day3.mts",
-    "at": "2026-09-14T13:12:48.642Z",
-    "agent": "plan2-G"
+    "at": "2026-09-16T04:38:14.052049Z",
+    "agent": "plan2-P-retest"
   },
   "p2-p1": {
     "verdict": "fail",
     "method": "api",
-    "actual": "bookings: None GET=no_access · View GET=200 POST=view_only · Edit POST=403 \"Your account is read-only for bookings\" | customers: None GET=no_access · View GET=200 POST=view_only · Edit POST=403 \"Requires an operator account with a tenant\" | listings: None GET=no_access · View GET=200 POST=view_only · Edit POST=403 \"Requires an operator account with a tenant\" | registers: None GET=no_access · View GET=200 POST=view_only · Edit POST=201 | ratios: None GET=no_access · View GET=200 · Edit (read-only area) | meals: None GET=no_access · View GET=200 POST=view_only · Edit POST=403 \"Requires an operator account\" | trips: None GET=no_access · View GET=200 POST=view_only · Edit POST=201 | timetable: None GET=no_access · View GET=200 POST=view_only · Edit POST=403 \"Requires an operator account\" | calendar: None GET=no_access · View GET=200 POST=view_only · Edit POST=201 | tasks: None GET=no_access · View GET=200 POST=view_only · Edit POST=400 [{\"code\":\"invalid_type\",\"expected\":\"string\",\"received\":\"undefined\",\"pa | medical: None GET=no_access · View GET=200 · Edit (read-only area) | incidents: None GET=no_access · View GET=200 POST=201 · Edit POST=201 | medication: None GET=no_access · View GET=200 POST=view_only · Edit POST=201 | moments: None GET=no_access · View GET=200 POST=view_only · Edit POST=201 | documents: None GET=no_access · View GET=200 POST=view_only · Edit POST=403 \"Requires an operator account\" | finances: None GET=no_access · View GET=403 · Edit (read-only area) | moneyops: None GET=no_access · View GET=403 POST=view_only · Edit POST=403 \"Requires an operator account\" | marketing: None GET=no_access · View GET=403 POST=view_only · Edit POST=403 \"Requires an operator account\" | messaging: None GET=no_access · View GET=200 POST=view_only · Edit POST=201 | email: None GET=no_access · View GET=403 POST=view_only · Edit POST=403 \"Requires an operator account\" | franchise: None GET=no_access · View GET=403 · Edit (read-only area)",
-    "notes": "6 area(s) off the expected pattern. Edit POSTs answering 400/404 count as 'allowed through the gate' (the body was minimal). A staff member with no restriction set is 'edit' everywhere (capLevel default). Areas 'ratios', 'medical', 'finances', 'franchise' have no staff POST — GET only. DECISION NEEDED: six create routes are operator-only regardless of the Roles matrix (bookings POST via canWrite in middleware/role.ts; customers, blocks, meal-menus, timetables, documents via operatorScope/canManage). Staff with Edit on those areas still get 403. Either open them to staff whose role cap is edit, or grey out Edit for those areas in Setup → Roles & permissions.",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "bookings: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=403 \"Your account is read-only for bookings\" | customers: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=403 \"Requires an operator account with a tenant\" | listings: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=403 \"Requires an operator account with a tenant\" | registers: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=201 | ratios: None GET=no_access \u00b7 View GET=200 \u00b7 Edit (read-only area) | meals: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=403 \"Requires an operator account\" | trips: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=201 | timetable: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=403 \"Requires an operator account\" | calendar: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=201 | tasks: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=400 [{\"code\":\"invalid_type\",\"expected\":\"string\",\"received\":\"undefined\",\"pa | medical: None GET=no_access \u00b7 View GET=200 \u00b7 Edit (read-only area) | incidents: None GET=no_access \u00b7 View GET=200 POST=201 \u00b7 Edit POST=201 | medication: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=201 | moments: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=201 | documents: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=403 \"Requires an operator account\" | finances: None GET=no_access \u00b7 View GET=403 \u00b7 Edit (read-only area) | moneyops: None GET=no_access \u00b7 View GET=403 POST=view_only \u00b7 Edit POST=403 \"Requires an operator account\" | marketing: None GET=no_access \u00b7 View GET=403 POST=view_only \u00b7 Edit POST=403 \"Requires an operator account\" | messaging: None GET=no_access \u00b7 View GET=200 POST=view_only \u00b7 Edit POST=201 | email: None GET=no_access \u00b7 View GET=403 POST=view_only \u00b7 Edit POST=403 \"Requires an operator account\" | franchise: None GET=no_access \u00b7 View GET=403 \u00b7 Edit (read-only area)",
+    "notes": "6 area(s) off the expected pattern. Edit POSTs answering 400/404 count as 'allowed through the gate' (the body was minimal). A staff member with no restriction set is 'edit' everywhere (capLevel default). Areas 'ratios', 'medical', 'finances', 'franchise' have no staff POST \u2014 GET only. DECISION NEEDED: six create routes are operator-only regardless of the Roles matrix (bookings POST via canWrite in middleware/role.ts; customers, blocks, meal-menus, timetables, documents via operatorScope/canManage). Staff with Edit on those areas still get 403. Either open them to staff whose role cap is edit, or grey out Edit for those areas in Setup \u2192 Roles & permissions.",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
@@ -503,7 +503,7 @@
     "verdict": "pass",
     "method": "api",
     "actual": "tasks set to None via the library doc (cache untouched): first 403 at second 7 (statuses: 200,200,200,200,200,200,200,403)",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
@@ -511,8 +511,8 @@
     "verdict": "pass",
     "method": "api",
     "actual": "staff with no permRole while the coach role is None on bookings/incidents/tasks: GET bookings 200, GET incidents 200, POST tasks 400",
-    "notes": "resolveCaps returns null when the user has no permRole (lib/accessMap.ts:228) and capLevel(null) = 'edit' — so a staff account invited before roles existed is a FULL-ACCESS account. Decision needed (plan p2-p3): default such accounts to a 'view' role or force a role on first login.",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "notes": "resolveCaps returns null when the user has no permRole (lib/accessMap.ts:228) and capLevel(null) = 'edit' \u2014 so a staff account invited before roles existed is a FULL-ACCESS account. Decision needed (plan p2-p3): default such accounts to a 'view' role or force a role on first login.",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
@@ -520,141 +520,141 @@
     "verdict": "pass",
     "method": "api",
     "actual": "Schedule+Clock+Meals OFF: GET rota 200; PUT rota 403 feature_off; POST rota/clock 400; POST timeclock/event 200; GET meals 403 feature_off",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p5": {
     "verdict": "pass",
     "method": "api",
-    "actual": "HO turns meals off for F1 → 200; GET meals F1 403 feature_off, F2 200, HO 200; F1 PUT features → 403; __all__ off → 200; F2 then 403",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "HO turns meals off for F1 \u2192 200; GET meals F1 403 feature_off, F2 200, HO 200; F1 PUT features \u2192 403; __all__ off \u2192 200; F2 then 403",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p6": {
     "verdict": "blocked",
     "method": "browser",
-    "actual": "Browser step (franchise Setup → Features vs HO matrix) — queued for the browser agent.",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "Browser step (franchise Setup \u2192 Features vs HO matrix) \u2014 queued for the browser agent.",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p7": {
     "verdict": "pass",
     "method": "api",
-    "actual": "site lead (venue V1 only): V2 rows leaking in first group: [none]; GET children/<V2 child> → 404; moments → 200; second group (listed as not narrowed): customers=200:1; threads=200:0; tasks=200 V2 task visible=false",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "site lead (venue V1 only): V2 rows leaking in first group: [none]; GET children/<V2 child> \u2192 404; moments \u2192 200; second group (listed as not narrowed): customers=200:1; threads=200:0; tasks=200 V2 task visible=false",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "site lead (listing V1 only): V2 rows leaking: [none]; GET children/<V2 child> → 404; second group: customers=200:1; threads=200:0; tasks=200 V2 task visible=false",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "site lead (listing V1 only): V2 rows leaking: [none]; GET children/<V2 child> \u2192 404; second group: customers=200:1; threads=200:0; tasks=200 V2 task visible=false",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p9": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "GET /api/events needs a real Firebase ID token (?token=, verifyFresh) — the in-process harness injects users by header, so the SSE stream can't be opened here. Code read: events.ts checks users.disabled/deactivatedAt on connect (403 account_disabled) and the stream is re-authenticated on reconnect only.",
+    "actual": "GET /api/events needs a real Firebase ID token (?token=, verifyFresh) \u2014 the in-process harness injects users by header, so the SSE stream can't be opened here. Code read: events.ts checks users.disabled/deactivatedAt on connect (403 account_disabled) and the stream is re-authenticated on reconnect only.",
     "notes": "Needs the live server + a real staff token (prereq q1).",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p10": {
     "verdict": "pass",
     "method": "api",
-    "actual": "ref=APF-10314; record-payment → 200 ; deactivate → 200 ; GET my/bookings → 403 account_closed; public listings with the token → 200 (11 shown); provider's Families lists them while closed: true; reactivate without confirm → 400, with confirm → 200; my/bookings after → 200; Families after: true",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "ref=APF-10314; record-payment \u2192 200 ; deactivate \u2192 200 ; GET my/bookings \u2192 403 account_closed; public listings with the token \u2192 200 (11 shown); provider's Families lists them while closed: true; reactivate without confirm \u2192 400, with confirm \u2192 200; my/bookings after \u2192 200; Families after: true",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p11": {
     "verdict": "pass",
     "method": "api",
-    "actual": "$A + x-act-as $B → /api/me still $A: true (tenantId=A); $H acting as $S signout-everywhere → 403 Only the account holder can sign out the; $H acting as $F1 GET subscription → 403",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "$A + x-act-as $B \u2192 /api/me still $A: true (tenantId=A); $H acting as $S signout-everywhere \u2192 403 Only the account holder can sign out the; $H acting as $F1 GET subscription \u2192 403",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p12": {
     "verdict": "pass",
     "method": "api",
-    "actual": "$H as $P: GET my/children → 200 (2); PUT allergies → 200; stored allergies=\"test\"; audit docs for the family: 0",
+    "actual": "$H as $P: GET my/children \u2192 200 (2); PUT allergies \u2192 200; stored allergies=\"test\"; audit docs for the family: 0",
     "notes": "HQ acting as a parent CAN write the child's medical fields (allergies stored) and nothing records that it was HQ rather than the parent (only a console.warn '[impersonate]' line). Decision needed (b6): block writes while impersonating or write an audit doc.",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p13": {
     "verdict": "pass",
     "method": "api",
-    "actual": "platform/providers / tenants / platform/leads / platform/support / platform/notifications → $A: 403/403/403/403/403; $F1: 403/403/403/403/403; $S: 403/403/403/403/403; $P: 403/403/403/403/403; $C: 403/403/403/403/403; $F1 GET franchises/features → 403",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "platform/providers / tenants / platform/leads / platform/support / platform/notifications \u2192 $A: 403/403/403/403/403; $F1: 403/403/403/403/403; $S: 403/403/403/403/403; $P: 403/403/403/403/403; $C: 403/403/403/403/403; $F1 GET franchises/features \u2192 403",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p14": {
     "verdict": "pass",
     "method": "api",
-    "actual": "operator token: POST my/bookings → 201 ; memberships/join → 400; GET my/wallet → 200; owner now in their own Families: true",
+    "actual": "operator token: POST my/bookings \u2192 201 ; memberships/join \u2192 400; GET my/wallet \u2192 200; owner now in their own Families: true",
     "notes": "Plan allows either answer; recorded: operators can book through the parent route and gain a customer record in their own tenant. Decide whether to refuse operator tokens on /api/my/*.",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p15": {
     "verdict": "pass",
     "method": "api",
-    "actual": "F1 PUT dslName → 200; HO's dslName after: \"HO DSL\"; tenant__fr__F1 doc dslName: \"F1 DSL\"; GET /api/library/<B> as F1 → 404; public /api/public/library/<B> → 200 (keys: providerName,cancelReasons)",
+    "actual": "F1 PUT dslName \u2192 200; HO's dslName after: \"HO DSL\"; tenant__fr__F1 doc dslName: \"F1 DSL\"; GET /api/library/<B> as F1 \u2192 404; public /api/public/library/<B> \u2192 200 (keys: providerName,cancelReasons)",
     "notes": "The authenticated router has no /:tenantId route (404); the PUBLIC library route returns only PUBLIC_SETTINGS_KEYS for any tenant by design (storefront).",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p16": {
     "verdict": "pass",
     "method": "api",
-    "actual": "$A registers role platform → 400 [object Object]; new account posts {role:company, tenantId:<B>} → 201; their users doc tenantId=a fresh tenant",
-    "notes": "zod: role is limited to parent/company/freelancer (registerRole.ts:19-21) — 'platform' is a 400; tenantId isn't a schema field, so it is ignored and a fresh tenant is created.",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "$A registers role platform \u2192 400 [object Object]; new account posts {role:company, tenantId:<B>} \u2192 201; their users doc tenantId=a fresh tenant",
+    "notes": "zod: role is limited to parent/company/freelancer (registerRole.ts:19-21) \u2014 'platform' is a 400; tenantId isn't a schema field, so it is ignored and a fresh tenant is created.",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p17": {
     "verdict": "pass",
     "method": "api",
-    "actual": "staff PATCH lead → 403; F1 DELETE HO's invite → 404; public preview → 200 keys=[role,tenantName] email leaked=false",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "staff PATCH lead \u2192 403; F1 DELETE HO's invite \u2192 404; public preview \u2192 200 keys=[role,tenantName] email leaked=false",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p18": {
     "verdict": "pass",
     "method": "api",
-    "actual": "request (as owner) → 201; PUT availability/mine as staff → 200; staff PATCH assign → 403; staff GET another's submission → 403",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "request (as owner) \u2192 201; PUT availability/mine as staff \u2192 200; staff PATCH assign \u2192 403; staff GET another's submission \u2192 403",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p19": {
     "verdict": "pass",
     "method": "api",
-    "actual": "staff PUT leave/config → 403; staff posts leave with someone else's staffId → 201 (stored for \"Perm Staff\"); staff cancels their APPROVED day → 200 ; manager decides their OWN request → 200 ",
-    "notes": "Cancel-after-approval rule: allowed (status → cancelled). Fix needed (decision): a manager can approve their own leave request with nothing flagged.",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "staff PUT leave/config \u2192 403; staff posts leave with someone else's staffId \u2192 201 (stored for \"Perm Staff\"); staff cancels their APPROVED day \u2192 200 ; manager decides their OWN request \u2192 200 ",
+    "notes": "Cancel-after-approval rule: allowed (status \u2192 cancelled). Fix needed (decision): a manager can approve their own leave request with nothing flagged.",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   },
   "p2-p20": {
     "verdict": "pass",
     "method": "api",
-    "actual": "staff clock-in → 200; second clock-in → 409 Already clocked in — clock out first.; staff PATCH → 403; manager PATCH → 200, who-changed stamp: editedBy",
-    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 — after fixes)",
+    "actual": "staff clock-in \u2192 200; second clock-in \u2192 409 Already clocked in \u2014 clock out first.; staff PATCH \u2192 403; manager PATCH \u2192 200, who-changed stamp: editedBy",
+    "evidence": "server/scripts/plan2/p2H_day4.mts (run 5 \u2014 after fixes)",
     "at": "2026-09-14T14:36:19.109Z",
     "agent": "plan2-G"
   }

@@ -23,7 +23,7 @@ const db = admin.firestore();
 const args = Object.fromEntries(process.argv.slice(2).map((a,i,arr)=>a.startsWith("--")?[a.slice(2),arr[i+1]&&!arr[i+1].startsWith("--")?arr[i+1]:true]:[]).filter(x=>x.length));
 const LIMIT = args.limit ? +args.limit : Infinity, GROUP = args.group ? String(args.group).toUpperCase() : "AB";
 const OUT = path.resolve("scripts/leads/out/residue.out.jsonl"), VERIFY = path.resolve("scripts/leads/out/verify.out.jsonl"), CONTACTS = path.resolve("scripts/leads/out/contacts.out.jsonl");
-const CONC = 6, TIMEOUT = 10000, MAXBYTES = 1_500_000, BRAVE_BUDGET = args.budget ? +args.budget : 3000, GAP_MS = 350;
+const CONC = 6, TIMEOUT = 10000, MAXBYTES = 1_500_000, BRAVE_BUDGET = args["fresh-budget"] ? +args["fresh-budget"] : (args.budget ? +args.budget : 3000), GAP_MS = 350;
 const UA = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36";
 const API_KEY = process.env.BRAVE_SEARCH_API_KEY || "";
 
@@ -163,6 +163,10 @@ console.log("RESIDUE COUNTS", JSON.stringify({ leadsNotExcluded: leads.length, g
 const doneRows = fs.existsSync(OUT) ? fs.readFileSync(OUT,"utf8").split("\n").filter(Boolean).map(l=>{try{return JSON.parse(l)}catch{return null}}).filter(Boolean) : [];
 const redo = (r) => r.result === "stuck" || r.result === "error" || r.result === "unresolved-needs-search" || (args["retry-search"] && r.searchSkipped && (r.result === "dead" || r.result === "blocked"));
 const done = new Set(doneRows.filter(r => !redo(r)).map(r=>r.id)); braveUsed = doneRows.filter(r=>r.searched && !r.searchSkipped).length;
+// --fresh-budget: --budget counts ALL-TIME searches from this log, which makes a small top-up allowance (e.g.
+// "851 more queries") impossible to express without adding it to a large historical total. --fresh-budget N caps
+// only THIS RUN's new searches at N, ignoring history — the honest way to say "no more than N new queries now".
+if (args["fresh-budget"]) braveUsed = 0;
 
 if (args.apply) { // Direct fill-only writes that apply_verify doesn't cover.
   const ids = [...new Set(doneRows.map(r=>r.id))]; const cur = new Map(); for (let i=0;i<ids.length;i+=300) { const snaps = await db.getAll(...ids.slice(i,i+300).map(id=>db.collection("leads").doc(id)), { fieldMask:["website","websiteCandidate","websiteDown","websiteDead","socialUrl","websiteRejected","bookingChecked","bookingSystem","verifyPending"] }); for (const s of snaps) if (s.exists) cur.set(s.id, s.data()); }

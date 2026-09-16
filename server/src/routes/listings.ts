@@ -8,10 +8,26 @@ import { desiredRuns, syncListingBlocks, bookedDatesDropped } from "../lib/listi
 import { resolveBundlePricing, type BundleDoc, type PassDoc, type PeriodDoc } from "../lib/bundlePricing";
 import { mealDayPlan } from "../lib/mealPlan";
 import { ukToday } from "../lib/ukDate";
+import { accessFor, subscriptionState } from "../middleware/subscription";
 
 export const listings = Router();
 
 const col = db.collection("listings");
+
+// GET /api/listings is mounted BEFORE the /api-wide enforceSubscription wall
+// on purpose (parents browse listings whether or not the provider's bill is
+// current) — but that also let a read-only/locked tenant keep creating and
+// editing listings, since the wall never ran for this router at all. Writes
+// here follow the same mode the rest of the API enforces (p2-m28/p2-m29).
+const TEAM_ROLES = new Set(["freelancer", "company", "franchise", "staff"]);
+async function subscriptionRefusal(req: Request): Promise<string | null> {
+  const auth = req.auth;
+  if (!auth || !TEAM_ROLES.has(auth.role) || !auth.tenantId) return null;
+  const { mode } = accessFor(await subscriptionState(auth.tenantId));
+  if (mode === "readonly") return "Your provider's ActivityOS payment is overdue, so listings are read-only for now.";
+  if (mode === "locked") return "Your provider's ActivityOS subscription has ended, so listings can't be changed right now.";
+  return null;
+}
 
 // ── Schema ────────────────────────────────────────────────────────────────
 // A listing stores the builder's draft near-verbatim (the WizardDraft shape
@@ -72,6 +88,26 @@ const baseListingSchema = z
     categoryIds: z.array(z.string().max(60)).max(50).optional(),
     heroCategoryId: z.string().max(60).nullable().optional(),
     venueId: z.string().max(60).nullable().optional(),
+    // Where sessions happen: a fixed venue (default), a home-visit provider who
+    // travels to the family, or both. Absent = "venue" (unchanged behaviour).
+    deliveryMode: z.enum(["venue", "home-visit", "both"]).optional(),
+    // Coverage area for a home-visit ("home-visit" or "both") listing — either a
+    // flat list of postcode prefixes, or a radius in miles from a base postcode.
+    // Checkout validates the family's service address against this.
+    coverageArea: z
+      .object({
+        mode: z.enum(["postcodePrefixes", "radius"]),
+        postcodePrefixes: z.array(z.string().trim().max(12)).max(200).optional(),
+        basePostcode: z.string().trim().max(16).optional(),
+        radiusMiles: z.number().positive().max(200).optional(),
+      })
+      .nullable()
+      .optional(),
+    // Freelancer manual scheduling control (product decision: no algorithmic
+    // travel-time buffers for freelancers — see server/src/lib/schedulingGap.ts).
+    // Minutes required between the end of one session and the start of the
+    // next; freelancer-editable, default 30. Ignored for company/franchise.
+    minGapMinutes: z.number().int().min(0).max(480).optional(),
     // Which season this listing runs in (Setup → Seasons). Groups it in
     // bookings/audiences/money and scopes it in the staff schedule.
     seasonId: z.string().max(60).nullable().optional(),
@@ -212,7 +248,14 @@ function runRecipeOf(doc: Record<string, unknown>) {
 function publishProblems(merged: Record<string, unknown>): string[] {
   const problems: string[] = [];
   if (!((merged.title as string) ?? (merged.name as string))?.trim()) problems.push("a name");
-  if (!merged.venueId) problems.push("a venue");
+  const deliveryMode = (merged.deliveryMode as string | undefined) ?? "venue";
+  if (deliveryMode !== "home-visit" && !merged.venueId) problems.push("a venue");
+  if (deliveryMode !== "venue") {
+    const coverage = merged.coverageArea as { mode?: string; postcodePrefixes?: string[]; basePostcode?: string; radiusMiles?: number } | null | undefined;
+    if (!coverage) problems.push("a home-visit coverage area");
+    else if (coverage.mode === "radius" ? !coverage.basePostcode || !coverage.radiusMiles : !(coverage.postcodePrefixes ?? []).length)
+      problems.push("a home-visit coverage area");
+  }
   const recipe = runRecipeOf(merged);
   const runs = desiredRuns(recipe, { start: "09:00", end: "15:30" });
   if (!runs.length) problems.push("dates with at least one running day");
@@ -531,6 +574,8 @@ listings.post("/", async (req, res) => {
     res.status(403).json({ error: "Requires an operator account with a tenant" });
     return;
   }
+  const subRefusal = await subscriptionRefusal(req);
+  if (subRefusal) { res.status(402).json({ error: subRefusal }); return; }
   const parsed = createSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
@@ -589,6 +634,8 @@ listings.put("/:id", async (req, res) => {
       .json({ error: own.status === 403 ? "Requires an operator account" : "Listing not found" });
     return;
   }
+  const subRefusal = await subscriptionRefusal(req);
+  if (subRefusal) { res.status(402).json({ error: subRefusal }); return; }
   const parsed = baseListingSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
@@ -664,6 +711,8 @@ listings.delete("/:id", async (req, res) => {
       .json({ error: own.status === 403 ? "Requires an operator account" : "Listing not found" });
     return;
   }
+  const subRefusal = await subscriptionRefusal(req);
+  if (subRefusal) { res.status(402).json({ error: subRefusal }); return; }
   // A listing with booked places can't be deleted (its bookings would point
   // at nothing) — archive it instead. Empty blocks go with the listing.
   const blocks = await db.collection("blocks").where("listingId", "==", own.snap.id).get();

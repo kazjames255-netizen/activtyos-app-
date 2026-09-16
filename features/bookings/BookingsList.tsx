@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
 import { useBookingsStore } from "./store";
 import {
@@ -118,7 +118,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
 
   const selCount = Object.keys(selected).filter((k) => selected[k]).length;
   const bounds = range ? rangeDays(range) : null;
-  const list = bookings
+  const list = useMemo(() => bookings
     .filter(
       (b) =>
         matchesFilter(b, filter) &&
@@ -131,18 +131,37 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
     )
     // Newest first, always — the one that just came in is the one you haven't
     // seen. Sorted here rather than relying on whatever order the API returns.
-    .sort(byNewest);
+    .sort(byNewest),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [bookings, filter, query, listing, seasonObj, listingSeason, bounds, day]);
 
   // Counts come from what the status tab and search already left, so a
   // listing showing "(3)" means three you can actually get to.
-  const inScope = bookings.filter((b) => matchesFilter(b, filter) && matchesSearch(b, query));
-  // Anything taken before bookings recorded a date. A range filter can't judge
-  // these, so it says how many it had to leave out rather than pretending the
-  // answer is "none".
-  const undated = inScope.filter((b) => !b.createdAt).length;
-  const listingOpts = [...new Set(inScope.map((b) => b.listing).filter(Boolean))]
-    .sort()
-    .map((name) => ({ name, n: inScope.filter((b) => b.listing === name).length }));
+  const inScope = useMemo(() => bookings.filter((b) => matchesFilter(b, filter) && matchesSearch(b, query)),
+    [bookings, filter, query]);
+  // Anything taken before bookings recorded a date, and the per-listing counts
+  // for the picker: one pass over `inScope` for both (this used to be a
+  // `.filter().length` per distinct listing — a full re-scan of inScope for
+  // EVERY listing name, on every render — the same "N scans instead of one"
+  // shape as the leads dropdown-count bug).
+  const { undated, listingOpts } = useMemo(() => {
+    let undatedN = 0;
+    const counts = new Map<string, number>();
+    for (const b of inScope) {
+      if (!b.createdAt) undatedN++;
+      if (b.listing) counts.set(b.listing, (counts.get(b.listing) ?? 0) + 1);
+    }
+    const opts = [...counts.keys()].sort().map((name) => ({ name, n: counts.get(name)! }));
+    return { undated: undatedN, listingOpts: opts };
+  }, [inScope]);
+  // One pass over `bookings` for every filter tab's count (not one full scan
+  // of `bookings` per tab — FILTER_TABS has 9 entries, so this used to be 9
+  // re-scans of the whole list on every render, including every keystroke).
+  const tabCounts = useMemo(() => {
+    const c: Record<string, number> = Object.fromEntries(FILTER_TABS.map(([key]) => [key, 0]));
+    for (const b of bookings) for (const [key] of FILTER_TABS) if (matchesFilter(b, key)) c[key]++;
+    return c;
+  }, [bookings]);
 
   return (
     <div>
@@ -170,7 +189,7 @@ export function BookingsList({ compact = false }: { compact?: boolean }) {
       {/* Filter chips */}
       <div className="mb-2.5 flex flex-wrap gap-[7px]">
         {FILTER_TABS.map(([key, label]) => {
-          const count = bookings.filter((b) => matchesFilter(b, key)).length;
+          const count = tabCounts[key] ?? 0;
           const on = filter === key;
           return (
             <button

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost, isDemoMode } from "@/lib/api";
 import { useHoScope, getHoScopeId, HO_OWN } from "@/components/franchise/HoScope";
@@ -625,12 +625,31 @@ function InboxView({ onCompose, onReply, onForward, onQuickReply, onEnquiry, his
     return m.folder === folder;
   };
   const restorable = folder === "archive" || folder === "snoozed" || folder === "spam" || folder === "trash";
-  const list = pool.filter(inFolder)
+  // A tenant's forwarded inbox accumulates over years — memoize the folder/filter/
+  // search pass instead of re-scanning `pool` on every render, including every
+  // keystroke in the search box.
+  const list = useMemo(() => pool.filter(inFolder)
     .filter((m) => filter === "all" || (filter === "unread" && m.unread) || (filter === "starred" && m.starred) || (filter === "files" && m.attachment))
-    .filter((m) => { const s = q.trim().toLowerCase(); return !s || `${m.from} ${m.subject} ${m.preview}`.toLowerCase().includes(s); });
-  const count = (k: string) => k === "sent" ? sentMail.length : k === "scheduled" ? schedMail.length || undefined : k === "inbox" ? items.filter((m) => (m.folder ?? "inbox") === "inbox" && m.unread).length
-    : k === "starred" ? items.filter((m) => m.starred && m.folder !== "spam" && m.folder !== "trash").length
-    : (k === "archive" || k === "snoozed" || k === "spam" || k === "trash") ? items.filter((m) => m.folder === k).length || undefined : undefined;
+    .filter((m) => { const s = q.trim().toLowerCase(); return !s || `${m.from} ${m.subject} ${m.preview}`.toLowerCase().includes(s); }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [pool, folder, filter, q]);
+  // Folder-sidebar badge counts used to be `items.filter(...).length` called once
+  // per folder button (a full rescan of the inbox per folder, on every render) —
+  // same "one pass per option" bug as LeadsApp's dropdown counts. One pass here.
+  const folderCounts = useMemo(() => {
+    let inboxUnread = 0, starred = 0;
+    const byFolder = new Map<string, number>();
+    for (const m of items) {
+      if ((m.folder ?? "inbox") === "inbox" && m.unread) inboxUnread++;
+      if (m.starred && m.folder !== "spam" && m.folder !== "trash") starred++;
+      const f = m.folder ?? "inbox";
+      byFolder.set(f, (byFolder.get(f) ?? 0) + 1);
+    }
+    return { inboxUnread, starred, byFolder };
+  }, [items]);
+  const count = (k: string) => k === "sent" ? sentMail.length : k === "scheduled" ? schedMail.length || undefined : k === "inbox" ? folderCounts.inboxUnread
+    : k === "starred" ? folderCounts.starred
+    : (k === "archive" || k === "snoozed" || k === "spam" || k === "trash") ? folderCounts.byFolder.get(k) || undefined : undefined;
   const pad = density === "cozy" ? "py-3" : "py-1.5";
   return (
     <div>
@@ -1969,8 +1988,15 @@ export function EmailApp() {
 
   const refresh = useCallback(() => {
     apiGet<Sent[]>("/api/emails").then((h) => { setHistory(h); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-    // Sample enquiries only in the demo/tour — a real, empty inbox shows empty (d27s2).
-    apiGet<ServerMail[]>("/api/emails/messages").then((m) => setMessages(m && m.length ? m : isDemoMode() ? DEMO_INBOX : [])).catch(() => setMessages(isDemoMode() ? DEMO_INBOX : []));
+    // A tenant's forwarded inbox accumulates over years; useRealtime refires this
+    // on every emails/emailMessages/scheduledEmails/bookings/moments change
+    // tenant-wide. Bail out of the state update (keep the same array reference)
+    // when the payload is content-identical to what's loaded, so the folder-count
+    // and list memos above don't re-derive over the full inbox for nothing.
+    apiGet<ServerMail[]>("/api/emails/messages").then((m) => {
+      const next = m && m.length ? m : isDemoMode() ? DEMO_INBOX : [];
+      setMessages((prev) => { try { if (prev && prev.length === next.length && JSON.stringify(prev) === JSON.stringify(next)) return prev; } catch { /* fall through */ } return next; });
+    }).catch(() => setMessages(isDemoMode() ? DEMO_INBOX : []));
     apiGet<Scheduled[]>("/api/emails/scheduled").then(setScheduled).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);

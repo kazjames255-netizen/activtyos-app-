@@ -1,0 +1,208 @@
+<title>ActivityOS — Backend Handover for Amir</title>
+<style>
+  :root {
+    --paper: #f4f5f7;
+    --paper-2: #ffffff;
+    --ink: #161c2c;
+    --ink-2: #4a5266;
+    --ink-3: #7d8494;
+    --line: #dde0e7;
+    --accent: #0e6f78;
+    --accent-soft: #e3f1f1;
+    --blocker: #b3261e;
+    --blocker-soft: #fbe9e7;
+    --owed: #9a6b00;
+    --owed-soft: #fdf1d8;
+    --done: #1e7a3d;
+    --done-soft: #e5f4e9;
+    --mono: ui-monospace, "SF Mono", "Cascadia Mono", Consolas, "IBM Plex Mono", monospace;
+    --sans: -apple-system, "Segoe UI", "IBM Plex Sans", Helvetica, Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #12141c; --paper-2: #191c27; --ink: #eef0f6; --ink-2: #b7bccb; --ink-3: #7d8494;
+      --line: #2b2f3d; --accent: #4fc3cb; --accent-soft: #16333335; --blocker: #ff8a80; --blocker-soft: #3a1f1c;
+      --owed: #e8b64a; --owed-soft: #3a2f14; --done: #6fcf8f; --done-soft: #163a24;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #12141c; --paper-2: #191c27; --ink: #eef0f6; --ink-2: #b7bccb; --ink-3: #7d8494;
+    --line: #2b2f3d; --accent: #4fc3cb; --accent-soft: #163333; --blocker: #ff8a80; --blocker-soft: #3a1f1c;
+    --owed: #e8b64a; --owed-soft: #3a2f14; --done: #6fcf8f; --done-soft: #163a24;
+  }
+  :root[data-theme="light"] {
+    --paper: #f4f5f7; --paper-2: #ffffff; --ink: #161c2c; --ink-2: #4a5266; --ink-3: #7d8494;
+    --line: #dde0e7; --accent: #0e6f78; --accent-soft: #e3f1f1; --blocker: #b3261e; --blocker-soft: #fbe9e7;
+    --owed: #9a6b00; --owed-soft: #fdf1d8; --done: #1e7a3d; --done-soft: #e5f4e9;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--sans); line-height: 1.55; }
+  .sheet { max-width: 760px; margin: 0 auto; padding: 48px 28px 96px; }
+  .masthead { display: flex; flex-direction: column; gap: 6px; padding-bottom: 22px; border-bottom: 2px solid var(--ink); margin-bottom: 28px; }
+  .masthead .eyebrow { font-family: var(--mono); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); font-weight: 600; }
+  .masthead h1 { font-size: 27px; font-weight: 800; margin: 2px 0 0; letter-spacing: -0.01em; text-wrap: balance; }
+  .masthead .meta { display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 12.5px; color: var(--ink-3); font-family: var(--mono); margin-top: 8px; }
+
+  .callout { background: var(--paper-2); border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 4px; padding: 14px 16px; font-size: 13.5px; color: var(--ink-2); margin-bottom: 30px; }
+  .callout b { color: var(--ink); }
+
+  .stat-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 34px; }
+  .stat { background: var(--paper-2); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; }
+  .stat .n { font-family: var(--mono); font-size: 21px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 11px; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.05em; margin-top: 2px; }
+  .stat.blocker .n { color: var(--blocker); } .stat.owed .n { color: var(--owed); } .stat.done .n { color: var(--done); } .stat.accent .n { color: var(--accent); }
+
+  section { margin-bottom: 34px; }
+  section > h2 { font-size: 12.5px; font-family: var(--mono); text-transform: uppercase; letter-spacing: 0.07em; color: var(--ink-3); border-bottom: 1px solid var(--line); padding-bottom: 8px; margin: 0 0 14px; }
+
+  .item { display: grid; grid-template-columns: 34px 1fr; gap: 12px; padding: 13px 0; border-bottom: 1px solid var(--line); }
+  .item:last-child { border-bottom: none; }
+  .item .num { font-family: var(--mono); font-size: 12px; color: var(--ink-3); padding-top: 2px; }
+  .item .body h3 { font-size: 14.5px; font-weight: 700; margin: 0 0 4px; }
+  .item .body p { font-size: 13.3px; color: var(--ink-2); margin: 0; }
+  .item .body p code, .item p code { font-family: var(--mono); font-size: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: 3px; padding: 1px 5px; }
+  .tag { display: inline-block; font-family: var(--mono); font-size: 10.5px; font-weight: 700; letter-spacing: 0.03em; text-transform: uppercase; padding: 2px 7px; border-radius: 3px; margin-bottom: 6px; }
+  .tag.blocker { background: var(--blocker-soft); color: var(--blocker); }
+  .tag.owed { background: var(--owed-soft); color: var(--owed); }
+  .tag.done { background: var(--done-soft); color: var(--done); }
+  .tag.new { background: var(--accent-soft); color: var(--accent); }
+
+  .resolved-list { font-size: 12.8px; color: var(--ink-3); line-height: 1.7; background: var(--paper-2); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; }
+
+  footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 11.5px; color: var(--ink-3); font-family: var(--mono); }
+
+  @media print {
+    body { background: #fff; }
+    .sheet { max-width: 100%; padding: 0; }
+    .stat, .item, .callout, .resolved-list { break-inside: avoid; }
+    section { break-inside: avoid-page; }
+  }
+  @media (max-width: 560px) {
+    .stat-row { grid-template-columns: repeat(2, 1fr); }
+  }
+</style>
+
+<div class="sheet">
+  <div class="masthead">
+    <span class="eyebrow">ActivityOS — engineering handover</span>
+    <h1>Backend still outstanding, for Amir</h1>
+    <div class="meta">
+      <span>Compiled 16 Sept 2026</span>
+      <span>·</span>
+      <span>Front-end for every item below is built and live</span>
+      <span>·</span>
+      <span>To PDF: ⌘/Ctrl+P → Save as PDF</span>
+    </div>
+  </div>
+
+  <div class="callout">
+    <b>Read first.</b> Numbering below is inherited from the running handoff log and deliberately has gaps — old references still resolve. Endpoints already built for read/aggregate-only features (<code>subscription.ts</code>, <code>platform.ts</code>, <code>analytics.ts</code>, <code>inventory.ts</code>) — don't rebuild those. Two new items (marked <span class="tag new" style="vertical-align:1px">new</span>) were found and fixed tonight by an automated test pass; they're listed for visibility, not action.
+  </div>
+
+  <div class="stat-row">
+    <div class="stat blocker"><div class="n">5</div><div class="l">Production blockers</div></div>
+    <div class="stat owed"><div class="n">64</div><div class="l">Numbered items owed</div></div>
+    <div class="stat done"><div class="n">2</div><div class="l">Fixed overnight, for visibility</div></div>
+    <div class="stat accent"><div class="n">40+</div><div class="l">Already resolved (see foot)</div></div>
+  </div>
+
+  <section>
+    <h2>0 · Production blockers — do these first</h2>
+    <div class="item"><div class="num">01</div><div class="body"><span class="tag blocker">Blocker</span><h3>Move Firestore to Blaze plan</h3><p>Free-tier daily read cap is being hit (<code>8 RESOURCE_EXHAUSTED</code>), blanking registers/bookings live. Also unblocks Storage (#2). Add backoff/circuit-break so scheduler sweeps stop hammering reads while quota is blown.</p></div></div>
+    <div class="item"><div class="num">02</div><div class="body"><span class="tag blocker">Blocker</span><h3>Firestore Storage bucket</h3><p>Images/PDFs/signatures/video still stored as Firestore docs via <code>/api/images/:id</code> (≤900KB, image only — <b>video upload is impossible today</b>). Enable Storage, add a real upload endpoint, swap the backing store in <code>uploads.ts</code>.</p></div></div>
+    <div class="item"><div class="num">04</div><div class="body"><span class="tag blocker">Blocker</span><h3>Deployment</h3><p>Guide at repo-root <code>DEPLOY.md</code> — code is deploy-ready (env-driven URLs, <code>nixpacks.toml</code>, service-account via secret). Owed: Railway/Vercel accounts, secrets, Firebase Authorized domain (broke a signup link on mobile before), Stripe webhook, Namecheap DNS.</p></div></div>
+    <div class="item"><div class="num">5b</div><div class="body"><span class="tag owed">Mostly done</span><h3>Per-franchise settings — remaining readers</h3><p>Most enforcement paths now use <code>tenantLibrary.ts</code>. Still reading head-office's copy only: <code>emails.ts</code>, <code>autoEmails.ts</code>, <code>sender.ts</code>, <code>sweeps.ts</code> prefs, <code>referral.ts</code>, <code>memberships.ts</code>, <code>reviews.ts</code>, <code>posts.ts</code>, <code>invites.ts</code>.</p></div></div>
+    <div class="item"><div class="num">05</div><div class="body"><span class="tag owed">Mostly done</span><h3>Franchise data isolation — staff scoping</h3><p>Spec: <code>docs/franchise-isolation-handoff.md</code>. Listings/registers/safeguarding/meals/customers/messages/invoices/income all scope correctly. Still owed: no <code>staff_assignments</code> collection (invites carry only <code>franchiseId</code>), and a backfill for data created before scoping existed.</p></div></div>
+  </section>
+
+  <section>
+    <h2>1 · Money &amp; payments</h2>
+    <div class="item"><div class="num">07</div><div class="body"><h3>Customer memberships — recurring charge</h3><p>Spec: <code>docs/memberships-handoff.md</code>. Phase 1 delivers benefits on join with no money collected. Owed: real Stripe subscription per member, <code>invoice.paid</code>/<code>payment_failed</code> webhooks, idempotent credit dedupe on <code>lastDeliveredAt</code>.</p></div></div>
+    <div class="item"><div class="num">08</div><div class="body"><h3>TFC auto-reconciliation</h3><p>Wire the HMRC EPP integration to match Tax-Free Childcare payments to bookings and flip them Paid. TFC tab is deliberately blank pending this.</p></div></div>
+    <div class="item"><div class="num">09</div><div class="body"><h3><code>cardFailed</code> trigger</h3><p>Field + banner exist; set from the Stripe <code>payment_intent.payment_failed</code> webhook, clear on success.</p></div></div>
+    <div class="item"><div class="num">10</div><div class="body"><h3>Reconciliation phase 2 — split payments</h3><p>A booking paid across card + TFC/voucher needs a payment-portions model <code>[{method,amount,status,ref}]</code>. Ripples through checkout, booking display, reconciliation — build carefully.</p></div></div>
+    <div class="item"><div class="num">12</div><div class="body"><h3>Add-ons in partial refunds</h3><p>Per-day add-ons need structured per-day prices on the booking (currently flattened strings); partial-refund calc should include that day's add-ons at policy %.</p></div></div>
+    <div class="item"><div class="num">15</div><div class="body"><h3>Rota labour cost → Money/Dashboard/Payroll</h3><p>Schedule now saves to <code>/api/rota</code> correctly (staff roster/DBS gate is reachable). Still owed: <code>users.pay_rate</code>, <code>GET /api/labour-cost</code>, roll-up of hours × rate × on-cost into Money-out/Dashboard/Finance/Payroll.</p></div></div>
+    <div class="item"><div class="num">16</div><div class="body"><h3>Setup money toggles that persist but nothing reads</h3><p>"Issue refunds automatically" / "credit note when no cash due" / "Ask about dietary needs".</p></div></div>
+  </section>
+
+  <section>
+    <h2>2 · Notifications &amp; schedulers</h2>
+    <div class="item"><div class="num">22</div><div class="body"><h3>Timetable publish → notify parents</h3><p><code>publishSchema</code> accepts <code>notifyEmail</code>/<code>notifyPush</code> but does nothing on publish.</p></div></div>
+    <div class="item"><div class="num">23</div><div class="body"><h3>Meal-order notifications — parent half</h3><p>Provider half done. Still owed: tell the parent when a change/removal request is approved or declined.</p></div></div>
+    <div class="item"><div class="num">24</div><div class="body"><h3>Caterer digest cron</h3><p>Email <code>listing.mealConfig.catererEmail</code> a daily/weekly digest at <code>catererAt</code>. No sweep reads those fields yet.</p></div></div>
+    <div class="item"><div class="num">25</div><div class="body"><h3>Schedule — the sends</h3><p>Availability-request flow is built (bell only). Owed: email half of the request, plus all four <code>settings.scheduling</code> sends (publish notify, auto-remind, shift reminders, auto-request-availability) — none read server-side.</p></div></div>
+    <div class="item"><div class="num">26</div><div class="body"><h3>Learning reminders — scheduled half</h3><p>Manual "Assign &amp; notify"/"Remind" now really bell+email. Owed: due/overdue/renewal-due chasing and the weekly manager digest (needs #37).</p></div></div>
+    <div class="item"><div class="num">27</div><div class="body"><h3>Holiday approvals — remaining piece</h3><p>Requests/decisions/cancellations are server-side and notifying correctly. Still owed: "needs covering" alert against the rota.</p></div></div>
+    <div class="item"><div class="num">28</div><div class="body"><h3>Staff announcements — remaining targeting</h3><p>Tenant/franchise targeting + read receipts done. Owed: site/listing-level targeting (needs #32), letting leads post.</p></div></div>
+    <div class="item"><div class="num">29</div><div class="body"><span class="tag new">New tonight — flagged, not fixed</span><h3>Message merge-fields — two remaining paths</h3><p>Resolution works for booking-triggered messages and bulk email. Still owed: the plain 1:1 <code>POST /api/messages</code> handler never calls <code>mergeText</code> (tokens like <code>{SessionDate}</code> go out literal), and the broadcast path only fills 4 of 7 tokens. Re-confirmed live by tonight's test pass (<code>p2-rt12</code>) — scoped as a shared-resolver refactor, not a quick fix.</p></div></div>
+  </section>
+
+  <section>
+    <h2>3 · Staff, RBAC &amp; per-user identity</h2>
+    <div class="item"><div class="num">30</div><div class="body"><h3>Roles &amp; permissions enforcement</h3><p>Spec: <code>docs/roles-permissions-handoff.md</code>. Owed: <code>role_id</code> on invites/users, resolved <code>caps</code> on <code>/api/me</code>, server-side capability enforcement, Phase 2b hard-enforce on medical/SEND/payroll data + audit log.</p></div></div>
+    <div class="item"><div class="num">32</div><div class="body"><h3>Deployment / assignment scoping</h3><p>Owed: persist <code>staff_assignments(user_id, venue_id, tenant_id)</code> so accepted invites scope registers/attendance/availability to assigned locations.</p></div></div>
+    <div class="item"><div class="num">33</div><div class="body"><h3>Staff-onboarding invite pre-fill</h3><p>Feed the real invite record's captured name/email/role into the onboarding form (currently a hardcoded demo const).</p></div></div>
+    <div class="item"><div class="num">34</div><div class="body"><h3>Per-user identity — remaining hardcoded screens</h3><p>My schedule/dashboard/leave now use the real signed-in account. Still hardcoded: My certificates, My payslips, My learning.</p></div></div>
+    <div class="item"><div class="num">35</div><div class="body"><h3>Register — remaining owed</h3><p>Child edits/notes/nappy/nudges are server-side. Owed: a LEAD flag within staff, and delivering <code>shareParent</code> notes to the parent app.</p></div></div>
+    <div class="item"><div class="num">36</div><div class="body"><h3>Listing wizard staff picker</h3><p>Feed from the tenant's real onboarded team instead of a separate <code>local.staff</code> localStorage list.</p></div></div>
+  </section>
+
+  <section>
+    <h2>4 · Big feature collections needing real persistence</h2>
+    <div class="item"><div class="num">37</div><div class="body"><h3>Learning Centre (LMS)</h3><p>Real collections owed: courses/quizzes/items/pass-mark, assignments, per-staff completion/attempts/scores, certificate store, video/image lesson media (ties to Storage #2), policy read-and-confirm collections.</p></div></div>
+    <div class="item"><div class="num">38</div><div class="body"><h3>Staff credentials/certificates</h3><p>Owed: real file storage for cert uploads, persisted verify state, expiry/renewal reminders, the public <code>/v/&lt;ref&gt;</code> certificate verification page the QR code points to.</p></div></div>
+    <div class="item"><div class="num">39</div><div class="body"><h3>Payroll</h3><p>Spec: <code>docs/payroll-integrations-handoff.md</code>. Full RTI, per-employee YTD, tax-code/NI, statutory pay, real QuickBooks/Xero/Sage OAuth posting, persisted payslips + PDF, field-level encryption + audit. <b>Never store payroll/bank/NI in localStorage in prod.</b></p></div></div>
+    <div class="item"><div class="num">40</div><div class="body"><h3>Holiday &amp; absence — remaining</h3><p>Storage/identity/approval RBAC done. Owed: year-end carry-over rollover, gov.uk bank-holidays feed, holiday-pay → payroll, SSP from sickness, data-protection handling for sickness records.</p></div></div>
+  </section>
+
+  <section>
+    <h2>5 · Data-model gaps &amp; smaller items</h2>
+    <div class="item"><div class="num">41</div><div class="body"><h3>Parent postcode on the booking</h3><p>Captured at signup already. Owed: <code>booking.postcode</code> at checkout, added to the <code>/api/bookings</code> and <code>/api/customers</code> projections — the Task Manager parent picker currently finds nothing.</p></div></div>
+    <div class="item"><div class="num">43</div><div class="body"><h3>Listing auto-expire</h3><p>Scheduled job to flip stored <code>status</code> to ended once the last date passes — for count/export/analytics accuracy.</p></div></div>
+    <div class="item"><div class="num">44</div><div class="body"><h3>Newsletter → HTML email — remaining</h3><p>Scheduled sends + open tracking done. Owed: real PDF/file attachments, click tracking, video storage, the live countdown GIF.</p></div></div>
+    <div class="item"><div class="num">45</div><div class="body"><h3>Marketing consent — surfacing</h3><p>Unsub tokens now signed. Owed: surface the suppression list in the UI.</p></div></div>
+    <div class="item"><div class="num">46a</div><div class="body"><h3>Subscription history for HQ churn %</h3><p>Client-side churn calc drifts on three server gaps: <code>tenants.createdAt</code> not guaranteed, <code>canceledAt</code> only set at term end (not on notice), and history reconstructed from the current doc so reactivation erases past cancellations. Proper fix: append-only <code>subscriptionEvents</code> collection from Stripe webhooks + an aggregate endpoint. Tie to #3's webhook work.</p></div></div>
+  </section>
+
+  <section>
+    <h2>6 · AI, voice &amp; niceties</h2>
+    <div class="item"><div class="num">47</div><div class="body"><h3>AI co-pilot tool-use</h3><p>Spec: <code>docs/ai-assistant-tooluse-handoff.md</code>. Chat is deliberately read-only. Owed: <code>POST /api/ai/act</code> executing against existing authed endpoints with a server-side permission re-check and mandatory confirm for mail/money/irreversible actions.</p></div></div>
+    <div class="item"><div class="num">48</div><div class="body"><h3>Server-side TTS</h3><p>One consistent narration voice for guided walkthroughs + LMS read-aloud (browser <code>speechSynthesis</code> varies today).</p></div></div>
+  </section>
+
+  <section>
+    <h2>7 · API docs &amp; cleanup before launch</h2>
+    <div class="item"><div class="num">50</div><div class="body"><h3>OpenAPI gaps</h3><p>Money area absent from <code>server/openapi.yaml</code> — document income/suppliers/purchasing, subscription routes, new platform routes, analytics pageview, register-role fields.</p></div></div>
+    <div class="item"><div class="num">51</div><div class="body"><h3>Dead routes / code cleanup</h3><p><code>locations</code> registered with no nav entry, staff <code>compliance</code> not in nav, listing-wizard drafts localStorage-only, walkthrough video slots, several unused legacy files.</p></div></div>
+  </section>
+
+  <section>
+    <h2>8 · Only Amir can do these</h2>
+    <div class="item"><div class="num">52</div><div class="body"><span class="tag blocker">Needs action</span><h3><code>URL_SIGNING_SECRET</code> in production</h3><p>Private image/unsubscribe links are HMAC-signed. Without the env var, links break on every restart. Set in Railway: <code>openssl rand -hex 32</code>.</p></div></div>
+    <div class="item"><div class="num">54</div><div class="body"><h3>Rate limiting is per-process</h3><p>In-memory limiter is fine on one instance — swap for a shared store before running more than one.</p></div></div>
+    <div class="item"><div class="num">55</div><div class="body"><h3>Stripe Connect webhook</h3><p>A booking/invoice only settles if the browser calls back. The webhook should call the existing <code>settleInvoiceBooking</code>.</p></div></div>
+    <div class="item"><div class="num">56</div><div class="body"><h3>Offline refunds need a home</h3><p>TFC/voucher/cash refund approvals now record a <code>payments</code> doc marked <code>to-reimburse</code>. Reconciliation should list these until manually marked returned.</p></div></div>
+    <div class="item"><div class="num">58</div><div class="body"><h3>Closed parent accounts after 30 days</h3><p>Reopens on sign-in today, forever — decide what should actually happen at 30 days (anonymise/delete) and add the sweep.</p></div></div>
+    <div class="item"><div class="num">59</div><div class="body"><h3>Refunding an invoice-paid top-up</h3><p>A refund larger than the original card payment needs to split across <code>bookings.invoicePaymentIntentIds[]</code> — the refund route only knows the one.</p></div></div>
+    <div class="item"><div class="num">61</div><div class="body"><h3>Encryption at rest for onboarding records</h3><p><code>onboardRecords</code>/<code>onboardFiles</code> hold bank details, NI numbers, ID scans and DBS certificates server-side, access-restricted but not encrypted beyond Firestore's default, no retention period set. Decide both before real staff records go in.</p></div></div>
+    <div class="item"><div class="num">63</div><div class="body"><h3>Clock pay-policy settings are per-device</h3><p>Grace minutes/rounding/pay basis live in localStorage — move to tenant settings so every manager's timesheet computes the same pay.</p></div></div>
+  </section>
+
+  <section>
+    <h2>Found and fixed overnight (16 Sept) — for visibility only</h2>
+    <div class="item"><div class="num">•</div><div class="body"><span class="tag done">Fixed</span><h3>Malformed JSON crashed the server (500, not 400)</h3><p>Any route receiving a broken JSON body returned a raw 500 instead of a clean validation error. Root cause was shared error middleware (<code>server/src/index.ts</code>) missing a branch for body-parser's JSON syntax error. Fixed, verified against three routes, no regressions.</p></div></div>
+    <div class="item"><div class="num">•</div><div class="body"><span class="tag done">Fixed</span><h3>Double-cancel could reopen a refund replay guard</h3><p>Cancelling an already-cancelled booking was silently accepted again, and a chained cancel → approve-refund → cancel-again sequence could reset refund state and reopen the replay guard against duplicate refund approval. Fixed with the same guard pattern already used on refund-approve.</p></div></div>
+  </section>
+
+  <section>
+    <h2>Already resolved — don't redo</h2>
+    <div class="resolved-list">
+      Real Stripe Billing (Elements, trial, past_due webhook, server-side 402 wall) · Customer wallet backend · Per-day partial cancellation · Single-use discount release on cancel · Payment method on bookings · Accidents/incidents → parent notify · Medication → parent notify + MAR views · Booked-child picker link · Trips consent + notify · Calendar reminders · Provider postcode → browse-by-distance · Staff token no longer reads money/DBS/concerns · Public child photos signed · Account disable/reopen guard · Invite redemption bound to address · Franchise staff scoping (mostly) · Bell scoping · Sibling counting on registers/ratios/meals · Trip consent overwrite guard · Medication consent re-grant guard · Register notes server-side · Wallet credit on cancel · Membership credit dedupe · Invoice settling its booking · Refund approve/decline guard · TFC refund copy accuracy · Signed unsubscribe links · Parent text escaping in emails · EHCP viewer XSS fix · Data deletion requests + export · Rate limiting (single-process) · Error pages · Dose-email mute server-side · Server-side clock stamps · Closed-account reopen guard · Invoice settlement / card downgrade fix · Membership tier-hop credit fix · Referee chase + HEIC uploads · Learning location targeting · Calendar events franchise-scoped · Leads-within-staff flag · Server-side clock records · Staff certs feeding rota DBS check · Demo cast removed from real screens · LMS completions/assignments server-side · Onboarding/SCR server-side · Legacy photos made private · Parent/staff screen translation.
+    </div>
+  </section>
+
+  <footer>
+    Source: docs/amir-backend-outstanding.md, cross-checked against lib/testing/agent-results/ and lib/testing/backlog.ts as of 16 Sept 2026. Numbering intentionally has gaps — do not renumber.
+  </footer>
+</div>

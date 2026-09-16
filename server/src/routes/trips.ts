@@ -93,7 +93,25 @@ async function tripSettings(tenantId: string, franchiseId?: string | null) {
     notifyParent: t.notifyParent !== false,
     requireConsent: t.requireConsent !== false,
     whoCanPlan: (t.whoCanPlan === "leads" || t.whoCanPlan === "managers" ? t.whoCanPlan : "all") as "all" | "leads" | "managers",
+    whoCanSend: (t.whoCanSend === "lead" ? "lead" : "all") as "all" | "lead",
   };
+}
+
+/** Setup → Trips "who can send" gate for the Step 8 parent message. Managers
+ *  and owners can always send (same carve-out as planning); a plain staff or
+ *  lead needs the setting on "all", or to be the trip's organiser (createdBy)
+ *  or its named trip lead. */
+async function canSendTripMessage(req: Request, trip: Record<string, unknown>): Promise<boolean> {
+  const auth = req.auth!;
+  if (canManage(auth.role)) return true;
+  const tenantId = String(trip.tenantId);
+  const { whoCanSend } = await tripSettings(tenantId, (trip.franchiseId as string | null | undefined) ?? auth.franchiseId);
+  if (whoCanSend !== "lead") return true;
+  const email = req.user?.email;
+  if (email && trip.createdBy === email) return true;
+  const name = req.user?.name;
+  if (name && typeof trip.lead === "string" && trip.lead.trim().toLowerCase() === name.trim().toLowerCase()) return true;
+  return false;
 }
 
 /** A decision the PARENT made. Since 12 Sept it's marked; before that the
@@ -403,6 +421,10 @@ trips.post("/:id/send-message", async (req, res) => {
   const o = await own(req, req.params.id);
   if (o.status !== 200) { res.status(o.status).json({ error: o.status === 403 ? "Forbidden" : "Trip not found" }); return; }
   const trip = o.snap.data()!;
+  if (!(await canSendTripMessage(req, trip))) {
+    res.status(403).json({ error: "Sending the trip message is limited to the trip lead / organiser (Setup → Trips & visits)" });
+    return;
+  }
   const template = String((req.body?.message as string | undefined) ?? trip.parentMsg ?? "").trim();
   if (!template) { res.status(400).json({ error: "Write the parent message first (Step 8), then send." }); return; }
 

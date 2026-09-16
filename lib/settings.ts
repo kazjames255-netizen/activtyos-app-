@@ -860,6 +860,11 @@ export interface TenantSettings {
     requireConsent?: boolean; // a trip can't be marked ready/completed until every child has consent
     ratioTarget?: number;     // target children-per-staff; the trip flags when it's exceeded
     whoCanPlan?: "all" | "leads" | "managers"; // who may create/plan a trip (staff-side gate)
+    /** Who may send the parent message (Step 8) for a trip. "all" (default) =
+     *  any staff who can see the trip — the long-standing behaviour. "lead" =
+     *  only the trip's organiser (createdBy) or its named trip lead; managers
+     *  and owners can always send, same as they can always plan. */
+    whoCanSend?: "all" | "lead";
   };
 
   /** Reviews hub — blend in-house feedback with external platforms. Connectors

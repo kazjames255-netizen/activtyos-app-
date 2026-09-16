@@ -1195,6 +1195,21 @@ paths:
         Rejected `409` when: the listing is a draft/archived; `opensAt` is
         in the future (the response body includes `opensAt` — show the
         countdown); or the block is full and the listing's waitlist is off.
+
+        **Home-visit listings** (`deliveryMode: "home-visit"` or `"both"`):
+        the request may include `serviceAddress: {address, postcode}` — where
+        this session actually happens. Omitted, it defaults to the parent's
+        saved account address (`GET /api/account`). Either way the postcode is
+        validated against the listing's `coverageArea` — outside it → `409`
+        with a clear message, nothing booked. A `home-visit` listing with no
+        `serviceAddress` resolvable at all → `400`.
+
+        **Freelancer scheduling gap:** for tenants of type `freelancer`, each
+        listing's `minGapMinutes` (default 30) is enforced as a plain
+        no-overlap-plus-gap check against the freelancer's other bookings that
+        day, across all their listings — a clash → `409`. This is a manual
+        gap, not a computed travel-time buffer (company/franchise get no
+        equivalent check here — that smarter logic is a later build).
       requestBody:
         required: true
         content:
@@ -4252,6 +4267,16 @@ components:
         seats:
           type: integer
           description: Places held in the block (default 1).
+        serviceAddress:
+          type: object
+          description: |
+            Home-visit listings only — where this session actually happens.
+            Defaults to the parent's saved account address at checkout but is
+            editable there (e.g. a grandparent's house). Absent for venue
+            bookings.
+          properties:
+            address: { type: string }
+            postcode: { type: string }
         booker: { type: string, example: Sarah Jones }
         email: { type: string, example: sarah.j@email.com }
         phone: { type: string }
@@ -4552,6 +4577,31 @@ components:
           type: array
           description: Automatic discount rules (see features/listings/discounts.ts).
           items: { type: object }
+        deliveryMode:
+          type: string
+          enum: [venue, home-visit, both]
+          description: |
+            Where sessions happen. Absent = "venue" (unchanged behaviour).
+            "home-visit"/"both" providers travel to the family — checkout
+            collects a serviceAddress and validates it against coverageArea.
+        coverageArea:
+          type: object
+          nullable: true
+          description: Home-visit coverage area (see server/src/lib/coverageArea.ts). Required to publish a "home-visit"/"both" listing.
+          properties:
+            mode: { type: string, enum: [postcodePrefixes, radius] }
+            postcodePrefixes: { type: array, items: { type: string }, description: 'e.g. ["SW1", "SW2", "TW9 1"]' }
+            basePostcode: { type: string, example: "SW1A 1AA" }
+            radiusMiles: { type: number, example: 10 }
+        minGapMinutes:
+          type: integer
+          example: 30
+          description: |
+            Freelancer manual scheduling control (product decision: no
+            algorithmic travel-time buffers for freelancers). Minutes required
+            between the end of one session and the start of the next; enforced
+            as a plain no-overlap-plus-gap check on POST /api/my/bookings for
+            tenants of type "freelancer" only. Default 30.
 
     Listing:
       allOf:

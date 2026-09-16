@@ -654,9 +654,10 @@ export function LeadsApp() {
         </div>
         <p className="mt-1 text-[12.5px] text-white/80">UK children&apos;s activity and childcare providers — from booking directories, Ofsted&apos;s register and website demo requests.</p>
         <div className="mt-3 flex flex-wrap gap-2 text-[12.5px]">
-          {([["Providers", rows.length], ["📇 Ready to contact", ready], ["⭐ Best prospects", best.length], ["🔎 Still researching", rows.length - ready]] as const).map(([k, n]) => (
+          {([["Providers (whole database)", rows.length], ["📇 Ready to contact", ready], ["⭐ Best prospects", best.length], ["🔎 Still researching", rows.length - ready]] as const).map(([k, n]) => (
             <span key={k} className="rounded-xl bg-white/15 px-3 py-1.5"><b className="text-[15px]">{n.toLocaleString()}</b> <span className="text-white/85">{k}</span></span>
           ))}
+          <span className="rounded-xl bg-white/10 px-3 py-1.5 text-white/70">These totals ignore filters — the tabs and list below reflect your current filter</span>
         </div>
       </div>
 
@@ -681,6 +682,13 @@ export function LeadsApp() {
               className="rounded-lg px-2.5 py-1 text-[12.5px] font-bold transition-colors"
               style={on ? { background: "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
           ); })}
+          {/* Not sourced yet — reminder to add these categories once the current list is confirmed accurate. */}
+          {["🏫 State schools", "🎓 Independent (non-SEND)", "🎓 Independent (SEND)"].map((label) => (
+            <button key={label} type="button" disabled title="Coming soon — not sourced yet"
+              className="cursor-not-allowed rounded-lg border border-dashed border-[var(--line)] px-2.5 py-1 text-[12.5px] font-bold text-[var(--ink-3)] opacity-60">
+              {label} <span className="font-normal">· soon</span>
+            </button>
+          ))}
         </div>
         {(["runs", "nation", "region", "ofsted", "size", "booking", "contact", "status", "source"] as Dim[]).map((dim) => (
           <FilterMenu key={dim} dim={dim} opts={opts[dim]} value={f[dim]} onChange={(v) => setDim(dim, v)}

@@ -1,0 +1,13 @@
+total zero-contact: 13052 shard5 (last hex f, not yet processed): 82
+DONE {"shard":"5 (hex f)","total":82,"processed":5,"resolvedNew":4,"deadEnd":1,"braveUsed":5}
+total zero-contact: 13035 shard5 (last hex f, not yet processed): 80
+DONE {"shard":"5 (hex f)","total":80,"processed":6,"resolvedNew":1,"secondaryOnly":2,"deadEnd":3,"braveUsed":6}
+total zero-contact: 13022 shard5 (last hex f, not yet processed): 76
+progress: 10/76 processed, 2 resolved, 4 secondary-only, 4 dead-end, brave used 10
+progress: 20/76 processed, 3 resolved, 6 secondary-only, 11 dead-end, brave used 20
+progress: 30/76 processed, 4 resolved, 9 secondary-only, 17 dead-end, brave used 30
+progress: 40/76 processed, 7 resolved, 12 secondary-only, 21 dead-end, brave used 40
+progress: 50/76 processed, 10 resolved, 14 secondary-only, 26 dead-end, brave used 50
+progress: 60/76 processed, 11 resolved, 16 secondary-only, 33 dead-end, brave used 60
+progress: 70/76 processed, 13 resolved, 18 secondary-only, 39 dead-end, brave used 70
+DONE {"shard":"5 (hex f)","total":76,"processed":76,"resolvedNew":14,"secondaryOnly":19,"deadEnd":43,"braveUsed":76}

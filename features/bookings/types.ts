@@ -205,6 +205,12 @@ export interface Booking {
    *  to the family in the decline email. */
   declineReason?: string;
 
+  /** Home-visit listings only: where this session actually happens. Defaults
+   *  to the parent's saved account address at checkout but is editable there
+   *  (e.g. a grandparent's house) — validated against the listing's coverage
+   *  area before the booking is allowed to complete. Absent on venue bookings. */
+  serviceAddress?: { address: string; postcode: string };
+
   // Transient UI state (kept on the record to match the legacy flows).
   _cancelling?: boolean;
   _refundType?: "full" | "partial" | "none";

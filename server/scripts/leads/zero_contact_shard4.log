@@ -1,0 +1,17 @@
+=== run start 2026-09-15T19:08:07.647Z shard4 total=120 todo=5 apply=false ===
+5 / 5 resolvedDirect=1 resolvedSecondary=1 deadEnds=1 braveCalls=5 blocked=0
+{"processed":5,"resolvedDirect":1,"resolvedSecondary":1,"deadEnds":1,"braveCalls":5,"blocked":0,"applied":false}
+=== run start 2026-09-15T19:09:13.086Z shard4 total=120 todo=120 apply=true ===
+10 / 120 resolvedDirect=1 resolvedSecondary=2 deadEnds=3 braveCalls=10 blocked=0
+20 / 120 resolvedDirect=1 resolvedSecondary=3 deadEnds=11 braveCalls=20 blocked=0
+30 / 120 resolvedDirect=1 resolvedSecondary=6 deadEnds=18 braveCalls=30 blocked=0
+40 / 120 resolvedDirect=1 resolvedSecondary=11 deadEnds=23 braveCalls=40 blocked=0
+50 / 120 resolvedDirect=2 resolvedSecondary=18 deadEnds=25 braveCalls=50 blocked=0
+60 / 120 resolvedDirect=2 resolvedSecondary=21 deadEnds=31 braveCalls=60 blocked=0
+70 / 120 resolvedDirect=2 resolvedSecondary=25 deadEnds=35 braveCalls=70 blocked=0
+80 / 120 resolvedDirect=2 resolvedSecondary=28 deadEnds=38 braveCalls=80 blocked=0
+90 / 120 resolvedDirect=2 resolvedSecondary=31 deadEnds=42 braveCalls=90 blocked=0
+100 / 120 resolvedDirect=2 resolvedSecondary=38 deadEnds=45 braveCalls=100 blocked=0
+110 / 120 resolvedDirect=2 resolvedSecondary=39 deadEnds=50 braveCalls=110 blocked=0
+120 / 120 resolvedDirect=2 resolvedSecondary=43 deadEnds=54 braveCalls=120 blocked=0
+{"processed":120,"resolvedDirect":2,"resolvedSecondary":43,"deadEnds":54,"braveCalls":120,"blocked":0,"applied":true}

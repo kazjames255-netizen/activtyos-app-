@@ -574,7 +574,12 @@ incidents.get("/:id/dossier", async (req, res) => {
   if (!scope || !scope.tenantId || !canRecord(scope.role)) { res.status(403).json({ error: "Requires an operator or staff account" }); return; }
   const lead = await staffLead(req);
   const snap = await col.doc(req.params.id).get();
-  if (!snap.exists || snap.data()!.tenantId !== scope.tenantId || !staffMayRead(req, snap.data()!, lead)) { res.status(404).json({ error: "Record not found" }); return; }
+  // A genuinely missing/foreign-tenant record stays 404 (don't reveal it
+  // exists). A record that DOES exist in this tenant but this staff member
+  // isn't assigned to is a real, named permissions gate, not a lookup miss —
+  // 403 says so honestly instead of masquerading as "not found".
+  if (!snap.exists || snap.data()!.tenantId !== scope.tenantId) { res.status(404).json({ error: "Record not found" }); return; }
+  if (!staffMayRead(req, snap.data()!, lead)) { res.status(403).json({ error: "You don't have access to this record" }); return; }
   const rec = snap.data()!;
   const childName = String(rec.childName ?? "");
 

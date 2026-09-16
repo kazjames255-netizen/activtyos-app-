@@ -97,6 +97,12 @@ export function ReconciliationApp() {
   // Voucher schemes present, for the sub-filter chips under the Vouchers tab.
   const voucherSchemes = useMemo(() => [...new Set(items.filter((it) => methodCat(it) === "Childcare vouchers" && it.voucherScheme).map((it) => it.voucherScheme as string))].sort(), [items]);
 
+  // The category tabs and voucher-provider chips each used to re-filter the WHOLE
+  // ledger once per button on every render (a growing off-platform ledger, not a
+  // handful of rows) just to show its count — one pass per dimension instead.
+  const catCounts = useMemo(() => { const m = new Map<string, number>(); for (const it of items) { const c = methodCat(it); m.set(c, (m.get(c) ?? 0) + 1); } return m; }, [items]);
+  const voucherCounts = useMemo(() => { const m = new Map<string, number>(); for (const it of items) if (it.voucherScheme && methodCat(it) === "Childcare vouchers") m.set(it.voucherScheme, (m.get(it.voucherScheme) ?? 0) + 1); return m; }, [items]);
+
   const filtered = useMemo(() => items.filter((it) => {
     if (cat !== "All" && methodCat(it) !== cat) return false;
     if (cat === "Childcare vouchers" && voucherSub && it.voucherScheme !== voucherSub) return false;
@@ -205,7 +211,7 @@ export function ReconciliationApp() {
         {cats.map((c) => (
           <button key={c} type="button" onClick={() => { setCat(c); setVoucherSub(""); }} className="rounded-full border px-3.5 py-1.5 text-[12.5px] font-bold transition-all duration-150 hover:-translate-y-px"
             style={cat === c ? { borderColor: "transparent", background: c === "All" ? "linear-gradient(180deg,#4f8bf5,#2f6bd8)" : (CAT_C[c] ?? "#1d3a8f"), color: "#fff", boxShadow: "0 3px 10px -2px rgba(47,107,216,.45)" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-            {c}{c !== "All" && <span className={cat === c ? "ml-1 opacity-80" : "ml-1 text-[var(--ink-3)]"}>{items.filter((it) => methodCat(it) === c).length}</span>}
+            {c}{c !== "All" && <span className={cat === c ? "ml-1 opacity-80" : "ml-1 text-[var(--ink-3)]"}>{catCounts.get(c) ?? 0}</span>}
           </button>
         ))}
       </div>
@@ -217,7 +223,7 @@ export function ReconciliationApp() {
           {["", ...voucherSchemes].map((v) => (
             <button key={v || "all"} type="button" onClick={() => setVoucherSub(v)} className="rounded-full border px-3 py-1 text-[12px] font-bold transition-colors"
               style={voucherSub === v ? { borderColor: "transparent", background: "#7c3aed", color: "#fff" } : { borderColor: "var(--line)", background: "var(--surface)", color: "var(--ink-2)" }}>
-              {v || "All providers"}{v && <span className={voucherSub === v ? "ml-1 opacity-80" : "ml-1 text-[var(--ink-3)]"}>{items.filter((it) => it.voucherScheme === v).length}</span>}
+              {v || "All providers"}{v && <span className={voucherSub === v ? "ml-1 opacity-80" : "ml-1 text-[var(--ink-3)]"}>{voucherCounts.get(v) ?? 0}</span>}
             </button>
           ))}
         </div>

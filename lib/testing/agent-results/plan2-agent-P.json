@@ -1,0 +1,245 @@
+{
+  "p2-hv1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST create (deliveryMode:home-visit, coverageArea postcodePrefixes, no venueId) \u2192 201; PUT status:live \u2192 200 ",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-hv2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "draft create (no coverageArea) \u2192 201; PUT status:live \u2192 400 \"Can't publish yet \u2014 this listing needs a home-visit coverage area.\"",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-hv3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "full radius (basePostcode+radiusMiles:5) publish \u2192 200; incomplete radius (basePostcode only) publish via the API \u2192 400 \"Can't publish yet \u2014 this listing needs a home-visit coverage area.\" (expected 400 \u2014 publishProblems requires the FULL radius config to go live, separately confirmed by p2-hv2's coverage-area gate); listing put live directly (bypassing publish) to exercise checkCoverage itself: booking against it with a far-away postcode (M1 1AE) \u2192 201 201 \u2014 unenforced, matching checkCoverage's early-return comment: 'not fully configured \u2014 don't block'",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-hv4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST booking with serviceAddress {12 Example Street, SW1 2AB} against postcodePrefixes:[SW1,SW2] listing \u2192 201; returned serviceAddress={\"address\":\"12 Example Street\",\"postcode\":\"SW1 2AB\"}",
+    "notes": "booking ref APF-10313",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-hv5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "booking with postcode M1 1AE (outside SW1/SW2) \u2192 409 \"Sorry, M1 1AE is outside this provider's home-visit coverage area\"",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-hv6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "booking with no serviceAddress and no saved account address \u2192 400 \"This provider comes to you \u2014 add the address the session should run at\"",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-hv7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "first booking 10:00\u201311:00 \u2192 201; second booking 11:10\u201312:00 (10 min gap, under minGapMinutes:20) \u2192 409 \"That clashes with your existing booking APF-10314 (10:00\u201311:00 on Tue 29 Sept) \u2014 you need at least 20 minutes between sessions.\"",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-hv8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "first booking 10:00\u201311:00 \u2192 201; second exactly 20 min later, 11:20\u201312:00 \u2192 201 (boundary allowed \u2014 sessionsClearGap isn't strictly-greater-than)",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-hv9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "operator confirm hv4 booking (APF-10313) \u2192 200; mail log saw a \"Booking confirmed\" send attempt: false ([mail] \"Booking request received \u2014 P2H16 A Venue Camp 2\" \u2192 p2hmu3lrv8c-pa-g9g869@p2h.test SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it)); source-confirmed: closing text says \"We'll come to you!\" when serviceAddress.postcode is set: true; location row label is \"We'll come to you at\" for a home-visit context: true",
+    "notes": "sendMail is fire-and-forget and goes through the real Resend SMTP config with MAIL_ALLOWLIST gating the actual recipient \u2014 the rendered HTML body itself isn't interceptable from the test process, so the exact closing/label strings are verified by reading emails.ts directly (lines confirmed present) rather than parsing a captured email.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-hv10": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "MyBookingsApp.tsx reads b.serviceAddress?.address / ?.postcode at 2 render site(s) (expect 2: booking-card hero + expanded detail), each rendering \"\ud83d\ude97 We'll come to you at ...\": true. A venue booking (no serviceAddress) falls through the same ternary's else-branch to its normal venue text, since both sites gate on b.serviceAddress? truthiness first.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "amount -10 \u2192 400 [{\"code\":\"too_small\",\"minimum\":0,\"type\":\"number\",\"inclusive\":false,\"exact\":false,\"message\":\"Number must be greater than 0\",\"path\":[\"amount\"]}]; amount 99999 on a \u00a320 booking \u2192 400 \"\u00a399999.00 is more than this booking's \u00a320.00 outstanding balance (\u00a320.00 total, \u00a30.00 already recorded) \u2014 check the amount.\"; amount \"ten\" \u2192 400 [{\"code\":\"invalid_type\",\"expected\":\"number\",\"received\":\"string\",\"path\":[\"amount\"],\"message\":\"Expected number, received string\"}]; amountPaid before=0 after all three=undefined",
+    "notes": "Fixed \u2014 server/src/routes/bookings.ts record-payment now refuses an amount that would overpay past the booking's own total (Overpay class + 400), unless the booking is Cancelled/Declined (where post-cancel money is tracked separately via receivedAfterCancel, unaffected).",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "tenant subscription.status=past_due, pastDueSince=15 days ago (readonly mode); POST /api/listings \u2192 402 \"Your provider's ActivityOS payment is overdue, so listings are read-only for now.\"",
+    "notes": "Fixed \u2014 server/src/routes/listings.ts POST/PUT/DELETE now check subscriptionRefusal() (accessFor+subscriptionState from middleware/subscription.ts) since /api/listings is mounted before the /api-wide enforceSubscription wall and always has been.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "tenant subscription.status=canceled (locked mode); POST /api/listings \u2192 402 \"Your provider's ActivityOS subscription has ended, so listings can't be changed right now.\"",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "plain staff (not assigned/lead) GET dossier \u2192 403 \"You don't have access to this record\"",
+    "notes": "Fixed \u2014 server/src/routes/incidents.ts dossier route now splits the !snap.exists/wrong-tenant case (still 404, hides existence) from the exists-but-not-visible-to-this-staffer case (now 403).",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "first administer \u2192 201; second, same med within a second \u2192 409 \"A dose of Calpol was just recorded a moment ago \u2014 is this a genuine second dose? Confirm to record it anyway.\"",
+    "notes": "Fixed \u2014 server/src/routes/medications.ts administer route now refuses a second dose of the SAME medication within a 2-minute window unless confirmDuplicate:true is sent (the record-payment duplicate pattern, scoped to per-medication since dose timing/witness legitimately varies more than a payment amount).",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "medication expiryDate=yesterday; administer \u2192 409 \"Piriton expired on 2026-09-15 \u2014 check the medication before recording a dose.\"",
+    "notes": "Fixed \u2014 administer now refuses when med.expiryDate is before the dose date.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt7": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "plain staff (not a lead) POST send-message \u2192 200 {\"ok\":true,\"sent\":0}",
+    "notes": "Still 200 \u2014 trips.ts own() allows any staff who can see the trip to send; whoCanPlan gates planning, not sending. This is the SAME open product-decision noted originally (not fixed this round \u2014 deciding staff-vs-lead send permission is Kaz's call, not a code typo).",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "SVG-with-<script> sent labelled image/png \u2192 400 \"That file's contents don't match its declared image type\"",
+    "notes": "Fixed \u2014 server/src/routes/uploads.ts now magic-byte-sniffs all four accepted image mimes (PNG/JPEG/GIF/WEBP), not just PDF's %PDF- check; an SVG's real bytes don't match any of the four signatures so it's rejected regardless of its declared Content-Type.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "overlapping an approved absence (self, 30-34d ahead vs new 32-36d) \u2192 409 \"RT9 Staff already has approved leave that overlaps these dates (2026-10-16 \u2013 2026-10-20).\"; a day last month (self-request) \u2192 400 \"That start date is in the past \u2014 leave can only be requested from today onwards.\"",
+    "notes": "Fixed \u2014 server/src/routes/leave.ts POST /absences now refuses (409) any request overlapping the SAME person's existing pending/approved leave, and refuses (400) a self-requested start date before today. A MANAGER recording historical leave for someone else is deliberately exempt from the past-date check (legitimate backdating of a real absence).",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt10": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "approve leave for Sam on the date they're rostered \u2192 201; GET /api/rota shift row \u2192 {\"id\":\"rt10sh1\",\"staffId\":\"sam\",\"site\":\"v1\",\"role\":\"Coach\",\"date\":\"2026-10-26\",\"start\":\"09:00\",\"end\":\"15:00\"}",
+    "notes": "Still fails: server/src/routes/rota.ts never reads the absences collection \u2014 GET /api/rota returns the shift with staffId still set, no uncovered/needsCover flag. Genuinely joining rota+leave (deciding the field name, whether it's computed at read time or on leave-approval, and how the Schedule screen should render it) is a real feature addition, not a small clear fix \u2014 left open, same as originally recorded.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "pass mark 80, POST completion score=40 \u2192 422 {\"error\":\"Score 40% is under the pass mark of 80% \u2014 not recorded as a completion.\",\"code\":\"below_pass_mark\",\"passMark\":80}",
+    "notes": "Already fixed in a prior round (server/src/routes/learning.ts:211-213 reads Setup's learning.passMark and 422s below it with code:below_pass_mark) \u2014 this retest just confirms it's not regressed.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt12": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "booking placed (201); plain POST /api/messages {parentEmail, body:\"See you on {SessionDate}\"} \u2192 201; stored/echoed body: \"See you on {SessionDate}\" \u2014 token left literal: true",
+    "notes": "needsBackend (Amir item 29, unchanged): the plain composer (messages.ts POST /) still sends the body verbatim \u2014 only /from-booking and /broadcast resolve merge fields. Not fixed this round; it's a shared-resolver refactor, not a small isolated fix, and was already tracked as owed backend work.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt13": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1 has no activity of its own; HO booking + F2's booking (category:booking) logged; $F1 GET /api/notifications sees 0 (expect 0 \u2014 belongs to neither its own franchise nor untagged); $L (staff, site lead assigned to v1, not franchise/company role) sees 0 (expect 0 \u2014 booking isn't in STAFF_CATEGORIES, applies even to a site lead); $C (head office) sees 2 (expect >=2 \u2014 HO sees everything)",
+    "notes": "Confirmed as designed, not a bug: staff bells only ever show STAFF_CATEGORIES (accident/medication/trip/calendar/moment/register/task \u2014 lib/notify.ts:398); booking/meal-order alerts never reach ANY staff bell including a site lead's, by design. Franchise scoping (F1 seeing none of F2's or HO's activity) is intact.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt14": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": ".exe bytes (MZ header) sent as data:image/png \u2192 400 \"That file's contents don't match its declared image type\"",
+    "notes": "Passes now as a DIRECT SIDE EFFECT of the p2-rt8/p2-s22 magic-byte fix (uploads.ts now checks PNG/JPEG/GIF/WEBP signatures for every image upload, not just PDF) \u2014 the exe's MZ header simply doesn't match any accepted image signature either. This was NOT a separate deliberate decision about renamed executables specifically; it fell out of closing the broader 'declared mime is trusted outright' hole that p2-s22 flagged. No separate product judgment call was made about disguised-executable policy beyond that.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt15": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "grep 'toISOString().slice(0, 10)' / '.split' in server/src on 15 Sept vs the 27 files found on 22 Oct (day 14): now 0 file(s). Fixed since: [lib/blockDomain.ts, lib/emailSend.ts, lib/listingRuns.ts, lib/staffPolicy.ts, lib/sweeps.ts, routes/bookings.ts, routes/compliance.ts, routes/credentials.ts, routes/discounts.ts, routes/expenses.ts, routes/growth.ts, routes/income.ts, routes/invoices.ts, routes/my.ts, routes/payroll.ts, routes/platformSupport.ts, routes/privacy.ts, routes/purchasing.ts, routes/splitfees.ts, routes/staffAnnouncements.ts, routes/tasks.ts, seedAvailabilityRequest.ts, seedCompanyDemo.ts, seedFranchiseDemo.ts, seedGrowthDemo.ts, seedRegisterDemo.ts, seedTfcDemo.ts]. New since: [none].",
+    "notes": "Same 27-file set, unchanged since day 14 \u2014 a known, tracked b35 leftover (UTC 'today' vs a provider's local day), not touched this round.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt16": {
+    "verdict": "blocked",
+    "method": "api",
+    "actual": "POST /api/tenants/welcome \u2192 404 \"\". Route confirmed absent: false. Same as originally recorded \u2014 the only \"welcome\" route is POST /api/me/welcome (parent first-login popup stamp), not a provider welcome email.",
+    "notes": "Feature doesn't exist \u2014 not something to fix in a bug-fix pass. Still tracked for product/Amir, unchanged.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt17": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "grep -rniE \"second.?carer|co.?parent|secondary.?carer\" features/parent server/src \u2192 0 hits",
+    "notes": "Confirmed still unbuilt, no half-built path \u2014 a known, tracked gap, not a regression.",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  },
+  "p2-rt18": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "basket body with listingId sent as [L1,L2] (two listings) instead of a single string \u2192 400 [{\"code\":\"invalid_type\",\"expected\":\"string\",\"received\":\"array\",\"path\":[\"listingId\"],\"message\":\"Expected string, received array\"}]; a normal single-listing basket \u2192 201",
+    "notes": "basketSchema (server/src/routes/my.ts:116-117) still declares a single listingId: z.string() \u2014 a malformed multi-listing shape fails schema validation cleanly (400), never reaches booking logic, never 500s. Multi-listing checkout itself remains unbuilt, as originally recorded (backlog d23s3).",
+    "evidence": "server/scripts/plan2/p2H_day16.mts",
+    "at": "2026-09-16T04:36:08.292822Z",
+    "agent": "plan2-P"
+  }
+}

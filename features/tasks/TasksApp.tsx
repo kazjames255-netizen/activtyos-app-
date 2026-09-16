@@ -101,6 +101,9 @@ const byTimeThenPrio = (a: Task, b: Task) => {
   if (at !== bt) return at ? -1 : 1;
   return byPrioDue(a, b);
 };
+// Shared empty-array reference for "no tasks in this bucket" lookups below, so
+// a miss doesn't hand out a fresh array every call.
+const EMPTY_TASKS: Task[] = [];
 const COLS: { k: Status; label: string; color: string }[] = [
   { k: "backlog", label: "Backlog", color: "#8a93a6" }, { k: "todo", label: "To do", color: "#3b82f6" },
   { k: "prog", label: "In progress", color: "#f59e0b" }, { k: "done", label: "Done", color: "#16b364" },
@@ -175,19 +178,30 @@ function QuickLinks({ tasks, me, onOpen }: { tasks: Task[]; me: string; onOpen: 
   const [mine, setMine] = useState(false);
   // One row per LINK, not per task: a repeating task carries the same link on
   // every date, which listed one spreadsheet 24 times.
-  const byUrl = new Map<string, { u: TaskUrl; tasks: Task[] }>();
-  for (const t of tasks) for (const u of t.urls ?? []) {
-    const g = byUrl.get(u.url);
-    if (!g) byUrl.set(u.url, { u, tasks: [t] });
-    else { if (!g.tasks.includes(t)) g.tasks.push(t); if (!g.u.title && u.title) g.u = u; }
-  }
+  // This is a plain-body loop over every task's urls, which used to re-run on
+  // EVERY render of QuickLinks — including one caused by typing in the page's
+  // main search box above, which re-renders the whole TasksApp tree, whether
+  // or not this popover is even open. Memoized on `tasks` (a tenant's whole
+  // non-archived task history) so it only redoes the work when the tasks
+  // themselves change.
+  const byUrl = useMemo(() => {
+    const m = new Map<string, { u: TaskUrl; tasks: Task[] }>();
+    for (const t of tasks) for (const u of t.urls ?? []) {
+      const g = m.get(u.url);
+      if (!g) m.set(u.url, { u, tasks: [t] });
+      else { if (!g.tasks.includes(t)) g.tasks.push(t); if (!g.u.title && u.title) g.u = u; }
+    }
+    return m;
+  }, [tasks]);
   const today = new Date().toISOString().slice(0, 10);
   // The task a link row opens: the next one due from today, else the latest.
   const nextOf = (ts: Task[]) => [...ts].sort((a, b) => { const ka = a.due ?? "9999", kb = b.due ?? "9999"; const fa = ka >= today, fb = kb >= today; return fa !== fb ? (fa ? -1 : 1) : fa ? ka.localeCompare(kb) : kb.localeCompare(ka); })[0];
   const term = q.trim().toLowerCase();
-  const rows = [...byUrl.values()]
+  // The filter/sort below only matters while the popover is open — no point
+  // paying for it (however small) on renders where nobody can see `rows`.
+  const rows = open ? [...byUrl.values()]
     .filter(({ u, tasks: ts }) => (!mine || (u.by ?? "") === me) && (!term || [u.title ?? "", u.url, urlKind(u.url).label, ...ts.map((t) => t.t)].some((x) => x.toLowerCase().includes(term))))
-    .sort((a, b) => (nextOf(a.tasks).due ?? "9999").localeCompare(nextOf(b.tasks).due ?? "9999"));
+    .sort((a, b) => (nextOf(a.tasks).due ?? "9999").localeCompare(nextOf(b.tasks).due ?? "9999")) : [];
   return (
     <span className="relative shrink-0">
       <button type="button" onClick={() => setOpen((v) => !v)} aria-expanded={open} title="All the links on your open tasks"
@@ -1139,7 +1153,22 @@ function BoardColumn({ c, list, today, noAssignee, over, setOver, drag, setDrag,
 function Calendar({ tasks, anchor, setAnchor, view, setView, today, noAssignee, onOpen, onStatus }: { tasks: Task[]; anchor: string; setAnchor: (d: string) => void; view: "day" | "week" | "month"; setView: (v: "day" | "week" | "month") => void; today: string; noAssignee: boolean; onOpen: (id: string) => void; onStatus: (t: Task, s: Status) => void }) {
   // Which day has its overflow list open.
   const [moreDay, setMoreDay] = useState<string | null>(null);
-  const on = (iso: string) => tasks.filter((t) => t.due === iso).slice().sort(byTimeThenPrio);
+  // Month view calls this per cell (up to ~42) and week view per day (7), each
+  // read up to twice (once for the list, once for the "+N more" count) — that
+  // used to mean a full re-scan of `tasks` (every non-archived task a tenant
+  // has, potentially years' worth) per cell, per render. One pass groups them
+  // by due date instead, so each cell is a Map lookup.
+  const byDue = useMemo(() => {
+    const m = new Map<string, Task[]>();
+    for (const t of tasks) {
+      if (!t.due) continue;
+      const arr = m.get(t.due);
+      if (arr) arr.push(t); else m.set(t.due, [t]);
+    }
+    for (const arr of m.values()) arr.sort(byTimeThenPrio);
+    return m;
+  }, [tasks]);
+  const on = (iso: string) => byDue.get(iso) ?? EMPTY_TASKS;
   const dowMon = (iso: string) => (new Date(`${iso}T00:00:00Z`).getUTCDay() + 6) % 7; // 0=Mon
   const weekStart = shiftIso(anchor, -dowMon(anchor));
   const step = view === "day" ? 1 : view === "week" ? 7 : 0;
@@ -1541,11 +1570,27 @@ function TeamView({ tasks, team, filter, setFilter, sort, setSort, today, onOpen
   // but only one of those strings is in `team`, so the other lot appeared in no
   // group at all — "5 matches" up top, one row below. Your own bucket matches on
   // identity (email first, then name), the same rule "My tasks" uses.
-  const byOf = (who: string) => tasks.filter((t) => (
-    who === "__unassigned" ? !t.who || t.who.trim() === ""
-      : personLabel(who) === "Me" ? isMine(t)
-      : (t.who || "") === who
-  ));
+  //
+  // This used to be one full scan of `tasks` PER PERSON (`.filter()` inside
+  // `byOf`), called again for every chip's count AND again for every person's
+  // list below — a tenant's whole task history times the size of the team,
+  // twice, on every render (including every keystroke of the global search
+  // box upstream). One pass buckets every task by its owner instead; `team`
+  // has at most one entry whose identity is "Me" (the roster excludes your
+  // own aliases — see `team` in TasksApp), so it's resolved once up front.
+  const meKey = team.find((w) => personLabel(w) === "Me");
+  const buckets = useMemo(() => {
+    const m = new Map<string, Task[]>();
+    const add = (k: string, t: Task) => { const a = m.get(k); if (a) a.push(t); else m.set(k, [t]); };
+    for (const t of tasks) {
+      if (!t.who || t.who.trim() === "") { add("__unassigned", t); continue; }
+      if (meKey && isMine(t)) add(meKey, t);
+      else add(t.who, t);
+    }
+    return m;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tasks, meKey]);
+  const byOf = (who: string) => buckets.get(who) ?? EMPTY_TASKS;
   const openCount = (who: string) => byOf(who).filter((t) => t.status !== "done").length;
   return (
     <div>

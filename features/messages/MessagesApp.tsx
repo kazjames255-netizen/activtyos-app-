@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -157,7 +157,15 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   useEffect(() => { if (hoScope) setNetFilter(hoScope); }, [hoScope]);
 
   const loadThreads = useCallback(() => {
-    apiGet<Thread[]>("/api/messages/threads").then((t) => { setThreads(t); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : tr("comms.loadFailed")));
+    // Threads accumulate across a tenant's whole message history; useRealtime
+    // refires this on every thread/message change tenant-wide. Bail out of the
+    // state update (keep the same array reference) when the fetched payload is
+    // content-identical to what's loaded, so the counts/filter memos below
+    // don't re-derive over the full list for nothing.
+    apiGet<Thread[]>("/api/messages/threads").then((t) => {
+      setThreads((prev) => { try { if (prev && prev.length === t.length && JSON.stringify(prev) === JSON.stringify(t)) return prev; } catch { /* fall through */ } return t; });
+      setError(null);
+    }).catch((e) => setError(e instanceof Error ? e.message : tr("comms.loadFailed")));
   }, [tr]);
   const loadThread = useCallback((id: string) => {
     apiGet<{ thread: Thread; messages: Message[] }>(`/api/messages/threads/${encodeURIComponent(id)}`).then((r) => { setMessages(r.messages); loadThreads(); }).catch((e) => setError(e instanceof Error ? e.message : tr("comms.failed")));
@@ -327,17 +335,29 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
   const needsReply = (t: Thread) => !!t.lastFrom && t.lastFrom !== mine;
 
   const allThreads = threads ?? [];
-  const counts = {
-    all: allThreads.length,
-    unread: allThreads.filter((t) => unread(t) > 0).length,
-    reply: allThreads.filter(needsReply).length,
-  };
+  // Folder/franchise chip counts used to be `allThreads.filter(...).length` called
+  // once per folder/network chip (a full rescan per chip, on every render) — same
+  // "one pass per option" bug as LeadsApp's dropdown counts. One pass into Maps.
+  const { counts, folderCounts, franchiseCounts } = useMemo(() => {
+    let unreadN = 0, replyN = 0;
+    const folderCounts = new Map<string, number>();
+    const franchiseCounts = new Map<string, number>();
+    for (const t of allThreads) {
+      if (unread(t) > 0) unreadN++;
+      if (needsReply(t)) replyN++;
+      if (t.folderId) folderCounts.set(t.folderId, (folderCounts.get(t.folderId) ?? 0) + 1);
+      const fKey = t.franchiseId || HO_OWN;
+      franchiseCounts.set(fKey, (franchiseCounts.get(fKey) ?? 0) + 1);
+    }
+    return { counts: { all: allThreads.length, unread: unreadN, reply: replyN }, folderCounts, franchiseCounts };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allThreads]);
   const inFolder = (t: Thread) => (activeFolder === "all" ? true : t.folderId === activeFolder);
-  const folderCount = (id: string) => allThreads.filter((t) => t.folderId === id).length;
+  const folderCount = (id: string) => folderCounts.get(id) ?? 0;
   // Head-office network filter: "all" = every franchise, HO_OWN = head-office
   // direct (family with no franchise), otherwise a specific franchiseId.
   const inNetwork = (t: Thread) => !isHo || netFilter === "all" || (netFilter === HO_OWN ? !t.franchiseId : t.franchiseId === netFilter);
-  const shownThreads = allThreads.filter((t) => {
+  const shownThreads = useMemo(() => allThreads.filter((t) => {
     if (!inNetwork(t)) return false;
     if (!inFolder(t)) return false;
     if (statusFilter === "unread" && unread(t) === 0) return false;
@@ -349,7 +369,9 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
       if (!hay.includes(q.trim().toLowerCase())) return false;
     }
     return true;
-  });
+  }),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  [allThreads, isHo, netFilter, activeFolder, statusFilter, q, mode]);
   const filterTabs: { key: "all" | "unread" | "reply"; label: string }[] = [
     { key: "all", label: tr("comms.all") },
     { key: "reply", label: mode === "operator" ? tr("comms.needsReply") : tr("comms.awaitingYou") },
@@ -513,8 +535,8 @@ export function MessagesApp({ mode }: { mode: "operator" | "parent" }) {
                     <div className="flex flex-wrap gap-1">
                       {[
                         { id: "all", label: tr("comms.allNetworks"), n: allThreads.length },
-                        { id: HO_OWN, label: tr("comms.hoDirect"), n: allThreads.filter((t) => !t.franchiseId).length },
-                        ...franchises.map((f) => ({ id: f.franchiseId, label: f.name, n: allThreads.filter((t) => t.franchiseId === f.franchiseId).length })),
+                        { id: HO_OWN, label: tr("comms.hoDirect"), n: franchiseCounts.get(HO_OWN) ?? 0 },
+                        ...franchises.map((f) => ({ id: f.franchiseId, label: f.name, n: franchiseCounts.get(f.franchiseId) ?? 0 })),
                       ].map((opt) => {
                         const on = netFilter === opt.id;
                         return (

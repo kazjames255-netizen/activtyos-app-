@@ -133,8 +133,21 @@ export function ExpensesApp({ embedded = false }: { embedded?: boolean } = {}) {
 
   const hoScope = useHoScope(); // head office: read only this network's own money
   const refresh = useCallback(() => {
-    apiGet<Payload>(withHoNet("/api/expenses")).then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
-    apiGet<Supplier[]>("/api/suppliers").then((s) => setSuppliers(Array.isArray(s) ? s : [])).catch(() => {});
+    apiGet<Payload>(withHoNet("/api/expenses")).then((p) => {
+      // Realtime refires this on every expenses/suppliers change tenant-wide; bail out of the
+      // state update (keep the old array reference) when the payload is content-identical to
+      // what's loaded, so the items/filtered/etc useMemos below don't re-derive for nothing.
+      setData((prev) => {
+        try { if (prev && prev.items.length === p.items.length && JSON.stringify(prev) === JSON.stringify(p)) return prev; } catch { /* fall through */ }
+        return p;
+      });
+      setError(null);
+    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Supplier[]>("/api/suppliers").then((s) => setSuppliers((prev) => {
+      const next = Array.isArray(s) ? s : [];
+      try { if (prev.length === next.length && JSON.stringify(prev) === JSON.stringify(next)) return prev; } catch { /* fall through */ }
+      return next;
+    })).catch(() => {});
   }, [hoScope]);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<Sub>("/api/subscription").then(setSub).catch(() => {}); }, []);

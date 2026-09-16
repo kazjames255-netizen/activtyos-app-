@@ -258,6 +258,26 @@ export interface WizardDraft {
   ageTo: string;
   categoryIds: string[];
   venueId: string | null;
+  /** Where sessions happen: a fixed "venue" (the default), a "home-visit"
+   *  provider who travels to the family, or "both" — a venue plus a coverage
+   *  area for visits. Absent on older listings = "venue" (unchanged behaviour). */
+  deliveryMode?: "venue" | "home-visit" | "both";
+  /** Where a home-visit ("home-visit" or "both") listing will travel to — either
+   *  a flat list of postcode prefixes ("SW1", "SW2 1") or a radius in miles
+   *  from the provider's base postcode. Checkout validates the family's service
+   *  address against this before the booking is allowed. */
+  coverageArea?: {
+    mode: "postcodePrefixes" | "radius";
+    postcodePrefixes?: string[];
+    basePostcode?: string;
+    radiusMiles?: number;
+  } | null;
+  /** Freelancer manual scheduling control (product decision: no algorithmic
+   *  travel-time buffers for freelancers) — the minimum gap, in minutes, the
+   *  provider wants between the end of one session and the start of the next.
+   *  Plain no-overlap-plus-gap check, enforced when a booking is placed.
+   *  Freelancer-editable; default 30. */
+  minGapMinutes?: number;
   /** Which season this listing runs in (Setup → Seasons). Drives the season
    *  filter on Bookings, Audiences and money-in. Null = not set. */
   seasonId?: string | null;
@@ -384,7 +404,13 @@ export function publishBlockers(d: WizardDraft, ticketCount: number, visibleTick
   const at = (key: string) => Math.max(0, STEPS.findIndex((x) => x.key === key));
   const out: { step: number; what: string }[] = [];
   if (!d.title.trim()) out.push({ step: at("basics"), what: "Give the listing a name" });
-  if (!d.venueId) out.push({ step: at("details"), what: "Choose where it runs (or pick your online option)" });
+  const homeVisit = d.deliveryMode === "home-visit" || d.deliveryMode === "both";
+  if (d.deliveryMode !== "home-visit" && !d.venueId) out.push({ step: at("details"), what: "Choose where it runs (or pick your online option)" });
+  if (homeVisit && !d.coverageArea) out.push({ step: at("details"), what: "Set the area you'll travel to for home visits" });
+  else if (homeVisit && d.coverageArea?.mode === "postcodePrefixes" && !(d.coverageArea.postcodePrefixes ?? []).length)
+    out.push({ step: at("details"), what: "Add at least one postcode area you cover" });
+  else if (homeVisit && d.coverageArea?.mode === "radius" && (!d.coverageArea.basePostcode || !d.coverageArea.radiusMiles))
+    out.push({ step: at("details"), what: "Set your base postcode and travel radius" });
   if (!d.runFrom || !d.runTo) out.push({ step: at("run"), what: "Set the dates it runs between" });
   else if (d.runTo < d.runFrom) out.push({ step: at("run"), what: "The end date is before the start date" });
   else if (!genDates(d.runFrom, d.runTo, d.days).filter((x) => !(d.datesOff ?? []).includes(x)).length) {
@@ -419,7 +445,7 @@ export function emptyDraft(defaults?: {
     // Basics step can show the real crop-and-move panel (a file upload can't be
     // driven from the tour). Real accounts always start empty.
     id: null, title: "", images: isDemoMode() ? [{ src: "/mockups/listing-hero-sample.svg", x: 50, y: 50, zoom: 100 }] : [], gallery: [], layout: "big", ageFrom: "", ageTo: "",
-    categoryIds: [], venueId: null, seasonId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
+    categoryIds: [], venueId: null, deliveryMode: "venue", coverageArea: null, minGapMinutes: 30, seasonId: null, allowOutOfRange: false, maxAttendees: String(defaults?.defaultCapacity ?? 60), capacityScope: "listing", showSpaces: defaults?.showSpaces ?? true,
     descriptionSection: "Summary", description: "", sections: [], outcomes: [], provided: [], toBring: [], safety: [], send: [],
     runFrom: "", runTo: "", blockMode: "weekly", days: defaults?.defaultRunningDays ?? [1, 2, 3, 4, 5], datesOff: [], blockId: null,
     mealsEnabled: false, mealPlan: {},
@@ -648,7 +674,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
   // The basket is per child and per date; the API takes one block per call, so
   // a basket spanning two weeks goes as two calls. Flagged to Amir — the server
   // is the better place to accept a mixed basket.
-  async function book(basket: BasketItem[], dayAssign: Record<string, Record<string, string[]>>, addonSel: Record<string, Record<string, string[]>>, method: string, children: ChildProfile[] = [], addonAns: Record<string, Record<string, string>> = {}, voucherScheme?: string, discountCodes?: string[], voucherRefs?: Record<string, string>, walletCap?: number, phone?: string, mealSel: Record<string, string> = {}) {
+  async function book(basket: BasketItem[], dayAssign: Record<string, Record<string, string[]>>, addonSel: Record<string, Record<string, string[]>>, method: string, children: ChildProfile[] = [], addonAns: Record<string, Record<string, string>> = {}, voucherScheme?: string, discountCodes?: string[], voucherRefs?: Record<string, string>, walletCap?: number, phone?: string, mealSel: Record<string, string> = {}, serviceAddress?: { address: string; postcode: string }) {
     setBookState({ busy: true, error: null });
     try {
       // Save children we haven't seen before, so next time is one tap. A
@@ -707,6 +733,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
           ...(sendCodes ? { discountCodes } : {}),
           ...(walletThisPost !== undefined ? { walletCap: walletThisPost } : {}),
           ...(phone?.trim() ? { phone: phone.trim() } : {}),
+          ...(serviceAddress?.postcode?.trim() ? { serviceAddress } : {}),
           items: items.map((l) => {
             // That child's own extras on that line, with the days they picked.
             const sel = addonSel[`${l.itemId}|${l.child}`] ?? {};
@@ -857,7 +884,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       mode="parent"
       theme="playful"
       bookState={bookState}
-      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes, p.voucherRefs, p.walletCap, p.phone, p.mealSel)}
+      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes, p.voucherRefs, p.walletCap, p.phone, p.mealSel, p.serviceAddress)}
     />
   );
 
@@ -875,7 +902,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
       tenantId={listing.tenantId}
       mode="parent"
       bookState={bookState}
-      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes, p.voucherRefs, p.walletCap, p.phone, p.mealSel)}
+      onBook={(p) => void book(p.basket, p.dayAssign, p.addonSel, p.method, p.children, p.addonAns, p.voucherScheme, p.discountCodes, p.voucherRefs, p.walletCap, p.phone, p.mealSel, p.serviceAddress)}
       topRight={topRight}
       full
     />
@@ -892,7 +919,7 @@ export function CustomerPage({ listing, topRight, bookingOnly, logo }: { listing
  */
 export function BookingOnly({ listing, onBook, bookState, mode = "operator", theme }: {
   listing: ServerListing;
-  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void;
   bookState?: { busy: boolean; error: string | null };
   /** "operator" (Take booking) or "parent" (Quick book). */
   mode?: "operator" | "parent";
@@ -1526,12 +1553,73 @@ function DetailsStep({ d, upd, local, patchLocal }: { d: WizardDraft; upd: (p: P
         <div className="w-[110px]"><FieldLabel>Age to</FieldLabel><Input type="number" min={0} value={d.ageTo} onChange={(e) => upd({ ageTo: e.target.value })} className="w-full" /></div>
       </div>
 
-      <SectionHead icon="📍">Venue</SectionHead>
-      <Select value={d.venueId ?? ""} onChange={(e) => upd({ venueId: e.target.value || null })} className="mb-1 w-full max-w-[360px]">
-        <option value="">Select a venue…</option>
-        {local.venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
-      </Select>
-      <div className="mb-3 text-[11px] text-[var(--ink-3)]">Address &amp; map pin are set per venue in <b>Locations</b>.</div>
+      <SectionHead icon="🚗">How sessions are delivered</SectionHead>
+      <div className="mb-2 flex flex-wrap gap-1.5">
+        {([["venue", "At a venue"], ["home-visit", "Home visits"], ["both", "Both"]] as [NonNullable<WizardDraft["deliveryMode"]>, string][]).map(([mode, label]) => {
+          const on = (d.deliveryMode ?? "venue") === mode;
+          return (
+            <button key={mode} type="button" onClick={() => upd({ deliveryMode: mode, ...(mode === "home-visit" && !d.coverageArea ? { coverageArea: { mode: "postcodePrefixes", postcodePrefixes: [] } } : {}) })}
+              className="rounded-full border px-3 py-1.5 text-[12px] font-bold"
+              style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+              {on ? "✓ " : ""}{label}
+            </button>
+          );
+        })}
+      </div>
+      <div className="mb-3 text-[11px] text-[var(--ink-3)]">Home visits: you travel to the family instead of (or as well as) running at a fixed venue.</div>
+
+      {(d.deliveryMode ?? "venue") !== "home-visit" && (<>
+        <SectionHead icon="📍">Venue</SectionHead>
+        <Select value={d.venueId ?? ""} onChange={(e) => upd({ venueId: e.target.value || null })} className="mb-1 w-full max-w-[360px]">
+          <option value="">Select a venue…</option>
+          {local.venues.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
+        </Select>
+        <div className="mb-3 text-[11px] text-[var(--ink-3)]">Address &amp; map pin are set per venue in <b>Locations</b>.</div>
+      </>)}
+
+      {(d.deliveryMode === "home-visit" || d.deliveryMode === "both") && (
+        <div className="mb-3 rounded-xl border border-[var(--line)] bg-[var(--panel)] p-3">
+          <div className="mb-2 text-[11.5px] font-bold">Coverage area — where you&rsquo;ll travel to</div>
+          <div className="mb-2 flex gap-1.5">
+            {([["postcodePrefixes", "Postcode list"], ["radius", "Radius from base"]] as [NonNullable<WizardDraft["coverageArea"]>["mode"], string][]).map(([mode, label]) => {
+              const on = (d.coverageArea?.mode ?? "postcodePrefixes") === mode;
+              return (
+                <button key={mode} type="button" onClick={() => upd({ coverageArea: { ...d.coverageArea, mode } })} className="rounded-full border px-3 py-1 text-[11.5px] font-bold"
+                  style={on ? { borderColor: "var(--brand-2)", background: "var(--brand-soft)", color: "var(--brand-ink)" } : { borderColor: "var(--line)", color: "var(--ink-3)" }}>
+                  {on ? "✓ " : ""}{label}
+                </button>
+              );
+            })}
+          </div>
+          {(d.coverageArea?.mode ?? "postcodePrefixes") === "postcodePrefixes" ? (
+            <>
+              <Input
+                value={(d.coverageArea?.postcodePrefixes ?? []).join(", ")}
+                onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "postcodePrefixes" }), mode: "postcodePrefixes", postcodePrefixes: e.target.value.split(",").map((s) => s.trim().toUpperCase()).filter(Boolean) } })}
+                placeholder="e.g. SW1, SW2, TW9"
+                className="mb-1 w-full max-w-[360px]"
+              />
+              <div className="text-[11px] text-[var(--ink-3)]">Comma-separated postcode areas/districts you&rsquo;ll visit (e.g. &ldquo;SW1, SW2, TW9 1&rdquo;). A booking&rsquo;s postcode must start with one of these.</div>
+            </>
+          ) : (
+            <div className="flex flex-wrap items-end gap-3">
+              <div>
+                <FieldLabel>Base postcode</FieldLabel>
+                <Input value={d.coverageArea?.basePostcode ?? ""} onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "radius" }), mode: "radius", basePostcode: e.target.value } })} placeholder="e.g. SW1A 1AA" className="w-[160px]" />
+              </div>
+              <div>
+                <FieldLabel>Radius (miles)</FieldLabel>
+                <Input type="number" min={1} value={d.coverageArea?.radiusMiles ?? ""} onChange={(e) => upd({ coverageArea: { ...(d.coverageArea ?? { mode: "radius" }), mode: "radius", radiusMiles: e.target.value ? Number(e.target.value) : undefined } })} className="w-[100px]" />
+              </div>
+            </div>
+          )}
+          <div className="mt-2 text-[11px] text-[var(--ink-3)]">Minimum gap between sessions</div>
+          <div className="mt-1 flex items-center gap-2">
+            <Input type="number" min={0} max={480} value={d.minGapMinutes ?? 30} onChange={(e) => upd({ minGapMinutes: e.target.value ? Number(e.target.value) : 0 })} className="w-[100px]" />
+            <span className="text-[11.5px] text-[var(--ink-3)]">minutes — a plain scheduling gap (not travel-time), so back-to-back home visits leave you room to get there.</span>
+          </div>
+        </div>
+      )}
 
       {seasons.length > 0 && (<>
         <SectionHead icon="📅">Season</SectionHead>
@@ -2741,7 +2829,7 @@ function myBrand() {
  * — so everyone gets the same starting gun on a popular run.
  */
 
-type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void; bookState?: { busy: boolean; error: string | null }; tenantId?: string };
+type BookView = { b: ReturnType<typeof useBooking>; d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null }; tenantId?: string };
 
 // Dispatcher — same logic, theme-specific presentation.
 /**
@@ -2815,7 +2903,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
 }
 
 function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful", tenantId }: {
-  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
+  d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
 }) {
   // A family can't pick a day that's already gone (the server enforces it too).
   // Operators still see every day — they may record a past attendance.
@@ -3298,7 +3386,7 @@ function SportBooking({ b, d, booking, weeks, spacesLeft, addons, mode, onBook, 
 function ParentPreview({ d, venue, local, booking, addons, blocks, mode, onBook, bookState, full, theme = "playful", onTheme, brand, logo, tenantId, topRight }: {
   topRight?: React.ReactNode;
   d: WizardDraft; venue: Venue | null; local: LocalState; blocks?: RunBlock[];
-  mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void; bookState?: { busy: boolean; error: string | null };
+  mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null };
   booking: BlockBooking | null; addons: LocalState["addons"]; full?: boolean;
   theme?: PageTheme; onTheme?: (t: PageTheme) => void;
   /** The provider's brand in the page header. Defaults to the signed-in

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
+import { emailProviderWelcome } from "../lib/emails";
 
 // Account provisioning at signup — one shot, then locked:
 //   {role: "parent"}                               → parent account
@@ -140,6 +141,21 @@ registerRole.post("/", async (req, res) => {
   // lead to "won" the instant the tenant exists — no manual board move.
   // Fire-and-forget: the CRM must never be able to block or fail a signup.
   convertMatchingLead(tenantRef.id, businessName, contactEmail || user.email || null, phone ?? null).catch(console.error);
+  // The provider's own welcome — introduces ActivityOS + first steps (add a
+  // listing, invite the team, finish Setup). Ungated by Setup → Email's
+  // "automatic emails" toggles (those are booking/payment traffic, not this
+  // once-ever account email) but still passes through the same MAIL_LIVE
+  // safety gate as every other send (mailer.ts).
+  const welcomeTo = contactEmail || user.email;
+  if (welcomeTo) {
+    emailProviderWelcome({
+      to: welcomeTo,
+      providerName: providerName || businessName,
+      firstName: user.name?.split(" ")[0],
+      portal: role,
+      tenantId: tenantRef.id,
+    });
+  }
   res.status(201).json({ role, tenantId: tenantRef.id, tenantName: businessName });
 });
 

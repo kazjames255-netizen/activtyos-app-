@@ -320,7 +320,15 @@ const administerSchema = z.object({
   given: z.boolean().optional(),
   witnessedBy: z.string().trim().max(120).optional(),
   notes: z.string().trim().max(1_000).optional(), // reaction, refused, etc.
+  // Set when the caller has already been warned about a likely duplicate and
+  // wants it recorded anyway (a genuine second dose can happen).
+  confirmDuplicate: z.boolean().optional(),
 });
+
+// Two administer calls for the SAME medication within this window are almost
+// always a double-tap (slow network retry, an accidental second submit), not
+// a genuine second dose — flag it rather than silently recording both.
+const MED_DUP_WINDOW_MS = 2 * 60 * 1000;
 
 // POST /api/medications/:id/administer — log a dose given. Gated on an
 // authorised, consented, unarchived medication — the safety rule.
@@ -348,6 +356,28 @@ medications.post("/:id/administer", async (req, res) => {
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
     return;
+  }
+  const expiryDate = med.expiryDate as string | undefined;
+  if (expiryDate && expiryDate < parsed.data.date) {
+    res.status(409).json({ error: `${med.name} expired on ${expiryDate} — check the medication before recording a dose.` });
+    return;
+  }
+  if (!parsed.data.confirmDuplicate) {
+    // No orderBy here on purpose — where(medicationId==) alone needs no
+    // composite index; the window compare is cheap to do in memory over a
+    // single medication's (small) admin history.
+    const recent = await adminCol.where("medicationId", "==", req.params.id).get();
+    const lastAt = recent.docs
+      .map((d) => Date.parse((d.data() as { createdAt?: string }).createdAt ?? ""))
+      .filter((t) => Number.isFinite(t))
+      .sort((a, b) => b - a)[0];
+    if (lastAt !== undefined && Date.now() - lastAt <= MED_DUP_WINDOW_MS) {
+      res.status(409).json({
+        error: `A dose of ${med.name} was just recorded a moment ago — is this a genuine second dose? Confirm to record it anyway.`,
+        code: "possible_duplicate",
+      });
+      return;
+    }
   }
   // Both of the following lived ONLY in MedicationApp.tsx — the button was
   // hidden and the form refused to submit, but the endpoint took the dose from

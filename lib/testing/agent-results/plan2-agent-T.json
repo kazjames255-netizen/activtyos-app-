@@ -1,0 +1,167 @@
+{
+  "p2-d20-race1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "capacity:1 block; two bookings fired via Promise.all for the SAME last spot → r1=201 (Waitlisted), r2=201 (Approval needed); confirmed (non-waitlisted) count=1; block.bookedCount afterward=1 (expect confirmed<=1 and bookedCount<=1 — no double-booking of the last seat)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-race2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "FIXED by Fixer 2026-09-16. server/src/routes/leave.ts's POST /absences/:id/decide now wraps the status check + write in db.runTransaction(), re-reading the doc inside the transaction and throwing a 409 Conflict (\"This request has already been decided\") if status is no longer \"pending\". Re-ran the original QA script (server/scripts/plan2/p2H_day20.mts) unmodified: \"same leave request, concurrent decide(approved) + decide(declined) → d1=200, d2=409; final stored status=\\\"approved\\\"\" — exactly one decision wins, the loser gets a clear error instead of a silent overwrite.",
+    "evidence": "server/scripts/plan2/p2H_day20.mts (re-run, now pass); server/src/routes/leave.ts:189-214",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T",
+    "notes": "Fix mirrors the existing refund-approve replay guard pattern (bookings.ts) and the cancel guard added for p2-d18-bk4.",
+    "fixedBy": "fixer",
+    "fixedAt": "2026-09-16"
+  },
+  "p2-d20-race3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "same booking, two concurrent cancel actions → c1=409, c2=200; booking.refundLog length afterward=0",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T",
+    "notes": "Same class as p2-d18-bk4 (day 18) — cancel has no guard against a second cancel of an already-cancelled booking, sequential or concurrent."
+  },
+  "p2-d20-race4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "booking paid then a refund set pending; two concurrent refund-approve calls → r1=409 \"This refund has already been approved\", r2=200 ; number that succeeded=1 (expect <=1 — the transaction + refund-approve replay guard should serialize this, unlike plain cancel)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-race5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "£20 booking; two TRUE-concurrent record-payment {amount:20} calls (Promise.all, not sequential) → p1=200, p2=409; succeeded count=1; final amountPaid=20 (expect exactly one to succeed, amountPaid=20 not 40)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-race6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "usageLimit:1 code; two concurrent bookings both quoting it → r1 applied=false (409), r2 applied=true (201); code.usedCount afterward=1 (expect <=1 — redeemCodesInTx's transaction should serialize even under true concurrency)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-load1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "25 concurrent GET /api/bookings → 25/25 returned 200, 0 returned 5xx, total wall time 896ms",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-load2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "20 concurrent POST /api/incidents → 20/20 returned 201 in 610ms, 20 unique ids, 20 rows actually found in Firestore (expect all three = 20, no lost or duplicated writes under concurrency)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-load3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "mixed burst: 15 concurrent GET /api/dashboard + 5 concurrent POST /api/my/children on the same tenant at once → 0 read 5xxs, 0 write failures, total wall time 688ms",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T",
+    "notes": "(listing 3yyvSA5DYnjQP6Ke3ubn created only to keep the tenant realistically populated for the dashboard reads)"
+  },
+  "p2-d20-integ1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "block.bookedCount before booking a seat then cancelling it: before-cancel=1, after-cancel=0 (expect a decrement of exactly 1 — a cancelled booking must free its seat, not leave a phantom hold on capacity)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-integ2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "after full record-payment: stored amount=20, amountPaid=20, pay=\"Paid\" (expect amountPaid<=amount, amountPaid>0, pay:'Paid' — a booking marked Paid always has real money recorded against it, never a mismatched/impossible state)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-integ3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "booking's own block deleted directly (orphaning its blockId); GET /api/bookings afterward → 200, the orphaned booking still present in the list: true — no 500 from the dangling reference",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-integ4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "usageLimit:2 code, 4 separate families each attempt to redeem it → final usedCount=2 (expect exactly 2, never more than the limit even across many attempts)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-integ5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "safeguarding record's own child deleted afterward; GET /api/incidents?kind=safeguarding → 200, the orphaned record still present: true — no 500 from the dangling childId, the concern itself (the sensitive part) survives the child record's own deletion",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-pe1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "franchise token with x-act-as:<the company owner's uid> GET /api/franchises (a company-only route) → 403 \"Head office only\" (expect 403 — the header must be ignored for a non-platform token, not silently elevate a franchise to acting as its own head office)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-pe2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "franchise token POST /api/invites {role:'company'} → 400 [{\"received\":\"company\",\"code\":\"invalid_enum_value\",\"options\":[\"franchise\",\"staff\"],\"path\":[\"role\"],\"message\":\"Invalid enum value. Expected 'franchise' | 'staff', received 'company'\"}] (expect 400/403 — invites.ts's own zod schema only accepts role:'franchise'|'staff', so 'company' can never even parse, let alone reach a role check)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-pe3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "invite created for role:'staff'; accept called with a body claiming {role:'company', franchiseId/tenantId:'some-other-tenant'} → 200; stored user doc role=\"staff\", tenantId=\"9xLyKXXXyMjkWpztFGrQ\" (expect role:'staff', tenantId:9xLyKXXXyMjkWpztFGrQ — the invite doc is the source of truth, client body is ignored for these fields)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-pe4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "plain staff token POST /api/invites {role:'staff'} → 403 \"Your account cannot create this invite\"",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-pe5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "franchise's own staff invite; PATCH /api/invites/<token> {role:'franchise'} → 200 {\"ok\":true}; stored role afterward=\"staff\" (expect either the route to refuse role changes outright, or the role field to be untouched even if the route accepts other edits)",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  },
+  "p2-d20-pe6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "staff (lead:false) PUT /api/account with extra fields lead:true, permRole:'manager', staffRole:'Manager' → 200; stored lead before/after: false/false; permRole present after: false",
+    "evidence": "server/scripts/plan2/p2H_day20.mts",
+    "at": "2026-09-16T09:00:00.000000Z",
+    "agent": "plan2-T"
+  }
+}

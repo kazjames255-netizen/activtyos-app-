@@ -7,7 +7,7 @@ import { defineConfig } from "@playwright/test";
 // dotenv), and this process doesn't load it — so the suite would send the old
 // dev fallback and get a 401 the moment a real secret is configured. Lift just
 // that key across, without overriding anything already in the environment.
-const serverEnv = path.join(import.meta.dirname, "server", ".env");
+const serverEnv = path.join(process.cwd(), "server", ".env");
 if (fs.existsSync(serverEnv)) {
   const lines = fs.readFileSync(serverEnv, "utf8").split("\n");
   for (const key of ["INBOUND_EMAIL_SECRET"]) {

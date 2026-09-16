@@ -26,6 +26,42 @@ import G from "./agent-results/plan2-agent-G.json";
 import H from "./agent-results/plan2-agent-H.json";
 import I from "./agent-results/plan2-agent-I.json";
 import J from "./agent-results/plan2-agent-J.json";
+// K–O were recorded (days 9/10/12/14/15) but never wired in here — fixed 15 Sept 2026.
+import K from "./agent-results/plan2-agent-K.json";
+import L from "./agent-results/plan2-agent-L.json";
+import M from "./agent-results/plan2-agent-M.json";
+import N from "./agent-results/plan2-agent-N.json";
+import O from "./agent-results/plan2-agent-O.json";
+// Day 16 (home-visit delivery mode + 18 retested prior fails) — 16 Sept 2026.
+import P from "./agent-results/plan2-agent-P.json";
+// Day 17 (trip whoCanSend + rota leave/needsCover + provider welcome email,
+// plus a fresh cross-tenant/multi-role/attack-surface sweep) — 16 Sept 2026.
+import Q from "./agent-results/plan2-agent-Q.json";
+// Day 18 (broad sweep — money, bookings, safeguarding, staff/rota, messaging,
+// multi-tenant edge cases beyond days 1-17) — 16 Sept 2026.
+import R from "./agent-results/plan2-agent-R.json";
+// Day 19 (closing the inventory's last real gaps — ventureLakes, geo/tiles,
+// the platform's own notification bell, the parent-facing refer-a-friend
+// flow, and the HAF/£0-booking Funded-status rule) — 16 Sept 2026.
+import S from "./agent-results/plan2-agent-S.json";
+// Day 20 (race conditions/concurrency, load/stress, data-integrity sweep on
+// booking/money/safeguarding records, deeper privilege-escalation) — 16 Sept 2026.
+import T from "./agent-results/plan2-agent-T.json";
+// Day 21 (round 2 of the "keep hunting" mandate — concurrent invite-accept,
+// discount-code create race, staff-cap-under-concurrency, a bigger booking
+// burst, more data-integrity/privesc checks) — 16 Sept 2026.
+import U from "./agent-results/plan2-agent-U.json";
+// Day 22 (round 3 — customer-record lost-update race, double-send-message
+// check, staff assignment-scope leak, franchiseId query-param spoofing,
+// orphaned-reference integrity checks) — 16 Sept 2026.
+import V from "./agent-results/plan2-agent-V.json";
+// Day 23 (round 4 — tasks.ts PUT merge confirmed clean, one more orphaned-
+// reference integrity check) — 16 Sept 2026.
+import W from "./agent-results/plan2-agent-W.json";
+// Day 24 (round 5 — expense-claim approve race, the FOURTH confirmed
+// instance of the same check-then-act-without-a-transaction pattern) — 16
+// Sept 2026.
+import X from "./agent-results/plan2-agent-X.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -43,4 +79,9 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(A as Record<string, AgentResult>), ...(B as Record<string, AgentResult>), ...(C as Record<string, AgentResult>),
   ...(D as Record<string, AgentResult>), ...(E as Record<string, AgentResult>), ...(F as Record<string, AgentResult>),
   ...(G as Record<string, AgentResult>), ...(H as Record<string, AgentResult>), ...(I as Record<string, AgentResult>), ...(J as Record<string, AgentResult>),
+  ...(K as Record<string, AgentResult>), ...(L as Record<string, AgentResult>), ...(M as Record<string, AgentResult>),
+  ...(N as Record<string, AgentResult>), ...(O as Record<string, AgentResult>), ...(P as Record<string, AgentResult>),
+  ...(Q as Record<string, AgentResult>), ...(R as Record<string, AgentResult>), ...(S as Record<string, AgentResult>),
+  ...(T as Record<string, AgentResult>), ...(U as Record<string, AgentResult>), ...(V as Record<string, AgentResult>),
+  ...(W as Record<string, AgentResult>), ...(X as Record<string, AgentResult>),
 };

@@ -254,6 +254,14 @@ export function Sidebar({ portal }: { portal: PortalKey }) {
           setBrand((m.role === "franchise" && m.franchiseName) || m.displayName || m.tenantName);
           return;
         }
+        // Platform (HQ super-admin) has neither a tenant nor a genuine customer
+        // relationship — never fall through to the parent/customer branding
+        // lookup below, which would brand HQ as whichever provider the admin's
+        // account happens to be linked to as a parent (e.g. via impersonation).
+        if (m.role === "platform") {
+          setBrand("ActivityOS Platform");
+          return;
+        }
         // Parent side: brand with their provider (Phase 1 is single-provider) —
         // their customer-facing display name.
         apiGet<{ name: string; logoUrl?: string | null }[]>("/api/my/providers")

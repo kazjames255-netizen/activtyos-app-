@@ -228,7 +228,17 @@ export function MomentsApp() {
   const [dlFit, setDlFit] = useState<"cover" | "contain">("contain");
   const [savedMsg, setSavedMsg] = useState<string | null>(null);
 
-  const refresh = useCallback(() => { apiGet<Moment[]>("/api/moments").then((m) => { setMoments(m); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load")); }, []);
+  const refresh = useCallback(() => { apiGet<Moment[]>("/api/moments").then((m) => {
+    // Years of moments pile up across a whole tenant; useRealtime re-triggers this on every
+    // moments change (any staff member, any child). Bail out of the state update (keep the
+    // same array reference) when the fetched payload is content-identical to what's loaded,
+    // so the gallery/folder useMemos below don't re-derive over the full list for nothing.
+    setMoments((prev) => {
+      try { if (prev && prev.length === m.length && JSON.stringify(prev) === JSON.stringify(m)) return prev; } catch { /* fall through */ }
+      return m;
+    });
+    setError(null);
+  }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load")); }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string }>("/api/me").then((me) => setCanManage(["company", "freelancer", "franchise"].includes(me.role))).catch(() => {}); }, []);
   useEffect(() => { apiGet<{ id: string; title: string }[]>("/api/listings?mine=1").then((l) => setListings(l.map((x) => ({ id: x.id, title: x.title })))).catch(() => {}); }, []);

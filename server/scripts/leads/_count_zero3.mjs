@@ -1,0 +1,11 @@
+import "dotenv/config"; import admin from "firebase-admin"; import fs from "fs";
+admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSync("./serviceAccountKey.json","utf8"))) });
+const db = admin.firestore();
+const snap = await db.collection("leads").select("name","location","county","region","postcode","website","email","phone","socialUrl","excluded","contactSearchStatus","secondaryContact").get();
+const zero = snap.docs.filter(d => { const x = d.data(); if (x.excluded) return false; return !x.website && !x.email && !x.phone && !x.socialUrl; });
+console.log("total leads", snap.size, "zero-contact", zero.length);
+const shard3 = zero.filter(d => "89ab".includes(d.id.slice(-1).toLowerCase()));
+console.log("shard3 count", shard3.length);
+const already = shard3.filter(d => d.data().contactSearchStatus);
+console.log("shard3 already contactSearchStatus", already.length);
+process.exit(0);

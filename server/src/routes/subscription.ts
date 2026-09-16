@@ -87,10 +87,10 @@ const planSchema = z.object({
 });
 const pricingSchema = z.object({ plans: z.array(planSchema).min(1).max(12) });
 
-type PlanRec = Record<string, unknown> & { id: string };
+export type PlanRec = Record<string, unknown> & { id: string };
 // The LIVE catalogue: the admin-saved config if present, else the seed. New
 // signups read this (prices, limits, descriptions), so an HQ edit auto-applies.
-async function getPlans(): Promise<PlanRec[]> {
+export async function getPlans(): Promise<PlanRec[]> {
   const doc = await db.collection("platform").doc("pricing").get();
   const stored = doc.exists ? (doc.data()?.plans as PlanRec[] | undefined) : undefined;
   return Array.isArray(stored) && stored.length ? stored : (DEFAULT_PLANS as unknown as PlanRec[]);
@@ -102,7 +102,7 @@ const addDays = (iso: string, n: number) => { const d = new Date(iso); d.setUTCD
 type Band = { id: string; price?: number; staffMax?: number | null; perStaffOver?: number };
 // The staff/location caps + price for a plan+band, from the live (or snapshot)
 // catalogue. Amir snapshots these onto the tenant at trial-start (grandfathering).
-function limitsFor(plans: PlanRec[], planId: string, bandId?: string | null) {
+export function limitsFor(plans: PlanRec[], planId: string, bandId?: string | null) {
   const p = plans.find((x) => x.id === planId);
   const bands = (p?.bands as Band[] | undefined) ?? [];
   const band = bands.find((b) => b.id === bandId) ?? bands[0];

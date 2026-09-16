@@ -57,6 +57,8 @@ import { ukToday } from "../lib/ukDate";
 import { bookingCutoffLabel, cutoffHours, pastCutoff } from "../lib/bookingCutoff";
 import { customerAreaOn } from "../lib/customerArea";
 import { NOT_TAKING_BOOKINGS, takesNewBookings } from "../middleware/subscription";
+import { checkCoverage, type CoverageArea } from "../lib/coverageArea";
+import { sessionsClearGap } from "../lib/schedulingGap";
 
 // Parent ("my") endpoints. Identity comes exclusively from the verified
 // Firebase token — the booker email is stamped server-side and every read
@@ -140,6 +142,12 @@ const basketSchema = z.object({
   // The booker's phone, captured at checkout (required client-side when they
   // have none on file). Lands on the family record if it hasn't got one yet.
   phone: z.string().trim().max(40).optional(),
+  // Home-visit listings only: where this session actually happens. Checked
+  // against the listing's coverageArea server-side before the booking is
+  // allowed to complete — see checkServiceAddress below.
+  serviceAddress: z
+    .object({ address: z.string().trim().max(300), postcode: z.string().trim().max(16) })
+    .optional(),
 });
 const legacySchema = z.object({
   listingId: z.string().min(1),
@@ -148,6 +156,9 @@ const legacySchema = z.object({
   child: z.string().min(1),
   age: z.number().int().nonnegative(),
   method: z.string().min(1),
+  serviceAddress: z
+    .object({ address: z.string().trim().max(300), postcode: z.string().trim().max(16) })
+    .optional(),
 });
 
 const isoDate = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected an ISO date (YYYY-MM-DD)");
@@ -654,6 +665,7 @@ my.post("/bookings", async (req, res) => {
           blockId: legacy.data.blockId,
           method: legacy.data.method,
           items: [{ pass: legacy.data.pass, child: legacy.data.child, age: legacy.data.age }],
+          ...(legacy.data.serviceAddress ? { serviceAddress: legacy.data.serviceAddress } : {}),
         },
       }
     : basketSchema.safeParse(req.body);
@@ -738,6 +750,9 @@ my.post("/bookings", async (req, res) => {
     ageFrom?: string;
     ageTo?: string;
     allowOutOfRange?: boolean;
+    deliveryMode?: "venue" | "home-visit" | "both";
+    coverageArea?: CoverageArea | null;
+    minGapMinutes?: number;
   };
   // An out-of-range child on a listing that ALLOWS them still can't be seated
   // automatically — the place is a request the provider approves or declines,
@@ -771,6 +786,30 @@ my.post("/bookings", async (req, res) => {
       opensAt: listing.opensAt,
     });
     return;
+  }
+
+  // ── Home-visit service address ──────────────────────────────────────────
+  // For a home-visit (or "both") listing, resolve where THIS session actually
+  // happens: what checkout sent, else the family's saved account address —
+  // then validate the postcode against the provider's coverage area. A booking
+  // that fails this never gets created.
+  let serviceAddress: { address: string; postcode: string } | undefined = input.serviceAddress;
+  if (listing.deliveryMode === "home-visit" || listing.deliveryMode === "both") {
+    if (!serviceAddress?.postcode?.trim() && familyUid) {
+      const u = (await db.collection("users").doc(familyUid).get()).data() as { address?: string; postcode?: string } | undefined;
+      if (u?.postcode?.trim()) serviceAddress = { address: u.address ?? "", postcode: u.postcode };
+    }
+    if (!serviceAddress?.postcode?.trim()) {
+      res.status(400).json({ error: "This provider comes to you — add the address the session should run at" });
+      return;
+    }
+    const coverage = await checkCoverage(listing.coverageArea, serviceAddress.postcode);
+    if (!coverage.ok) {
+      res.status(409).json({ error: coverage.reason });
+      return;
+    }
+  } else {
+    serviceAddress = undefined; // a venue booking never carries one
   }
 
   // Pricing context: the bundle's resolved passes/timings (server-priced),
@@ -1104,6 +1143,54 @@ my.post("/bookings", async (req, res) => {
       }
   }
 
+  // ── Freelancer manual scheduling gap ────────────────────────────────────
+  // Product decision: freelancers get NO algorithmic travel-time buffer — just
+  // a plain "minimum gap between sessions" they set per listing (minutes,
+  // default 30). Enforced as a no-overlap-plus-gap check against the
+  // freelancer's OTHER bookings that day, across all their listings (a
+  // freelancer runs one calendar). Best-effort outside the write transaction —
+  // like the capacity checks above, a genuine photo-finish race is not this
+  // foundational build's concern (company/franchise smarter travel-buffer
+  // logic is explicitly out of scope here).
+  {
+    const tenantType = (await db.collection("tenants").doc(listing.tenantId).get()).data()?.type as string | undefined;
+    const gapMinutes = listing.minGapMinutes ?? 30;
+    if (tenantType === "freelancer" && gapMinutes > 0) {
+      // This booking's own date → {start, end}, from the listing's blocks.
+      const myRange = new Map<string, { start: string; end: string }>();
+      for (const d of blocksSnap.docs)
+        for (const s of (d.data() as BlockDoc).sessions)
+          if (blockOfDate.get(s.date) === d.id) myRange.set(s.date, { start: s.start, end: s.end });
+      const myDates = [...new Set(priced.flatMap((p) => p.days))];
+      if (myDates.length && myRange.size) {
+        const otherSnap = await bookingsCol.where("tenantId", "==", listing.tenantId).where("status", "in", ["Confirmed", "Approval needed"]).get();
+        const others = otherSnap.docs.map((d) => fromDoc(d.data() as BookingDoc)).filter((b) => (b.days ?? []).some((day) => myDates.includes(day)));
+        if (others.length) {
+          const otherBlockIds = [...new Set(others.map((b) => b.blockId).filter((id): id is string => !!id))];
+          const otherBlockSnaps = otherBlockIds.length ? await db.getAll(...otherBlockIds.map((id) => db.collection("blocks").doc(id))) : [];
+          const otherRangeByBlock = new Map(
+            otherBlockSnaps.filter((s) => s.exists).map((s) => [s.id, new Map(((s.data() as BlockDoc).sessions ?? []).map((sess) => [sess.date, { start: sess.start, end: sess.end }]))]),
+          );
+          for (const day of myDates) {
+            const mine = myRange.get(day);
+            if (!mine) continue;
+            for (const b of others) {
+              if (!(b.days ?? []).includes(day)) continue;
+              const theirs = b.blockId ? otherRangeByBlock.get(b.blockId)?.get(day) : undefined;
+              if (!theirs) continue;
+              if (!sessionsClearGap(mine.start, mine.end, theirs.start, theirs.end, gapMinutes)) {
+                res.status(409).json({
+                  error: `That clashes with your existing booking ${b.ref} (${theirs.start}–${theirs.end} on ${prettyDay(day)}) — you need at least ${gapMinutes} minutes between sessions.`,
+                });
+                return;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
   // Automatic discounts across the basket, with the shared engine. The
   // engine prices "these pass lines × N attendees", so when every child has
   // the same lines we use it exactly (multi-person rules apply); a mixed
@@ -1408,6 +1495,7 @@ my.post("/bookings", async (req, res) => {
             ...(refByChild.get(rc.name.trim().toLowerCase()) ? { paymentRef: refByChild.get(rc.name.trim().toLowerCase()) } : {}),
             ...(fromWallet ? { walletApplied: fromWallet } : {}),
             ...(discountCodes.length ? { discountCode: discountCodes.join(", "), discountCodes } : {}),
+            ...(serviceAddress ? { serviceAddress } : {}),
             tenantId: listing.tenantId,
             // Attribute the booking to whichever franchise OWNS the listing, so a
             // parent booking on a franchise's listing shows in that franchise's

@@ -30,6 +30,20 @@ const MAX_BYTES = 900_000; // stay under Firestore's 1MB doc limit
 // 1MiB doc cap for the other fields. Plenty for an e-receipt or supplier bill.
 const MAX_PDF_B64 = 1_000_000;
 
+// Magic-byte sniffing for the four image mimes the schema accepts. Without
+// this, the declared Content-Type on the data URL was trusted outright — an
+// SVG (or anything else) could be labelled "image/png" and stored/served as
+// one. GET /api/images/:id already sends X-Content-Type-Options: nosniff so a
+// browser won't re-interpret it, but the file is still wrongly accepted and
+// served under an image content type. Checked on the first few decoded bytes
+// only — cheap, and this is a security boundary, not a full validator.
+const IMAGE_MAGIC: Record<string, (b: Buffer) => boolean> = {
+  "image/png": (b) => b.length >= 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47 && b[4] === 0x0d && b[5] === 0x0a && b[6] === 0x1a && b[7] === 0x0a,
+  "image/jpeg": (b) => b.length >= 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  "image/gif": (b) => b.length >= 6 && (b.subarray(0, 6).toString("ascii") === "GIF87a" || b.subarray(0, 6).toString("ascii") === "GIF89a"),
+  "image/webp": (b) => b.length >= 12 && b.subarray(0, 4).toString("ascii") === "RIFF" && b.subarray(8, 12).toString("ascii") === "WEBP",
+};
+
 const uploadSchema = z.object({
   dataUrl: z
     .string()
@@ -79,6 +93,14 @@ uploads.post("/", json({ limit: "2mb" }), async (req, res) => {
   } else if (bytes > MAX_BYTES) {
     res.status(413).json({ error: `Image too large (${Math.round(bytes / 1024)}KB — max ${MAX_BYTES / 1000}KB)` });
     return;
+  } else {
+    const magic = IMAGE_MAGIC[contentType];
+    // Decode just enough bytes to check the header, not the whole file.
+    const head = Buffer.from(b64.slice(0, 32), "base64");
+    if (!magic || !magic(head)) {
+      res.status(400).json({ error: "That file's contents don't match its declared image type" });
+      return;
+    }
   }
   const isPrivate = parsed.data.purpose === "private";
   const ref = await col.add({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost } from "@/lib/api";
@@ -358,9 +358,16 @@ export function MedicationApp() {
   useEffect(() => { refresh(); }, [refresh]);
   useEffect(() => { apiGet<{ role: string; lead?: boolean }>("/api/me").then((me) => { setRole(me.role); setLead(me.lead === true); setCanManage(["company", "freelancer", "franchise"].includes(me.role)); }).catch(() => {}); }, []);
   useRealtime(["medications", "medicationAdmin", "bookings"], refresh);
-  // The child's live set of booked ISO days — recomputed each render, so a new
-  // booking immediately widens what "On every booked day" approves.
-  const bookedDaysFor = (name: string) => new Set(bkgs.filter((b) => (b.child ?? "").trim().toLowerCase() === (name ?? "").trim().toLowerCase()).flatMap((b) => b.days ?? []));
+  // Bookings grouped by child (lower-cased name), one pass — bookedDaysFor/listingsFor used
+  // to each re-filter the whole `bkgs` array per medication row (dozens of meds × the
+  // tenant's full booking history, every render). Recomputed whenever bkgs changes, so a
+  // new booking still immediately widens what "On every booked day" approves.
+  const bkgsByChild = useMemo(() => {
+    const m = new Map<string, { child?: string; days?: string[]; listing?: string }[]>();
+    for (const b of bkgs) { const k = (b.child ?? "").trim().toLowerCase(); (m.get(k) ?? m.set(k, []).get(k)!).push(b); }
+    return m;
+  }, [bkgs]);
+  const bookedDaysFor = (name: string) => new Set((bkgsByChild.get((name ?? "").trim().toLowerCase()) ?? []).flatMap((b) => b.days ?? []));
 
   async function setArchived(m: Med, archived: boolean) {
     try { await api(`/api/medications/${encodeURIComponent(m.id)}`, { method: "PUT", body: JSON.stringify({ archived }) }); refresh(); }
@@ -383,7 +390,16 @@ export function MedicationApp() {
     finally { setLogging(null); }
   }
 
-  const dosesFor = (id: string) => admins.filter((a) => a.medicationId === id);
+  // One pass over `admins` grouped by medication id — this used to be `admins.filter(...)`
+  // called per rendered medication row (dosesFor(m.id) below), rescanning the whole
+  // administration history (every dose, every child, every day it's ever been given) once
+  // per medication on every render.
+  const dosesByMed = useMemo(() => {
+    const m = new Map<string, AdminEvent[]>();
+    for (const a of admins) (m.get(a.medicationId) ?? m.set(a.medicationId, []).get(a.medicationId)!).push(a);
+    return m;
+  }, [admins]);
+  const dosesFor = (id: string) => dosesByMed.get(id) ?? [];
   const active = (meds ?? []).filter((m) => !m.archived);
   const archivedMeds = (meds ?? []).filter((m) => m.archived);
   const consented = active.filter((m) => m.consentGranted).length;
@@ -391,7 +407,7 @@ export function MedicationApp() {
   const dosesToday = admins.filter((a) => a.date === todayIso()).length;
   const tiles: [string, string | number][] = [["On file", active.length], ["With consent", consented], ["Needs consent", needsConsent], ["Doses today", dosesToday]];
   const ql = q.trim().toLowerCase();
-  const listingsFor = (name: string) => bkgs.filter((b) => (b.child ?? "").trim().toLowerCase() === (name ?? "").trim().toLowerCase()).map((b) => b.listing).filter(Boolean) as string[];
+  const listingsFor = (name: string) => (bkgsByChild.get((name ?? "").trim().toLowerCase()) ?? []).map((b) => b.listing).filter(Boolean) as string[];
   const allListings = [...new Set(bkgs.map((b) => b.listing).filter(Boolean) as string[])].sort();
   const shown = (showArchived ? archivedMeds : active)
     .filter((m) => !ql || m.childName.toLowerCase().includes(ql) || m.name.toLowerCase().includes(ql))

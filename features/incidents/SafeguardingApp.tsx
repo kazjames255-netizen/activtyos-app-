@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { useSettings } from "@/lib/settings";
@@ -504,9 +504,18 @@ export function SafeguardingApp() {
 
   const all = logs ?? [];
   const ql = q.trim().toLowerCase();
-  const shown = all.filter((l) => (!ql || l.childName.toLowerCase().includes(ql) || l.description.toLowerCase().includes(ql) || (l.concernCategory ?? "").toLowerCase().includes(ql)) && (!riskFilter || l.severity === riskFilter));
-  const thisMonth = all.filter((l) => (l.date ?? "").slice(0, 7) === todayIso().slice(0, 7)).length;
-  const high = all.filter((l) => l.severity === "serious").length;
+  // Safeguarding concerns accumulate across a whole tenant's history — memoize the
+  // search/filter pass and the tile counts (same fix as Incidents/First aid) instead of
+  // re-scanning `all` from scratch on every render / every keystroke in the search box.
+  const shown = useMemo(() => all.filter((l) => (!ql || l.childName.toLowerCase().includes(ql) || l.description.toLowerCase().includes(ql) || (l.concernCategory ?? "").toLowerCase().includes(ql)) && (!riskFilter || l.severity === riskFilter)),
+    [all, ql, riskFilter]);
+  const { thisMonth, high } = useMemo(() => {
+    const month = todayIso().slice(0, 7);
+    let thisMonth = 0, high = 0;
+    for (const l of all) { if ((l.date ?? "").slice(0, 7) === month) thisMonth++; if (l.severity === "serious") high++; }
+    return { thisMonth, high };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [all]);
   const tiles: [string, number][] = [["This month", thisMonth], ["High risk", high], ["Total", all.length]];
 
   return (

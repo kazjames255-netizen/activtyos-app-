@@ -938,8 +938,12 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
         <div onClick={() => setExpanded((x) => !x)} className="flex flex-1 cursor-pointer flex-wrap items-center gap-x-4 gap-y-1 overflow-hidden px-4 py-2 hover:bg-[var(--panel)]">
           <PCol label={t("parent.listingCol")} w="min-w-[120px] flex-1">
             <span className="block text-[12.5px] font-extrabold leading-tight text-[var(--ink)] [overflow-wrap:anywhere]" title={b.listing}>{b.listing || "—"}</span>
-            {loc.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {loc.location}</span>}
-            {(loc.address || loc.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(", ")}</span>}
+            {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
+              <span className="block text-[11px] font-semibold text-[var(--ink-2)]">🚗 We&rsquo;ll come to you at {[b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ")}</span>
+            ) : (<>
+              {loc.location && <span className="block text-[11px] font-semibold text-[var(--ink-2)]">📍 {loc.location}</span>}
+              {(loc.address || loc.city) && <span className="block text-[10.5px] text-[var(--ink-3)]">{[loc.address, loc.city].filter(Boolean).join(", ")}</span>}
+            </>)}
           </PCol>
           <PCol label={t("parent.datesCol")} w="w-[150px]"><span className="text-[12.5px] font-extrabold text-[var(--ink)]">{bookingDateSummary(b)}</span><span className="block text-[10.5px] font-semibold text-[var(--ink-3)]">{sessCount} session{sessCount === 1 ? "" : "s"} · {childCount > 1 ? `${childCount} children` : "1 child"}{sessCount > 1 ? " · tap to view all" : ""}</span></PCol>
           <PCol label={t("parent.statusCol")} w="w-[104px]"><span className="inline-flex whitespace-nowrap rounded-full px-2.5 py-[3px] text-[11px] font-extrabold" style={pendingMove ? { background: "#fdf3d8", color: "#8a5300" } : { background: pHeroTone(b.status).bg, color: pHeroTone(b.status).fg }}>{pendingMove ? t("parent.dateChangeStatus") : b.status}</span></PCol>
@@ -1081,13 +1085,17 @@ function BookingCard({ b, refresh, autoPay, autoAmend, autoCancel, autoOpen, cla
           <DefRow label={t("parent.childDefLabel")} value={b.child} />
           <DefRow label={t("parent.passLabel")} value={b.pass} />
           {b.timing && <DefRow label={t("parent.timing")} value={b.timing} />}
-          {(info?.location || info?.address || times || (detail?.staff && detail.staff.length > 0)) && (
+          {(info?.location || info?.address || times || b.serviceAddress || (detail?.staff && detail.staff.length > 0)) && (
             <>
               <SectionHead>{t("parent.whereWhen")}</SectionHead>
-              {info?.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {info.location}</div>}
-              {(info?.address || info?.city) && (
-                <div className="pb-[4px] text-[12px] text-[var(--ink-3)]">{[info.address, info.city].filter(Boolean).join(" · ")}</div>
-              )}
+              {b.serviceAddress?.address || b.serviceAddress?.postcode ? (
+                <div className="py-[4px] text-[12.5px] font-semibold">🚗 We&rsquo;ll come to you at {[b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ")}</div>
+              ) : (<>
+                {info?.location && <div className="py-[4px] text-[12.5px] font-semibold">📍 {info.location}</div>}
+                {(info?.address || info?.city) && (
+                  <div className="pb-[4px] text-[12px] text-[var(--ink-3)]">{[info.address, info.city].filter(Boolean).join(" · ")}</div>
+                )}
+              </>)}
               {times && <div className="py-[2px] text-[12.5px]">🕒 {times}</div>}
               {detail?.staff && detail.staff.length > 0 && (
                 <div className="py-[2px] text-[12.5px]">👤 {t("parent.staffOnsite")} {detail.staff.map((s) => s.name).join(", ")}</div>

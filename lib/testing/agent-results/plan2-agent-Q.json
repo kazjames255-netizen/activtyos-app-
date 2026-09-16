@@ -1,0 +1,213 @@
+{
+  "p2-d17-t1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "whoCanSend unset (defaults \"all\"); plain staff (not organiser, not lead) POST send-message → 200 {\"ok\":true,\"sent\":0}",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-t2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "whoCanSend:\"lead\"; plain staff (not organiser, not named lead) POST send-message → 403 \"Sending the trip message is limited to the trip lead / organiser (Setup → Trips & visits)\"",
+    "notes": "Confirms p2-rt7 (day 16) is fixed — that retest found a plain staff member could send regardless of setting, because whoCanSend didn't exist yet.",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-t3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "whoCanSend:\"lead\"; the trip's own organiser (createdBy matches the sending actor) POST send-message → 200 sent",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-t4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "whoCanSend:\"lead\"; staff named as trip.lead (not organiser) POST send-message → 200 sent",
+    "notes": "trip.lead was set with a direct Firestore write in this test (no dedicated 'name the trip lead' UI/API field was found on tripSchema) — worth QA confirming there IS a real product path to name a trip's lead, otherwise this carve-out may be unreachable in practice even though the server-side check works.",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-t5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "whoCanSend:\"lead\"; the tenant OWNER (canManage) POST send-message → 200 sent",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-t6": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "features/setup/SetupApp.tsx references settings.trips?.whoCanSend and offers a \"lead\" option in the Select: true",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-r1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "approve leave for a rostered staff member on one specific date → 201; GET /api/rota: the shift ON the leave date comes back {staffOnLeave:true, needsCover:true}; a second shift for the same person OUTSIDE the leave range comes back with neither flag",
+    "notes": "Confirms p2-rt10 (day 16) is fixed — that retest found GET /api/rota never read the absences collection at all. Also confirms the flag is correctly scoped by date, not applied to every future shift for that person.",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-r2": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "ScheduleApp.tsx reads needsCover/staffOnLeave: true; MyScheduleApp.tsx reads needsCover/staffOnLeave: true",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-r3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "self-requested (pending, no status given) leave for a rostered staff member → 201 status=pending; GET /api/rota shift row for that date → no staffOnLeave/needsCover flag present",
+    "notes": "flagShiftsOnLeave correctly filters approvedLeaveByName on status:'approved' only — a merely-requested absence doesn't misreport the shift as uncovered before a manager decides it.",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-e1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/register-role {role:'company', businessName, contactEmail} on a brand-new account → 201; [mail] line seen: [mail] \"Welcome to ActivityOS — let's get you set up\" → <signup email> SUPPRESSED (not live; add to MAIL_ALLOWLIST to receive it); recipient matches the signup email: true; subject matches exactly: true",
+    "notes": "Confirms p2-rt16 (day 16) is fixed — that retest found no provider-welcome route/feature existed at all. MAIL_LIVE is off so the send is SUPPRESSED, but the attempt (and its subject/recipient) is what's being confirmed here, same evidence pattern as day 16's p2-hv9.",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-e2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/register-role {role:'freelancer'} on a brand-new account → 201; [mail] \"Welcome to ActivityOS — let's get you set up\" line seen, addressed to the freelancer's signup email: true",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-e3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "re-POST /api/register-role on an already-chosen account → 409 \"Account type already set\"; a second welcome-email attempt fired: false",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-e4": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "emails.ts greeting falls back to providerName when firstName is blank: true; registerRole.ts derives firstName from user.name.split(' ')[0]: true; source comment confirms the welcome mail is NOT gated by Setup → Email's automatic-email toggles: true",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/incidents as tenant A's owner with body.tenantId forged to tenant B's real id → 201; the STORED document's real tenantId = A's own tenant id, not B's forged one",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "tenant B creates a customer (201); tenant A's owner PUT /api/customers/<B's customer id> (a wholly different tenant, not franchise-vs-franchise) → 404 \"Customer not found\"; the record's name is unchanged afterward",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "tenant B creates a task (201); tenant A's owner PUT then DELETE /api/tasks/<B's task id> → 404 on both; the task still exists afterward with its original title, untouched",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "franchise token GET /api/franchises/features → 403 \"Head office only\"; GET /api/franchises (the whole network's franchise list) → 403 \"Head office only\"",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "parent token GET /api/bookings (the operator route, not /api/my/bookings) → 403 \"Requires an operator account\"",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "FIXED by Fixer 2026-09-16. server/src/index.ts's top-level error middleware (~lines 292-309) now branches on e?.type === \"entity.parse.failed\" || e?.status === 400 and returns a clean 400 {\"error\":\"That request wasn't valid — please try again.\"} instead of falling through to the generic 500. Re-verified live with malformed JSON POST (\"{\\\"bad json\") against all three routes QA tested: /api/bookings → 400, /api/customers → 400, /api/tasks → 400 (all previously 500). entity.too.large still returns 413 as before (branch order preserved, not regressed).",
+    "notes": "One shared fix in the top-level error middleware covers every /api/* route, as QA noted. server tsc --noEmit clean for index.ts (one unrelated pre-existing error in server/src/routes/leave.ts:131, not touched by this fix, not introduced by it).",
+    "evidence": "server/src/index.ts:292-309 (fix); verified via curl -X POST with malformed JSON body against /api/bookings, /api/customers, /api/tasks (all 400 after fix, were 500 before)",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q",
+    "fixedBy": "fixer",
+    "fixedAt": "2026-09-16"
+  },
+  "p2-d17-b7": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/incidents description at exactly 4,000 chars (the schema's declared max) → 201; at 4,001 chars → 400 (refused cleanly); at 200,000 chars → 400 (refused cleanly, no crash, no silent truncation)",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b8": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/incidents with childName sent as an object ({\"$ne\":null}) instead of a string → 400 [{\"code\":\"invalid_type\",\"expected\":\"string\",\"received\":\"object\",\"path\":[\"childName\"],\"message\":\"Expected string, received object\"}]",
+    "notes": "zod's invalid_type catches the type-confused / NoSQL-injection-shaped value before it ever reaches Firestore; no crash.",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b9": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT /api/account with extra fields role:\"platform\", tenantId:\"someone-elses-tenant\", permRole:\"full-access\" alongside a legitimate name change (none of the three are in putSchema) → 200; the users doc's role field is unchanged before/after (freelancer/freelancer); permRole is NOT present in the doc after",
+    "notes": "zod's default behaviour (strip unknown keys) quietly drops the self-escalation attempt rather than writing it — confirmed by reading the actual Firestore doc, not just the response body.",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b10": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "GET /api/bookings?limit=-1 → 200 (returns the tenant's normal list, 0 rows in this fresh tenant); GET /api/bookings?limit=999999999 → 200 (same)",
+    "notes": "Neither call errors or crashes, but bookings.ts's list route doesn't read a `limit` query param at all (confirmed by grep) — both requests silently ignore the parameter and just return the tenant's full list rather than erroring or applying any cap. Not a crash/security bug on its own (this tenant's list is naturally small), but flagged as a genuine gap: no page-size limit exists on this list route at all, which plan2's own intent doc already calls out as a class of thing never swept (pagination).",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b11": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1's franchise token PUT /api/franchises/<F2's id>/territory (head-office-only route, both franchises under the same company) → 403 \"Head office only\"",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  },
+  "p2-d17-b12": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "plain staff token GET /api/franchises → 403 \"Head office only\"",
+    "evidence": "server/scripts/plan2/p2H_day17.mts",
+    "at": "2026-09-16T05:00:00.000000Z",
+    "agent": "plan2-Q"
+  }
+}

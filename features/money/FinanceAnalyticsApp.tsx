@@ -64,7 +64,18 @@ export function FinanceAnalyticsApp() {
   }, [status, tabTouched]);
 
   const load = useCallback(() => {
-    apiGet<Booking[]>("/api/bookings").then((b) => { setBookings(Array.isArray(b) ? b : []); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Booking[]>("/api/bookings").then((b) => {
+      const next = Array.isArray(b) ? b : [];
+      // useRealtime refetches on every bookings/payments/invoices change, which can fire
+      // often — bail out of the state update (keep the old array reference) when the payload
+      // is content-identical to what's loaded, so financeFigures()/mix don't re-walk a
+      // tenant's whole booking history for nothing.
+      setBookings((prev) => {
+        try { if (prev && prev.length === next.length && JSON.stringify(prev) === JSON.stringify(next)) return prev; } catch { /* fall through */ }
+        return next;
+      });
+      setError(null);
+    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     apiGet<InvPayload>("/api/invoices").then((p) => setInvoices(p)).catch(() => setInvoices({ items: [], summary: { count: 0, outstanding: 0, collected: 0, overdue: 0 } }));
     apiGet<PaymentRecord[]>("/api/payments").then((p) => setPayments(Array.isArray(p) ? p : [])).catch(() => {});
     apiGet<PayStatus>("/api/payments/status").then(setStatus).catch(() => {});

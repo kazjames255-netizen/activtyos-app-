@@ -32,7 +32,16 @@ export function MoneyOutApp() {
   const [tab, setTab] = useState<"expenses" | "pos">("expenses");
 
   const refresh = useCallback(() => {
-    apiGet<{ items: Expense[] }>("/api/expenses").then((p) => setExpenses(p.items ?? [])).catch(() => {});
+    apiGet<{ items: Expense[] }>("/api/expenses").then((p) => {
+      const next = p.items ?? [];
+      // useRealtime refetches on every expenses change; bail out of the state update (keep the
+      // old array reference) when the payload is content-identical, so the KPI totals below
+      // don't re-scan a tenant's whole expense history for nothing.
+      setExpenses((prev) => {
+        try { if (prev.length === next.length && JSON.stringify(prev) === JSON.stringify(next)) return prev; } catch { /* fall through */ }
+        return next;
+      });
+    }).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["expenses"], refresh);
@@ -48,12 +57,17 @@ export function MoneyOutApp() {
   const pending = useMemo(() => expenses.filter((e) => !isPaid(e)), [expenses]);
   const pendingTotal = pending.reduce((s, e) => s + (e.amount ?? 0), 0);
 
+  // A tenant's expense history can span years — one pass over each relevant subset
+  // (not re-filtered/re-reduced on every render) for the hero's four totals.
   const sumIn = (rows: Expense[], key: string, byYear = false) =>
     rows.filter((r) => (byYear ? (r.date ?? "").slice(0, 4) : (r.date ?? "").slice(0, 7)) === key).reduce((s, r) => s + (r.amount ?? 0), 0);
-  const outMonth = sumIn(counted, thisMonthKey);
-  const outYear = sumIn(counted, thisYear, true);
-  const paidMonth = sumIn(expenses.filter(isPaid), thisMonthKey);
-  const pendMonth = sumIn(pending, thisMonthKey);
+  const { outMonth, outYear, paidMonth, pendMonth } = useMemo(() => ({
+    outMonth: sumIn(counted, thisMonthKey),
+    outYear: sumIn(counted, thisYear, true),
+    paidMonth: sumIn(expenses.filter(isPaid), thisMonthKey),
+    pendMonth: sumIn(pending, thisMonthKey),
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), [counted, pending, expenses, thisMonthKey, thisYear]);
 
   const TABS = [
     { key: "expenses" as const, label: "Expenses", icon: "🧾" },

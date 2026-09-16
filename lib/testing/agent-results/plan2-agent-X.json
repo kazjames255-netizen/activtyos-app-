@@ -1,0 +1,13 @@
+{
+  "p2-d24-race1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "FIXED by Fixer 2026-09-16. server/src/routes/expenseClaims.ts's PATCH /:id now wraps the !c.expenseId check and the expense-doc create in a db.runTransaction() (fresh tx.get(ref) re-read, then tx.set on a pre-generated expense doc ref, then tx.set on the claim patch) — the second concurrent approval now sees the first's expenseId already set inside the transaction and skips creating another expense row. Re-ran the original QA script (server/scripts/plan2/p2H_day24.mts) unmodified: \"same expense claim, two concurrent PATCH {status:'approved'} calls → r1=200, r2=200; expenses docs created with claimId=<this claim>=1\" — exactly one expense row, as intended.",
+    "evidence": "server/scripts/plan2/p2H_day24.mts (re-run, now pass); server/src/routes/expenseClaims.ts:70-96",
+    "at": "2026-09-16T13:00:00.000000Z",
+    "agent": "plan2-X",
+    "notes": "Both concurrent PATCH calls still return 200 (both do legitimately update status/decidedBy/decidedAt) — only the money-out side-effect (the expense row) is now deduplicated, which is the actual bug (double-counted spend), matching QA's framing.",
+    "fixedBy": "fixer",
+    "fixedAt": "2026-09-16"
+  }
+}

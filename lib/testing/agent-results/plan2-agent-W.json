@@ -1,0 +1,19 @@
+{
+  "p2-d23-race1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "two concurrent PUT /api/tasks/<id> — one sends only {t:...}, the other only {who:...} (a true partial payload, not the full object) → r1=200, r2=200; final t=\"Race1 Task RENAMED\" (renamed: true), who=\"Someone Else\" (updated: true)",
+    "evidence": "server/scripts/plan2/p2H_day23.mts",
+    "at": "2026-09-16T12:00:00.000000Z",
+    "agent": "plan2-W",
+    "notes": "Confirms the contrast with p2-d22-race1: tasks.ts's partialSchema + .set(merge:true) genuinely merges field-by-field, so two concurrent edits to different fields both survive — customers.ts's full-object PUT is the outlier, not the norm, across the codebase."
+  },
+  "p2-d23-integ1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "code used on a real booking, then the discountCodes doc itself deleted directly; POST /api/discounts/validate for the now-gone code → 200 valid=false; GET /api/bookings (the booking that used the deleted code) → 200 (expect: validate cleanly says invalid/not-recognised, no 500; the booking list still reads fine despite referencing a deleted discount code)",
+    "evidence": "server/scripts/plan2/p2H_day23.mts",
+    "at": "2026-09-16T12:00:00.000000Z",
+    "agent": "plan2-W"
+  }
+}

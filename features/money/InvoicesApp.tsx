@@ -118,7 +118,17 @@ export function InvoicesApp({ embedded = false }: { embedded?: boolean } = {}) {
 
   const hoScope = useHoScope(); // head office: read only this network's own money
   const refresh = useCallback(() => {
-    apiGet<Payload>(withHoMoney("/api/invoices")).then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Payload>(withHoMoney("/api/invoices")).then((p) => {
+      // useRealtime refetches on every invoices change server-side, which can fire often for a
+      // busy franchise; bail out of the state update (keep the old object/array references) when
+      // the payload is content-identical to what's loaded, so the KPI/ledger useMemos below don't
+      // re-derive the whole invoice list for nothing.
+      setData((prev) => {
+        try { if (prev && prev.items.length === p.items.length && JSON.stringify(prev) === JSON.stringify(p)) return prev; } catch { /* fall through */ }
+        return p;
+      });
+      setError(null);
+    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
   }, [hoScope]);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["invoices"], refresh);

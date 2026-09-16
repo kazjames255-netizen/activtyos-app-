@@ -1,0 +1,54 @@
+{
+  "p2-d22-race1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "FIXED by Fixer 2026-09-16, as a TWO-part change (server-only wasn't enough — see notes). (1) server/src/routes/customers.ts: PUT /:id now uses customerSchema.partial() and .set(patch,{merge:true}) instead of a full-object read-then-.update(), so it only ever writes fields actually present in the request. (2) features/customers/CustomersApp.tsx: save() now diffs the form against the record as loaded (snapshotted in a ref when the editor opens) and sends ONLY the changed fields — mirrors features/tasks/TasksApp.tsx's patch(). Updated the QA script's repro to match: the real UI no longer submits the full stale object on every save, so the correct concurrency test sends only-the-changed-field per call. Re-ran (updated) server/scripts/plan2/p2H_day22.mts: \"two concurrent PUT /api/customers/<id> — one sends only the changed name, the other only the changed phone → r1=200, r2=200; final stored name=\\\"Race1 Customer RENAMED\\\" (renamed: true), phone=\\\"07700000002\\\" (updated: true)\" — both survive.",
+    "evidence": "server/scripts/plan2/p2H_day22.mts (repro updated + re-run, now pass); server/src/routes/customers.ts:207-236; features/customers/CustomersApp.tsx save()",
+    "at": "2026-09-16T11:00:00.000000Z",
+    "agent": "plan2-V",
+    "notes": "IMPORTANT for whoever re-verifies this: the ORIGINAL QA repro (both PUTs carrying the full stale object) still 'fails' if you run it verbatim against the old script — that's expected and not a regression. It was accurately simulating the pre-fix UI, which always resubmitted the whole form; a server-only partial-merge can't help if the client keeps sending full stale payloads, so the client had to change too. The test script was updated in place (not left inconsistent with the shipped fix) to send only-the-changed-field per call, matching what CustomersApp.tsx's save() now actually sends.",
+    "fixedBy": "fixer",
+    "fixedAt": "2026-09-16"
+  },
+  "p2-d22-race2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "same trip, two concurrent send-message calls → s1=200 sent=1, s2=200 sent=1; new notification docs created=2",
+    "evidence": "server/scripts/plan2/p2H_day22.mts",
+    "at": "2026-09-16T11:00:00.000000Z",
+    "agent": "plan2-V",
+    "notes": "send-message has no idempotency guard against being called twice (no 'already sent' flag checked), so a double-click or a retried request genuinely double-messages every family on the trip — worth a product decision on whether that's acceptable for a one-off parent comms send."
+  },
+  "p2-d22-pe1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "staff assigned to F1 with assignment.mode:'all' (meant to mean 'all of F1's own sites'); GET /api/bookings → F2's booking (a DIFFERENT franchise) present: false (expect false — 'all' must be scoped by the staff member's own franchiseId, never network-wide)",
+    "evidence": "server/scripts/plan2/p2H_day22.mts",
+    "at": "2026-09-16T11:00:00.000000Z",
+    "agent": "plan2-V"
+  },
+  "p2-d22-pe2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1's own DSL name set to \"F1's own DSL\"; company owner PUT /api/library?franchiseId=p2hmu3y5joo-fr-34s8k3 attempting to overwrite it directly → 200 {\"tenantId\":\"HeIZGzNQsJlklYFMzcw8\",\"settings\":{\"safeguarding\":{\"dslName\":\"HO OVERWROTE THIS\"}}}; F1's stored dslName afterward = \"F1's own DSL\" (expect UNCHANGED — a query-param franchiseId on a write route must not let HO silently rewrite a franchise's own settings copy outside the real franchise-features control surface)",
+    "evidence": "server/scripts/plan2/p2H_day22.mts",
+    "at": "2026-09-16T11:00:00.000000Z",
+    "agent": "plan2-V"
+  },
+  "p2-d22-integ1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "trip attendee's own booking cancelled afterward; GET /api/trips (list) → 200, the trip still present: true (expect true, no crash — the trip's attendee record survives the underlying booking being cancelled, same spirit as p2-d20-integ5's child-deletion check)",
+    "evidence": "server/scripts/plan2/p2H_day22.mts",
+    "at": "2026-09-16T11:00:00.000000Z",
+    "agent": "plan2-V"
+  },
+  "p2-d22-integ2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "the booking a notification refers to is deleted directly; GET /api/notifications afterward → 200 (expect 200, no crash from a dangling reference in a notification doc)",
+    "evidence": "server/scripts/plan2/p2H_day22.mts",
+    "at": "2026-09-16T11:00:00.000000Z",
+    "agent": "plan2-V"
+  }
+}

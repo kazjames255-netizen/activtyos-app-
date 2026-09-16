@@ -76,12 +76,57 @@ async function loadStore(key: string) {
   return { staff: (m.staff as Record<string, unknown>[] | undefined) ?? [], sites: (m.sites as string[] | undefined) ?? [], shifts, updatedAt: (m.updatedAt as string | undefined) ?? null };
 }
 
+// Approved leave (Leave & absence — the `absences` collection in leave.ts) →
+// this team's shifts. A shift's staff member may have leave approved for that
+// date; the rota never cross-referenced it, so it kept showing them as
+// scheduled with nothing to say otherwise. `absences` is keyed by the same
+// rotaKey (tenant, or tenant__fr__franchise) as the rota — but by NAME, not
+// staffId: leave.ts stamps `staffId: slug(name)` (e.g. "jordan-lee"), which
+// isn't the rota's own staff.id (e.g. "team-jordan-lee" — see withTeam in
+// ScheduleApp.tsx), so the two only line up reliably by name. Matches
+// staffRosterBlock's own trimmed-lowercase name comparison (staffPolicy.ts).
+async function approvedLeaveByName(key: string): Promise<Map<string, { start: string; end: string }[]>> {
+  const snap = await db.collection("absences").where("rotaKey", "==", key).where("status", "==", "approved").get();
+  const byName = new Map<string, { start: string; end: string }[]>();
+  for (const d of snap.docs) {
+    const a = d.data() as { name?: string; start?: string; end?: string };
+    const name = (a.name ?? "").trim().toLowerCase();
+    if (!name || !a.start || !a.end) continue;
+    const arr = byName.get(name) ?? [];
+    arr.push({ start: a.start, end: a.end });
+    byName.set(name, arr);
+  }
+  return byName;
+}
+const dateInRanges = (ranges: { start: string; end: string }[] | undefined, date: string): boolean =>
+  !!ranges && ranges.some((r) => r.start <= date && date <= r.end);
+
+/** Stamp `staffOnLeave`/`needsCover` onto any shift whose staff member has
+ *  approved leave covering that shift's date — the UI shows "Off — needs
+ *  cover" instead of silently rendering them as rostered. */
+async function flagShiftsOnLeave(key: string, staff: Record<string, unknown>[], shifts: Record<string, unknown>[]): Promise<Record<string, unknown>[]> {
+  const byName = await approvedLeaveByName(key);
+  if (!byName.size) return shifts;
+  const nameOfStaffId = new Map(staff.map((s) => [String(s.id), String(s.name ?? "").trim().toLowerCase()]));
+  return shifts.map((s) => {
+    const staffId = s.staffId as string | null | undefined;
+    const date = s.date as string | undefined;
+    const name = staffId ? nameOfStaffId.get(staffId) : undefined;
+    if (name && date && dateInRanges(byName.get(name), date)) {
+      return { ...s, staffOnLeave: true, needsCover: true };
+    }
+    return s;
+  });
+}
+
 // GET /api/rota — the store. Staff read it too (it's their rota), but never
 // see colleagues' pay rates.
 rota.get("/", async (req, res) => {
   const auth = req.auth!;
   if (!auth.tenantId || !canRead(auth.role)) { res.status(403).json({ error: "Forbidden" }); return; }
-  const store = await loadStore(keyOf(auth.tenantId, auth.franchiseId));
+  const key = keyOf(auth.tenantId, auth.franchiseId);
+  const store = await loadStore(key);
+  store.shifts = await flagShiftsOnLeave(key, store.staff as Record<string, unknown>[], store.shifts as Record<string, unknown>[]) as typeof store.shifts;
   if (auth.role === "staff") {
     store.staff = store.staff.map(({ rate: _r, ...s }) => s);
     // Colleagues' shifts follow Setup → Scheduling "who can see co-workers"

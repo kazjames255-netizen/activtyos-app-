@@ -10,6 +10,7 @@ admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSy
 const db = admin.firestore();
 const args = Object.fromEntries(process.argv.slice(2).map((a,i,arr)=>a.startsWith("--")?[a.slice(2),arr[i+1]&&!arr[i+1].startsWith("--")?arr[i+1]:true]:[]).filter(x=>x.length));
 const LIMIT = args.limit ? +args.limit : Infinity; const SOURCES = args.sources ? String(args.sources).split(",") : null;
+const ONLY = args.only ? new Set(String(args.only).split(",")) : null;
 // --rescan: deliberate second attempt at leads we already searched and found nothing for (15 Sept 2026 — Brave credit
 // topped up, worth retrying the "searched, no candidate" pile). Writes to its OWN out file so it never collides with
 // the original pass's done-tracking, and — unlike the normal apply below — a rescan that ALSO finds nothing never
@@ -22,7 +23,10 @@ const SKIP = /(maps\.apple|maps\.google|goo\.gl|waze|what3words|openstreetmap|fa
 const STOP = new Set("the and of ltd limited cic cio uk plc llp co club clubs school nursery pre preschool childcare children kids day care centre center group holiday camp camps club activities activity community trust academy little happy days playgroup out after".split(" "));
 const tokens = (s) => (s||"").toLowerCase().replace(/[’']/g,"").split(/[^a-z0-9]+/).filter(t=>t.length>=3 && !STOP.has(t));
 const squash = (s) => (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
-const town = (l) => { const loc = String(l.location||"").split(/[·|]/)[0].split(",")[0].replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/,"").trim(); return loc && !/^\d+ sites?$/i.test(loc) ? loc : (l.county||l.region||""); };
+// Companies House imports (and maybe others) carry a bare `postcode` field with no `location` at all — falling
+// through to "" silently dropped the location context from the search query. Fall back to postcode itself
+// (still a useful geo-anchor in a Brave query) when nothing else is set.
+const town = (l) => { const loc = String(l.location||"").split(/[·|]/)[0].split(",")[0].replace(/\b[A-Z]{1,2}\d[A-Z\d]?\s*\d[A-Z]{2}\b/,"").trim(); return loc && !/^\d+ sites?$/i.test(loc) ? loc : (l.county||l.region||l.postcode||"").trim(); };
 const decode = (s) => s.replace(/&amp;/g,"&").replace(/&#(\d+);/g,(m,n)=>String.fromCharCode(+n)).replace(/&quot;/g,'"').replace(/&#x27;|&#39;/g,"'").replace(/<[^>]+>/g,"");
 const API_KEY = process.env.BRAVE_SEARCH_API_KEY || "";
 // Preferred: the Brave Search API (JSON, X-Subscription-Token; free tier 1 req/s, 2k/month). Falls back to the HTML page
@@ -75,7 +79,7 @@ const snap = await db.collection("leads").select("name","location","county","reg
 const ORDER = ["haf","playwaze","pebble","eequ","yellowdays","ciw","ofsted","cis","fsni"];
 // No website at all, OR a doubtful one (holding page / dead / social page only / an earlier candidate that was rejected) — a search may find the real site.
 const doubtful = (x) => !x.website || x.comingSoon || x.websiteDown;
-const todo = snap.docs.filter(d => { const x=d.data(); if (x.excluded || x.websiteCandidate || done.has(d.id) || (SOURCES && !SOURCES.includes(x.source))) return false;
+const todo = snap.docs.filter(d => { const x=d.data(); if (x.excluded || x.websiteCandidate || done.has(d.id) || (SOURCES && !SOURCES.includes(x.source)) || (ONLY && !ONLY.has(d.id))) return false;
   return RESCAN ? (!x.website && !!x.websiteSearchedAt) : (doubtful(x) && !x.websiteSearchedAt); })
   .sort((a,b)=>ORDER.indexOf(a.data().source)-ORDER.indexOf(b.data().source)).slice(0, LIMIT);
 console.log("to search", todo.length, "(already done", done.size, ")", RESCAN ? "[RESCAN mode]" : "");

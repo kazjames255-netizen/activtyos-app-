@@ -23,7 +23,9 @@ import { type ClockRecord, loadClock, slug, clockIn, clockOut, startBreak, endBr
 const DEMO_ME = "Marcus Bell";
 const AVAIL_ID = "me-avail"; // staffId for my real assigned camp days
 const ROTA_KEY = "aos.rota.v5";
-interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; date: string; start: string; end: string; in?: string; out?: string; note?: string; rate?: number; address?: string }
+interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; date: string; start: string; end: string; in?: string; out?: string; note?: string; rate?: number; address?: string;
+  /** Server-computed (GET /api/rota) — this person has approved leave covering the date. */
+  staffOnLeave?: boolean; needsCover?: boolean }
 const money = (n: number) => `£${n.toFixed(2)}`;
 interface Staff { id: string; name: string }
 const ROLE_COL: Record<string, string> = { "Lead Coach": "#2f6bd8", Lifeguard: "#0f857b", Coach: "#6366f1", "Activity Assistant": "#8b5cf6", "Activity Instructor": "#b45309", "First Aider": "#c06a10" };
@@ -401,6 +403,7 @@ export function MyScheduleApp() {
                               <div className="mt-1 flex items-center gap-2">
                                 <span className="inline-flex flex-none items-center gap-1 rounded-full px-2 py-0.5 text-[10.5px] font-bold" style={{ background: col + "1a", color: col }}>{s.role}</span>
                                 {(s.listing || s.site) && <span className="truncate text-[11px] font-medium text-[var(--ink-3)]">{s.listing || s.site}</span>}
+                                {s.staffOnLeave && <span className="inline-flex flex-none items-center gap-1 rounded-full bg-[#fff1d6] px-2 py-0.5 text-[10.5px] font-black text-[#8a5a09]">🌴 Off — needs cover</span>}
                               </div>
                               {/* mini timeline bar */}
                               <div className="relative mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-[var(--panel)]">

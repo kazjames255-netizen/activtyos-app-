@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost, openFile } from "@/lib/api";
@@ -277,6 +277,14 @@ export function CustomersApp() {
   const [notice, setNotice] = useState<string | null>(null);
   const [invitingId, setInvitingId] = useState<string | null>(null);
   const topRef = useRef<HTMLDivElement>(null);
+  // The customer record as loaded, snapshotted when the editor opens — so
+  // save() can send only the fields the user actually changed, instead of
+  // the whole form re-submitting every field (including ones untouched by
+  // this editor) and silently clobbering a concurrent edit to a different
+  // field (the PUT route now merges by field; this is the client half of
+  // that fix — copies the diff-only pattern features/tasks/TasksApp.tsx's
+  // patch() already uses).
+  const originalRef = useRef<Customer | null>(null);
   const [view, setView] = useState<"families" | "children">("families");
   const [loc, setLoc] = useState("");
   const [day, setDay] = useState("");
@@ -356,7 +364,17 @@ export function CustomersApp() {
     // parts are stored alongside so "Dear Sarah" is possible in an email.
     const first = draft.firstName.trim();
     const last = draft.lastName.trim();
-    const body = {
+    const locationName = venues.find((v) => v.id === draft.locationId)?.name ?? "";
+    const children = draft.children
+      .filter((k) => k.name.trim())
+      .map((k) => ({
+        name: k.name.trim(),
+        // Age isn't written when there's a date of birth: two facts that can
+        // disagree, one of which rots. Kept only for records with no dob.
+        ...(k.dob.trim() ? { dob: k.dob.trim() } : k.age.trim() ? { age: parseInt(k.age, 10) || 0 } : {}),
+        ...(k.sendPlanId ? { sendPlanId: k.sendPlanId, sendPlanName: k.sendPlanName } : {}),
+      }));
+    const fullBody = {
       name: [first, last].filter(Boolean).join(" "),
       firstName: first,
       lastName: last,
@@ -365,25 +383,36 @@ export function CustomersApp() {
       locationId: draft.locationId,
       // The name too, so a record still reads properly if a venue is renamed
       // or removed from the library later.
-      locationName: venues.find((v) => v.id === draft.locationId)?.name ?? "",
+      locationName,
       marketingOptIn: draft.marketingOptIn,
-      // PECR audit trail: stamp when consent was first recorded, keep the
-      // original date on re-saves, and clear it if consent is withdrawn.
-      marketingOptInAt: draft.marketingOptIn ? (draft.marketingOptInAt ?? new Date().toISOString()) : undefined,
       notes: draft.notes.trim(),
-      // Sent back deliberately. `children` has `.default([])` on the server,
-      // so leaving it out of a PUT doesn't mean "unchanged" — it means an
-      // empty array, and every edit was quietly wiping the family's children.
-      children: draft.children
-        .filter((k) => k.name.trim())
-        .map((k) => ({
-          name: k.name.trim(),
-          // Age isn't written when there's a date of birth: two facts that can
-          // disagree, one of which rots. Kept only for records with no dob.
-          ...(k.dob.trim() ? { dob: k.dob.trim() } : k.age.trim() ? { age: parseInt(k.age, 10) || 0 } : {}),
-          ...(k.sendPlanId ? { sendPlanId: k.sendPlanId, sendPlanName: k.sendPlanName } : {}),
-        })),
+      children,
     };
+    // The route now merges only the fields it's sent (a PUT no longer needs
+    // every field present to mean "unchanged" — see server/src/routes/customers.ts).
+    // So on an edit, only send what actually changed from the record as
+    // loaded — two people editing different fields on the same family at the
+    // same time must both stick, not have whichever PUT lands second silently
+    // overwrite the first's change with its own stale copy of that field.
+    const orig = originalRef.current;
+    const body: Partial<typeof fullBody> = orig
+      ? Object.fromEntries(
+          (Object.entries(fullBody) as [keyof typeof fullBody, unknown][]).filter(([key, value]) => {
+            if (key === "firstName") return value !== (orig.firstName ?? splitName(orig.name).firstName);
+            if (key === "lastName") return value !== (orig.lastName ?? splitName(orig.name).lastName);
+            if (key === "email") return value !== (orig.email ?? "");
+            if (key === "phone") return value !== (orig.phone ?? "");
+            if (key === "locationId" || key === "locationName") return draft.locationId !== (orig.locationId ?? "");
+            if (key === "marketingOptIn") return value !== !!orig.marketingOptIn;
+            if (key === "notes") return value !== (orig.notes ?? "");
+            if (key === "name") return false; // derivative of first/last — included whenever those are
+            return true; // children: always sent in full (see server default/comment above)
+          }),
+        )
+      : fullBody;
+    // If the composite `name` changed (because first/last did), it must ride
+    // along even though `name` itself is never diffed above.
+    if (orig && ("firstName" in body || "lastName" in body)) body.name = fullBody.name;
     try {
       const saved = draft.id
         ? await api<Customer>(`/api/customers/${encodeURIComponent(draft.id)}`, {
@@ -393,13 +422,16 @@ export function CustomersApp() {
         : await apiPost<Customer>("/api/customers", body);
       // Saving must not fail because the invite did — the family record is the
       // thing that had to happen; an invite can be re-sent from the row.
-      if (sendInvite && body.email) {
+      // NB: fullBody, not body — body may have omitted `email`/`name` because
+      // this save didn't change them, but they're still the customer's real,
+      // current values (which is all this invite step needs).
+      if (sendInvite && fullBody.email) {
         try {
           await apiPost(`/api/customers/${encodeURIComponent(saved.id)}/invite`, {});
         } catch (e) {
           setError(
             t("customers.savedButInviteFailed", {
-              name: body.name,
+              name: fullBody.name,
               error: e instanceof Error ? e.message : t("customers.unknownError"),
             }),
           );
@@ -437,7 +469,7 @@ export function CustomersApp() {
         } catch (e) {
           setError(
             t("customers.savedButChildrenFailed", {
-              name: body.name,
+              name: fullBody.name,
               error: e instanceof Error ? e.message : t("customers.unknownError"),
             }),
           );
@@ -490,6 +522,7 @@ export function CustomersApp() {
     // not the window, so scrolling the window moves nothing at all.
     topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     setKidIdx(0);
+    originalRef.current = c;
     setDraft({
       id: c.id,
       firstName: c.firstName ?? splitName(c.name).firstName,
@@ -533,7 +566,7 @@ export function CustomersApp() {
   };
 
   const query = q.trim().toLowerCase();
-  const shown = (customers ?? []).filter(
+  const shown = useMemo(() => (customers ?? []).filter(
     (c) =>
       (!stage || stageOf(c) === stage) &&
       (!loc || c.locationId === loc) &&
@@ -546,7 +579,20 @@ export function CustomersApp() {
         .join(" ")}`
         .toLowerCase()
         .includes(query)),
-  );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  ), [customers, stage, loc, day, query, stats]);
+
+  // One pass over `customers` for every stage tile's count (not one full
+  // rescan of `customers` per stage — STAGES.map used to call
+  // `customers.filter(c => stageOf(c) === st.key).length` for each of the 4
+  // stages, on every render, for a list that can run to thousands of
+  // families in a large franchise).
+  const stageCounts = useMemo(() => {
+    const c: Record<string, number> = Object.fromEntries(STAGES.map((st) => [st.key, 0]));
+    for (const cu of customers ?? []) c[stageOf(cu)]++;
+    return c;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [customers, stats]);
 
   // Every child, with the family they belong to. Built from the same records
   // rather than fetched — a child has no existence apart from their family.
@@ -560,14 +606,14 @@ export function CustomersApp() {
       "#2f6bd8")
     : "#2f6bd8";
 
-  const kids = shown.flatMap((c) =>
+  const kids = useMemo(() => shown.flatMap((c) =>
     (c.children ?? []).map((k) => ({ ...k, family: c })),
-  );
+  ), [shown]);
   // Siblings grouped under their family — joined in one card, still opened
   // individually (see the Children view).
-  const childFamilies = shown
+  const childFamilies = useMemo(() => shown
     .map((c) => ({ family: c, kids: (c.children ?? []).map((k) => ({ ...k, family: c })) }))
-    .filter((g) => g.kids.length > 0);
+    .filter((g) => g.kids.length > 0), [shown]);
 
   return (
     // The same light palette Listings, Sessions & blocks and Bookings each set
@@ -616,7 +662,7 @@ export function CustomersApp() {
               </Button>
             )}
             {canWrite && !draft && (
-              <Button variant="primary" className="!bg-[var(--surface)] !border-white !text-[#2f5fd0]" onClick={() => { topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); setDraft(emptyDraft()); }}>
+              <Button variant="primary" className="!bg-[var(--surface)] !border-white !text-[#2f5fd0]" onClick={() => { topRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); originalRef.current = null; setDraft(emptyDraft()); }}>
                 {t("customers.addFamily")}
               </Button>
             )}
@@ -1113,7 +1159,7 @@ export function CustomersApp() {
             <div className="text-[10.5px] leading-[1.35]" style={{ color: stage === "" ? "rgba(255,255,255,.85)" : "var(--ink-3)" }}>{t("customers.everyoneOnList")}</div>
           </button>
           {STAGES.map((st) => {
-            const n = customers.filter((c) => stageOf(c) === st.key).length;
+            const n = stageCounts[st.key] ?? 0;
             const on = stage === st.key;
             return (
               <button

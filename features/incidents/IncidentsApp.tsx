@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { CSSProperties } from "react";
 import { useSearchParams } from "next/navigation";
 import { api, get as apiGet, post as apiPost, put as apiPut } from "@/lib/api";
@@ -377,17 +377,30 @@ export function IncidentsApp({ kind, bare = false }: { kind: Kind; bare?: boolea
   const c = COPY[kind];
   const ql = q.trim().toLowerCase();
   const all = logs ?? [];
-  const thisMonth = all.filter((l) => (l.date ?? "").slice(0, 7) === todayIso().slice(0, 7)).length;
-  const serious = all.filter((l) => l.severity === "serious").length;
-  const informed = all.filter((l) => l.parentNotified || l.parentNotifiedAt).length;
+  // Years of first-aid/behaviour records pile up across a whole tenant — these used to be
+  // plain `const`s re-filtering/re-scanning `all` on every render (including every keystroke
+  // in the search box). One memoized pass per derived value instead.
+  const { thisMonth, serious, informed, injuries } = useMemo(() => {
+    const month = todayIso().slice(0, 7);
+    let thisMonth = 0, serious = 0, informed = 0;
+    const injurySet = new Set<string>();
+    for (const l of all) {
+      if ((l.date ?? "").slice(0, 7) === month) thisMonth++;
+      if (l.severity === "serious") serious++;
+      if (l.parentNotified || l.parentNotifiedAt) informed++;
+      const inj = l.injury?.trim(); if (inj) injurySet.add(inj);
+    }
+    return { thisMonth, serious, informed, injuries: [...injurySet].sort() };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [all]);
   const tiles: [string, number][] = [["This month", thisMonth], ["Serious", serious], ["Parent informed", informed], ["Total", all.length]];
-  const injuries = [...new Set(all.map((l) => l.injury?.trim()).filter(Boolean) as string[])].sort();
-  const shown = all.filter((l) =>
+  const shown = useMemo(() => all.filter((l) =>
     (!ql || l.childName.toLowerCase().includes(ql) || l.description.toLowerCase().includes(ql)) &&
     (!sevFilter || l.severity === sevFilter) &&
     (!injuryFilter || l.injury === injuryFilter) &&
     (!dateFilter || l.date === dateFilter) &&
-    (ackFilter === "" || (ackFilter === "yes" ? !!l.acknowledgedAt : !l.acknowledgedAt)));
+    (ackFilter === "" || (ackFilter === "yes" ? !!l.acknowledgedAt : !l.acknowledgedAt))),
+  [all, ql, sevFilter, injuryFilter, dateFilter, ackFilter]);
 
   return (
     <div className={bare ? "text-[var(--ink)]" : "-m-5 min-h-[calc(100vh-3.5rem)] bg-[var(--bg)] p-5 text-[var(--ink)]"} style={bare ? undefined : LIGHT_PALETTE}>

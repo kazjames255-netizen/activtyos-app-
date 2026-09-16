@@ -18,6 +18,7 @@ interface Invoice { status?: string; amount?: number; date?: string; paidAt?: st
 interface Income { date?: string; amount?: number }
 interface Booking { pay?: string; amount?: number; amountPaid?: number; createdAt?: string }
 const monthKeyOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+const sameLen = (a: unknown[], b: unknown[]) => { try { return a.length === b.length && JSON.stringify(a) === JSON.stringify(b); } catch { return false; } };
 
 // Money IN hub. Customer Invoices (raise, send, get paid) plus Income (cash on
 // the door, grants, ad-hoc takings). Paid invoices are money-in, so the hero
@@ -28,10 +29,13 @@ export function MoneyInApp() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [tab, setTab] = useState<"invoices" | "income">("income");
 
+  // useRealtime refetches all three on every invoices/income/bookings change; bail out of each
+  // state update (keep the old array reference) when the payload is content-identical to what's
+  // loaded, so the KPI totals below don't re-scan a tenant's whole history for nothing.
   const refresh = useCallback(() => {
-    apiGet<{ items: Invoice[] }>("/api/invoices").then((p) => setInvoices(p.items ?? [])).catch(() => {});
-    apiGet<{ items: Income[] }>("/api/income").then((p) => setIncomes(p.items ?? [])).catch(() => {});
-    apiGet<Booking[]>("/api/bookings").then((b) => setBookings(Array.isArray(b) ? b : [])).catch(() => {});
+    apiGet<{ items: Invoice[] }>("/api/invoices").then((p) => setInvoices((prev) => sameLen(prev, p.items ?? []) ? prev : (p.items ?? []))).catch(() => {});
+    apiGet<{ items: Income[] }>("/api/income").then((p) => setIncomes((prev) => sameLen(prev, p.items ?? []) ? prev : (p.items ?? []))).catch(() => {});
+    apiGet<Booking[]>("/api/bookings").then((b) => setBookings((prev) => sameLen(prev, Array.isArray(b) ? b : []) ? prev : (Array.isArray(b) ? b : []))).catch(() => {});
   }, []);
   useEffect(() => { refresh(); }, [refresh]);
   useRealtime(["invoices", "income", "bookings"], refresh);
@@ -48,9 +52,14 @@ export function MoneyInApp() {
   const sumIn = (rows: { date?: string; amount?: number }[], key: string, byYear = false) =>
     rows.filter((r) => (byYear ? (r.date ?? "").slice(0, 4) : (r.date ?? "").slice(0, 7)) === key).reduce((s, r) => s + (r.amount ?? 0), 0);
 
-  const invMonth = sumIn(paidInv, thisMonthKey), incMonth = sumIn(incomes, thisMonthKey), bkMonth = sumIn(bookingIn, thisMonthKey);
-  const invYear = sumIn(paidInv, thisYear, true), incYear = sumIn(incomes, thisYear, true), bkYear = sumIn(bookingIn, thisYear, true);
-  const inMonth = invMonth + incMonth + bkMonth, inYear = invYear + incYear + bkYear;
+  // `bookingIn` especially can span years of history — one pass per subset for the hero's
+  // totals, not re-filtered/re-reduced six times on every render.
+  const { invMonth, incMonth, bkMonth, invYear, incYear, bkYear, inMonth, inYear } = useMemo(() => {
+    const invMonth = sumIn(paidInv, thisMonthKey), incMonth = sumIn(incomes, thisMonthKey), bkMonth = sumIn(bookingIn, thisMonthKey);
+    const invYear = sumIn(paidInv, thisYear, true), incYear = sumIn(incomes, thisYear, true), bkYear = sumIn(bookingIn, thisYear, true);
+    return { invMonth, incMonth, bkMonth, invYear, incYear, bkYear, inMonth: invMonth + incMonth + bkMonth, inYear: invYear + incYear + bkYear };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [paidInv, incomes, bookingIn, thisMonthKey, thisYear]);
 
   const Kpi = ({ big, sub }: { big: string; sub: string }) => (
     <div className="rounded-xl bg-white/15 px-4 py-2 backdrop-blur-sm"><div className="text-[20px] font-extrabold leading-none">{big}</div><div className="mt-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white/80">{sub}</div></div>

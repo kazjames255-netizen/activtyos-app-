@@ -2057,6 +2057,12 @@ export function SetupApp() {
               <option value="managers">Managers &amp; owners only</option>
             </Select>
           </Row>
+          <Row label="Who can send the trip message to parents" hint="Step 8's parent message/payment request. Managers/owners can always send this; this controls staff.">
+            <Select value={settings.trips?.whoCanSend ?? "all"} onChange={(e) => set("trips", { ...settings.trips, whoCanSend: e.target.value as "all" | "lead" })}>
+              <option value="all">Any staff who can see the trip</option>
+              <option value="lead">Only the trip lead / organiser</option>
+            </Select>
+          </Row>
         </Section>
       )}
 

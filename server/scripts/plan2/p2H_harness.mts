@@ -42,6 +42,8 @@ import { feedback } from "../../src/routes/feedback";
 import { referral, referralsAdmin } from "../../src/routes/referral";
 import { memberships, membershipsAdmin } from "../../src/routes/memberships";
 import { platform } from "../../src/routes/platform";
+import { ventureLakes } from "../../src/routes/ventureLakes";
+import { geo, tiles } from "../../src/routes/geo";
 import { leads, leadsPublic } from "../../src/routes/leads";
 import { providersPublic } from "../../src/routes/providers";
 import { analytics } from "../../src/routes/analytics";
@@ -114,6 +116,7 @@ export function buildApp() {
   app.use("/api/public/reference", referencePublic);
   app.use("/api/leads", leadsPublic);
   app.use("/api/providers", providersPublic);
+  app.use("/api/geo/tiles", tiles);
   app.use("/api", injectUser, attachRole);
   app.use("/api", enforceSubscription);
   app.use("/api", enforceAccess);
@@ -128,6 +131,8 @@ export function buildApp() {
   app.use("/api/registers", registers);
   app.use("/api/children", children);
   app.use("/api/platform/notifications", platformNotifications);
+  app.use("/api/venture-lakes", ventureLakes);
+  app.use("/api/geo", geo);
   app.use("/api/leads", leads);
   app.use("/api/ratios", ratios);
   app.use("/api/incidents", incidents);

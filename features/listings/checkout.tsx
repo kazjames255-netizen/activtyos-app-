@@ -696,7 +696,7 @@ function parentMethodEntry(m: string): [string, string] | null {
 export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, booking, tenantId }: {
   b: ReturnType<typeof useBooking>; d: WizardDraft; addons: LocalState["addons"]; tk: CkTheme;
   mode?: "operator" | "parent";
-  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; tfc?: { amount: number; remainderVia: string; references: Record<string, string> }; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null }) => void;
+  onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; tfc?: { amount: number; remainderVia: string; references: Record<string, string> }; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void;
   booking?: { busy: boolean; error: string | null };
   /** The listing's tenant, for the signed-out parent's public settings read. */
   tenantId?: string;
@@ -939,6 +939,27 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
       .then((r) => { if (r?.phone?.trim()) { setPhone(r.phone.trim()); setPhonePrefilled(true); } })
       .catch(() => {});
   }, [parentMode, tenantId]);
+
+  // ── Home-visit service address ──────────────────────────────────────────
+  // For a home-visit (or "both") listing, checkout needs to know where THIS
+  // session actually happens — defaults to the parent's saved account address,
+  // editable here (e.g. booking a session at a grandparent's house). The
+  // server re-validates the postcode against the provider's coverage area
+  // before the booking is allowed to complete.
+  const homeVisit = d.deliveryMode === "home-visit" || d.deliveryMode === "both";
+  const [serviceAddress, setServiceAddress] = useState({ address: "", postcode: "" });
+  const [addressPrefilled, setAddressPrefilled] = useState(false);
+  useEffect(() => {
+    if (!parentMode || !homeVisit) return;
+    apiGet<{ address?: string; postcode?: string }>("/api/account")
+      .then((r) => {
+        if (r?.address?.trim() || r?.postcode?.trim()) {
+          setServiceAddress({ address: r.address?.trim() ?? "", postcode: r.postcode?.trim() ?? "" });
+          setAddressPrefilled(true);
+        }
+      })
+      .catch(() => {});
+  }, [parentMode, homeVisit]);
   // ── Discount code (parent only) ─────────────────────────────────────────
   // A parent can type a code or one-tap one of their own coupons. We validate it
   // against the SAME engine the charge uses (/api/discounts/validate → shared
@@ -2469,8 +2490,25 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         </div>
       )}
 
+      {ckStage === "pay" && homeVisit && (
+        <div className="mt-3">
+          <label className="mb-1 block text-[11px] font-bold" style={{ color: tk.muted }}>We&rsquo;ll come to you — confirm the address</label>
+          <input value={serviceAddress.address} onChange={(e) => setServiceAddress((s) => ({ ...s, address: e.target.value }))} placeholder="House number and street"
+            className={`mb-1.5 w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
+            style={{ background: tk.inputBg, borderColor: tk.line, color: tk.ink }} />
+          <input value={serviceAddress.postcode} onChange={(e) => setServiceAddress((s) => ({ ...s, postcode: e.target.value.toUpperCase() }))} placeholder="Postcode"
+            className={`w-full border px-3 py-2 text-[13px] outline-none ${tk.round}`}
+            style={{ background: tk.inputBg, borderColor: serviceAddress.postcode.trim() ? tk.line : tk.accent, color: tk.ink }} />
+          <div className="mt-1 text-[11px]" style={{ color: tk.muted }}>
+            {serviceAddress.postcode.trim()
+              ? (addressPrefilled ? "From your account — edit it if this session is somewhere else (e.g. a grandparent's)." : "Where this session will actually happen. We'll check it's in the provider's coverage area.")
+              : "We need the postcode to confirm you're within the provider's home-visit coverage."}
+          </div>
+        </div>
+      )}
+
       {ckStage === "pay" && <button className={`mt-3 w-full py-3 text-[13.5px] font-extrabold disabled:opacity-40 ${tk.round}`} style={{ background: tk.accent, color: tk.accentInk }}
-        disabled={(!parentMode && !b.parent) || (parentMode && !phone.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
+        disabled={(!parentMode && !b.parent) || (parentMode && !phone.trim()) || (homeVisit && !serviceAddress.postcode.trim()) || roster.length === 0 || unassigned > 0 || shortPasses.length > 0 || clashes.length > 0 || !!booking?.busy || (method === "voucher" && !!chosenVoucher && roster.some((c) => !(voucherRefs[c.name] ?? "").trim())) || (method === "tfc" && roster.some((c) => !(voucherRefs[c.name] ?? "").trim()))}
         onClick={() => {
           b.setChild(Object.values(b.assign).filter(Boolean).join(", "));
           // With an onBook handler the confirm actually books — the parent
@@ -2512,6 +2550,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
             // Only sent when the family chose to spend LESS than their full
             // balance — otherwise the server auto-applies it all (authoritative).
             walletCap: walletUse === null ? undefined : walletApplied,
+            serviceAddress: homeVisit && serviceAddress.postcode.trim() ? serviceAddress : undefined,
             basket: b.basket, addonSel: b.addonSel, addonAns: b.addonAns, mealSel: b.mealSel, children: roster,
             // Resolved here so the caller gets plain "who's on what" rather than exceptions.
             dayAssign: Object.fromEntries(b.basket.map((x) => [x.id, Object.fromEntries(x.dates.map((iso) => [iso, b.childrenOn(x.id)]))])),
@@ -2521,6 +2560,7 @@ export function CheckoutPanel({ b, d, addons, tk, mode = "operator", onBook, boo
         {booking?.busy ? "Booking…"
           : !parentMode && !b.parent ? "Find the parent first"
           : parentMode && !phone.trim() ? "Add your contact phone"
+          : homeVisit && !serviceAddress.postcode.trim() ? "Add the visit address"
           : roster.length === 0 ? "Add a child first"
           : unassigned > 0 ? `${unassigned} day${unassigned === 1 ? " has" : "s have"} nobody on ${unassigned === 1 ? "it" : "them"}`
           : clashes.length > 0 ? `${clashes[0].name} is booked twice at the same time on ${fmtDate(clashes[0].iso)}`

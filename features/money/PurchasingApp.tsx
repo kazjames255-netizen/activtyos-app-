@@ -115,7 +115,16 @@ export function PurchasingApp({ embedded = false, fixedKind }: { embedded?: bool
   const [savedSuppliers, setSavedSuppliers] = useState<{ name: string; email?: string; phone?: string; address?: string }[]>([]);
   const hoScope = useHoScope(); // head office: read only this network's own money
   const refresh = useCallback(() => {
-    apiGet<Payload>(withHoMoney("/api/purchasing")).then((p) => { setData(p); setError(null); }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
+    apiGet<Payload>(withHoMoney("/api/purchasing")).then((p) => {
+      // Realtime refires this on every purchaseOrders/suppliers change tenant-wide; bail out of
+      // the state update (keep the old array reference) when the payload is content-identical to
+      // what's loaded, so the items/filtered/etc useMemos below don't re-derive for nothing.
+      setData((prev) => {
+        try { if (prev && prev.items.length === p.items.length && JSON.stringify(prev) === JSON.stringify(p)) return prev; } catch { /* fall through */ }
+        return p;
+      });
+      setError(null);
+    }).catch((e) => setError(e instanceof Error ? e.message : "Failed to load"));
     apiGet<{ name: string; email?: string; phone?: string; address?: string }[]>("/api/suppliers").then((s) => setSavedSuppliers(Array.isArray(s) ? s.filter((x) => x.name) : [])).catch(() => {});
   }, [hoScope]);
   useEffect(() => { refresh(); }, [refresh]);

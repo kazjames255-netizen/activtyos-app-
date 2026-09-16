@@ -1,0 +1,248 @@
+{
+  "p2-d18-m1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "discount usageLimit:1 created; first booking with the code → 201, usedCount after → 1; second booking (different family) with the SAME exhausted code → 400 \"This code has reached its usage limit\"",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R",
+    "notes": "The whole booking is refused (400), not silently completed without the discount — an explicitly-requested-but-exhausted code is treated as a hard checkout error the family sees and can react to (remove the code, or contact the provider), rather than a silent price change."
+  },
+  "p2-d18-m2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "minSpend:100; validate at subtotal 50 → valid=false reason=\"Spend at least £100.00 to use this code\"; at subtotal 150 → valid=true off=5",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-m3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "code assignedTo P's email; validate as an unrelated family (P2) → valid=false reason=\"This code is reserved for another customer\"; as the assigned family (P) → valid=true",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-m4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "invoice status:sent, dueDate yesterday → created 201; GET /api/invoices row.overdue=true; summary.overdue=1",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-m5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "booking total=20; record-payment for the EXACT remaining balance → 200 ; one more penny beyond that (now overpaying) → 400 \"£0.01 is more than this booking's £0.00 outstanding balance (£20.00 total, £20.00 already recorded) — check the amount.\"",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-m6": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "royalty rate set to 12.5% → 200; two F1 bookings taken; HO's own row for F1 → {\"franchiseId\":\"p2hmu3o62jl-fr-e3eud5\",\"name\":\"P2H18 F1 · P2H18 F1 area\",\"count\":2,\"revenue\":40,\"collected\":0,\"fee\":5}; F1's own /mine figure → {\"settings\":{\"rate\":12.5,\"basis\":\"revenue\"},\"count\":2,\"revenue\":40,\"collected\":0,\"fee\":5,\"period\":\"all\",\"from\":null,\"to\":null}",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-bk1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "block capacityScope:'day', capacity:1; first child on day 1 → 201; second child, SAME day 1 (day full) → 409 (row status: 409); third child, DIFFERENT day 2 (day 2 still empty) → 201 — confirms the cap is per-day, not per-block",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-bk2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "coverage postcodePrefixes:['SW1']; booking with a LOWERCASE, spaced postcode (\"sw1 2ab\") → 201 accepted — matching is case/space-insensitive",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-bk3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "two DIFFERENT freelancer tenants (A, A2), each with a home-visit listing booked at overlapping/close times (10:00-11:00 vs 10:15-11:00, same day, under A's own 20-min gap) → A's booking 201; A2's booking 201 (expected both 201 — the clash-check queries bookingsCol.where(tenantId==listing.tenantId), so it never crosses tenant boundaries even when two freelancers' sessions genuinely overlap in time)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-bk4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "FIXED by Fixer 2026-09-16. server/src/routes/bookings.ts's `case \"cancel\":` branch (~line 548) now throws Conflict(409, \"This booking is already cancelled\") if b.status === \"Cancelled\" before calling applyCancel(), matching the existing replay guard on refund-approve. Re-ran the ORIGINAL QA script (server/scripts/plan2/p2H_day18.mts) unmodified: \"first cancel → 200; SAME booking cancelled again → 409 'This booking is already cancelled'\". Also verified QA's full chained repro (cancel(full) → refund-approve → cancel-again → refund-approve-again) with a standalone script against the harness: cancel1 200, refundApprove1 200, cancel2 409 (blocked — previously 200, which used to reset cancel.refund to \"full\" and reopen the refund-approve guard), refundApprove2 409 (guard correctly stays closed since cancel2 never mutated cancel.refund). No double payout possible via this path anymore. bk5 (cancel-day) re-verified pass — no regression.",
+    "notes": "Fix: server/src/routes/bookings.ts, case \"cancel\" in the actions switch (~line 548-556).",
+    "evidence": "server/scripts/plan2/p2H_day18.mts (re-run, bk4 now pass); server/src/routes/bookings.ts:548-556",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R",
+    "fixedBy": "fixer",
+    "fixedAt": "2026-09-16"
+  },
+  "p2-d18-bk5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "3-day booking; cancel-day on day 1 (2027-02-03) → 200; kid.cancelledDays afterward = [\"2027-02-03\"]; kid.dates (unchanged historical record, still all 3) = [\"Wed 03 Feb 2027\",\"Thu 04 Feb 2027\",\"Fri 05 Feb 2027\"]; a refundLog line was added: true",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-sg1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "medication created with consentGranted:false; POST administer → 409 \"No parental consent on file for this medication — can't record a dose.\"",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-sg2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "incident kind:'incident' (not safeguarding), confidential:true, no shareWithParent → created 201; GET /api/incidents as the child's own parent → record present: false (expect false — confidential holds even for a non-safeguarding kind)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-sg3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "safeguarding concern logged by one staff member; ANOTHER plain staff member (not DSL, not the recorder) GET /api/incidents?kind=safeguarding → row present: false, full description visible: false (expect the record to be absent or redacted, never the full text)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-sg4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1 creates a medication record (201); F2's GET /api/medications includes it: false (expect false)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-sg5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "Setup safeguarding.notifyParentAccident:false; accident logged on the child's own record → GET /api/incidents as that SAME child's own parent shows it: true (expect true — the toggle governs the proactive notification, not whether an accident appears on the child's own profile; confirmed by reading incidents.ts's parent-list filter, which has no accident-specific exclusion)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-r1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "approve leave for Riley on 2026-11-10 → 201, rota shows needsCover: true; POST .../cancel → 200; rota afterward shows needsCover: false (expect false once cancelled)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-r2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "two franchises (F1, F2) each roster a staff member with the SAME name (\"Sam Shared Name\") on the same date; leave approved only under F1's rotaKey → F1's own /api/rota flags the shift needsCover: true; F2's own /api/rota, same name/date, different franchise: false (expect false — leave doesn't cross the franchise boundary even with a name collision)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-r3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "a staff record carrying rate:15.5 exists on the rota; plain staff GET /api/rota — any staff row still carries a rate field: false (expect false — rota.ts strips 'rate' for role:'staff')",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-r4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "a staff member flagged lead:true attempts POST /api/leave/absences/<id>/decide on a colleague's pending request → 403 \"Only a manager can approve or decline leave\" (expect 403 — decide is canManage-gated by role, a staff 'lead' flag doesn't cross it)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-r5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "two different staff, same date, both approved leave — Alex's shift needsCover: true; Jordan's shift needsCover: true (expect both true, independently)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-msg1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/messages/broadcast with {SessionDate}/{ParentName} tokens in the body → 200 ; tokens left literal in the response: false",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-msg2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1 administers a dose (201) — 'medication' IS a STAFF_CATEGORY notification; F1's own bell has activity: true; F2's bell shows a 'medication' entry from F1's tenant: false (expect false — franchise scoping holds for staff-visible categories too, not just the booking/meal-order categories day 17 checked)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-msg3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "send-message with all 7 SEND_TOKENS in one message → 200; any token left unsubstituted in the response echo: false",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R",
+    "notes": "The route doesn't echo the per-family rendered body in its response, so this checks the top-level template wasn't rejected/mangled; token substitution itself happens per-recipient inside the send loop (confirmed by reading trips.ts SEND_TOKENS)."
+  },
+  "p2-d18-msg4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1 broadcasts to its own listing's families → 200 ; F2's own GET /api/messages/threads contains the F1-only broadcast text: false (expect false)",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R",
+    "notes": "'A franchise can only broadcast to ITS OWN families' per messages.ts's own comment (line ~529) — this confirms the delivery side agrees with the send-side restriction."
+  },
+  "p2-d18-t1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F1's trips.whoCanSend set to 'lead' (its own Setup copy only); F2's plain staff member (not organiser/lead) POST send-message on an F2 trip → 200 sent — F1's restrictive setting did not leak into F2's own trips",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-t2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "code created under tenant A; validate with the exact same code text but tenantId=B (a wholly different tenant) → valid=false reason=\"That code isn’t recognised\"; validate with the correct tenantId=A → valid=true",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-t3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "A's home-visit listing stores its own coverageArea ({\"mode\":\"postcodePrefixes\",\"postcodePrefixes\":[\"SW1\"]}) scoped under tenantId=o4OzZGF1QAtVjGxSDzXf (A=o4OzZGF1QAtVjGxSDzXf) — no shared/global coverage config exists that a second freelancer tenant (A2) could collide with",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-t4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "platform token GET /api/invoices with NO ?tenantId= → 400 \"Platform: pass ?tenantId=\"; WITH ?tenantId=A → 200",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  },
+  "p2-d18-t5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "F2's own GET /api/splitfees/mine → 200; F2's own GET /api/library shows any splitfees rate value baked directly into its OWN settings object (it should read the shared company-level rate via the splitfees route, not a copy in its library settings): false",
+    "evidence": "server/scripts/plan2/p2H_day18.mts",
+    "at": "2026-09-16T06:00:00.000000Z",
+    "agent": "plan2-R"
+  }
+}

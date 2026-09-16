@@ -161,8 +161,14 @@ async function venueMapPng(lat: number, lng: number): Promise<Buffer | null> {
 async function listingContext(
   b: Booking,
   want: { whatIncluded?: boolean; map?: boolean },
-): Promise<{ heroCid?: string; location?: string; provided?: string[]; toBring?: string[]; mapCid?: string; attachments: MailAttachment[] }> {
+): Promise<{ heroCid?: string; location?: string; homeVisit?: boolean; provided?: string[]; toBring?: string[]; mapCid?: string; attachments: MailAttachment[] }> {
   const attachments: MailAttachment[] = [];
+  // Home-visit booking: "location" is the family's own service address, not a
+  // venue — no venue lookup, no map of their own house.
+  if (b.serviceAddress?.address || b.serviceAddress?.postcode) {
+    const location = [b.serviceAddress.address, b.serviceAddress.postcode].filter(Boolean).join(", ") || undefined;
+    return { location, homeVisit: true, attachments };
+  }
   try {
     let listing: Record<string, unknown> | undefined;
     if (b.blockId) {
@@ -246,7 +252,7 @@ function layout(
   title: string,
   bodyHtml: string,
   b: Booking,
-  ctx: { heroCid?: string; location?: string; provided?: string[]; toBring?: string[]; mapCid?: string } = {},
+  ctx: { heroCid?: string; location?: string; homeVisit?: boolean; provided?: string[]; toBring?: string[]; mapCid?: string } = {},
 ): string {
   const kids = b.kids?.length ? b.kids.map((k) => k.name).join(", ") : b.child;
   const bookingUrl = `${webUrl}/custdash/bookings?open=${encodeURIComponent(b.ref)}`;
@@ -273,7 +279,7 @@ function layout(
         <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-top:16px">
           ${row("Activity", escapeHtml(b.listing))}
           ${row("Pass", escapeHtml(b.pass))}
-          ${ctx.location ? row("Location", escapeHtml(ctx.location)) : ""}
+          ${ctx.location ? row(ctx.homeVisit ? "We'll come to you at" : "Location", escapeHtml(ctx.location)) : ""}
           ${row("Child", escapeHtml(kids || "—"))}
           ${row("Total", `<b>${gbp(b.amount)}</b>`)}
         </table>
@@ -320,6 +326,7 @@ function sendCustomerEmail(
       layout({ name: brand.name, hasLogo: !!brand.logo }, title, body, b, {
         heroCid: ctx.heroCid,
         location: ctx.location,
+        homeVisit: ctx.homeVisit,
         provided: ctx.provided,
         toBring: ctx.toBring,
         mapCid: ctx.mapCid,
@@ -353,12 +360,15 @@ export function emailPaymentLink(b: Booking, providerName: string): void {
 }
 
 export function emailBookingConfirmed(b: Booking, providerName: string): void {
+  const closing = b.serviceAddress?.postcode
+    ? `Great news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has confirmed your booking. We'll come to you!`
+    : `Great news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has confirmed your booking. See you there!`;
   sendCustomerEmail(
     b, providerName, "bookings",
     `Booking confirmed — ${b.listing}`,
     "You're booked in ✓",
-    `<p style="font-size:14px">Great news ${escapeHtml(b.booker)} — ${escapeHtml(providerName)} has confirmed your booking. See you there!</p>`,
-    { whatIncluded: true, map: true }, // hero + location + what's included / to bring + venue map
+    `<p style="font-size:14px">${closing}</p>`,
+    { whatIncluded: true, map: true }, // hero + location + what's included / to bring + venue map (skipped automatically for home-visit — see listingContext)
   );
 }
 
@@ -531,6 +541,64 @@ export function emailSignUpInvite(p: {
       { attachments: brand.logo ? [brand.logo] : [] },
     );
   })().catch((e) => console.error("[mail] sign-up invite build failed:", (e as Error).message));
+}
+
+/** New provider welcome — sent once, right after a company/freelancer signup
+ *  creates its tenant (registerRole.ts). Introduces ActivityOS and the first
+ *  couple of things worth doing, with a straight link into their new
+ *  dashboard. Account-access mail like the sign-up invite: ungated by the
+ *  Setup → Email "automatic emails" toggles (those are for booking/payment
+ *  traffic, not the once-ever welcome), but still passes through the same
+ *  MAIL_LIVE gate as every other send (see sendMail in mailer.ts). */
+export function emailProviderWelcome(p: {
+  to: string;
+  providerName: string;
+  /** First name, if we have one, for the greeting — falls back to the
+   *  business name. */
+  firstName?: string;
+  portal: "company" | "freelancer" | "franchise";
+  tenantId?: string;
+}): void {
+  void (async () => {
+    const dashUrl = `${webUrl}/${p.portal}/dashboard`;
+    const greetingName = p.firstName?.trim() || p.providerName;
+    const step = (n: number, title: string, body: string) => `
+      <tr>
+        <td style="padding:10px 0;vertical-align:top;width:34px">
+          <div style="width:26px;height:26px;border-radius:50%;background:#eef4ff;color:#1d3a8f;font-size:13px;font-weight:800;text-align:center;line-height:26px">${n}</div>
+        </td>
+        <td style="padding:10px 0 10px 4px">
+          <div style="font-size:14px;font-weight:800;color:#171534">${escapeHtml(title)}</div>
+          <div style="font-size:13px;color:#4a4763;line-height:1.5;margin-top:2px">${body}</div>
+        </td>
+      </tr>`;
+    const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
+      <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+      </div>
+      <div style="padding:26px 22px">
+        <h2 style="font-size:21px;margin:0 0 12px;color:#171534">Welcome to ActivityOS, ${escapeHtml(greetingName)} 🎉</h2>
+        <p style="font-size:14px;line-height:1.6;margin:0 0 16px">
+          <b>${escapeHtml(p.providerName)}</b> is now set up. ActivityOS is where you'll run bookings, take payments,
+          roster your team and keep families in the loop — all from one place.
+        </p>
+        <table cellpadding="0" cellspacing="0" style="border-collapse:collapse;width:100%;margin-bottom:6px">
+          ${step(1, "Add your first listing", "A camp, class or club families can book — set the dates, price and how many places you've got.")}
+          ${step(2, "Invite your team", "Bring in your staff or franchisees so rotas, registers and messages reach the right people.")}
+          ${step(3, "Finish Setup &amp; features", "Your logo, safeguarding contacts, cancellation policy and the rest — a few minutes now saves a chase later.")}
+        </table>
+        <div style="text-align:center;margin:22px 0 6px">
+          <a href="${dashUrl}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">Open your dashboard →</a>
+        </div>
+        <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:18px 0 0;text-align:center">
+          Questions any time? Reply to this email, or use Message ActivityOS from inside the app.
+        </p>
+      </div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+    </div>`;
+    sendAs(p.tenantId, "ActivityOS", p.to, "Welcome to ActivityOS — let's get you set up", html);
+  })().catch((e) => console.error("[mail] provider welcome build failed:", (e as Error).message));
 }
 
 /** Team/franchise invite — the join link, who sent it and what it grants.

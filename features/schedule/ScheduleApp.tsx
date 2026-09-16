@@ -39,7 +39,11 @@ const WIN_A = 7 * 60, WIN = 19 * 60 - WIN_A; // availability bar window: 7am–7
 
 type Week = Partial<Record<WDay, { from: string; to: string }>>;
 interface Staff { id: string; name: string; role: string; rate: number; avail: "notsubmitted" | "confirmed"; reminders?: number; requested?: boolean; requestedScope?: "this" | "all"; requestedAt?: number; week?: Week; weeks?: Record<string, Week> }
-interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; season?: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean; note?: string; brk?: { from: string; to: string }; checkinPokes?: number }
+interface Shift { id: string; staffId: string | null; site: string; role: string; listing?: string; season?: string; date: string; start: string; end: string; in?: string; out?: string; locked?: boolean; note?: string; brk?: { from: string; to: string }; checkinPokes?: number;
+  /** Server-computed (GET /api/rota) — the assigned staff member has APPROVED
+   *  leave covering this date (Leave & absence). Read-only; recomputed fresh
+   *  on every load, so it's fine if a save round-trips a stale copy. */
+  staffOnLeave?: boolean; needsCover?: boolean }
 interface Store { staff: Staff[]; shifts: Shift[]; sites: string[] }
 
 // weekday key for a date; per-week override (weeks[mondayIso]) falls back to the recurring pattern
@@ -310,6 +314,14 @@ export function ScheduleApp() {
   const deployedFor = (name: string, sh: { site: string; listing?: string }) => deployedAt(deploy, name, venuesR.find((v) => v.name === sh.site)?.id, sh.listing ? listingsR.find((l) => l.title === sh.listing)?.id : undefined, (id) => listingsR.find((l) => l.id === id)?.venueId);
   const inPeriod = (s: Shift) => dateSet.has(s.date) && (site === "all" || s.site === site) && (listingF === "all" || s.listing === listingF) && inSeason(s.season);
   const periodShifts = useMemo(() => store.shifts.filter(inPeriod), [store.shifts, dateSet, site, listingF, seasonSel]);
+  // store.shifts holds every shift ever created for the tenant (not just this period), and the
+  // grid used to re-scan all of it once per listing (store.shifts.filter(...)) on every render
+  // just to show "shifts elsewhere" — one pass here instead, grouped by listing.
+  const shiftsByListing = useMemo(() => {
+    const m = new Map<string, Shift[]>();
+    for (const s of store.shifts) { const arr = m.get(s.listing ?? ""); if (arr) arr.push(s); else m.set(s.listing ?? "", [s]); }
+    return m;
+  }, [store.shifts]);
   const listingOpts = useMemo(() => [...new Set(scopedListings.map((l) => l.title))].sort(), [scopedListings]);
   const seasonOpts = useMemo(() => (tenantSettings.seasons ?? []).map((s) => s.name), [tenantSettings.seasons]);
 
@@ -483,7 +495,10 @@ export function ScheduleApp() {
     // amber = needs staff. (The role is still named on the row label + its dot.)
     // #6 — assigned = bold navy fill; unassigned = soft red tint (calmer when
     // the rota has lots of open shifts, and the booked ones pop).
-    const heat = filled
+    const onLeaveNow = filled && s.staffOnLeave;
+    const heat = onLeaveNow
+      ? { background: "repeating-linear-gradient(135deg,#fff7e6 0 10px,#ffedc7 10px 20px)", borderColor: "#e0a736", color: "#8a5a09" }
+      : filled
       ? { background: "linear-gradient(160deg,#3a6fd8 0%,#234da8 55%,#1d3a8f 100%)", borderColor: "#16306e", color: "#ffffff", boxShadow: "inset 0 1px 0 rgba(255,255,255,.22)" }
       : { background: "#fff1f2", borderColor: "#f4a6ae", color: "#b91c1c" };
     return (
@@ -492,8 +507,9 @@ export function ScheduleApp() {
         style={heat}>
         {!compact && <div className="flex items-start gap-1"><span className="min-w-0 flex-1 font-extrabold">{to12(s.start)} – {to12(s.end)}</span>{canManage && <span role="button" onClick={(e) => { e.stopPropagation(); removeShift(s.id); }} className="flex-none opacity-60 hover:opacity-100">×</span>}</div>}
         <div className="truncate font-bold">{st ? (compact ? st.name.split(" ")[0] : st.name) : (compact ? "—" : t("schedule.unfilled"))}</div>
+        {onLeaveNow && <div className={"mt-0.5 inline-flex items-center gap-1 rounded-md bg-white/60 px-1.5 py-0.5 font-extrabold " + (compact ? "text-[8.5px]" : "text-[10px]")}>🌴 {compact ? "Off" : "Off — needs cover"}</div>}
         {!compact && s.listing && <div className="truncate text-[10px] opacity-75">🎟 {s.listing}{s.season ? ` · ${s.season}` : ""}</div>}
-        {!compact && filled && <div className="mt-1 inline-flex items-center gap-1 rounded-md bg-white/40 px-1.5 py-0.5 text-[10px] font-bold">{s.out ? `✅ ${t("schedule.outAt", { time: to12(s.out) })}` : s.in ? `🟢 ${t("schedule.inAt", { time: to12(s.in) })}` : `⚪ ${t("schedule.notIn")}`}</div>}
+        {!compact && filled && !onLeaveNow && <div className="mt-1 inline-flex items-center gap-1 rounded-md bg-white/40 px-1.5 py-0.5 text-[10px] font-bold">{s.out ? `✅ ${t("schedule.outAt", { time: to12(s.out) })}` : s.in ? `🟢 ${t("schedule.inAt", { time: to12(s.in) })}` : `⚪ ${t("schedule.notIn")}`}</div>}
         {!compact && s.locked && <div className="mt-1 inline-block rounded bg-black/25 px-1.5 py-0.5 text-[9px] font-extrabold uppercase">{t("schedule.locked")}</div>}
       </button>
     );
@@ -761,7 +777,7 @@ export function ScheduleApp() {
                     // Every role/shift ever added to this listing — so switching Day /
                     // Week / Month keeps the rows you built, even when this view's dates
                     // hold none of them.
-                    const allListingShifts = store.shifts.filter((s) => s.listing === l.title);
+                    const allListingShifts = shiftsByListing.get(l.title) ?? [];
                     const elsewhere = allListingShifts.length - listingShifts.length;
                     const lRoles = [...new Set([...allListingShifts.map((s) => s.role), ...(extraRoles[l.title] ?? [])])];
                     return (
@@ -1081,7 +1097,7 @@ export function ScheduleApp() {
       })()}
 
       {/* Add-a-new-role picker */}
-      {roleMenu && (() => { const si = roleMenu; const shown = [...new Set([...store.shifts.filter((s) => s.listing === si).map((s) => s.role), ...(extraRoles[si] ?? [])])]; const avail = roleOptions.filter((r) => !shown.includes(r)); return (
+      {roleMenu && (() => { const si = roleMenu; const shown = [...new Set([...(shiftsByListing.get(si) ?? []).map((s) => s.role), ...(extraRoles[si] ?? [])])]; const avail = roleOptions.filter((r) => !shown.includes(r)); return (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[12vh]" onClick={() => setRoleMenu(null)}>
           <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-2"><span className="text-[16px]">➕</span><div className="text-[15px] font-extrabold text-[var(--ink)]">{t("schedule.addARole")}</div><button type="button" onClick={() => setRoleMenu(null)} className="ml-auto text-[18px] text-[var(--ink-3)]">×</button></div>

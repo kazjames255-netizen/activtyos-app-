@@ -41,6 +41,7 @@ import { referral, referralsAdmin } from "./routes/referral";
 import { memberships, membershipsAdmin } from "./routes/memberships";
 import { platform } from "./routes/platform";
 import { leads, leadsPublic, warmLeads } from "./routes/leads";
+import { ventureLakes } from "./routes/ventureLakes";
 import { providersPublic } from "./routes/providers";
 import { analytics } from "./routes/analytics";
 import { reconciliation } from "./routes/reconciliation";
@@ -211,6 +212,8 @@ app.use("/api/registers", registers);
 app.use("/api/children", children);
 app.use("/api/platform/notifications", platformNotifications);
 app.use("/api/leads", leads);
+// Venture Cycle Project — separate lake/country-park hire feasibility list.
+app.use("/api/venture-lakes", ventureLakes);
 app.use("/api/ratios", ratios);
 app.use("/api/incidents", incidents);
 app.use("/api/medications", medications);
@@ -295,6 +298,13 @@ app.use(
     const e = err as { type?: string; status?: number };
     if (e?.type === "entity.too.large") {
       res.status(413).json({ error: "That listing is too large to save — try smaller images." });
+      return;
+    }
+    // express.json()'s body-parser throws a SyntaxError with status 400 and
+    // type "entity.parse.failed" for malformed JSON — that's a bad request,
+    // not a server fault, and used to fall through to the generic 500 below.
+    if (e?.type === "entity.parse.failed" || e?.status === 400) {
+      res.status(400).json({ error: "That request wasn't valid — please try again." });
       return;
     }
     res.status(500).json({ error: "Internal server error" });

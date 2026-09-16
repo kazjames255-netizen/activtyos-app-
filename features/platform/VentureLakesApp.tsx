@@ -19,7 +19,7 @@ import { Card, Panel, Select, Input, SectionHead, Badge } from "@/components/ui"
 // competition, pricing) will add fields here later; until then those fields
 // are simply absent, not faked.
 const WILLEN_ACRES = 150;
-const MAX_DRIVE_MINUTES = 90;
+const MAX_DRIVE_MINUTES = 150;
 
 interface VentureLake {
   id: string;
@@ -49,6 +49,12 @@ interface VentureLake {
   reviewCountApprox?: number | null;
   verdict?: string;
   phase2CheckedAt?: string;
+  // Contact enrichment — website found via Phase 2's own search results
+  // (reused, not a fresh query); email/phone scraped from that page directly
+  // (no Brave cost). Absent where none was found.
+  website?: string;
+  email?: string;
+  phone?: string;
 }
 
 type SortKey = "acres-desc" | "acres-asc" | "drive-asc" | "drive-desc" | "name-asc";
@@ -140,6 +146,9 @@ function hasPricingInfo(r: VentureLake): boolean {
 function isProtected(r: VentureLake): boolean {
   return !!r.protectedStatus && r.protectedStatus.length > 0 && r.protectedStatus[0] !== "None found";
 }
+function hasFootfallData(r: VentureLake): boolean {
+  return r.reviewCountApprox != null;
+}
 
 // extractTrail() writes a plain boolean into a fixed pathSuitability string
 // (not a raw boolean field) — the two exact strings the script writes:
@@ -174,6 +183,8 @@ const PRICING_CAVEAT =
   "⚠ Any £ mention found near this site in search results — not verified to be cycle-hire specific. Treat as “worth checking”, not a confirmed price.";
 const FOOTFALL_CAVEAT =
   "⚠ Approximate, extracted from search snippets — low numbers (under ~20–30) are likely extraction noise, not real visitor counts.";
+const PROTECTED_EXPLAINER =
+  "A legal conservation designation was found for this site — e.g. SSSI (Site of Special Scientific Interest), NNR (National Nature Reserve), SAC (Special Area of Conservation), or a National Trust designation. This can restrict or block adding new commercial structures (a hire kiosk, signage, storage) — check with the landowner before assuming a lease is possible.";
 
 // Badge palette matches the house convention (features/bookings/helpers.ts
 // statusTone/payTone) — amber = caution/unknown, red = direct competitor,
@@ -203,10 +214,11 @@ export function VentureLakesApp() {
   const [researchedOnly, setResearchedOnly] = useState(false);
   const [trailFilter, setTrailFilter] = useState<TrailFilter>("");
   const [concessionFilter, setConcessionFilter] = useState<ConcessionFilter>("");
+  const [footfallFilter, setFootfallFilter] = useState<"" | "has" | "none">("");
 
   const phase2FiltersActive =
     !!cycleHireFilter || !!verdictFilter || !!ownerFilter || pricingOnly || hideProtected || !!minReviews ||
-    researchedOnly || !!trailFilter || !!concessionFilter;
+    researchedOnly || !!trailFilter || !!concessionFilter || !!footfallFilter;
   const filtersActive = phase2FiltersActive || minAcres !== "60" || !!maxDriveMinutes;
 
   const clearFilters = () => {
@@ -221,6 +233,7 @@ export function VentureLakesApp() {
     setResearchedOnly(false);
     setTrailFilter("");
     setConcessionFilter("");
+    setFootfallFilter("");
   };
 
   useEffect(() => {
@@ -265,13 +278,16 @@ export function VentureLakesApp() {
         if (concessionFilter === "has" && !hasConcessionInfo(it)) return false;
         if (concessionFilter === "none" && !noConcessionInfo(it)) return false;
 
+        if (footfallFilter === "has" && !hasFootfallData(it)) return false;
+        if (footfallFilter === "none" && hasFootfallData(it)) return false;
+
         return true;
       })
       .slice()
       .sort(SORTS[sort].cmp);
   }, [
     items, sort, maxDriveMinutes, minAcres, cycleHireFilter, verdictFilter, ownerFilter, pricingOnly,
-    hideProtected, minReviews, researchedOnly, trailFilter, concessionFilter,
+    hideProtected, minReviews, researchedOnly, trailFilter, concessionFilter, footfallFilter,
   ]);
 
   return (
@@ -279,10 +295,16 @@ export function VentureLakesApp() {
       <SectionHead>
         Leads Lakes/Country Parks
         <span className="ml-2 font-normal text-[12px] text-[var(--ink-3)]">
-          Lakes &amp; country parks ≥ 60 acres, within a {MAX_DRIVE_MINUTES}-minute drive of Milton Keynes — cycle-hire feasibility list
+          Lakes &amp; country parks ≥ 60 acres, within a {MAX_DRIVE_MINUTES}-minute (2.5hr) drive of Milton Keynes — cycle-hire feasibility list
           (Willen Lake, Milton Keynes = {WILLEN_ACRES} acres, 100%)
         </span>
       </SectionHead>
+
+      <Card className="border-l-4 border-l-[var(--brand)] bg-[var(--surface-2,rgba(127,127,127,0.04))] p-3 text-[13px] text-[var(--ink-2)]">
+        <strong className="text-[var(--ink)]">Only the top 150 largest sites (by acreage) have been fully researched so far</strong> — owner, existing competition, cycle-hire status, pricing signals, path suitability, and contact details.
+        The remaining ~1,100+ sites currently only have Phase 1 data (name, size, location, drive time) and show as &quot;Not researched&quot; below.
+        Use the <strong>Researched only</strong> filter to see just the completed 150.
+      </Card>
 
       <Card className="flex flex-wrap items-center gap-3 p-3">
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]">
@@ -363,7 +385,17 @@ export function VentureLakesApp() {
         </label>
 
         <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]" title={FOOTFALL_CAVEAT}>
-          Min reviews (footfall)
+          Reviews shown (footfall proxy)
+          <span className="cursor-help text-[var(--ink-3)]" aria-hidden>⚠</span>
+          <Select value={footfallFilter} onChange={(e) => setFootfallFilter(e.target.value as "" | "has" | "none")}>
+            <option value="">Any</option>
+            <option value="has">Yes — has review data</option>
+            <option value="none">No — none found</option>
+          </Select>
+        </label>
+
+        <label className="flex items-center gap-2 text-[13px] text-[var(--ink-2)]" title={FOOTFALL_CAVEAT}>
+          Min reviews
           <span className="cursor-help text-[var(--ink-3)]" aria-hidden>⚠</span>
           <Input
             type="number"
@@ -381,9 +413,9 @@ export function VentureLakesApp() {
           Has pricing info <span className="cursor-help text-[var(--ink-3)]" aria-hidden>⚠</span>
         </label>
 
-        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]">
+        <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]" title={PROTECTED_EXPLAINER}>
           <input type="checkbox" checked={hideProtected} onChange={(e) => setHideProtected(e.target.checked)} className="h-4 w-4 accent-[var(--brand)]" />
-          Hide protected sites
+          Hide protected sites <span className="cursor-help text-[var(--ink-3)]" aria-hidden>ⓘ</span>
         </label>
 
         <label className="flex items-center gap-1.5 text-[13px] text-[var(--ink-2)]">
@@ -423,6 +455,9 @@ export function VentureLakesApp() {
                 <th className="px-4 py-2 font-semibold">% of Willen Lake</th>
                 <th className="px-4 py-2 font-semibold">Drive time from MK</th>
                 <th className="px-4 py-2 font-semibold">Distance (mi, straight-line)</th>
+                <th className="px-4 py-2 font-semibold" title={FOOTFALL_CAVEAT}>
+                  Reviews (footfall proxy) <span className="cursor-help" aria-hidden>⚠</span>
+                </th>
                 <th className="px-4 py-2 font-semibold">Phase 2</th>
               </tr>
             </thead>
@@ -452,6 +487,13 @@ export function VentureLakesApp() {
                         {r.driveTimeMinutes != null ? `${r.driveTimeMinutes} min` : "—"}
                       </td>
                       <td className="px-4 py-2 tabular-nums text-[var(--ink-3)]">{r.distanceMiles.toFixed(1)}</td>
+                      <td className="px-4 py-2 tabular-nums" title={FOOTFALL_CAVEAT}>
+                        {r.reviewCountApprox != null ? (
+                          <span className="cursor-help">~{r.reviewCountApprox.toLocaleString()}</span>
+                        ) : (
+                          <span className="text-[var(--ink-3)]">—</span>
+                        )}
+                      </td>
                       <td className="px-4 py-2">
                         {researched ? (
                           r.hasCycleHireAlready ? (
@@ -466,7 +508,7 @@ export function VentureLakesApp() {
                     </tr>
                     {isOpen && (
                       <tr className="border-b border-[var(--line)] last:border-0">
-                        <td colSpan={7} className="bg-[var(--surface-2,rgba(127,127,127,0.04))] px-4 py-3">
+                        <td colSpan={8} className="bg-[var(--surface-2,rgba(127,127,127,0.04))] px-4 py-3">
                           {!researched ? (
                             <p className="text-[13px] text-[var(--ink-3)]">
                               Not yet covered by the Phase 2 research pass (top 150 sites by acreage only).
@@ -483,7 +525,9 @@ export function VentureLakesApp() {
                                   <Badge tone={BLUE}>No cycle hire found</Badge>
                                 )}
                                 {r.protectedStatus && r.protectedStatus.length > 0 && r.protectedStatus[0] !== "None found" && (
-                                  <Badge tone={AMBER}>{r.protectedStatus.join(", ")}</Badge>
+                                  <span title={PROTECTED_EXPLAINER} className="cursor-help">
+                                    <Badge tone={AMBER}>{r.protectedStatus.join(", ")} <span aria-hidden>ⓘ</span></Badge>
+                                  </span>
                                 )}
                                 {r.reviewCountApprox != null && (
                                   <span title={FOOTFALL_CAVEAT} className="cursor-help">
@@ -497,6 +541,21 @@ export function VentureLakesApp() {
                               {r.verdict && (
                                 <p className="text-[13px] font-semibold text-[var(--ink)]">{r.verdict}</p>
                               )}
+
+                              <div className="flex flex-wrap items-center gap-3 text-[12px]">
+                                {r.website && (
+                                  <a href={r.website} target="_blank" rel="noopener noreferrer" className="font-semibold text-[var(--brand)] underline">
+                                    Website ↗
+                                  </a>
+                                )}
+                                {r.email && (
+                                  <a href={`mailto:${r.email}`} className="text-[var(--ink-2)]">{r.email}</a>
+                                )}
+                                {r.phone && <span className="text-[var(--ink-2)]">{r.phone}</span>}
+                                {!r.website && !r.email && !r.phone && (
+                                  <span className="text-[var(--ink-3)]">No website/contact found</span>
+                                )}
+                              </div>
 
                               <div className="grid grid-cols-1 gap-x-6 gap-y-1 text-[12px] text-[var(--ink-2)] sm:grid-cols-2">
                                 <div>
@@ -536,7 +595,7 @@ export function VentureLakesApp() {
               })}
               {!loading && rows.length === 0 && items.length > 0 && (
                 <tr>
-                  <td colSpan={7} className="px-4 py-6 text-center text-[var(--ink-3)]">
+                  <td colSpan={8} className="px-4 py-6 text-center text-[var(--ink-3)]">
                     No sites match these filters.
                   </td>
                 </tr>

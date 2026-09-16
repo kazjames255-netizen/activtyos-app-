@@ -1,0 +1,95 @@
+=== zero_contact_shard1 run start 2026-09-15T19:04:37.408Z already done: 0
+shard1 leads to process: 5
+=== FINAL {"processed":5,"resolvedWebsite":1,"resolvedSocial":0,"resolvedEmailPhone":0,"deadEnd":4,"blocked":0,"braveDead":false}
+=== zero_contact_shard1 run start 2026-09-15T19:06:14.620Z already done: 5
+shard1 leads to process: 4129
+progress: processed=50 website=8 social=4 emailPhone=8 dead=30 blocked=0
+progress: processed=100 website=16 social=6 emailPhone=15 dead=63 blocked=0
+progress: processed=150 website=24 social=7 emailPhone=22 dead=97 blocked=0
+progress: processed=200 website=29 social=9 emailPhone=28 dead=134 blocked=0
+progress: processed=250 website=37 social=10 emailPhone=31 dead=172 blocked=0
+progress: processed=300 website=45 social=10 emailPhone=32 dead=213 blocked=0
+progress: processed=350 website=47 social=11 emailPhone=37 dead=255 blocked=0
+progress: processed=400 website=52 social=11 emailPhone=40 dead=297 blocked=0
+progress: processed=450 website=54 social=11 emailPhone=41 dead=344 blocked=0
+progress: processed=500 website=56 social=13 emailPhone=41 dead=390 blocked=0
+progress: processed=550 website=57 social=14 emailPhone=41 dead=438 blocked=0
+progress: processed=600 website=61 social=15 emailPhone=41 dead=483 blocked=0
+progress: processed=650 website=62 social=17 emailPhone=41 dead=530 blocked=0
+progress: processed=700 website=63 social=17 emailPhone=41 dead=579 blocked=0
+progress: processed=750 website=65 social=18 emailPhone=41 dead=626 blocked=0
+progress: processed=800 website=66 social=18 emailPhone=41 dead=675 blocked=0
+progress: processed=850 website=67 social=18 emailPhone=42 dead=723 blocked=0
+progress: processed=900 website=81 social=18 emailPhone=51 dead=750 blocked=0
+progress: processed=950 website=84 social=18 emailPhone=64 dead=784 blocked=0
+progress: processed=1000 website=91 social=19 emailPhone=70 dead=820 blocked=0
+progress: processed=1050 website=98 social=19 emailPhone=74 dead=859 blocked=0
+progress: processed=1100 website=109 social=19 emailPhone=79 dead=893 blocked=0
+progress: processed=1150 website=123 social=19 emailPhone=83 dead=925 blocked=0
+progress: processed=1200 website=129 social=19 emailPhone=88 dead=964 blocked=0
+progress: processed=1250 website=132 social=19 emailPhone=92 dead=1007 blocked=0
+progress: processed=1300 website=136 social=20 emailPhone=100 dead=1044 blocked=0
+progress: processed=1350 website=138 social=20 emailPhone=103 dead=1089 blocked=0
+progress: processed=1400 website=143 social=20 emailPhone=105 dead=1132 blocked=0
+progress: processed=1450 website=149 social=22 emailPhone=108 dead=1171 blocked=0
+progress: processed=1500 website=153 social=22 emailPhone=111 dead=1214 blocked=0
+progress: processed=1550 website=155 social=24 emailPhone=115 dead=1256 blocked=0
+progress: processed=1600 website=157 social=24 emailPhone=119 dead=1300 blocked=0
+progress: processed=1650 website=160 social=24 emailPhone=124 dead=1342 blocked=0
+progress: processed=1700 website=165 social=26 emailPhone=125 dead=1384 blocked=0
+progress: processed=1750 website=168 social=27 emailPhone=126 dead=1429 blocked=0
+progress: processed=1800 website=170 social=28 emailPhone=129 dead=1473 blocked=0
+progress: processed=1850 website=177 social=28 emailPhone=134 dead=1511 blocked=0
+progress: processed=1900 website=180 social=28 emailPhone=136 dead=1556 blocked=0
+progress: processed=1950 website=182 social=31 emailPhone=138 dead=1599 blocked=0
+progress: processed=2000 website=186 social=31 emailPhone=142 dead=1641 blocked=0
+progress: processed=2050 website=190 social=31 emailPhone=144 dead=1685 blocked=0
+progress: processed=2100 website=198 social=32 emailPhone=144 dead=1726 blocked=0
+progress: processed=2150 website=200 social=32 emailPhone=145 dead=1773 blocked=0
+progress: processed=2200 website=204 social=32 emailPhone=147 dead=1817 blocked=0
+progress: processed=2250 website=206 social=32 emailPhone=149 dead=1863 blocked=0
+progress: processed=2300 website=208 social=32 emailPhone=149 dead=1911 blocked=0
+progress: processed=2350 website=212 social=32 emailPhone=152 dead=1954 blocked=0
+progress: processed=2400 website=218 social=33 emailPhone=152 dead=1997 blocked=0
+progress: processed=2450 website=219 social=35 emailPhone=152 dead=2044 blocked=0
+progress: processed=2500 website=220 social=37 emailPhone=153 dead=2090 blocked=0
+progress: processed=2550 website=226 social=37 emailPhone=153 dead=2134 blocked=0
+progress: processed=2600 website=230 social=37 emailPhone=153 dead=2180 blocked=0
+progress: processed=2650 website=231 social=37 emailPhone=154 dead=2228 blocked=0
+progress: processed=2700 website=234 social=37 emailPhone=155 dead=2274 blocked=0
+progress: processed=2750 website=237 social=38 emailPhone=155 dead=2320 blocked=0
+progress: processed=2800 website=241 social=38 emailPhone=156 dead=2365 blocked=0
+progress: processed=2850 website=243 social=39 emailPhone=156 dead=2412 blocked=0
+progress: processed=2900 website=245 social=39 emailPhone=157 dead=2459 blocked=0
+progress: processed=2950 website=247 social=40 emailPhone=157 dead=2506 blocked=0
+progress: processed=3000 website=248 social=40 emailPhone=158 dead=2554 blocked=0
+progress: processed=3050 website=251 social=40 emailPhone=160 dead=2599 blocked=0
+progress: processed=3100 website=251 social=40 emailPhone=160 dead=2649 blocked=0
+progress: processed=3150 website=252 social=40 emailPhone=160 dead=2698 blocked=0
+progress: processed=3200 website=255 social=41 emailPhone=160 dead=2744 blocked=0
+progress: processed=3250 website=257 social=41 emailPhone=160 dead=2792 blocked=0
+progress: processed=3300 website=258 social=42 emailPhone=160 dead=2840 blocked=0
+progress: processed=3350 website=258 social=42 emailPhone=160 dead=2890 blocked=0
+progress: processed=3400 website=259 social=42 emailPhone=160 dead=2939 blocked=0
+progress: processed=3450 website=259 social=42 emailPhone=162 dead=2987 blocked=0
+progress: processed=3500 website=259 social=42 emailPhone=162 dead=3037 blocked=0
+progress: processed=3550 website=259 social=42 emailPhone=162 dead=3087 blocked=0
+progress: processed=3600 website=259 social=42 emailPhone=162 dead=3137 blocked=0
+write error companiesHouse-daycare-17257543 Error: 4 DEADLINE_EXCEEDED: Deadline exceeded after 60.008s,remote_addr=142.250.202.170:443
+write error companiesHouse-daycare-17257900 Error: 4 DEADLINE_EXCEEDED: Deadline exceeded after 60.002s,name resolution: 0.001s,metadata filters: 0.001s,LB pick: 0.
+write error companiesHouse-daycare-17260293 Error: 4 DEADLINE_EXCEEDED: Deadline exceeded after 59.999s,name resolution: 0.002s,metadata filters: 0.001s,LB pick: 0.
+write error companiesHouse-daycare-17260371 Error: 4 DEADLINE_EXCEEDED: Deadline exceeded after 86.460s,LB pick: 0.002s,remote_addr=142.250.202.170:443
+write error companiesHouse-daycare-17261651 Error: 4 DEADLINE_EXCEEDED: Deadline exceeded after 60.671s,name resolution: 0.001s,metadata filters: 0.001s,LB pick: 0.
+write error companiesHouse-daycare-17263111 Error: 4 DEADLINE_EXCEEDED: Deadline exceeded after 60.114s,LB pick: 0.001s,remote_addr=142.250.202.170:443
+write error companiesHouse-daycare-17264240 Error: 4 DEADLINE_EXCEEDED: Deadline exceeded after 1668.014s,name resolution: 0.007s,LB pick: 0.003s,remote_addr=142.25
+progress: processed=3650 website=259 social=42 emailPhone=162 dead=3187 blocked=0
+progress: processed=3700 website=259 social=42 emailPhone=163 dead=3236 blocked=0
+progress: processed=3750 website=259 social=43 emailPhone=163 dead=3285 blocked=0
+progress: processed=3800 website=261 social=43 emailPhone=164 dead=3332 blocked=0
+progress: processed=3850 website=269 social=45 emailPhone=170 dead=3366 blocked=0
+progress: processed=3900 website=282 social=45 emailPhone=174 dead=3399 blocked=0
+progress: processed=3950 website=288 social=47 emailPhone=177 dead=3438 blocked=0
+progress: processed=4000 website=290 social=48 emailPhone=183 dead=3479 blocked=0
+progress: processed=4050 website=294 social=48 emailPhone=186 dead=3522 blocked=0
+progress: processed=4100 website=304 social=49 emailPhone=186 dead=3561 blocked=0
+=== FINAL {"processed":4129,"resolvedWebsite":312,"resolvedSocial":50,"resolvedEmailPhone":188,"deadEnd":3579,"blocked":0,"braveDead":false}

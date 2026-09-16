@@ -1,0 +1,123 @@
+{
+  "p2-d19-vl1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "tenant operator token GET /api/venture-lakes → 403 \"Requires the platform role\"",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-vl2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "platform GET /api/venture-lakes → 200; a normal site is present: true; a site marked excluded:true is present: false (expect false — filtered server-side)",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-geo1": {
+    "verdict": "pass",
+    "method": "code",
+    "actual": "index.ts mount order: general auth wall at line 192; /api/geo (search) mounted at line 266 (after the wall, so it requires a token); /api/geo/tiles mounted at line 162 (before the wall, so map tiles load for an <img> tag with no auth header) — matches the file's own comment that tiles must be public because <img> can't send auth",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-geo2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "authed GET /api/geo/search?q=London → 200 in 225ms (result count: 2)",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S",
+    "notes": "Environment allowed the real geocode call through."
+  },
+  "p2-d19-pn1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "tenant operator token GET /api/platform/notifications → 403 \"Requires the platform role\"",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-pn2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "fresh signup → 201; platform bell item count before/after: 57/57; a 'signup' type item is present: true; unread count: 4",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-pn3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/platform/notifications/read → 200; unread afterward: 0 (expect 0); item count unchanged: 57 vs before 57",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-pn4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "POST /api/platform/notifications/dismiss {id:'task_VJJI1BohA5zoz8rtRtCy_2026-09-16'} → 200; that id still present afterward: false (expect false)",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-pn5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "PUT /api/platform/notifications/prefs {muted:['signup']} → 200; a second fresh signup happens (201); the bell now shows a 'signup' item: false (expect false — muted types are filtered out of buildItems' result)",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-ref1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "GET /api/my/referral for a parent with NO booking anywhere → 200 {\"enabled\":false,\"reason\":\"Book with a provider first to unlock referrals.\"}",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-ref2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "P books with A (referral.enabled still false, the Setup default); GET /api/my/referral → 200 {\"enabled\":false}",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-ref3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "referral.enabled:true, friendOff:10, referrerReward:8; GET /api/my/referral for the same parent (now WITH a booking) → 200 {\"enabled\":true,\"provider\":\"P2H19 Freelancer A\",\"code\":\"P2HMU3OTN88\",\"type\":\"amount\",\"link\":\"http://localhost:3000/store/HvEk4ZH0oHiJYpo4zyoq?ref=P2HMU3OTN88\",\"friendOff\":10,\"referrerReward\":8,\"minSpend\":0,\"capToFriendSpend\":true,\"booked\":0,\"earned\":0}",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-ref4": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "friend (P2) books quoting P's referral code (P2HMU3OTN88) → 201, code applied: true; P's own GET /api/my/referral afterward → booked=1, earned=8 (expect booked>=1, earned>=8)",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-ref5": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "friend books with F1 using an F1 referrer's code (201); F1's own GET /api/referrals shows this referral: true; F2's own GET /api/referrals shows it: false (expect false — franchiseFamilyEmails scoping holds)",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  },
+  "p2-d19-haf1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "£0 booking (HAF-style free place) → 201; pay status = \"Funded\" (expect 'Funded', never 'Unpaid')",
+    "evidence": "server/scripts/plan2/p2H_day19.mts",
+    "at": "2026-09-16T07:00:00.000000Z",
+    "agent": "plan2-S"
+  }
+}

@@ -111,6 +111,30 @@ leave.post("/absences", async (req, res) => {
   const manager = canManage(auth.role);
   const name = manager ? (parsed.data.name ?? "").trim() : m.name || m.email;
   if (!name) { res.status(400).json({ error: "Who is this for?" }); return; }
+  // A member of staff requesting for themselves can't ask for a day that's
+  // already gone — a manager recording an absence after the fact is a
+  // different, legitimate case and isn't restricted.
+  if (!manager && parsed.data.start < ukToday()) {
+    res.status(400).json({ error: "That start date is in the past — leave can only be requested from today onwards." });
+    return;
+  }
+  // Refuse a request that overlaps a day this person already has an approved
+  // (or another pending) absence for — the planner had no such check, so the
+  // same day could be double-booked without either request ever being told.
+  {
+    const key = keyOf(req);
+    const existing = await col.where("rotaKey", "==", key).get();
+    const overlap = existing.docs
+      .map((d) => d.data() as AbsenceDoc)
+      .find((a) =>
+        a.status !== "cancelled" && a.status !== "declined" &&
+        a.name.trim().toLowerCase() === name.toLowerCase() &&
+        a.start <= parsed.data.end && parsed.data.start <= a.end);
+    if (overlap) {
+      res.status(409).json({ error: `${name} already has ${overlap.status} leave that overlaps these dates (${overlap.start}${overlap.end !== overlap.start ? ` – ${overlap.end}` : ""}).` });
+      return;
+    }
+  }
   const now = new Date().toISOString();
   const doc: AbsenceDoc = {
     ...parsed.data,
@@ -172,7 +196,20 @@ leave.post("/absences/:id/decide", async (req, res) => {
   if (!snap) { res.status(404).json({ error: "Not found" }); return; }
   const now = new Date().toISOString();
   const by = req.user?.name ?? req.user?.email ?? "Manager";
-  await snap.ref.set({ status: parsed.data.status, decidedBy: by, decidedAt: now, ...(parsed.data.note ? { note: parsed.data.note } : {}) }, { merge: true });
+  // Re-check status is still "pending" INSIDE the transaction — two managers
+  // deciding the same request at once (or a double-click) used to both win,
+  // the second silently overwriting the first's decision.
+  try {
+    await db.runTransaction(async (tx) => {
+      const fresh = await tx.get(snap.ref);
+      if (!fresh.exists) throw new HttpError(404, "Not found");
+      if (fresh.get("status") !== "pending") throw new HttpError(409, "This request has already been decided");
+      tx.set(snap.ref, { status: parsed.data.status, decidedBy: by, decidedAt: now, ...(parsed.data.note ? { note: parsed.data.note } : {}) }, { merge: true });
+    });
+  } catch (e) {
+    if (e instanceof HttpError) { res.status(e.status).json({ error: e.message }); return; }
+    throw e;
+  }
   res.json({ ok: true, status: parsed.data.status, decidedBy: by, decidedAt: now });
 
   const a = snap.data() as AbsenceDoc;
@@ -222,3 +259,12 @@ leave.put("/config", async (req, res) => {
   }, { merge: true });
   res.json({ ok: true });
 });
+
+class HttpError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}

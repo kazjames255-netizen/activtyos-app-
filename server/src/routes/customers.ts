@@ -79,6 +79,13 @@ const customerSchema = z.object({
   marketingSource: z.string().trim().max(60).optional(),
   children: z.array(childSchema).max(20).default([]),
 });
+// PUT only ever writes fields the caller actually sent — a full-object
+// read-then-write used to let one editor's unrelated field change silently
+// clobber another editor's concurrent change under their stale full payload.
+// .partial() wraps every field (including the .default()s above) in
+// ZodOptional, which short-circuits before the default runs, so an omitted
+// field really does stay omitted rather than being reset to "" / [].
+const customerPatchSchema = customerSchema.partial();
 
 // GET /api/customers — the caller's tenant's customers (staff may read;
 // platform may filter with ?tenantId= or see all).
@@ -186,6 +193,9 @@ function withConsentStamp(
   next: Record<string, unknown>,
   prev?: FirebaseFirestore.DocumentData,
 ): Record<string, unknown> {
+  // A partial PUT that doesn't touch marketingOptIn at all mustn't re-derive
+  // (and so overwrite) the consent stamp from a patch that never mentioned it.
+  if (!("marketingOptIn" in next)) return next;
   const was = !!prev?.marketingOptIn;
   const now = !!next.marketingOptIn;
   if (now && !was) return { ...next, marketingOptInAt: new Date().toISOString(), marketingSource: "Added by the provider" };
@@ -225,14 +235,15 @@ customers.put("/:id", async (req, res) => {
       .json({ error: own.status === 403 ? "Requires an operator account" : "Customer not found" });
     return;
   }
-  const parsed = customerSchema.safeParse(req.body);
+  const parsed = customerPatchSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues });
     return;
   }
   const patch = withConsentStamp(parsed.data, own.snap.data());
-  await own.snap.ref.update(patch);
-  res.json({ id: own.snap.id, ...own.snap.data(), ...patch });
+  await own.snap.ref.set(patch, { merge: true });
+  const after = await own.snap.ref.get();
+  res.json({ id: after.id, ...after.data() });
 });
 
 customers.delete("/:id", async (req, res) => {

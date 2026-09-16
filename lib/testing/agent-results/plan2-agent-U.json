@@ -1,0 +1,70 @@
+{
+  "p2-d21-race1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "FIXED by Fixer 2026-09-16. server/src/routes/discounts.ts's POST / now wraps the dupe-check query and the create in one db.runTransaction() (tx.get(query) + tx.create(ref, doc), a pre-generated doc ref), throwing a 409 Conflict (\"You already have a code with that name\") if the code already exists. Re-ran the original QA script (server/scripts/plan2/p2H_day21.mts) unmodified: \"two concurrent POST /api/discounts with the SAME code text ('P2H21DUPE') → r1=201, r2=409; both returned 201: false; discountCodes docs actually stored with this code=1\".",
+    "evidence": "server/scripts/plan2/p2H_day21.mts (re-run, now pass); server/src/routes/discounts.ts:235-260",
+    "at": "2026-09-16T10:00:00.000000Z",
+    "agent": "plan2-U",
+    "notes": "Kept the existing collection shape (random-ID docs) rather than switching to code-as-doc-ID, since code uniqueness is per-tenant not global — a composite id would be needed either way, and the transaction achieves the same guarantee with less schema churn.",
+    "fixedBy": "fixer",
+    "fixedAt": "2026-09-16"
+  },
+  "p2-d21-race2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "same invite token, two concurrent accept calls (different uids, same sentTo email) → r1=200, r2=410; succeeded count=1 (expect exactly 1 — the accept transaction reads+checks invite.usedBy inside the transaction, so the loser should see 410 'already used')",
+    "evidence": "server/scripts/plan2/p2H_day21.mts",
+    "at": "2026-09-16T10:00:00.000000Z",
+    "agent": "plan2-U"
+  },
+  "p2-d21-race3": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "fresh tenant, staffLimit:1 (0 existing staff); two DIFFERENT staff invites accepted concurrently by two different people → r1=409 \"P2H21 Race3 Tenant's ActivityOS plan is full right now, so you can't join just yet. We've let them know — once they free up a place or upgrade, this same invite link will work.\", r2=200 ; succeeded count=1 (expect <=1 — the cap check is read inside the accept transaction specifically to prevent this, per the route's own comment)",
+    "evidence": "server/scripts/plan2/p2H_day21.mts",
+    "at": "2026-09-16T10:00:00.000000Z",
+    "agent": "plan2-U"
+  },
+  "p2-d21-load1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "6 concurrent full booking creations (each its own listing/block/family, the heaviest single write path in the app) → 6/6 succeeded, 0 5xxs, 10276ms wall time (timing not gated — see note)",
+    "evidence": "server/scripts/plan2/p2H_day21.mts",
+    "at": "2026-09-16T10:00:00.000000Z",
+    "agent": "plan2-U",
+    "notes": "10276ms for 6 concurrent full booking creations in a single-process dev sandbox — not necessarily representative of production latency under load; flagged as an observation for whoever owns real load-testing infra, not a correctness bug."
+  },
+  "p2-d21-integ1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "booking created with a £5-off code applied (amount=15); the code is deactivated AFTERWARD; re-reading the booking → amount=15 (expect unchanged — deactivating a code must never retroactively alter an already-priced booking)",
+    "evidence": "server/scripts/plan2/p2H_day21.mts",
+    "at": "2026-09-16T10:00:00.000000Z",
+    "agent": "plan2-U"
+  },
+  "p2-d21-integ2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "two part-payments (£8 + £12) recorded separately; booking.amountPaid=20; sum of 2 payments doc(s)=20 (expect both =20 and equal to each other — the booking's own running total and its itemised payment records must never drift apart)",
+    "evidence": "server/scripts/plan2/p2H_day21.mts",
+    "at": "2026-09-16T10:00:00.000000Z",
+    "agent": "plan2-U"
+  },
+  "p2-d21-pe1": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "platform token acting-as F1 (a franchise) GET /api/franchises (company-only route) → 403 \"Head office only\" (expect 403 — impersonation inherits the impersonated account's OWN role restrictions, doesn't grant platform-level or company-level power)",
+    "evidence": "server/scripts/plan2/p2H_day21.mts",
+    "at": "2026-09-16T10:00:00.000000Z",
+    "agent": "plan2-U"
+  },
+  "p2-d21-pe2": {
+    "verdict": "pass",
+    "method": "api",
+    "actual": "invite accepted once (200); a SECOND, different account attempts to accept the SAME already-used token → 410 \"Invite already used\" (expect 410 'already used')",
+    "evidence": "server/scripts/plan2/p2H_day21.mts",
+    "at": "2026-09-16T10:00:00.000000Z",
+    "agent": "plan2-U"
+  }
+}

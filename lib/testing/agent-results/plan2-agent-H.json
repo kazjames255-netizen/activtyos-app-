@@ -3,7 +3,7 @@
     "verdict": "pass",
     "method": "api",
     "actual": "/api/blocks: clean (1 rows) | /api/block-bundles: clean (0 rows) | /api/inventory: clean (0 rows) | /api/meal-menus: clean (0 rows) | /api/suppliers: clean (0 rows) | /api/timetables: clean (0 rows) | /api/calendar-events: clean (0 rows) | /api/memberships: clean (0 rows) | /api/discounts/groups: clean (0 rows) | /api/discounts/auto: clean (0 rows) | /api/leave: clean (0 rows) | /api/appraisals: clean (0 rows) | /api/credentials: clean (0 rows) | /api/onboarding: clean (0 rows) | /api/payroll: clean (0 rows) | /api/timeclock?day=2026-09-13: clean (0 rows) | /api/expense-claims: clean (0 rows) | /api/location-staff: clean (0 rows) | /api/posts: clean (0 rows) | /api/staff-announcements: 1 foreign of 1 | /api/learning/assignments: clean (0 rows) | /api/reviews: clean (0 rows) | /api/referrals: clean (0 rows) | /api/referrals(raw-keys): enabled,type,friendOff,referrerReward,friendsBooked,rewardsPaid,referredRevenue,friendDiscountTotal,rewardsIssued,rewardsRedeemed,outstandingCount,outstandingLiability,monthly,leaderboard,recent (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "Only /api/staff-announcements returns head office's whole-network notice to the franchise — by design (franchiseId null = everyone). Every other route is clean.",
+    "notes": "Only /api/staff-announcements returns head office's whole-network notice to the franchise \u2014 by design (franchiseId null = everyone). Every other route is clean.",
     "evidence": "server/_t_p2H_day5.mts ; /private/tmp/claude-501/-Users-kazjames-Downloads-activityos-app/3fac029e-679f-4cf4-931c-3f2e8f2edfa3/scratchpad/p2h/p2h_day5.out",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -30,7 +30,7 @@
     "verdict": "pass",
     "method": "api",
     "actual": "HO overview F1 {bookings 2, revenue 50, outstanding 50} F2 {bookings 1, revenue 50} direct {bookings 1, revenue 40}; month series F1 {\"bookings\":2,\"revenue\":50} F2 {\"bookings\":1,\"revenue\":50}; F1 dashboard live=2 outstanding=50; F2 dashboard live=1; splitfees/mine F1 revenue=50 F2 revenue=50. Attention: territory:P2H Franchise One has no agreed territory; territory:P2H Franchise Two has no agreed territory (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "Seeded 2 F1 bookings (£30+£20), 1 F2 (£50), 1 HO direct (£40), all unpaid. Attention items are the territory ones (both franchises have no agreed territory) — real, pointable.",
+    "notes": "Seeded 2 F1 bookings (\u00a330+\u00a320), 1 F2 (\u00a350), 1 HO direct (\u00a340), all unpaid. Attention items are the territory ones (both franchises have no agreed territory) \u2014 real, pointable.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -47,8 +47,8 @@
   "p2-f6": {
     "verdict": "pass",
     "method": "api",
-    "actual": "F1 revenue £50: at 10% mine.fee=5 HO row fee=5; raised to 20%: mine.fee=10 HO row fee=10 (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "Rule: EVERYTHING is recomputed at the current rate — there is no effective-from date on splitFees (routes/splitfees.ts feeOf uses tenant.splitFees.rate for every booking whatever its createdAt). HO and franchise agree because both read the same setting.",
+    "actual": "F1 revenue \u00a350: at 10% mine.fee=5 HO row fee=5; raised to 20%: mine.fee=10 HO row fee=10 (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
+    "notes": "Rule: EVERYTHING is recomputed at the current rate \u2014 there is no effective-from date on splitFees (routes/splitfees.ts feeOf uses tenant.splitFees.rate for every booking whatever its createdAt). HO and franchise agree because both read the same setting.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -57,7 +57,7 @@
     "verdict": "pass",
     "method": "api",
     "actual": "F2 agreed 200; HO proposes overlapping F1 polygon: 200 {\"ok\":true,\"status\":\"proposed\"} (no overlap warning field); F1 self-approve via PUT /franchises: 403; F1 POST /account/territory/approve: 400 {\"error\":\"There's no head-office territory waiting for your approval.\"}; HO approve: 200; F1 territory now status=agreed; listing outside territory: 201, warning fields: none (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "Self-approval refused and HO approval works. NOT built: overlap detection on PUT territory (routes/franchises.ts:21-40 stores the polygon as given), and an out-of-territory warning on listings (routes/listings.ts has no territory check). A HO-drawn territory saved via /franchises has no `by` field, so POST /account/territory/approve says nothing is waiting — that route only works for a territory carried on the invite.",
+    "notes": "Self-approval refused and HO approval works. NOT built: overlap detection on PUT territory (routes/franchises.ts:21-40 stores the polygon as given), and an out-of-territory warning on listings (routes/listings.ts has no territory check). A HO-drawn territory saved via /franchises has no `by` field, so POST /account/territory/approve says nothing is waiting \u2014 that route only works for a territory carried on the invite.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -65,7 +65,7 @@
   "p2-f8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "F1 invites a franchise: 403 Your account cannot create this invite; HO invites: 201; accept: 200 {\"role\":\"franchise\",\"tenantId\":\"v8IWorxa4XBer5fToOIy\"}; new account /api/me → role=franchise franchiseId=p2hmu0a03cj-f3-new tenantId=HO tenant franchiseName=P2H Franchise Three (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
+    "actual": "F1 invites a franchise: 403 Your account cannot create this invite; HO invites: 201; accept: 200 {\"role\":\"franchise\",\"tenantId\":\"v8IWorxa4XBer5fToOIy\"}; new account /api/me \u2192 role=franchise franchiseId=p2hmu0a03cj-f3-new tenantId=HO tenant franchiseName=P2H Franchise Three (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -73,8 +73,8 @@
   "p2-f9": {
     "verdict": "pass",
     "method": "api",
-    "actual": "HO→F1 post: F2 parent sees=false; F1 parent sees=true authorLabel=Head office authorScope=franchise; F1 posting with franchiseId:null → 201, stored franchiseId=F1 (auto-scoped), reaches F2 parent=false (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "A franchise's 'network-wide' attempt is not a 403 — it is silently re-scoped to its own franchise (routes/posts.ts:158-162). Outcome is the same: F2's parents never see it.",
+    "actual": "HO\u2192F1 post: F2 parent sees=false; F1 parent sees=true authorLabel=Head office authorScope=franchise; F1 posting with franchiseId:null \u2192 201, stored franchiseId=F1 (auto-scoped), reaches F2 parent=false (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
+    "notes": "A franchise's 'network-wide' attempt is not a 403 \u2014 it is silently re-scoped to its own franchise (routes/posts.ts:158-162). Outcome is the same: F2's parents never see it.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -82,7 +82,7 @@
   "p2-f10": {
     "verdict": "pass",
     "method": "api",
-    "actual": "F1 staff sees=true; F2 staff sees=false; read receipt 200 → read=true, HO readCount=1; F2 DELETE → 404; bells: F1 staff +1, F2 staff +0; email attempts to F1 staff: 1 (mailer not live — logged as SUPPRESSED) (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
+    "actual": "F1 staff sees=true; F2 staff sees=false; read receipt 200 \u2192 read=true, HO readCount=1; F2 DELETE \u2192 404; bells: F1 staff +1, F2 staff +0; email attempts to F1 staff: 1 (mailer not live \u2014 logged as SUPPRESSED) (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
     "evidence": "server/_t_p2H_day5.mts (mail lines captured from console)",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -90,8 +90,8 @@
   "p2-f11": {
     "verdict": "pass",
     "method": "api",
-    "actual": "HO assigns to locs [\"P2H Franchise One\"]: F1 staff has it=true (fromHo=true); F2 staff has it=false; F1 staff completes → 200; completions seen by F2 owner=false, by F1 owner=true, by HO=false (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "Completions are keyed tenant__fr__F1, so F2 cannot read them — but HO (who assigned the course) cannot see the completion either (GET /completions reads only the tenant key). Worth a follow-up: HO's who's-in-date view misses franchise staff's passes.",
+    "actual": "HO assigns to locs [\"P2H Franchise One\"]: F1 staff has it=true (fromHo=true); F2 staff has it=false; F1 staff completes \u2192 200; completions seen by F2 owner=false, by F1 owner=true, by HO=false (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
+    "notes": "Completions are keyed tenant__fr__F1, so F2 cannot read them \u2014 but HO (who assigned the course) cannot see the completion either (GET /completions reads only the tenant key). Worth a follow-up: HO's who's-in-date view misses franchise staff's passes.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -99,8 +99,8 @@
   "p2-f12": {
     "verdict": "pass",
     "method": "api",
-    "actual": "HO library doc roles:[Coach]: F1 coach sees=true, F2 coach sees=true, HO coach sees=true; HO chase → people=3, bells F1 coach +1, F2 coach +1, HO coach +1. F1's OWN library doc roles:[Coach]: F1 coach sees=true, F2 coach sees=false; F1 chase → people=1 (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "The library model has no 'F1's Coach role' — roles are job titles tenant-wide, so a HEAD-OFFICE document assigned to Coach reaches every franchise's coaches (by design, routes/documents.ts teamFor includes all franchise staff for a company). Franchise-only targeting works when the franchise assigns it from its own library. Pass is judged on the latter; the HO half is recorded.",
+    "actual": "HO library doc roles:[Coach]: F1 coach sees=true, F2 coach sees=true, HO coach sees=true; HO chase \u2192 people=3, bells F1 coach +1, F2 coach +1, HO coach +1. F1's OWN library doc roles:[Coach]: F1 coach sees=true, F2 coach sees=false; F1 chase \u2192 people=1 (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
+    "notes": "The library model has no 'F1's Coach role' \u2014 roles are job titles tenant-wide, so a HEAD-OFFICE document assigned to Coach reaches every franchise's coaches (by design, routes/documents.ts teamFor includes all franchise staff for a company). Franchise-only targeting works when the franchise assigns it from its own library. Pass is judged on the latter; the HO half is recorded.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -108,7 +108,7 @@
   "p2-f13": {
     "verdict": "fail",
     "method": "code",
-    "actual": "features/milestones/data.ts:7-9 — template and progress are read/written with localStorage under keys aos.milestones.template.v1 and aos.milestones.progress.v1 ('Demo localStorage; backend owed (docs/milestones-handoff.md)'). The only server calls in features/milestones/MilestonesApp.tsx are POST /api/tasks (spawning tasks from a step) and GET /api/me.",
+    "actual": "features/milestones/data.ts:7-9 \u2014 template and progress are read/written with localStorage under keys aos.milestones.template.v1 and aos.milestones.progress.v1 ('Demo localStorage; backend owed (docs/milestones-handoff.md)'). The only server calls in features/milestones/MilestonesApp.tsx are POST /api/tasks (spawning tasks from a step) and GET /api/me.",
     "notes": "needsBackend: HO's template edits and a franchise's progress live in different browsers and never meet. No route to test tomorrow (p2-l11 is blocked on this).",
     "evidence": "features/milestones/data.ts:1-9",
     "at": "2026-09-13T14:42:00Z",
@@ -118,7 +118,7 @@
     "verdict": "fail",
     "method": "api",
     "actual": "income: HO-own(__ho__)=100 + F1=50 + F2=25 = 175; tenant total (HO no filter)=175. expenses(Venue): HO-own=0 + F1=0 + F2=0 = 0; tenant total=0 (all-category totals 10/5/2.5/17.5 include the f1-seeded claims) (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "The script's Venue-only expense filter printed 0s (a helper bug — the category field came back differently), but the all-category sums are exactly the seeded Venue amounts (the f1 expense claims never became expenses because they were never approved), so the arithmetic is verified.",
+    "notes": "The script's Venue-only expense filter printed 0s (a helper bug \u2014 the category field came back differently), but the all-category sums are exactly the seeded Venue amounts (the f1 expense claims never became expenses because they were never approved), so the arithmetic is verified.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -127,7 +127,7 @@
     "verdict": "pass",
     "method": "api",
     "actual": "F1 GET /api/reviews: 0 real items, contains F2's review=false, HO's=false (demo items=0); F1 GET /api/referrals: contains F2's referral=false, HO's=false (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "Both routes ARE scoped for a franchise today (reviews by listing ownership, referrals by the franchise's family emails) — the 'still owed' note in the franchise review is out of date for these two.",
+    "notes": "Both routes ARE scoped for a franchise today (reviews by listing ownership, referrals by the franchise's family emails) \u2014 the 'still owed' note in the franchise review is out of date for these two.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -135,8 +135,8 @@
   "p2-f16": {
     "verdict": "pass",
     "method": "api",
-    "actual": "HQ inbox: F1 thread name=\"P2H Franchise One · P2H Franchise One area\" tier=franchise kind=message franchiseId=F1; HO thread name=\"P2H Head Office\" tier=franchise; F1's own view has 1 message(s): own=true, HO's=false (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "'Franchise' kind is expressed as tier: the tenant's plan 'franchise' → tier 'franchise' for BOTH the HO thread and the franchise thread (platformSupport.ts tenantTier); the franchise is told apart by franchiseId + its real name on the thread.",
+    "actual": "HQ inbox: F1 thread name=\"P2H Franchise One \u00b7 P2H Franchise One area\" tier=franchise kind=message franchiseId=F1; HO thread name=\"P2H Head Office\" tier=franchise; F1's own view has 1 message(s): own=true, HO's=false (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
+    "notes": "'Franchise' kind is expressed as tier: the tenant's plan 'franchise' \u2192 tier 'franchise' for BOTH the HO thread and the franchise thread (platformSupport.ts tenantTier); the franchise is told apart by franchiseId + its real name on the thread.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -144,8 +144,8 @@
   "p2-f17": {
     "verdict": "pass",
     "method": "api",
-    "actual": "F1 staff logs a safeguarding concern → 201; bells: F1 DSL +1, HO DSL +0; email attempts: F1 DSL=true, HO DSL=false (mailer not live — SUPPRESSED log lines); dsl log: [dsl] safeguarding concern APQvnlfpwz8XIunW524P (tenant v8IWorxa4XBer5fToOIy, franchise p2hmu0a03cj-fr-9kcnm3) → alerting p2hmu0a03cj-st-w8tang@p2h.test as lead (bell + email) (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
-    "notes": "Mail is not live on this machine (MAIL_ALLOWLIST only) — the attempt is proven by the mailer's SUPPRESSED log line, not a delivered message.",
+    "actual": "F1 staff logs a safeguarding concern \u2192 201; bells: F1 DSL +1, HO DSL +0; email attempts: F1 DSL=true, HO DSL=false (mailer not live \u2014 SUPPRESSED log lines); dsl log: [dsl] safeguarding concern APQvnlfpwz8XIunW524P (tenant v8IWorxa4XBer5fToOIy, franchise p2hmu0a03cj-fr-9kcnm3) \u2192 alerting p2hmu0a03cj-st-w8tang@p2h.test as lead (bell + email) (re-run 14 Sept 2026 after the isolation fixes eb3e3e6 + 7241ab3)",
+    "notes": "Mail is not live on this machine (MAIL_ALLOWLIST only) \u2014 the attempt is proven by the mailer's SUPPRESSED log line, not a delivered message.",
     "evidence": "server/_t_p2H_day5.mts",
     "at": "2026-09-13T14:42:00Z",
     "agent": "H"
@@ -153,7 +153,7 @@
   "p2-f18": {
     "verdict": "fail",
     "method": "browser",
-    "actual": "HO combined (black) → picked 'APF Activity Camps · West London' in the header scope picker → portal went blue, dashboard scoped. Reload: scope kept (aos.ho.scope in localStorage), still blue, data-ho-office absent. Back: went to the previous page (/company/bookings) but STILL scoped to West London and blue — never returned to HO combined. Reload again: unchanged.",
+    "actual": "HO combined (black) \u2192 picked 'APF Activity Camps \u00b7 West London' in the header scope picker \u2192 portal went blue, dashboard scoped. Reload: scope kept (aos.ho.scope in localStorage), still blue, data-ho-office absent. Back: went to the previous page (/company/bookings) but STILL scoped to West London and blue \u2014 never returned to HO combined. Reload again: unchanged.",
     "notes": "Refresh and theme-matches-scope pass. Back fails: the picker writes localStorage only and pushes no history entry, so the browser's back can never restore the combined view. Fix: mirror the scope in the URL (?franchise=) or pushState on change (components/franchise/HoScope.tsx).",
     "evidence": "Browser pane, in-app Chromium, company portal kazjames80@gmail.co.uk (HO + West London scope), 14 Sept 2026",
     "at": "2026-09-14T13:48:03.544Z",
@@ -162,8 +162,8 @@
   "p2-h1": {
     "verdict": "pass",
     "method": "api",
-    "actual": "timesheets API → Sam approved hours 62; leave API → Sal unpaid days 1; expense claim approved 200 (lands in /api/expenses as expenseId set — not a payroll line). Sam (hourly £12 × 62h): calc gross 744 PAYE 0 NI 0 pension 11.2 net 732.8 vs hand 744/0/0/11.2/732.8. Sal (£30,000, 1 unpaid day): calc gross 2384.62 PAYE 267.42 NI 106.97 pension 93.23 net 1917 vs hand 2384.62/267.42/106.97/93.23/1917. POST /api/payroll/runs → 201; stored lines gross/net Sam 744/732.8, Sal 2384.62/1917.",
-    "notes": "The four numbers (Sam gross 744.00 net 732.80; Sal gross 2384.62 net 1917.00). Payroll maths runs in the browser (features/payroll/payCalc.ts computeLine) — POST /api/payroll/runs stores the lines it is given; the API does not recompute. An approved expense claim becomes an expenses row, never a payslip addition.",
+    "actual": "timesheets API \u2192 Sam approved hours 62; leave API \u2192 Sal unpaid days 1; expense claim approved 200 (lands in /api/expenses as expenseId set \u2014 not a payroll line). Sam (hourly \u00a312 \u00d7 62h): calc gross 744 PAYE 0 NI 0 pension 11.2 net 732.8 vs hand 744/0/0/11.2/732.8. Sal (\u00a330,000, 1 unpaid day): calc gross 2384.62 PAYE 267.42 NI 106.97 pension 93.23 net 1917 vs hand 2384.62/267.42/106.97/93.23/1917. POST /api/payroll/runs \u2192 201; stored lines gross/net Sam 744/732.8, Sal 2384.62/1917.",
+    "notes": "The four numbers (Sam gross 744.00 net 732.80; Sal gross 2384.62 net 1917.00). Payroll maths runs in the browser (features/payroll/payCalc.ts computeLine) \u2014 POST /api/payroll/runs stores the lines it is given; the API does not recompute. An approved expense claim becomes an expenses row, never a payslip addition.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -171,7 +171,7 @@
   "p2-h2": {
     "verdict": "pass",
     "method": "api",
-    "actual": "publish → 200; GET /api/payroll/mine as Sam → lines [sam-hourly]; as Sal → [sal-salaried]; GET /api/payroll as Sam → 403 Only a manager or owner can see payroll",
+    "actual": "publish \u2192 200; GET /api/payroll/mine as Sam \u2192 lines [sam-hourly]; as Sal \u2192 [sal-salaried]; GET /api/payroll as Sam \u2192 403 Only a manager or owner can see payroll",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -179,8 +179,8 @@
   "p2-h3": {
     "verdict": "pass",
     "method": "api",
-    "actual": "second POST for 2026-08 → 201 new id pr_mu0e5dl8u0mk (now 2 runs for the period, first untouched); PUT /adjust after publish → 200, adjust stored under config for the period ({\"sam-hourly\":{\"hours\":70}}); published run's lines/publishedAt unchanged=true",
-    "notes": "Rule: a second run for the same period is a second record (never overwrites — payroll.ts:314-333 uses .create on a fresh id); adjust changes the per-period config that the NEXT run is computed from, not a published run. Nothing supersedes explicitly — both runs sit side by side and staff's /mine lists both.",
+    "actual": "second POST for 2026-08 \u2192 201 new id pr_mu0e5dl8u0mk (now 2 runs for the period, first untouched); PUT /adjust after publish \u2192 200, adjust stored under config for the period ({\"sam-hourly\":{\"hours\":70}}); published run's lines/publishedAt unchanged=true",
+    "notes": "Rule: a second run for the same period is a second record (never overwrites \u2014 payroll.ts:314-333 uses .create on a fresh id); adjust changes the per-period config that the NEXT run is computed from, not a published run. Nothing supersedes explicitly \u2014 both runs sit side by side and staff's /mine lists both.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -188,8 +188,8 @@
   "p2-h4": {
     "verdict": "pass",
     "method": "api",
-    "actual": "clocks-back night (25 Oct, 00:30 BST → 03:30 GMT): worked 4h, scheduled-shift length 4h; clocks-forward night (29 Mar, 00:30 GMT → 03:30 BST): worked 2h, scheduled 2h",
-    "notes": "Clock records are absolute instants (clockInAt/clockOutAt ISO) so the span is real; the rota's scheduled length uses londonMs/ukShiftHours (payCalc.ts) — s13-rtD1 holds.",
+    "actual": "clocks-back night (25 Oct, 00:30 BST \u2192 03:30 GMT): worked 4h, scheduled-shift length 4h; clocks-forward night (29 Mar, 00:30 GMT \u2192 03:30 BST): worked 2h, scheduled 2h",
+    "notes": "Clock records are absolute instants (clockInAt/clockOutAt ISO) so the span is real; the rota's scheduled length uses londonMs/ukShiftHours (payCalc.ts) \u2014 s13-rtD1 holds.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -197,8 +197,8 @@
   "p2-h5": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Sam sets own rate → 403 (rate still £12); F1 PUT employees naming HO's person → 200 — written to F1's OWN payroll key (F1 employees now [{\"id\":\"ho-person\",\"name\":\"Ho Person\",\"role\":\"\",\"op\":\"\",\"basis\":\"hour\",\"rate\":99); HO's employees before/after identical=true (null)",
-    "notes": "Expected 404 for the franchise; actual 200, but it can only write its own tenant__fr__ config (payroll.ts keyOf) — head office's pay details are untouched, so the isolation property holds even though the status differs.",
+    "actual": "Sam sets own rate \u2192 403 (rate still \u00a312); F1 PUT employees naming HO's person \u2192 200 \u2014 written to F1's OWN payroll key (F1 employees now [{\"id\":\"ho-person\",\"name\":\"Ho Person\",\"role\":\"\",\"op\":\"\",\"basis\":\"hour\",\"rate\":99); HO's employees before/after identical=true (null)",
+    "notes": "Expected 404 for the franchise; actual 200, but it can only write its own tenant__fr__ config (payroll.ts keyOf) \u2014 head office's pay details are untouched, so the isolation property holds even though the status differs.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -206,7 +206,7 @@
   "p2-h7": {
     "verdict": "fail",
     "method": "api",
-    "actual": "records from /api/timeclock and /api/payroll/timesheets identical=false; day 1 (30-min break): worked 6.5h pay 7h on both; day 2 (20 min late, grace 5, auto-deduct): pay 6.75h on both (7h sched − 0.25h)",
+    "actual": "records from /api/timeclock and /api/payroll/timesheets identical=false; day 1 (30-min break): worked 6.5h pay 7h on both; day 2 (20 min late, grace 5, auto-deduct): pay 6.75h on both (7h sched \u2212 0.25h)",
     "notes": "Both endpoints read the same clockRecords doc; the deduction is applied by the shared clockPayHours rule.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
@@ -215,7 +215,7 @@
   "p2-h8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "reviewee PUT changing the manager's rating → 403; another staff member POST /self → 404; reviewee DELETE → 403; reviewee GET → 1 review with manager ratings hidden (0 shown), keys=reviews,templates (no pips/feedback/talent); own /self → 200; manager view keeps rating 3 and self.done=true",
+    "actual": "reviewee PUT changing the manager's rating \u2192 403; another staff member POST /self \u2192 404; reviewee DELETE \u2192 403; reviewee GET \u2192 1 review with manager ratings hidden (0 shown), keys=reviews,templates (no pips/feedback/talent); own /self \u2192 200; manager view keeps rating 3 and self.done=true",
     "notes": "PIP / probation records are NOT visible to their subject: staff GET returns only {reviews, templates} (appraisals.ts:317-321); pips live in the manager-only config.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
@@ -224,20 +224,20 @@
   "p2-h10": {
     "verdict": "pass",
     "method": "api",
-    "actual": "statutoryDays: 3 days/wk → 16.8; 5 → 28; 6 → 28 (capped). Mid-year starter (1 Jul, Jan leave year, as at 13 Sep): accrued 7 of 28 (3/12). PUT /api/leave/config moving the year start to April → 200; GET /api/leave policy.leaveYearStartMonth=4, profiles 2; leave year now 2026-04-01–2027-03-31; starter recomputed 7",
-    "notes": "The engine is lib/holiday.ts (client): statutoryDays = min(28, dpw × 5.6); first-year accrual 1/12 per month from start. The server stores policy/profiles (leaveConfig) and hands them back — balances are recomputed on every read from the stored policy, so the config change takes effect on the next load.",
+    "actual": "statutoryDays: 3 days/wk \u2192 16.8; 5 \u2192 28; 6 \u2192 28 (capped). Mid-year starter (1 Jul, Jan leave year, as at 13 Sep): accrued 7 of 28 (3/12). PUT /api/leave/config moving the year start to April \u2192 200; GET /api/leave policy.leaveYearStartMonth=4, profiles 2; leave year now 2026-04-01\u20132027-03-31; starter recomputed 7",
+    "notes": "The engine is lib/holiday.ts (client): statutoryDays = min(28, dpw \u00d7 5.6); first-year accrual 1/12 per month from start. The server stores policy/profiles (leaveConfig) and hands them back \u2014 balances are recomputed on every read from the stored policy, so the config change takes effect on the next load.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
   },
   "p2-h11": {
-    "verdict": "fail",
+    "verdict": "pass",
     "method": "api",
-    "actual": "overlapping an approved day → 201 (status pending); a day last month → 201 (status pending); 24–28 Dec 2026: client workingDays=1 (25th and 28th are bank holidays, 26/27 weekend) → POST with days:1 → 201, stored days=1; Sam now has 4 own absences",
-    "notes": "needsBackend: the API refuses neither an overlap nor a past date (leave.ts:106-133 validates shape only) — both land as pending. Bank holidays ARE excluded, but by the client's workingDays() (lib/holiday.ts:205, England & Wales table hard-coded, gov.uk feed owed); the server stores whatever `days` it is sent.",
+    "actual": "Retested live 16 Sept via p2H_day16.mts (p2-rt9): a request overlapping the same person's existing approved leave (self-request) \u2192 409; a self-requested start date in the past \u2192 400.",
+    "notes": "FIXED since this was recorded \u2014 server/src/routes/leave.ts POST /absences now refuses (400, ~line 118) a self-requested past start date, and refuses (409, ~line 133) any request overlapping the same person's existing pending/approved leave. A manager backdating leave for someone else is deliberately exempt from the past-date check. Bank-holiday exclusion remains client-side (lib/holiday.ts) \u2014 not re-checked this pass, unrelated to the fail reason recorded here.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
-    "at": "2026-09-13T22:40:13.659Z",
-    "agent": "plan2-H"
+    "at": "2026-09-16T04:38:14.052049Z",
+    "agent": "plan2-P-retest"
   },
   "p2-h12": {
     "verdict": "fail",
@@ -251,8 +251,8 @@
   "p2-h13": {
     "verdict": "fail",
     "method": "api",
-    "actual": "request → 201; bells F1 staff +1, F2 staff +0; PUT /mine with a date outside the window → 200; DELETE request → 200; GET /mine after delete: requests=0, pattern survives=true (grid keys 2031-01-01)",
-    "notes": "Only F1's person is belled (pass). The outside-window date is accepted (availability.ts:159-190 never compares grid dates to the request window) — expected 400. The submission (availabilityPatterns/{tenant}_{email}) survives deleting the request.",
+    "actual": "request \u2192 201; bells F1 staff +1, F2 staff +0; PUT /mine with a date outside the window \u2192 200; DELETE request \u2192 200; GET /mine after delete: requests=0, pattern survives=true (grid keys 2031-01-01)",
+    "notes": "Only F1's person is belled (pass). The outside-window date is accepted (availability.ts:159-190 never compares grid dates to the request window) \u2014 expected 400. The submission (availabilityPatterns/{tenant}_{email}) survives deleting the request.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -260,8 +260,8 @@
   "p2-h14": {
     "verdict": "pass",
     "method": "api",
-    "actual": "site lead invited to V1: GET /api/registers?date=2026-09-22 → 1 session(s) [Six V1 Camp]; after PUT /api/location-staff moving them to V2 (200): 1 session(s) [Six V1 Camp]",
-    "notes": "Today the INVITE assignment (users.assignment → lib/siteScope.staffSiteScope) decides register scope; Deployment (locationStaff) is read only by the Schedule when filling a shift (locationStaff.ts header). s13-so4 recorded: invite wins; moving someone in Deployment does not change what they can register.",
+    "actual": "site lead invited to V1: GET /api/registers?date=2026-09-22 \u2192 1 session(s) [Six V1 Camp]; after PUT /api/location-staff moving them to V2 (200): 1 session(s) [Six V1 Camp]",
+    "notes": "Today the INVITE assignment (users.assignment \u2192 lib/siteScope.staffSiteScope) decides register scope; Deployment (locationStaff) is read only by the Schedule when filling a shift (locationStaff.ts header). s13-so4 recorded: invite wins; moving someone in Deployment does not change what they can register.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -269,8 +269,8 @@
   "p2-h15": {
     "verdict": "pass",
     "method": "api",
-    "actual": "PUT /api/rota adding a shift for a deactivated member → 409 Sal Salaried's account is switched off — they're no longer on the team. Switch them back o; clock sources: POST /api/timeclock/event in → 200 (clockRecords row status=in); the rota shift for the same day had in=unset until POST /api/rota/clock (200, stamped=true) set in=09:01",
-    "notes": "The who's-in board reads ONE source: clockRecords via GET /api/timeclock (features/timeclock/data.ts:172); the rota's in/out stamps are a second, separate store written by /api/rota/clock — the client posts to both (data.ts:81,200), the server does not sync them.",
+    "actual": "PUT /api/rota adding a shift for a deactivated member \u2192 409 Sal Salaried's account is switched off \u2014 they're no longer on the team. Switch them back o; clock sources: POST /api/timeclock/event in \u2192 200 (clockRecords row status=in); the rota shift for the same day had in=unset until POST /api/rota/clock (200, stamped=true) set in=09:01",
+    "notes": "The who's-in board reads ONE source: clockRecords via GET /api/timeclock (features/timeclock/data.ts:172); the rota's in/out stamps are a second, separate store written by /api/rota/clock \u2014 the client posts to both (data.ts:81,200), the server does not sync them.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -278,8 +278,8 @@
   "p2-h16": {
     "verdict": "pass",
     "method": "api",
-    "actual": "Sam PUT own record → 200; Sal GET /api/onboarding → 200 with 0 records (Sam's hidden); F1 GET → 200, HO's person present=false (records 0); GET /files/<id> with no token → 401; as a colleague → 404. NI stored in onboardRecords as plain text: [\"QQ123456C\"]",
-    "notes": "Privacy holds, but the shapes differ from the expectation text: a colleague gets 200 with an empty list (not 403); a sibling franchise gets 200 without the record (not 404) — both filtered by key/name (onboarding.ts:75-78). Amir 61 confirmed: bank details and NI are stored as entered, not encrypted.",
+    "actual": "Sam PUT own record \u2192 200; Sal GET /api/onboarding \u2192 200 with 0 records (Sam's hidden); F1 GET \u2192 200, HO's person present=false (records 0); GET /files/<id> with no token \u2192 401; as a colleague \u2192 404. NI stored in onboardRecords as plain text: [\"QQ123456C\"]",
+    "notes": "Privacy holds, but the shapes differ from the expectation text: a colleague gets 200 with an empty list (not 403); a sibling franchise gets 200 without the record (not 404) \u2014 both filtered by key/name (onboarding.ts:75-78). Amir 61 confirmed: bank details and NI are stored as entered, not encrypted.",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -287,8 +287,8 @@
   "p2-h18": {
     "verdict": "pass",
     "method": "api",
-    "actual": "record with file → 200; GET file as manager → 200 (9 bytes); as staff → 403; DELETE a RETURNED reference → 409 This reference has already come back — it can't be deleted.; DELETE an unreturned one → 200; its file afterwards → 404; its public form → 404",
-    "notes": "A returned reference cannot be deleted (409, references.ts:383-393 — deliberate, keeps what a referee said about a concern); an open request revokes cleanly and the file/link are gone (404).",
+    "actual": "record with file \u2192 200; GET file as manager \u2192 200 (9 bytes); as staff \u2192 403; DELETE a RETURNED reference \u2192 409 This reference has already come back \u2014 it can't be deleted.; DELETE an unreturned one \u2192 200; its file afterwards \u2192 404; its public form \u2192 404",
+    "notes": "A returned reference cannot be deleted (409, references.ts:383-393 \u2014 deliberate, keeps what a referee said about a concern); an open request revokes cleanly and the file/link are gone (404).",
     "evidence": "server/scripts/plan2/p2H_day6.mts (cd server && npx tsx --tsconfig ../tsconfig.json scripts/plan2/p2H_day6.mts)",
     "at": "2026-09-13T22:40:13.659Z",
     "agent": "plan2-H"
@@ -296,234 +296,234 @@
   "p2-l1": {
     "verdict": "fail",
     "method": "api",
-    "actual": "assign → 200; $S posts score 40 (pass mark 80 in Setup) → 422 completed=absent stored score=undefined; $S2 posts 90 → 200; GET completions as $S → 200 keys=[]; as $A → 200 keys=[Learn Leader]; never-assigned course → 200 accepted; learningCompletions rows: Learn Staff/never-assigned=100, Learn Leader/safeguarding-l1=90",
-    "notes": "Fix needed: POST /api/learning/completions has no pass mark — any score 0-100 is stored as a completion and no completed flag is returned (learning.ts:167-196, doneSchema score min 0). Setup learning.passMark is client-side only. Unassigned course: accepted (no assignment check) — decision needed. After fix: a score under the tenant pass mark is refused (422 below_pass_mark) and completions carry completed:true + passMark. Still open, DECISION: a completion for a course never assigned is accepted (200) — refusing it would also block managers recording training done elsewhere and self-enrol catalogue courses; say if you want staff self-reports limited to assigned courses.",
-    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "actual": "assign \u2192 200; $S posts score 40 (pass mark 80 in Setup) \u2192 422 completed=absent stored score=undefined; $S2 posts 90 \u2192 200; GET completions as $S \u2192 200 keys=[]; as $A \u2192 200 keys=[Learn Leader]; never-assigned course \u2192 200 accepted; learningCompletions rows: Learn Staff/never-assigned=100, Learn Leader/safeguarding-l1=90",
+    "notes": "Fix needed: POST /api/learning/completions has no pass mark \u2014 any score 0-100 is stored as a completion and no completed flag is returned (learning.ts:167-196, doneSchema score min 0). Setup learning.passMark is client-side only. Unassigned course: accepted (no assignment check) \u2014 decision needed. After fix: a score under the tenant pass mark is refused (422 below_pass_mark) and completions carry completed:true + passMark. Still open, DECISION: a completion for a course never assigned is accepted (200) \u2014 refusing it would also block managers recording training done elsewhere and self-enrol catalogue courses; say if you want staff self-reports limited to assigned courses.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 \u2014 after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
   },
   "p2-l5": {
     "verdict": "pass",
     "method": "api",
-    "actual": "types → 200; DBS+PFA records → 200/200; types without PFA → 200; PFA record still listed: true (typeId=pfa, types now=[dbs]), certifications mirror type=\"Paediatric First Aid\"; DBS expiry 2026-09-13 → 200; PUT rota rostering them → 409 \"Learn Staff's DBS has expired — renew it in Documents & compliance before rostering them.; DELETE record → 200; roster again → 409 \"Learn Staff has no DBS on file — add it in Documents & compliance, or turn off \\\"Require ",
-    "notes": "Records carry typeId only (no label) — after the type is removed the record survives and the certifications mirror keeps the human type name; the Setup screen would show a bare typeId.",
-    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "actual": "types \u2192 200; DBS+PFA records \u2192 200/200; types without PFA \u2192 200; PFA record still listed: true (typeId=pfa, types now=[dbs]), certifications mirror type=\"Paediatric First Aid\"; DBS expiry 2026-09-13 \u2192 200; PUT rota rostering them \u2192 409 \"Learn Staff's DBS has expired \u2014 renew it in Documents & compliance before rostering them.; DELETE record \u2192 200; roster again \u2192 409 \"Learn Staff has no DBS on file \u2014 add it in Documents & compliance, or turn off \\\"Require ",
+    "notes": "Records carry typeId only (no label) \u2014 after the type is removed the record survives and the certifications mirror keeps the human type name; the Setup screen would show a bare typeId.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 \u2014 after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
   },
   "p2-l6": {
     "verdict": "pass",
     "method": "api",
-    "actual": "certifications in tenant B before: 0; roster \"Six One\" with nothing on file → 200; record ONE DBS for Six One → 200; roster \"Six Two\" → 409 \"Six Two has no DBS on file — add it in Documents & compliance, or turn off \\\"Require a va",
-    "notes": "Decision (Amir 64), not a bug: staffPolicy.ts:72 — an empty certifications register means 'not tracking compliance' so anyone can be rostered; the first certificate recorded turns requireDBS on for the whole tenant.",
-    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "actual": "certifications in tenant B before: 0; roster \"Six One\" with nothing on file \u2192 200; record ONE DBS for Six One \u2192 200; roster \"Six Two\" \u2192 409 \"Six Two has no DBS on file \u2014 add it in Documents & compliance, or turn off \\\"Require a va",
+    "notes": "Decision (Amir 64), not a bug: staffPolicy.ts:72 \u2014 an empty certifications register means 'not tracking compliance' so anyone can be rostered; the first certificate recorded turns requireDBS on for the whole tenant.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 \u2014 after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
   },
   "p2-l7": {
     "verdict": "pass",
     "method": "api",
-    "actual": "14MB: POST files → 201, 27/27 chunks (200), done → 200, GET as $A → 200 14000000 bytes; 15.1MB: POST files → 413 \"Files up to 15MB only — this one is 15.1MB.\"; GET file as $P → 403; as a staff member the document isn't assigned to ($S) → 200",
-    "notes": "15.1MB is refused by the zod max on 'bytes' as a 400 (documents.ts:605 FILE_MAX) rather than the 413 the plan names — same protection, different code. Declared 'bytes' is never checked against what the chunks add up to (chunks are capped at 40 × 700k b64 ≈ 21MB raw). Unassigned staff: GET /files/:id is 'anyone on the team' (documents.ts:648) — answered 200.",
-    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "actual": "14MB: POST files \u2192 201, 27/27 chunks (200), done \u2192 200, GET as $A \u2192 200 14000000 bytes; 15.1MB: POST files \u2192 413 \"Files up to 15MB only \u2014 this one is 15.1MB.\"; GET file as $P \u2192 403; as a staff member the document isn't assigned to ($S) \u2192 200",
+    "notes": "15.1MB is refused by the zod max on 'bytes' as a 400 (documents.ts:605 FILE_MAX) rather than the 413 the plan names \u2014 same protection, different code. Declared 'bytes' is never checked against what the chunks add up to (chunks are capped at 40 \u00d7 700k b64 \u2248 21MB raw). Unassigned staff: GET /files/:id is 'anyone on the team' (documents.ts:648) \u2014 answered 200.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 \u2014 after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
   },
   "p2-l8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "publish v1 → 200; $S confirms v1 → 200; publish v2 → 200; $S re-sends v1 → 409 \"There's a newer version (v2) — reopen it and confirm that one.\"; $S3 confirms v2 → 200; GET library as $A: $S's receipts=[v1], team=4; as $S: unread for v2=true; chase → 200 people=3; bells: $S +1, $S3 +0",
-    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "actual": "publish v1 \u2192 200; $S confirms v1 \u2192 200; publish v2 \u2192 200; $S re-sends v1 \u2192 409 \"There's a newer version (v2) \u2014 reopen it and confirm that one.\"; $S3 confirms v2 \u2192 200; GET library as $A: $S's receipts=[v1], team=4; as $S: unread for v2=true; chase \u2192 200 people=3; bells: $S +1, $S3 +0",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 \u2014 after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
   },
   "p2-l9": {
     "verdict": "pass",
     "method": "api",
-    "actual": "PUT expiry=2026-09-13 → 200; GET library as $A → 200: doc present, expiry=\"2026-09-13\", server flag keys=[expiry,expiresAt]; as $S → 200: still listed (expiry=\"2026-09-13\") — warned, not hidden",
-    "notes": "The API stores and returns the raw expiry date only; 'Expired' is derived on both screens (DocumentsApp.tsx:130-131 status pill + expired filter; StaffDocsApp.tsx:72-73 shows an 'Expired' label to staff — the document stays readable). Record: staff are warned, not hidden.",
-    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "actual": "PUT expiry=2026-09-13 \u2192 200; GET library as $A \u2192 200: doc present, expiry=\"2026-09-13\", server flag keys=[expiry,expiresAt]; as $S \u2192 200: still listed (expiry=\"2026-09-13\") \u2014 warned, not hidden",
+    "notes": "The API stores and returns the raw expiry date only; 'Expired' is derived on both screens (DocumentsApp.tsx:130-131 status pill + expired filter; StaffDocsApp.tsx:72-73 shows an 'Expired' label to staff \u2014 the document stays readable). Record: staff are warned, not hidden.",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 \u2014 after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
   },
   "p2-l12": {
     "verdict": "pass",
     "method": "api",
-    "actual": "$F1 PUT assignments (kind all) → 200; visible to F1 staff: true (200); F2 staff: false (200); HO staff: false (200); $F2 manager: false; POST notify all as $F1 → 200 sent=1 names=[Learn F1 Staff] outside F1: [none]",
-    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "actual": "$F1 PUT assignments (kind all) \u2192 200; visible to F1 staff: true (200); F2 staff: false (200); HO staff: false (200); $F2 manager: false; POST notify all as $F1 \u2192 200 sent=1 names=[Learn F1 Staff] outside F1: [none]",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 \u2014 after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
   },
   "p2-l13": {
     "verdict": "pass",
     "method": "api",
-    "actual": "team: Learn Manager=Manager; Learn Third=Coach; Learn Staff=Coach; Learn Leader=Lead / manager; staff with exactly \"Lead / manager\": 1 [Learn Leader]; POST notify {role} → 200 sent=1 names=[Learn Leader]",
-    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "actual": "team: Learn Manager=Manager; Learn Third=Coach; Learn Staff=Coach; Learn Leader=Lead / manager; staff with exactly \"Lead / manager\": 1 [Learn Leader]; POST notify {role} \u2192 200 sent=1 names=[Learn Leader]",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 \u2014 after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
   },
   "p2-l14": {
     "verdict": "pass",
     "method": "api",
-    "actual": "assign req+opt → 200; GET as $S → 200 flags=[req-course:true,opt-course:false]; complete required → 200; GET completions as $A → 200 keys=[Learn Staff,Learn Leader]; stored doc id=\"<TA>_p2hmu1d1rjx-st-8ae2y9_req-course\" uid=p2hmu1d1rjx-st-8ae2y9; after renaming $S to \"Learn Renamed\" their GET completions still shows it: true (Learn Staff)",
-    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 — after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
+    "actual": "assign req+opt \u2192 200; GET as $S \u2192 200 flags=[req-course:true,opt-course:false]; complete required \u2192 200; GET completions as $A \u2192 200 keys=[Learn Staff,Learn Leader]; stored doc id=\"<TA>_p2hmu1d1rjx-st-8ae2y9_req-course\" uid=p2hmu1d1rjx-st-8ae2y9; after renaming $S to \"Learn Renamed\" their GET completions still shows it: true (Learn Staff)",
+    "evidence": "server/scripts/plan2/p2H_day7.mts (run 2 \u2014 after fixes: pass mark, exact role notify, uid-keyed completions, 413 oversize)",
     "at": "2026-09-14T14:58:28.940Z",
     "agent": "plan2-H"
   },
   "p2-o1": {
     "verdict": "pass",
     "method": "api",
-    "actual": "POST daily ×7 → 201 created=7; done 2026-09-14,2026-09-15 → 200/200; PUT range 2026-09-14→2026-09-16 → 200 {\"created\":0,\"removed\":4,\"keptDone\":0}; left 3 (done kept: [2026-09-14,2026-09-15], future gone: true); range 2026-09-16→2026-09-16 (done dates now outside) → 200 keptDone=2, done rows still present: 2; DELETE series → 200 deleted=3, left 0; subtask-only: $S sees the task flagged subtaskOnly=true; PUT {t} → 403 \"You've been given a step on this task — you can tick your own step or add a comment, but not change the task ; tick own step → 200; tick the lead's step → 403",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "POST daily \u00d77 \u2192 201 created=7; done 2026-09-14,2026-09-15 \u2192 200/200; PUT range 2026-09-14\u21922026-09-16 \u2192 200 {\"created\":0,\"removed\":4,\"keptDone\":0}; left 3 (done kept: [2026-09-14,2026-09-15], future gone: true); range 2026-09-16\u21922026-09-16 (done dates now outside) \u2192 200 keptDone=2, done rows still present: 2; DELETE series \u2192 200 deleted=3, left 0; subtask-only: $S sees the task flagged subtaskOnly=true; PUT {t} \u2192 403 \"You've been given a step on this task \u2014 you can tick your own step or add a comment, but not change the task ; tick own step \u2192 200; tick the lead's step \u2192 403",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o2": {
     "verdict": "pass",
     "method": "api",
-    "actual": "as $S (tenant A) → 200 people=[p2hmu1ernjh-st-6fplb0@p2h.test,p2hmu1ernjh-st-vkd8wb@p2h.test,p2hmu1ernjh-own-8cpyp0@p2h.test] outside A: [none] parent present: false; as F1 staff → 200 people=[p2hmu1ernjh-st-w5136b@p2h.test,p2hmu1ernjh-fr-1k507p@p2h.test] outside F1: [none]; as $F1 manager → 200 outside F1: [none]; as HO → headOffice=true groups=[Head office:2,P2H Ops F1:2,P2H Ops F2:2]",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "as $S (tenant A) \u2192 200 people=[p2hmu1ernjh-st-6fplb0@p2h.test,p2hmu1ernjh-st-vkd8wb@p2h.test,p2hmu1ernjh-own-8cpyp0@p2h.test] outside A: [none] parent present: false; as F1 staff \u2192 200 people=[p2hmu1ernjh-st-w5136b@p2h.test,p2hmu1ernjh-fr-1k507p@p2h.test] outside F1: [none]; as $F1 manager \u2192 200 outside F1: [none]; as HO \u2192 headOffice=true groups=[Head office:2,P2H Ops F1:2,P2H Ops F2:2]",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o3": {
     "verdict": "blocked",
     "method": "api",
-    "actual": "POST end 10:00 before start 14:00 → 400 [{\"code\":\"custom\",\"message\":\"end time must be after start time\",\"path\":[\"end\"]}]; endDate before date → 400; POST event at 16:42 UK with remindMode on / 2 min → 201; calendar bells without a sweep: 0→0. Reminder-fires-once half: needs a sweep runner (calendarReminders is module-private in src/lib/sweeps.ts:50 and startSweeps() would run every production sweep in-process).",
+    "actual": "POST end 10:00 before start 14:00 \u2192 400 [{\"code\":\"custom\",\"message\":\"end time must be after start time\",\"path\":[\"end\"]}]; endDate before date \u2192 400; POST event at 16:42 UK with remindMode on / 2 min \u2192 201; calendar bells without a sweep: 0\u21920. Reminder-fires-once half: needs a sweep runner (calendarReminders is module-private in src/lib/sweeps.ts:50 and startSweeps() would run every production sweep in-process).",
     "notes": "Sweep half unverified in-process.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o4": {
     "verdict": "pass",
     "method": "api",
-    "actual": "POST timetable → 201; publish {parents, notifyEmail} → 200 published.at=set; PUT draft (name+activity changed) → 200 draft name=\"Week one EDITED\"; GET /published as $P → 200: sees name=\"Week one\" activity=\"Football\" (frozen: true); parent bells 0→0, emails 1→1",
-    "notes": "Owed (Amir 22): notifyEmail/notifyPush are accepted by publishSchema (timetables.ts:299-309) and dropped — no parent email or bell is sent on publish.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "POST timetable \u2192 201; publish {parents, notifyEmail} \u2192 200 published.at=set; PUT draft (name+activity changed) \u2192 200 draft name=\"Week one EDITED\"; GET /published as $P \u2192 200: sees name=\"Week one\" activity=\"Football\" (frozen: true); parent bells 0\u21920, emails 1\u21921",
+    "notes": "Owed (Amir 22): notifyEmail/notifyPush are accepted by publishSchema (timetables.ts:299-309) and dropped \u2014 no parent email or bell is sent on publish.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o5": {
     "verdict": "pass",
     "method": "api",
-    "actual": "POST item qty 5 → 201; /order {quantity:10, cost:25} → 200 ordered=true expense created=true (£25); /received → 200 quantity=15 ordered=false; /carry-over Summer→Autumn → 200 copied=1; new-season item quantity=15 carriedFrom=Summer 2026 lastCheckedAt=null; PUT {minQty:null} → 200 minQty=null; PUT {quantity:-1} → 400 [{\"code\":\"too_small\",\"minimum\":0,\"type\":\"number\",\"inclusive\":true,\"exact\":false,\"message\":\"Number must be grea",
+    "actual": "POST item qty 5 \u2192 201; /order {quantity:10, cost:25} \u2192 200 ordered=true expense created=true (\u00a325); /received \u2192 200 quantity=15 ordered=false; /carry-over Summer\u2192Autumn \u2192 200 copied=1; new-season item quantity=15 carriedFrom=Summer 2026 lastCheckedAt=null; PUT {minQty:null} \u2192 200 minQty=null; PUT {quantity:-1} \u2192 400 [{\"code\":\"too_small\",\"minimum\":0,\"type\":\"number\",\"inclusive\":true,\"exact\":false,\"message\":\"Number must be grea",
     "notes": "The reorder level is the `minQty` field (the plan's reorderLevel); the order body is {quantity, cost, category} not {qty}.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o6": {
     "verdict": "fail",
     "method": "api",
-    "actual": "Setup inventory.lowStockAlert=true; item minQty 5; /check {quantity:2} → 200 quantity=2; provider bells 1→1 (stock-related: 0). No low-stock sweep exists to wait for: src/lib/sweeps.ts registers no inventory sweep and nothing in server/src raises a stock alert.",
-    "notes": "Fix needed: low-stock alerts are client-side only — settings.inventory.lowStockAlert (lib/settings.ts:957) just filters/badges the Inventory page (features/inventory/InventoryApp.tsx:45). No server sweep, no notify() call, so the 'one bell per item, none while OFF' behaviour has nothing to test until a sweep is written.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "Setup inventory.lowStockAlert=true; item minQty 5; /check {quantity:2} \u2192 200 quantity=2; provider bells 1\u21921 (stock-related: 0). No low-stock sweep exists to wait for: src/lib/sweeps.ts registers no inventory sweep and nothing in server/src raises a stock alert.",
+    "notes": "Fix needed: low-stock alerts are client-side only \u2014 settings.inventory.lowStockAlert (lib/settings.ts:957) just filters/badges the Inventory page (features/inventory/InventoryApp.tsx:45). No server sweep, no notify() call, so the 'one bell per item, none while OFF' behaviour has nothing to test until a sweep is written.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o7": {
     "verdict": "pass",
     "method": "api",
-    "actual": "POST order (D1=2026-09-16) → 201 total=3; provider 'ordered a meal' bells: 1; /change before cut-off → 200 item=Jacket potato; listing cut-off 2 days@00:01 → 200; /change after cut-off → 409 \"Ordering for that day has closed — order by 00:01, 2 days before.\"; /cancel after cut-off → 409 \"Cancelling for that day has closed — order by 00:01, 2 days before. Contact the provider.\" (order status now \"placed\"); second order (D2) → 201; /pay → 200 pay=Paid; change a paid order → 409; report → 200 rows=2 total=£5.50 vs operator order list units=2 total=£5.50; every row carries allergies/dietary: true",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "POST order (D1=2026-09-16) \u2192 201 total=3; provider 'ordered a meal' bells: 1; /change before cut-off \u2192 200 item=Jacket potato; listing cut-off 2 days@00:01 \u2192 200; /change after cut-off \u2192 409 \"Ordering for that day has closed \u2014 order by 00:01, 2 days before.\"; /cancel after cut-off \u2192 409 \"Cancelling for that day has closed \u2014 order by 00:01, 2 days before. Contact the provider.\" (order status now \"placed\"); second order (D2) \u2192 201; /pay \u2192 200 pay=Paid; change a paid order \u2192 409; report \u2192 200 rows=2 total=\u00a35.50 vs operator order list units=2 total=\u00a35.50; every row carries allergies/dietary: true",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o8": {
     "verdict": "pass",
     "method": "api",
-    "actual": "child allergies=\"nuts\" orders \"Peanut satay\" (allergens [nuts]) → 201 accepted; warning keys in the response: [warnings]; line allergens=[nuts]; kitchen report row: dish=\"Peanut satay\" allergies=\"nuts\"; parent meal-days entry for that day mentions the child's allergy: false (allergenNote=\"\")",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "child allergies=\"nuts\" orders \"Peanut satay\" (allergens [nuts]) \u2192 201 accepted; warning keys in the response: [warnings]; line allergens=[nuts]; kitchen report row: dish=\"Peanut satay\" allergies=\"nuts\"; parent meal-days entry for that day mentions the child's allergy: false (allergenNote=\"\")",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o9": {
     "verdict": "pass",
     "method": "api",
-    "actual": "changeApproval=review; order → 201; parent /change → 200 changeRequest=pending (Jacket potato); provider 'change requested' bells: 1; $A /request {approve} → 200 applied=true; parent bells 0→0, parent emails 1→1 (nothing, as expected while owed)",
-    "notes": "Owed (Amir 23): POST /api/meal-orders/:id/request approve/decline (mealsShop.ts:702-735) writes the order and never notifies the family — no bell, no email.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "changeApproval=review; order \u2192 201; parent /change \u2192 200 changeRequest=pending (Jacket potato); provider 'change requested' bells: 1; $A /request {approve} \u2192 200 applied=true; parent bells 0\u21920, parent emails 1\u21921 (nothing, as expected while owed)",
+    "notes": "Owed (Amir 23): POST /api/meal-orders/:id/request approve/decline (mealsShop.ts:702-735) writes the order and never notifies the family \u2014 no bell, no email.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o10": {
     "verdict": "pass",
     "method": "api",
-    "actual": "PUT mealConfig {catererEmail, catererEvery:day, catererAt:16:41} → 200 stored={\"catererEmail\":\"caterer-8cpyp0@p2h.test\",\"catererEvery\":\"day\",\"catererAt\":\"16:41\",\"cutoffWhen\":\"off\"}; emails to the caterer after the time: 0→0. No sender exists to wait for: nothing in server/src reads catererEmail/catererAt (listings.ts:128-137 stores them and says 'Caterer emailing is a backend cron (Amir)'); the UI's Meals config shows the same note.",
-    "notes": "Owed (Amir 24): no caterer digest sweep — settings are stored only.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "PUT mealConfig {catererEmail, catererEvery:day, catererAt:16:41} \u2192 200 stored={\"catererEmail\":\"caterer-8cpyp0@p2h.test\",\"catererEvery\":\"day\",\"catererAt\":\"16:41\",\"cutoffWhen\":\"off\"}; emails to the caterer after the time: 0\u21920. No sender exists to wait for: nothing in server/src reads catererEmail/catererAt (listings.ts:128-137 stores them and says 'Caterer emailing is a backend cron (Amir)'); the UI's Meals config shows the same note.",
+    "notes": "Owed (Amir 24): no caterer digest sweep \u2014 settings are stored only.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o11": {
     "verdict": "pass",
     "method": "api",
-    "actual": "PUT seasonId=s-one on L → 200; listings in s-one=[1] s-empty=[0]; GET /api/bookings → 200 2 bookings; join by listing (client rule): s-one → [APF-10312] (L's APF-10312 in, L2's APF-10313 out), s-empty → [nobody] via the __none__ sentinel; GET /api/bookings?seasonId=s-empty → 200 2 rows (server ignores the param: true); delete season s-one → listing keeps seasonId=\"s-one\" (public feed shows season=null)",
-    "notes": "Record: the season filter is client-side only (EmailApp.tsx:1513 seasonListingFilter, listing ids or ['__none__']) — no server route filters bookings by season; GET /api/bookings ignores ?seasonId. Deleting a season leaves the orphan id on the listing (listings.ts resolves it to season=null on the public feed).",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "PUT seasonId=s-one on L \u2192 200; listings in s-one=[1] s-empty=[0]; GET /api/bookings \u2192 200 2 bookings; join by listing (client rule): s-one \u2192 [APF-10312] (L's APF-10312 in, L2's APF-10313 out), s-empty \u2192 [nobody] via the __none__ sentinel; GET /api/bookings?seasonId=s-empty \u2192 200 2 rows (server ignores the param: true); delete season s-one \u2192 listing keeps seasonId=\"s-one\" (public feed shows season=null)",
+    "notes": "Record: the season filter is client-side only (EmailApp.tsx:1513 seasonListingFilter, listing ids or ['__none__']) \u2014 no server route filters bookings by season; GET /api/bookings ignores ?seasonId. Deleting a season leaves the orphan id on the listing (listings.ts resolves it to season=null on the public feed).",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o12": {
     "verdict": "pass",
     "method": "api",
-    "actual": "bundle → 201; attach to L3 → 200; booking on L3 APF-10314 → 201; /duplicate → 201 newId=true name=\"Ops bundle (copy)\" listingIds=[]; /archive → 200 archived=true; public feed still shows L3 after the BUNDLE is archived: true; /reorder with tenant B's id → 400 \"Bundle ose0SLaOTDGVi6SwjBQ4 isn't one of yours\"; archive the LISTING → 200; public feed hides L3: true; booking APF-10314 intact: true status=Approval needed",
-    "notes": "Foreign id is refused as 404 \"Bundle … not found\" (blockBundles.ts:365) rather than the plan's 400 — same protection, different code. Archiving a bundle does not touch the public feed (the listing's own archived flag does); the duplicate has a new id and no listings/bookings.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "bundle \u2192 201; attach to L3 \u2192 200; booking on L3 APF-10314 \u2192 201; /duplicate \u2192 201 newId=true name=\"Ops bundle (copy)\" listingIds=[]; /archive \u2192 200 archived=true; public feed still shows L3 after the BUNDLE is archived: true; /reorder with tenant B's id \u2192 400 \"Bundle ose0SLaOTDGVi6SwjBQ4 isn't one of yours\"; archive the LISTING \u2192 200; public feed hides L3: true; booking APF-10314 intact: true status=Approval needed",
+    "notes": "Foreign id is refused as 404 \"Bundle \u2026 not found\" (blockBundles.ts:365) rather than the plan's 400 \u2014 same protection, different code. Archiving a bundle does not touch the public feed (the listing's own archived flag does); the duplicate has a new id and no listings/bookings.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o13": {
     "verdict": "pass",
     "method": "api",
-    "actual": "listing with one block 2026-08-05→2026-08-11 (block i6qhOl…): GET ?mine=1 → status=\"live\" archived=false blocks=1; public feed (?tenantId) lists it: false; direct GET /api/listings/:id → 200",
-    "notes": "Record (Amir 43): the public feed drops it on the dates gate (listings.ts:373-381 hasUpcomingBlock) but the stored status stays 'live' — ?mine=1 counts, HQ analytics and anything keyed on status:'live' overstate.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "listing with one block 2026-08-05\u21922026-08-11 (block i6qhOl\u2026): GET ?mine=1 \u2192 status=\"live\" archived=false blocks=1; public feed (?tenantId) lists it: false; direct GET /api/listings/:id \u2192 200",
+    "notes": "Record (Amir 43): the public feed drops it on the dates gate (listings.ts:373-381 hasUpcomingBlock) but the stored status stays 'live' \u2014 ?mine=1 counts, HQ analytics and anything keyed on status:'live' overstate.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o14": {
     "verdict": "fail",
     "method": "api",
-    "actual": "PUT ageCaps {g57:1} ageCapsOn → 200; GET back: ageCaps={\"g57\":1} ageCapsOn=true (survived: true); first 6-year-old → 201 Approval needed; second 6-year-old → 201 Approval needed (refused/waitlisted: false)",
-    "notes": "Fix needed (§S, known): the caps are stored and returned (listings.ts:88-93) but POST /api/my/bookings never reads ageCaps — capacity is block-wide only (my.ts:1259-1283). The wizard's 'Enforced once the backend is built' badge still applies.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "PUT ageCaps {g57:1} ageCapsOn \u2192 200; GET back: ageCaps={\"g57\":1} ageCapsOn=true (survived: true); first 6-year-old \u2192 201 Approval needed; second 6-year-old \u2192 201 Approval needed (refused/waitlisted: false)",
+    "notes": "Fix needed (\u00a7S, known): the caps are stored and returned (listings.ts:88-93) but POST /api/my/bookings never reads ageCaps \u2014 capacity is block-wide only (my.ts:1259-1283). The wizard's 'Enforced once the backend is built' badge still applies.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o15": {
     "verdict": "pass",
     "method": "api",
-    "actual": "cap 1, auto: $P → 201 Approval needed; $P2 → Waitlisted; $P3 → Waitlisted; $A cancels $P → 200; after 2.5s: $P2=Offered $P3=Waitlisted; $P2 /decline-offer → 200; $P3 now Offered; $P3 /accept-offer → 200 Confirmed. Expiry (fresh block, $P2 then $P4 queued): $P2 Offered offeredAt=2026-09-14T15:41:29.348Z; offerExpiresAt back-dated; $P2 accept-offer → 409 \"This offer has expired — you're back in the queue\"; expireOffers(): $P2=Waitlisted offeredAt=2026-09-14T15:41:29.348Z note=\"Offer expired — back in the queue.\" (re-issued to the same family: false), $P4=Offered (moved on: true)",
-    "notes": "Expired offers are handled by SWEEP — 'waitlist-expiry' runs expireOffers() every 5 min (sweeps.ts:789) and accept-offer refuses an expired offer on read (my.ts:1913). ",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "cap 1, auto: $P \u2192 201 Approval needed; $P2 \u2192 Waitlisted; $P3 \u2192 Waitlisted; $A cancels $P \u2192 200; after 2.5s: $P2=Offered $P3=Waitlisted; $P2 /decline-offer \u2192 200; $P3 now Offered; $P3 /accept-offer \u2192 200 Confirmed. Expiry (fresh block, $P2 then $P4 queued): $P2 Offered offeredAt=2026-09-14T15:41:29.348Z; offerExpiresAt back-dated; $P2 accept-offer \u2192 409 \"This offer has expired \u2014 you're back in the queue\"; expireOffers(): $P2=Waitlisted offeredAt=2026-09-14T15:41:29.348Z note=\"Offer expired \u2014 back in the queue.\" (re-issued to the same family: false), $P4=Offered (moved on: true)",
+    "notes": "Expired offers are handled by SWEEP \u2014 'waitlist-expiry' runs expireOffers() every 5 min (sweeps.ts:789) and accept-offer refuses an expired offer on read (my.ts:1913). ",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o16": {
     "verdict": "pass",
     "method": "api",
-    "actual": "listing cut-off 2h; session 2026-09-14 17:41–18:41 UK (1h ahead); parent POST /api/my/bookings → 409 \"Bookings for Mon 14 Sept have closed — P2H Ops Cutoff stops taking bookings 2 hours before each session. Plea; operator POST /api/bookings same block → 201 ref APF-10323 status Confirmed (operator door open: true)",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "listing cut-off 2h; session 2026-09-14 17:41\u201318:41 UK (1h ahead); parent POST /api/my/bookings \u2192 409 \"Bookings for Mon 14 Sept have closed \u2014 P2H Ops Cutoff stops taking bookings 2 hours before each session. Plea; operator POST /api/bookings same block \u2192 201 ref APF-10323 status Confirmed (operator door open: true)",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o17": {
     "verdict": "pass",
     "method": "api",
-    "actual": "POST /api/bookings ×50 on a block of 26 → codes 201, per-row statuses: 26 placed, 24 Waitlisted (first waitlisted row: 27); block bookedCount before=26; POST /bulk {approve ×50} → 409 rows=\"Approving these would put Bulk day 24 places over capacity — approve fewer, or waitlist the rest.\"; after: Confirmed=26 Waitlisted=24, block bookedCount=26/26",
-    "notes": "Meets the plan after the fix: creation is per row (row 27 onward come back Waitlisted, never a 500) and bulk approve is now all-or-nothing WITH a capacity check — 409 over_capacity instead of confirming 50 on a block of 26.",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "POST /api/bookings \u00d750 on a block of 26 \u2192 codes 201, per-row statuses: 26 placed, 24 Waitlisted (first waitlisted row: 27); block bookedCount before=26; POST /bulk {approve \u00d750} \u2192 409 rows=\"Approving these would put Bulk day 24 places over capacity \u2014 approve fewer, or waitlist the rest.\"; after: Confirmed=26 Waitlisted=24, block bookedCount=26/26",
+    "notes": "Meets the plan after the fix: creation is per row (row 27 onward come back Waitlisted, never a 500) and bulk approve is now all-or-nothing WITH a capacity check \u2014 409 over_capacity instead of confirming 50 on a block of 26.",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   },
   "p2-o18": {
     "verdict": "pass",
     "method": "api",
-    "actual": "POST trip (2 children, consent granted by provider) → 201 attendees=[Ops Kid One=granted,Ops Kid Nuts=granted]; PUT {childNames} only (dropping Kid One) → 200 Kid One still in attendees: true; PUT {childNames + attendees} → 200 attendees=[Ops Kid Nuts=granted] Kid One gone: true childIds cleaned: true; day register 2026-09-14 → 200 lists Kid One (booked): true, Kid Nuts (never booked): false; trip roll (attending) = [Ops Kid Nuts]",
-    "notes": "Roll call is client-side in the planner (attendees minus declined; trips.ts:105-110) — no roll-call API. A PUT that sends childNames WITHOUT attendees keeps the removed child's consent entry (trips.ts:318-320: incoming = prev, enrichTrip only adds) — confirmed: the entry lingers until the client also resends attendees (the planner does).",
-    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 — after fixes)",
+    "actual": "POST trip (2 children, consent granted by provider) \u2192 201 attendees=[Ops Kid One=granted,Ops Kid Nuts=granted]; PUT {childNames} only (dropping Kid One) \u2192 200 Kid One still in attendees: true; PUT {childNames + attendees} \u2192 200 attendees=[Ops Kid Nuts=granted] Kid One gone: true childIds cleaned: true; day register 2026-09-14 \u2192 200 lists Kid One (booked): true, Kid Nuts (never booked): false; trip roll (attending) = [Ops Kid Nuts]",
+    "notes": "Roll call is client-side in the planner (attendees minus declined; trips.ts:105-110) \u2014 no roll-call API. A PUT that sends childNames WITHOUT attendees keeps the removed child's consent entry (trips.ts:318-320: incoming = prev, enrichTrip only adds) \u2014 confirmed: the entry lingers until the client also resends attendees (the planner does).",
+    "evidence": "server/scripts/plan2/p2H_day8.mts (run 4 \u2014 after fixes)",
     "at": "2026-09-14T15:46:39.426Z",
     "agent": "plan2-H"
   }

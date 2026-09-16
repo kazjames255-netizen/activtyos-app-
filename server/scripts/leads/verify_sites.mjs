@@ -7,7 +7,10 @@ admin.initializeApp({ credential: admin.credential.cert(JSON.parse(fs.readFileSy
 const db = admin.firestore();
 const args = Object.fromEntries(process.argv.slice(2).map((a,i,arr)=>a.startsWith("--")?[a.slice(2),arr[i+1]&&!arr[i+1].startsWith("--")?arr[i+1]:true]:[]).filter(x=>x.length));
 const LIMIT = args.limit ? +args.limit : Infinity, KIND = args.kind || "all", ONLY = args.only ? new Set(String(args.only).split(",")) : null;
-const OUT = path.resolve("scripts/leads/out/verify.out.jsonl"); const CONC = args.render ? 6 : 24, TIMEOUT = 12000, MAXBYTES = 1_500_000;
+// Render mode's concurrency was 6 headless-Chromium contexts, which — via Chromium's multi-process architecture
+// (renderer + GPU + network-service processes per context) — was launching enough OS processes to starve the dev
+// machine (measured 7.7s for a simple redirect on the Next.js dev server the user was actively using). Cut to 3.
+const OUT = path.resolve("scripts/leads/out/verify.out.jsonl"); const CONC = args.render ? 3 : 24, TIMEOUT = 12000, MAXBYTES = 1_500_000;
 // Resume key is id + url: a lead whose old candidate was dropped and that now carries a NEW candidate gets checked again.
 const done = new Set(fs.existsSync(OUT) ? fs.readFileSync(OUT,"utf8").split("\n").filter(Boolean).map(l=>{try{const r=JSON.parse(l);return r.id+"|"+r.url}catch{return null}}) : []);
 

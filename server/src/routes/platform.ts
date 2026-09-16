@@ -2,6 +2,8 @@ import { Router } from "express";
 import { z } from "zod";
 import { db, auth } from "../firebase";
 import type { BookingDoc } from "../lib/bookingDoc";
+import { takesStaffSeat } from "../lib/billing";
+import { getPlans, limitsFor } from "./subscription";
 
 export const platform = Router();
 
@@ -108,16 +110,29 @@ platform.get("/subscriptions", async (req, res) => {
     db.collection("tenants").get(),
     db.collection("users").get(),
   ]);
+  // Same seat count as the tenant's own /api/subscription (lib/billing.ts
+  // takesStaffSeat: active staff only — a franchise login is a location, not
+  // a seat, and a deactivated account frees its place). This used to count
+  // role "staff" OR "franchise" with no disabled check, so this HQ row could
+  // read higher than what the provider's own Subscription page showed.
   const staffByTenant: Record<string, number> = {};
   for (const d of usersSnap.docs) {
     const u = d.data();
-    if ((u.role === "staff" || u.role === "franchise") && u.tenantId) {
+    if (takesStaffSeat(d) && u.tenantId) {
       staffByTenant[u.tenantId as string] = (staffByTenant[u.tenantId as string] ?? 0) + 1;
     }
   }
+  // Same price fallback as the tenant's own /api/subscription: a tenant with
+  // no snapshotted sub.price (never billed yet, or predates snapshotting)
+  // used to show price:null here while its own Subscription page showed the
+  // live catalogue price for its plan/band — read as "free" in the HQ MRR
+  // total and provider list when it wasn't.
+  const plans = await getPlans();
   const rows = tenantsSnap.docs.map((d) => {
     const t = d.data();
     const sub = (t.subscription as Record<string, unknown> | undefined) ?? null;
+    const planId = (sub?.plan as string) ?? (t.type === "company" ? "company" : "freelancer");
+    const lim = limitsFor(plans, planId, sub?.band as string | null | undefined);
     return {
       id: d.id,
       name: (t.name as string) ?? d.id,
@@ -126,11 +141,11 @@ platform.get("/subscriptions", async (req, res) => {
       plan: (sub?.plan as string) ?? null,
       band: (sub?.band as string) ?? null,
       status: (sub?.status as string) ?? "active",
-      price: (sub?.price as number) ?? null,
+      price: (sub?.price as number) ?? lim.price,
       cadence: (sub?.cadence as string) ?? "month",
       trialEndsAt: (sub?.trialEndsAt as string) ?? null,
       staffCount: staffByTenant[d.id] ?? 0,
-      staffLimit: (sub?.staffLimit as number | null) ?? null,
+      staffLimit: (sub?.staffLimit as number | null) ?? lim.staffLimit,
     };
   });
   rows.sort((a, b) => (`${b.createdAt ?? ""}` < `${a.createdAt ?? ""}` ? -1 : 1));
@@ -160,10 +175,11 @@ platform.get("/providers", async (req, res) => {
     db.collection("users").get(),
     db.collection("libraries").get(),
   ]);
+  // See /subscriptions above — same active-staff-seat count as lib/billing.ts.
   const staffByTenant: Record<string, number> = {};
   for (const d of usersSnap.docs) {
     const u = d.data();
-    if ((u.role === "staff" || u.role === "franchise") && u.tenantId) staffByTenant[u.tenantId as string] = (staffByTenant[u.tenantId as string] ?? 0) + 1;
+    if (takesStaffSeat(d) && u.tenantId) staffByTenant[u.tenantId as string] = (staffByTenant[u.tenantId as string] ?? 0) + 1;
   }
   const settingsById: Record<string, Record<string, unknown>> = {};
   for (const d of libsSnap.docs) settingsById[d.id] = (d.data()?.settings as Record<string, unknown>) ?? {};

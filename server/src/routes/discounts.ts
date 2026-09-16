@@ -238,13 +238,25 @@ discounts.post("/", async (req, res) => {
   const parsed = codeSchema.safeParse(req.body);
   if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
   const code = normaliseCode(parsed.data.code);
-  const dupe = await col.where("tenantId", "==", auth.tenantId).where("code", "==", code).limit(1).get();
-  if (!dupe.empty) { res.status(409).json({ error: "You already have a code with that name" }); return; }
   // Reserve for a group → snapshot its members onto the code.
   const grp = parsed.data.assignedGroupId ? await resolveGroup(auth.tenantId, parsed.data.assignedGroupId) : null;
   const doc = { ...parsed.data, code, tenantId: auth.tenantId, franchiseId: auth.role === "franchise" ? auth.franchiseId : null, usedCount: 0, createdAt: new Date().toISOString(),
     ...(grp ? { assignedEmails: grp.emails, assignedGroupName: grp.name } : {}) };
-  const ref = await col.add(doc);
+  // The dupe-check-then-add used to be two separate calls — two concurrent
+  // POSTs for the same code could both pass the check and both create a
+  // code. Do the check and the create in one transaction so the second
+  // writer sees the first's write and is refused.
+  const ref = col.doc();
+  try {
+    await db.runTransaction(async (tx) => {
+      const dupe = await tx.get(col.where("tenantId", "==", auth.tenantId).where("code", "==", code).limit(1));
+      if (!dupe.empty) throw new HttpError(409, "You already have a code with that name");
+      tx.create(ref, doc);
+    });
+  } catch (e) {
+    if (e instanceof HttpError) { res.status(e.status).json({ error: e.message }); return; }
+    throw e;
+  }
   const valueTxt = valueTxtOf(parsed.data.type, parsed.data.value);
   const scopeText = await listingScopeText(auth.tenantId, parsed.data.listingId);
   if (parsed.data.assignedTo) await notifyAssigned(auth.tenantId, parsed.data.assignedTo, parsed.data.assignedName, code, valueTxt, parsed.data.expiry, scopeText);
@@ -338,3 +350,12 @@ discounts.post("/validate", async (req, res) => {
   if (!check.ok) { res.json({ valid: false, reason: check.reason }); return; }
   res.json({ valid: true, code: normaliseCode(parsed.data.code), off: check.off, exclusive: !!data.exclusive });
 });
+
+class HttpError extends Error {
+  constructor(
+    public status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}

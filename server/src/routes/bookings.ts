@@ -546,6 +546,13 @@ bookings.post("/:ref/actions", async (req, res) => {
 
       switch (action.type) {
         case "cancel":
+          // Cancelling an already-cancelled booking used to be accepted
+          // silently — applyCancel would overwrite the existing cancel
+          // record and reset cancel.refund back to "full", which reopens
+          // the refund-approve replay guard above (it only checks
+          // b.cancel.refund !== "approved") and lets a refund be
+          // re-approved a second time (bk4).
+          if (b.status === "Cancelled") throw new Conflict("This booking is already cancelled");
           applyCancel(b, action.refund, action.amount, action.reason);
           break;
         case "cancel-child":
@@ -846,6 +853,7 @@ const recordPaymentSchema = z.object({
 });
 const refKey = (r: unknown) => String(r ?? "").replace(/\s+/g, "").toUpperCase();
 class Duplicate extends Error { constructor(public prior: { amount: number; reference: string | null; createdAt: string; recordedBy?: string }) { super("possible_duplicate"); } }
+class Overpay extends Error { constructor(public bookingAmount: number, public alreadyPaid: number, public attempted: number) { super("overpay"); } }
 bookings.post("/:ref/record-payment", async (req, res) => {
   const scope = operatorScope(req, res);
   if (!scope || !requireWrite(req, res)) return;
@@ -880,6 +888,14 @@ bookings.post("/:ref/record-payment", async (req, res) => {
         if (dup) throw new Duplicate({ amount: Number(dup.amount), reference: (dup.reference as string | null) ?? null, createdAt: String(dup.createdAt ?? ""), recordedBy: dup.recordedBy as string | undefined });
       }
       const paid = Math.round(((b.amountPaid ?? 0) + parsed.data.amount) * 100) / 100;
+      // A booking still awaiting/part-paid can't be recorded past its own total
+      // — that's almost always a typo (an extra digit) rather than a genuine
+      // overpayment. Cancelled/Declined bookings are exempt: money arriving
+      // after cancellation is tracked separately via receivedAfterCancel below
+      // and is a real, expected case (e.g. a late cheque clearing).
+      if (b.status !== "Cancelled" && b.status !== "Declined" && paid > (b.amount ?? 0) + 0.005) {
+        throw new Overpay(b.amount ?? 0, b.amountPaid ?? 0, parsed.data.amount);
+      }
       b.amountPaid = paid;
       b.pay = paid >= (b.amount ?? 0) ? "Paid" : "Partially paid";
       if (b.status === "Cancelled" || b.status === "Declined")
@@ -907,6 +923,12 @@ bookings.post("/:ref/record-payment", async (req, res) => {
     res.json({ ...updated, ...(overpaid > 0 ? { overpaid } : {}) });
   } catch (e) {
     if (e instanceof NotFound) res.status(404).json({ error: "Booking not found" });
+    else if (e instanceof Overpay) {
+      const outstanding = Math.round(Math.max(0, e.bookingAmount - e.alreadyPaid) * 100) / 100;
+      res.status(400).json({
+        error: `${money(e.attempted)} is more than this booking's ${money(outstanding)} outstanding balance (${money(e.bookingAmount)} total, ${money(e.alreadyPaid)} already recorded) — check the amount.`,
+      });
+    }
     else if (e instanceof Duplicate) {
       const when = new Date(e.prior.createdAt);
       const day = Number.isNaN(when.getTime()) ? "recently" : `on ${when.toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "Europe/London" })}`;

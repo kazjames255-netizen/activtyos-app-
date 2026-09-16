@@ -80,16 +80,25 @@ expenseClaims.patch("/:id", async (req, res) => {
   const by = req.user?.email ?? req.user?.uid ?? "manager";
   const patch: Record<string, unknown> = { status: parsed.data.status, [`${parsed.data.status}At`]: now, [`${parsed.data.status}By`]: by, ...(parsed.data.reason ? { reason: parsed.data.reason } : {}) };
   // Approved (or paid straight away) → it's money out: one expense row, once.
-  if ((parsed.data.status === "approved" || parsed.data.status === "paid") && !c.expenseId) {
-    const exp = await db.collection("expenses").add({
-      tenantId: c.tenantId, franchiseId: c.franchiseId ?? null, date: c.date, category: c.category, amount: c.amount,
-      supplier: c.staffName, notes: `Staff expense claim — ${c.staffName}${c.note ? `: ${c.note}` : ""}`,
-      ...(c.receiptUrl ? { receiptUrl: c.receiptUrl } : {}), claimId: snap.id,
-      createdBy: by, createdByName: req.user?.name ?? by, createdAt: now,
-    });
-    patch.expenseId = exp.id;
-  }
-  await ref.set(patch, { merge: true });
+  // Was check-then-act (!c.expenseId on a stale read, then add()) — two
+  // concurrent approvals could both pass the check and both create an
+  // expense row, double-counting spend. Re-check inside a transaction so the
+  // second writer sees the first's expenseId and skips creating another.
+  const expenseRef = db.collection("expenses").doc();
+  await db.runTransaction(async (tx) => {
+    const fresh = await tx.get(ref);
+    const freshData = fresh.data() as Record<string, unknown> | undefined;
+    if ((parsed.data.status === "approved" || parsed.data.status === "paid") && !freshData?.expenseId) {
+      tx.set(expenseRef, {
+        tenantId: c.tenantId, franchiseId: c.franchiseId ?? null, date: c.date, category: c.category, amount: c.amount,
+        supplier: c.staffName, notes: `Staff expense claim — ${c.staffName}${c.note ? `: ${c.note}` : ""}`,
+        ...(c.receiptUrl ? { receiptUrl: c.receiptUrl } : {}), claimId: snap.id,
+        createdBy: by, createdByName: req.user?.name ?? by, createdAt: now,
+      });
+      patch.expenseId = expenseRef.id;
+    }
+    tx.set(ref, patch, { merge: true });
+  });
   const after = await ref.get();
   res.json(sign({ id: after.id, ...after.data() }));
 });
