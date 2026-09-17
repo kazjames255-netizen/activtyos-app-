@@ -9,14 +9,20 @@ import { Button, Card, FieldLabel, Input, Select, SectionHead } from "@/componen
 // collection, multi-device sync, or anyone else's access.
 const KEY = "aos.hq.myMoney.v1";
 type Kind = "income" | "expense";
-interface Entry { id: string; date: string; desc: string; amount: number; kind: Kind; category: string }
+interface Entry { id: string; date: string; desc: string; amount: number; kind: Kind; category: string; received: boolean }
 
 const CATEGORIES: Record<Kind, string[]> = {
   income: ["Salary", "Dividend", "Consulting", "Other income"],
   expense: ["Rent/mortgage", "Bills", "Food", "Travel", "Software/subs", "Other expense"],
 };
 
-function load(): Entry[] { try { return JSON.parse(localStorage.getItem(KEY) || "[]"); } catch { return []; } }
+function load(): Entry[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(KEY) || "[]") as Entry[];
+    // Backfill entries saved before "received" existed.
+    return raw.map((e) => ({ ...e, received: e.received ?? false }));
+  } catch { return []; }
+}
 function save(entries: Entry[]) { try { localStorage.setItem(KEY, JSON.stringify(entries)); } catch { /* ignore */ } }
 const money = (n: number) => `£${n.toLocaleString("en-GB", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const today = () => new Date().toISOString().slice(0, 10);
@@ -34,7 +40,7 @@ export function MyMoneyApp() {
   const add = () => {
     const n = Number(amount);
     if (!desc.trim() || !n || n <= 0) return;
-    const next = [{ id: crypto.randomUUID(), date, desc: desc.trim(), amount: n, kind, category }, ...entries];
+    const next = [{ id: crypto.randomUUID(), date, desc: desc.trim(), amount: n, kind, category, received: false }, ...entries];
     setEntries(next); save(next);
     setDesc(""); setAmount("");
   };
@@ -115,6 +121,7 @@ export function MyMoneyApp() {
                 <th className="px-4 py-2.5">Description</th>
                 <th className="px-4 py-2.5">Category</th>
                 <th className="px-4 py-2.5 text-right">Amount</th>
+                <th className="px-4 py-2.5 text-center">Received</th>
                 <th className="px-4 py-2.5" />
               </tr>
             </thead>
@@ -150,6 +157,13 @@ export function MyMoneyApp() {
                         className="w-24 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right font-bold hover:border-[var(--line)] focus:border-[var(--brand)] focus:outline-none"
                         style={{ color: e.kind === "income" ? "#0f6b3a" : "#b3261e" }} />
                     </div>
+                  </td>
+                  <td className="px-2 py-1.5 text-center">
+                    <button type="button" onClick={() => update(e.id, { received: !e.received })} aria-pressed={e.received}
+                      className="rounded-full px-2.5 py-1 text-[11px] font-extrabold"
+                      style={e.received ? { background: "#e6f6ee", color: "#0f6b3a" } : { background: "var(--panel)", color: "var(--ink-3)" }}>
+                      {e.received ? "✓ Yes" : "No"}
+                    </button>
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button type="button" onClick={() => remove(e.id)} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#b3261e]">Remove</button>
