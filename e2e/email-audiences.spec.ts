@@ -86,7 +86,9 @@ test.describe("email audiences", () => {
 
     await page.goto("/company/email");
     await page.getByText(subject).click();
-    await page.getByRole("button", { name: /Mark as enquiry/ }).click();
+    // The action bar is deliberately repeated top and bottom of a message (EmailApp.tsx)
+    // so it's reachable without scrolling past a long one — .first() picks the top one.
+    await page.getByRole("button", { name: /Mark as enquiry/ }).first().click();
     await page.getByRole("button", { name: /Add to enquiries/ }).click();
 
     // The enquiry store is client-side; the Audiences tab must now list them.
