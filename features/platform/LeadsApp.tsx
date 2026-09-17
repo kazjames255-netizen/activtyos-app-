@@ -221,6 +221,27 @@ const BOOKING: Record<Booking, { label: string; hint: string }> = {
 };
 const isFreelancer = (l: Lead) => l.plan === "freelancer";
 const isCompany = (l: Lead) => l.plan === "company" || l.plan === "franchise";
+// A light background tint + a saturated left-edge stripe per provider/quick-tab CATEGORY, so the type reads
+// at a glance in a mixed list without needing to read the small badge text — and the SAME colours drive the
+// quick-filter tab buttons above the list, so a tab and its cards visually match. Priority when a lead could
+// match more than one (e.g. a company that's also an independent school): the more specific school category
+// wins over the generic company/freelancer plan. Leads matching none (no plan set, no school classification —
+// e.g. a fresh Ofsted-only import) get no tint — plain card, same as before this existed.
+const PROVIDER_ACCENT: Record<string, { bg: string; stripe: string }> = {
+  freelancer: { bg: "#faf7ff", stripe: "#a855f7" },
+  company: { bg: "#f5f8ff", stripe: "#3b5bdb" },
+  indepNonSend: { bg: "#fffbeb", stripe: "#b45309" },
+  indepSend: { bg: "#f0fdfa", stripe: "#0f766e" },
+  stateSchool: { bg: "#fff7ed", stripe: "#c2410c" },
+};
+const providerAccent = (l: Lead) => {
+  if (l.schoolType === "send") return PROVIDER_ACCENT.indepSend;
+  if (l.schoolType) return PROVIDER_ACCENT.indepNonSend;
+  if ((l.sources ?? []).includes("gias-state") || l.source === "gias-state") return PROVIDER_ACCENT.stateSchool;
+  if (isFreelancer(l)) return PROVIDER_ACCENT.freelancer;
+  if (isCompany(l)) return PROVIDER_ACCENT.company;
+  return null;
+};
 
 const STATUSES = ["new", "contacted", "won", "lost"] as const;
 const TONE: Record<string, { bg: string; fg: string; label: string }> = {
@@ -354,7 +375,7 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
   ],
   status: STATUSES.map((s) => ({ value: s, label: TONE[s].label, test: ({ l }: R) => (l.status || "new") === s })),
 };
-const DIM_LABEL: Record<Dim, string> = { plan: "Plan", runs: "What they do", activity: "Activity", fit: "Fit", size: "Size", booking: "Platform", nation: "Nation", region: "Region", ofsted: "Ofsted registered", source: "Found on", contact: "Contact", status: "Status", schoolType: "School type", schoolPhase: "School phase", schoolGovernance: "School governance", roleContact: "Role contacts" };
+const DIM_LABEL: Record<Dim, string> = { plan: "Provider", runs: "What they do", activity: "Activity", fit: "Fit", size: "Size", booking: "Platform", nation: "Nation", region: "Region", ofsted: "Ofsted registered", source: "Found on", contact: "Contact", status: "Status", schoolType: "School type", schoolPhase: "School phase", schoolGovernance: "School governance", roleContact: "Role contacts" };
 type Filters = Record<Dim, string[]>;
 const NO_FILTERS: Filters = { plan: [], runs: [], activity: [], fit: [], size: [], booking: [], nation: [], region: [], ofsted: [], source: [], contact: [], status: [], schoolType: [], schoolPhase: [], schoolGovernance: [], roleContact: [] };
 
@@ -486,6 +507,37 @@ function FilterMenu({ dim, opts, value, onChange, countFor }: { dim: Dim; opts: 
 
 // Formula-safe (same rule as lib/csv): scraped/imported text starting = + - @ tab CR gets an apostrophe.
 const csvCell = (v: unknown) => { let s = String(v ?? ""); if (typeof v !== "number" && /^[=+\-@\t\r]/.test(s) && !/^[-+]?\d+(\.\d+)?$/.test(s)) s = `'${s}`; return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
+const csvReviewLabel = (l: Lead) => l.reviewTier === "likely_fit" ? "Likely fit" : l.reviewTier === "uncertain" ? "Needs a glance" : "";
+// The CSV export's columns — one entry per column, in export order. Each column can be shown/hidden from the
+// Export CSV menu; everything defaults to on. Kept as one list (not the head[]/lines[] pair this replaced) so
+// the picker checkboxes and the actual export always agree on what a column even is.
+const CSV_COLUMNS: { key: string; label: string; value: (l: Lead, d: Derived) => string }[] = [
+  { key: "name", label: "Name", value: (l) => l.name },
+  { key: "business", label: "Registered name", value: (l) => l.business ?? "" },
+  { key: "companyNumber", label: "Company number", value: (l) => l.companyNumber ?? "" },
+  { key: "reviewStatus", label: "Review status", value: (l) => csvReviewLabel(l) },
+  { key: "email", label: "Email", value: (l) => l.email ?? "" },
+  { key: "okToEmail", label: "OK to email (PECR)", value: (l) => okToEmail(l) ? "yes" : l.email ? "needs consent" : "" },
+  { key: "phone", label: "Phone", value: (l) => l.phone ?? "" },
+  { key: "website", label: "Website", value: (l) => l.website ?? "" },
+  { key: "possibleWebsite", label: "Possible website (unconfirmed)", value: (l) => (l.website ? "" : l.websiteCandidate ?? "") },
+  { key: "indirectContact", label: "Indirect contact", value: (l) => l.secondaryContact ?? "" },
+  { key: "indirectContactType", label: "Indirect contact type", value: (l) => l.secondaryContactType ?? "" },
+  { key: "indirectContactNote", label: "Indirect contact note", value: (l) => l.secondaryContactNote ?? "" },
+  { key: "location", label: "Postcode/location", value: (l) => l.location ?? "" },
+  { key: "region", label: "Region", value: (_l, d) => d.region },
+  { key: "nation", label: "Nation", value: (_l, d) => d.nation },
+  { key: "runs", label: "Runs", value: (_l, d) => d.types.map((t) => TYPE[t]?.label).join("; ") },
+  { key: "fit", label: "Fit", value: (_l, d) => FIT[d.fit].label.replace(/^\S+ /, "") },
+  { key: "size", label: "Size", value: (_l, d) => SIZE[d.size].replace(/^\S+ /, "") },
+  { key: "network", label: "Franchise / group", value: (l) => l.network ?? "" },
+  { key: "booking", label: "Booking", value: (_l, d) => BOOKING[d.booking].label.replace(/^\S+ /, "") },
+  { key: "directories", label: "Directories", value: (_l, d) => d.srcs.map((s) => srcMeta(s).label).join("; ") },
+  { key: "status", label: "Status", value: (l) => TONE[l.status]?.label ?? l.status },
+  { key: "sourceUrl", label: "Listing link", value: (l) => l.sourceUrl ?? "" },
+];
+const CSV_COLUMN_KEYS = CSV_COLUMNS.map((c) => c.key);
+const CSV_COLS_STORAGE_KEY = "leads.csvColumns.v1";
 
 export function LeadsApp() {
   const [leads, setLeads] = useState<Lead[]>([]);
@@ -679,7 +731,7 @@ export function LeadsApp() {
     return maps;
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, view, f, term, opts]);
-  const planTabs: [string, string][] = [["", "All plans"], ["company", "🏢 Companies"], ["freelancer", "🧑 Freelancers"]];
+  const planTabs: [string, string][] = [["", "All providers"], ["company", "🏢 Companies"], ["freelancer", "🧑 Freelancers"]];
   const setDim = (dim: Dim, v: string[]) => { setF((cur) => ({ ...cur, [dim]: v })); setLimit(60); };
   const active = DIMS.filter((dim) => dim !== "plan").flatMap((dim) => f[dim].map((v) => ({ dim, v, label: opts[dim].find((o) => o.value === v)?.label ?? v })));
   const clearAll = () => { setF(NO_FILTERS); setQ(""); setLimit(60); };
@@ -688,7 +740,24 @@ export function LeadsApp() {
   // the lead's own name) — swap which one is the card's bold heading. Off by default: the lead's own name leads,
   // the school shows as the "🏫 at X" badge. On: the school leads, the club's own name moves to the subtitle spot.
   const [schoolNameAsTitle, setSchoolNameAsTitle] = useState(false);
+  // Only worth showing the toggle when it would actually change something — otherwise it just sits there
+  // reading "On" over leads it has no effect on (freelancers/companies with no GIAS link), which reads as broken.
+  const hasLinkedSchoolInView = useMemo(() => shown.some(({ l }) => l.giasSchoolName && !sameOrg(l.giasSchoolName, l.name) && !sameOrg(l.giasSchoolName, l.business)), [shown]);
   const [exportOpen, setExportOpen] = useState(false);
+  // Which CSV columns to include — remembered per-browser so the choice sticks across exports.
+  const [csvCols, setCsvCols] = useState<Set<string>>(() => new Set(CSV_COLUMN_KEYS));
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem(CSV_COLS_STORAGE_KEY) || "null") as string[] | null;
+      if (saved?.length) setCsvCols(new Set(saved.filter((k) => CSV_COLUMN_KEYS.includes(k))));
+    } catch {}
+  }, []);
+  const toggleCsvCol = (key: string) => setCsvCols((cur) => {
+    const next = new Set(cur); if (next.has(key)) next.delete(key); else next.add(key);
+    try { localStorage.setItem(CSV_COLS_STORAGE_KEY, JSON.stringify([...next])); } catch {}
+    return next;
+  });
+  const setAllCsvCols = (on: boolean) => { const next = on ? new Set(CSV_COLUMN_KEYS) : new Set<string>(); setCsvCols(next); try { localStorage.setItem(CSV_COLS_STORAGE_KEY, JSON.stringify([...next])); } catch {} };
   const exportBox = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!exportOpen) return;
@@ -698,9 +767,9 @@ export function LeadsApp() {
   }, [exportOpen]);
 
   const exportCsv = (list: R[], tag: string) => {
-    const head = ["Name", "Registered name", "Company number", "Review status", "Email", "OK to email (PECR)", "Phone", "Website", "Possible website (unconfirmed)", "Indirect contact", "Indirect contact type", "Indirect contact note", "Postcode/location", "Region", "Nation", "Runs", "Fit", "Size", "Franchise / group", "Booking", "Directories", "Status", "Listing link"];
-    const reviewLabel = (l: Lead) => l.reviewTier === "likely_fit" ? "Likely fit" : l.reviewTier === "uncertain" ? "Needs a glance" : "";
-    const lines = list.map(({ l, d }) => [l.name, l.business, l.companyNumber ?? "", reviewLabel(l), l.email, okToEmail(l) ? "yes" : l.email ? "needs consent" : "", l.phone, l.website, l.website ? "" : l.websiteCandidate, l.secondaryContact ?? "", l.secondaryContactType ?? "", l.secondaryContactNote ?? "", l.location, d.region, d.nation, d.types.map((t) => TYPE[t]?.label).join("; "), FIT[d.fit].label.replace(/^\S+ /, ""), SIZE[d.size].replace(/^\S+ /, ""), l.network ?? "", BOOKING[d.booking].label.replace(/^\S+ /, ""), d.srcs.map((s) => srcMeta(s).label).join("; "), TONE[l.status]?.label ?? l.status, l.sourceUrl ?? ""].map(csvCell).join(","));
+    const cols = CSV_COLUMNS.filter((c) => csvCols.has(c.key));
+    const head = cols.map((c) => c.label);
+    const lines = list.map(({ l, d }) => cols.map((c) => c.value(l, d)).map(csvCell).join(","));
     const url = URL.createObjectURL(new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" }));
     const a = document.createElement("a"); a.href = url; a.download = `leads-${tag}-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
@@ -747,24 +816,28 @@ export function LeadsApp() {
       <div className="mb-2 flex flex-wrap items-center gap-2 rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-2 shadow-sm">
         <input value={q} onChange={(e) => { setQ(e.target.value); setLimit(60); }} placeholder="🔍 Search name, town, email…"
           className="w-[220px] rounded-xl border border-[var(--line)] bg-[var(--bg)] px-3 py-1.5 text-[12.5px] outline-none focus:border-[var(--brand)]" />
-        <div className="inline-flex rounded-xl border border-[var(--line)] p-0.5" role="group" aria-label="Plan">
-          {planTabs.map(([k, label]) => { const on = k ? f.plan.length === 1 && f.plan[0] === k : !f.plan.length; return (
-            <button key={k || "all"} type="button" onClick={() => setDim("plan", k ? [k] : [])} aria-pressed={on}
-              className="rounded-lg px-2.5 py-1 text-[12.5px] font-bold transition-colors"
-              style={on ? { background: "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
-          ); })}
-          {/* Independent schools are sourced now (DfE GIAS import) — these two are real filters
-              on the schoolType dim. State schools genuinely aren't sourced yet, so that one stays
-              a placeholder until a register for them exists. */}
+        <div className="inline-flex rounded-xl border border-[var(--line)] p-0.5" role="group" aria-label="Provider type">
+          {planTabs.map(([k, label]) => {
+            const on = k ? f.plan.length === 1 && f.plan[0] === k : !f.plan.length;
+            const accent = k === "freelancer" ? PROVIDER_ACCENT.freelancer : k === "company" ? PROVIDER_ACCENT.company : null;
+            return (
+              <button key={k || "all"} type="button" onClick={() => setDim("plan", k ? [k] : [])} aria-pressed={on}
+                className="rounded-lg px-2.5 py-1 text-[12.5px] font-bold transition-colors"
+                style={on ? { background: accent?.stripe ?? "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
+            );
+          })}
+          {/* Independent schools are sourced now (DfE GIAS import) — these two are real filters on the
+              schoolType dim. Each tab's active colour matches PROVIDER_ACCENT so a tab and its cards visually
+              agree — non-SEND (amber), SEND (teal), state (orange), same palette the cards use. */}
           {([
-            ["🎓 Independent schools (non-SEND)", ["prep", "senior", "all_through", "other"]],
-            ["🎓 Independent schools (SEND)", ["send"]],
-          ] as [string, string[]][]).map(([label, vals]) => {
+            ["🎓 Independent schools (non-SEND)", ["prep", "senior", "all_through", "other"], PROVIDER_ACCENT.indepNonSend],
+            ["🎓 Independent schools (SEND)", ["send"], PROVIDER_ACCENT.indepSend],
+          ] as [string, string[], { bg: string; stripe: string }][]).map(([label, vals, accent]) => {
             const on = f.schoolType.length === vals.length && vals.every((v) => f.schoolType.includes(v));
             return (
               <button key={label} type="button" onClick={() => setDim("schoolType", on ? [] : vals)} aria-pressed={on}
                 className="rounded-lg px-2.5 py-1 text-[12.5px] font-bold transition-colors"
-                style={on ? { background: "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
+                style={on ? { background: accent.stripe, color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
             );
           })}
           {(() => {
@@ -777,7 +850,7 @@ export function LeadsApp() {
             return (
               <button type="button" onClick={() => setDim("source", on ? [] : ["gias-state"])} aria-pressed={on}
                 className="rounded-lg px-2.5 py-1 text-[12.5px] font-bold transition-colors"
-                style={on ? { background: "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>
+                style={on ? { background: PROVIDER_ACCENT.stateSchool.stripe, color: "#fff" } : { color: "var(--ink-2)" }}>
                 🏫 State schools
               </button>
             );
@@ -803,12 +876,14 @@ export function LeadsApp() {
         {q && <button type="button" onClick={() => setQ("")} className="flex items-center gap-1 rounded-full bg-[#eaf0ff] px-2.5 py-0.5 text-[11.5px] font-bold text-[var(--brand)]">“{q}” ×</button>}
         <span className="text-[12px] text-[var(--ink-3)]">— {shown.filter((r) => r.l.email).length.toLocaleString()} with email ({shown.filter((r) => okToEmail(r.l)).length.toLocaleString()} OK to email) · {shown.filter((r) => r.l.phone).length.toLocaleString()} with phone</span>
         <div className="ml-auto flex items-center gap-2">
-          <button type="button" onClick={() => setSchoolNameAsTitle((v) => !v)} aria-pressed={schoolNameAsTitle}
-            title="For a club/nursery/committee linked to a host school, show the SCHOOL's name as the heading instead of the club's own name"
-            className="rounded-lg border border-[var(--line)] px-3 py-1 text-[12px] font-extrabold"
-            style={schoolNameAsTitle ? { background: "var(--ink)", color: "#fff" } : { background: "var(--surface)", color: "var(--ink-2)" }}>
-            🏫 School name as title: {schoolNameAsTitle ? "On" : "Off"}
-          </button>
+          {hasLinkedSchoolInView && (
+            <button type="button" onClick={() => setSchoolNameAsTitle((v) => !v)} aria-pressed={schoolNameAsTitle}
+              title="For a club/nursery/committee linked to a host school, flip which name leads the card"
+              className="rounded-lg border border-[var(--line)] px-3 py-1 text-[12px] font-extrabold"
+              style={schoolNameAsTitle ? { background: "var(--ink)", color: "#fff" } : { background: "var(--surface)", color: "var(--ink-2)" }}>
+              🏫 Title: {schoolNameAsTitle ? "School name" : "Club/wraparound name"} <span aria-hidden className="text-[10px]">⇄</span>
+            </button>
+          )}
           <label className="flex items-center gap-1.5 text-[12px] font-bold text-[var(--ink-3)]">Sort
             <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px] font-bold text-[var(--ink-2)]">
               {(Object.keys(SORTS) as SortKey[]).map((k) => <option key={k} value={k}>{SORTS[k]}</option>)}
@@ -818,17 +893,33 @@ export function LeadsApp() {
             <button type="button" onClick={() => setExportOpen((o) => !o)} disabled={!shown.length} aria-expanded={exportOpen}
               className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-50">⬇ Export CSV <span aria-hidden className="text-[10px]">▾</span></button>
             {exportOpen && (
-              <div className="absolute right-0 top-[calc(100%+6px)] z-40 w-[300px] overflow-hidden rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] shadow-[0_20px_50px_-16px_rgba(15,23,42,.5)]">
-                <button type="button" onClick={() => exportCsv(shown, view)}
-                  className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-4 py-3 text-left hover:bg-[#eaf0ff]">
+              <div className="absolute right-0 top-[calc(100%+6px)] z-40 w-[560px] max-w-[92vw] overflow-hidden rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] shadow-[0_20px_50px_-16px_rgba(15,23,42,.5)]">
+                <button type="button" onClick={() => csvCols.size && exportCsv(shown, view)} disabled={!csvCols.size}
+                  className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-4 py-3 text-left hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
                   <span className="text-[13.5px] font-extrabold text-[var(--ink)]">⬇ Export as it is ({shown.length.toLocaleString()})</span>
                   <span className="text-[11.5px] font-medium text-[var(--ink-3)]">The filters you already have set{active.length || q || f.plan.length ? "" : " (none active)"}</span>
                 </button>
-                <button type="button" onClick={() => exportCsv(rows, "all")}
-                  className="flex w-full flex-col items-start gap-0.5 px-4 py-3 text-left hover:bg-[#eaf0ff]">
+                <button type="button" onClick={() => csvCols.size && exportCsv(rows, "all")} disabled={!csvCols.size}
+                  className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-4 py-3 text-left hover:bg-[#eaf0ff] disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent">
                   <span className="text-[13.5px] font-extrabold text-[var(--ink)]">⬇ Export everything ({rows.length.toLocaleString()})</span>
                   <span className="text-[11.5px] font-medium text-[var(--ink-3)]">Ignore filters — the whole database</span>
                 </button>
+                <div className="flex items-center justify-between px-4 pt-3 pb-1.5">
+                  <span className="text-[11.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">Columns ({csvCols.size}/{CSV_COLUMN_KEYS.length})</span>
+                  <span className="flex gap-2 text-[11.5px] font-bold" style={{ color: "var(--brand)" }}>
+                    <button type="button" onClick={() => setAllCsvCols(true)} className="hover:underline">All</button>
+                    <button type="button" onClick={() => setAllCsvCols(false)} className="hover:underline">None</button>
+                  </span>
+                </div>
+                <div className="grid max-h-[70vh] grid-cols-2 gap-x-4 overflow-y-auto px-4 pb-3">
+                  {CSV_COLUMNS.map((c) => (
+                    <label key={c.key} className="flex items-center gap-2 py-1 text-[12.5px] font-medium text-[var(--ink-2)]">
+                      <input type="checkbox" checked={csvCols.has(c.key)} onChange={() => toggleCsvCol(c.key)} className="h-3.5 w-3.5 shrink-0" />
+                      {c.label}
+                    </label>
+                  ))}
+                </div>
+                {!csvCols.size && <div className="border-t border-[var(--line)] px-4 py-2 text-[11.5px] font-bold text-[#9a5a00]">Pick at least one column to export.</div>}
               </div>
             )}
           </div>
@@ -856,8 +947,10 @@ export function LeadsApp() {
             const showSchoolAsTitle = schoolNameAsTitle && !!linkedSchool;
             const heading = showSchoolAsTitle ? linkedSchool! : l.name;
             const subtitle = showSchoolAsTitle ? l.name : l.business;
+            const accent = providerAccent(l);
             return (
-              <div key={l.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
+              <div key={l.id} className="rounded-2xl border p-4"
+                style={accent ? { background: accent.bg, borderColor: "var(--line)", borderLeft: `4px solid ${accent.stripe}` } : { background: "var(--surface)", borderColor: "var(--line)" }}>
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
