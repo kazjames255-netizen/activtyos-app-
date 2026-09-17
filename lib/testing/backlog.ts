@@ -815,6 +815,25 @@ export const BACKLOG: BacklogItem[] = [
     detail: "DECIDED 13 Sept by Kaz + FIXED 13 Sept: once a parent has withdrawn consent OR any dose has been recorded, a medication can't be deleted — only archived (kept with full history, hidden from the active list, shown under Archived and in the family's data export). DELETE /api/medications/:id on a withdrawn record → 409 code keep_archived (doses already → 409). MedicationApp: an archived withdrawn record shows 'Parent withdrew consent — kept on the record' in place of Restore (the server refuses it); a Delete button appears only on an archived record with no doses and no withdrawal (a mistaken entry). Before, a withdrawn medicine with no doses could be deleted (200) and the parent's withdrawal vanished (agent C's d12s6 residual). Tested (d12s6).",
     file: "server/src/routes/medications.ts (DELETE), features/medication/MedicationApp.tsx", step: "d12s6",
   },
+  // ── 17 Sept: found + fixed while triaging the e2e Playwright suite ─────────
+  {
+    id: "s17-leave-crash", who: "claude", severity: "high",
+    title: "Requesting leave could crash if an existing absence record had no name",
+    detail: "FIXED 17 Sept: the overlap check in POST /api/leave/absences called a.name.trim() on every existing absence for the rota key, but `name` is optional in the schema — any record saved without one (possible via direct API use, or a partial migration) threw and took the whole leave-request flow down for that person, not just that one row. Now (a.name ?? \"\").trim(). Found via a clean tsc --noEmit pass after fixing an unrelated corrupted node_modules install.",
+    file: "server/src/routes/leave.ts", step: "n/a — found via typecheck, not a plan step",
+  },
+  {
+    id: "s17-salesapp-selects", who: "claude", severity: "medium",
+    title: "Sales lead-edit form: 4 dropdowns had a broken accessible name, and Companies House website-build leads showed as \"Cold call\"",
+    detail: "FIXED 17 Sept: the Type/Source/Likely plan/Stage <select>s in the lead-edit modal were each wrapped inside their own <label>, so each one's computed accessible name concatenated the label text with whichever option was selected (e.g. selecting \"Business\" under \"Type\" made that select's accessible name collide with the real \"Business name\" text input — broke a getByLabel(\"Business\") lookup in the HQ e2e spec, and would equally confuse anyone using a screen reader on this form). Moved all 4 to htmlFor/id association. Separately, normSource() didn't recognise the website-build add-on's/demo form's raw source strings, so those leads silently defaulted to \"cold_call\" — added a website_build source id + better keyword matching.",
+    file: "features/platform/SalesApp.tsx", step: "n/a — found via e2e/hq.spec.ts",
+  },
+  {
+    id: "s17-invite-email-inconsistency", who: "decision", severity: "medium",
+    title: "Two different \"invite a team member\" flows disagree on whether an email is required",
+    detail: "NOT FIXED — needs a decision. HoTeamApp (head-office combined view, /company/staff with no scope) explicitly supports a blank-email, link-only invite — the copy literally says \"email (optional — or copy a link)\". TeamApp (the plain per-site Team & invites view, reached via ?hoScope=__ho__ or a non-franchised account) is a 5-step wizard where step 1's Next button is disabled until an email is filled — there is no way to create a link-only invite through it, and the join page enforces that the new person signs up with EXACTLY that email (\"This invite was sent to X — sign up with that address\"). So the same underlying feature (invite by shareable link, no email) works in one operator view and not the other. Decide whether TeamApp should also allow a blank email (matching HoTeamApp), or whether HoTeamApp's optional-email path should go away for consistency.",
+    file: "features/team/TeamApp.tsx, features/team/HoTeamApp.tsx", step: "n/a — found via e2e/secondary.spec.ts",
+  },
 ];
 
 export const bySeverity = (a: BacklogItem, b: BacklogItem) =>
