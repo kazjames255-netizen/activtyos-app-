@@ -56,6 +56,19 @@ interface Lead {
    *  e.g. the council HAF programme page that lists them, or an email/phone found by re-reading the
    *  original register/directory page. Never a substitute for a direct channel; see the note for why. */
   secondaryContact?: string; secondaryContactType?: "council-haf-programme" | "venue-school" | "sourceUrl-refetch" | string; secondaryContactNote?: string;
+  /** DfE GIAS independent-schools import (England): the register id (URN), the register's own name for the
+   *  school (shown alongside a lead whose OWN name is a club/nursery operating at that school, not the school
+   *  itself — see giasSchoolName), school-type classification derived from age range / SEN provision, whether
+   *  they board, and their statutory age range. */
+  giasUrn?: string; giasSchoolName?: string; schoolType?: "send" | "prep" | "senior" | "all_through" | "other"; boarding?: boolean;
+  ageLow?: number; ageHigh?: number;
+  /** DfE GIAS state-funded-schools import (England): phase of education, and governance — which trust (if
+   *  any) runs them. schoolGovernance is unset (not guessed) for the handful GIAS didn't give a clean answer for. */
+  schoolPhase?: "primary" | "secondary" | "all_through" | "nursery";
+  schoolGovernance?: "mat" | "sat" | "la_maintained" | "free_school"; trustName?: string;
+  /** Named role-contacts read off a school's own staff/key-staff page (enrich_schools.mjs) — best-effort, not
+   *  every school publishes these, and not every one found is guaranteed correctly attributed. */
+  roleContacts?: Partial<Record<"head" | "pupilPremiumLead" | "inclusionLead" | "sendco", { name?: string; email?: string }>>;
 }
 
 // ── What we sell vs who they are ─────────────────────────────────────────────
@@ -73,6 +86,14 @@ const TYPE: Record<string, { label: string; emoji: string }> = {
   other: { label: "Other childcare", emoji: "🏫" },
 };
 const CORE = ["holiday", "wraparound", "activity"];
+// DfE GIAS school-type classification (independent schools import) — badge shown on the card, separate from TYPE
+// above (that's what a business RUNS; this is what KIND of school it is).
+const SCHOOL_TYPE_BADGE: Record<string, string> = { send: "♿ SEND", prep: "🎒 Prep", senior: "🎓 Senior", all_through: "🏫 All-through", other: "🏫 Independent" };
+// DfE GIAS school-phase / school-governance classification (state-funded schools import) — same idea as
+// SCHOOL_TYPE_BADGE above, kept separate because these are two independent axes, not one flat enum.
+const SCHOOL_PHASE_BADGE: Record<string, string> = { primary: "🎒 Primary", secondary: "🎓 Secondary", all_through: "🏫 All-through", nursery: "🍼 Nursery" };
+const SCHOOL_GOV_BADGE: Record<string, string> = { mat: "🏛 MAT", sat: "🏫 SAT", la_maintained: "🏢 LA-maintained", free_school: "🆓 Free school" };
+const ROLE_CONTACT_LABEL: Record<string, string> = { head: "🎓 Headteacher", pupilPremiumLead: "💷 Pupil Premium lead", inclusionLead: "🤝 Inclusion lead", sendco: "♿ SENDCo" };
 const DIRECTORY = ["eequ", "playwaze", "pebble", "yellowdays"];
 const HOLIDAY_WORDS = /\b(holiday|camps?|play ?scheme|half[- ]term)\b/i;
 type Fit = "core" | "adjacent" | "nursery";
@@ -222,10 +243,19 @@ const SOURCE: Record<string, { label: string; emoji: string }> = {
   yellowdays: { label: "Yellow Days", emoji: "🌼" },
   ofsted: { label: "Ofsted", emoji: "🏫" },
   haf: { label: "Council HAF list", emoji: "🍎" },
+  gias: { label: "DfE GIAS register — independent schools", emoji: "🎓" },
+  "gias-state": { label: "DfE GIAS register — state schools", emoji: "🏫" },
 };
 /** The directories a lead is on — all of them, not only the one it was first found on. */
 const srcOf = (l: { sources?: string[]; source?: string }) => (l.sources?.length ? l.sources : [l.source || "demo"]);
 const srcMeta = (s?: string) => SOURCE[s || "demo"] || { label: (s || "Website").replace(/^\w/, (c) => c.toUpperCase()), emoji: "🌐" };
+/** Loose "same organisation, going by name" check — used to skip showing a linked GIAS school's name when the
+ *  lead's own name already IS that school (only clubs/nurseries/committees linked to a DIFFERENT school need it). */
+const sameOrg = (a?: string, b?: string) => {
+  const norm = (s?: string) => (s || "").toLowerCase().replace(/^z(?=[a-z])/i, "").replace(/[^a-z0-9]/g, "");
+  const A = norm(a), B = norm(b);
+  return !!A && !!B && (A === B || A.includes(B) || B.includes(A));
+};
 
 function fmt(iso: string) {
   const d = new Date(iso);
@@ -239,7 +269,7 @@ function fmt(iso: string) {
 // AND. Every option shows how many leads it would leave, given everything else.
 type R = { l: Lead; d: Derived };
 type Opt = { value: string; label: string; hint?: string; group?: string; test: (r: R) => boolean };
-type Dim = "plan" | "runs" | "activity" | "fit" | "size" | "booking" | "nation" | "region" | "ofsted" | "source" | "contact" | "status";
+type Dim = "plan" | "runs" | "activity" | "fit" | "size" | "booking" | "nation" | "region" | "ofsted" | "source" | "contact" | "status" | "schoolType" | "schoolPhase" | "schoolGovernance" | "roleContact";
 const okToEmail = (l: Lead) => !!l.email && !l.personalContact && l.kind !== "person";
 // A dead website whose domain still resolves to *something* (parked/for-sale, an empty page, or reachable
 // content that isn't theirs) means the business likely still exists — just with a broken/abandoned web
@@ -276,6 +306,33 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
     { value: "yes", label: "🏫 Yes — on the Ofsted register", hint: "Came from the Ofsted childcare register (England); the badge links to their Ofsted page", test: ({ l, d }) => d.srcs.includes("ofsted") || (l.ofstedSites ?? 0) > 0 },
     { value: "no", label: "🚫 No — not Ofsted-registered", hint: "Directory / HAF / other-nation leads with no Ofsted record. Wales, Scotland and NI have their own registers (see Nation)", test: ({ l, d }) => !d.srcs.includes("ofsted") && !((l.ofstedSites ?? 0) > 0) },
   ],
+  schoolType: [
+    { value: "send", label: "♿ SEND", hint: "An independent special school (DfE GIAS register), or one with named SEN provision", test: ({ l }) => l.schoolType === "send" },
+    { value: "prep", label: "🎒 Prep", hint: "Independent, not SEND, statutory age range topping out around 11–13", test: ({ l }) => l.schoolType === "prep" },
+    { value: "senior", label: "🎓 Senior", hint: "Independent, not SEND, statutory age range starting at 11+", test: ({ l }) => l.schoolType === "senior" },
+    { value: "all_through", label: "🏫 All-through", hint: "One school spanning both prep and senior ages (roughly 3/4 to 16/18)", test: ({ l }) => l.schoolType === "all_through" },
+    { value: "other", label: "❔ Other / not classified", hint: "An independent school GIAS didn't give a clean age range for", test: ({ l }) => !!l.schoolType && l.schoolType === "other" },
+    { value: "boarding", label: "🛏️ Boarding", hint: "Takes boarders, per the GIAS register — cross-cut with any of the school types above", test: ({ l }) => l.boarding === true },
+  ],
+  schoolPhase: [
+    { value: "primary", label: "🎒 Primary", hint: "Includes middle schools deemed primary, per the GIAS register", test: ({ l }) => l.schoolPhase === "primary" },
+    { value: "secondary", label: "🎓 Secondary", hint: "Includes middle schools deemed secondary, per the GIAS register", test: ({ l }) => l.schoolPhase === "secondary" },
+    { value: "all_through", label: "🏫 All-through", hint: "One school spanning both primary and secondary ages", test: ({ l }) => l.schoolPhase === "all_through" },
+    { value: "nursery", label: "🍼 Nursery", hint: "A state-funded nursery school on the GIAS register", test: ({ l }) => l.schoolPhase === "nursery" },
+  ],
+  schoolGovernance: [
+    { value: "mat", label: "🏛 Multi-academy trust (MAT)", hint: "An academy linked to a trust that runs more than one school in this dataset", test: ({ l }) => l.schoolGovernance === "mat" },
+    { value: "sat", label: "🏫 Standalone academy (SAT)", hint: "An academy linked to a trust that runs only this one school", test: ({ l }) => l.schoolGovernance === "sat" },
+    { value: "la_maintained", label: "🏢 LA-maintained", hint: "An ordinary local-authority maintained school, not an academy", test: ({ l }) => l.schoolGovernance === "la_maintained" },
+    { value: "free_school", label: "🆓 Free school", hint: "GIAS's own \"Free Schools\" category — kept as its own bucket even though free schools are structurally academies", test: ({ l }) => l.schoolGovernance === "free_school" },
+  ],
+  roleContact: [
+    { value: "head", label: "🎓 Has headteacher contact", hint: "A named headteacher (and/or their email) was found on the school's own staff page", test: ({ l }) => !!l.roleContacts?.head },
+    { value: "pupilPremiumLead", label: "💷 Has Pupil Premium lead contact", hint: "A named Pupil Premium lead (and/or their email) was found on the school's own staff page", test: ({ l }) => !!l.roleContacts?.pupilPremiumLead },
+    { value: "inclusionLead", label: "🤝 Has Inclusion lead contact", hint: "A named Inclusion lead (and/or their email) was found on the school's own staff page", test: ({ l }) => !!l.roleContacts?.inclusionLead },
+    { value: "sendco", label: "♿ Has SENDCo contact", hint: "A named SENDCo — or Designated Safeguarding Lead filling that role — was found on the school's own staff page", test: ({ l }) => !!l.roleContacts?.sendco },
+    { value: "any", label: "✅ Has any role-contact", hint: "At least one of the above was found", test: ({ l }) => !!l.roleContacts && Object.keys(l.roleContacts).length > 0 },
+  ],
   contact: [
     { value: "chLikelyFit", label: "✅ Likely fit — ready to treat", group: "Review status (Companies House sweep)", hint: "Name-matched by a keyword classifier against a real kids/coaching signal — a reasonable shortlist, still not manually verified", test: ({ l }) => l.reviewTier === "likely_fit" },
     { value: "chUncertain", label: "❔ Needs a glance", group: "Review status (Companies House sweep)", hint: "Matched the SIC code but the name is ambiguous (e.g. \"Academy\" could be kids' coaching or a pro club's academy) — check before treating as a lead", test: ({ l }) => l.needsHumanReview === true },
@@ -297,9 +354,9 @@ const STATIC_OPTS: Partial<Record<Dim, Opt[]>> = {
   ],
   status: STATUSES.map((s) => ({ value: s, label: TONE[s].label, test: ({ l }: R) => (l.status || "new") === s })),
 };
-const DIM_LABEL: Record<Dim, string> = { plan: "Plan", runs: "What they do", activity: "Activity", fit: "Fit", size: "Size", booking: "Platform", nation: "Nation", region: "Region", ofsted: "Ofsted registered", source: "Found on", contact: "Contact", status: "Status" };
+const DIM_LABEL: Record<Dim, string> = { plan: "Plan", runs: "What they do", activity: "Activity", fit: "Fit", size: "Size", booking: "Platform", nation: "Nation", region: "Region", ofsted: "Ofsted registered", source: "Found on", contact: "Contact", status: "Status", schoolType: "School type", schoolPhase: "School phase", schoolGovernance: "School governance", roleContact: "Role contacts" };
 type Filters = Record<Dim, string[]>;
-const NO_FILTERS: Filters = { plan: [], runs: [], activity: [], fit: [], size: [], booking: [], nation: [], region: [], ofsted: [], source: [], contact: [], status: [] };
+const NO_FILTERS: Filters = { plan: [], runs: [], activity: [], fit: [], size: [], booking: [], nation: [], region: [], ofsted: [], source: [], contact: [], status: [], schoolType: [], schoolPhase: [], schoolGovernance: [], roleContact: [] };
 
 // Which list you're working. Only four, and they don't overlap in confusing ways:
 // best prospects ⊂ ready to contact; still researching = everyone else; demo
@@ -609,7 +666,7 @@ export function LeadsApp() {
   // The filter dropdowns: one pass over the list PER DIMENSION for all of that
   // dimension's option counts (not one pass per option — a dimension with 20
   // options used to mean 20 full scans of the list on every render).
-  const MENU_DIMS: Dim[] = ["runs", "nation", "region", "ofsted", "size", "booking", "contact", "status"];
+  const MENU_DIMS: Dim[] = ["runs", "nation", "region", "ofsted", "schoolType", "schoolPhase", "schoolGovernance", "roleContact", "size", "booking", "contact", "status"];
   const dropdownCounts = useMemo(() => {
     const maps = Object.fromEntries(MENU_DIMS.map((dim) => [dim, new Map<string, number>()])) as Record<Dim, Map<string, number>>;
     for (const dim of MENU_DIMS) {
@@ -627,13 +684,23 @@ export function LeadsApp() {
   const active = DIMS.filter((dim) => dim !== "plan").flatMap((dim) => f[dim].map((v) => ({ dim, v, label: opts[dim].find((o) => o.value === v)?.label ?? v })));
   const clearAll = () => { setF(NO_FILTERS); setQ(""); setLimit(60); };
 
-  const exportCsv = () => {
+  const [exportOpen, setExportOpen] = useState(false);
+  const exportBox = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!exportOpen) return;
+    const onDoc = (e: MouseEvent) => { if (exportBox.current && !exportBox.current.contains(e.target as Node)) setExportOpen(false); };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, [exportOpen]);
+
+  const exportCsv = (list: R[], tag: string) => {
     const head = ["Name", "Registered name", "Company number", "Review status", "Email", "OK to email (PECR)", "Phone", "Website", "Possible website (unconfirmed)", "Indirect contact", "Indirect contact type", "Indirect contact note", "Postcode/location", "Region", "Nation", "Runs", "Fit", "Size", "Franchise / group", "Booking", "Directories", "Status", "Listing link"];
     const reviewLabel = (l: Lead) => l.reviewTier === "likely_fit" ? "Likely fit" : l.reviewTier === "uncertain" ? "Needs a glance" : "";
-    const lines = shown.map(({ l, d }) => [l.name, l.business, l.companyNumber ?? "", reviewLabel(l), l.email, okToEmail(l) ? "yes" : l.email ? "needs consent" : "", l.phone, l.website, l.website ? "" : l.websiteCandidate, l.secondaryContact ?? "", l.secondaryContactType ?? "", l.secondaryContactNote ?? "", l.location, d.region, d.nation, d.types.map((t) => TYPE[t]?.label).join("; "), FIT[d.fit].label.replace(/^\S+ /, ""), SIZE[d.size].replace(/^\S+ /, ""), l.network ?? "", BOOKING[d.booking].label.replace(/^\S+ /, ""), d.srcs.map((s) => srcMeta(s).label).join("; "), TONE[l.status]?.label ?? l.status, l.sourceUrl ?? ""].map(csvCell).join(","));
+    const lines = list.map(({ l, d }) => [l.name, l.business, l.companyNumber ?? "", reviewLabel(l), l.email, okToEmail(l) ? "yes" : l.email ? "needs consent" : "", l.phone, l.website, l.website ? "" : l.websiteCandidate, l.secondaryContact ?? "", l.secondaryContactType ?? "", l.secondaryContactNote ?? "", l.location, d.region, d.nation, d.types.map((t) => TYPE[t]?.label).join("; "), FIT[d.fit].label.replace(/^\S+ /, ""), SIZE[d.size].replace(/^\S+ /, ""), l.network ?? "", BOOKING[d.booking].label.replace(/^\S+ /, ""), d.srcs.map((s) => srcMeta(s).label).join("; "), TONE[l.status]?.label ?? l.status, l.sourceUrl ?? ""].map(csvCell).join(","));
     const url = URL.createObjectURL(new Blob([[head.join(","), ...lines].join("\n")], { type: "text/csv" }));
-    const a = document.createElement("a"); a.href = url; a.download = `leads-${view}-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+    const a = document.createElement("a"); a.href = url; a.download = `leads-${tag}-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setExportOpen(false);
   };
 
   const best = rows.filter(VIEWS.find((v) => v.key === "best")!.test);
@@ -650,7 +717,7 @@ export function LeadsApp() {
       )}
       <div className="op-hero relative mb-3.5 overflow-hidden rounded-2xl p-5 text-white shadow-[0_10px_30px_-12px_rgba(29,58,143,.55)]" style={{ background: "var(--hero-grad)" }}>
         <div className="flex items-center gap-2 text-[22px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💬</span>Leads
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/20 text-[17px]">💬</span>Prospective leads
         </div>
         <p className="mt-1 text-[12.5px] text-white/80">UK children&apos;s activity and childcare providers — from booking directories, Ofsted&apos;s register and website demo requests.</p>
         <div className="mt-3 flex flex-wrap gap-2 text-[12.5px]">
@@ -682,15 +749,37 @@ export function LeadsApp() {
               className="rounded-lg px-2.5 py-1 text-[12.5px] font-bold transition-colors"
               style={on ? { background: "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
           ); })}
-          {/* Not sourced yet — reminder to add these categories once the current list is confirmed accurate. */}
-          {["🏫 State schools", "🎓 Independent (non-SEND)", "🎓 Independent (SEND)"].map((label) => (
-            <button key={label} type="button" disabled title="Coming soon — not sourced yet"
-              className="cursor-not-allowed rounded-lg border border-dashed border-[var(--line)] px-2.5 py-1 text-[12.5px] font-bold text-[var(--ink-3)] opacity-60">
-              {label} <span className="font-normal">· soon</span>
-            </button>
-          ))}
+          {/* Independent schools are sourced now (DfE GIAS import) — these two are real filters
+              on the schoolType dim. State schools genuinely aren't sourced yet, so that one stays
+              a placeholder until a register for them exists. */}
+          {([
+            ["🎓 Independent schools (non-SEND)", ["prep", "senior", "all_through", "other"]],
+            ["🎓 Independent schools (SEND)", ["send"]],
+          ] as [string, string[]][]).map(([label, vals]) => {
+            const on = f.schoolType.length === vals.length && vals.every((v) => f.schoolType.includes(v));
+            return (
+              <button key={label} type="button" onClick={() => setDim("schoolType", on ? [] : vals)} aria-pressed={on}
+                className="rounded-lg px-2.5 py-1 text-[12.5px] font-bold transition-colors"
+                style={on ? { background: "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>{label}</button>
+            );
+          })}
+          {(() => {
+            // State schools are sourced now too (DfE GIAS state-funded-schools import), but unlike the
+            // Independent quick-tabs above (which filter on schoolType — a field only GIAS-sourced leads
+            // carry), schoolPhase alone wouldn't distinguish "state school" from some other future source
+            // that also happened to have a phase field. Filter on `source` directly instead — the one field
+            // that unambiguously means "this exact import".
+            const on = f.source.length === 1 && f.source[0] === "gias-state";
+            return (
+              <button type="button" onClick={() => setDim("source", on ? [] : ["gias-state"])} aria-pressed={on}
+                className="rounded-lg px-2.5 py-1 text-[12.5px] font-bold transition-colors"
+                style={on ? { background: "var(--ink)", color: "#fff" } : { color: "var(--ink-2)" }}>
+                🏫 State schools
+              </button>
+            );
+          })()}
         </div>
-        {(["runs", "nation", "region", "ofsted", "size", "booking", "contact", "status", "source"] as Dim[]).map((dim) => (
+        {(["runs", "nation", "region", "ofsted", "schoolType", "schoolPhase", "schoolGovernance", "roleContact", "size", "booking", "contact", "status", "source"] as Dim[]).map((dim) => (
           <FilterMenu key={dim} dim={dim} opts={opts[dim]} value={f[dim]} onChange={(v) => setDim(dim, v)}
             countFor={(o) => dropdownCounts[dim].get(o.value) ?? 0} />
         ))}
@@ -715,8 +804,24 @@ export function LeadsApp() {
               {(Object.keys(SORTS) as SortKey[]).map((k) => <option key={k} value={k}>{SORTS[k]}</option>)}
             </select>
           </label>
-          <button type="button" onClick={exportCsv} disabled={!shown.length} title="Downloads exactly the leads currently shown — every active view tab, filter and search term applies"
-            className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-50">⬇ Export CSV ({shown.length.toLocaleString()})</button>
+          <div ref={exportBox} className="relative">
+            <button type="button" onClick={() => setExportOpen((o) => !o)} disabled={!shown.length} aria-expanded={exportOpen}
+              className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)] disabled:opacity-50">⬇ Export CSV <span aria-hidden className="text-[10px]">▾</span></button>
+            {exportOpen && (
+              <div className="absolute right-0 top-[calc(100%+6px)] z-40 w-[300px] overflow-hidden rounded-xl border-2 border-[var(--line)] bg-[var(--surface)] shadow-[0_20px_50px_-16px_rgba(15,23,42,.5)]">
+                <button type="button" onClick={() => exportCsv(shown, view)}
+                  className="flex w-full flex-col items-start gap-0.5 border-b border-[var(--line)] px-4 py-3 text-left hover:bg-[#eaf0ff]">
+                  <span className="text-[13.5px] font-extrabold text-[var(--ink)]">⬇ Export as it is ({shown.length.toLocaleString()})</span>
+                  <span className="text-[11.5px] font-medium text-[var(--ink-3)]">The filters you already have set{active.length || q || f.plan.length ? "" : " (none active)"}</span>
+                </button>
+                <button type="button" onClick={() => exportCsv(rows, "all")}
+                  className="flex w-full flex-col items-start gap-0.5 px-4 py-3 text-left hover:bg-[#eaf0ff]">
+                  <span className="text-[13.5px] font-extrabold text-[var(--ink)]">⬇ Export everything ({rows.length.toLocaleString()})</span>
+                  <span className="text-[11.5px] font-medium text-[var(--ink-3)]">Ignore filters — the whole database</span>
+                </button>
+              </div>
+            )}
+          </div>
           <button type="button" onClick={() => { setLoading(true); void load(true, true); }} title="Load the latest research"
             className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-1 text-[12px] font-extrabold text-[var(--ink-2)] hover:bg-[var(--panel)]">↻ Refresh</button>
         </div>
@@ -764,7 +869,7 @@ export function LeadsApp() {
                       {l.size && <span>👥 {l.size}</span>}
                       <span className="text-[var(--ink-3)]">{fmt(l.createdAt)}</span>
                     </div>
-                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.haf || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network || l.websiteDead || l.bookingMethod === "confirmed-manual") && (
+                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.haf || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network || l.websiteDead || l.bookingMethod === "confirmed-manual" || l.schoolType || l.boarding || l.schoolPhase || l.schoolGovernance || l.roleContacts) && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                         {l.plan && <span className="rounded-full px-2 py-0.5 font-extrabold" style={isFreelancer(l) ? { background: "#f3e8ff", color: "#6b21a8" } : { background: "#e0ecff", color: "#1d3a8f" }} title={l.planReason || undefined}>{isFreelancer(l) ? "🧑 Freelancer" : "🏢 Company"}</span>}
                         {l.legalForm && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">{l.legalForm}</span>}
@@ -779,6 +884,21 @@ export function LeadsApp() {
                           : <span className="rounded-full bg-[#e8f7ec] px-2 py-0.5 font-extrabold text-[#1c6b3a]" title="Listed as a Holiday Activities & Food programme provider">🍎 HAF provider{l.hafLocalAuthority ? ` · ${l.hafLocalAuthority}` : ""}{l.hafPaid === true ? " · also sells paid places" : l.hafPaid === false ? " · free places only" : ""}</span>)}
                         {l.listingsOnSource ? <span className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-bold text-[#1d3a8f]">{l.listingsOnSource} listing{l.listingsOnSource === 1 ? "" : "s"} on {srcMeta(l.source).label}</span> : null}
                         {(l.providerTypes ?? []).map((t) => TYPE[t] && <span key={t} className="rounded-full bg-[#eef9f0] px-2 py-0.5 font-bold text-[#0f6b3a]">{TYPE[t].emoji} {TYPE[t].label}</span>)}
+                        {/* This lead IS a school on the GIAS register when its own name already says so — no need to also
+                            name it. Show the school name only when the lead is something else (a club/nursery/committee)
+                            that GIAS's own dedupe linked to a school, so it's clear WHICH school that's about. */}
+                        {l.giasSchoolName && !sameOrg(l.giasSchoolName, l.name) && !sameOrg(l.giasSchoolName, l.business) && (
+                          <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]" title="The DfE GIAS register links this lead to this school (e.g. an out-of-school club or nursery operating on its site)">🏫 at {l.giasSchoolName}</span>
+                        )}
+                        {l.schoolType && <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 font-bold text-[#6b21a8]" title={l.ageLow != null && l.ageHigh != null ? `Ages ${l.ageLow}–${l.ageHigh} (DfE GIAS register)` : "DfE GIAS register"}>{SCHOOL_TYPE_BADGE[l.schoolType] || l.schoolType}</span>}
+                        {l.boarding && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]" title="Takes boarders (DfE GIAS register)">🛏️ Boarding</span>}
+                        {l.schoolPhase && <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 font-bold text-[#6b21a8]" title={l.ageLow != null && l.ageHigh != null ? `Ages ${l.ageLow}–${l.ageHigh} (DfE GIAS register)` : "DfE GIAS register"}>{SCHOOL_PHASE_BADGE[l.schoolPhase] || l.schoolPhase}</span>}
+                        {l.schoolGovernance && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]" title={l.trustName ? `${l.trustName} (DfE GIAS register)` : "DfE GIAS register"}>{SCHOOL_GOV_BADGE[l.schoolGovernance] || l.schoolGovernance}{l.trustName ? ` · ${l.trustName}` : ""}</span>}
+                        {l.roleContacts && Object.entries(l.roleContacts).map(([role, c]) => c && (
+                          <span key={role} className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-bold text-[#1d3a8f]" title={`Read from their staff/key-staff page${c.email ? `: ${c.email}` : ""}`}>
+                            {ROLE_CONTACT_LABEL[role] || role}{c.name ? ` · ${c.name}` : ""}
+                          </span>
+                        ))}
                         {l.network && <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 font-extrabold text-[#6b21a8]" title={l.networkKind === "franchise" ? "A franchisee — the brand's head office is a Franchise-plan lead" : "Part of a group of separately registered companies"}>{l.networkKind === "franchise" ? `🌐 ${l.network} franchisee` : `🏛 ${l.network} group`}{l.networkOperators ? ` · 1 of ${l.networkOperators}` : ""}</span>}
                         {l.ofstedSites ? <span className="rounded-full bg-[#eef4ff] px-2 py-0.5 font-bold text-[#1d3a8f]" title="Venues registered with Ofsted (Childcare Register)">🏫 {l.ofstedSites} Ofsted-registered site{l.ofstedSites === 1 ? "" : "s"}</span> : null}
                         {srcOf(l).includes("ofsted") && <span className="rounded-full bg-[#e9f7f6] px-2 py-0.5 font-bold text-[#0e7a75]" title="Ofsted-registered childcare can take Tax-Free Childcare payments — ActivityOS handles TFC">💷 Can take Tax-Free Childcare</span>}

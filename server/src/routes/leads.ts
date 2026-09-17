@@ -21,6 +21,13 @@ const schema = z.object({
   interest: z.string().trim().max(60).optional().default(""),
   message: z.string().trim().max(2000).optional().default(""),
   source: z.string().trim().max(60).optional().default("demo"),
+  // Which of the three plans the submitter says they are — a real signal
+  // when the form asks (e.g. the pricing-page website-design add-on), rather
+  // than the Sales board silently defaulting every inbound lead to "company".
+  plan: z.enum(["freelancer", "company", "franchise"]).optional(),
+  // Same taxonomy as the Leads (prospect research) page's TYPE constant, so a
+  // self-reported business type lines up with the researched-prospect data.
+  businessType: z.enum(["holiday", "wraparound", "activity", "tuition", "preschool", "nursery", "childminder", "other"]).optional(),
 });
 
 export const leadsPublic = Router();
@@ -76,7 +83,22 @@ const LIST_FIELDS = ["name", "email", "phone", "business", "size", "message", "s
   // those leads carry instead of the usual `location` (was missing — every filter/count using these read 0).
   "reviewTier", "needsHumanReview", "postcode", "regAddress",
   // Free secondary-contact pass (council HAF page / re-read source page) for leads with no direct channel.
-  "secondaryContact", "secondaryContactType", "secondaryContactNote"];
+  "secondaryContact", "secondaryContactType", "secondaryContactNote",
+  // DfE GIAS independent-schools import: school-type classification, boarding flag, age range, and the register id
+  // for clean re-runs (dedupe by URN). "postcode" is already listed above. Club-language enrichment
+  // (enrich_schools.mjs) writes into the existing providerTypes/bookingSystem/email/phone fields above.
+  // giasSchoolName is the register's own name for the school — shown when a lead is a club/nursery/committee
+  // that GIAS's own dedupe (by postcode+name or website host) linked to a DIFFERENT-named school, so the UI can
+  // say which school that link is about instead of leaving it implicit.
+  "giasUrn", "giasSchoolName", "schoolType", "boarding", "ageLow", "ageHigh",
+  // DfE GIAS state-funded-schools import (import_gias_state.mjs): phase of education and governance
+  // (MAT/SAT/LA-maintained/free school), plus the trust name when linked to one. Shares giasUrn/ageLow/ageHigh
+  // with the independent import above.
+  "schoolPhase", "schoolGovernance", "trustName",
+  // Named role-contacts (headteacher, pupil premium lead, inclusion lead, SENDCo) read from a school's own
+  // staff/key-staff page (enrich_schools.mjs) — best-effort name/email pairs, not a substitute for the main
+  // email/phone fields above.
+  "roleContacts"];
 const FRESH_MS = 3 * 60_000;
 type Row = Record<string, unknown> & { id: string; createdAt?: string };
 let cache: { at: number; items: Row[] } | null = null;
