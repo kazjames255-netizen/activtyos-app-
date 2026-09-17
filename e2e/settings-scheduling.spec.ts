@@ -131,7 +131,9 @@ test.describe("rota reaches staff read-only", () => {
   test("franchise adds a shift; staff see it without edit controls", async ({ page, browser }) => {
     const staffName = `E2E Steward ${stamp}`;
     await page.goto("/franchise/schedule");
-    await expect(page.getByRole("heading", { name: "Schedule & rota" })).toBeVisible({ timeout: 15_000 });
+    // PageHero's title is styled text, not a heading element; the copy is
+    // "Staff schedule" today, not "Schedule & rota".
+    await expect(page.getByText("Staff schedule", { exact: true })).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: /Add a shift/ }).click();
     const form = page.locator("div").filter({ has: page.getByText("Add a shift", { exact: true }) }).filter({ has: page.getByRole("button", { name: "Save shift" }) }).last();
     await form.locator("input").first().fill(staffName);

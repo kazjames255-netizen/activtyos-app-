@@ -121,7 +121,9 @@ test.describe("medication consent loop", () => {
     // Operator records a dose against the consented medication.
     const opCtx = await browser.newContext({ storageState: statePath("company") });
     const opPage = await opCtx.newPage();
-    await opPage.goto("/company/medication");
+    // Same franchise-linked-fixture issue as the accidents test above — scope
+    // to the head office's own direct operation, not the read-only combined view.
+    await opPage.goto("/company/medication?hoScope=__ho__");
     await expect(opPage.getByText(medName).first()).toBeVisible({ timeout: 15_000 });
     await expect(opPage.getByText("consent on file").first()).toBeVisible();
     // Scope to THIS run's medication — earlier runs leave rows behind. Logging

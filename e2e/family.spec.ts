@@ -38,7 +38,7 @@ test.describe("children profiles", () => {
     // and it isn't reset by the per-run data wipe, so don't assume it's on.
     // settings load async, so isVisible() alone can race ahead of the
     // button appearing — wait briefly, and only skip if it never shows.
-    const boyBtn = page.getByRole("button", { name: "Boy", exact: true });
+    const boyBtn = page.getByRole("button", { name: "👦 Boy", exact: true });
     await boyBtn.waitFor({ state: "visible", timeout: 8_000 }).then(() => boyBtn.click()).catch(() => {});
     await page.getByRole("button", { name: "Next →" }).click();
 

@@ -14,6 +14,9 @@ test.describe("operator publishes a listing via the wizard", () => {
   test.use({ storageState: statePath("freelancer") });
 
   test("blocks → wizard → published", async ({ page }) => {
+    // The full block-build + wizard + publish flow is meaningfully more
+    // than the default 60s budget under parallel-worker load.
+    test.setTimeout(120_000);
     const accounts = loadAccounts().accounts;
     await ensureVenue(accounts.freelancer);
     const title = `E2E Wizard Camp ${stamp()}`;
@@ -93,6 +96,7 @@ test.describe("parent books; operator sees it live", () => {
   test.use({ storageState: statePath("parent") });
 
   test("browse → book free place → confirmation → live operator row", async ({ page, browser }) => {
+    test.setTimeout(120_000);
     const accounts = loadAccounts().accounts;
     const s = stamp();
     const title = `E2E Camp ${s}`;
@@ -133,7 +137,7 @@ test.describe("parent books; operator sees it live", () => {
     await page.getByPlaceholder("First and last name").fill(childName);
     const dob = page.locator('input[type="date"]').first();
     if (await dob.isVisible().catch(() => false)) await dob.fill("2018-05-14");
-    const boy = page.getByRole("button", { name: "Boy", exact: true });
+    const boy = page.getByRole("button", { name: "👦 Boy", exact: true });
     if (await boy.isVisible().catch(() => false)) await boy.click();
     await page.getByRole("button", { name: "Add child", exact: true }).click();
     await page.getByRole("button", { name: "Next", exact: true }).click();

@@ -54,7 +54,7 @@ test.describe("discount codes", () => {
     await page.getByPlaceholder("First and last name").fill(`E2E Coupon Kid ${stamp}`);
     const dob = page.locator('input[type="date"]').first();
     if (await dob.isVisible().catch(() => false)) await dob.fill("2018-05-14");
-    const boy = page.getByRole("button", { name: "Boy", exact: true });
+    const boy = page.getByRole("button", { name: "👦 Boy", exact: true });
     if (await boy.isVisible().catch(() => false)) await boy.click();
     await page.getByRole("button", { name: "Add child", exact: true }).click();
     await page.getByRole("button", { name: "Next", exact: true }).click();

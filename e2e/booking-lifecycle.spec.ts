@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath, type AccountManifest } from "./helpers/env";
 import { apiPost, fbSignIn } from "./helpers/accounts";
 import { bookViaApi, provisionLiveListing } from "./helpers/tenantData";
-import { cardWith } from "./helpers/ui";
+import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // The booking lifecycle beyond the happy path: a parent-initiated
 // cancellation, and the waitlist loop (full day → queued → operator offers →
@@ -34,15 +34,22 @@ test.describe("parent cancellation", () => {
     // The shared parent account may not have dismissed the one-time
     // first-login welcome modal yet (ParentWelcome.tsx) — it sits on top of
     // the whole page and blocks every click/assertion until closed.
-    const welcomeClose = page.getByRole("dialog").getByRole("button", { name: "Close" });
-    await welcomeClose.waitFor({ state: "visible", timeout: 8_000 }).then(() => welcomeClose.click()).catch(() => {});
-    await page
+    await dismissParentWelcome(page);
+    const cancelBtn = page
       .locator("div")
       .filter({ has: page.getByText(title).first() })
       .filter({ has: page.getByRole("button", { name: /Cancel booking/ }) })
       .last()
-      .getByRole("button", { name: /Cancel booking/ })
-      .click();
+      .getByRole("button", { name: /Cancel booking/ });
+    // The welcome modal can reopen mid-test if its own "mark seen" POST
+    // hadn't landed server-side when we first closed it — retry through it
+    // rather than trusting a single dismiss to hold for the whole test.
+    try {
+      await cancelBtn.click({ timeout: 10_000 });
+    } catch {
+      await dismissParentWelcome(page);
+      await cancelBtn.click();
+    }
     await expect(page.getByText("Request cancellation")).toBeVisible();
     await page.getByRole("button", { name: "Send cancellation request" }).click();
 
