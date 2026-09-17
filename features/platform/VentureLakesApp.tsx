@@ -2,7 +2,7 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { get as apiGet } from "@/lib/api";
-import { Card, Panel, Select, Input, SectionHead, Badge } from "@/components/ui";
+import { Card, Panel, Select, Input, SectionHead, Badge, Button } from "@/components/ui";
 
 // VENTURE CYCLE PROJECT (Phase 1) — a separate business venture Kaz and
 // Cameron are exploring: lake/country-park cycle hire, benchmarked against
@@ -236,6 +236,31 @@ export function VentureLakesApp() {
     setFootfallFilter("");
   };
 
+  const CSV_COLUMNS: (keyof VentureLake)[] = [
+    "name", "postcode", "locality", "acres", "pctOfWillen", "distanceMiles", "driveTimeMinutes",
+    "owner", "hasCycleHireAlready", "verdict", "concessionInfo", "competitionOnsite", "pricingNotes",
+    "pathSuitability", "parkingNotes", "protectedStatus", "reviewCountApprox", "phase2CheckedAt",
+    "website", "email", "phone",
+  ];
+  const csvCell = (v: unknown) => {
+    if (v === null || v === undefined) return "";
+    const s = Array.isArray(v) ? v.join("; ") : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const downloadCsv = () => {
+    const lines = [CSV_COLUMNS.join(",")];
+    for (const it of rows) lines.push(CSV_COLUMNS.map((c) => csvCell(it[c])).join(","));
+    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "venture-lakes.csv";
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  };
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
@@ -428,6 +453,10 @@ export function VentureLakesApp() {
             Clear filters
           </button>
         )}
+
+        <Button type="button" onClick={downloadCsv} disabled={rows.length === 0}>
+          ⬇ Download CSV ({rows.length} row{rows.length === 1 ? "" : "s"}, all fields)
+        </Button>
 
         <span className="ml-auto text-[12px] text-[var(--ink-3)]">
           {loading ? "Loading…" : `${rows.length} of ${items.length} sites match`}
