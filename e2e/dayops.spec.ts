@@ -28,8 +28,11 @@ test.describe("operator day ops", () => {
   test("register shows the booked child; check-in sticks", async ({ page }) => {
     await page.goto("/company/admin-registers");
     // The rebuilt register (July 2026) is a single-listing, single-day hero
-    // view — the only level-1 heading is the top bar's nav label.
-    await expect(page.getByRole("heading", { level: 1, name: "Registers" })).toBeVisible();
+    // view with no level-1 heading anywhere on the page (RegistersApp.tsx
+    // renders a "Loading the register…" placeholder — no <h1> — until
+    // `ready`, then the hero itself has no heading role at all). The
+    // "Previous day" nav arrow only exists once the real content mounts, so
+    // wait on that instead of a heading that was never there.
     await expect(page.getByLabel("Previous day")).toBeVisible({ timeout: 15_000 });
 
     // Point the register at OUR listing — other runs leave listings behind,
@@ -37,7 +40,7 @@ test.describe("operator day ops", () => {
     // "▾": the sidebar's collapsible group headers carry the same caret.)
     if (!(await page.getByText(listing.title).first().isVisible().catch(() => false))) {
       await page.getByLabel("Choose listing").click();
-      await page.getByPlaceholder("Search listings…").fill(listing.title);
+      await page.getByPlaceholder("Search listings or venues…").fill(listing.title);
       await page.getByRole("button", { name: listing.title }).click();
     }
     // Jump to the session day via the 📅 overlay input (the booking sits on

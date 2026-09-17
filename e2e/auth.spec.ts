@@ -77,6 +77,12 @@ test.describe("signup", () => {
   });
 
   test("duplicate email is rejected with a friendly message", async ({ page }) => {
+    // This test walks the full operator wizard TWICE (once to create the
+    // account, once to collide with it) plus a deliberate 15s dead-wait in
+    // walkOperatorWizard for the "Skip for now" button that never appears on
+    // the duplicate-email path — comfortably more work than the default 60s
+    // budget allows for under dev-server load.
+    test.setTimeout(120_000);
     const email = `e2e-signup-dupe-${runId}@${TEST_EMAIL_DOMAIN}`;
     await page.goto("/signup");
     await walkOperatorWizard(page, `E2E Signup Dupe ${runId}`, email);

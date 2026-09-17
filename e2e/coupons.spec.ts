@@ -73,6 +73,11 @@ test.describe("discount codes", () => {
     await expect(page.getByText("Due now")).toBeVisible();
     await expect(page.getByText("£18.00").first()).toBeVisible();
 
+    // Contact phone is required at the pay stage — without it "Confirm & pay"
+    // stays disabled and the click hangs forever waiting for it to be actionable.
+    const phoneInput = page.getByPlaceholder("e.g. 07700 900123");
+    if (await phoneInput.inputValue().then((v) => !v.trim())) await phoneInput.fill("07700900123");
+
     await page.getByRole("button", { name: /Confirm & pay/ }).click();
     await expect(page.getByRole("heading", { name: /Congratulations/ })).toBeVisible({ timeout: 30_000 });
 

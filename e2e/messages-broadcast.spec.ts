@@ -10,6 +10,12 @@ test.describe("listing broadcast", () => {
   test.use({ storageState: statePath("company") });
 
   test("operator broadcasts to a listing's families; parent receives it", async ({ page, browser }) => {
+    // Provisioning (venue/period/pass/bundle/listing + a booking, all via
+    // sequential API calls with their own fbSignIn round-trips) plus a second
+    // browser context's own navigation easily eats into the default 60s test
+    // budget — bump it like the other multi-context/provisioning specs do
+    // (e.g. e2e/settings-scheduling.spec.ts, e2e/payments.spec.ts).
+    test.setTimeout(120_000);
     const accounts = loadAccounts().accounts;
     const stamp = Date.now().toString(36);
     const title = `E2E Broadcast Camp ${stamp}`;

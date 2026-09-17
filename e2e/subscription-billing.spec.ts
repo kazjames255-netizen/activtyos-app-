@@ -45,7 +45,7 @@ test("fresh signup hits the gate, starts a card-backed trial, cancels and reacti
   await page.getByPlaceholder("you@example.com").fill(email);
   await page.locator('input[type="password"]').fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
-  await expect(page.getByText("Pick a plan to start your free trial")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText("Pick your plan")).toBeVisible({ timeout: 30_000 });
 
   // The PaymentElement replaces the old dummy card form — fill the Stripe
   // test card inside its iframes.
@@ -62,7 +62,7 @@ test("fresh signup hits the gate, starts a card-backed trial, cancels and reacti
   await page.getByRole("button", { name: /Start 7-day free trial/ }).click();
 
   // confirmSetup + POST /start + the gate's re-check — give Stripe room.
-  await expect(page.getByText("Pick a plan to start your free trial")).toBeHidden({ timeout: 60_000 });
+  await expect(page.getByText("Pick your plan")).toBeHidden({ timeout: 60_000 });
 
   // Money → Subscription shows the live trial and the card on file.
   await page.goto("/freelancer/subscription");

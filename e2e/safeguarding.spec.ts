@@ -39,7 +39,12 @@ test.describe("accidents", () => {
   test.use({ storageState: statePath("company") });
 
   test("operator logs an accident through the wizard; the record and its bell reach the parent", async ({ page, browser }) => {
-    await page.goto("/company/accidents");
+    // The standing "company" fixture has a franchise joined to it (global
+    // setup, for the invite/franchise-portal specs), so without a scope this
+    // lands on the head-office "all franchises" combined view (HoOversightApp),
+    // which is read-only and has no "Log first aid" button. Scope to the head
+    // office's own direct operation, same as e2e/settings-scheduling.spec.ts.
+    await page.goto("/company/accidents?hoScope=__ho__");
     // The view was renamed Accidents → "First aid" (July 2026 manual pass).
     await page.getByRole("button", { name: /Log first aid/ }).click();
 

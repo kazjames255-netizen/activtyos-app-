@@ -22,7 +22,12 @@ test.describe("setup reaches the parent checkout", () => {
     const question = `Can your child swim 25m? E2E ${stamp}`;
     const listing = await provisionLiveListing(accounts.company, { title: `E2E Setup Camp ${stamp}`, price: 0 });
 
-    await page.goto("/company/setup?tab=people");
+    // The standing "company" fixture has a franchise joined to it (global
+    // setup, for the invite/franchise-portal specs), so without a scope this
+    // lands on the head-office "all franchises" combined view, which hides
+    // per-site settings like child questions (see SetupApp's hoCombined). Scope
+    // to the head office's own direct operation, same as e2e/secondary.spec.ts.
+    await page.goto("/company/setup?tab=people&hoScope=__ho__");
     await expect(page.getByText("What you collect about every child")).toBeVisible({ timeout: 15_000 });
 
     // Add a custom question (autosave — wait for the Saved stamp).

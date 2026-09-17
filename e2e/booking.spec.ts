@@ -34,11 +34,14 @@ test.describe("operator publishes a listing via the wizard", () => {
     await page.getByPlaceholder("Pass name (e.g. 5-day week pass)").fill(passName);
     await page.getByRole("button", { name: "Add pass", exact: true }).click();
     await expect(page.getByText(passName).first()).toBeVisible();
-    // Cards are reusable, so their button stays after a click — click each
-    // one exactly once to put every period/pass on the board into the block.
+    // Once a card is added its button flips to "✓ In block" + Undo, so it
+    // drops out of this locator's matches — the remaining cards shift down
+    // an index each time. Snapshot the count up front, then always click
+    // index 0 (the next not-yet-added card), rather than nth(i) against a
+    // shrinking live list.
     const addToBlock = page.getByRole("button", { name: "+ Add to block" });
     const cardCount = await addToBlock.count();
-    for (let i = 0; i < cardCount; i++) await addToBlock.nth(i).click();
+    for (let i = 0; i < cardCount; i++) await addToBlock.first().click();
     const blockName = `E2E Block ${stamp()}`;
     await page.getByPlaceholder("e.g. Summer Multi Activity Camp — Loughton").fill(blockName);
     await page.getByRole("button", { name: /Move to Block Library/ }).click();
@@ -102,8 +105,13 @@ test.describe("parent books; operator sees it live", () => {
     await opPage.goto("/company/bookings");
     await expect(opPage.getByRole("heading", { level: 2, name: "Bookings" })).toBeVisible();
 
-    // Parent finds the listing in Browse.
+    // Parent finds the listing in Browse. The shared parent account may not
+    // have dismissed the one-time first-login welcome modal yet
+    // (ParentWelcome.tsx) — it sits on top of the whole page and blocks every
+    // click until closed.
     await page.goto("/custdash/browse");
+    const welcomeClose = page.getByRole("dialog").getByRole("button", { name: "Close" });
+    if (await welcomeClose.isVisible().catch(() => false)) await welcomeClose.click();
     await page.getByPlaceholder("Search by name or venue…").fill(title);
     await page.getByRole("button", { name: "More details", exact: true }).first().click();
     await page.waitForURL(`**/book/${listing.id}`);
