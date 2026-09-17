@@ -666,7 +666,7 @@ export function LeadsApp() {
   // The filter dropdowns: one pass over the list PER DIMENSION for all of that
   // dimension's option counts (not one pass per option — a dimension with 20
   // options used to mean 20 full scans of the list on every render).
-  const MENU_DIMS: Dim[] = ["runs", "nation", "region", "ofsted", "schoolType", "schoolPhase", "schoolGovernance", "roleContact", "size", "booking", "contact", "status"];
+  const MENU_DIMS: Dim[] = ["runs", "nation", "region", "ofsted", "schoolType", "schoolPhase", "schoolGovernance", "roleContact", "size", "booking", "contact", "status", "source"];
   const dropdownCounts = useMemo(() => {
     const maps = Object.fromEntries(MENU_DIMS.map((dim) => [dim, new Map<string, number>()])) as Record<Dim, Map<string, number>>;
     for (const dim of MENU_DIMS) {
