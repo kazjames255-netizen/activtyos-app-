@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath, type AccountManifest } from "./helpers/env";
 import { apiFetch, fbSignIn } from "./helpers/accounts";
-import { bookViaApi, createParentChild, provisionLiveListing, type ProvisionedListing } from "./helpers/tenantData";
+import { bookViaApi, createParentChild, markParentWelcomed, provisionLiveListing, type ProvisionedListing } from "./helpers/tenantData";
 import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // Safeguarding: accidents, medication (the full consent → dose loop), the
@@ -94,6 +94,14 @@ test.describe("medication consent loop", () => {
   test.use({ storageState: statePath("parent") });
 
   test("parent authorises → operator records a dose → parent sees it", async ({ page, browser }) => {
+    // Multi-context (parent + operator) plus a full page reload partway
+    // through — same class of multi-step test as "accidents" above, which
+    // already needed 120s; this one was missing the same bump.
+    test.setTimeout(120_000);
+    // Mark the welcome popup seen server-side before navigating, so it never
+    // opens at all — see markParentWelcomed's doc comment for why dismissing
+    // it via the UI alone is racy.
+    await markParentWelcomed(loadAccounts().accounts.parent);
     await page.goto("/custdash/medication");
     await dismissParentWelcome(page);
     await page.getByRole("button", { name: /Authorise a medication/ }).click();
@@ -148,6 +156,15 @@ test.describe("medication consent loop", () => {
 test.describe("meal shop", () => {
   test.use({ storageState: statePath("company") });
 
+  // STALE: this test targets a "meal shop" one-off-item flow that no longer
+  // exists. Meals is now a menu-builder (Saved menus → Season & listing →
+  // Menu → Days, features/meals/MenuPlanner.tsx + SavedMenus.tsx) feeding a
+  // parent-side weekly timetable (features/meals/ParentMealsApp.tsx) where
+  // ordering goes through a real Stripe PayModal — there's no more manual
+  // "operator marks it paid" step to test. Needs a full rewrite AND is
+  // blocked on Stripe test keys for the payment leg either way (same known
+  // gap as payments.spec.ts / subscription-billing.spec.ts) — not chased
+  // further this pass, flagging rather than half-fixing.
   test("operator sells a meal; parent orders; operator marks it paid", async ({ page, browser }) => {
     await page.goto("/company/meals");
     await page.getByRole("button", { name: /Meal shop/ }).click();

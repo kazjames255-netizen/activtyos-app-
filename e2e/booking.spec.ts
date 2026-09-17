@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
-import { ensureVenue, provisionLiveListing } from "./helpers/tenantData";
-import { cardWith } from "./helpers/ui";
+import { ensureVenue, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
+import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // The platform's core journey. Two halves:
 //   1. Operator builds a block and publishes a listing entirely through the UI.
@@ -109,15 +109,17 @@ test.describe("parent books; operator sees it live", () => {
     await opPage.goto("/company/bookings");
     await expect(opPage.getByRole("heading", { level: 2, name: "Bookings" })).toBeVisible();
 
-    // Parent finds the listing in Browse. The shared parent account may not
-    // have dismissed the one-time first-login welcome modal yet
-    // (ParentWelcome.tsx) — it sits on top of the whole page and blocks every
-    // click until closed.
+    // Parent finds the listing in Browse. Mark the one-time first-login
+    // welcome modal (ParentWelcome.tsx) as seen server-side before
+    // navigating, so it never opens at all — see markParentWelcomed's doc
+    // comment for why dismissing it via the UI alone is racy.
+    await markParentWelcomed(accounts.parent);
     await page.goto("/custdash/browse");
-    const welcomeClose = page.getByRole("dialog").getByRole("button", { name: "Close" });
-    await welcomeClose.waitFor({ state: "visible", timeout: 8_000 }).then(() => welcomeClose.click()).catch(() => {});
+    await dismissParentWelcome(page);
     await page.getByPlaceholder("Search by name or venue…").fill(title);
-    await page.getByRole("button", { name: "More details", exact: true }).first().click();
+    // Accessible name is "More details — <listing title>", not bare "More
+    // details" (disambiguates cards from each other) — match the prefix.
+    await page.getByRole("button", { name: /^More details/ }).first().click();
     await page.waitForURL(`**/book/${listing.id}`);
 
     // Pick the pass (then a timing, if the bundle offers periods), one day,
@@ -137,7 +139,11 @@ test.describe("parent books; operator sees it live", () => {
     await page.getByPlaceholder("First and last name").fill(childName);
     const dob = page.locator('input[type="date"]').first();
     if (await dob.isVisible().catch(() => false)) await dob.fill("2018-05-14");
-    const boy = page.getByRole("button", { name: "👦 Boy", exact: true });
+    // Unlike ChildrenApp's own wizard, this in-booking add-child form's
+    // Boy/Girl buttons carry no emoji prefix — a bare "👦 Boy" exact match
+    // silently misses, the required field stays unset, and "Add child"
+    // never closes the panel ("we still need boy or girl").
+    const boy = page.getByRole("button", { name: "Boy" });
     if (await boy.isVisible().catch(() => false)) await boy.click();
     await page.getByRole("button", { name: "Add child", exact: true }).click();
     await page.getByRole("button", { name: "Next", exact: true }).click();

@@ -128,12 +128,38 @@ test.describe("timetable publish reaches staff", () => {
 test.describe("rota reaches staff read-only", () => {
   test.use({ storageState: statePath("franchise") });
 
+  // STALE: this test's flow ("Add a shift" button → fill a name → "Save
+  // shift") targets a rota UI that no longer exists. ScheduleApp.tsx now
+  // organises the rota by ROLE under each listing — a fresh listing has no
+  // role rows at all, so there's nothing to add a shift into until a role is
+  // added first via "＋ Add a new role" (a modal with preset roles, or a
+  // "Custom role" option that opens a native window.prompt()). Only once a
+  // role row exists do the per-day "＋" cells (their accessible name is just
+  // "＋" — "Add a shift" is a tooltip `title`, not the accessible name)
+  // appear, and clicking one opens a shift-editor panel whose confirm button
+  // is "Save" (schedule.save), not "Save shift". Needs a full rewrite
+  // covering: add-role (with the native prompt dialog), locating the correct
+  // role row's day cell, and the new editor's controls — not chased further
+  // this pass, flagging rather than half-fixing blind.
   test("franchise adds a shift; staff see it without edit controls", async ({ page, browser }) => {
+    // Multi-context (franchise + staff) plus a slow-loading view — same
+    // class of test as its siblings above, which already needed 150s; this
+    // one was missing the same bump.
+    test.setTimeout(120_000);
     const staffName = `E2E Steward ${stamp}`;
+    // The schedule page has nothing to add a shift to without a live listing
+    // in view ("No listings for this view") — unlike its siblings above,
+    // this test never provisioned one. Scope it to the franchise account
+    // itself so it shows up under /franchise/schedule's default filters.
+    await provisionLiveListing(accounts.franchise, { title: `E2E Rota ${stamp}` });
     await page.goto("/franchise/schedule");
-    // PageHero's title is styled text, not a heading element; the copy is
-    // "Staff schedule" today, not "Schedule & rota".
-    await expect(page.getByText("Staff schedule", { exact: true })).toBeVisible({ timeout: 15_000 });
+    // PageHero's title is now a real <h2>, but its accessible name carries
+    // the "🗓 " icon prefix — "🗓 Staff schedule", not bare "Staff schedule" —
+    // so an exact match on the bare word never matches (same class of bug as
+    // the "👦 Boy" button elsewhere). This view's data-load is also slow even
+    // warm under a busy dev server (documented elsewhere for company/
+    // franchise portals) — 15s occasionally isn't enough.
+    await expect(page.getByRole("heading", { name: /Staff schedule/ })).toBeVisible({ timeout: 30_000 });
     await page.getByRole("button", { name: /Add a shift/ }).click();
     const form = page.locator("div").filter({ has: page.getByText("Add a shift", { exact: true }) }).filter({ has: page.getByRole("button", { name: "Save shift" }) }).last();
     await form.locator("input").first().fill(staffName);

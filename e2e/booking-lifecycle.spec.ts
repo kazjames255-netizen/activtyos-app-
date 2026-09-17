@@ -131,10 +131,12 @@ test.describe("waitlist loop", () => {
     const queued = await bookViaApi(accounts.parent, listing, { child: `E2E Queue Kid ${stamp}` });
     expect(queued.status).toBe("Waitlisted");
 
-    // Parent sees the queue card — OUR child's, not a leftover one.
+    // Parent sees the queue card — OUR child's, not a leftover one. The
+    // waiting-list section starts collapsed (MyBookingsApp.tsx) — tap its
+    // header to open before the card content renders.
     await page.goto("/custdash/bookings");
-    await expect(page.getByText("My waiting list")).toBeVisible({ timeout: 15_000 });
-    await expect(cardWith(page, `E2E Queue Kid ${stamp}`, "On the waiting list")).toBeVisible();
+    await page.getByRole("button", { name: /My waiting list/ }).click();
+    await expect(cardWith(page, `E2E Queue Kid ${stamp}`, "On the waiting list")).toBeVisible({ timeout: 15_000 });
 
     // A place must free up before it can be offered ("That date is still
     // full — free a place first") — the seat-holder cancels.

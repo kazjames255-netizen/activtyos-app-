@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
-import { bookViaApi, createParentChild, provisionLiveListing } from "./helpers/tenantData";
-import { cardWith } from "./helpers/ui";
+import { bookViaApi, createParentChild, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
+import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // Parent child-profile management: the multi-step modal, required fields, and
 // the saved card. (All steps are in the DOM at once, slid off-screen —
@@ -24,12 +24,12 @@ test.describe("children profiles", () => {
     test.setTimeout(120_000);
     const name = `E2E Child ${Date.now().toString(36)}`;
 
+    // Mark the welcome popup seen server-side before navigating so it never
+    // opens at all — dismissing it via the UI mid-test races its own async
+    // open-check and can reopen behind this test's own add-child wizard.
+    await markParentWelcomed(loadAccounts().accounts.parent);
     await page.goto("/custdash/children");
-    // The shared parent account may not have dismissed the one-time first-login
-    // welcome modal yet (ParentWelcome.tsx) — it sits on top of the whole page
-    // and blocks every click until closed.
-    const welcomeClose = page.getByRole("dialog").getByRole("button", { name: "Close" });
-    await welcomeClose.waitFor({ state: "visible", timeout: 8_000 }).then(() => welcomeClose.click()).catch(() => {});
+    await dismissParentWelcome(page);
     await page.getByRole("button", { name: "+ Add child" }).click();
 
     // Step 1 — basics (always present, always first).
@@ -84,9 +84,13 @@ test.describe("children profiles", () => {
     await saveBtn.click();
 
     // THIS child's card renders with the flags we set (other children may
-    // carry the same allergy — read it off our card).
+    // carry the same allergy — read it off our card). The allergy chip is
+    // collapsed by default (just "⚠ Allergy") — click it to reveal the note
+    // (FlagChip in ChildrenApp.tsx).
     await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
-    await expect(cardWith(page, name, "⚠ Allergy: Peanuts")).toBeVisible();
+    const card = cardWith(page, name);
+    await card.getByRole("button", { name: "⚠ Allergy" }).click();
+    await expect(card.getByText("Peanuts")).toBeVisible();
 
     // Remove it again (cleanup + covers the confirm dialog).
     page.on("dialog", (d) => d.accept());
@@ -108,6 +112,7 @@ test.describe("children profiles", () => {
     const listing = await provisionLiveListing(accounts.company, { title: `E2E Lock Camp ${stamp}`, price: 0 });
     await bookViaApi(accounts.parent, listing, { child: name });
 
+    await markParentWelcomed(accounts.parent);
     await page.goto("/custdash/children");
     const card = cardWith(page, name);
     await expect(card).toBeVisible({ timeout: 15_000 });
