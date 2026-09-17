@@ -39,6 +39,10 @@ export function MyMoneyApp() {
     setDesc(""); setAmount("");
   };
   const remove = (id: string) => { const next = entries.filter((e) => e.id !== id); setEntries(next); save(next); };
+  const update = (id: string, patch: Partial<Entry>) => {
+    const next = entries.map((e) => (e.id === id ? { ...e, ...patch } : e));
+    setEntries(next); save(next);
+  };
 
   const totals = useMemo(() => {
     const income = entries.filter((e) => e.kind === "income").reduce((s, e) => s + e.amount, 0);
@@ -106,6 +110,7 @@ export function MyMoneyApp() {
           <table className="w-full text-[12.5px]">
             <thead>
               <tr className="border-b border-[var(--line)] text-left text-[11px] font-bold uppercase tracking-wide text-[var(--ink-3)]">
+                <th className="px-4 py-2.5">Type</th>
                 <th className="px-4 py-2.5">Date</th>
                 <th className="px-4 py-2.5">Description</th>
                 <th className="px-4 py-2.5">Category</th>
@@ -116,11 +121,35 @@ export function MyMoneyApp() {
             <tbody>
               {entries.map((e) => (
                 <tr key={e.id} className="border-b border-[var(--line)] last:border-b-0">
-                  <td className="px-4 py-2.5 text-[var(--ink-2)]">{e.date}</td>
-                  <td className="px-4 py-2.5 font-semibold">{e.desc}</td>
-                  <td className="px-4 py-2.5 text-[var(--ink-2)]">{e.category}</td>
-                  <td className="px-4 py-2.5 text-right font-bold" style={{ color: e.kind === "income" ? "#0f6b3a" : "#b3261e" }}>
-                    {e.kind === "income" ? "+" : "−"}{money(e.amount)}
+                  <td className="px-2 py-1.5">
+                    <select value={e.kind} onChange={(ev) => { const k = ev.target.value as Kind; update(e.id, { kind: k, category: CATEGORIES[k][0] }); }}
+                      className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 font-semibold hover:border-[var(--line)] focus:border-[var(--brand)] focus:outline-none">
+                      <option value="income">💷 Income</option>
+                      <option value="expense">🧾 Expense</option>
+                    </select>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input type="date" value={e.date} onChange={(ev) => update(e.id, { date: ev.target.value })}
+                      className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-[var(--ink-2)] hover:border-[var(--line)] focus:border-[var(--brand)] focus:outline-none" />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <input type="text" value={e.desc} onChange={(ev) => update(e.id, { desc: ev.target.value })}
+                      className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 font-semibold hover:border-[var(--line)] focus:border-[var(--brand)] focus:outline-none" />
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <select value={e.category} onChange={(ev) => update(e.id, { category: ev.target.value })}
+                      className="w-full rounded-md border border-transparent bg-transparent px-1.5 py-1 text-[var(--ink-2)] hover:border-[var(--line)] focus:border-[var(--brand)] focus:outline-none">
+                      {CATEGORIES[e.kind].includes(e.category) ? null : <option value={e.category}>{e.category}</option>}
+                      {CATEGORIES[e.kind].map((c) => <option key={c} value={c}>{c}</option>)}
+                    </select>
+                  </td>
+                  <td className="px-2 py-1.5 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <span className="font-bold" style={{ color: e.kind === "income" ? "#0f6b3a" : "#b3261e" }}>{e.kind === "income" ? "+" : "−"}£</span>
+                      <input type="number" min="0" step="0.01" value={e.amount} onChange={(ev) => update(e.id, { amount: Number(ev.target.value) || 0 })}
+                        className="w-24 rounded-md border border-transparent bg-transparent px-1.5 py-1 text-right font-bold hover:border-[var(--line)] focus:border-[var(--brand)] focus:outline-none"
+                        style={{ color: e.kind === "income" ? "#0f6b3a" : "#b3261e" }} />
+                    </div>
                   </td>
                   <td className="px-4 py-2.5 text-right">
                     <button type="button" onClick={() => remove(e.id)} className="text-[11px] font-bold text-[var(--ink-3)] hover:text-[#b3261e]">Remove</button>
