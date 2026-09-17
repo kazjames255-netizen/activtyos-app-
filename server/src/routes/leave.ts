@@ -128,7 +128,7 @@ leave.post("/absences", async (req, res) => {
       .map((d) => d.data() as AbsenceDoc)
       .find((a) =>
         a.status !== "cancelled" && a.status !== "declined" &&
-        a.name.trim().toLowerCase() === name.toLowerCase() &&
+        (a.name ?? "").trim().toLowerCase() === name.toLowerCase() &&
         a.start <= parsed.data.end && parsed.data.start <= a.end);
     if (overlap) {
       res.status(409).json({ error: `${name} already has ${overlap.status} leave that overlaps these dates (${overlap.start}${overlap.end !== overlap.start ? ` – ${overlap.end}` : ""}).` });
