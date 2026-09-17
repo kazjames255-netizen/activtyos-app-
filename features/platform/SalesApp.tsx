@@ -12,7 +12,7 @@ import { whoLabel, foldRepeats, REPEAT_WORD, type Person } from "@/features/task
 // view.
 
 type Stage = "new" | "contacted" | "demo" | "trial" | "won" | "lost";
-type Source = "cold_call" | "email" | "social" | "referral" | "event" | "inbound";
+type Source = "cold_call" | "email" | "social" | "referral" | "event" | "inbound" | "website_build";
 type Kind = "person" | "business" | "group" | "franchise" | "school" | "cluster" | "charity";
 // What sort of prospect this is. `nameLabel` retitles the first field, because
 // "Business" is wrong for a self-employed coach and misleading for a trust.
@@ -60,6 +60,7 @@ const VALID_STAGES = new Set(STAGES.map((s) => s.id));
 const SOURCES: { id: Source; label: string }[] = [
   { id: "cold_call", label: "📞 Cold call" }, { id: "email", label: "✉️ Email" }, { id: "social", label: "📱 Social" },
   { id: "referral", label: "🤝 Referral" }, { id: "event", label: "🎟️ Event" }, { id: "inbound", label: "🌐 Inbound" },
+  { id: "website_build", label: "🎨 Website build request" },
 ];
 const srcLabel = (s: Source) => SOURCES.find((x) => x.id === s)?.label ?? s;
 const ACT: { id: Activity["type"]; label: string }[] = [
@@ -103,7 +104,7 @@ function normaliseLead(raw: Lead & Partial<{ name: string; message: string; stat
     stage: VALID_STAGES.has(raw.stage) ? raw.stage : VALID_STAGES.has(raw.status as Stage) ? (raw.status as Stage) : "new",
     business: raw.business || raw.name || raw.email || "Untitled",
     email: raw.email || "", phone: raw.phone || "", location: raw.location || "", owner: raw.owner || "",
-    source: raw.source || "inbound",
+    source: normSource(raw.source || "inbound"),
     plan,
     // estMrr feeds a column total — undefined turns it into NaN on screen.
     estMrr: typeof raw.estMrr === "number" ? raw.estMrr : PLAN_MRR[plan],
@@ -501,20 +502,24 @@ function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onC
         </div>
         <div className="p-5">
           <div className="grid gap-3 sm:grid-cols-2">
-            <label className="block"><span className={lbl}>Type</span>
-              <select className={fld} value={f.kind ?? "business"} onChange={(e) => set({ kind: e.target.value as Kind })}>
+            {/* Selects use htmlFor/id, not a wrapping <label>, so their accessible name is
+                just the label text — a wrapped <select>'s computed name also picks up
+                whichever <option> is currently selected (e.g. "Type" + "Business"), which
+                collided with the real "Business name" field's label in strict-mode lookups. */}
+            <div className="block"><label htmlFor="lead-kind" className={lbl}>Type</label>
+              <select id="lead-kind" className={fld} value={f.kind ?? "business"} onChange={(e) => set({ kind: e.target.value as Kind })}>
                 {KIND_ORDER.map((k) => <option key={k} value={k}>{KINDS[k].icon} {KINDS[k].label}</option>)}
               </select>
-            </label>
+            </div>
             <label className="block"><span className={lbl}>{KINDS[f.kind ?? "business"].nameLabel}</span><input className={fld} value={f.business} onChange={(e) => set({ business: e.target.value })} /></label>
             <label className="block"><span className={lbl}>Contact name</span><input className={fld} value={f.contactName} onChange={(e) => set({ contactName: e.target.value })} /></label>
             <label className="block"><span className={lbl}>Location</span><input className={fld} value={f.location} onChange={(e) => set({ location: e.target.value })} /></label>
             <label className="block"><span className={lbl}>Email</span><input className={fld} value={f.email} onChange={(e) => set({ email: e.target.value })} /></label>
             <label className="block"><span className={lbl}>Phone</span><input className={fld} value={f.phone} onChange={(e) => set({ phone: e.target.value })} /></label>
-            <label className="block"><span className={lbl}>Source</span><select className={fld} value={f.source} onChange={(e) => set({ source: e.target.value as Source })}>{SOURCES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
+            <div className="block"><label htmlFor="lead-source" className={lbl}>Source</label><select id="lead-source" className={fld} value={f.source} onChange={(e) => set({ source: e.target.value as Source })}>{SOURCES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
             <label className="block"><span className={lbl}>Owner (rep)</span><input className={fld} value={f.owner} onChange={(e) => set({ owner: e.target.value })} placeholder="e.g. Priya" /></label>
-            <label className="block"><span className={lbl}>Likely plan</span><select className={fld} value={f.plan} onChange={(e) => set({ plan: e.target.value as Lead["plan"], estMrr: PLAN_MRR[e.target.value as Lead["plan"]] })}>{(["freelancer", "company", "franchise"] as const).map((p) => <option key={p} value={p} className="capitalize">{p}</option>)}</select></label>
-            <label className="block"><span className={lbl}>Stage</span><select className={fld} value={f.stage} onChange={(e) => set({ stage: e.target.value as Stage })}>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></label>
+            <div className="block"><label htmlFor="lead-plan" className={lbl}>Likely plan</label><select id="lead-plan" className={fld} value={f.plan} onChange={(e) => set({ plan: e.target.value as Lead["plan"], estMrr: PLAN_MRR[e.target.value as Lead["plan"]] })}>{(["freelancer", "company", "franchise"] as const).map((p) => <option key={p} value={p} className="capitalize">{p}</option>)}</select></div>
+            <div className="block"><label htmlFor="lead-stage" className={lbl}>Stage</label><select id="lead-stage" className={fld} value={f.stage} onChange={(e) => set({ stage: e.target.value as Stage })}>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
             <label className="block sm:col-span-2"><span className={lbl}>Notes</span><textarea rows={2} className={`${fld} resize-y`} value={f.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
           </div>
 
@@ -591,7 +596,23 @@ const ALIASES: Record<Field, string[]> = {
   notes: ["notes", "note", "comment", "comments"],
 };
 const fieldForHeader = (h: string): Field | null => { const k = h.trim().toLowerCase(); for (const f of Object.keys(ALIASES) as Field[]) if (ALIASES[f].includes(k)) return f; return null; };
-const normSource = (v: string): Source => { const k = v.toLowerCase(); if (k.includes("cold") || k.includes("call")) return "cold_call"; if (k.includes("email") || k.includes("mail")) return "email"; if (k.includes("social") || k.includes("insta") || k.includes("face") || k.includes("linked") || k.includes("dm")) return "social"; if (k.includes("refer")) return "referral"; if (k.includes("event") || k.includes("confer") || k.includes("expo")) return "event"; if (k.includes("inbound") || k.includes("web") || k.includes("form")) return "inbound"; return "cold_call"; };
+const SOURCE_IDS = new Set(SOURCES.map((s) => s.id));
+// The demo form and the pricing-page add-on both post a raw `source` string
+// with no login — never assume it matches one of our Source ids as-is (an
+// unrecognised value silently rendered as the <select>'s first option, "Cold
+// call", which is how a website build request once showed up as a cold call).
+const normSource = (v: string): Source => {
+  const k = v.toLowerCase().trim();
+  if (SOURCE_IDS.has(k as Source)) return k as Source;
+  if (k.includes("website") || k.includes("addon") || k.includes("add-on")) return "website_build";
+  if (k.includes("cold") || k.includes("call")) return "cold_call";
+  if (k.includes("email") || k.includes("mail")) return "email";
+  if (k.includes("social") || k.includes("insta") || k.includes("face") || k.includes("linked") || k.includes("dm")) return "social";
+  if (k.includes("refer")) return "referral";
+  if (k.includes("event") || k.includes("confer") || k.includes("expo")) return "event";
+  if (k.includes("inbound") || k.includes("web") || k.includes("form") || k.includes("demo")) return "inbound";
+  return "cold_call";
+};
 const normPlan = (v: string): Lead["plan"] => { const k = v.toLowerCase(); if (k.includes("free") || k.includes("solo")) return "freelancer"; if (k.includes("franch")) return "franchise"; return "company"; };
 const normStage = (v: string): Stage => { const k = v.toLowerCase(); if (k.includes("won") || k.includes("customer") || k.includes("signed")) return "won"; if (k.includes("lost") || k.includes("dead")) return "lost"; if (k.includes("trial")) return "trial"; if (k.includes("demo")) return "demo"; if (k.includes("contact")) return "contacted"; return "new"; };
 
