@@ -14,6 +14,7 @@ import {
   type TestAccount,
 } from "./helpers/env";
 import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignUp, fbTrySignIn } from "./helpers/accounts";
+import { NAV_GROUPS, PORTALS } from "../lib/nav/config";
 
 // Where each role lands after sign-in (mirrors lib/roles.ts ROLE_HOME).
 const ROLE_HOME: Record<Role, string> = {
@@ -25,7 +26,9 @@ const ROLE_HOME: Record<Role, string> = {
   parent: "/custdash/browse",
 };
 
-setup.describe.configure({ timeout: 300_000 });
+// The pre-compile pass below can take several minutes cold (dozens of never-before-hit routes,
+// each paying Next dev's one-time compile cost) — give this describe block room for that.
+setup.describe.configure({ timeout: 600_000 });
 
 async function uiLogin(browser: Browser, role: Role, email: string) {
   const context = await browser.newContext();
@@ -141,4 +144,37 @@ setup("provision throwaway accounts & signed-in states", async ({ browser }) => 
 
   const manifest: AccountManifest = { runId, password: TEST_PASSWORD, accounts };
   fs.writeFileSync(ACCOUNTS_PATH, JSON.stringify(manifest, null, 2));
+});
+
+// Next.js dev mode compiles each route on its FIRST hit — a cold visit can take 20-30s, a warm
+// one under 1s (measured: /freelancer/ai was 26.8s cold, 0.45s warm). Every spec file's first
+// visit to a given view pays that tax out of ITS OWN test timeout, which is what was actually
+// timing out the portal smoke tests (each visits 25-50 NEVER-BEFORE-COMPILED routes in one test)
+// and very likely contributed to other specs' timeouts too. Pre-compile every nav route here,
+// once, in setup — outside any single spec's time budget — so later tests measure real behaviour
+// instead of Turbopack's one-time cost. Auth doesn't matter: these routes render their shell (and
+// so get compiled) even signed out; the portal guard redirect happens client-side after hydration.
+setup("pre-compile every portal view (Next dev cold-start tax, paid once here)", async () => {
+  const seen = new Set<string>();
+  const urls: string[] = [];
+  for (const portal of PORTALS) {
+    for (const group of NAV_GROUPS[portal] ?? []) {
+      for (const item of group.items) {
+        if (item.hidden || item.view === "auth") continue;
+        const key = `${portal}/${item.view}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+        urls.push(`${WEB_URL}/${key}`);
+      }
+    }
+  }
+  const CONCURRENCY = 6;
+  let i = 0;
+  async function worker() {
+    while (i < urls.length) {
+      const url = urls[i++];
+      try { await fetch(url, { signal: AbortSignal.timeout(45_000) }); } catch { /* best-effort warm-up, a real spec will surface any genuine failure */ }
+    }
+  }
+  await Promise.all(Array.from({ length: CONCURRENCY }, worker));
 });

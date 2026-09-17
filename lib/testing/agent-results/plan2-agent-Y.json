@@ -1,0 +1,11 @@
+{
+  "p2-r9": {
+    "verdict": "fail",
+    "method": "api",
+    "actual": "GET /api/leads (H), 17 Sept 2026: 71,718 docs, Firestore query took 132,563ms (132.6s) with the trimmed field select() and NO limit/cursor param; JSON payload 61.93MB. This supersedes plan2-agent-O's 15 Sept reading (39,286 rows, blocked — no volume tenant existed yet to test the OTHER routes at scale). The leads collection itself has since grown to a genuine, unarguable volume case: 132s server-side + 62MB over the wire is now measured, not inferred.",
+    "notes": "Confirms b36 (item 18/46a in amir-backend-outstanding.md) at real scale rather than a projection. Root cause: leads.ts serves the WHOLE collection from an in-memory cache (3-min TTL) built by one unbounded select().get() — the cache softens repeat loads but the first hit after expiry, and the client-side filter/derive/sort/dropdown-count work done on all 71.7k rows in the browser on every render, are both real and now precisely measured. Fix (scoped with the user, not yet built): move filtering/pagination/derivation server-side so the client receives a slim, already-filtered page instead of the full collection — see the 17 Sept conversation for the design. Separately: the e2e smoke tests (company/franchise/freelancer/staff portals, e2e/smoke.spec.ts) were ALL timing out at 10 minutes visiting 25-50 nav views each — traced to a DIFFERENT cause (Next.js dev-mode cold-compile, ~27s per never-before-hit route, confirmed by curl: 26.8s cold vs 0.45s warm on /freelancer/ai) rather than this same data-volume issue. Fixed by adding a pre-compile warm-up pass to e2e/global.setup.ts so later specs measure real behaviour instead of Turbopack's one-time tax. Also fixed in this session: e2e/auth.spec.ts's three signup tests were failing because the test never checked the Terms/DPA consent checkbox added 8 Sept (a test bug, not a product bug) — 2 of 3 now pass, third needs a second look.",
+    "evidence": "server/scripts/leads/_payload_check.mjs (one-off, deleted after use — reran the same query pattern as leads.ts's refresh()); e2e/global.setup.ts (pre-compile warm-up, added 17 Sept); e2e/auth.spec.ts (consent-checkbox fix, added 17 Sept)",
+    "at": "2026-09-17T10:15:00.000Z",
+    "agent": "plan2-Y"
+  }
+}

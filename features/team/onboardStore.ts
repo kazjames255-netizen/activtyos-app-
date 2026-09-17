@@ -13,6 +13,9 @@
 
 import { api, fetchBlob, get as apiGet, isDemoMode, post as apiPost, put as apiPut } from "@/lib/api";
 import { typeOf } from "@/features/listings/planUpload";
+import { DEMO_STAFF } from "@/features/learning/credentials";
+
+const DEMO_NAMES = new Set(DEMO_STAFF.map((s) => s.name));
 
 export const ONBOARD_FKEY = "aos.team.onboardfields.v1";
 export const ONBOARD_RKEY = "aos.team.onboardrecords.v1";
@@ -94,11 +97,18 @@ export async function hydrateFiles<R extends StoredRecord>(rec: R): Promise<R> {
  *  aside rather than uploaded automatically: a browser isn't tied to one
  *  account, and a safer-recruitment record must not land in the wrong
  *  provider's tenant. The screen offers Import / Discard. */
-export function localBackup(): StoredRecord[] { return typeof window === "undefined" ? [] : read<StoredRecord[]>(ONBOARD_LOCAL_BACKUP, []); }
+export function localBackup(): StoredRecord[] {
+  // Filtered at read time too, not just in stashLocalOnce — a browser that stashed before this
+  // filter existed still has the demo cast sitting in ONBOARD_LOCAL_BACKUP.
+  return typeof window === "undefined" ? [] : read<StoredRecord[]>(ONBOARD_LOCAL_BACKUP, []).filter((r) => !DEMO_NAMES.has(r.staff));
+}
 export function stashLocalOnce(): void {
   if (typeof window === "undefined" || isDemoMode()) return;
   if (localStorage.getItem("aos.team.onboard.stashed.v1")) return;
-  const cur = read<StoredRecord[]>(ONBOARD_RKEY, []);
+  // Filter out the guided-tour demo cast (e.g. "Marcus Bell") — this key can hold demo-mode
+  // seed data from before the server migration, and offering to "import" it into a real
+  // account's onboarding records would contaminate a genuine tenant with fixture data.
+  const cur = read<StoredRecord[]>(ONBOARD_RKEY, []).filter((r) => !DEMO_NAMES.has(r.staff));
   if (cur.length) write(ONBOARD_LOCAL_BACKUP, cur);
   localStorage.setItem("aos.team.onboard.stashed.v1", "1");
 }

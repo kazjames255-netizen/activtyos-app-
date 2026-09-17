@@ -266,6 +266,14 @@ const SOURCE: Record<string, { label: string; emoji: string }> = {
   haf: { label: "Council HAF list", emoji: "🍎" },
   gias: { label: "DfE GIAS register — independent schools", emoji: "🎓" },
   "gias-state": { label: "DfE GIAS register — state schools", emoji: "🏫" },
+  "companiesHouse-sports": { label: "Companies House — sports", emoji: "🏢" },
+  "companiesHouse-daycare": { label: "Companies House — day-care", emoji: "🏢" },
+  "companiesHouse-performingarts": { label: "Companies House — performing arts", emoji: "🏢" },
+  "companiesHouse-farmsAttractions": { label: "Companies House — farms & attractions", emoji: "🏢" },
+  "companiesHouse-residentialCamps": { label: "Companies House — residential camps", emoji: "🏢" },
+  "companiesHouse-leisureCentres": { label: "Companies House — leisure centres", emoji: "🏢" },
+  "companiesHouse-attractionsMuseums": { label: "Companies House — museums & attractions", emoji: "🏢" },
+  "companiesHouse-otherEducation": { label: "Companies House — STEM/language/cookery camps", emoji: "🏢" },
 };
 /** The directories a lead is on — all of them, not only the one it was first found on. */
 const srcOf = (l: { sources?: string[]; source?: string }) => (l.sources?.length ? l.sources : [l.source || "demo"]);
@@ -622,13 +630,12 @@ export function LeadsApp() {
       region: tally((r) => [r.d.region || "Not known"]).sort((a, b) => Number(a === "Not known") - Number(b === "Not known")).map((v) => ({ value: v, label: v === "Not known" ? "📍 Not known" : `📍 ${v}`, test: ({ d }: R) => (d.region || "Not known") === v })),
       // Which import batch/category a lead came from — was a defined dimension with
       // zero options ever populated, so this filter silently did nothing until now.
-      source: tally((r) => [r.l.source || "unknown"]).map((v) => {
-        const CH_LABEL: Record<string, string> = {
-          "companiesHouse-sports": "🏢 Companies House — sports", "companiesHouse-daycare": "🏢 Companies House — day-care",
-          "companiesHouse-performingarts": "🏢 Companies House — performing arts", "unknown": "❓ Unknown source",
-        };
-        return { value: v, label: CH_LABEL[v] || srcMeta(v).label, group: v.startsWith("companiesHouse") ? "Companies House sweeps" : "Other sources", test: ({ l }: R) => (l.source || "unknown") === v };
-      }),
+      // SOURCE (above) now has every companiesHouse-* tag, so this just adds the emoji
+      // and the "unknown" fallback rather than duplicating labels that drift out of sync.
+      source: tally((r) => [r.l.source || "unknown"]).map((v) => ({
+        value: v, label: v === "unknown" ? "❓ Unknown source" : `${srcMeta(v).emoji} ${srcMeta(v).label}`,
+        group: v.startsWith("companiesHouse") ? "Companies House sweeps" : "Other sources", test: ({ l }: R) => (l.source || "unknown") === v,
+      })),
       booking: [
         // "none" (confirmed no platform) lives once, under "Booking platforms" below
         // (value: "noPlatform") — it used to also appear here under "Overall" with

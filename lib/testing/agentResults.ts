@@ -62,6 +62,10 @@ import W from "./agent-results/plan2-agent-W.json";
 // instance of the same check-then-act-without-a-transaction pattern) — 16
 // Sept 2026.
 import X from "./agent-results/plan2-agent-X.json";
+// p2-r9 re-verified at real volume (leads collection now 71.7k docs, 132.6s/
+// 62MB unpaged) — supersedes plan2-agent-O's blocked reading; plus e2e suite
+// fixes (smoke-test cold-compile warm-up, signup consent-checkbox) — 17 Sept 2026.
+import Y from "./agent-results/plan2-agent-Y.json";
 
 export interface AgentResult {
   verdict: "pass" | "fail" | "blocked";
@@ -83,5 +87,5 @@ export const AGENT_RESULTS: Record<string, AgentResult> = {
   ...(N as Record<string, AgentResult>), ...(O as Record<string, AgentResult>), ...(P as Record<string, AgentResult>),
   ...(Q as Record<string, AgentResult>), ...(R as Record<string, AgentResult>), ...(S as Record<string, AgentResult>),
   ...(T as Record<string, AgentResult>), ...(U as Record<string, AgentResult>), ...(V as Record<string, AgentResult>),
-  ...(W as Record<string, AgentResult>), ...(X as Record<string, AgentResult>),
+  ...(W as Record<string, AgentResult>), ...(X as Record<string, AgentResult>), ...(Y as Record<string, AgentResult>),
 };

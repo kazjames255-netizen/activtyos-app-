@@ -41,6 +41,9 @@ test.describe("signup", () => {
     await page.getByRole("button", { name: "Continue" }).click(); // hear → login
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill(TEST_PASSWORD);
+    // Operators must tick the Terms/DPA consent checkbox (added 8 Sept) — Create
+    // account stays disabled without it.
+    await page.getByRole("checkbox").check();
     await page.getByRole("button", { name: "Create account" }).click();
     // Operators now land on an optional "Get paid" step (Stripe Connect + bank
     // details) before the portal — skip it. Only appears when the account was

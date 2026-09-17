@@ -2902,6 +2902,7 @@ function WaitlistPanel({ b, d, tone }: { b: ReturnType<typeof useBooking>; d: Wi
   );
 }
 
+const BASKET_NOTE_KEY = "aos.basket.lastListing.v1";
 function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, onBook, bookState, theme = "playful", tenantId }: {
   d: WizardDraft; booking: BlockBooking | null; weeks: { n: number; mon: string; days: string[] }[]; spacesLeft: number | null; addons: LocalState["addons"]; blocks?: RunBlock[]; mode?: "operator" | "parent"; onBook?: (p: { method: string; voucherScheme?: string; voucherRefs?: Record<string, string>; discountCodes?: string[]; walletCap?: number; phone?: string; basket: BasketItem[]; addonSel: Record<string, Record<string, string[]>>; addonAns: Record<string, Record<string, string>>; mealSel: Record<string, string>; children: ChildProfile[]; dayAssign: Record<string, Record<string, string[]>>; parent?: { id: string; name: string; email?: string; phone?: string; address?: string } | null; /** Home-visit listings only: where this session actually happens — defaults to the parent's saved address, editable at checkout. */ serviceAddress?: { address: string; postcode: string } }) => void; bookState?: { busy: boolean; error: string | null }; theme?: PageTheme; tenantId?: string;
 }) {
@@ -2921,8 +2922,40 @@ function BookingWidget({ d, booking, weeks, spacesLeft, addons, blocks, mode, on
   useEffect(() => {
     if (b.stage !== "pick") box.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }, [b.stage]);
+  // Only one listing's basket is kept at a time (useBooking's state is fresh per listing page) —
+  // a family who picks a pass here, then browses to a different listing, loses that selection with
+  // no warning today. Not fixing the "one basket" limit itself (that's a real product decision), just
+  // making the silent loss visible: note what's in the basket in sessionStorage, and if a DIFFERENT
+  // listing's basket is found stashed when this one mounts, say what was dropped.
+  const [droppedBasketNotice, setDroppedBasketNotice] = useState<string | null>(null);
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem(BASKET_NOTE_KEY);
+      if (raw) {
+        const prev = JSON.parse(raw) as { listingId: string | null; title: string; count: number };
+        if (prev.listingId !== d.id) {
+          setDroppedBasketNotice(`Your ${prev.count} pass${prev.count === 1 ? "" : "es"} for ${prev.title} ${prev.count === 1 ? "was" : "were"} cleared when you came here — only one club's basket is kept at a time.`);
+        }
+        sessionStorage.removeItem(BASKET_NOTE_KEY);
+      }
+    } catch { /* sessionStorage unavailable (private mode etc) — the notice is a courtesy, not load-bearing */ }
+    // Once per mount (a fresh listing page), not on every basket change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => {
+    try {
+      if (b.basket.length > 0) sessionStorage.setItem(BASKET_NOTE_KEY, JSON.stringify({ listingId: d.id, title: d.title, count: b.basket.length }));
+      else sessionStorage.removeItem(BASKET_NOTE_KEY);
+    } catch { /* ignore */ }
+  }, [b.basket.length, d.id, d.title]);
   return (
     <div ref={box}>
+      {droppedBasketNotice && (
+        <div className="mb-2.5 flex items-start justify-between gap-2 rounded-xl border border-dashed border-[#d9a84e] bg-[#fff8e8] px-3 py-2 text-[12px] font-semibold text-[#7a5210]">
+          <span>⚠️ {droppedBasketNotice}</span>
+          <button type="button" onClick={() => setDroppedBasketNotice(null)} className="shrink-0 font-extrabold opacity-70 hover:opacity-100" aria-label="Dismiss">✕</button>
+        </div>
+      )}
       {theme === "playful" ? <PlayfulBooking {...view} /> : <SportBooking {...view} surf={THEMES[theme]} />}
     </div>
   );

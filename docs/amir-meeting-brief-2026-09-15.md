@@ -1,6 +1,8 @@
 # Amir — backend to-do, meeting brief (15 Sept 2026)
 
-Full detail for every item: `docs/amir-backend-outstanding.md` (verified against the code 12 Sept 2026). This is the short version to work from in the room. Last commit from Amir was 9 Aug — over 5 weeks ago — so treat all of §0 as "hasn't been started."
+Full detail for every item: `docs/amir-backend-outstanding.md` (verified against the code 12 Sept 2026; §9 added 17 Sept from Plan 2 acceptance testing). This is the short version to work from in the room. Last commit from Amir was 9 Aug — over 5 weeks ago — so treat all of §0 as "hasn't been started."
+
+**New since this brief — add to the room:** §9 (17 Sept) has a live cross-tenant data leak in HQ "Open account" impersonation (item 65 — writes land under the admin's identity, not the impersonated user's; a child record leaked between two unrelated providers) and a real fixture-data contamination risk (item 69 — the app offers to import old "Marcus Bell" demo data into a genuine account). Both are worth flagging alongside §0.
 
 ---
 
