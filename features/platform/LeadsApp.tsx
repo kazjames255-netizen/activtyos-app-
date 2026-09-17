@@ -684,6 +684,10 @@ export function LeadsApp() {
   const active = DIMS.filter((dim) => dim !== "plan").flatMap((dim) => f[dim].map((v) => ({ dim, v, label: opts[dim].find((o) => o.value === v)?.label ?? v })));
   const clearAll = () => { setF(NO_FILTERS); setQ(""); setLimit(60); };
 
+  // For a lead that's a club/nursery/committee linked to a host school (giasSchoolName set and different from
+  // the lead's own name) — swap which one is the card's bold heading. Off by default: the lead's own name leads,
+  // the school shows as the "🏫 at X" badge. On: the school leads, the club's own name moves to the subtitle spot.
+  const [schoolNameAsTitle, setSchoolNameAsTitle] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const exportBox = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -799,6 +803,12 @@ export function LeadsApp() {
         {q && <button type="button" onClick={() => setQ("")} className="flex items-center gap-1 rounded-full bg-[#eaf0ff] px-2.5 py-0.5 text-[11.5px] font-bold text-[var(--brand)]">“{q}” ×</button>}
         <span className="text-[12px] text-[var(--ink-3)]">— {shown.filter((r) => r.l.email).length.toLocaleString()} with email ({shown.filter((r) => okToEmail(r.l)).length.toLocaleString()} OK to email) · {shown.filter((r) => r.l.phone).length.toLocaleString()} with phone</span>
         <div className="ml-auto flex items-center gap-2">
+          <button type="button" onClick={() => setSchoolNameAsTitle((v) => !v)} aria-pressed={schoolNameAsTitle}
+            title="For a club/nursery/committee linked to a host school, show the SCHOOL's name as the heading instead of the club's own name"
+            className="rounded-lg border border-[var(--line)] px-3 py-1 text-[12px] font-extrabold"
+            style={schoolNameAsTitle ? { background: "var(--ink)", color: "#fff" } : { background: "var(--surface)", color: "var(--ink-2)" }}>
+            🏫 School name as title: {schoolNameAsTitle ? "On" : "Off"}
+          </button>
           <label className="flex items-center gap-1.5 text-[12px] font-bold text-[var(--ink-3)]">Sort
             <select value={sort} onChange={(e) => setSort(e.target.value as SortKey)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2 py-1 text-[12.5px] font-bold text-[var(--ink-2)]">
               {(Object.keys(SORTS) as SortKey[]).map((k) => <option key={k} value={k}>{SORTS[k]}</option>)}
@@ -842,13 +852,17 @@ export function LeadsApp() {
         <div className="flex flex-col gap-2.5">
           {shown.slice(0, limit).map(({ l }) => {
             const tone = TONE[l.status] || TONE.new;
+            const linkedSchool = l.giasSchoolName && !sameOrg(l.giasSchoolName, l.name) && !sameOrg(l.giasSchoolName, l.business) ? l.giasSchoolName : null;
+            const showSchoolAsTitle = schoolNameAsTitle && !!linkedSchool;
+            const heading = showSchoolAsTitle ? linkedSchool! : l.name;
+            const subtitle = showSchoolAsTitle ? l.name : l.business;
             return (
               <div key={l.id} className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <b className="text-[15px] text-[var(--ink)]">{l.name}</b>
-                      {l.business && <span className="text-[13px] text-[var(--ink-3)]">· {l.business}</span>}
+                      <b className="text-[15px] text-[var(--ink)]">{heading}</b>
+                      {subtitle && <span className="text-[13px] text-[var(--ink-3)]">· {subtitle}</span>}
                       <span className="rounded-full px-2.5 py-0.5 text-[11px] font-extrabold" style={{ background: tone.bg, color: tone.fg }}>{tone.label}</span>
                       {srcOf(l).map((sname) => { const url = l.sourceRefs?.[sname]?.url || (sname === l.source ? l.sourceUrl : undefined); const cls = "rounded-full px-2.5 py-0.5 text-[11px] font-bold"; const st = { background: "var(--panel)", color: "var(--ink-2)", border: "1px solid var(--line)" }; return url
                         ? <a key={sname} href={url} target="_blank" rel="noopener noreferrer" className={`${cls} hover:underline`} style={st} title={`Their listing on ${srcMeta(sname).label}`}>{srcMeta(sname).emoji} {srcMeta(sname).label} ↗</a>
@@ -869,7 +883,7 @@ export function LeadsApp() {
                       {l.size && <span>👥 {l.size}</span>}
                       <span className="text-[var(--ink-3)]">{fmt(l.createdAt)}</span>
                     </div>
-                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.haf || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network || l.websiteDead || l.bookingMethod === "confirmed-manual" || l.schoolType || l.boarding || l.schoolPhase || l.schoolGovernance || l.roleContacts) && (
+                    {(l.plan || l.kind || l.legalForm || l.companyNumber || l.charityNumber || l.bookingSystem || l.haf || l.sourceUrl || l.comingSoon || l.providerTypes?.length || l.network || l.websiteDead || l.bookingMethod === "confirmed-manual" || l.schoolType || l.boarding || l.schoolPhase || l.schoolGovernance || l.roleContacts || linkedSchool) && (
                       <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[11px]">
                         {l.plan && <span className="rounded-full px-2 py-0.5 font-extrabold" style={isFreelancer(l) ? { background: "#f3e8ff", color: "#6b21a8" } : { background: "#e0ecff", color: "#1d3a8f" }} title={l.planReason || undefined}>{isFreelancer(l) ? "🧑 Freelancer" : "🏢 Company"}</span>}
                         {l.legalForm && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]">{l.legalForm}</span>}
@@ -886,9 +900,10 @@ export function LeadsApp() {
                         {(l.providerTypes ?? []).map((t) => TYPE[t] && <span key={t} className="rounded-full bg-[#eef9f0] px-2 py-0.5 font-bold text-[#0f6b3a]">{TYPE[t].emoji} {TYPE[t].label}</span>)}
                         {/* This lead IS a school on the GIAS register when its own name already says so — no need to also
                             name it. Show the school name only when the lead is something else (a club/nursery/committee)
-                            that GIAS's own dedupe linked to a school, so it's clear WHICH school that's about. */}
-                        {l.giasSchoolName && !sameOrg(l.giasSchoolName, l.name) && !sameOrg(l.giasSchoolName, l.business) && (
-                          <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]" title="The DfE GIAS register links this lead to this school (e.g. an out-of-school club or nursery operating on its site)">🏫 at {l.giasSchoolName}</span>
+                            that GIAS's own dedupe linked to a school, so it's clear WHICH school that's about — unless
+                            the title-swap toggle already put that name in the heading above. */}
+                        {linkedSchool && !showSchoolAsTitle && (
+                          <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]" title="The DfE GIAS register links this lead to this school (e.g. an out-of-school club or nursery operating on its site)">🏫 at {linkedSchool}</span>
                         )}
                         {l.schoolType && <span className="rounded-full bg-[#f3e8ff] px-2 py-0.5 font-bold text-[#6b21a8]" title={l.ageLow != null && l.ageHigh != null ? `Ages ${l.ageLow}–${l.ageHigh} (DfE GIAS register)` : "DfE GIAS register"}>{SCHOOL_TYPE_BADGE[l.schoolType] || l.schoolType}</span>}
                         {l.boarding && <span className="rounded-full bg-[var(--panel)] px-2 py-0.5 font-bold text-[var(--ink-2)] ring-1 ring-[var(--line)]" title="Takes boarders (DfE GIAS register)">🛏️ Boarding</span>}
