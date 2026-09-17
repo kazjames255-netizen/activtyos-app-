@@ -42,11 +42,11 @@ export default function DemoPage() {
 
   return (
     <div style={{ minHeight: "100vh", background: BG, color: INK, fontFamily: "var(--ff, system-ui)", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px" }}>
-      <Link href="/nametbc.html" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none", marginBottom: 30 }}>
+      <Link href="/activly.html" style={{ display: "flex", alignItems: "center", gap: 9, textDecoration: "none", marginBottom: 30 }}>
         <span style={{ width: 34, height: 34, borderRadius: 10, background: PINK, display: "grid", placeItems: "center" }}>
           <svg viewBox="0 0 24 24" width="18" height="18" fill="none"><path d="M3 11.5L21 3l-8.5 18-2.2-7.3L3 11.5z" fill="#fff" /></svg>
         </span>
-        <span style={{ fontWeight: 800, fontSize: 18, color: INK }}>Wiggle<span style={{ color: PINK }}>kit</span></span>
+        <span style={{ fontWeight: 800, fontSize: 18, color: INK }}>Activ<span style={{ color: PINK }}>ly</span></span>
       </Link>
 
       <div style={{ width: "100%", maxWidth: 520, background: CARD, border: `1px solid ${LINE}`, borderRadius: 22, padding: "30px 30px 34px", boxShadow: "0 30px 70px -40px rgba(0,0,0,.7)" }}>
@@ -59,7 +59,7 @@ export default function DemoPage() {
             </p>
             <div style={{ display: "flex", gap: 10, justifyContent: "center", marginTop: 22, flexWrap: "wrap" }}>
               <Link href="/signup" style={{ background: PINK, color: "#fff", fontWeight: 800, fontSize: 15, padding: "12px 22px", borderRadius: 999, textDecoration: "none" }}>Start free →</Link>
-              <Link href="/nametbc.html" style={{ background: "transparent", color: INK2, fontWeight: 800, fontSize: 15, padding: "12px 22px", borderRadius: 999, textDecoration: "none", border: `1px solid ${LINE}` }}>Back to site</Link>
+              <Link href="/activly.html" style={{ background: "transparent", color: INK2, fontWeight: 800, fontSize: 15, padding: "12px 22px", borderRadius: 999, textDecoration: "none", border: `1px solid ${LINE}` }}>Back to site</Link>
             </div>
           </div>
         ) : (

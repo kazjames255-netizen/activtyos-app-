@@ -91,7 +91,7 @@ import { TestingApp } from "@/features/testing/TestingApp";
 import { LeadsApp } from "@/features/platform/LeadsApp";
 import { VentureLakesApp } from "@/features/platform/VentureLakesApp";
 import { InternationalExpansionApp } from "@/features/platform/InternationalExpansionApp";
-import { WigglekitSiteApp } from "@/features/platform/WigglekitSiteApp";
+import { ActivlySiteApp } from "@/features/platform/ActivlySiteApp";
 import { MyMoneyApp } from "@/features/platform/MyMoneyApp";
 import { SupportInboxApp } from "@/features/platform/SupportInboxApp";
 import { SupportReviewApp } from "@/features/platform/SupportReviewApp";
@@ -351,7 +351,7 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
     leads: LeadsApp,
     "venture-lakes": VentureLakesApp,
     "international-expansion": InternationalExpansionApp,
-    "wigglekit-site": WigglekitSiteApp,
+    "activly-site": ActivlySiteApp,
     "my-money": MyMoneyApp,
     // Platform tooling on the roadmap — these need PLATFORM-scoped
     // backends (a platform account has no tenant, so the operator

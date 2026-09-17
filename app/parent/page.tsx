@@ -46,7 +46,7 @@ function ParentAuth() {
   // Debounced provider search against the public directory
   // (server/src/routes/providers.ts). A failure is reported as "directory
   // unavailable" rather than silently showing an empty list — an empty list
-  // would read as "your club isn't on Wigglekit", which is a different claim.
+  // would read as "your club isn't on Activly", which is a different claim.
   useEffect(() => {
     if (tab !== "up") return;
     const q = provider.trim();

@@ -497,7 +497,7 @@
 @media(max-width:1040px){.navmega-menu{grid-template-columns:1fr}.navmega-intro{border-right:0;border-bottom:1px solid var(--line);padding-right:0;padding-bottom:12px}}
 
 
-/* ================= Wigglekit interactive FX layer ================= */
+/* ================= Activly interactive FX layer ================= */
 @media (prefers-reduced-motion:no-preference){
  [data-reveal]{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.2,.7,.2,1),transform .7s cubic-bezier(.2,.7,.2,1)}
  [data-reveal].in{opacity:1;transform:none}
@@ -548,7 +548,7 @@
 #how .step-c p{color:var(--ink-3);font-size:14.5px;line-height:1.55;margin:0}
 
 
-/* ================= Wigglekit FX2 — bold 3D movement ================= */
+/* ================= Activly FX2 — bold 3D movement ================= */
 .hero{overflow:hidden}
 .scene3d{position:absolute;inset:0;z-index:2;pointer-events:none;perspective:1100px;transform-style:preserve-3d}
 .float3d{position:absolute;will-change:transform;transform-style:preserve-3d}
@@ -586,7 +586,7 @@
 @keyframes mqscroll{to{transform:translateX(-50%)}}
 @media(prefers-reduced-motion:reduce){.mq-track{animation:none;transform:none}}
 
-/* ===== Owner override: Wigglekit brand motion always on (site owner's explicit choice) ===== */
+/* ===== Owner override: Activly brand motion always on (site owner's explicit choice) ===== */
 .scene3d{display:block !important}
 @media(max-width:760px){.scene3d{display:none !important}}
 [data-reveal]{opacity:0;transform:perspective(1200px) translateY(48px) translateZ(-300px) rotateX(20deg);transform-origin:50% 100%;transition:opacity .85s ease,transform .95s cubic-bezier(.16,.85,.3,1)}
@@ -599,7 +599,7 @@
 .mq-track{animation:mqscroll 34s linear infinite !important}
 
 
-/* ================= Wigglekit feature orbit ================= */
+/* ================= Activly feature orbit ================= */
 #orbit{position:relative;overflow:hidden}
 .orbit-stage{position:relative;height:460px;max-width:840px;margin:26px auto 0}
 @media(max-width:760px){.orbit-stage{height:560px;max-width:360px}}

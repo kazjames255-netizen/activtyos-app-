@@ -367,7 +367,7 @@
    thumbnail column) — that is a tidier panel anyway, and it buys back ~56px.
    The card may then overhang the checkout block's empty left padding, never
    its content. */
-/* nametbc-lite.css loads after this file, so #booking .bk-checkout at equal
+/* activly-lite.css loads after this file, so #booking .bk-checkout at equal
    specificity was winning; add a class to outrank it by source-independent
    specificity rather than reaching for !important */
 #booking .bk-frame .bk-checkout{padding-left:92px}

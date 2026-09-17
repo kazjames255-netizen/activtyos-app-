@@ -26,9 +26,9 @@ export const SURFACE_THEMES: SurfaceTheme[] = [
     hero: "var(--hero-grad)",
   },
   {
-    // Wigglekit — the site's dark navy ground with a pink/indigo glow, for
+    // Activly — the site's dark navy ground with a pink/indigo glow, for
     // matching the marketing site. Was the default until "App default" landed.
-    id: "classic", name: "Wigglekit",
+    id: "classic", name: "Activly",
     swatch: "linear-gradient(135deg,#080B1E,#111A3A 55%,#FF3D7F)",
     page: "radial-gradient(130% 85% at 0% 0%, rgba(255,61,127,.12) 0%, transparent 52%), radial-gradient(115% 80% at 100% 0%, rgba(63,107,216,.12) 0%, transparent 46%), linear-gradient(180deg,#080B1E 0%,#0A0F26 100%)",
     hero: "linear-gradient(120deg,#080B1E 0%,#111A3A 52%,#2a1424 100%)",

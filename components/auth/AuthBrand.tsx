@@ -36,12 +36,12 @@ export function AosMark({ size = 30 }: { size?: number }) {
   );
 }
 
-// Wordmark — Wigglekit.
+// Wordmark — Activly.
 export function AosWordmark({ className = "" }: { className?: string }) {
   return (
     <span className={className} style={{ fontFamily: "var(--ff-display)" }}>
-      <span style={{ color: "var(--ink, #171534)" }}>Wiggle</span>
-      <span style={{ color: "var(--gold, #f5b81f)" }}>kit</span>
+      <span style={{ color: "var(--ink, #171534)" }}>Activ</span>
+      <span style={{ color: "var(--gold, #f5b81f)" }}>ly</span>
     </span>
   );
 }

@@ -60,7 +60,7 @@ const VIEW_SETTINGS: Record<string, string> = {
 // ─────────────────────────────────────────────────────────────────────────
 
 // The operator page's local token scope. Named LIGHT_PALETTE for historical
-// reasons, but it now carries the Wigglekit marketing-site palette verbatim so
+// reasons, but it now carries the Activly marketing-site palette verbatim so
 // every operator page sits on the same dark navy #F4F6FC ground, #FFFFFF
 // surface cards, #101A38 ink and #C81E5E pink accents as the website. Because
 // it is applied as an inline style on the page wrapper it overrides :root, so

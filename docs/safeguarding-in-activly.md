@@ -1,4 +1,4 @@
-# Safeguarding, as operated in Wigglekit
+# Safeguarding, as operated in Activly
 
 **A policy you can adopt, written around the controls the system actually gives you.**
 

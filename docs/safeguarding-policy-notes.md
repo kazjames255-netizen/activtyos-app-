@@ -24,7 +24,7 @@ The policy is drafted for **England**, for a **non-Ofsted-registered out-of-scho
 | **The provider has at least two adults** | Everything from one-to-one rules to missing-child procedure assumes it | Genuine sole traders (the `freelancer` portal is a first-class persona in this product) cannot do §16 as written. Flagged inline at §15.2.5 as needing a lone-working risk assessment, but **this is a real gap for the freelancer segment and product should think about it** |
 | **Products' feature names as they exist in this build** | Cited from source, not memory | Several cited areas are client-side demo stores (see §4) |
 
-**Naming.** I used `[PLATFORM]` throughout rather than "ActivityOS" or "Wigglekit". Three reasons: the brand is currently TBC (per the Name-TBC marketing site work); a provider adopting this makes it *their* policy, and a vendor name inside a child protection policy reads oddly to an inspector; and it lets the same seed text survive a rename. Feature names (**Log a concern**, **Registers**, **Documents**) are used concretely because they need to be actionable.
+**Naming.** I used `[PLATFORM]` throughout rather than "ActivityOS" or "Activly". Three reasons: the brand is currently TBC (per the Name-TBC marketing site work); a provider adopting this makes it *their* policy, and a vendor name inside a child protection policy reads oddly to an inspector; and it lets the same seed text survive a rename. Feature names (**Log a concern**, **Registers**, **Documents**) are used concretely because they need to be actionable.
 
 ---
 

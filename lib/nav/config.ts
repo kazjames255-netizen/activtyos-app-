@@ -591,7 +591,7 @@ export const NAV_GROUPS: Record<PortalKey, NavGroup[]> = {
         { view: "leads", legacyView: "platform-leads", label: "Prospective leads", icon: { type: "glyph", value: "💬" }, badge: null },
         { view: "venture-lakes", legacyView: "platform-venture-lakes", label: "Leads Lakes/Country Parks", icon: { type: "glyph", value: "🚵" }, badge: null },
         { view: "international-expansion", legacyView: "platform-international-expansion", label: "International Expansion", icon: { type: "glyph", value: "🌍" }, badge: null },
-        { view: "wigglekit-site", legacyView: "platform-wigglekit-site", label: "Wigglekit site", icon: { type: "glyph", value: "🔗" }, badge: null },
+        { view: "activly-site", legacyView: "platform-activly-site", label: "Activly site", icon: { type: "glyph", value: "🔗" }, badge: null },
         { view: "sales", legacyView: "platform-sales", label: "Sales pipeline", icon: { type: "glyph", value: "💼" }, badge: null },
         { view: "features", legacyView: "platform-features", label: "Provider features", icon: { type: "glyph", value: "◐" }, badge: null },
       ],

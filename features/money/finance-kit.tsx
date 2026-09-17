@@ -9,7 +9,7 @@ import { useState, type ReactNode } from "react";
 // side by side read as a carnival, and white text failed AA on every one (amber
 // was 1.79:1). The colour now lands on the numeral and a thin rail instead —
 // which is what the marketing site's own dashboard mock does
-// (`.pf-k .n.p{color:#ee1f63}` in nametbc.css). All clear AA on --surface.
+// (`.pf-k .n.p{color:#ee1f63}` in activly.css). All clear AA on --surface.
 export const GRAD = {
   blue: "linear-gradient(135deg,#16306e 0%,#3f78d8 100%)",
   teal: "linear-gradient(135deg,#0e6f8a 0%,#14b8a6 100%)",

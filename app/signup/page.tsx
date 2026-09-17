@@ -55,7 +55,7 @@ type StepId = "type" | "you" | "business" | "identity" | "hear" | "login" | "pay
 const TERMS_VERSION = "2026-09-05";
 const DPA_VERSION = "2026-09-05";
 const STEP_META: Record<StepId, { emoji: string; title: string; lede: string }> = {
-  type: { emoji: "", title: "Let's get you set up", lede: "Choose how you’ll use Wigglekit." },
+  type: { emoji: "", title: "Let's get you set up", lede: "Choose how you’ll use Activly." },
   you: { emoji: "🙋", title: "About you", lede: "So we can set up your account." },
   business: { emoji: "🏢", title: "About your business", lede: "This seeds your storefront, invoices and Setup." },
   identity: { emoji: "🌟", title: "How parents see you", lede: "Your public name on booking pages, and your logo." },
@@ -420,7 +420,7 @@ function SignupForm() {
 
   // ── Operator / parent wizard ─────────────────────────────────────────────
   const meta = STEP_META[current];
-  const eyebrow = current === "payments" ? "🎉 Account created" : current === "type" && referredBy ? "🎉 You're invited to Wigglekit" : `Step ${step + 1} of ${steps.length}`;
+  const eyebrow = current === "payments" ? "🎉 Account created" : current === "type" && referredBy ? "🎉 You're invited to Activly" : `Step ${step + 1} of ${steps.length}`;
   return (
     <Card className="w-full max-w-[640px] overflow-hidden p-0">
       <Hero emoji={meta.emoji} eyebrow={eyebrow} title={meta.title} lede={meta.lede} steps={steps} step={step} />
@@ -646,7 +646,7 @@ function Hero({ emoji, eyebrow, title, lede, steps, step }: { emoji: string; eye
       <div className="mb-4 flex items-center gap-2.5">
         <AosMark />
         <span className="text-[19px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>
-          <span style={{ color: "#fff" }}>Wiggle</span><span style={{ color: "#FF3D7F" }}>kit</span>
+          <span style={{ color: "#fff" }}>Activ</span><span style={{ color: "#FF3D7F" }}>ly</span>
         </span>
       </div>
       {typeof step === "number" && steps && (
