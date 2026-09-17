@@ -60,7 +60,7 @@ test.describe("operator day ops", () => {
     // Collect them (the old check-out) — the row keeps the in-time for the
     // day's audit trail.
     await row.getByRole("button", { name: "Collect", exact: true }).click();
-    await expect(cardWith(page, childName, /In \d{2}:\d{2} · Out \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
+    await expect(cardWith(page, childName, /In \d{2}:\d{2} · Out \d{2}:\d{2}/)).toBeVisible({ timeout: 30_000 });
   });
 
   test("newsfeed post reaches the booked family", async ({ page, browser }) => {

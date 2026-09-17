@@ -18,3 +18,16 @@ export const cardWith = (page: Page, ...anchors: (string | RegExp)[]): Locator =
   anchors
     .reduce((cards, anchor) => cards.filter({ hasText: anchor }), page.locator('[data-ui="card"]'))
     .last();
+
+/**
+ * The shared parent account may not have dismissed the one-time first-login
+ * welcome modal yet (features/parent/ParentWelcome.tsx) — it sits on top of
+ * the whole page and blocks every click/assertion until closed. Its open
+ * condition depends on an async /api/me + /api/my/children fetch, so an
+ * un-awaited isVisible() check can race ahead of it appearing — wait briefly
+ * instead, and do nothing if it never shows.
+ */
+export const dismissParentWelcome = async (page: Page) => {
+  const close = page.getByRole("dialog").getByRole("button", { name: "Close" });
+  await close.waitFor({ state: "visible", timeout: 8_000 }).then(() => close.click()).catch(() => {});
+};

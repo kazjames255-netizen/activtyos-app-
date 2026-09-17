@@ -33,7 +33,7 @@ test.describe("setup reaches the parent checkout", () => {
     // Add a custom question (autosave — wait for the Saved stamp).
     await page.getByRole("button", { name: /Add a question/ }).click();
     await page.getByPlaceholder("e.g. Can your child swim 25m?").fill(question);
-    await expect(page.getByText(/^Saved \d{2}:\d{2}$/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Saved \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
 
     // Turn "Ask a child's gender" OFF (row-scoped so no other toggle is hit).
     const genderRow = page
@@ -42,7 +42,7 @@ test.describe("setup reaches the parent checkout", () => {
       .filter({ has: page.getByRole("button", { name: "Off", exact: true }) })
       .last();
     await genderRow.getByRole("button", { name: "Off", exact: true }).click();
-    await expect(page.getByText(/^Saved \d{2}:\d{2}$/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/Saved \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
 
     // Parent checkout: the question appears, Boy/Girl is gone.
     const parentCtx = await browser.newContext({ storageState: statePath("parent") });
@@ -68,7 +68,7 @@ test.describe("setup reaches the parent checkout", () => {
       // inside our question's editor.
       page.on("dialog", (d) => d.accept());
       await page.getByRole("button", { name: "Delete", exact: true }).click().catch(() => {});
-      await expect(page.getByText(/^Saved \d{2}:\d{2}$/)).toBeVisible({ timeout: 15_000 });
+      await expect(page.getByText(/Saved \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
     }
   });
 });

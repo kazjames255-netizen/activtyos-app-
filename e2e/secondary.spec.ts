@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
 import { TEST_EMAIL_DOMAIN, TEST_PASSWORD, apiPost, fbSignIn } from "./helpers/accounts";
-import { cardWith } from "./helpers/ui";
+import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // Cross-account journeys beyond booking: staff invite → join, operator ↔
 // parent messaging, and invoicing. Each flow uses the UI end to end; only
@@ -11,19 +11,37 @@ test.describe("team invites", () => {
   test.use({ storageState: statePath("company"), permissions: ["clipboard-read", "clipboard-write"] });
 
   test("operator creates a link invite; a new staff member joins through it", async ({ page, browser }) => {
-    await page.goto("/company/staff");
+    // A 5-step wizard plus 3 separate browser contexts (join, re-check
+    // Activated, reuse-is-dead) is meaningfully more than the default 60s.
+    test.setTimeout(120_000);
+    // Head office accounts with franchises land on the HO recruitment view
+    // (Team & recruitment) by default — force the plain Team & invites view
+    // (own-locations scope) so the staff-invite wizard tested below is the
+    // one actually on screen.
+    await page.goto("/company/staff?hoScope=__ho__");
     await expect(page.getByRole("heading", { name: "Team & invites" })).toBeVisible();
 
-    // Link-only invite: leave the email blank.
-    await page.getByRole("button", { name: "+ Invite staff" }).click();
-    await page.getByRole("button", { name: "Copy link" }).first().click();
+    // The invite wizard requires an email to proceed and send (step 1's Next
+    // is disabled without one). That email is enforced on the join form too
+    // — "This invite was sent to X, sign up with that address" — so the
+    // invitee below must join with THIS SAME address, not one of their own.
+    const invitee = `e2e-invited-${Date.now().toString(36)}@${TEST_EMAIL_DOMAIN}`;
+    await page.getByPlaceholder("their@email.com").fill(invitee);
+    await page.getByRole("button", { name: "Next ›", exact: true }).click(); // step 2 — role
+    await page.getByRole("button", { name: "Next ›", exact: true }).click(); // step 3 — job title
+    await page.getByRole("button", { name: "Next ›", exact: true }).click(); // step 4 — deployment
+    await page.getByRole("button", { name: "Next ›", exact: true }).click(); // step 5 — review
+    await page.getByRole("button", { name: /Send invite/ }).click();
+
+    // The card doesn't surface the raw token, but it does show the email we
+    // just filled in — anchor on that rather than "first invite in the list",
+    // which older runs' pending invites would also satisfy.
+    const ourCard = cardWith(page, invitee);
+    await ourCard.getByRole("button", { name: /Copy invite link/ }).click();
     const inviteUrl = await page.evaluate(() => navigator.clipboard.readText());
     expect(inviteUrl).toContain("/signup?invite=");
-    // The row renders the token's tail — the anchor that identifies OUR invite.
-    const tokenTail = inviteUrl.split("invite=")[1].slice(-8);
 
     // A fresh browser profile (signed out) follows the link and joins.
-    const invitee = `e2e-invitee-${Date.now().toString(36)}@${TEST_EMAIL_DOMAIN}`;
     const ctx = await browser.newContext();
     const joinPage = await ctx.newPage();
     await joinPage.goto(inviteUrl);
@@ -37,12 +55,12 @@ test.describe("team invites", () => {
     await joinPage.waitForURL("**/staff/dash", { timeout: 30_000 });
     await ctx.close();
 
-    // OUR invite's row flips to Used (live via SSE — poll with a reload as
-    // backstop). Earlier runs leave Used rows behind, so never match the
-    // badge alone.
+    // OUR invite's row flips to Activated (live via SSE — poll with a reload
+    // as backstop). Earlier runs leave Activated rows behind, so never match
+    // the badge alone.
     await expect(async () => {
-      await page.goto("/company/staff");
-      await expect(cardWith(page, tokenTail, "Used")).toBeVisible({ timeout: 5_000 });
+      await page.goto("/company/staff?hoScope=__ho__");
+      await expect(cardWith(page, invitee, "Account activated")).toBeVisible({ timeout: 5_000 });
     }).toPass({ timeout: 30_000 });
 
     // A used invite is dead: following the same link again must hit the
@@ -60,6 +78,10 @@ test.describe("messages", () => {
   test.use({ storageState: statePath("company") });
 
   test("operator messages a family; parent sees it and replies", async ({ page, browser }) => {
+    // API-arranged customer + a second browser context's own navigation is
+    // meaningfully more work than the default 60s budget allows for under
+    // load — same pattern as messages-broadcast.spec.ts.
+    test.setTimeout(120_000);
     const accounts = loadAccounts().accounts;
     const stamp = Date.now().toString(36);
     const familyName = `E2E Family ${stamp}`;
@@ -97,6 +119,7 @@ test.describe("messages", () => {
     const parentCtx = await browser.newContext({ storageState: statePath("parent") });
     const parentPage = await parentCtx.newPage();
     await parentPage.goto("/custdash/messages");
+    await dismissParentWelcome(parentPage);
     await parentPage.getByText(msgText).first().click();
     await expect(parentPage.getByPlaceholder(/Write a message/)).toBeVisible({ timeout: 15_000 });
 
@@ -119,8 +142,13 @@ test.describe("invoices", () => {
     const stamp = Date.now().toString(36);
     const customer = `E2E Invoice Family ${stamp}`;
 
-    await page.goto("/company/purchasing");
-    await expect(page.getByRole("heading", { name: "Money in", level: 1 })).toBeVisible();
+    // The standing "company" fixture has a franchise joined to it (global
+    // setup), so without a scope this lands on the head-office "all
+    // franchises" combined view, not the plain Money area. Scope to the head
+    // office's own direct operation, same as the other specs hitting this.
+    await page.goto("/company/purchasing?hoScope=__ho__");
+    // "Money in" is styled hero text in a <div>, not a heading element.
+    await expect(page.getByText("Money in", { exact: true })).toBeVisible();
     // Make the Invoices side active explicitly (it's the default today, but
     // the side toggle survives redesigns better than assuming the default).
     await page.getByRole("button", { name: "📄 Invoices" }).click();

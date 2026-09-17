@@ -111,7 +111,7 @@ test.describe("parent books; operator sees it live", () => {
     // click until closed.
     await page.goto("/custdash/browse");
     const welcomeClose = page.getByRole("dialog").getByRole("button", { name: "Close" });
-    if (await welcomeClose.isVisible().catch(() => false)) await welcomeClose.click();
+    await welcomeClose.waitFor({ state: "visible", timeout: 8_000 }).then(() => welcomeClose.click()).catch(() => {});
     await page.getByPlaceholder("Search by name or venue…").fill(title);
     await page.getByRole("button", { name: "More details", exact: true }).first().click();
     await page.waitForURL(`**/book/${listing.id}`);

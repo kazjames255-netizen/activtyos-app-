@@ -22,12 +22,20 @@ test.describe("parent cancellation", () => {
   test.use({ storageState: statePath("parent") });
 
   test("cancel request → Cancelled on both sides", async ({ page, browser }) => {
+    // Provisioning + a UI cancel flow + a second browser context's own
+    // navigation is meaningfully more than the default 60s budget.
+    test.setTimeout(120_000);
     const title = `E2E Cancel Camp ${stamp}`;
     const child = `E2E Cancel Kid ${stamp}`;
     const listing = await provisionLiveListing(accounts.company, { title, price: 0 });
     await bookViaApi(accounts.parent, listing, { child });
 
     await page.goto("/custdash/bookings");
+    // The shared parent account may not have dismissed the one-time
+    // first-login welcome modal yet (ParentWelcome.tsx) — it sits on top of
+    // the whole page and blocks every click/assertion until closed.
+    const welcomeClose = page.getByRole("dialog").getByRole("button", { name: "Close" });
+    await welcomeClose.waitFor({ state: "visible", timeout: 8_000 }).then(() => welcomeClose.click()).catch(() => {});
     await page
       .locator("div")
       .filter({ has: page.getByText(title).first() })

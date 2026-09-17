@@ -2,7 +2,7 @@ import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath, type AccountManifest } from "./helpers/env";
 import { apiFetch, fbSignIn } from "./helpers/accounts";
 import { bookViaApi, createParentChild, provisionLiveListing, type ProvisionedListing } from "./helpers/tenantData";
-import { cardWith } from "./helpers/ui";
+import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // Safeguarding: accidents, medication (the full consent → dose loop), the
 // meal shop, and photo moments with consent enforcement.
@@ -39,6 +39,9 @@ test.describe("accidents", () => {
   test.use({ storageState: statePath("company") });
 
   test("operator logs an accident through the wizard; the record and its bell reach the parent", async ({ page, browser }) => {
+    // A multi-step wizard plus a second browser context's own navigation is
+    // meaningfully more than the default 60s budget under load.
+    test.setTimeout(120_000);
     // The standing "company" fixture has a franchise joined to it (global
     // setup, for the invite/franchise-portal specs), so without a scope this
     // lands on the head-office "all franchises" combined view (HoOversightApp),
@@ -70,6 +73,7 @@ test.describe("accidents", () => {
     const parentCtx = await browser.newContext({ storageState: statePath("parent") });
     const parentPage = await parentCtx.newPage();
     await parentPage.goto("/custdash/accidents");
+    await dismissParentWelcome(parentPage);
     await expect(cardWith(parentPage, childName, "Tripped during warm-up")).toBeVisible({ timeout: 15_000 });
 
     // …and the notification layer raised a bell for the family, not just a
@@ -91,6 +95,7 @@ test.describe("medication consent loop", () => {
 
   test("parent authorises → operator records a dose → parent sees it", async ({ page, browser }) => {
     await page.goto("/custdash/medication");
+    await dismissParentWelcome(page);
     await page.getByRole("button", { name: /Authorise a medication/ }).click();
     const medName = `Salbutamol ${stamp}`;
 
