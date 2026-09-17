@@ -19,6 +19,9 @@ test.describe("children profiles", () => {
   test.use({ storageState: statePath("parent") });
 
   test("parent adds a child through the 4-step modal", async ({ page }) => {
+    // The generic step-walker (up to 5 steps, each with its own fill/wait)
+    // plus a removal round-trip is meaningfully more than the default 60s.
+    test.setTimeout(120_000);
     const name = `E2E Child ${Date.now().toString(36)}`;
 
     await page.goto("/custdash/children");
