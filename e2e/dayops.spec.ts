@@ -58,9 +58,14 @@ test.describe("operator day ops", () => {
     await expect(cardWith(page, childName, /In \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
 
     // Collect them (the old check-out) — the row keeps the in-time for the
-    // day's audit trail.
+    // day's audit trail. Marking collected opens a native window.prompt()
+    // asking who took the child (RegistersApp.tsx mark()) — an unhandled
+    // dialog gets auto-dismissed (null), which the app reads as "cancelled"
+    // and silently aborts the whole action, so a handler must be registered
+    // before the click.
+    page.once("dialog", (d) => d.accept("E2E Grandparent"));
     await row.getByRole("button", { name: "Collect", exact: true }).click();
-    await expect(cardWith(page, childName, /In \d{2}:\d{2} · Out \d{2}:\d{2}/)).toBeVisible({ timeout: 30_000 });
+    await expect(cardWith(page, childName, /In \d{2}:\d{2} · Out \d{2}:\d{2}/)).toBeVisible({ timeout: 15_000 });
   });
 
   test("newsfeed post reaches the booked family", async ({ page, browser }) => {
