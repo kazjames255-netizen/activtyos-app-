@@ -1,8 +1,7 @@
 "use client";
 
-import { Fragment, type ReactNode } from "react";
-import { Card, Panel } from "@/components/ui";
-import { SectionHead } from "@/components/ui";
+import { Card, SectionHead } from "@/components/ui";
+import { renderMarkdown } from "@/lib/markdown";
 
 // INTERNATIONAL EXPANSION & £10M TARGET (platform-only) — a read-only
 // rendering of the consolidated report on international expansion versus the
@@ -13,41 +12,72 @@ import { SectionHead } from "@/components/ui";
 // (Ireland, Belgium, Netherlands, France, Germany, Spain, New Zealand,
 // Denmark, USA/Florida) for when international entry is actually warranted.
 // It lives here as static content (no API — there is no backend for this
-// yet, it's a reference document for the platform team), rendered from the
-// raw markdown below via a small self-contained renderer (headers, tables,
-// lists, bold/italic, hr) rather than a full markdown library, since this is
-// the only place in the app that needs one.
-const REPORT_MARKDOWN = String.raw`
-# International Expansion & the £10M-in-2-Years Target — Consolidated Report
+// yet, it's a reference document for the platform team). The headline
+// numbers ("stat line" + "Start Monday") are pulled out as KPI tiles for
+// scannability; the rest renders from markdown via the shared renderer
+// (headers, tables, lists, bold/italic, hr). A sticky pill nav jumps
+// between sections since the underlying report runs to ~2,700 words.
 
-**Recommendation: Don't spend on international expansion yet. Fix the UK funnel first (0% of 50,489 leads have ever been contacted, won, or lost), monetize it as a success-fee lead-engine, and treat international entry — starting with Ireland — as a 2026-H2 move once UK unit economics are proven, not assumed.**
+const GRAD = {
+  blue: "linear-gradient(135deg,#16306e 0%,#3f78d8 100%)",
+  teal: "linear-gradient(135deg,#0e6f8a 0%,#14b8a6 100%)",
+  green: "linear-gradient(135deg,#0b6b3a 0%,#2fb56f 100%)",
+  pink: "linear-gradient(135deg,#9c1458 0%,#ee1f63 100%)",
+  amber: "linear-gradient(135deg,#9a5a12 0%,#f5b81f 100%)",
+  violet: "linear-gradient(135deg,#5b21b6 0%,#8b5cf6 100%)",
+} as const;
 
-**The £10M-profit-in-2-years target is unrealistic as currently framed — off by roughly 1–2 orders of magnitude given real comps and real unit economics.** A credible reframe: **£1–3M profit in 2 years is achievable; £10M is a 4–6 year outcome**, and only if churn and monetization are fixed. Details below — read the numbers before the narrative.
+function Tile({ icon, value, label, sub, grad }: { icon: string; value: string; label: string; sub: string; grad: string }) {
+  return (
+    <div className="relative overflow-hidden rounded-2xl p-3.5 text-white shadow-[0_12px_28px_-16px_rgba(20,30,80,.5)]" style={{ background: grad }}>
+      <div className="pointer-events-none absolute -right-6 -top-8 h-24 w-24 rounded-full bg-white/10" />
+      <div className="relative">
+        <div className="flex items-center gap-1.5 text-[10.5px] font-extrabold uppercase tracking-[0.08em] text-white/70">
+          <span className="grid h-5 w-5 flex-none place-items-center rounded-md bg-white/15 text-[11px]">{icon}</span>
+        </div>
+        <div className="mt-1.5 text-[24px] font-extrabold leading-none tabular-nums" style={{ fontFamily: "var(--ff-display)", textShadow: "0 1px 2px rgba(0,0,0,.25)" }}>
+          {value}
+        </div>
+        <div className="mt-1 break-words text-[11.5px] font-semibold leading-snug text-white/90">{label}</div>
+        <div className="mt-1 break-words text-[10.5px] leading-snug text-white/65">{sub}</div>
+      </div>
+    </div>
+  );
+}
 
----
+const STAT_LINE = [
+  { icon: "🚨", grad: GRAD.pink, value: "0%", label: "of 50,489 leads ever marked contacted/won/lost", sub: "The funnel that's supposed to fund everything below doesn't exist yet" },
+  { icon: "⚖️", grad: GRAD.amber, value: "0.64:1", label: "base-case LTV:CAC (healthy SaaS = 3:1)", sub: "On median assumptions, new customers may not be profitable yet" },
+  { icon: "🎯", grad: GRAD.violet, value: "£40–100M", label: "ARR needed to hit £10M profit at a realistic 10–25% net margin", sub: "vs. a 50,489-lead pipeline that would need >100% conversion just to get there" },
+  { icon: "⏳", grad: GRAD.blue, value: "10 years", label: "for the closest UK comp (ClassForKids) to reach <£5M revenue, then exit", sub: "The best available evidence for how fast this category actually moves" },
+  { icon: "🇮🇪", grad: GRAD.teal, value: "3,102", label: "registered providers on Ireland's Tusla register", sub: "Best-evidenced next market — but see the sequencing problem below" },
+];
 
-## The stat line a founder needs in 5 seconds
+const START_MONDAY = [
+  { icon: "✉️", grad: GRAD.blue, value: "19,284", label: "drafted outreach emails, ready to review", sub: "scripts/leads/overnight_draft_outreach.mjs — nothing sent yet" },
+  { icon: "❓", grad: GRAD.amber, value: "6,640", label: "leads tagged “uncertain”", sub: "uncertain_verify.mjs exists but hasn't cleared the backlog" },
+  { icon: "✅", grad: GRAD.green, value: "3,469", label: "leads tagged “likely fit”", sub: "Highest-confidence slice — best candidates for the first send" },
+  { icon: "📇", grad: GRAD.teal, value: "35,329", label: "leads with an email or phone on file", sub: "of 49,314 non-duplicate, non-excluded leads — addressable right now" },
+];
 
-| | | |
-|---|---|---|
-| **0%** | of 50,489 leads ever marked contacted/won/lost | The funnel that's supposed to fund everything below doesn't exist yet |
-| **0.64:1** | base-case LTV:CAC (healthy SaaS = 3:1) | On median assumptions, new customers may not be profitable yet |
-| **£40–100M** | ARR needed to hit £10M profit at a realistic 10–25% net margin | vs. a 50,489-lead pipeline that would need >100% conversion just to get there |
-| **10 years** | for the closest UK comp (ClassForKids) to reach <£5M revenue, then exit | The best available evidence for how fast this category actually moves |
-| **3,102** | registered providers on Ireland's Tusla register | Best-evidenced next market — but see the sequencing problem below |
+const RECOMMENDATION = "**Recommendation: Don't spend on international expansion yet. Fix the UK funnel first (0% of 50,489 leads have ever been contacted, won, or lost), monetize it as a success-fee lead-engine, and treat international entry — starting with Ireland — as a 2026-H2 move once UK unit economics are proven, not assumed.**\n\n**The £10M-profit-in-2-years target is unrealistic as currently framed — off by roughly 1–2 orders of magnitude given real comps and real unit economics.** A credible reframe: **£1–3M profit in 2 years is achievable; £10M is a 4–6 year outcome**, and only if churn and monetization are fixed. Details below — read the numbers before the narrative.";
 
----
+interface Section {
+  id: string;
+  nav: string;
+  md: string;
+  extra?: "start-monday";
+}
 
+const SECTIONS: Section[] = [
+  {
+    id: "start-monday",
+    nav: "Start Monday",
+    extra: "start-monday",
+    md: String.raw`
 ## Start Monday: the next 7 days
 
 This isn't hypothetical prep work — as of tonight, the first move is already half-done and sitting in Firestore waiting on a human. Here's the actual current state of the \`leads\` collection, queried live, not estimated:
-
-| | | |
-|---|---|---|
-| **19,284** | leads with a drafted, personalized outreach email already written and saved (\`outreachStatus: "drafted-pending-review"\`) | Written tonight by \`scripts/leads/overnight_draft_outreach.mjs\`. Nothing has been sent — the script explicitly only drafts, it does not send. |
-| **6,640** | leads still tagged \`reviewTier: "uncertain"\` | Not yet confirmed as real activity-provider businesses; a verification pass exists (\`uncertain_verify.mjs\`) but hasn't cleared the backlog |
-| **3,469** | leads tagged \`reviewTier: "likely_fit"\` | The highest-confidence slice of the pipeline — best candidates for the first send |
-| **35,329** | leads with an email or phone on file (of 49,314 non-duplicate, non-excluded leads) | The addressable portion of the pipeline right now |
 
 Concrete actions, in order, this week — not "review the strategy," actual tasks with owners:
 
@@ -60,9 +90,12 @@ Concrete actions, in order, this week — not "review the strategy," actual task
 7. **Draft a one-page term sheet for the success-fee lead engine** (§5): the fee structure (flat fee per enrolled child, or a % of first-term value), who it applies to, and how it's billed. Have it ready before the first replies come in, not written reactively.
 8. **Set the first weekly KPI review for this Friday** — see the tracking list near the end of this report. Do this before batch #2 goes out, so batch #2 is informed by batch #1's real numbers, not guessed at.
 9. **No international spend this week.** Nothing above competes with the capped international test described in §4 if the founder wants to run one in parallel — but this week's owner-hours go to the funnel, not a new market.
-
----
-
+`,
+  },
+  {
+    id: "s1",
+    nav: "1 · Gate everything",
+    md: String.raw`
 ## 1. The number that should gate everything else
 
 Before market selection, pricing, or targets: **50,489 leads sit in the pipeline. 40,378 have never been contacted. Zero have ever been marked contacted, won, or lost.**
@@ -70,9 +103,12 @@ Before market selection, pricing, or targets: **50,489 leads sit in the pipeline
 This isn't a detail buried in an appendix — it's the fact that should reframe the whole conversation. You cannot model CAC, LTV, or a 2-year profit target off a funnel that has never once closed the loop on a single lead, in your own market, in your own language, with every structural advantage you'll ever have. Every dollar figure below inherits this uncertainty. Where we give "realistic" numbers, treat them as *the best available estimate given comparable companies*, not as validated data — because ActivityOS-specific data doesn't exist yet.
 
 **The fast, nearly-free fix:** work is already paid for (leads are already acquired). A back-of-envelope: even a modest 5% conversion on the 40,378 never-contacted leads, at ~£60/mo blended ARPU, is roughly **2,000 new customers, ~£120k MRR (~£1.4M ARR)** — at close to zero incremental CAC. No international market gets close to that return per pound spent in year one. This is the highest-leverage move available *right now*, and it's domestic.
-
----
-
+`,
+  },
+  {
+    id: "s2",
+    nav: "2 · Real comps",
+    md: String.raw`
 ## 2. What real competitors actually did (and how long it took)
 
 Comparisons to real companies in this exact category, not category-agnostic SaaS benchmarks:
@@ -91,9 +127,12 @@ Comparisons to real companies in this exact category, not category-agnostic SaaS
 **Pricing isn't the naive part.** ActivityOS's £29–99/mo tiers sit comfortably inside what this market has proven it will pay. **The timeline is the naive part.**
 
 **What ActivityOS does differently on monetization:** most UK rivals layer a commission on top of a subscription — LoveAdmin (£35/mo + 3% of transactions), Pebble (free + 10% commission, or £15/mo + 1%), Book That In (pure 1.5% take-rate, no subscription), ClassForKids (£35+/mo + an undisclosed volume-based fee). ActivityOS's flat-subscription, zero-take-rate model is a genuine differentiator on paper economics — a provider running £5k/month in bookings keeps all of it, instead of giving up £50–500/month elsewhere. But it's also the easiest thing for a well-funded entrant to match or beat (it's a pricing choice, not a structural moat) — and, as the unit-economics section below shows, it also removes a retention lever every one of those competitors has and ActivityOS doesn't.
-
----
-
+`,
+  },
+  {
+    id: "s3",
+    nav: "3 · Unit economics",
+    md: String.raw`
 ## 3. Unit economics, stress-tested honestly
 
 ### Assumptions, built from the actual sales motion (outbound + demo calls, not self-serve)
@@ -158,9 +197,12 @@ What specifically happens each quarter — concrete moves, not strategy-speak:
 **Q5–Q6 — compound what's working.** Put budget behind whichever channel (UK subscription, UK success-fee engine, or Ireland) shows the best LTV:CAC, not the one that feels most exciting. Build out CS/support ahead of the customer count so churn doesn't creep past the 5%/mo base case as the book gets bigger. Re-underwrite every assumption in §3 against a full year of real cohort data and update the numbers in this report accordingly.
 
 **Q7–Q8 — land the number, don't just hope for it.** Push toward the 5,000–8,000 UK customer range (plus Ireland if it scaled). Run the full opex readout — support, sales, eng/G&A — against §3's cost structure so the net profit number is a measured result, not an aspiration. Deliver the final 2-year board readout: did it land at £1–3M as this report predicted, and if not, exactly why not.
-
----
-
+`,
+  },
+  {
+    id: "s4",
+    nav: "4 · Why not now",
+    md: String.raw`
 ## 4. The case against spending on international expansion right now
 
 This needs to be argued, not asserted, because the counter-case is real too.
@@ -185,9 +227,12 @@ This needs to be argued, not asserted, because the counter-case is real too.
 - A demonstrated UK conversion rate of ~8–12%+ on properly worked leads, sustained across two consecutive months
 - Actual CAC, actual churn over a full cohort quarter, and LTV:CAC comfortably above 3:1 — not the 0.64:1 base case above
 - A pre-registered kill/scale gate on the capped international test
-
----
-
+`,
+  },
+  {
+    id: "s5",
+    nav: "5 · Is it a moat?",
+    md: String.raw`
 ## 5. Is the lead database a moat? No — and that's the actual strategic insight
 
 A moat is something a well-funded competitor *can't* replicate quickly. Today, the 50,489-lead database is not one:
@@ -213,9 +258,12 @@ Concretely: build the machinery to actually work the 40,378 dormant leads (autom
 3. **It creates genuine lock-in** — providers who depend on ActivityOS as a *customer-acquisition channel*, not just a booking calendar, have a materially higher switching cost than UI preference alone provides. It also directly fixes the LTV:CAC problem in §3 by adding a revenue line that doesn't require new customer acquisition and by giving providers a reason to stay.
 
 This also happens to be the prerequisite for making the churn/monetization fixes in §3 real, and for ever making the international case in §2/§4 numerically honest instead of aspirational.
-
----
-
+`,
+  },
+  {
+    id: "s6",
+    nav: "6 · The 9 markets",
+    md: String.raw`
 ## 6. Where does that leave the nine international markets?
 
 The underlying market research (five independently verified deep-dives, adversarially fact-checked) is genuinely strong and worth preserving for when international entry is actually warranted. Summary, re-ranked with confidence tags:
@@ -235,9 +283,12 @@ The underlying market research (five independently verified deep-dives, adversar
 **The one caveat that applies to all nine: no market-sizing (TAM) or willingness-to-pay estimate exists for any of them.** Every ranking reflects ease of data access, compliance integration, and competitive risk — not validated commercial opportunity. This is the biggest open question in the market-selection research, independent of the sequencing question in §4.
 
 **This report addresses which country to expand to next, not UK pipeline execution.** Per §1 and §4, resolving the 40,378-uncontacted-leads problem should come before any of this gets funded.
-
----
-
+`,
+  },
+  {
+    id: "kpi",
+    nav: "KPI tracking",
+    md: String.raw`
 ## Keeping score: the weekly/monthly KPI list
 
 This report is worthless as a management tool if nobody checks whether it's happening. These are the numbers to watch — not a dashboard wishlist, the minimum set that tells you whether the plan above is on track or needs a hard revision.
@@ -266,214 +317,23 @@ This report is worthless as a management tool if nobody checks whether it's happ
 - **Cohort payback period (actual)** — compare against the 31-month base case and the 20-month average customer lifetime; if payback is still longer than lifetime, CAC spend should not scale further until that's fixed
 - **Progress against the §4 international gate criteria** (8–12%+ UK conversion sustained two consecutive months, LTV:CAC >3:1) — pass/fail, not vibes
 - **Re-underwrite §3's assumptions** (ARPU, CAC, churn, gross margin) against the quarter's real numbers and update this report
-
----
-
+`,
+  },
+  {
+    id: "bottom-line",
+    nav: "Bottom line",
+    md: String.raw`
 ## Bottom line
 
 - **£10M profit in 2 years is not supported by any comp or any unit-economics path in this analysis.** A credible reframe is £1–3M profit in 2 years, with £10M as a 4–6 year outcome contingent on fixing churn and monetizing the lead engine.
 - **Base-case unit economics are sub-1:1 LTV:CAC with a payback period longer than the average customer lifetime** — this is more urgent than the international question and than the profit target.
 - **The 50,489-lead pipeline, 40,378 never contacted, zero ever marked won/lost, is the single fact that should gate everything else in this report.** It's the cheapest, fastest, highest-leverage lever available — and turning it into a success-fee acquisition engine (not just "fixing follow-up") is the one strategic move that improves the moat, the unit economics, and the profit target simultaneously.
 - **International expansion (Ireland first, when it's time) is a good plan for a company that has proven it can convert a lead in its own market.** Right now it hasn't. Spend the next quarter proving that, fund a small capped international experiment in parallel if the timeline truly can't wait, and don't fund a second unproven market on top of a first, unmeasured one.
-`;
-
-// --- Tiny, self-contained markdown renderer -----------------------------
-// This report is the only place in the app that needs markdown rendering,
-// so rather than pull in a library it's parsed here directly: headers (#/##/
-// ###), horizontal rules (---), tables (| a | b |), bulleted/numbered lists,
-// and inline **bold**/*italic*. Good enough for this one static document —
-// not a general-purpose markdown engine.
-
-function renderInline(text: string, keyPrefix: string): ReactNode[] {
-  // Split on **bold** first, then *italic* within the non-bold remainder.
-  const nodes: ReactNode[] = [];
-  const boldParts = text.split(/(\*\*[^*]+\*\*)/g);
-  boldParts.forEach((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      nodes.push(<strong key={`${keyPrefix}-b${i}`} className="text-[var(--ink)]">{part.slice(2, -2)}</strong>);
-      return;
-    }
-    const italicParts = part.split(/(\*[^*]+\*)/g);
-    italicParts.forEach((ip, j) => {
-      if (ip.startsWith("*") && ip.endsWith("*") && ip.length > 1) {
-        nodes.push(<em key={`${keyPrefix}-i${i}-${j}`}>{ip.slice(1, -1)}</em>);
-      } else if (ip) {
-        nodes.push(<Fragment key={`${keyPrefix}-t${i}-${j}`}>{ip}</Fragment>);
-      }
-    });
-  });
-  return nodes;
-}
-
-function parseTable(lines: string[]): { header: string[]; rows: string[][] } {
-  const cells = (line: string) =>
-    line
-      .trim()
-      .replace(/^\|/, "")
-      .replace(/\|$/, "")
-      .split("|")
-      .map((c) => c.trim());
-  const header = cells(lines[0]);
-  const rows = lines.slice(2).map(cells);
-  return { header, rows };
-}
-
-function renderMarkdown(md: string): ReactNode[] {
-  const lines = md.split("\n");
-  const out: ReactNode[] = [];
-  let i = 0;
-  let key = 0;
-
-  while (i < lines.length) {
-    const line = lines[i];
-
-    if (line.trim() === "") {
-      i++;
-      continue;
-    }
-
-    if (line.trim() === "---") {
-      out.push(<hr key={`hr-${key++}`} className="my-5 border-[var(--line)]" />);
-      i++;
-      continue;
-    }
-
-    if (line.startsWith("### ")) {
-      out.push(
-        <h4 key={`h4-${key++}`} className="mb-1.5 mt-4 text-[14px] font-extrabold text-[var(--ink)]">
-          {renderInline(line.slice(4), `h4-${key}`)}
-        </h4>,
-      );
-      i++;
-      continue;
-    }
-
-    if (line.startsWith("## ")) {
-      out.push(
-        <h3 key={`h3-${key++}`} className="mb-2 mt-6 font-[var(--ff-display)] text-[19px] font-extrabold text-[var(--ink)]">
-          {renderInline(line.slice(3), `h3-${key}`)}
-        </h3>,
-      );
-      i++;
-      continue;
-    }
-
-    if (line.startsWith("# ")) {
-      out.push(
-        <h2 key={`h2-${key++}`} className="mb-2 mt-2 font-[var(--ff-display)] text-[22px] font-extrabold text-[var(--ink)]">
-          {renderInline(line.slice(2), `h2-${key}`)}
-        </h2>,
-      );
-      i++;
-      continue;
-    }
-
-    // Table: a line starting with "|" followed by a "|---|---|" separator.
-    if (line.trim().startsWith("|") && lines[i + 1]?.trim().match(/^\|?[\s:-]+\|[\s:|-]+$/)) {
-      const tableLines: string[] = [];
-      let j = i;
-      while (j < lines.length && lines[j].trim().startsWith("|")) {
-        tableLines.push(lines[j]);
-        j++;
-      }
-      const { header, rows } = parseTable(tableLines);
-      out.push(
-        <div key={`tbl-${key++}`} className="my-3 overflow-x-auto rounded-xl border border-[var(--line)]">
-          <table className="w-full min-w-[560px] border-collapse text-[13px]">
-            <thead>
-              <tr className="border-b border-[var(--line)] bg-[var(--panel)] text-left">
-                {header.map((h, hi) => (
-                  <th key={hi} className="px-3 py-2 font-semibold text-[var(--ink-2)]">
-                    {renderInline(h, `th-${key}-${hi}`)}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((r, ri) => (
-                <tr key={ri} className="border-b border-[var(--line)] align-top last:border-0">
-                  {r.map((c, ci) => (
-                    <td key={ci} className="px-3 py-2 text-[var(--ink-2)]">
-                      {renderInline(c, `td-${key}-${ri}-${ci}`)}
-                    </td>
-                  ))}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>,
-      );
-      i = j;
-      continue;
-    }
-
-    // Numbered list: "1. text"
-    if (/^\d+\.\s/.test(line.trim())) {
-      const items: string[] = [];
-      let j = i;
-      while (j < lines.length && /^\d+\.\s/.test(lines[j].trim())) {
-        items.push(lines[j].trim().replace(/^\d+\.\s/, ""));
-        j++;
-      }
-      out.push(
-        <ol key={`ol-${key++}`} className="my-2 list-decimal space-y-1.5 pl-5 text-[13px] leading-relaxed text-[var(--ink-2)]">
-          {items.map((it, ii) => (
-            <li key={ii}>{renderInline(it, `oli-${key}-${ii}`)}</li>
-          ))}
-        </ol>,
-      );
-      i = j;
-      continue;
-    }
-
-    // Bulleted list: "- text"
-    if (line.trim().startsWith("- ")) {
-      const items: string[] = [];
-      let j = i;
-      while (j < lines.length && lines[j].trim().startsWith("- ")) {
-        items.push(lines[j].trim().slice(2));
-        j++;
-      }
-      out.push(
-        <ul key={`ul-${key++}`} className="my-2 list-disc space-y-1.5 pl-5 text-[13px] leading-relaxed text-[var(--ink-2)]">
-          {items.map((it, ii) => (
-            <li key={ii}>{renderInline(it, `uli-${key}-${ii}`)}</li>
-          ))}
-        </ul>,
-      );
-      i = j;
-      continue;
-    }
-
-    // Paragraph: gather consecutive non-blank, non-special lines.
-    const paraLines: string[] = [];
-    let j = i;
-    while (
-      j < lines.length &&
-      lines[j].trim() !== "" &&
-      lines[j].trim() !== "---" &&
-      !lines[j].startsWith("#") &&
-      !lines[j].trim().startsWith("|") &&
-      !lines[j].trim().startsWith("- ") &&
-      !/^\d+\.\s/.test(lines[j].trim())
-    ) {
-      paraLines.push(lines[j]);
-      j++;
-    }
-    out.push(
-      <p key={`p-${key++}`} className="my-2 text-[13.5px] leading-relaxed text-[var(--ink-2)]">
-        {renderInline(paraLines.join(" "), `p-${key}`)}
-      </p>,
-    );
-    i = j;
-  }
-
-  return out;
-}
+`,
+  },
+];
 
 export function InternationalExpansionApp() {
-  const content = renderMarkdown(REPORT_MARKDOWN.trim());
-
   return (
     <div className="flex flex-col gap-3.5 p-4">
       <SectionHead>
@@ -483,15 +343,47 @@ export function InternationalExpansionApp() {
         </span>
       </SectionHead>
 
-      <Card className="border-l-4 border-l-[var(--brand)] bg-[var(--surface-2,rgba(127,127,127,0.04))] p-3 text-[13px] text-[var(--ink-2)]">
-        Reference document for the platform team — 0% of 50,489 UK leads have ever been contacted, won, or lost. Fix and
-        monetize that funnel before funding international expansion; see &quot;Bottom line&quot; at the end for the full
-        recommendation.
+      <Card className="border-l-4 border-l-[var(--brand)] bg-[var(--surface-2,rgba(127,127,127,0.04))] p-4 text-[13px] leading-relaxed text-[var(--ink-2)]">
+        <div className="mx-auto max-w-[840px]">{renderMarkdown(RECOMMENDATION)}</div>
       </Card>
 
-      <Panel title="International Expansion & the £10M-in-2-Years Target — Consolidated Report">
-        <div className="mx-auto max-w-[840px]">{content}</div>
-      </Panel>
+      <div>
+        <div className="mb-2 text-[11px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">
+          The stat line a founder needs in 5 seconds
+        </div>
+        <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+          {STAT_LINE.map((t) => (
+            <Tile key={t.value} {...t} />
+          ))}
+        </div>
+      </div>
+
+      <nav className="sticky top-0 z-10 -mx-4 flex gap-1.5 overflow-x-auto border-b border-[var(--line)] bg-[var(--bg,var(--surface))] px-4 py-2.5 backdrop-blur">
+        {SECTIONS.map((s) => (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            className="flex-none whitespace-nowrap rounded-full border border-[var(--line)] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[var(--ink-2)] transition-colors hover:border-[var(--brand)] hover:text-[var(--brand)]"
+          >
+            {s.nav}
+          </a>
+        ))}
+      </nav>
+
+      {SECTIONS.map((s) => (
+        <Card key={s.id} id={s.id} className="scroll-mt-16 p-4">
+          <div className="mx-auto max-w-[840px]">
+            {s.extra === "start-monday" && (
+              <div className="mb-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
+                {START_MONDAY.map((t) => (
+                  <Tile key={t.value} {...t} />
+                ))}
+              </div>
+            )}
+            {renderMarkdown(s.md.trim())}
+          </div>
+        </Card>
+      ))}
     </div>
   );
 }
