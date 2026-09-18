@@ -41,6 +41,7 @@ import { referral, referralsAdmin } from "./routes/referral";
 import { memberships, membershipsAdmin } from "./routes/memberships";
 import { platform } from "./routes/platform";
 import { leads, leadsPublic, warmLeads } from "./routes/leads";
+import { demoSlotsPublic, demoSlotTemplates, demoSlotBlackouts } from "./routes/demoSlots";
 import { ventureLakes } from "./routes/ventureLakes";
 import { providersPublic } from "./routes/providers";
 import { analytics } from "./routes/analytics";
@@ -185,6 +186,9 @@ app.use("/api/public/reference", rateLimit("public-reference", 30), referencePub
 const leadsLimit = rateLimit("leads", 10);
 app.use("/api/leads", (req, res, next) => (req.method === "POST" ? leadsLimit(req, res, next) : next()), leadsPublic);
 
+// The /demo page's slot picker — public read of open instances.
+app.use("/api/demo-slots", demoSlotsPublic);
+
 // Provider directory for the parent sign-up picker — a parent has no account
 // yet, so this must sit above requireAuth. Name + rough location only.
 app.use("/api/providers", rateLimit("providers", 120), providersPublic);
@@ -280,6 +284,8 @@ app.use("/api/tenants", tenants);
 app.use("/api/me", me);
 // Before /api/platform so the general router can't shadow them.
 app.use("/api/platform/leads", platformLeads);
+app.use("/api/platform/demo-slot-templates", demoSlotTemplates);
+app.use("/api/platform/demo-slot-blackouts", demoSlotBlackouts);
 app.use("/api/platform/support", platformSupport);
 app.use("/api/support/report", supportReport);
 app.use("/api/platform", platform);

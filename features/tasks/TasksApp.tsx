@@ -1399,6 +1399,9 @@ function LinkedPicker({ link, onChange, opts, inputCls }: { link: TaskLink | nul
 
 // ── Create-task modal ───────────────────────────────────────────────────────
 export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle, onClose, onCreate }: { noAssignee: boolean; team: { name: string; email: string }[]; me: string; myEmail?: string; opts: LinkOpts; initialTitle?: string; onClose: () => void; onCreate: (f: Partial<Task>, toCal: boolean) => void }) {
+  // HQ has no Events calendar of its own — offering to sync a platform task
+  // to "the Events calendar" would point at a feature that doesn't exist there.
+  const isPlatform = usePathname()?.split("/")[1] === "platform";
   const [t, setT] = useState(initialTitle ?? "");
   const [who, setWho] = useState("");
   const [whoEmail, setWhoEmail] = useState("");
@@ -1541,12 +1544,14 @@ export function CreateModal({ noAssignee, team, me, myEmail, opts, initialTitle,
                 <LinkAdder existing={urls} me={me} onAdd={(u) => setUrls([...urls, u])} />
               </DSection>
 
-              <DSection icon="📅" tint="#be185d" title="Events calendar">
-                <label className={`flex items-start gap-2.5 ${due ? "cursor-pointer" : "opacity-60"}`}>
-                  <input type="checkbox" checked={toCal} disabled={!due} onChange={(e) => setToCal(e.target.checked)} className="mt-0.5 h-[18px] w-[18px] flex-none accent-[#be185d]" />
-                  <span className="text-[12.5px] text-[var(--ink-2)]"><b className="text-[var(--ink)]">Also show in the Events calendar</b><br />{due ? "Adds it to your sidebar calendar too." : "Set a due date first."}</span>
-                </label>
-              </DSection>
+              {!isPlatform && (
+                <DSection icon="📅" tint="#be185d" title="Events calendar">
+                  <label className={`flex items-start gap-2.5 ${due ? "cursor-pointer" : "opacity-60"}`}>
+                    <input type="checkbox" checked={toCal} disabled={!due} onChange={(e) => setToCal(e.target.checked)} className="mt-0.5 h-[18px] w-[18px] flex-none accent-[#be185d]" />
+                    <span className="text-[12.5px] text-[var(--ink-2)]"><b className="text-[var(--ink)]">Also show in the Events calendar</b><br />{due ? "Adds it to your sidebar calendar too." : "Set a due date first."}</span>
+                  </label>
+                </DSection>
+              )}
           </div>
         </div>
 
@@ -1768,6 +1773,8 @@ const initialsOf = (name: string) => name.trim().split(/[\s@._-]+/).filter(Boole
 const AVATAR_TINTS = ["#1d3a8f", "#0f8a4a", "#b45309", "#be185d", "#0e7490", "#7c2d12", "#4338ca", "#15803d", "#c2410c", "#0369a1"];
 const avatarTint = (s: string) => AVATAR_TINTS[[...s.trim().toLowerCase()].reduce((h, c) => (h * 31 + c.charCodeAt(0)) >>> 0, 7) % AVATAR_TINTS.length];
 function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose, onPatch, onSyncCal, onUnsyncCal, onArchive, onDelete, onDeleteSeries, seriesStart, onEditSeries }: { task: Task; team: { name: string; email: string }[]; noAssignee: boolean; me: string; myEmail?: string; meDerived?: boolean; opts: LinkOpts; onClose: () => void; onPatch: (f: Partial<Task>, scope?: "one" | "all") => void; onSyncCal: () => void; onUnsyncCal: () => void; onArchive: () => void; onDelete: () => void; onDeleteSeries: () => void; seriesStart?: string; onEditSeries: (r: { from: string; until: string; freq: string }) => Promise<string | null> }) {
+  // HQ has no Events calendar of its own.
+  const isPlatform = usePathname()?.split("/")[1] === "platform";
   // Editing when the repeat runs (its first/last date, how often).
   const [rangeEdit, setRangeEdit] = useState<{ from: string; until: string; freq: string } | null>(null);
   const [rangeBusy, setRangeBusy] = useState(false);
@@ -2044,24 +2051,26 @@ function Drawer({ task, team, noAssignee, me, myEmail, meDerived, opts, onClose,
             </div>
           </DSection>
 
-          <DSection icon="📅" tint="#be185d" title="Events calendar" meta={task.calEventId ? "Showing" : undefined}>
-            {!task.due ? (
-              <div className="text-[12px] text-[var(--ink-3)]">Set a due date to show this task on the Events calendar.</div>
-            ) : task.calEventId ? (
-              <>
-                <div className="text-[12px] text-[var(--ink-2)]"><b className="text-[#0f8a4a]">✓ On the Events calendar.</b> Its labels, subtasks, links and comments show in the event notes — press Update after you change them.</div>
-                <div className="mt-2.5 flex gap-2">
-                  <button type="button" onClick={onSyncCal} className="rounded-xl bg-[#be185d] px-3.5 py-2 text-[12px] font-extrabold text-white shadow-sm">Update event</button>
-                  <button type="button" onClick={onUnsyncCal} className="rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-[12px] font-bold text-[var(--ink-2)]">Remove from calendar</button>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="text-[12px] text-[var(--ink-2)]">Also show this task on the Events calendar, carrying its labels, subtasks, links and comments into the event notes.</div>
-                <button type="button" onClick={onSyncCal} className="mt-2.5 rounded-xl bg-[#be185d] px-3.5 py-2 text-[12px] font-extrabold text-white shadow-sm">Show in Events calendar</button>
-              </>
-            )}
-          </DSection>
+          {!isPlatform && (
+            <DSection icon="📅" tint="#be185d" title="Events calendar" meta={task.calEventId ? "Showing" : undefined}>
+              {!task.due ? (
+                <div className="text-[12px] text-[var(--ink-3)]">Set a due date to show this task on the Events calendar.</div>
+              ) : task.calEventId ? (
+                <>
+                  <div className="text-[12px] text-[var(--ink-2)]"><b className="text-[#0f8a4a]">✓ On the Events calendar.</b> Its labels, subtasks, links and comments show in the event notes — press Update after you change them.</div>
+                  <div className="mt-2.5 flex gap-2">
+                    <button type="button" onClick={onSyncCal} className="rounded-xl bg-[#be185d] px-3.5 py-2 text-[12px] font-extrabold text-white shadow-sm">Update event</button>
+                    <button type="button" onClick={onUnsyncCal} className="rounded-xl border border-[var(--line)] bg-white px-3.5 py-2 text-[12px] font-bold text-[var(--ink-2)]">Remove from calendar</button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="text-[12px] text-[var(--ink-2)]">Also show this task on the Events calendar, carrying its labels, subtasks, links and comments into the event notes.</div>
+                  <button type="button" onClick={onSyncCal} className="mt-2.5 rounded-xl bg-[#be185d] px-3.5 py-2 text-[12px] font-extrabold text-white shadow-sm">Show in Events calendar</button>
+                </>
+              )}
+            </DSection>
+          )}
          </div>
         </div>
 

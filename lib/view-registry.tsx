@@ -237,8 +237,6 @@ export const VIEW_REGISTRY: Partial<Record<PortalKey, Record<string, ComponentTy
   freelancer: {
     dash: DashboardApp,
     setup: SetupApp,
-    holiday: HolidayApp,
-    timesheets: TimesheetsApp,
     bookings: BookingsApp,
     listings: FreelancerListingsApp,
     blocks: BlocksApp,

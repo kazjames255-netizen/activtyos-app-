@@ -20,6 +20,16 @@ const schema = z.object({
   size: z.string().trim().max(60).optional().default(""),
   interest: z.string().trim().max(60).optional().default(""),
   message: z.string().trim().max(2000).optional().default(""),
+  // The demo page's "What would you like us to cover?" checkboxes — lets
+  // whoever runs the call see what the person actually wants to see, rather
+  // than everyone getting the same generic tour.
+  interestedFeatures: z.array(z.string().trim().max(80)).max(20).optional().default([]),
+  // The chosen call time (ISO, UTC), if they booked a slot from the demo
+  // page's picker — see routes/demoSlots.ts. Not re-validated as a real open
+  // slot here: the picker only ever offers real ones, and a race (two people
+  // grabbing the same slot moments apart) is rare enough to handle by hand
+  // rather than adding transactional locking for a low-volume form.
+  slotAt: z.string().trim().max(40).optional(),
   source: z.string().trim().max(60).optional().default("demo"),
   // Which of the three plans the submitter says they are — a real signal
   // when the form asks (e.g. the pricing-page website-design add-on), rather
@@ -27,7 +37,7 @@ const schema = z.object({
   plan: z.enum(["freelancer", "company", "franchise"]).optional(),
   // Same taxonomy as the Leads (prospect research) page's TYPE constant, so a
   // self-reported business type lines up with the researched-prospect data.
-  businessType: z.enum(["holiday", "wraparound", "activity", "tuition", "preschool", "nursery", "childminder", "other"]).optional(),
+  businessType: z.enum(["holiday", "wraparound", "activity", "tuition", "preschool", "nursery", "childminder", "school", "other"]).optional(),
 });
 
 export const leadsPublic = Router();
@@ -40,7 +50,10 @@ leadsPublic.post("/", async (req, res) => {
   }
   const ref = db.collection("leads").doc();
   // A demo request is a live sales conversation: it goes on the HQ Sales board.
-  const doc = { ...parsed.data, status: "new", inPipeline: true, createdAt: new Date().toISOString() };
+  // This route is only ever the "Book a demo" form — every submission IS a
+  // demo request, so it starts straight in the Sales board's "Demo" column
+  // rather than "Lead" (which is for cold prospects nobody's spoken to yet).
+  const doc = { ...parsed.data, status: "demo", inPipeline: true, createdAt: new Date().toISOString() };
   await ref.set(doc);
   if (cache) { cache.items.unshift({ id: ref.id, ...doc }); rev++; }
   res.json({ ok: true, id: ref.id });

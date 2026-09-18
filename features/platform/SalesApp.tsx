@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { del, get, post, put } from "@/lib/api";
 import { useRealtime } from "@/lib/realtime";
 import { whoLabel, foldRepeats, REPEAT_WORD, type Person } from "@/features/tasks/taskDisplay";
+import { DemoSlotsPanel } from "./DemoSlotsPanel";
+import { VideoCallsPanel } from "./VideoCallsPanel";
 
 // ── Sales CRM ───────────────────────────────────────────────────────────────
 // Backed by the platform Sales CRM API (/api/platform/leads — see
@@ -11,7 +13,7 @@ import { whoLabel, foldRepeats, REPEAT_WORD, type Person } from "@/features/task
 // server stamps timestamps and activity identity. No rep logins yet — one HQ
 // view.
 
-type Stage = "new" | "contacted" | "demo" | "trial" | "won" | "lost";
+export type Stage = "new" | "contacted" | "demo" | "trial" | "won" | "lost";
 type Source = "cold_call" | "email" | "social" | "referral" | "event" | "inbound" | "website_build";
 type Kind = "person" | "business" | "group" | "franchise" | "school" | "cluster" | "charity";
 // What sort of prospect this is. `nameLabel` retitles the first field, because
@@ -37,17 +39,24 @@ interface SalesTask {
   link?: { k: string; v: string; href?: string } | null;
 }
 
-interface Lead {
+export interface Lead {
   id: string; business: string; contactName: string; email: string; phone: string; location: string;
   source: Source; owner: string; plan: "freelancer" | "company" | "franchise"; estMrr: number;
   kind?: Kind;
   stage: Stage; lostReason?: string; notes: string; activities: Activity[]; createdAt: string; updatedAt: string;
+  // The demo page's chosen call time (ISO), if they booked a slot rather
+  // than just leaving a "call me" request — see routes/demoSlots.ts.
+  slotAt?: string;
+  // The demo page's "What would you like us to cover?" ticks — rendered as
+  // its own list in LeadModal, not folded into the free-text Notes.
+  interestedFeatures?: string[];
 }
+const slotFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
 // 5 clear steps left→right (a fresh Lead → a New customer who's signed up), plus
 // Lost held separately at the end. When a signup matches a lead's email/phone/
 // business, the backend auto-moves it to "New customer" (see sales-crm-handoff).
-const STAGES: { id: Stage; label: string; color: string; prob: number }[] = [
+export const STAGES: { id: Stage; label: string; color: string; prob: number }[] = [
   { id: "new", label: "1 · Lead", color: "#6b6880", prob: 0.1 },
   { id: "contacted", label: "2 · Contacted", color: "#3f78d8", prob: 0.25 },
   { id: "demo", label: "3 · Demo", color: "#7c3aed", prob: 0.5 },
@@ -94,13 +103,22 @@ type NewActivity = { type: Activity["type"]; note: string; outcome?: string };
  * guard would have to be remembered every time someone touches this file, and
  * the next omission is another white screen on the page you use to sell.
  */
-function normaliseLead(raw: Lead & Partial<{ name: string; message: string; status: string; interest: string }>): Lead {
+function normaliseLead(raw: Lead & Partial<{ name: string; message: string; status: string; interest: string; interestedFeatures: string[]; businessType: string }>): Lead {
   const plan = (["freelancer", "company", "franchise"] as const).includes(raw.plan) ? raw.plan : "company";
+  // The demo form's role picker ("Freelancer" / "Company" / "Franchise" /
+  // "School or MAT" — the last two both submit as plan "company", since they
+  // use the same feature set, but businessType keeps the distinction visible)
+  // — surfaced up front in Notes (the one free-text field this board already
+  // shows). Its "What would you like us to cover?" checkboxes are kept as
+  // their own array (interestedFeatures below) and rendered as a real list
+  // in LeadModal, not run together into this sentence-shaped field.
+  const schoolTag = raw.businessType === "school" ? "School / MAT" : "";
   return {
     ...raw,
     // The demo form calls them name/message/status.
     contactName: raw.contactName || raw.name || "",
-    notes: raw.notes || raw.message || "",
+    notes: raw.notes || [schoolTag, raw.message].filter(Boolean).join("\n\n") || "",
+    interestedFeatures: Array.isArray(raw.interestedFeatures) ? raw.interestedFeatures : undefined,
     stage: VALID_STAGES.has(raw.stage) ? raw.stage : VALID_STAGES.has(raw.status as Stage) ? (raw.status as Stage) : "new",
     business: raw.business || raw.name || raw.email || "Untitled",
     email: raw.email || "", phone: raw.phone || "", location: raw.location || "", owner: raw.owner || "",
@@ -119,7 +137,7 @@ export function SalesApp() {
   const [leads, setLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<"pipeline" | "dashboard">("pipeline");
+  const [tab, setTab] = useState<"pipeline" | "dashboard" | "slots" | "calls">("pipeline");
   const [detail, setDetail] = useState<Lead | null>(null);
   const [adding, setAdding] = useState(false);
   // Tasks the HQ board has linked to a lead. They're ordinary tasks — this is
@@ -141,7 +159,6 @@ export function SalesApp() {
   useEffect(() => { loadTasks(); }, [loadTasks]);
   const [importing, setImporting] = useState(false);
   const [query, setQuery] = useState("");
-  const [drag, setDrag] = useState<string | null>(null);
 
   // The API may return stages the board no longer shows (e.g. the old
   // "interested") — fold those into "new" so no lead vanishes between columns.
@@ -198,7 +215,7 @@ export function SalesApp() {
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex items-center gap-1 rounded-full bg-white/12 p-1 text-[12px] font-bold">
-              {([["pipeline", "Pipeline"], ["dashboard", "Dashboard"]] as const).map(([v, l]) => (
+              {([["pipeline", "Pipeline"], ["dashboard", "Dashboard"], ["slots", "Demo slots"], ["calls", "Video calls"]] as const).map(([v, l]) => (
                 <button key={v} type="button" onClick={() => setTab(v)} className="rounded-full px-3 py-1 transition-colors" style={tab === v ? { background: "#fff", color: "#1d3a8f" } : { color: "rgba(255,255,255,.8)" }}>{l}</button>
               ))}
             </div>
@@ -225,10 +242,10 @@ export function SalesApp() {
               {q && <span className="text-[12px] text-[var(--ink-3)]">{filtered.length} match{filtered.length === 1 ? "" : "es"} · <button type="button" onClick={() => setQuery("")} className="font-bold text-[#1d3a8f]">clear</button></span>}
               {q && filtered.length === 0 && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#0f7a43] px-3 py-1.5 text-[12px] font-bold text-white">+ New lead (not found)</button>}
             </div>
-            <Pipeline leads={filtered} onOpen={setDetail} onMove={move} drag={drag} setDrag={setDrag} />
+            <Pipeline leads={filtered} onOpen={setDetail} onMove={move} />
           </>
         );
-      })() : <Dashboard leads={leads} />}
+      })() : tab === "dashboard" ? <Dashboard leads={leads} /> : tab === "slots" ? <DemoSlotsPanel /> : <VideoCallsPanel leads={leads} onOpen={setDetail} onMove={move} />}
 
       {(detail || adding) && (
         <LeadModal
@@ -289,42 +306,65 @@ export function SalesApp() {
   );
 }
 
-// ── Pipeline (kanban) ───────────────────────────────────────────────────────
-function Pipeline({ leads, onOpen, onMove, drag, setDrag }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void; drag: string | null; setDrag: (id: string | null) => void }) {
+// ── Pipeline — one full-width page per stage ────────────────────────────────
+// Was a 6-column kanban board with drag-and-drop between columns: dragging
+// wasn't usable on touch/smaller screens, and side-by-side narrow columns
+// left leads' details cramped and later columns squeezed off-screen. Each
+// stage now gets the full page width as its own tab; the "Move to" dropdown
+// (already added for non-drag devices) is the only way to change stage now.
+function Pipeline({ leads, onOpen, onMove }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void }) {
+  const [stage, setStage] = useState<Stage>("new");
+  const items = leads.filter((l) => l.stage === stage);
+  const sum = items.reduce((a, b) => a + b.estMrr, 0);
+
   return (
-    <div className="mt-3 flex gap-3 overflow-x-auto pb-2">
-      {STAGES.map((st) => {
-        const items = leads.filter((l) => l.stage === st.id);
-        const sum = items.reduce((a, b) => a + b.estMrr, 0);
-        return (
-          <div key={st.id} className="flex w-[230px] shrink-0 flex-col rounded-2xl border border-[var(--line)] bg-[var(--panel)]"
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => { e.preventDefault(); if (drag) onMove(drag, st.id); setDrag(null); }}>
-            <div className="flex items-center justify-between gap-2 border-b border-[var(--line)] px-3 py-2.5">
-              <span className="flex items-center gap-1.5 text-[12.5px] font-extrabold"><span className="h-2 w-2 rounded-full" style={{ background: st.color }} />{st.label}</span>
-              <span className="text-[10.5px] font-bold text-[var(--ink-3)]">{items.length} · {money(sum)}</span>
+    <div className="mt-3">
+      <div className="flex flex-wrap gap-1.5">
+        {STAGES.map((st) => {
+          const n = leads.filter((l) => l.stage === st.id).length;
+          return (
+            <button key={st.id} type="button" onClick={() => setStage(st.id)}
+              className={`flex items-center gap-1.5 rounded-full border px-3.5 py-1.5 text-[12.5px] font-extrabold ${stage === st.id ? "border-[#1d3a8f] bg-[#eaf0fc] text-[#1d3a8f]" : "border-[var(--line)] bg-[var(--surface)] text-[var(--ink-2)]"}`}>
+              <span className="h-2 w-2 rounded-full" style={{ background: st.color }} />{st.label}
+              <span className="text-[var(--ink-3)]">{n}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-3 flex items-center justify-between">
+        <span className="text-[12.5px] font-bold text-[var(--ink-2)]">{items.length} lead{items.length === 1 ? "" : "s"} · {money(sum)}</span>
+      </div>
+
+      <div className="mt-2 flex flex-col gap-2">
+        {items.length === 0 && <div className="rounded-xl border border-dashed border-[var(--line)] py-8 text-center text-[12.5px] text-[var(--ink-3)]">Nothing in {STAGES.find((s) => s.id === stage)?.label} right now.</div>}
+        {items.map((l) => (
+          <div key={l.id} onClick={() => onOpen(l)}
+            className="flex cursor-pointer flex-wrap items-center gap-3 rounded-xl border border-[var(--line)] bg-[var(--surface)] p-3 shadow-[0_1px_2px_rgba(16,24,40,.05)] hover:border-[var(--ink-3)]">
+            <span title={KINDS[l.kind ?? "business"].label} className="text-[16px]">{KINDS[l.kind ?? "business"].icon}</span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13.5px] font-extrabold">{l.business}</div>
+              <div className="truncate text-[11.5px] text-[var(--ink-3)]">{l.contactName} · {l.location}</div>
             </div>
-            <div className="flex min-h-[80px] flex-col gap-2 p-2">
-              {items.map((l) => (
-                <div key={l.id} draggable onDragStart={() => setDrag(l.id)} onDragEnd={() => setDrag(null)} onClick={() => onOpen(l)}
-                  className="cursor-pointer rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-[0_1px_2px_rgba(16,24,40,.05)] hover:border-[var(--ink-3)]">
-                  <div className="flex items-center gap-1.5">
-                    <span title={KINDS[l.kind ?? "business"].label}>{KINDS[l.kind ?? "business"].icon}</span>
-                    <div className="truncate text-[12.5px] font-extrabold">{l.business}</div>
-                  </div>
-                  <div className="truncate text-[11px] text-[var(--ink-3)]">{l.contactName} · {l.location}</div>
-                  <div className="mt-1.5 flex items-center justify-between text-[10.5px]">
-                    <span className="text-[var(--ink-3)]">{srcLabel(l.source).split(" ")[0]}{l.owner ? ` · ${l.owner}` : ""}</span>
-                    <span className="rounded-full bg-[#eaf0fc] px-1.5 py-0.5 font-bold capitalize text-[#1d3a8f]">{l.plan}</span>
-                  </div>
-                  {l.activities[0] && <div className="mt-1 truncate text-[10px] text-[var(--ink-3)]">{fmtDay(l.activities[0].at)}: {l.activities[0].note}</div>}
-                </div>
-              ))}
-              {items.length === 0 && <div className="py-3 text-center text-[10.5px] text-[var(--ink-3)]">Drop here</div>}
-            </div>
+            {l.slotAt && (
+              <span className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f]">
+                📹 Video call · {slotFmt.format(new Date(l.slotAt))}
+              </span>
+            )}
+            <span className="text-[11px] text-[var(--ink-3)]">{srcLabel(l.source).split(" ")[0]}{l.owner ? ` · ${l.owner}` : ""}</span>
+            <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[11px] font-bold capitalize text-[#1d3a8f]">{l.plan}</span>
+            {l.activities[0] && <span className="truncate text-[10.5px] text-[var(--ink-3)]">{fmtDay(l.activities[0].at)}: {l.activities[0].note}</span>}
+            <select
+              value={l.stage}
+              onClick={(e) => e.stopPropagation()}
+              onChange={(e) => onMove(l.id, e.target.value as Stage)}
+              className="ml-auto rounded-lg border border-[var(--line)] bg-[var(--panel)] px-2 py-1.5 text-[11.5px] font-bold text-[var(--ink-2)]"
+            >
+              {STAGES.map((s) => <option key={s.id} value={s.id}>Move to: {s.label}</option>)}
+            </select>
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
 }
@@ -520,6 +560,14 @@ function LeadModal({ lead, onClose, onSave, onDelete }: { lead: Lead | null; onC
             <label className="block"><span className={lbl}>Owner (rep)</span><input className={fld} value={f.owner} onChange={(e) => set({ owner: e.target.value })} placeholder="e.g. Priya" /></label>
             <div className="block"><label htmlFor="lead-plan" className={lbl}>Likely plan</label><select id="lead-plan" className={fld} value={f.plan} onChange={(e) => set({ plan: e.target.value as Lead["plan"], estMrr: PLAN_MRR[e.target.value as Lead["plan"]] })}>{(["freelancer", "company", "franchise"] as const).map((p) => <option key={p} value={p} className="capitalize">{p}</option>)}</select></div>
             <div className="block"><label htmlFor="lead-stage" className={lbl}>Stage</label><select id="lead-stage" className={fld} value={f.stage} onChange={(e) => set({ stage: e.target.value as Stage })}>{STAGES.map((s) => <option key={s.id} value={s.id}>{s.label}</option>)}</select></div>
+            {!!f.interestedFeatures?.length && (
+              <div className="block sm:col-span-2">
+                <span className={lbl}>Wants to see (ticked on the demo page)</span>
+                <ul className="mt-1 list-disc space-y-0.5 pl-4 text-[13px] text-[var(--ink)]">
+                  {f.interestedFeatures.map((x) => <li key={x}>{x}</li>)}
+                </ul>
+              </div>
+            )}
             <label className="block sm:col-span-2"><span className={lbl}>Notes</span><textarea rows={2} className={`${fld} resize-y`} value={f.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
           </div>
 
