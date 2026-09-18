@@ -544,14 +544,39 @@ async function resolveLeadReply(input: InboundInput): Promise<string | null> {
  * board's LeadModal, same list HQ's own touches show in) and bumps
  * lastReplyAt so the bell picks it up (platformNotifications.ts) — a
  * prospect's reply must not just vanish into an unmonitored mailbox. */
+/** Strips the quoted original message a reply carries along with it — most
+ * clients paste it in whether or not there were real line breaks preserved
+ * by the time it reaches us as plain text (confirmed live: a genuine reply
+ * arrived as one unbroken line, "Nice On Fri, 18 Sept… ActivityOS
+ * <no-reply@…> wrote: > ActivityOS > Here's your answer…", the whole quoted
+ * thread flattened in with it), so a line-anchored quote stripper alone
+ * isn't enough. Truncates at the first recognisable quote marker, checked
+ * in order: an inline "On <date> … wrote:" header (Gmail/Apple Mail, needs
+ * no line start), a line starting with "&gt;" (traditional quoting, when
+ * real newlines ARE present), or "-----Original Message-----" (Outlook). */
+function stripQuotedReply(text: string): string {
+  const markers: RegExp[] = [
+    /\bOn .{0,120}?\bwrote:/,
+    /^>/m,
+    /^-{2,}\s*Original Message\s*-{2,}/im,
+  ];
+  let cut = text.length;
+  for (const re of markers) {
+    const m = re.exec(text);
+    if (m && m.index < cut) cut = m.index;
+  }
+  return text.slice(0, cut).trim();
+}
+
 async function storeLeadReply(leadId: string, input: InboundInput): Promise<void> {
   const ref = db.collection("leads").doc(leadId);
   const now = new Date().toISOString();
+  const body = stripQuotedReply(input.text || "");
   const activity = {
     id: `reply-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
     type: "email" as const,
     direction: "in" as const,
-    note: input.text || "(no message body)",
+    note: body || "(no message body)",
     at: now,
     by: input.from || input.fromEmail || "Customer (reply)",
   };
