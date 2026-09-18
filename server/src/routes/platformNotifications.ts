@@ -73,24 +73,27 @@ async function buildItems(muted: string[]): Promise<Item[]> {
   }
 
   if (on("lead")) {
-    // Only demo requests (the /demo form posts source "demo", the public
-    // schema's default). The collection now holds ~26,000 researched prospects,
-    // all created in the last 45 days, so "recent leads" read every one of them
-    // on each bell refresh — minutes, then a Firestore timeout, and the bell
-    // (deletion requests included) never answered (acceptance d21s7).
-    // Equality only, so no composite index; the date is checked below.
-    const leadsSnap = await db.collection("leads").where("source", "==", "demo").get();
+    // Every source the PUBLIC, unauthenticated leads endpoint (server/src/
+    // routes/leads.ts leadsPublic) can write — a real inbound request, not a
+    // researched prospect. New sources from that form must be added here too,
+    // or they silently never ring the bell (acceptance d24s3). The collection
+    // now holds ~26,000 researched prospects, all created in the last 45 days,
+    // so "recent leads" read every one of them on each bell refresh — minutes,
+    // then a Firestore timeout, and the bell (deletion requests included)
+    // never answered (acceptance d21s7). A single `in` query stays equality-
+    // only, so no composite index; the date is checked below.
+    const leadsSnap = await db.collection("leads").where("source", "in", ["demo", "website_build"]).get();
     for (const d of leadsSnap.docs) {
-      const l = d.data() as { name?: string; business?: string; createdAt?: string; imported?: boolean };
+      const l = d.data() as { name?: string; business?: string; createdAt?: string; imported?: boolean; source?: string };
       // Researched prospects bulk-imported into Leads (e.g. from a directory)
       // aren't demo requests — a hundred of them mustn't ring the bell.
       if (l.imported) continue;
       if (l.createdAt && l.createdAt > cutoff) {
         items.push({
           id: `lead_${d.id}`, type: "lead",
-          title: "New demo request",
+          title: l.source === "website_build" ? "New website build request" : "New demo request",
           body: [l.name, l.business].filter(Boolean).join(" · ") || d.id,
-          href: `/platform/leads`, at: l.createdAt,
+          href: `/platform/sales`, at: l.createdAt,
         });
       }
     }
