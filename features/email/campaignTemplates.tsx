@@ -608,11 +608,14 @@ export function CampaignDesigner({ initial, company, socials, onCancel, onSave, 
     }
   };
 
-  // Higher than any persistent app chrome (the header's notification bell
-  // dropdown is also z-50) — a tie there is decided by DOM/mount order,
-  // which can flip and intermittently steal clicks meant for this modal.
+  // Higher than the persistent app shell header (components/shell/Header.tsx
+  // is z-[300] — confirmed live via getComputedStyle/elementFromPoint that
+  // its notification bell was winning hit-testing over this modal's earlier
+  // z-[200], even though the modal is mounted later in the DOM; a header
+  // dropdown living inside that z-300 stacking context beats anything below
+  // it regardless of DOM order). Below the app's toast/alert layer (z-[900]+).
   return (
-    <div className="fixed inset-0 z-[200] flex bg-black/50" onClick={onCancel}>
+    <div className="fixed inset-0 z-[350] flex bg-black/50" onClick={onCancel}>
       <div className="flex h-full w-full flex-col overflow-hidden bg-[var(--card,#fff)]" onClick={(e) => e.stopPropagation()}>
         <style>{`.aos-scroll{overflow-y:scroll}.aos-scroll::-webkit-scrollbar{width:14px;height:14px}.aos-scroll::-webkit-scrollbar-track{background:#e7ecf4;border-radius:8px}.aos-scroll::-webkit-scrollbar-thumb{background:#6f88b3;border-radius:8px;border:3px solid #e7ecf4;min-height:40px}.aos-scroll::-webkit-scrollbar-thumb:hover{background:#4f6da0}`}</style>
         <div className="flex items-center justify-between gap-3 px-5 py-3 text-white" style={{ background: "linear-gradient(120deg,#16306e,#3f78d8)" }}>

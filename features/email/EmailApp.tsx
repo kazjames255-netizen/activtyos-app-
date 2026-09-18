@@ -1167,7 +1167,10 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
         </div>
       </div>
     )}
-    {designing && <div className="relative z-[145]"><CampaignDesigner initial={design} company={company} socials={socials} onCancel={() => setDesigning(false)} onSave={(d) => { setDesign(d); setDesigning(false); }} /></div>}
+    {/* Same fix as the other CampaignDesigner usage below: no wrapping div —
+        it trapped the designer's z-index inside a z-145 stacking context
+        that could never beat the app header's z-[300]. */}
+    {designing && <CampaignDesigner initial={design} company={company} socials={socials} onCancel={() => setDesigning(false)} onSave={(d) => { setDesign(d); setDesigning(false); }} />}
     {sentOk && (
       <div className="fixed inset-0 z-[150] flex items-center justify-center bg-black/45 p-4">
         <div className="w-full max-w-sm rounded-2xl bg-[var(--surface)] p-6 text-center shadow-2xl">
@@ -1678,7 +1681,16 @@ function TemplatesView({ onUse, company, socials }: { onUse: (t: EmailTemplate) 
           ))}</div>}
       <p className="mt-3 text-[11.5px] text-[var(--ink-3)]">These are just for building &amp; saving — <b>to send</b> one, go to <b>Campaigns → New campaign → Design your own → Use a saved one</b>.</p>
       </>}
-      {designer && <div className="relative z-[130]"><CampaignDesigner initial={designer.mode === "edit" ? { accent: designer.item.accent, blocks: designer.item.blocks } : null} company={company} socials={socials} onCancel={() => setDesigner(null)} onSave={saveDesign} saveLabel="💾 Save template" /></div>}
+      {/* No wrapping div here: CampaignDesigner's own root is already
+          position:fixed, so a positioned "relative z-[130]" wrapper around
+          it did nothing for layout but everything for harm — it created a
+          NEW stacking context that trapped the designer's own z-index
+          inside it, so raising the designer's z-index could never beat the
+          app header (z-[300], a true sibling-level stacking context) no
+          matter how high — the outer z-130 wrapper was what actually got
+          compared against the header, not the designer's inner z-index.
+          Confirmed live via getComputedStyle + elementFromPoint. */}
+      {designer && <CampaignDesigner initial={designer.mode === "edit" ? { accent: designer.item.accent, blocks: designer.item.blocks } : null} company={company} socials={socials} onCancel={() => setDesigner(null)} onSave={saveDesign} saveLabel="💾 Save template" />}
 
       {edit && (
         <div className="fixed inset-0 z-[130] flex items-start justify-center overflow-y-auto bg-black/45 p-4 pt-[5vh]" onClick={() => setEdit(null)}>
