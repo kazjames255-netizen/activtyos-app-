@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { randomBytes } from "node:crypto";
 import type { Booking } from "../../../features/bookings/types";
 import { db } from "../firebase";
 import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
@@ -8,14 +9,29 @@ import { webUrl } from "./stripe";
 import { AOS_MARK_PNG_B64 } from "./brandLogo";
 import { geocodeAddress } from "../routes/geo";
 
+/** A random, always-lowercase local part for a lead's reply address —
+ * deliberately NOT the Firestore doc id: that's mixed-case, and real mail
+ * transit routinely lowercases addresses somewhere along the way (many
+ * clients/providers do, regardless of what we send), which would silently
+ * break matching for any id containing an uppercase letter. Assigned once
+ * per lead and reused on every subsequent email to the same lead. */
+async function ensureLeadReplyToken(leadId: string): Promise<string> {
+  const ref = db.collection("leads").doc(leadId);
+  const existing = (await ref.get()).data() as { replyToken?: string } | undefined;
+  if (existing?.replyToken) return existing.replyToken;
+  const token = randomBytes(6).toString("hex"); // hex: always [a-f0-9], nothing to lowercase
+  await ref.set({ replyToken: token }, { merge: true });
+  return token;
+}
+
 /** A reply-able address for a lead-facing email — hitting "reply" lands back
  * on our inbound webhook (routes/emails.ts), which now recognises
- * "lead-<id>@…" and files it onto that lead instead of a tenant, so a
+ * "lead-<token>@…" and files it onto that lead instead of a tenant, so a
  * prospect's reply doesn't just vanish into an unmonitored mailbox. Falls
  * back to undefined (plain no-reply) when inbound mail isn't configured in
  * this environment. */
-const leadReplySender = (leadId: string): { replyTo: string } | undefined =>
-  inboundConfigured ? { replyTo: `lead-${leadId}@${inboundDomain}` } : undefined;
+const leadReplySender = async (leadId: string): Promise<{ replyTo: string } | undefined> =>
+  inboundConfigured ? { replyTo: `lead-${await ensureLeadReplyToken(leadId)}@${inboundDomain}` } : undefined;
 
 /** The ActivityOS mark as an inline (CID) attachment. Embedded rather than
  *  hot-linked so it renders in every client and regardless of environment —
@@ -660,7 +676,7 @@ export function emailWebsiteAddonAck(p: {
     </div>`;
     // No tenantId — this is platform mail, before anyone has an account.
     // Reply-To routes a reply back onto this lead (see leadReplySender).
-    await sendMail(p.to, heading, html, leadReplySender(p.leadId));
+    await sendMail(p.to, heading, html, await leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] website-addon ack build failed:", (e as Error).message));
 }
 
@@ -685,7 +701,7 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string; l
       </div>
       <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
     </div>`;
-    await sendMail(p.to, "You're booked in for your Activly demo", html, leadReplySender(p.leadId));
+    await sendMail(p.to, "You're booked in for your Activly demo", html, await leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] demo-booked ack build failed:", (e as Error).message));
 }
 
@@ -717,7 +733,7 @@ export function emailQuestionAnswered(p: { to: string; name: string; question: s
       </div>
       <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
     </div>`;
-    await sendMail(p.to, "Your question, answered", html, leadReplySender(p.leadId));
+    await sendMail(p.to, "Your question, answered", html, await leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] question-answered build failed:", (e as Error).message));
 }
 
