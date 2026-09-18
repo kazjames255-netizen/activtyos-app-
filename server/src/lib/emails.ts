@@ -601,6 +601,83 @@ export function emailProviderWelcome(p: {
   })().catch((e) => console.error("[mail] provider welcome build failed:", (e as Error).message));
 }
 
+/** Immediate acknowledgement for the pricing page's "Website design &
+ * maintenance" add-on — both its "Add website design & maintenance" (now a
+ * real slot booking, sharing the same open-slot pool as /demo — see
+ * routes/demoSlots.ts) and "Ask a question first" (no slot) buttons land
+ * here (POST /api/leads, source "website_build"). Distinct subject/body per
+ * kind so a question genuinely reads back what they asked, not a generic
+ * "thanks", and a booked slot gets a real confirmation, not a repeat offer
+ * to book one. */
+export function emailWebsiteAddonAck(p: {
+  to: string;
+  name: string;
+  kind: "signup" | "question";
+  message?: string;
+  slotAt?: string;
+}): void {
+  void (async () => {
+    const firstName = p.name.trim().split(/\s+/)[0] || p.name.trim();
+    const demoUrl = `${webUrl}/demo`;
+    const heading = p.kind === "question"
+      ? "Got your question — we'll reply shortly"
+      : p.slotAt ? "You're booked in — got your website request" : "Got your website request";
+    const body = p.kind === "question"
+      ? `<p style="font-size:14px;line-height:1.6;margin:0 0 14px">Thanks, ${escapeHtml(firstName)} — here's what you asked us:</p>
+         <div style="background:#f5f6fb;border-left:3px solid #1d3a8f;border-radius:6px;padding:12px 14px;margin:0 0 16px;font-size:13.5px;line-height:1.55;color:#171534">${escapeHtml(p.message?.trim() || "(no message included)")}</div>
+         <p style="font-size:14px;line-height:1.6;margin:0 0 16px">Someone from the team will get back to you shortly with an answer.</p>`
+      : p.slotAt
+      ? `<p style="font-size:14px;line-height:1.6;margin:0 0 16px">Thanks, ${escapeHtml(firstName)} — we've got your request for a branded website to match your Activly storefront, and booked you in for a quick call to talk it through:</p>
+         <div style="background:#eef4ff;border-radius:10px;padding:14px 16px;margin:0 0 16px;text-align:center;font-size:15px;font-weight:800;color:#1d3a8f">${escapeHtml(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(p.slotAt)))} (UK time)</div>
+         <p style="font-size:13.5px;line-height:1.6;margin:0 0 16px;color:#4a4763">We'll send a call link nearer the time. Need to move it? Just reply to this email.</p>`
+      : `<p style="font-size:14px;line-height:1.6;margin:0 0 16px">Thanks, ${escapeHtml(firstName)} — we've got your request for a branded website to match your Activly storefront. Someone from the team will be in touch shortly to confirm the details and get started.</p>`;
+    const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
+      <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+      </div>
+      <div style="padding:26px 22px">
+        <h2 style="font-size:21px;margin:0 0 12px;color:#171534">${escapeHtml(heading)}</h2>
+        ${body}
+        ${!p.slotAt ? `
+        <p style="font-size:13.5px;line-height:1.6;margin:0 0 6px;color:#4a4763">${p.kind === "question" ? "Prefer to talk it through instead? Grab a free 1-on-1 walkthrough with the team — no obligation." : "Want a full demo to go through our platform instead? Grab a free 1-on-1 walkthrough with the team — no obligation."}</p>
+        <div style="text-align:center;margin:16px 0 6px">
+          <a href="${demoUrl}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">Book a demo →</a>
+        </div>` : ""}
+        <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:18px 0 0;text-align:center">Questions any time? Just reply to this email.</p>
+      </div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+    </div>`;
+    // No tenantId — this is platform mail, before anyone has an account.
+    await sendMail(p.to, heading, html);
+  })().catch((e) => console.error("[mail] website-addon ack build failed:", (e as Error).message));
+}
+
+/** HQ booked a lead onto a real demo-call slot on their behalf (the Sales
+ * board's "📹 Book onto a demo" action — for someone who never went through
+ * /demo themselves, e.g. a website-add-on enquiry). Confirms the day/time so
+ * they're not just told, out of nowhere, that a call is happening. */
+export function emailDemoBooked(p: { to: string; name: string; slotAt: string }): void {
+  void (async () => {
+    const firstName = p.name.trim().split(/\s+/)[0] || p.name.trim();
+    const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(p.slotAt));
+    const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
+      <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+      </div>
+      <div style="padding:26px 22px">
+        <h2 style="font-size:21px;margin:0 0 12px;color:#171534">You're booked in, ${escapeHtml(firstName)} 🎉</h2>
+        <p style="font-size:14px;line-height:1.6;margin:0 0 16px">We've pencilled you in for a free 1-on-1 walkthrough:</p>
+        <div style="background:#eef4ff;border-radius:10px;padding:14px 16px;margin:0 0 16px;text-align:center;font-size:15px;font-weight:800;color:#1d3a8f">${escapeHtml(when)} (UK time)</div>
+        <p style="font-size:13.5px;line-height:1.6;margin:0;color:#4a4763">We'll send a call link nearer the time. Need to move it? Just reply to this email.</p>
+      </div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+    </div>`;
+    await sendMail(p.to, "You're booked in for your Activly demo", html);
+  })().catch((e) => console.error("[mail] demo-booked ack build failed:", (e as Error).message));
+}
+
 /** Team/franchise invite — the join link, who sent it and what it grants.
  * The link is the secret; it can only be used once. */
 export function emailTeamInvite(p: {

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
+import { emailDemoBooked } from "../lib/emails";
 
 // Sales CRM (HQ pipeline) — mounted at /api/platform/leads. Leads live in a
 // top-level `leads` collection with activities EMBEDDED as an array on the
@@ -46,6 +47,10 @@ const leadSchema = z.object({
   stage: z.enum(STAGES).default("new"),
   lostReason: z.string().trim().max(400).optional(),
   notes: z.string().trim().max(4_000).default(""),
+  // Set when HQ books a lead onto a real open demo-call slot (either the
+  // public /demo form, or HQ doing it on the board's behalf for a lead who
+  // hasn't booked a call themselves) — see routes/demoSlots.ts.
+  slotAt: z.string().trim().max(40).optional(),
 });
 
 const activitySchema = z.object({
@@ -99,12 +104,21 @@ platformLeads.put("/:id", async (req, res) => {
   // from the current stage plus the last time anything about the lead changed —
   // renaming a lead would make it look like it had just moved. The dashboard's
   // pipeline summary reads this log.
-  const before = snap.data() as { stage?: string; stageLog?: { from: string; to: string; at: string }[] };
+  const before = snap.data() as { stage?: string; stageLog?: { from: string; to: string; at: string }[]; slotAt?: string; name?: string; contactName?: string; business?: string; email?: string };
   const moved = parsed.data.stage && parsed.data.stage !== (before.stage ?? "new");
   const stageLog = moved
     ? [...(before.stageLog ?? []), { from: before.stage ?? "new", to: parsed.data.stage!, at: now }].slice(-40)
     : undefined;
   await ref.set({ ...parsed.data, ...(stageLog ? { stageLog, stageAt: now } : {}), inPipeline: true, updatedAt: now }, { merge: true });
+  // A genuinely new/changed slot (the Sales board's "Book onto a demo" —
+  // someone who never booked one themselves) gets an email so it isn't
+  // sprung on them — a no-op PUT that happens to resend the same slotAt
+  // (e.g. an unrelated field edit) doesn't re-notify.
+  if (parsed.data.slotAt && parsed.data.slotAt !== before.slotAt) {
+    const to = parsed.data.email || before.email;
+    const name = parsed.data.contactName || before.contactName || before.name || parsed.data.business || before.business || "";
+    if (to) emailDemoBooked({ to, name, slotAt: parsed.data.slotAt });
+  }
   const after = await ref.get();
   res.json({ id: after.id, ...after.data() });
 });

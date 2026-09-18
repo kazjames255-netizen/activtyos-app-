@@ -50,6 +50,11 @@ export interface Lead {
   // The demo page's "What would you like us to cover?" ticks — rendered as
   // its own list in LeadModal, not folded into the free-text Notes.
   interestedFeatures?: string[];
+  // The pricing page's website-design add-on: which of its two buttons they
+  // used ("Add website design & maintenance" vs "Ask a question first") — a
+  // question gets its own card treatment with the question text up front,
+  // not buried in Notes like a generic message.
+  interest?: "website-design-signup" | "website-design-question";
 }
 const slotFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -59,7 +64,7 @@ const slotFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", we
 export const STAGES: { id: Stage; label: string; color: string; prob: number }[] = [
   { id: "new", label: "1 · Lead", color: "#6b6880", prob: 0.1 },
   { id: "contacted", label: "2 · Contacted", color: "#3f78d8", prob: 0.25 },
-  { id: "demo", label: "3 · Demo", color: "#7c3aed", prob: 0.5 },
+  { id: "demo", label: "3 · Demo & website meeting", color: "#7c3aed", prob: 0.5 },
   { id: "trial", label: "4 · Trial", color: "#a5670a", prob: 0.8 },
   { id: "won", label: "5 · New customer 🎉", color: "#0f7a43", prob: 1 },
   { id: "lost", label: "Lost", color: "#c02636", prob: 0 },
@@ -103,7 +108,13 @@ type NewActivity = { type: Activity["type"]; note: string; outcome?: string };
  * guard would have to be remembered every time someone touches this file, and
  * the next omission is another white screen on the page you use to sell.
  */
-function normaliseLead(raw: Lead & Partial<{ name: string; message: string; status: string; interest: string; interestedFeatures: string[]; businessType: string }>): Lead {
+const BIZ_TYPE_LABEL: Record<string, string> = {
+  holiday: "Holiday camps & clubs", wraparound: "Breakfast & after-school", activity: "Sports & activity classes",
+  tuition: "Tuition & learning", preschool: "Pre-school / playgroup", nursery: "Nursery / day care",
+  childminder: "Childminder", school: "School / MAT", other: "Other childcare",
+};
+
+function normaliseLead(raw: Lead & Partial<{ name: string; message: string; status: string; interest: string; interestedFeatures: string[]; businessType: string; businessTypes: string[] }>): Lead {
   const plan = (["freelancer", "company", "franchise"] as const).includes(raw.plan) ? raw.plan : "company";
   // The demo form's role picker ("Freelancer" / "Company" / "Franchise" /
   // "School or MAT" — the last two both submit as plan "company", since they
@@ -112,13 +123,17 @@ function normaliseLead(raw: Lead & Partial<{ name: string; message: string; stat
   // shows). Its "What would you like us to cover?" checkboxes are kept as
   // their own array (interestedFeatures below) and rendered as a real list
   // in LeadModal, not run together into this sentence-shaped field.
-  const schoolTag = raw.businessType === "school" ? "School / MAT" : "";
+  // The pricing-page add-on form is genuinely multi-select (businessTypes) —
+  // the demo page's own role picker stays single-value (businessType).
+  const bizTypes = Array.isArray(raw.businessTypes) ? raw.businessTypes : (raw.businessType ? [raw.businessType] : []);
+  const bizTypesTag = bizTypes.length ? `Runs: ${bizTypes.map((t) => BIZ_TYPE_LABEL[t] || t).join(", ")}` : "";
   return {
     ...raw,
     // The demo form calls them name/message/status.
     contactName: raw.contactName || raw.name || "",
-    notes: raw.notes || [schoolTag, raw.message].filter(Boolean).join("\n\n") || "",
+    notes: raw.notes || [bizTypesTag, raw.message].filter(Boolean).join("\n\n") || "",
     interestedFeatures: Array.isArray(raw.interestedFeatures) ? raw.interestedFeatures : undefined,
+    interest: raw.interest === "website-design-signup" || raw.interest === "website-design-question" ? raw.interest : undefined,
     stage: VALID_STAGES.has(raw.stage) ? raw.stage : VALID_STAGES.has(raw.status as Stage) ? (raw.status as Stage) : "new",
     business: raw.business || raw.name || raw.email || "Untitled",
     email: raw.email || "", phone: raw.phone || "", location: raw.location || "", owner: raw.owner || "",
@@ -190,6 +205,14 @@ export function SalesApp() {
     setLeads((cur) => cur.map((x) => (x.id === id ? { ...x, stage, updatedAt: nowIso() } : x)));
     put(`/api/platform/leads/${id}`, { stage }).catch((e) => { setError(e instanceof Error ? e.message : "Move failed"); refresh(); });
   };
+  // HQ books a non-demo lead (e.g. a website-add-on enquiry) onto a real
+  // open call slot — sets exactly what a genuine /demo submission would
+  // (stage "demo" + slotAt), so it follows the same downstream flow as if
+  // they'd booked it themselves.
+  const bookDemo = (id: string, slotAt: string) => {
+    setLeads((cur) => cur.map((x) => (x.id === id ? { ...x, stage: "demo", slotAt, updatedAt: nowIso() } : x)));
+    put(`/api/platform/leads/${id}`, { stage: "demo", slotAt }).catch((e) => { setError(e instanceof Error ? e.message : "Booking failed"); refresh(); });
+  };
   const doImport = async (rows: Lead[]) => {
     setImporting(false);
     try { await post("/api/platform/leads/bulk", rows); refresh(); }
@@ -242,7 +265,7 @@ export function SalesApp() {
               {q && <span className="text-[12px] text-[var(--ink-3)]">{filtered.length} match{filtered.length === 1 ? "" : "es"} · <button type="button" onClick={() => setQuery("")} className="font-bold text-[#1d3a8f]">clear</button></span>}
               {q && filtered.length === 0 && <button type="button" onClick={() => setAdding(true)} className="rounded-full bg-[#0f7a43] px-3 py-1.5 text-[12px] font-bold text-white">+ New lead (not found)</button>}
             </div>
-            <Pipeline leads={filtered} onOpen={setDetail} onMove={move} />
+            <Pipeline leads={filtered} onOpen={setDetail} onMove={move} onBookDemo={bookDemo} />
           </>
         );
       })() : tab === "dashboard" ? <Dashboard leads={leads} /> : tab === "slots" ? <DemoSlotsPanel /> : <VideoCallsPanel leads={leads} onOpen={setDetail} onMove={move} />}
@@ -312,7 +335,7 @@ export function SalesApp() {
 // left leads' details cramped and later columns squeezed off-screen. Each
 // stage now gets the full page width as its own tab; the "Move to" dropdown
 // (already added for non-drag devices) is the only way to change stage now.
-function Pipeline({ leads, onOpen, onMove }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void }) {
+function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen: (l: Lead) => void; onMove: (id: string, s: Stage) => void; onBookDemo: (id: string, slotAt: string) => void }) {
   const [stage, setStage] = useState<Stage>("new");
   const items = leads.filter((l) => l.stage === stage);
   const sum = items.reduce((a, b) => a + b.estMrr, 0);
@@ -345,7 +368,16 @@ function Pipeline({ leads, onOpen, onMove }: { leads: Lead[]; onOpen: (l: Lead) 
             <div className="min-w-0 flex-1">
               <div className="truncate text-[13.5px] font-extrabold">{l.business}</div>
               <div className="truncate text-[11.5px] text-[var(--ink-3)]">{l.contactName} · {l.location}</div>
+              {l.interest === "website-design-question" && (
+                <div className="mt-0.5 truncate text-[11.5px] font-semibold text-[#a5670a]">❓ Asked: {l.notes || "(no message)"}</div>
+              )}
             </div>
+            {l.interest === "website-design-signup" && (
+              <span className="truncate rounded-md bg-[#eafaf0] px-2 py-1 text-[11px] font-bold text-[#127a3e]">🌐 Wants the website add-on</span>
+            )}
+            {l.interest === "website-design-question" && (
+              <span className="truncate rounded-md bg-[#fdf3e5] px-2 py-1 text-[11px] font-bold text-[#a5670a]">❓ Question</span>
+            )}
             {l.slotAt && (
               <span className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f]">
                 📹 Video call · {slotFmt.format(new Date(l.slotAt))}
@@ -354,6 +386,9 @@ function Pipeline({ leads, onOpen, onMove }: { leads: Lead[]; onOpen: (l: Lead) 
             <span className="text-[11px] text-[var(--ink-3)]">{srcLabel(l.source).split(" ")[0]}{l.owner ? ` · ${l.owner}` : ""}</span>
             <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[11px] font-bold capitalize text-[#1d3a8f]">{l.plan}</span>
             {l.activities[0] && <span className="truncate text-[10.5px] text-[var(--ink-3)]">{fmtDay(l.activities[0].at)}: {l.activities[0].note}</span>}
+            {!l.slotAt && l.stage !== "won" && l.stage !== "lost" && (
+              <BookDemoButton onBook={(iso) => onBookDemo(l.id, iso)} />
+            )}
             <select
               value={l.stage}
               onClick={(e) => e.stopPropagation()}
@@ -365,6 +400,68 @@ function Pipeline({ leads, onOpen, onMove }: { leads: Lead[]; onOpen: (l: Lead) 
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// A lead who hasn't booked a call themselves (a website-add-on enquiry, a
+// cold prospect, …) can still be put on one by HQ — reuses the exact same
+// open-slot feed the public /demo page reads (server/src/routes/demoSlots.ts),
+// so a slot taken here can never double-book a real self-served one, and
+// picking one drives the lead through the identical stage+slotAt shape a
+// genuine demo submission would.
+interface DemoSlot { iso: string; durationMins: number }
+const slotDayFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short" });
+const slotTimeFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", hour: "2-digit", minute: "2-digit" });
+const slotDayKey = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/London", year: "numeric", month: "2-digit", day: "2-digit" });
+
+function BookDemoButton({ onBook }: { onBook: (iso: string) => void }) {
+  const [open, setOpen] = useState(false);
+  const [slots, setSlots] = useState<DemoSlot[] | null>(null);
+
+  const openPicker = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setOpen(true);
+    if (!slots) get<DemoSlot[]>("/api/demo-slots").then(setSlots).catch(() => setSlots([]));
+  };
+
+  const byDay = (slots ?? []).reduce<Record<string, DemoSlot[]>>((acc, s) => {
+    const k = slotDayKey.format(new Date(s.iso));
+    (acc[k] ??= []).push(s);
+    return acc;
+  }, {});
+
+  return (
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
+      <button type="button" onClick={openPicker} className="truncate rounded-md border border-[#dbe6fb] bg-[var(--surface)] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">
+        📹 Book onto a demo
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-[59]" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 top-full z-[60] mt-1.5 max-h-72 w-72 overflow-y-auto rounded-xl border border-[var(--line)] bg-[var(--surface)] p-2.5 shadow-xl">
+            {slots === null ? (
+              <div className="p-2 text-[12px] text-[var(--ink-3)]">Loading available times…</div>
+            ) : Object.keys(byDay).length === 0 ? (
+              <div className="p-2 text-[12px] text-[var(--ink-3)]">No open slots in the next 7 days — add some in Demo slots.</div>
+            ) : (
+              Object.entries(byDay).map(([day, daySlots]) => (
+                <div key={day} className="mb-2 last:mb-0">
+                  <div className="mb-1 text-[10.5px] font-extrabold uppercase tracking-wide text-[var(--ink-3)]">{slotDayFmt.format(new Date(daySlots[0].iso))}</div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {daySlots.map((s) => (
+                      <button key={s.iso} type="button" onClick={() => { onBook(s.iso); setOpen(false); }}
+                        className="rounded-full border border-[var(--line)] bg-[var(--panel)] px-2.5 py-1 text-[11.5px] font-bold text-[var(--ink-2)] hover:border-[#1d3a8f] hover:bg-[#eef4fd] hover:text-[#1d3a8f]">
+                        {slotTimeFmt.format(new Date(s.iso))}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

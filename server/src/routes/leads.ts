@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { db } from "../firebase";
+import { emailWebsiteAddonAck } from "../lib/emails";
 
 // Marketing-site "Book a demo" lead capture.
 // - POST is PUBLIC: the /demo form on the site posts here with no login.
@@ -37,7 +38,16 @@ const schema = z.object({
   plan: z.enum(["freelancer", "company", "franchise"]).optional(),
   // Same taxonomy as the Leads (prospect research) page's TYPE constant, so a
   // self-reported business type lines up with the researched-prospect data.
+  // Single-value — the /demo page's role picker. The pricing-page add-on
+  // form is genuinely multi-select (a lot of providers run more than one
+  // kind of thing), so it sends businessTypes instead.
   businessType: z.enum(["holiday", "wraparound", "activity", "tuition", "preschool", "nursery", "childminder", "school", "other"]).optional(),
+  businessTypes: z.array(z.enum(["holiday", "wraparound", "activity", "tuition", "preschool", "nursery", "childminder", "school", "other"])).max(8).optional(),
+  // The website-design add-on's own two questions, beyond the shared
+  // name/email/phone/business fields — whether they already have a site
+  // (so the build starts from scratch or a migration) and, if so, its address.
+  hasWebsite: z.enum(["yes", "no"]).optional(),
+  currentWebsite: z.string().trim().max(300).optional(),
 });
 
 export const leadsPublic = Router();
@@ -49,13 +59,36 @@ leadsPublic.post("/", async (req, res) => {
     return;
   }
   const ref = db.collection("leads").doc();
-  // A demo request is a live sales conversation: it goes on the HQ Sales board.
-  // This route is only ever the "Book a demo" form — every submission IS a
-  // demo request, so it starts straight in the Sales board's "Demo" column
-  // rather than "Lead" (which is for cold prospects nobody's spoken to yet).
-  const doc = { ...parsed.data, status: "demo", inPipeline: true, createdAt: new Date().toISOString() };
+  // This route serves two different forms with two different meanings:
+  //  - The /demo page: every submission IS a booked call, so it starts
+  //    straight in the Sales board's "Demo" column.
+  //  - The pricing page's "Website design & maintenance" add-on (source
+  //    "website_build"): its "Add website design & maintenance" path now
+  //    books a real slot from the SAME shared pool as /demo (see
+  //    routes/demoSlots.ts — one `leads`-wide slotAt query keeps the two
+  //    from ever double-booking a slot), so a booked one lands in "Demo"
+  //    too — it's a real meeting, just about the website rather than the
+  //    platform. "Ask a question first" never books a slot, so it starts in
+  //    "Lead" like any other cold prospect nobody's spoken to yet.
+  const isWebsiteAddon = parsed.data.source === "website_build";
+  const status = isWebsiteAddon ? (parsed.data.slotAt ? "demo" : "new") : "demo";
+  const doc = { ...parsed.data, status, inPipeline: true, createdAt: new Date().toISOString() };
   await ref.set(doc);
   if (cache) { cache.items.unshift({ id: ref.id, ...doc }); rev++; }
+  // Acknowledge immediately — the pricing-page add-on form has no other
+  // confirmation beyond an inline "Sent" message, and both its buttons
+  // ("Add…" / "Ask a question first") capture email/phone this early, so
+  // this is the first real touchpoint. Fire-and-forget: email never blocks
+  // the response.
+  if (isWebsiteAddon) {
+    emailWebsiteAddonAck({
+      to: parsed.data.email,
+      name: parsed.data.name,
+      kind: parsed.data.interest === "website-design-question" ? "question" : "signup",
+      message: parsed.data.message,
+      slotAt: parsed.data.slotAt,
+    });
+  }
   res.json({ ok: true, id: ref.id });
 });
 
