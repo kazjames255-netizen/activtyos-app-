@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
 import { ensureVenue, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
 import { cardWith, dismissParentWelcome } from "./helpers/ui";
+import { apiPost, fbSignIn } from "./helpers/accounts";
 
 // The platform's core journey. Two halves:
 //   1. Operator builds a block and publishes a listing entirely through the UI.
@@ -108,7 +109,7 @@ test.describe("parent books; operator sees it live", () => {
     // mid-fill can force a re-render and detach the search input —
     // Playwright retries the fill automatically, but that retry needs
     // headroom too.
-    test.setTimeout(180_000);
+    test.setTimeout(150_000);
     const accounts = loadAccounts().accounts;
     const s = stamp();
     const title = `E2E Camp ${s}`;
@@ -126,6 +127,15 @@ test.describe("parent books; operator sees it live", () => {
     // navigating, so it never opens at all — see markParentWelcomed's doc
     // comment for why dismissing it via the UI alone is racy.
     await markParentWelcomed(accounts.parent);
+    // Browse is Phase-1 single-provider: it only shows listings from
+    // providers this family is already linked to (booked with, or arrived
+    // via that provider's own storefront link, which calls this same
+    // endpoint) — see POST /api/my/providers/follow. A fresh e2e parent has
+    // no history with "company" yet, so without this Browse would
+    // legitimately show its empty state, same as a real first-time visitor
+    // who hasn't clicked through a provider's own link.
+    const parentSignIn = await fbSignIn(accounts.parent.email);
+    await apiPost("/api/my/providers/follow", parentSignIn.idToken, { tenantId: listing.tenantId });
     await page.goto("/custdash/browse");
     await dismissParentWelcome(page);
     await page.getByPlaceholder("Search by name or venue…").fill(title);
@@ -199,7 +209,12 @@ test.describe("parent books; operator sees it live", () => {
     }
     await nextBtn.click();
 
-    // Free booking: no payment method, just confirm.
+    // Free booking: no payment method, just confirm. A contact phone is
+    // required before the button will read "Confirm booking" at all — until
+    // it's filled the button's own label is "Add your contact phone", which
+    // this locator would otherwise wait on forever.
+    const phoneField = page.getByPlaceholder("e.g. 07700 900123");
+    if (await phoneField.isVisible().catch(() => false)) await phoneField.fill("07700900123");
     await expect(page.getByText("Nothing to pay.")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Confirm booking" }).click();
     await expect(page.getByRole("heading", { name: /Congratulations/ })).toBeVisible({ timeout: 30_000 });
