@@ -66,6 +66,10 @@ export interface Lead {
   // is visible on the card later and the reply box can be edited/resent.
   questionAnswer?: string;
   questionAnsweredAt?: string;
+  // Set when the lead replies to one of our emails — routes/emails.ts's
+  // inbound webhook recognises the "lead-<id>@…" Reply-To on every
+  // lead-facing email and files their reply as an activity here.
+  lastReplyAt?: string;
 }
 const slotFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -406,6 +410,9 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
               <span className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f]">
                 📹 Video call · {slotFmt.format(new Date(l.slotAt))}
               </span>
+            )}
+            {l.lastReplyAt && (
+              <span title="They replied to one of our emails — see Activity below" className="truncate rounded-md bg-[#eef2fb] px-2 py-1 text-[11px] font-bold text-[#3f5bb3]">💬 Replied {fmtDay(l.lastReplyAt)}</span>
             )}
             <span className="text-[11px] text-[var(--ink-3)]">{srcLabel(l.source).split(" ")[0]}{l.owner ? ` · ${l.owner}` : ""}</span>
             <span className="rounded-full bg-[#eaf0fc] px-2 py-0.5 text-[11px] font-bold capitalize text-[#1d3a8f]">{l.plan}</span>

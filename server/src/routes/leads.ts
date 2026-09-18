@@ -87,6 +87,7 @@ leadsPublic.post("/", async (req, res) => {
       kind: parsed.data.interest === "website-design-question" ? "question" : "signup",
       message: parsed.data.message,
       slotAt: parsed.data.slotAt,
+      leadId: ref.id,
     });
   }
   res.json({ ok: true, id: ref.id });

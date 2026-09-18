@@ -84,7 +84,7 @@ async function buildItems(muted: string[]): Promise<Item[]> {
     // only, so no composite index; the date is checked below.
     const leadsSnap = await db.collection("leads").where("source", "in", ["demo", "website_build"]).get();
     for (const d of leadsSnap.docs) {
-      const l = d.data() as { name?: string; business?: string; createdAt?: string; imported?: boolean; source?: string };
+      const l = d.data() as { name?: string; contactName?: string; business?: string; createdAt?: string; imported?: boolean; source?: string; lastReplyAt?: string };
       // Researched prospects bulk-imported into Leads (e.g. from a directory)
       // aren't demo requests — a hundred of them mustn't ring the bell.
       if (l.imported) continue;
@@ -94,6 +94,17 @@ async function buildItems(muted: string[]): Promise<Item[]> {
           title: l.source === "website_build" ? "New website build request" : "New demo request",
           body: [l.name, l.business].filter(Boolean).join(" · ") || d.id,
           href: `/platform/sales`, at: l.createdAt,
+        });
+      }
+      // A lead replying to a confirmation/answer email lands here via the
+      // inbound webhook (routes/emails.ts resolveLeadReply) — surfaced
+      // separately from "new lead" so it doesn't read as a fresh prospect.
+      if (l.lastReplyAt && l.lastReplyAt > cutoff) {
+        items.push({
+          id: `leadreply_${d.id}_${l.lastReplyAt}`, type: "lead",
+          title: "New reply from a lead",
+          body: [l.contactName || l.name, l.business].filter(Boolean).join(" · ") || d.id,
+          href: `/platform/sales`, at: l.lastReplyAt,
         });
       }
     }

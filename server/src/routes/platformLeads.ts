@@ -117,7 +117,7 @@ platformLeads.put("/:id", async (req, res) => {
   if (parsed.data.slotAt && parsed.data.slotAt !== before.slotAt) {
     const to = parsed.data.email || before.email;
     const name = parsed.data.contactName || before.contactName || before.name || parsed.data.business || before.business || "";
-    if (to) emailDemoBooked({ to, name, slotAt: parsed.data.slotAt });
+    if (to) emailDemoBooked({ to, name, slotAt: parsed.data.slotAt, leadId: ref.id });
   }
   const after = await ref.get();
   res.json({ id: after.id, ...after.data() });
@@ -142,7 +142,7 @@ platformLeads.put("/:id/answer", async (req, res) => {
   await ref.set({ questionAnswer: parsed.data.answer, questionAnsweredAt: now, updatedAt: now }, { merge: true });
   const to = lead.email;
   const name = lead.contactName || lead.name || lead.business || "";
-  if (to) emailQuestionAnswered({ to, name, question: lead.message || "", answer: parsed.data.answer });
+  if (to) emailQuestionAnswered({ to, name, question: lead.message || "", answer: parsed.data.answer, leadId: ref.id });
   const after = await ref.get();
   res.json({ id: after.id, ...after.data() });
 });

@@ -3,10 +3,19 @@ import type { Booking } from "../../../features/bookings/types";
 import { db } from "../firebase";
 import { autoEmailOn, type AutoEmailPrefs } from "./autoEmails";
 import { sendMail, type MailAttachment } from "./mailer";
-import { tenantSender } from "./sender";
+import { tenantSender, inboundDomain, inboundConfigured } from "./sender";
 import { webUrl } from "./stripe";
 import { AOS_MARK_PNG_B64 } from "./brandLogo";
 import { geocodeAddress } from "../routes/geo";
+
+/** A reply-able address for a lead-facing email — hitting "reply" lands back
+ * on our inbound webhook (routes/emails.ts), which now recognises
+ * "lead-<id>@…" and files it onto that lead instead of a tenant, so a
+ * prospect's reply doesn't just vanish into an unmonitored mailbox. Falls
+ * back to undefined (plain no-reply) when inbound mail isn't configured in
+ * this environment. */
+const leadReplySender = (leadId: string): { replyTo: string } | undefined =>
+  inboundConfigured ? { replyTo: `lead-${leadId}@${inboundDomain}` } : undefined;
 
 /** The ActivityOS mark as an inline (CID) attachment. Embedded rather than
  *  hot-linked so it renders in every client and regardless of environment —
@@ -615,6 +624,7 @@ export function emailWebsiteAddonAck(p: {
   kind: "signup" | "question";
   message?: string;
   slotAt?: string;
+  leadId: string;
 }): void {
   void (async () => {
     const firstName = p.name.trim().split(/\s+/)[0] || p.name.trim();
@@ -649,7 +659,8 @@ export function emailWebsiteAddonAck(p: {
       <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
     </div>`;
     // No tenantId — this is platform mail, before anyone has an account.
-    await sendMail(p.to, heading, html);
+    // Reply-To routes a reply back onto this lead (see leadReplySender).
+    await sendMail(p.to, heading, html, leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] website-addon ack build failed:", (e as Error).message));
 }
 
@@ -657,7 +668,7 @@ export function emailWebsiteAddonAck(p: {
  * board's "📹 Book onto a demo" action — for someone who never went through
  * /demo themselves, e.g. a website-add-on enquiry). Confirms the day/time so
  * they're not just told, out of nowhere, that a call is happening. */
-export function emailDemoBooked(p: { to: string; name: string; slotAt: string }): void {
+export function emailDemoBooked(p: { to: string; name: string; slotAt: string; leadId: string }): void {
   void (async () => {
     const firstName = p.name.trim().split(/\s+/)[0] || p.name.trim();
     const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(p.slotAt));
@@ -674,7 +685,7 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string })
       </div>
       <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
     </div>`;
-    await sendMail(p.to, "You're booked in for your Activly demo", html);
+    await sendMail(p.to, "You're booked in for your Activly demo", html, leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] demo-booked ack build failed:", (e as Error).message));
 }
 
@@ -683,7 +694,7 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string })
  * original question back alongside the answer — they asked it once, this
  * shouldn't make them re-find what they said — and always offers a demo,
  * the same closing nudge as the initial acknowledgement. */
-export function emailQuestionAnswered(p: { to: string; name: string; question: string; answer: string }): void {
+export function emailQuestionAnswered(p: { to: string; name: string; question: string; answer: string; leadId: string }): void {
   void (async () => {
     const firstName = p.name.trim().split(/\s+/)[0] || p.name.trim();
     const demoUrl = `${webUrl}/demo`;
@@ -706,7 +717,7 @@ export function emailQuestionAnswered(p: { to: string; name: string; question: s
       </div>
       <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
     </div>`;
-    await sendMail(p.to, "Your question, answered", html);
+    await sendMail(p.to, "Your question, answered", html, leadReplySender(p.leadId));
   })().catch((e) => console.error("[mail] question-answered build failed:", (e as Error).message));
 }
 
