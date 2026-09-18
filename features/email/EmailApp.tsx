@@ -1048,6 +1048,15 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
   const saveCurrentDesign = () => { if (!design) return; const nm = saveName.trim() || "Saved design"; const item: SavedTemplate = { id: `sv-${nowMs}`, name: nm, accent: design.accent, blocks: design.blocks }; const next = [item, ...savedDesigns.filter((x) => x.name !== nm)]; setSavedDesigns(next); persistMyTemplates(next); };
   // One-click countdown for the current design (templates don't include one) — adds a dated countdown so the clock shows.
   const addCountdownToDesign = () => { const d = new Date(Date.now() + 14 * 86400000); const p = (n: number) => String(n).padStart(2, "0"); const dateStr = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`; setDesign((dz) => { if (!dz) return dz; const idx = dz.blocks.findIndex((b) => b.t === "countdown"); if (idx >= 0) return { ...dz, blocks: dz.blocks.map((b, i) => (i === idx ? { ...b, date: b.date || dateStr, time: b.time || "18:00" } : b)) }; return { ...dz, blocks: [...dz.blocks, { t: "countdown", heading: "Hurry — offer ends soon", label: "", date: dateStr, time: "18:00" } as Block] }; }); };
+  // Same one-click default for a worded email — cdOn alone isn't enough to
+  // show the clock (wordedHasCountdown also needs cdDate), so seed it here
+  // rather than leaving cdOn true with no date, which would just show the
+  // "no date set" warning instead of ever including the clock.
+  const addCountdownToWorded = () => {
+    if (!cdDate) { const d = new Date(Date.now() + 14 * 86400000); const p = (n: number) => String(n).padStart(2, "0"); setCdDate(`${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`); }
+    if (!cdTime) setCdTime("18:00");
+    setCdOn(true);
+  };
   // A worded email that includes a big countdown is sent as HTML (text block + countdown block).
   const wordedHasCountdown = cdOn && !!cdDate;
   // Countdown status for the current content — so "no clock in the email" is obvious before sending.
@@ -1105,6 +1114,16 @@ function NewCampaign({ audiences, templates, initialAudienceId, initialName, ini
                       <textarea value={tmplBody} onChange={(e) => setTmplBody(e.target.value)} rows={9} placeholder="Write your email… use merge fields like {ChildName} or {ListingName} and they fill in per family." className="w-full resize-y bg-[var(--surface)] px-4 py-3 text-[13.5px] leading-relaxed text-[var(--ink)] outline-none" />
                     </div>
                     <div className="mt-2 flex flex-wrap items-center gap-2"><button type="button" onClick={() => setPreviewBig(true)} className="rounded-lg border border-[#dbe6fb] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">⤢ Preview email</button><p className="text-[11.5px] text-[var(--ink-3)]">Edit freely — this text becomes the email body. Merge fields resolve per family on send.</p></div>
+                    {cdOn
+                      ? <div className="mt-2 rounded-xl border border-[#bfe6cf] bg-[#eafaf0] p-3">
+                          <div className="mb-2 flex items-center gap-2"><span className="text-[12.5px] font-extrabold text-[#127a3e]">⏱ Countdown clock</span><button type="button" onClick={() => setCdOn(false)} className="ml-auto text-[11.5px] font-bold text-[#127a3e] hover:underline">Remove</button></div>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <input type="date" value={cdDate} onChange={(e) => setCdDate(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none" />
+                            <input type="time" value={cdTime} onChange={(e) => setCdTime(e.target.value)} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none" />
+                            <input value={cdHeading} onChange={(e) => setCdHeading(e.target.value)} placeholder="Hurry — offer ends soon" className="min-w-[180px] flex-1 rounded-lg border border-[var(--line)] bg-[var(--surface)] px-2.5 py-1.5 text-[12.5px] text-[var(--ink)] outline-none" />
+                          </div>
+                        </div>
+                      : <button type="button" onClick={addCountdownToWorded} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-[#bfe0c9] bg-[#f0faf3] px-4 py-2.5 text-[13px] font-extrabold text-[#127a3e] hover:bg-[#e3f6ea]">⏱ Countdown</button>}
                   </div>
                 : design
                   ? <div className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-4 shadow-sm">

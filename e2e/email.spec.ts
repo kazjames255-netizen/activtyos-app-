@@ -118,19 +118,8 @@ test.describe("email client", () => {
     const name = `E2E campaign ${stamp}`;
     await walkToContent(page, stamp, name);
 
-    // GENUINE PRODUCT BUG, not a stale locator — flagging rather than
-    // half-fixing blind. `features/email/EmailApp.tsx`'s worded-template
-    // branch (mode === "template") has no countdown toggle anywhere in its
-    // JSX; `cdOn`/`setCdOn`/`cdDate`/`setCdDate`/`cdHeading`/`setCdHeading`
-    // are declared but `setCdOn` etc. have ZERO call sites in the whole
-    // file. The countdown warning banner even still says "Open the … ⏱
-    // Countdown panel" — a panel that doesn't exist. A countdown can only be
-    // added via the separate Designer flow (`design your own` → the block
-    // system), not from a worded email. So "worded email WITH countdown" is
-    // currently unreachable through the UI. Left failing on purpose so this
-    // doesn't silently regress further; logged as a real finding in
-    // docs/amir-backend-outstanding.md rather than rewritten to test a
-    // different (designer) flow that isn't what this test is meant to prove.
+    // Clicking ⏱ Countdown seeds a default date/time (mirrors the designer's
+    // own one-click addCountdownToDesign) so the clock is included right away.
     await page.locator("textarea").fill(`Hello from the e2e wizard ${stamp}.`);
     await page.getByRole("button", { name: "⏱ Countdown" }).click();
     await expect(page.getByText(/Countdown included/)).toBeVisible();
