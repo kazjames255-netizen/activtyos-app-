@@ -31,7 +31,11 @@ test.describe("sales pipeline", () => {
 
     // The board re-reads from the API (not a local store), so the new card
     // appearing proves the round trip. The stamped name is this run's anchor.
-    await expect(page.getByText(leadBusiness)).toBeVisible({ timeout: 15_000 });
+    // Confirmed server-side that the POST always lands well within 15s — the
+    // slow part is the client's own refetch+re-render of the (now real,
+    // production-sized) leads list under load, same class of slow-render
+    // budget issue documented elsewhere in this suite.
+    await expect(page.getByText(leadBusiness)).toBeVisible({ timeout: 30_000 });
 
     // Tidy: remove the lead through the API so reruns don't accumulate.
     const hq = await fbSignIn(accounts.platform.email);
@@ -44,10 +48,15 @@ test.describe("sales pipeline", () => {
 
 test.describe("bug report → support inbox", () => {
   test("operator files a bug from the header; HQ sees, replies, resolves", async ({ browser }) => {
+    // Two full portal page loads (~15-30s each under load, documented
+    // perf issue elsewhere in this suite) plus a report → reply → resolve
+    // round trip — the 60s default isn't enough.
+    test.setTimeout(120_000);
     // Operator side: the 🐞 next to the bell, page + device auto-captured.
     const opCtx = await browser.newContext({ storageState: statePath("company") });
     const opPage = await opCtx.newPage();
     await opPage.goto("/company/dashboard");
+    await expect(opPage.getByRole("button", { name: "Report a bug" })).toBeVisible({ timeout: 30_000 });
     await opPage.getByRole("button", { name: "Report a bug" }).click();
     await opPage.getByPlaceholder("What were you doing, and what went wrong?").fill(bugSteps);
     await opPage.getByRole("button", { name: "Send report" }).click();

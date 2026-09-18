@@ -23,7 +23,10 @@ test.describe("operator publishes a listing via the wizard", () => {
 
     // Build a block bundle: one period, one pass, into the library.
     await page.goto("/freelancer/blocks");
-    await expect(page.getByRole("heading", { level: 2, name: "Sessions & blocks" })).toBeVisible();
+    // A portal view can take 15-30s to render even fully warm under parallel-
+    // worker load (documented perf issue) — the default 10s assertion budget
+    // is too tight for this specific navigation.
+    await expect(page.getByRole("heading", { level: 2, name: "Sessions & blocks" })).toBeVisible({ timeout: 30_000 });
     // Unique names so we can wait for OUR cards (cards render async, and
     // earlier runs leave cards behind). Everything on the board goes into the
     // block — extras are harmless, missing passes are not.
@@ -99,8 +102,13 @@ test.describe("parent books; operator sees it live", () => {
     // Two browser contexts, an extra sign-in round trip for
     // markParentWelcomed, plus the full book→pay→confirm flow — 120s wasn't
     // enough under a busy dev server (same class of slow-load issue
-    // documented elsewhere in this suite).
-    test.setTimeout(150_000);
+    // documented elsewhere in this suite). Browse also holds a live
+    // useRealtime(["listings","blocks"]) subscription, so any OTHER spec
+    // creating a listing/block on the shared "company" tenant while this is
+    // mid-fill can force a re-render and detach the search input —
+    // Playwright retries the fill automatically, but that retry needs
+    // headroom too.
+    test.setTimeout(180_000);
     const accounts = loadAccounts().accounts;
     const s = stamp();
     const title = `E2E Camp ${s}`;
@@ -111,7 +119,7 @@ test.describe("parent books; operator sees it live", () => {
     const opCtx = await browser.newContext({ storageState: statePath("company") });
     const opPage = await opCtx.newPage();
     await opPage.goto("/company/bookings");
-    await expect(opPage.getByRole("heading", { level: 2, name: "Bookings" })).toBeVisible();
+    await expect(opPage.getByRole("heading", { level: 2, name: "Bookings" })).toBeVisible({ timeout: 30_000 });
 
     // Parent finds the listing in Browse. Mark the one-time first-login
     // welcome modal (ParentWelcome.tsx) as seen server-side before
