@@ -137,9 +137,18 @@ platformLeads.put("/:id/answer", async (req, res) => {
   const ref = col.doc(req.params.id);
   const snap = await ref.get();
   if (!snap.exists) { res.status(404).json({ error: "Lead not found" }); return; }
-  const lead = snap.data() as { email?: string; name?: string; contactName?: string; business?: string; message?: string };
+  const lead = snap.data() as { email?: string; name?: string; contactName?: string; business?: string; message?: string; activities?: unknown[] };
   const now = new Date().toISOString();
-  await ref.set({ questionAnswer: parsed.data.answer, questionAnsweredAt: now, updatedAt: now }, { merge: true });
+  // Appended as its own thread message (direction "out"), same as an inbound
+  // reply — NOT a single overwritable field. The old questionAnswer/
+  // questionAnsweredAt fields silently replaced each other on every reply,
+  // which read as the previous exchange having vanished; the thread is now
+  // the append-only activities array, same place an inbound reply lands.
+  const activity = {
+    id: randomUUID(), type: "email" as const, direction: "out" as const,
+    note: parsed.data.answer, at: now, by: req.user?.name ?? req.user?.email ?? "HQ",
+  };
+  await ref.set({ activities: [activity, ...(lead.activities ?? [])], inPipeline: true, updatedAt: now }, { merge: true });
   const to = lead.email;
   const name = lead.contactName || lead.name || lead.business || "";
   if (to) emailQuestionAnswered({ to, name, question: lead.message || "", answer: parsed.data.answer, leadId: ref.id });

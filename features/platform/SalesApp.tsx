@@ -28,7 +28,10 @@ const KINDS: Record<Kind, { label: string; nameLabel: string; icon: string }> = 
   charity:   { label: "Charity / community",   nameLabel: "Organisation name", icon: "🤝" },
 };
 const KIND_ORDER: Kind[] = ["person", "business", "group", "franchise", "school", "cluster", "charity"];
-interface Activity { id: string; type: "call" | "email" | "social" | "demo" | "note"; note: string; outcome?: string; at: string; by: string }
+// `direction` only applies to a real email exchange (the question/reply
+// thread — see LeadModal): "in" is the lead's own words, "out" is HQ's.
+// Absent on every other activity type (a logged call, a note, …).
+interface Activity { id: string; type: "call" | "email" | "social" | "demo" | "note"; note: string; outcome?: string; at: string; by: string; direction?: "in" | "out" }
 interface SalesTask {
   id: string; t: string; due?: string | null; time?: string | null; who?: string;
   // The assignee's email and the repeat this date belongs to. Both were missing,
@@ -61,14 +64,13 @@ export interface Lead {
   // What they run, ticked on the pricing-page form — shown as its own line,
   // not folded into Notes.
   businessTypes?: string[];
-  // HQ's reply to a "website-design-question" lead — see POST …/:id/answer.
-  // Storing it (rather than just emailing and forgetting) means the answer
-  // is visible on the card later and the reply box can be edited/resent.
-  questionAnswer?: string;
-  questionAnsweredAt?: string;
+  // The question/reply thread for a "website-design-question" lead lives in
+  // `activities` as ordinary entries with direction "in" (the lead's own
+  // words) / "out" (HQ's) — an append-only log, not a single overwritable
+  // field, so a later reply can never look like it erased an earlier one.
   // Set when the lead replies to one of our emails — routes/emails.ts's
-  // inbound webhook recognises the "lead-<id>@…" Reply-To on every
-  // lead-facing email and files their reply as an activity here.
+  // inbound webhook recognises the "lead-<token>@…" Reply-To on every
+  // lead-facing email and files their reply as a direction:"in" activity.
   lastReplyAt?: string;
 }
 const slotFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
@@ -397,7 +399,7 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
               <div className="truncate text-[13.5px] font-extrabold">{l.business}</div>
               <div className="truncate text-[11.5px] text-[var(--ink-3)]">{l.contactName} · {l.location}</div>
               {l.interest === "website-design-question" && (
-                <div className="mt-0.5 truncate text-[11.5px] font-semibold text-[#a5670a]">❓ Asked: {l.message || "(no message)"}{l.questionAnswer ? " · ✅ Answered" : ""}</div>
+                <div className="mt-0.5 truncate text-[11.5px] font-semibold text-[#a5670a]">❓ Asked: {l.message || "(no message)"}{l.activities.some((a) => a.direction === "out") ? " · ✅ Answered" : ""}</div>
               )}
             </div>
             {l.interest === "website-design-signup" && (
@@ -647,14 +649,21 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
     id: "", business: "", kind: "business", contactName: "", email: "", phone: "", location: "", source: "cold_call", owner: "", plan: "company", estMrr: PLAN_MRR.company, stage: "new", notes: "", activities: [], createdAt: nowIso(), updatedAt: nowIso(),
   });
   const [act, setAct] = useState<{ type: Activity["type"]; note: string; outcome: string }>({ type: "call", note: "", outcome: "" });
-  const [answerDraft, setAnswerDraft] = useState(f.questionAnswer ?? "");
+  // Always starts blank — this is "write a NEW message", never "edit the
+  // last one". The thread itself (f.activities, direction "in"/"out") is
+  // the only record of what's already been said; nothing here overwrites it.
+  const [answerDraft, setAnswerDraft] = useState("");
   const [answerBusy, setAnswerBusy] = useState(false);
   const sendAnswer = async () => {
-    if (!answerDraft.trim() || answerBusy) return;
+    const text = answerDraft.trim();
+    if (!text || answerBusy) return;
     setAnswerBusy(true);
     try {
-      await onAnswerQuestion(f.id, answerDraft.trim());
-      setF((x) => ({ ...x, questionAnswer: answerDraft.trim(), questionAnsweredAt: nowIso() }));
+      await onAnswerQuestion(f.id, text);
+      // Reflect it immediately rather than waiting on a refetch — the server
+      // prepends the identical shape (routes/platformLeads.ts PUT …/answer).
+      setF((x) => ({ ...x, activities: [{ id: uid(), type: "email", direction: "out", note: text, at: nowIso(), by: "You" }, ...x.activities] }));
+      setAnswerDraft("");
     } finally {
       setAnswerBusy(false);
     }
@@ -680,24 +689,38 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
           <div className="text-[15px] font-extrabold" style={{ fontFamily: "var(--ff-display)" }}>{lead ? f.business || "Lead" : "New lead"}</div>
           <button type="button" onClick={onClose} className="rounded-full bg-white/15 px-3 py-1 text-[12px] font-bold">✕ Close</button>
         </div>
-        {f.interest === "website-design-question" && (
-          <div className="border-b border-[var(--line)] bg-[#fff8ee] p-5">
-            <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#a5670a]">❓ Their question</div>
-            <div className="rounded-xl border border-[#f0dcb0] bg-[var(--surface)] px-3.5 py-3 text-[13.5px] leading-relaxed text-[var(--ink)]">{f.message || "(no message included)"}</div>
-            <div className="mt-3.5 mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#a5670a]">
-              {f.questionAnswer ? "✅ Your reply" : "Reply"}
-              {f.questionAnsweredAt && <span className="ml-1.5 font-semibold normal-case text-[var(--ink-3)]">sent {fmtDay(f.questionAnsweredAt)}</span>}
+        {f.interest === "website-design-question" && (() => {
+          // The thread: their original message first, then every "in"/"out"
+          // activity in chronological order. f.activities is stored
+          // newest-first (every writer prepends — see platformLeads.ts and
+          // routes/emails.ts), so the email-thread slice is reversed for
+          // natural oldest-to-newest reading; the generic Activity log
+          // further down keeps the newest-first order it's always had.
+          const thread = f.activities.filter((a) => a.type === "email" && a.direction).slice().reverse();
+          const bubble = (dir: "in" | "out", text: string, who: string, at?: string) => (
+            <div key={`${dir}-${at ?? "orig"}-${who}`} className={`max-w-[88%] rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed ${dir === "out" ? "ml-auto bg-[#1d3a8f] text-white" : "bg-[var(--surface)] border border-[#f0dcb0] text-[var(--ink)]"}`}>
+              <div className={`mb-0.5 text-[10.5px] font-bold uppercase tracking-wide ${dir === "out" ? "text-white/70" : "text-[#a5670a]"}`}>{who}{at ? ` · ${fmtDay(at)}` : ""}</div>
+              {text}
             </div>
-            <textarea rows={3} value={answerDraft} onChange={(e) => setAnswerDraft(e.target.value)} placeholder="Type your answer — this emails it to them along with their question and a Book a demo link."
-              className="w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
-            <div className="mt-2 flex items-center gap-2">
-              <button type="button" onClick={() => void sendAnswer()} disabled={!answerDraft.trim() || answerBusy} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">
-                {answerBusy ? "Sending…" : f.questionAnswer ? "Send updated answer" : "Send answer"}
-              </button>
-              <span className="text-[11px] text-[var(--ink-3)]">Emails {f.email || "them"} the question, your answer, and a link to book a demo.</span>
+          );
+          return (
+            <div className="border-b border-[var(--line)] bg-[#fff8ee] p-5">
+              <div className="mb-2.5 text-[11px] font-extrabold uppercase tracking-wide text-[#a5670a]">💬 Question &amp; reply thread</div>
+              <div className="flex flex-col gap-2">
+                {bubble("in", f.message || "(no message included)", "Them")}
+                {thread.map((a) => bubble(a.direction!, a.note, a.direction === "out" ? "You" : "Them", a.at))}
+              </div>
+              <textarea rows={2} value={answerDraft} onChange={(e) => setAnswerDraft(e.target.value)} placeholder="Type a reply — this emails it to them, and they can reply back into this same thread."
+                className="mt-3 w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+              <div className="mt-2 flex items-center gap-2">
+                <button type="button" onClick={() => void sendAnswer()} disabled={!answerDraft.trim() || answerBusy} className="rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">
+                  {answerBusy ? "Sending…" : "Send"}
+                </button>
+                <span className="text-[11px] text-[var(--ink-3)]">Emails {f.email || "them"} this reply, with a Book a demo link.</span>
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
         <div className="p-5">
           {!!f.businessTypes?.length && (
             <div className="mb-3 text-[12.5px] text-[var(--ink-2)]"><span className="font-bold text-[var(--ink-3)]">Runs:</span> {f.businessTypes.map((t) => BIZ_TYPE_LABEL[t] || t).join(", ")}</div>

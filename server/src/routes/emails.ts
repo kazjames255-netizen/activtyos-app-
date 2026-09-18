@@ -1,7 +1,6 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import { Router, raw, type Request, type Response } from "express";
 import { z } from "zod";
-import { FieldValue } from "firebase-admin/firestore";
 import { db } from "../firebase";
 import { performEmailSend, recordOpen, readUnsubToken } from "../lib/emailSend";
 import { fromAddress, fromDomain, fromName } from "../lib/mailer";
@@ -546,19 +545,21 @@ async function resolveLeadReply(input: InboundInput): Promise<string | null> {
  * lastReplyAt so the bell picks it up (platformNotifications.ts) — a
  * prospect's reply must not just vanish into an unmonitored mailbox. */
 async function storeLeadReply(leadId: string, input: InboundInput): Promise<void> {
+  const ref = db.collection("leads").doc(leadId);
   const now = new Date().toISOString();
   const activity = {
     id: `reply-${Date.now()}-${Math.round(Math.random() * 1e6)}`,
     type: "email" as const,
+    direction: "in" as const,
     note: input.text || "(no message body)",
     at: now,
     by: input.from || input.fromEmail || "Customer (reply)",
   };
-  await db.collection("leads").doc(leadId).set({
-    activities: FieldValue.arrayUnion(activity),
-    lastReplyAt: now,
-    updatedAt: now,
-  }, { merge: true });
+  // Prepended (newest-first), matching every other activity writer for this
+  // collection (POST …/:id/activities) — a mixed order would silently
+  // reshuffle the thread depending on which path added the last message.
+  const existing = ((await ref.get()).data()?.activities as unknown[] | undefined) ?? [];
+  await ref.set({ activities: [activity, ...existing], lastReplyAt: now, updatedAt: now }, { merge: true });
 }
 
 /** Which provider does this message belong to? Null when nothing matches —
