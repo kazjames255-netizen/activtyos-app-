@@ -137,13 +137,22 @@ new fakes the moment they're spotted.
     real ESP is a bounce rate that gets a domain suspended.
 - [x] ~~Staff portal landing page is the legacy iframe~~ — real
   StaffDashApp now (today's sessions, open tasks, day-plan link).
-- [ ] **Inbound email has no provider connected** — the Email Inbox backend
-  is live (`POST /api/emails/inbound`, store + folder/snooze endpoints) but
-  nothing feeds it: pick an inbound-parse provider (Postmark/SES/Mailgun/
-  Cloudflare Email Workers), point it at the webhook, and set
-  `INBOUND_EMAIL_SECRET` (the code falls back to a dev secret when unset —
-  fine only while nothing is deployed). Until then operator inboxes are
-  empty. (`server/src/routes/emails.ts`)
+- [ ] **Inbound email relies on a cloudflared quick tunnel in dev — no
+  stable production endpoint yet.** Resend IS connected as the inbound
+  provider (`email.received` webhook, `server/src/routes/emails.ts`'s
+  `emailsResendInbound`) and its signing secret is set, but a cloudflared
+  *quick* tunnel gets a brand-new random URL every restart, so the webhook's
+  target silently goes dead the moment the tunnel process dies — this
+  already happened once and swallowed a real lead's reply with no error
+  anywhere. `scripts/dev-inbound-tunnel.sh` re-points the webhook at a fresh
+  tunnel URL automatically every time it's run (needs `RESEND_API_KEY` +
+  `RESEND_INBOUND_WEBHOOK_ID` in `server/.env`) — run it whenever inbound
+  mail needs to work in dev. Before a real deploy, replace it with a proper
+  named Cloudflare Tunnel (stable hostname) or point Resend at the real
+  production domain directly; a quick tunnel must never be the production
+  answer. The old shared-secret generic endpoint (`POST /api/emails/inbound`,
+  `INBOUND_EMAIL_SECRET`) still exists for other inbound-parse providers if
+  Resend is ever swapped out.
 - [ ] **Firestore has no Storage bucket** — images live as Firestore docs
   served via `/api/images/:id`. Enable Blaze/Storage and swap the backing
   store in `server/src/routes/uploads.ts` before image volume grows.
