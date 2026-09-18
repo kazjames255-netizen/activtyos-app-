@@ -761,6 +761,29 @@ export function emailQuestionAnswered(p: { to: string; name: string; question: s
   })().catch((e) => console.error("[mail] question-answered build failed:", (e as Error).message));
 }
 
+/** HQ shares a call note with the lead — the Sales board's "Call notes"
+ * section, only when the "Share with them?" toggle is set to Yes (kept
+ * internal-only otherwise, never emailed). Same reply-routing as everything
+ * else lead-facing, so a reply lands back on the thread, not a dead end. */
+export function emailCallNote(p: { to: string; name: string; note: string; leadId: string }): void {
+  void (async () => {
+    const firstName = p.name.trim().split(/\s+/)[0] || p.name.trim();
+    const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
+      <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+      </div>
+      <div style="padding:26px 22px">
+        <h2 style="font-size:21px;margin:0 0 12px;color:#171534">A quick note for you, ${escapeHtml(firstName)}</h2>
+        <div style="background:#eef4ff;border-left:3px solid #1d3a8f;border-radius:6px;padding:12px 14px;margin:0 0 16px;font-size:14px;line-height:1.6;color:#171534">${escapeHtml(p.note)}</div>
+        <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:18px 0 0;text-align:center">Questions any time? Just reply to this email.</p>
+      </div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+    </div>`;
+    await sendMail(p.to, "A note from the Activly team", html, await leadReplySender(p.leadId));
+  })().catch((e) => console.error("[mail] call-note build failed:", (e as Error).message));
+}
+
 /** Team/franchise invite — the join link, who sent it and what it grants.
  * The link is the secret; it can only be used once. */
 export function emailTeamInvite(p: {

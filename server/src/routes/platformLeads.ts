@@ -2,7 +2,7 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
-import { emailDemoBooked, emailQuestionAnswered } from "../lib/emails";
+import { emailDemoBooked, emailQuestionAnswered, emailCallNote } from "../lib/emails";
 
 // Sales CRM (HQ pipeline) — mounted at /api/platform/leads. Leads live in a
 // top-level `leads` collection with activities EMBEDDED as an array on the
@@ -57,6 +57,10 @@ const activitySchema = z.object({
   type: z.enum(ACTIVITY_TYPES),
   note: z.string().trim().min(1).max(1_000),
   outcome: z.string().trim().max(200).optional(),
+  // "note" entries only — HQ's own call/meeting notes, saved onto the lead
+  // either purely for internal reference, or emailed to the lead too (the
+  // Sales board's own "Call notes" section, with a Share yes/no choice).
+  shared: z.boolean().optional(),
 });
 
 // GET / — every lead with its embedded activities, most recently touched first
@@ -182,16 +186,24 @@ platformLeads.post("/:id/activities", async (req, res) => {
   const snap = await ref.get();
   if (!snap.exists) { res.status(404).json({ error: "Lead not found" }); return; }
   const now = new Date().toISOString();
+  const shared = parsed.data.type === "note" && parsed.data.shared === true;
   const activity = {
     id: randomUUID(),
     type: parsed.data.type,
     note: parsed.data.note,
     ...(parsed.data.outcome ? { outcome: parsed.data.outcome } : {}),
+    ...(shared ? { shared: true } : {}),
     at: now,
     by: req.user?.name ?? req.user?.email ?? "Platform",
   };
   const existing = (snap.data()!.activities as unknown[] | undefined) ?? [];
   await ref.set({ activities: [activity, ...existing], inPipeline: true, updatedAt: now }, { merge: true });
+  if (shared) {
+    const lead = snap.data() as { email?: string; name?: string; contactName?: string; business?: string };
+    const to = lead.email;
+    const name = lead.contactName || lead.name || lead.business || "";
+    if (to) emailCallNote({ to, name, note: parsed.data.note, leadId: ref.id });
+  }
   const after = await ref.get();
   res.status(201).json({ id: after.id, ...after.data() });
 });

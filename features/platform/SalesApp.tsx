@@ -31,7 +31,7 @@ const KIND_ORDER: Kind[] = ["person", "business", "group", "franchise", "school"
 // `direction` only applies to a real email exchange (the question/reply
 // thread — see LeadModal): "in" is the lead's own words, "out" is HQ's.
 // Absent on every other activity type (a logged call, a note, …).
-interface Activity { id: string; type: "call" | "email" | "social" | "demo" | "note"; note: string; outcome?: string; at: string; by: string; direction?: "in" | "out" }
+interface Activity { id: string; type: "call" | "email" | "social" | "demo" | "note"; note: string; outcome?: string; at: string; by: string; direction?: "in" | "out"; shared?: boolean }
 interface SalesTask {
   id: string; t: string; due?: string | null; time?: string | null; who?: string;
   // The assignee's email and the repeat this date belongs to. Both were missing,
@@ -679,6 +679,30 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
       setAnswerBusy(false);
     }
   };
+  // A dedicated "call notes" writer — distinct from the generic activity
+  // logger below, so it's obvious this is HQ's own working notes on this
+  // person (saved straight to the lead), with an explicit choice on whether
+  // it also gets emailed to them or stays internal-only. Posts through the
+  // same activities endpoint (type "note"), tagged `shared` server-side.
+  const [noteDraft, setNoteDraft] = useState("");
+  const [noteShare, setNoteShare] = useState<boolean>(false);
+  const [noteBusy, setNoteBusy] = useState(false);
+  const saveCallNote = async () => {
+    const text = noteDraft.trim();
+    if (!text || noteBusy || !f.id) return;
+    setNoteBusy(true);
+    try {
+      // The server returns the WHOLE lead (its activities array, freshly
+      // prepended) — same response shape as the answer-question endpoint.
+      const saved = await post<Lead>(`/api/platform/leads/${f.id}/activities`, { type: "note", note: text, shared: noteShare });
+      setF((x) => ({ ...x, activities: saved.activities }));
+      setNoteDraft("");
+      setNoteShare(false);
+    } finally {
+      setNoteBusy(false);
+    }
+  };
+  const [videoOpen, setVideoOpen] = useState(false);
   // Touches logged here are sent on Save (POST …/activities — the server
   // stamps at/by); shown in the list immediately with a local placeholder.
   const [pending, setPending] = useState<NewActivity[]>([]);
@@ -732,6 +756,52 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
             </div>
           );
         })()}
+        {f.videoRoom && (
+          <div className="border-b border-[var(--line)] bg-[#eef4fd] p-5">
+            <div className="flex items-center gap-2">
+              <span className="text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">📹 Video call{f.slotAt ? ` · ${slotFmt.format(new Date(f.slotAt))}` : ""}</span>
+              <button type="button" onClick={() => setVideoOpen((v) => !v)} className="ml-auto rounded-lg border border-[#dbe6fb] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">
+                {videoOpen ? "Hide call" : "Join call here"}
+              </button>
+              <a href={`https://meet.jit.si/${f.videoRoom}`} target="_blank" rel="noopener noreferrer" className="rounded-lg border border-[#dbe6fb] bg-[var(--surface)] px-3 py-1.5 text-[12px] font-bold text-[#1d3a8f] hover:bg-[#eef4fd]">Open in new tab ↗</a>
+            </div>
+            {videoOpen && (
+              <iframe
+                src={`https://meet.jit.si/${f.videoRoom}#config.prejoinPageEnabled=true`}
+                allow="camera; microphone; fullscreen; display-capture; autoplay"
+                className="mt-3 w-full rounded-xl border border-[var(--line)]"
+                style={{ height: 480 }}
+              />
+            )}
+          </div>
+        )}
+        <div className="border-b border-[var(--line)] bg-[var(--panel)] p-5">
+          <div className="mb-1.5 text-[11px] font-extrabold uppercase tracking-wide text-[#1d3a8f]">📝 Call notes</div>
+          <p className="mb-2 text-[11.5px] text-[var(--ink-3)]">Your own notes on this person — saved here for next time. Choose to email a note to them, or keep it internal.</p>
+          {f.activities.filter((a) => a.type === "note").length > 0 && (
+            <div className="mb-3 flex flex-col gap-1.5">
+              {f.activities.filter((a) => a.type === "note").map((a) => (
+                <div key={a.id} className="rounded-lg border border-[var(--line)] bg-[var(--surface)] px-3 py-2 text-[12.5px] text-[var(--ink)]">
+                  <div className="mb-0.5 flex items-center gap-1.5 text-[10.5px] font-bold text-[var(--ink-3)]">
+                    {a.by} · {fmtDay(a.at)}
+                    {a.shared ? <span className="rounded-full bg-[#eafaf0] px-1.5 py-0.5 font-extrabold text-[#127a3e]">✓ Shared with them</span> : <span className="rounded-full bg-[var(--panel)] px-1.5 py-0.5 font-extrabold text-[var(--ink-3)]">Internal only</span>}
+                  </div>
+                  {a.note}
+                </div>
+              ))}
+            </div>
+          )}
+          <textarea rows={2} value={noteDraft} onChange={(e) => setNoteDraft(e.target.value)} placeholder="Notes from the call — what was said, what's next…"
+            className="w-full resize-y rounded-xl border border-[var(--line)] bg-[var(--surface)] px-3.5 py-2.5 text-[13px] text-[var(--ink)] outline-none focus:border-[#1d3a8f]" />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <span className="text-[11.5px] font-bold text-[var(--ink-3)]">Share with them?</span>
+            <button type="button" onClick={() => setNoteShare(false)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${!noteShare ? "border-[#1d3a8f] bg-[#eaf0fc] text-[#1d3a8f]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>No — internal only</button>
+            <button type="button" onClick={() => setNoteShare(true)} className={`rounded-full border px-3 py-1 text-[11.5px] font-bold ${noteShare ? "border-[#127a3e] bg-[#eafaf0] text-[#127a3e]" : "border-[var(--line)] text-[var(--ink-2)]"}`}>Yes — email it to them</button>
+            <button type="button" onClick={() => void saveCallNote()} disabled={!noteDraft.trim() || noteBusy} className="ml-auto rounded-lg bg-[#1d3a8f] px-4 py-1.5 text-[12.5px] font-bold text-white disabled:opacity-40">
+              {noteBusy ? "Saving…" : "Save note"}
+            </button>
+          </div>
+        </div>
         <div className="p-5">
           {!!f.businessTypes?.length && (
             <div className="mb-3 text-[12.5px] text-[var(--ink-2)]"><span className="font-bold text-[var(--ink-3)]">Runs:</span> {f.businessTypes.map((t) => BIZ_TYPE_LABEL[t] || t).join(", ")}</div>
