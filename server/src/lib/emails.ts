@@ -678,6 +678,38 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string })
   })().catch((e) => console.error("[mail] demo-booked ack build failed:", (e as Error).message));
 }
 
+/** HQ's reply to a "website-design-question" lead (Sales board's reply box
+ * on the lead card, PUT /api/platform/leads/:id/answer). Quotes their
+ * original question back alongside the answer — they asked it once, this
+ * shouldn't make them re-find what they said — and always offers a demo,
+ * the same closing nudge as the initial acknowledgement. */
+export function emailQuestionAnswered(p: { to: string; name: string; question: string; answer: string }): void {
+  void (async () => {
+    const firstName = p.name.trim().split(/\s+/)[0] || p.name.trim();
+    const demoUrl = `${webUrl}/demo`;
+    const html = `
+    <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
+      <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
+        <span style="font-size:22px;font-weight:800;color:#1d3a8f">ActivityOS</span>
+      </div>
+      <div style="padding:26px 22px">
+        <h2 style="font-size:21px;margin:0 0 12px;color:#171534">Here's your answer, ${escapeHtml(firstName)}</h2>
+        <p style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#8a8fa3;margin:0 0 4px">You asked</p>
+        <div style="background:#f5f6fb;border-left:3px solid #8a8fa3;border-radius:6px;padding:10px 14px;margin:0 0 16px;font-size:13px;line-height:1.55;color:#4a4763">${escapeHtml(p.question || "(no message included)")}</div>
+        <p style="font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:#1d3a8f;margin:0 0 4px">Our answer</p>
+        <div style="background:#eef4ff;border-left:3px solid #1d3a8f;border-radius:6px;padding:12px 14px;margin:0 0 18px;font-size:14px;line-height:1.6;color:#171534">${escapeHtml(p.answer)}</div>
+        <p style="font-size:13.5px;line-height:1.6;margin:0 0 6px;color:#4a4763">Want to see it for yourself instead? Grab a free 1-on-1 walkthrough with the team — no obligation.</p>
+        <div style="text-align:center;margin:16px 0 6px">
+          <a href="${demoUrl}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">Book a demo →</a>
+        </div>
+        <p style="font-size:11.5px;line-height:1.5;color:#8a8fa3;margin:18px 0 0;text-align:center">Anything else? Just reply to this email.</p>
+      </div>
+      <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
+    </div>`;
+    await sendMail(p.to, "Your question, answered", html);
+  })().catch((e) => console.error("[mail] question-answered build failed:", (e as Error).message));
+}
+
 /** Team/franchise invite — the join link, who sent it and what it grants.
  * The link is the secret; it can only be used once. */
 export function emailTeamInvite(p: {

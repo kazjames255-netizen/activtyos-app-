@@ -2,7 +2,7 @@ import { Router } from "express";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { db } from "../firebase";
-import { emailDemoBooked } from "../lib/emails";
+import { emailDemoBooked, emailQuestionAnswered } from "../lib/emails";
 
 // Sales CRM (HQ pipeline) — mounted at /api/platform/leads. Leads live in a
 // top-level `leads` collection with activities EMBEDDED as an array on the
@@ -119,6 +119,30 @@ platformLeads.put("/:id", async (req, res) => {
     const name = parsed.data.contactName || before.contactName || before.name || parsed.data.business || before.business || "";
     if (to) emailDemoBooked({ to, name, slotAt: parsed.data.slotAt });
   }
+  const after = await ref.get();
+  res.json({ id: after.id, ...after.data() });
+});
+
+// PUT /:id/answer — HQ replies to a "website-design-question" lead. Stores
+// the answer on the lead (so it's visible later, not just fired-and-
+// forgotten) and emails the customer their original question + this answer
+// + a Book a demo link, in one go.
+platformLeads.put("/:id/answer", async (req, res) => {
+  if (req.auth!.role !== "platform") {
+    res.status(403).json({ error: "Requires the platform role" });
+    return;
+  }
+  const parsed = z.object({ answer: z.string().trim().min(1).max(4_000) }).safeParse(req.body);
+  if (!parsed.success) { res.status(400).json({ error: parsed.error.issues }); return; }
+  const ref = col.doc(req.params.id);
+  const snap = await ref.get();
+  if (!snap.exists) { res.status(404).json({ error: "Lead not found" }); return; }
+  const lead = snap.data() as { email?: string; name?: string; contactName?: string; business?: string; message?: string };
+  const now = new Date().toISOString();
+  await ref.set({ questionAnswer: parsed.data.answer, questionAnsweredAt: now, updatedAt: now }, { merge: true });
+  const to = lead.email;
+  const name = lead.contactName || lead.name || lead.business || "";
+  if (to) emailQuestionAnswered({ to, name, question: lead.message || "", answer: parsed.data.answer });
   const after = await ref.get();
   res.json({ id: after.id, ...after.data() });
 });
