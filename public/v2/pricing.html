@@ -235,7 +235,14 @@
       </div>
     </div>
     <script>
-      var wkApiBase = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:4000' : '';
+      // TEMPORARY, for live testing over the cloudflared tunnels — web and
+      // API are two SEPARATE tunnel domains right now (see
+      // scripts/dev-inbound-tunnel.sh's sibling web-tunnel setup), so the
+      // normal "same-origin in production" assumption below doesn't hold
+      // for this one test hostname. Revert this line once done testing.
+      var wkApiBase = (location.hostname==='localhost'||location.hostname==='127.0.0.1') ? 'http://localhost:4000'
+        : location.hostname==='drawn-monsters-bowl-toddler.trycloudflare.com' ? 'https://clearly-parade-interior-prints.trycloudflare.com'
+        : '';
       // People type "www.example.com" far more often than "https://www.example.com" —
       // add the scheme ourselves rather than rejecting a perfectly real address.
       function wkNormaliseUrl(v){
