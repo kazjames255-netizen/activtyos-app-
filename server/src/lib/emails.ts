@@ -33,6 +33,22 @@ async function ensureLeadReplyToken(leadId: string): Promise<string> {
 const leadReplySender = async (leadId: string): Promise<{ replyTo: string } | undefined> =>
   inboundConfigured ? { replyTo: `lead-${await ensureLeadReplyToken(leadId)}@${inboundDomain}` } : undefined;
 
+/** A real, working video-call room for a lead's booked slot — Jitsi Meet
+ * (meet.jit.si): free, no account needed to join or host, works instantly.
+ * No Google/Zoom account to connect (that would need real OAuth, set up by
+ * hand in that provider's own console — not something done from here), and
+ * a static personal link would mean every booking shares the same room.
+ * One random slug per lead, assigned once and reused for every email about
+ * that lead's call (rescheduling keeps the same room) — unguessable, so
+ * only people who were actually sent the link can join. */
+export async function ensureLeadVideoUrl(leadId: string): Promise<string> {
+  const ref = db.collection("leads").doc(leadId);
+  const existing = (await ref.get()).data() as { videoRoom?: string } | undefined;
+  const room = existing?.videoRoom || `Activly-${randomBytes(8).toString("hex")}`;
+  if (!existing?.videoRoom) await ref.set({ videoRoom: room }, { merge: true });
+  return `https://meet.jit.si/${room}`;
+}
+
 /** The ActivityOS mark as an inline (CID) attachment. Embedded rather than
  *  hot-linked so it renders in every client and regardless of environment —
  *  Gmail/Outlook strip SVG and data-URIs and can't reach a localhost URL. Any
@@ -645,6 +661,7 @@ export function emailWebsiteAddonAck(p: {
   void (async () => {
     const firstName = p.name.trim().split(/\s+/)[0] || p.name.trim();
     const demoUrl = `${webUrl}/demo`;
+    const videoUrl = p.slotAt ? await ensureLeadVideoUrl(p.leadId) : null;
     const heading = p.kind === "question"
       ? "Got your question — we'll reply shortly"
       : p.slotAt ? "You're booked in — got your website request" : "Got your website request";
@@ -652,10 +669,13 @@ export function emailWebsiteAddonAck(p: {
       ? `<p style="font-size:14px;line-height:1.6;margin:0 0 14px">Thanks, ${escapeHtml(firstName)} — here's what you asked us:</p>
          <div style="background:#f5f6fb;border-left:3px solid #1d3a8f;border-radius:6px;padding:12px 14px;margin:0 0 16px;font-size:13.5px;line-height:1.55;color:#171534">${escapeHtml(p.message?.trim() || "(no message included)")}</div>
          <p style="font-size:14px;line-height:1.6;margin:0 0 16px">Someone from the team will get back to you shortly with an answer.</p>`
-      : p.slotAt
+      : p.slotAt && videoUrl
       ? `<p style="font-size:14px;line-height:1.6;margin:0 0 16px">Thanks, ${escapeHtml(firstName)} — we've got your request for a branded website to match your Activly storefront, and booked you in for a quick call to talk it through:</p>
          <div style="background:#eef4ff;border-radius:10px;padding:14px 16px;margin:0 0 16px;text-align:center;font-size:15px;font-weight:800;color:#1d3a8f">${escapeHtml(new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(p.slotAt)))} (UK time)</div>
-         <p style="font-size:13.5px;line-height:1.6;margin:0 0 16px;color:#4a4763">We'll send a call link nearer the time. Need to move it? Just reply to this email.</p>`
+         <div style="text-align:center;margin:0 0 16px">
+           <a href="${videoUrl}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">🎥 Join your call</a>
+         </div>
+         <p style="font-size:13.5px;line-height:1.6;margin:0 0 16px;color:#4a4763">Same link works whenever you're ready to join, no account or download needed. Need to move it? Just reply to this email.</p>`
       : `<p style="font-size:14px;line-height:1.6;margin:0 0 16px">Thanks, ${escapeHtml(firstName)} — we've got your request for a branded website to match your Activly storefront. Someone from the team will be in touch shortly to confirm the details and get started.</p>`;
     const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
@@ -688,6 +708,7 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string; l
   void (async () => {
     const firstName = p.name.trim().split(/\s+/)[0] || p.name.trim();
     const when = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "long", day: "numeric", month: "long", hour: "2-digit", minute: "2-digit" }).format(new Date(p.slotAt));
+    const videoUrl = await ensureLeadVideoUrl(p.leadId);
     const html = `
     <div style="font-family:system-ui,-apple-system,'Segoe UI',sans-serif;max-width:560px;margin:0 auto;color:#171534;background:#ffffff">
       <div style="text-align:center;padding:22px 0 12px;border-bottom:3px solid #1d3a8f">
@@ -697,7 +718,10 @@ export function emailDemoBooked(p: { to: string; name: string; slotAt: string; l
         <h2 style="font-size:21px;margin:0 0 12px;color:#171534">You're booked in, ${escapeHtml(firstName)} 🎉</h2>
         <p style="font-size:14px;line-height:1.6;margin:0 0 16px">We've pencilled you in for a free 1-on-1 walkthrough:</p>
         <div style="background:#eef4ff;border-radius:10px;padding:14px 16px;margin:0 0 16px;text-align:center;font-size:15px;font-weight:800;color:#1d3a8f">${escapeHtml(when)} (UK time)</div>
-        <p style="font-size:13.5px;line-height:1.6;margin:0;color:#4a4763">We'll send a call link nearer the time. Need to move it? Just reply to this email.</p>
+        <div style="text-align:center;margin:0 0 16px">
+          <a href="${videoUrl}" style="display:inline-block;background:#1d3a8f;color:#ffffff;padding:13px 32px;border-radius:999px;text-decoration:none;font-weight:800;font-size:15px;box-shadow:0 8px 20px -8px rgba(29,58,143,.55)">🎥 Join your call</a>
+        </div>
+        <p style="font-size:13.5px;line-height:1.6;margin:0;color:#4a4763">Same link works whenever you're ready to join, no account or download needed. Need to move it? Just reply to this email.</p>
       </div>
       <div style="text-align:center;padding:14px 0;border-top:1px solid #eef0f5;color:#8a86a3;font-size:11.5px">Powered by <b style="color:#4a4763">ActivityOS</b></div>
     </div>`;

@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { gzipSync } from "node:zlib";
 import { db } from "../firebase";
-import { emailWebsiteAddonAck } from "../lib/emails";
+import { emailWebsiteAddonAck, emailDemoBooked } from "../lib/emails";
 
 // Marketing-site "Book a demo" lead capture.
 // - POST is PUBLIC: the /demo form on the site posts here with no login.
@@ -89,6 +89,11 @@ leadsPublic.post("/", async (req, res) => {
       slotAt: parsed.data.slotAt,
       leadId: ref.id,
     });
+  } else if (parsed.data.slotAt) {
+    // A real /demo booking with a chosen slot — the page's own copy
+    // ("we'll email a confirmation shortly") had nothing behind it until
+    // now; this is that confirmation, with a working video-call link.
+    emailDemoBooked({ to: parsed.data.email, name: parsed.data.name, slotAt: parsed.data.slotAt, leadId: ref.id });
   }
   res.json({ ok: true, id: ref.id });
 });

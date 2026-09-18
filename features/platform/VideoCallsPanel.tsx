@@ -50,7 +50,14 @@ export function VideoCallsPanel({ leads, onOpen, onMove }: { leads: Lead[]; onOp
                 return (
                   <li key={l.id} data-ui="card" className={`flex flex-wrap items-center gap-3 px-3.5 py-2.5 ${i > 0 ? "border-t border-[var(--line)]" : ""}`}>
                     <div className="flex min-w-0 flex-1 cursor-pointer items-center gap-3" onClick={() => onOpen(l)}>
-                      <span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11.5px] font-extrabold text-[#1d3a8f]">📹 Video call · {timeFmt.format(new Date(l.slotAt!))}</span>
+                      {l.videoRoom ? (
+                        <a href={`https://meet.jit.si/${l.videoRoom}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                          className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11.5px] font-extrabold text-[#1d3a8f] hover:bg-[#dde8fb]">
+                          📹 Video call · {timeFmt.format(new Date(l.slotAt!))} ↗
+                        </a>
+                      ) : (
+                        <span className="rounded-full bg-[#eef4fd] px-2.5 py-1 text-[11.5px] font-extrabold text-[#1d3a8f]">📹 Video call · {timeFmt.format(new Date(l.slotAt!))}</span>
+                      )}
                       <div className="min-w-0 flex-1">
                         <div className="truncate text-[13px] font-extrabold text-[var(--ink)]">{l.business}</div>
                         <div className="truncate text-[11px] text-[var(--ink-3)]">{l.contactName} · {l.email}{l.phone ? ` · ${l.phone}` : ""}</div>

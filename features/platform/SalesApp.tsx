@@ -72,6 +72,10 @@ export interface Lead {
   // inbound webhook recognises the "lead-<token>@…" Reply-To on every
   // lead-facing email and files their reply as a direction:"in" activity.
   lastReplyAt?: string;
+  // A real Jitsi Meet room (server/src/lib/emails.ts's ensureLeadVideoUrl) —
+  // assigned once per lead and reused for every email about their booked
+  // call, so rescheduling never breaks a link already sent.
+  videoRoom?: string;
 }
 const slotFmt = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/London", weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
 
@@ -409,9 +413,16 @@ function Pipeline({ leads, onOpen, onMove, onBookDemo }: { leads: Lead[]; onOpen
               <span className="truncate rounded-md bg-[#fdf3e5] px-2 py-1 text-[11px] font-bold text-[#a5670a]">❓ Question</span>
             )}
             {l.slotAt && (
-              <span className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f]">
-                📹 Video call · {slotFmt.format(new Date(l.slotAt))}
-              </span>
+              l.videoRoom ? (
+                <a href={`https://meet.jit.si/${l.videoRoom}`} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}
+                  className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f] hover:bg-[#dde8fb]">
+                  📹 Video call · {slotFmt.format(new Date(l.slotAt))} ↗
+                </a>
+              ) : (
+                <span className="truncate rounded-md bg-[#eef4fd] px-2 py-1 text-[11px] font-bold text-[#1d3a8f]">
+                  📹 Video call · {slotFmt.format(new Date(l.slotAt))}
+                </span>
+              )
             )}
             {l.lastReplyAt && (
               <span title="They replied to one of our emails — see Activity below" className="truncate rounded-md bg-[#eef2fb] px-2 py-1 text-[11px] font-bold text-[#3f5bb3]">💬 Replied {fmtDay(l.lastReplyAt)}</span>
@@ -698,8 +709,8 @@ function LeadModal({ lead, onClose, onSave, onDelete, onAnswerQuestion }: { lead
           // further down keeps the newest-first order it's always had.
           const thread = f.activities.filter((a) => a.type === "email" && a.direction).slice().reverse();
           const bubble = (dir: "in" | "out", text: string, who: string, at?: string) => (
-            <div key={`${dir}-${at ?? "orig"}-${who}`} className={`max-w-[88%] rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed ${dir === "out" ? "ml-auto bg-[#1d3a8f] text-white" : "bg-[var(--surface)] border border-[#f0dcb0] text-[var(--ink)]"}`}>
-              <div className={`mb-0.5 text-[10.5px] font-bold uppercase tracking-wide ${dir === "out" ? "text-white/70" : "text-[#a5670a]"}`}>{who}{at ? ` · ${fmtDay(at)}` : ""}</div>
+            <div key={`${dir}-${at ?? "orig"}-${who}`} className={`max-w-[88%] rounded-xl px-3.5 py-2.5 text-[13px] leading-relaxed ${dir === "out" ? "ml-auto bg-[#1d3a8f] text-white" : "border border-[#bfe6cf] bg-[#eafaf0] text-[#0f5132]"}`}>
+              <div className={`mb-0.5 text-[10.5px] font-bold uppercase tracking-wide ${dir === "out" ? "text-white/70" : "text-[#127a3e]"}`}>{who}{at ? ` · ${fmtDay(at)}` : ""}</div>
               {text}
             </div>
           );
