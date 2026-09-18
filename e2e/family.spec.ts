@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
-import { bookViaApi, createParentChild, provisionLiveListing } from "./helpers/tenantData";
-import { cardWith } from "./helpers/ui";
+import { bookViaApi, createParentChild, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
+import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // Parent child-profile management: the multi-step modal, required fields, and
 // the saved card. (All steps are in the DOM at once, slid off-screen —
@@ -24,12 +24,12 @@ test.describe("children profiles", () => {
     test.setTimeout(120_000);
     const name = `E2E Child ${Date.now().toString(36)}`;
 
+    // Mark the welcome popup seen server-side before navigating so it never
+    // opens at all — see markParentWelcomed's doc comment for why dismissing
+    // it via the UI alone is racy.
+    await markParentWelcomed(loadAccounts().accounts.parent);
     await page.goto("/custdash/children");
-    // The shared parent account may not have dismissed the one-time first-login
-    // welcome modal yet (ParentWelcome.tsx) — it sits on top of the whole page
-    // and blocks every click until closed.
-    const welcomeClose = page.getByRole("dialog").getByRole("button", { name: "Close" });
-    await welcomeClose.waitFor({ state: "visible", timeout: 8_000 }).then(() => welcomeClose.click()).catch(() => {});
+    await dismissParentWelcome(page);
     await page.getByRole("button", { name: "+ Add child" }).click();
 
     // Step 1 — basics (always present, always first).
@@ -84,9 +84,15 @@ test.describe("children profiles", () => {
     await saveBtn.click();
 
     // THIS child's card renders with the flags we set (other children may
-    // carry the same allergy — read it off our card).
+    // carry the same allergy — read it off our card). The allergy note is
+    // behind a FlagChip that starts collapsed (ChildrenApp.tsx) — its detail
+    // only renders once clicked open, joined with an em dash, not a colon
+    // ("⚠ Allergy — Peanuts", not "⚠ Allergy: Peanuts").
     await expect(page.getByText(name)).toBeVisible({ timeout: 15_000 });
-    await expect(cardWith(page, name, "⚠ Allergy: Peanuts")).toBeVisible();
+    const card = cardWith(page, name);
+    await expect(card).toBeVisible({ timeout: 15_000 });
+    await card.getByRole("button", { name: /Allergy/ }).click();
+    await expect(card.getByText("Peanuts")).toBeVisible();
 
     // Remove it again (cleanup + covers the confirm dialog).
     page.on("dialog", (d) => d.accept());

@@ -1,8 +1,8 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath, type AccountManifest } from "./helpers/env";
 import { apiFetch, apiPost, fbSignIn } from "./helpers/accounts";
-import { bookViaApi, createParentChild, provisionLiveListing } from "./helpers/tenantData";
-import { cardWith } from "./helpers/ui";
+import { bookViaApi, createParentChild, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
+import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // Trips notify-and-consent: the trip is arranged through the operator API
 // (the 7-step planner UI has its own life; the consent MACHINERY is what
@@ -60,16 +60,20 @@ test.describe("parent consent journey", () => {
   test.use({ storageState: statePath("parent") });
 
   test("bell rings, consent given through the UI, operator side updates", async ({ page }) => {
+    test.setTimeout(90_000);
+    // Mark the welcome popup seen server-side before navigating, so it never
+    // opens at all — see markParentWelcomed's doc comment for why dismissing
+    // it via the UI alone is racy (it can also reopen mid-test, e.g. after
+    // the second `goto` below, which a one-shot dismiss wouldn't catch).
+    await markParentWelcomed(accounts.parent);
     // The consent request must have raised the family's bell — assert the
     // BELL UI itself (badge + entry), not just the API record behind it.
     await page.goto("/custdash/bookings");
-    // The shared parent account may not have dismissed the one-time
-    // first-login welcome modal yet (ParentWelcome.tsx) — it sits on top of
-    // the whole page and blocks the bell dropdown until closed.
-    const welcomeClose = page.getByRole("dialog").getByRole("button", { name: "Close" });
-    await welcomeClose.waitFor({ state: "visible", timeout: 8_000 }).then(() => welcomeClose.click()).catch(() => {});
+    await dismissParentWelcome(page);
     const bell = page.getByRole("button", { name: /^Notifications/ });
-    await expect(bell).toBeVisible();
+    // Same class of slow-load issue documented elsewhere in this suite —
+    // the default 10s can be tight straight after a fresh page load.
+    await expect(bell).toBeVisible({ timeout: 20_000 });
     await bell.click();
     await expect(page.getByText(`Consent needed: ${childName} — trip to ${destination}`)).toBeVisible({ timeout: 15_000 });
     await page.keyboard.press("Escape");

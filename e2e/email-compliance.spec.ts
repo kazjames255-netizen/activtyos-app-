@@ -1,6 +1,24 @@
 import { test, expect } from "@playwright/test";
+import { createHash, createHmac } from "node:crypto";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { API_URL, loadAccounts } from "./helpers/env";
 import { TEST_EMAIL_DOMAIN, apiFetch, apiPost, fbSignIn } from "./helpers/accounts";
+
+// Mirrors server/src/lib/signing.ts's deriveSecret()+sign() so this test can
+// build a genuinely valid signed unsubscribe token without a server-only
+// helper endpoint. A plain base64url(tenantId:email) token (the pre-12-Sept
+// format) is no longer accepted for a fresh tenant — the legacy-token path
+// requires proof the tenant actually sent marketing before the signing
+// migration, which a same-day e2e tenant can never satisfy (see
+// server/src/routes/emails.ts's `parsed.legacy` branch).
+function signedUnsubToken(tenantId: string, email: string): string {
+  const material = readFileSync(path.join(process.cwd(), "server/serviceAccountKey.json"), "utf8");
+  const secret = createHash("sha256").update(`url-signing:${material}`).digest("hex");
+  const body = `${tenantId}:${email.toLowerCase()}`;
+  const sig = createHmac("sha256", secret).update(`unsub:${body}`).digest("base64url");
+  return `${Buffer.from(body).toString("base64url")}.${sig}`;
+}
 
 // The email send engine's legal & delivery guarantees, asserted at the API
 // layer (no UI): the UK PECR consent split (booked families are soft opt-in,
@@ -109,9 +127,10 @@ test.describe("email compliance & send engine (API)", () => {
     expect((await dryRun(token, [target])).recipientCount).toBe(1);
 
     // The footer's unsubscribe link is GET /api/emails/unsubscribe?u=<token>,
-    // where the token is base64url("tenantId:email") — same encoding the
-    // footer builds. Public endpoint: a mail client carries no auth.
-    const tok = Buffer.from(`${tenantId}:${target}`).toString("base64url");
+    // signed the same way the real footer builds it (see signedUnsubToken's
+    // doc comment for why a plain unsigned token no longer works). Public
+    // endpoint: a mail client carries no auth.
+    const tok = signedUnsubToken(tenantId, target);
     const page = await fetch(`${API_URL}/api/emails/unsubscribe?u=${tok}`);
     expect(page.status).toBe(200);
     expect(await page.text()).toContain("unsubscribed");

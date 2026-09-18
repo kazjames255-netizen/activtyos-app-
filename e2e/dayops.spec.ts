@@ -26,14 +26,23 @@ test.describe("operator day ops", () => {
   test.use({ storageState: statePath("company") });
 
   test("register shows the booked child; check-in sticks", async ({ page }) => {
+    // This test runs first in the file, right after global.setup — the busiest
+    // point of a run (account provisioning + every other spec file's first
+    // hit all landing on the dev server at once). No explicit budget before
+    // meant the default 60s was shared with a 30s assertion below; give it
+    // real room.
+    test.setTimeout(120_000);
     await page.goto("/company/admin-registers");
     // The rebuilt register (July 2026) is a single-listing, single-day hero
     // view with no level-1 heading anywhere on the page (RegistersApp.tsx
     // renders a "Loading the register…" placeholder — no <h1> — until
     // `ready`, then the hero itself has no heading role at all). The
     // "Previous day" nav arrow only exists once the real content mounts, so
-    // wait on that instead of a heading that was never there.
-    await expect(page.getByLabel("Previous day")).toBeVisible({ timeout: 15_000 });
+    // wait on that instead of a heading that was never there. The register
+    // fetches a whole window of days up front (RegistersApp.tsx's `refresh`),
+    // which is slow even warm under a busy dev server (same class of issue
+    // documented elsewhere in this suite) — 30s occasionally isn't enough.
+    await expect(page.getByLabel("Previous day")).toBeVisible({ timeout: 45_000 });
 
     // Point the register at OUR listing — other runs leave listings behind,
     // which turns the hero name into a dropdown picker. (Never target a bare
@@ -69,8 +78,15 @@ test.describe("operator day ops", () => {
   });
 
   test("newsfeed post reaches the booked family", async ({ page, browser }) => {
+    // A second browser context's own page load plus the 30s parent-
+    // visibility wait below doesn't fit the default 60s test budget.
+    test.setTimeout(120_000);
     const body = `Bring wellies tomorrow! (${stamp})`;
-    await page.goto("/company/newsfeed");
+    // The standing "company" fixture has a franchise joined, so /company/*
+    // defaults to the head-office "all franchises" combined scope — posting
+    // there targets the network, not this tenant's own direct bookings.
+    // Force the tenant's own scope so the booked parent actually receives it.
+    await page.goto("/company/newsfeed?hoScope=__ho__");
     // Posting starts from a template tile now. "Announcement" also names a
     // filter chip, so pick the tile by its unique hint line.
     await page.getByRole("button", { name: "General news for families" }).click();
@@ -85,7 +101,11 @@ test.describe("operator day ops", () => {
     const parentCtx = await browser.newContext({ storageState: statePath("parent") });
     const parentPage = await parentCtx.newPage();
     await parentPage.goto("/custdash/newsfeed");
-    await expect(parentPage.getByText(body)).toBeVisible({ timeout: 15_000 });
+    // Confirmed via a direct /api/posts check that the data is correct
+    // (franchiseId: null, tenantId matches) the moment this fails — it's the
+    // page's own load/fetch that's slow under a busy dev server, not a
+    // targeting bug. Same class of issue as other portal views' load times.
+    await expect(parentPage.getByText(body)).toBeVisible({ timeout: 30_000 });
     await parentCtx.close();
 
     // …and ONLY the booked family: a parent with no booking at this provider
@@ -101,12 +121,17 @@ test.describe("operator day ops", () => {
     await outPage.getByRole("button", { name: "Sign in", exact: true }).click();
     await outPage.waitForURL("**/custdash/browse", { timeout: 30_000 });
     await outPage.goto("/custdash/newsfeed");
-    await expect(outPage.getByText("No updates yet.")).toBeVisible({ timeout: 15_000 });
+    // Same class of slow-load issue documented elsewhere in this suite —
+    // this is the last of three page loads in the test, under load.
+    await expect(outPage.getByText("No updates yet.")).toBeVisible({ timeout: 30_000 });
     await expect(outPage.getByText(body)).toBeHidden();
     await outCtx.close();
   });
 
   test("task can be added, completed and lands in Done", async ({ page }) => {
+    // Same class of slow-load issue as its siblings in this file — missing
+    // the timeout bump they already have.
+    test.setTimeout(90_000);
     const title = `E2E task ${stamp}`;
     await page.goto("/company/tasks");
     await page.getByPlaceholder(/Quick add…/).fill(title);
@@ -117,16 +142,21 @@ test.describe("operator day ops", () => {
     const card = page.locator('[data-ui="card"]').filter({ hasText: title }).last();
     await expect(card).toBeVisible({ timeout: 15_000 });
 
-    // Every board card has a "Done" button; ours flips to "✓ Done" when the
-    // PUT lands (exact:true keeps the pre-click match off the flipped label).
-    await card.getByRole("button", { name: "Done", exact: true }).click();
-    await expect(cardWith(page, title, "✓ Done")).toBeVisible({ timeout: 15_000 });
+    // The board no longer has a lone "Done" button (it could only move a
+    // card one way) — status is set through the same dropdown the list view
+    // uses (TasksApp.tsx). "Done" is one of its options at every status, so
+    // it isn't a usable signal on its own — the "Archive" button only
+    // renders once status === "done", so anchor on that instead.
+    await card.getByLabel("Status").selectOption("done");
+    await expect(card.getByRole("button", { name: "Archive" })).toBeVisible({ timeout: 15_000 });
 
     // Reload proves the completion persisted server-side rather than living
     // only in the optimistic local state.
     await page.reload();
     await page.getByRole("button", { name: "Board", exact: true }).click();
-    await expect(cardWith(page, title, "✓ Done")).toBeVisible({ timeout: 15_000 });
+    await expect(
+      page.locator('[data-ui="card"]').filter({ hasText: title }).last().getByRole("button", { name: "Archive" }),
+    ).toBeVisible({ timeout: 15_000 });
   });
 });
 
@@ -139,19 +169,43 @@ test.describe("staff & workforce policy", () => {
   test.use({ storageState: statePath("freelancer") });
 
   test("an expired DBS blocks adding a shift, with the reason shown", async ({ page }) => {
+    // The rota (rebuilt as a per-role grid) only assigns shifts to someone
+    // already on the tenant's rota ROSTER, picked from a list — never a
+    // typed name. There's no UI to add an ad-hoc roster member (roster
+    // entries otherwise only come from real staff logins), so seed one
+    // directly via PUT /api/rota — the same API the UI itself saves
+    // through — with a name matching the compliance record below, then
+    // drive the actual block through the real save button.
+    test.setTimeout(90_000);
     const who = `E2E Coach ${stamp}`;
     const op = await fbSignIn(accounts.freelancer.email);
     const cert = await apiPost<{ id: string }>("/api/compliance", op.idToken, {
       staffName: who, type: "DBS check", expiry: "2020-01-01",
     });
+    const staffId = `e2e-${stamp}`;
+    await apiFetch("/api/rota", op.idToken, {
+      method: "PUT",
+      body: JSON.stringify({ staff: [{ id: staffId, name: who }], shifts: [], sites: [] }),
+    });
+    await provisionLiveListing(accounts.freelancer, { title: `E2E Rota ${stamp}` });
 
     await page.goto("/freelancer/schedule");
-    await page.getByRole("button", { name: /Add a shift/ }).click();
-    await page.locator('div:has(> label:text-is("Staff member")) input').fill(who);
-    await page.getByRole("button", { name: "Save shift" }).click();
+    await expect(page.getByRole("heading", { name: /Staff schedule/ })).toBeVisible({ timeout: 30_000 });
+    await page.getByRole("button", { name: /Add a new role/ }).first().click();
+    await page.getByRole("button", { name: "Lead Coach" }).click();
+    await page.getByRole("button", { name: "＋" }).first().click();
+    await page.getByRole("button", { name: /Assign staff/ }).click();
+    // The name also matches a sidebar "click to view/edit availability" row
+    // for the same person, which carries a rate too ("…£0.00/hr" is in
+    // BOTH), so a "£" alone doesn't disambiguate — only the sidebar row
+    // carries the 🔔 reminder icon, so exclude that instead.
+    await page.getByRole("button", { name: new RegExp(`^(?!.*🔔).*${who}`) }).click();
+    await page.getByRole("button", { name: "Done", exact: true }).click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(page.getByText(/DBS has expired/)).toBeVisible({ timeout: 15_000 });
 
-    // Remove the fixture so no later test is policy-gated by it.
+    // Remove the fixtures so no later test is policy-gated by them.
     await apiFetch(`/api/compliance/${cert.id}`, op.idToken, { method: "DELETE" });
+    await apiFetch("/api/rota", op.idToken, { method: "PUT", body: JSON.stringify({ staff: [], shifts: [], sites: [] }) });
   });
 });

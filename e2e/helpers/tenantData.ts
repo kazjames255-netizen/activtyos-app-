@@ -17,6 +17,19 @@ export interface ProvisionedListing {
   runTo: string;
 }
 
+// Marks a parent account as having seen the first-login welcome popup
+// (features/parent/ParentWelcome.tsx), the same way its own "×"/"I'll do it
+// later" buttons do server-side. Call this before navigating a parent-account
+// test to a custdash route so the modal never opens at all — dismissing it
+// via the UI is inherently racy (its open-check is an async fetch that can
+// resolve mid-test, and it can pop up BEHIND a later full-screen modal like
+// the add-child wizard, where no amount of clicking can reach its Close
+// button). Idempotent and safe to call every run on the shared fixture.
+export async function markParentWelcomed(parent: TestAccount): Promise<void> {
+  const s = await fbSignIn(parent.email);
+  await apiPost("/api/me/welcome", s.idToken, {});
+}
+
 // Venue + marketplace opt-in live in the tenant library. PUT replaces each
 // top-level key wholesale, so merge with what's stored (settings holds the
 // providerName seeded at signup). Returns the venue id.

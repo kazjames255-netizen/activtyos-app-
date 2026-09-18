@@ -52,8 +52,12 @@ test.describe("email tools", () => {
     // Designer gallery → start from a template → save (names via a prompt).
     await page.getByText("Refer a friend", { exact: true }).click();
     page.once("dialog", (d) => void d.accept(name));
-    await page.getByRole("button", { name: /Save template/ }).click();
-    await expect(page.getByText(name)).toBeVisible();
+    // The designer modal's own z-index doesn't consistently beat the app
+    // header's notification bell (same class of transient-overlay issue as
+    // email.spec.ts's "I'm ready to send" click) — force is safe here since
+    // the button is otherwise ready per the retry log.
+    await page.getByRole("button", { name: /Save template/ }).click({ force: true });
+    await expect(page.getByText(name)).toBeVisible({ timeout: 20_000 });
 
     page.once("dialog", (d) => void d.accept());
     await page.locator("div").filter({ hasText: name })
@@ -68,7 +72,9 @@ test.describe("email tools", () => {
 
     await page.goto("/company/email");
     await page.getByRole("button", { name: "Compose", exact: true }).click();
-    await page.locator('select:has-text("A single address")').selectOption("one");
+    // The audience picker is a button group now, not a <select> — "one" is
+    // labelled "Specific people".
+    await page.getByRole("button", { name: /Specific people/ }).click();
     await page.getByPlaceholder("name@example.com", { exact: true }).fill(`e2e-undo-${stamp}@${TEST_EMAIL_DOMAIN}`);
     await page.locator('div:has(> label:text-is("Subject")) input').fill(subject);
     await page.locator('[contenteditable="true"]').fill("This one gets pulled back.");

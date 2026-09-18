@@ -79,7 +79,9 @@ test.describe("timetable publish reaches staff", () => {
   test("build a manual day plan and publish to the staff portal", async ({ page, browser }) => {
     test.setTimeout(150_000);
     await page.goto("/company/timetable");
-    await expect(page.getByText("Activity timetable builder")).toBeVisible({ timeout: 15_000 });
+    // Same class of slow-load issue as elsewhere in this suite — 15s
+    // occasionally isn't enough even warm under a busy dev server.
+    await expect(page.getByText("Activity timetable builder")).toBeVisible({ timeout: 30_000 });
 
     // Step 1: pick our first listing — dates flow in and a draft auto-saves.
     await page.locator("select").first().selectOption({ index: 1 });
@@ -125,28 +127,54 @@ test.describe("timetable publish reaches staff", () => {
   });
 });
 
-test.describe("rota reaches staff read-only", () => {
+test.describe("franchise rota", () => {
   test.use({ storageState: statePath("franchise") });
 
-  test("franchise adds a shift; staff see it without edit controls", async ({ page, browser }) => {
-    const staffName = `E2E Steward ${stamp}`;
+  test("franchise adds a role and an unfilled shift to the rota", async ({ page }) => {
+    // A slow-loading view — same class of test as its siblings above, which
+    // already needed 150s; this one was missing a bump entirely.
+    test.setTimeout(90_000);
+    // The schedule page has nothing to add a shift to without a live listing
+    // in view ("No listings for this view") — unlike its siblings above,
+    // this test never provisioned one. Scope it to the franchise account
+    // itself so it shows up under /franchise/schedule's default filters.
+    const listing = await provisionLiveListing(accounts.franchise, { title: `E2E Rota ${stamp}` });
     await page.goto("/franchise/schedule");
-    // PageHero's title is styled text, not a heading element; the copy is
-    // "Staff schedule" today, not "Schedule & rota".
-    await expect(page.getByText("Staff schedule", { exact: true })).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: /Add a shift/ }).click();
-    const form = page.locator("div").filter({ has: page.getByText("Add a shift", { exact: true }) }).filter({ has: page.getByRole("button", { name: "Save shift" }) }).last();
-    await form.locator("input").first().fill(staffName);
-    await page.getByRole("button", { name: "Save shift" }).click();
-    await expect(page.getByText(staffName).first()).toBeVisible({ timeout: 15_000 });
+    // PageHero's title is now a real <h2>, but its accessible name carries
+    // the "🗓 " icon prefix — "🗓 Staff schedule", not bare "Staff schedule" —
+    // so an exact match on the bare word never matches (same class of bug as
+    // the "👦 Boy" button elsewhere). This view's data-load is also slow even
+    // warm under a busy dev server (documented elsewhere for company/
+    // franchise portals) — 15s occasionally isn't enough.
+    await expect(page.getByRole("heading", { name: /Staff schedule/ })).toBeVisible({ timeout: 30_000 });
 
-    const staffCtx = await browser.newContext({ storageState: statePath("staff") });
-    const sp = await staffCtx.newPage();
-    await sp.goto("/staff/schedule");
-    await expect(sp.getByText(staffName).first()).toBeVisible({ timeout: 15_000 });
-    // Read-only for staff: no add button, no delete ×.
-    await expect(sp.getByRole("button", { name: /Add a shift/ })).toBeHidden();
-    await staffCtx.close();
+    // PARTIAL COVERAGE, flagging rather than half-fixing blind: the rota was
+    // rebuilt as a per-role grid with no free-text "shift for a name" flow —
+    // a fresh listing starts with no role rows, and assigning a shift to
+    // someone only offers people already on this franchise's ROTA ROSTER
+    // (ScheduleApp.tsx's "Assign staff" picker), which is empty here — the
+    // e2e fixtures provision a login for the "staff" role (global.setup.ts,
+    // via an invite) but never add them as a rota/team member with a pay
+    // rate and availability, so there is no one to assign. Verified: the
+    // "staff" side's own /staff/schedule (MyScheduleApp.tsx) only ever
+    // renders shifts with a real staffId (`all.filter(sh => sh.staffId)`,
+    // line ~105) — an unfilled/open shift, though the API does return it to
+    // every staff account (rota.ts GET "/api/rota": "open shifts carry no
+    // one's details"), is never shown there. So "staff sees an unassigned
+    // shift" isn't something the current UI can do — this half of the test
+    // needs either a rota-roster-member provisioning helper added to
+    // global.setup.ts, or a rewrite once such a surface exists. What IS
+    // covered below: a franchise can add a role to a listing's rota and
+    // save an (unfilled) shift into it end-to-end through the real UI.
+    await page.getByRole("button", { name: /Add a new role/ }).first().click();
+    // Preset role picker — any preset works; pick the first offered.
+    await page.getByRole("button", { name: "Lead Coach" }).click();
+    await page.getByRole("button", { name: "＋" }).first().click();
+    await page.getByRole("button", { name: "Save", exact: true }).click();
+    // The saved shift renders on the role row as "Unfilled" (ShiftBlock) —
+    // our fresh, uniquely-titled listing is the only thing on this page, so
+    // no further disambiguation is needed.
+    await expect(page.getByText("Unfilled").first()).toBeVisible({ timeout: 15_000 });
   });
 });
 
@@ -154,8 +182,19 @@ test.describe("ratio groups flow from Setup to the Ratios board", () => {
   test.use({ storageState: statePath("company") });
 
   test("group added in Setup shows on the Ratios policy table", async ({ page }) => {
+    // Several sequential steps each with their own 15s wait, plus a reload
+    // and a second page load — the default 60s budget doesn't leave enough
+    // slack under a busy dev server (confirmed: timed out on the final
+    // `goto`, not on any single assertion).
+    test.setTimeout(120_000);
     const groupName = `E2E Group ${stamp}`;
-    await page.goto("/company/setup?tab=groups");
+    // The standing "company" fixture has a franchise joined to it, so without
+    // a scope /company/setup defaults to the head-office "combined" view,
+    // whose tab list is filtered down to just company/branding/roles/money
+    // (SetupApp.tsx's HO_COMBINED_KEEP) — "groups" isn't in it, so `tab`
+    // silently falls back to the first tab and the heading never appears.
+    // Same pattern as elsewhere in this suite — force the tenant's own scope.
+    await page.goto("/company/setup?tab=groups&hoScope=__ho__");
     await expect(page.getByText("Age groups & rooms").first()).toBeVisible({ timeout: 15_000 });
     const startStandard = page.getByRole("button", { name: "Start from the standard groups" });
     if (await startStandard.isVisible().catch(() => false)) await startStandard.click();

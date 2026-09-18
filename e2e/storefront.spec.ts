@@ -27,6 +27,9 @@ test("provider storefront lists live listings and links to booking", async ({ pa
   await page.waitForURL(`**/book/${listing.id}`);
 
   // Signed out: the book page offers Sign in, and the widget is live.
-  await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible();
+  // `signedIn` starts undefined while Firebase auth state resolves
+  // asynchronously — neither "Sign in" nor "Back to activities" renders
+  // until it settles (BookPage.tsx), so this can't be instant.
+  await expect(page.getByRole("link", { name: "Sign in" })).toBeVisible({ timeout: 20_000 });
   await expect(page.getByText(/choose your pass/i)).toBeVisible({ timeout: 15_000 });
 });

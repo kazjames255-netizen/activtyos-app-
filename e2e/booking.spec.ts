@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath } from "./helpers/env";
-import { ensureVenue, provisionLiveListing } from "./helpers/tenantData";
-import { cardWith } from "./helpers/ui";
+import { ensureVenue, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
+import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // The platform's core journey. Two halves:
 //   1. Operator builds a block and publishes a listing entirely through the UI.
@@ -96,7 +96,11 @@ test.describe("parent books; operator sees it live", () => {
   test.use({ storageState: statePath("parent") });
 
   test("browse → book free place → confirmation → live operator row", async ({ page, browser }) => {
-    test.setTimeout(120_000);
+    // Two browser contexts, an extra sign-in round trip for
+    // markParentWelcomed, plus the full book→pay→confirm flow — 120s wasn't
+    // enough under a busy dev server (same class of slow-load issue
+    // documented elsewhere in this suite).
+    test.setTimeout(150_000);
     const accounts = loadAccounts().accounts;
     const s = stamp();
     const title = `E2E Camp ${s}`;
@@ -109,15 +113,17 @@ test.describe("parent books; operator sees it live", () => {
     await opPage.goto("/company/bookings");
     await expect(opPage.getByRole("heading", { level: 2, name: "Bookings" })).toBeVisible();
 
-    // Parent finds the listing in Browse. The shared parent account may not
-    // have dismissed the one-time first-login welcome modal yet
-    // (ParentWelcome.tsx) — it sits on top of the whole page and blocks every
-    // click until closed.
+    // Parent finds the listing in Browse. Mark the one-time first-login
+    // welcome modal (ParentWelcome.tsx) as seen server-side before
+    // navigating, so it never opens at all — see markParentWelcomed's doc
+    // comment for why dismissing it via the UI alone is racy.
+    await markParentWelcomed(accounts.parent);
     await page.goto("/custdash/browse");
-    const welcomeClose = page.getByRole("dialog").getByRole("button", { name: "Close" });
-    await welcomeClose.waitFor({ state: "visible", timeout: 8_000 }).then(() => welcomeClose.click()).catch(() => {});
+    await dismissParentWelcome(page);
     await page.getByPlaceholder("Search by name or venue…").fill(title);
-    await page.getByRole("button", { name: "More details", exact: true }).first().click();
+    // Accessible name is "More details — <listing title>", not bare "More
+    // details" (disambiguates cards from each other) — match the prefix.
+    await page.getByRole("button", { name: /^More details/ }).first().click();
     await page.waitForURL(`**/book/${listing.id}`);
 
     // Pick the pass (then a timing, if the bundle offers periods), one day,
@@ -137,10 +143,53 @@ test.describe("parent books; operator sees it live", () => {
     await page.getByPlaceholder("First and last name").fill(childName);
     const dob = page.locator('input[type="date"]').first();
     if (await dob.isVisible().catch(() => false)) await dob.fill("2018-05-14");
-    const boy = page.getByRole("button", { name: "👦 Boy", exact: true });
-    if (await boy.isVisible().catch(() => false)) await boy.click();
+    // Boy/girl only renders once the provider's settings.collectGender loads
+    // (async) — and becomes REQUIRED when it's on (checkout.tsx), blocking
+    // "Add child" with an inline error if skipped. isVisible() never waits,
+    // so it can race ahead of the button appearing and silently skip it —
+    // wait briefly instead (same fix already applied in family.spec.ts).
+    // This is the CHECKOUT flow's own child form (features/listings/
+    // checkout.tsx), a different component from the parent-portal
+    // ChildrenApp.tsx wizard — its Boy/Girl buttons carry no emoji prefix.
+    const boyBtn = page.getByRole("button", { name: "Boy", exact: true });
+    await boyBtn.waitFor({ state: "visible", timeout: 8_000 }).then(() => boyBtn.click()).catch(() => {});
     await page.getByRole("button", { name: "Add child", exact: true }).click();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+    // The button reads "Next" only once every child is on a pass and any
+    // provider-required custom question is answered (checkout.tsx's `ready`)
+    // — otherwise it shows a guiding message instead ("Answer "…" for …",
+    // "Put a child on every pass", etc). A required question can be added to
+    // this shared tenant mid-run by another spec (settings-scheduling.spec.ts,
+    // "All listings" scope) — same class of cross-spec race as elsewhere in
+    // this suite. Answer generically rather than assume there is none.
+    const nextBtn = page.getByRole("button", { name: "Next", exact: true });
+    for (let guard = 0; !(await nextBtn.isVisible().catch(() => false)); guard++) {
+      // A busy shared tenant can accumulate a genuinely large set of custom
+      // questions (other specs add their own concurrently) — give this
+      // plenty of room before concluding something's actually stuck.
+      if (guard > 20) throw new Error("Children step never reached 'Next' — more blocking questions than expected.");
+      // The child form can still be open if "Add child" was blocked by a
+      // required field we hadn't filled yet — answer everything currently
+      // visible FIRST, then submit, so a field revealed by an earlier
+      // answer (e.g. a "tell us more" box that only appears after picking
+      // Yes) gets picked up on submission rather than raced past.
+      for (const box of await page.getByRole("textbox").all()) {
+        if (await box.isVisible().catch(() => false) && !(await box.inputValue().catch(() => "x"))) await box.fill("N/A").catch(() => {});
+      }
+      for (const sel of await page.locator("select:visible").all()) {
+        if (!(await sel.inputValue().catch(() => "x"))) {
+          const firstReal = await sel.locator("option").nth(1).getAttribute("value").catch(() => null);
+          if (firstReal) await sel.selectOption(firstReal).catch(() => {});
+        }
+      }
+      for (const yes of await page.getByRole("button", { name: "Yes", exact: true }).all()) {
+        if (await yes.isVisible().catch(() => false)) await yes.click().catch(() => {});
+      }
+      if (await boyBtn.isVisible().catch(() => false)) await boyBtn.click().catch(() => {});
+      const addChildBtn = page.getByRole("button", { name: "Add child", exact: true });
+      if (await addChildBtn.isVisible().catch(() => false)) await addChildBtn.click().catch(() => {});
+      await page.waitForTimeout(400);
+    }
+    await nextBtn.click();
 
     // Free booking: no payment method, just confirm.
     await expect(page.getByText("Nothing to pay.")).toBeVisible({ timeout: 15_000 });

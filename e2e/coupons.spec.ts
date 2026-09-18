@@ -54,10 +54,42 @@ test.describe("discount codes", () => {
     await page.getByPlaceholder("First and last name").fill(`E2E Coupon Kid ${stamp}`);
     const dob = page.locator('input[type="date"]').first();
     if (await dob.isVisible().catch(() => false)) await dob.fill("2018-05-14");
-    const boy = page.getByRole("button", { name: "👦 Boy", exact: true });
-    if (await boy.isVisible().catch(() => false)) await boy.click();
+    // Boy/girl only renders once the provider's settings.collectGender loads
+    // (async) and becomes REQUIRED when it's on, blocking "Add child" with
+    // an inline error if skipped — isVisible() never waits, so it can race
+    // ahead of the button appearing and silently skip it. Wait briefly
+    // instead (same fix as booking.spec.ts/family.spec.ts).
+    // This is the CHECKOUT flow's own child form (features/listings/
+    // checkout.tsx), a different component from the parent-portal
+    // ChildrenApp.tsx wizard — its Boy/Girl buttons carry no emoji prefix.
+    const boy = page.getByRole("button", { name: "Boy", exact: true });
+    await boy.waitFor({ state: "visible", timeout: 8_000 }).then(() => boy.click()).catch(() => {});
     await page.getByRole("button", { name: "Add child", exact: true }).click();
-    await page.getByRole("button", { name: "Next", exact: true }).click();
+    // The button reads "Next" only once every provider-required custom
+    // question is answered — a required question can be added to this
+    // shared tenant mid-run by another spec, same cross-spec race as
+    // elsewhere in this suite. Answer generically rather than assume none.
+    const nextBtn = page.getByRole("button", { name: "Next", exact: true });
+    for (let guard = 0; !(await nextBtn.isVisible().catch(() => false)); guard++) {
+      if (guard > 20) throw new Error("Children step never reached 'Next' — more blocking questions than expected.");
+      for (const box of await page.getByRole("textbox").all()) {
+        if (await box.isVisible().catch(() => false) && !(await box.inputValue().catch(() => "x"))) await box.fill("N/A").catch(() => {});
+      }
+      for (const sel of await page.locator("select:visible").all()) {
+        if (!(await sel.inputValue().catch(() => "x"))) {
+          const firstReal = await sel.locator("option").nth(1).getAttribute("value").catch(() => null);
+          if (firstReal) await sel.selectOption(firstReal).catch(() => {});
+        }
+      }
+      for (const yes of await page.getByRole("button", { name: "Yes", exact: true }).all()) {
+        if (await yes.isVisible().catch(() => false)) await yes.click().catch(() => {});
+      }
+      if (await boy.isVisible().catch(() => false)) await boy.click().catch(() => {});
+      const addChildBtn = page.getByRole("button", { name: "Add child", exact: true });
+      if (await addChildBtn.isVisible().catch(() => false)) await addChildBtn.click().catch(() => {});
+      await page.waitForTimeout(400);
+    }
+    await nextBtn.click();
 
     // Pay stage. A made-up code is rejected server-side and changes nothing.
     await expect(page.getByText("Have discount codes?")).toBeVisible({ timeout: 15_000 });

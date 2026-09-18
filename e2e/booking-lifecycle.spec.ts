@@ -1,7 +1,7 @@
 import { test, expect } from "@playwright/test";
 import { loadAccounts, statePath, type AccountManifest } from "./helpers/env";
 import { apiPost, fbSignIn } from "./helpers/accounts";
-import { bookViaApi, provisionLiveListing } from "./helpers/tenantData";
+import { bookViaApi, markParentWelcomed, provisionLiveListing } from "./helpers/tenantData";
 import { cardWith, dismissParentWelcome } from "./helpers/ui";
 
 // The booking lifecycle beyond the happy path: a parent-initiated
@@ -23,17 +23,19 @@ test.describe("parent cancellation", () => {
 
   test("cancel request → Cancelled on both sides", async ({ page, browser }) => {
     // Provisioning + a UI cancel flow + a second browser context's own
-    // navigation is meaningfully more than the default 60s budget.
-    test.setTimeout(120_000);
+    // navigation is meaningfully more than the default 60s budget — and
+    // 120s wasn't always enough under a busy dev server either.
+    test.setTimeout(150_000);
     const title = `E2E Cancel Camp ${stamp}`;
     const child = `E2E Cancel Kid ${stamp}`;
     const listing = await provisionLiveListing(accounts.company, { title, price: 0 });
     await bookViaApi(accounts.parent, listing, { child });
 
+    // Mark the welcome popup seen server-side before navigating — see
+    // markParentWelcomed's doc comment for why dismissing it via the UI
+    // alone is racy.
+    await markParentWelcomed(accounts.parent);
     await page.goto("/custdash/bookings");
-    // The shared parent account may not have dismissed the one-time
-    // first-login welcome modal yet (ParentWelcome.tsx) — it sits on top of
-    // the whole page and blocks every click/assertion until closed.
     await dismissParentWelcome(page);
     const cancelBtn = page
       .locator("div")
@@ -71,7 +73,10 @@ test.describe("approval flow", () => {
   test.use({ storageState: statePath("parent") });
 
   test("approval-needed bookings: operator approves one, declines another; parent sees both outcomes", async ({ page, browser }) => {
-    test.setTimeout(120_000);
+    // Two contexts, several sequential UI waits under load, plus the extra
+    // sign-in round trip for markParentWelcomed — 120s wasn't enough (this
+    // test previously timed out wholesale with no specific failing step).
+    test.setTimeout(180_000);
     const title = `E2E Approval Camp ${stamp}`;
     const approveKid = `E2E Approve Kid ${stamp}`;
     const declineKid = `E2E Decline Kid ${stamp}`;
@@ -83,8 +88,11 @@ test.describe("approval flow", () => {
     expect(b1.status).toBe("Approval needed");
     expect(b2.status).toBe("Approval needed");
 
-    // Parent sees both waiting on approval.
+    // Parent sees both waiting on approval. Mark the welcome popup seen
+    // server-side before navigating — see markParentWelcomed's doc comment.
+    await markParentWelcomed(accounts.parent);
     await page.goto("/custdash/bookings");
+    await dismissParentWelcome(page);
     await expect(cardWith(page, approveKid, "Approval needed")).toBeVisible({ timeout: 15_000 });
     await expect(cardWith(page, declineKid, "Approval needed")).toBeVisible();
 
@@ -131,10 +139,13 @@ test.describe("waitlist loop", () => {
     const queued = await bookViaApi(accounts.parent, listing, { child: `E2E Queue Kid ${stamp}` });
     expect(queued.status).toBe("Waitlisted");
 
-    // Parent sees the queue card — OUR child's, not a leftover one.
+    // Parent sees the queue card — OUR child's, not a leftover one. The
+    // waiting-list section starts collapsed (MyBookingsApp.tsx) — tap its
+    // header to open before the card content renders.
     await page.goto("/custdash/bookings");
-    await expect(page.getByText("My waiting list")).toBeVisible({ timeout: 15_000 });
-    await expect(cardWith(page, `E2E Queue Kid ${stamp}`, "On the waiting list")).toBeVisible();
+    await dismissParentWelcome(page);
+    await page.getByRole("button", { name: /My waiting list/ }).click();
+    await expect(cardWith(page, `E2E Queue Kid ${stamp}`, "On the waiting list")).toBeVisible({ timeout: 15_000 });
 
     // A place must free up before it can be offered ("That date is still
     // full — free a place first") — the seat-holder cancels.
