@@ -114,6 +114,7 @@ test.describe("children profiles", () => {
     const listing = await provisionLiveListing(accounts.company, { title: `E2E Lock Camp ${stamp}`, price: 0 });
     await bookViaApi(accounts.parent, listing, { child: name });
 
+    await markParentWelcomed(accounts.parent);
     await page.goto("/custdash/children");
     const card = cardWith(page, name);
     await expect(card).toBeVisible({ timeout: 15_000 });
