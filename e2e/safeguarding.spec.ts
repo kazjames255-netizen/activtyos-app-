@@ -160,61 +160,105 @@ test.describe("medication consent loop", () => {
 test.describe("meal shop", () => {
   test.use({ storageState: statePath("company") });
 
-  // STALE: this test targets a "meal shop" one-off-item flow that no longer
-  // exists. Meals is now a menu-builder (Saved menus → Season & listing →
-  // Menu → Days, features/meals/MenuPlanner.tsx + SavedMenus.tsx) feeding a
-  // parent-side weekly timetable (features/meals/ParentMealsApp.tsx) where
-  // ordering goes through a real Stripe PayModal — there's no more manual
-  // "operator marks it paid" step to test. Needs a full rewrite AND is
-  // blocked on Stripe test keys for the payment leg either way (same known
-  // gap as payments.spec.ts / subscription-billing.spec.ts) — not chased
-  // further this pass, flagging rather than half-fixing.
+  // Meals is now a menu-builder (Saved menus → Season & listing → Menu →
+  // Days, features/meals/MenuPlanner.tsx + SavedMenus.tsx) feeding a
+  // parent-side weekly timetable (features/meals/ParentMealsApp.tsx) that
+  // pays through a real Stripe PayModal. This drives the real operator +
+  // parent UI end to end: build a saved menu, drop it onto today (the
+  // listing this describe block's booked child already runs on today),
+  // then have the parent pick it and start paying. It stops at the PayModal
+  // rather than completing a charge — this dev environment has no
+  // STRIPE_SECRET_KEY configured (same known gap as payments.spec.ts /
+  // subscription-billing.spec.ts), so /api/payments/checkout deterministically
+  // 503s with "Payments aren't configured" — asserting on THAT is the honest
+  // boundary of what's testable here, and still proves the order reached the
+  // server unpaid and the parent-side pay flow wired up correctly.
+  const fmtDateTile = (iso: string) =>
+    new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", timeZone: "UTC" });
 
-  test("operator sells a meal; parent orders; operator marks it paid", async ({ page, browser }) => {
-    await page.goto("/company/meals");
-    await page.getByRole("button", { name: /Meal shop/ }).click();
-    await page.getByRole("button", { name: /Add a meal/ }).click();
-    await page.getByPlaceholder("Hot lunch").fill(`E2E Hot lunch ${stamp}`);
+  test("operator plans a menu; parent picks a meal and starts paying", async ({ page, browser }) => {
+    test.setTimeout(120_000);
+    const menuName = `E2E Meal Menu ${stamp}`;
+    const dishName = `E2E Hot Lunch ${stamp}`;
+    const todayIso = iso(new Date());
+
+    await page.goto("/company/meals?hoScope=__ho__");
+
+    // 1 · Saved menus — build a one-dish menu.
+    await page.getByRole("button", { name: "Saved menus" }).click();
+    await page.getByRole("button", { name: /New menu/ }).click();
+    await page.getByPlaceholder("e.g. Summer week A").fill(menuName);
+    await page.getByPlaceholder("Hot lunch — chicken").fill(dishName);
     await page.locator('input[type="number"]').first().fill("3.50");
-    await page.getByRole("button", { name: "Save", exact: true }).click();
-    await expect(page.getByText(`E2E Hot lunch ${stamp}`).first()).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Save menu" }).click();
+    await expect(cardWith(page, menuName)).toBeVisible({ timeout: 15_000 });
 
-    // Parent orders one.
+    // 2 · Season & listing — point the planner at this run's live listing
+    // (the one the top-of-file beforeAll already booked childName onto,
+    // running today). If this tenant has seasons configured the listing
+    // picker only reveals itself once a season's picked — "All" always works.
+    await page.getByRole("button", { name: "1 · Season & listing" }).click();
+    // The listing picker only renders once a season's been touched (or the
+    // tenant has none at all) — touching "All seasons" first, when the
+    // picker exists, reveals it.
+    const seasonSelect = page.locator('select[title="Filter to a season"]');
+    if (await seasonSelect.count()) await seasonSelect.selectOption("");
+    const listingSelect = page.locator("select").last();
+    await expect(listingSelect).toBeVisible({ timeout: 10_000 });
+    await listingSelect.selectOption({ label: listing.title });
+
+    // 3 · Days — pick the menu as the "brush", then drop it onto today's tile.
+    await page.getByRole("button", { name: "3 · Days" }).click();
+    await page.getByRole("button", { name: menuName, exact: true }).click();
+    await page.getByText(fmtDateTile(todayIso), { exact: true }).click();
+    await page.getByRole("button", { name: /Save plan/ }).click();
+
+    // Confirm the plan actually landed server-side (the "Days" tab's own
+    // flash text is easy to miss a repaint of under a busy dev server).
+    const companySignIn = await fbSignIn(accounts.company.email);
+    await expect
+      .poll(
+        async () => {
+          const l = await apiFetch<{ mealsEnabled?: boolean; mealPlan?: Record<string, unknown> }>(
+            `/api/listings/${encodeURIComponent(listing.id)}`,
+            companySignIn.idToken,
+          );
+          return !!l.mealsEnabled && !!l.mealPlan?.[todayIso];
+        },
+        { timeout: 15_000 },
+      )
+      .toBe(true);
+
+    // Parent side: pick today's meal for the booked child, then start paying.
+    await markParentWelcomed(accounts.parent);
     const parentCtx = await browser.newContext({ storageState: statePath("parent") });
     const parentPage = await parentCtx.newPage();
     await parentPage.goto("/custdash/meals");
-    // Children are one-tap chips only (profiles + booked names — no free
-    // typing; the server rejects a child the account doesn't know).
-    await parentPage.getByRole("button", { name: childName, exact: true }).click();
-    await expect(parentPage.getByRole("button", { name: `✓ ${childName}`, exact: true })).toBeVisible();
-    // Order for a comfortably-future day: the provider's order cut-off
-    // (settings.meals.orderCutoffHours, default 18h before the session day)
-    // is enforced server-side, so "today" — and late in the day even
-    // "tomorrow" — would 409.
-    const mealDay = new Date(Date.now() + 3 * 86_400_000).toISOString().slice(0, 10);
-    await parentPage.locator('input[type="date"]').fill(mealDay);
-    await expect(parentPage.getByText(`E2E Hot lunch ${stamp}`).first()).toBeVisible({ timeout: 15_000 });
-    const optionRow = parentPage
-      .locator("div")
-      .filter({ has: parentPage.getByText(`E2E Hot lunch ${stamp}`) })
-      .filter({ has: parentPage.getByRole("button", { name: "More" }) })
-      .last();
-    await optionRow.getByRole("button", { name: "More" }).click();
-    await parentPage.getByRole("button", { name: "Place order" }).click();
-    await expect(parentPage.getByText("Order placed — pay the provider at drop-off.")).toBeVisible({ timeout: 15_000 });
+    await dismissParentWelcome(parentPage);
+    const cell = parentPage.getByLabel(`Meal for ${childName} on `, { exact: false });
+    await expect(cell).toBeVisible({ timeout: 20_000 });
+    // Index 0 is the "— choose —" placeholder; index 1 is our one dish.
+    await cell.selectOption({ index: 1 });
+    await expect(parentPage.getByText(dishName).first()).toBeVisible({ timeout: 10_000 });
+
+    await parentPage.getByRole("button", { name: /💳 Pay/ }).click();
+    await expect(parentPage.getByText(/Pay for your meal/)).toBeVisible({ timeout: 15_000 });
+    // The deterministic 503 documented above — proves the order was created
+    // and priced server-side, and the pay flow is wired up correctly.
+    await expect(parentPage.getByText(/Payments aren.t configured/)).toBeVisible({ timeout: 15_000 });
+    await parentPage.getByRole("button", { name: "Close" }).click();
     await parentCtx.close();
 
-    // Operator sees the order and marks it paid (the shop tab is client
-    // state — a reload lands back on the dietary board).
-    await page.reload();
-    await page.getByRole("button", { name: /Meal shop/ }).click();
-    // OUR child's order card: click ITS Mark-paid (a leftover unpaid order
-    // from a failed run could sit first) and expect the paid badge on it.
-    const orderCard = cardWith(page, childName);
-    await expect(orderCard).toBeVisible({ timeout: 15_000 });
-    await orderCard.getByRole("button", { name: "Mark paid" }).click();
-    // exact: the "unpaid" badge and "Mark paid" button both contain "paid".
-    await expect(cardWith(page, childName).getByText("paid", { exact: true })).toBeVisible({ timeout: 15_000 });
+    // The order itself reached the server, priced correctly, and unpaid.
+    const parentSignIn = await fbSignIn(accounts.parent.email);
+    const orders = await apiFetch<{ childName: string; date: string; total: number; pay: string }[]>(
+      "/api/meal-orders",
+      parentSignIn.idToken,
+    );
+    const ours = orders.find((o) => o.childName === childName && o.date === todayIso);
+    expect(ours, "the parent's meal order should have reached the server").toBeTruthy();
+    expect(ours!.total).toBe(3.5);
+    expect(ours!.pay).toBe("Unpaid");
   });
 });
 

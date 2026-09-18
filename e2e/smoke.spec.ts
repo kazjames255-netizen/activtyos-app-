@@ -56,7 +56,9 @@ for (const portal of PORTALS) {
 
       const failures: string[] = [];
       for (const { view, label } of viewsFor(portal)) {
+        const t0 = Date.now();
         const problem = await checkView(page, portal, view, pageErrors);
+        console.log(`[timing] ${portal}/${view}: ${Date.now() - t0}ms`);
         if (problem) failures.push(`/${portal}/${view} (${label}): ${problem}`);
       }
       expect(failures, failures.join("\n")).toEqual([]);
