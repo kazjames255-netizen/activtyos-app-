@@ -4,7 +4,7 @@ import { db } from "../firebase";
 import type { Role } from "../middleware/role";
 import { stripe } from "../lib/stripe";
 import {
-  ensureCustomer, ensureProduct, priceData, saveSub, subOf, syncFromStripe,
+  ensureCustomer, ensureProduct, priceData, saveSub, subOf, syncFromStripe, settleOpenInvoice,
   staffCount, pendingStaffInvites, locationCount, updateMeteredQuantities, type SubRecord,
 } from "../lib/billing";
 import { accessFor, clearSubscriptionCache, subscriptionState } from "../middleware/subscription";
@@ -230,7 +230,10 @@ subscription.get("/access", async (req, res) => {
     return;
   }
   const state = await subscriptionState(auth.tenantId);
-  res.json({ ...accessFor(state), status: state.status, pastDueSince: state.status === "past_due" ? state.pastDueSince : null, owner: canManage(auth.role) });
+  // pastDueSince stays meaningful once dunning has exhausted into "unpaid" —
+  // it's still "the day your payment failed", which is what the banner says.
+  const overdue = state.status === "past_due" || state.status === "unpaid";
+  res.json({ ...accessFor(state), status: state.status, pastDueSince: overdue ? state.pastDueSince : null, owner: canManage(auth.role) });
 });
 
 // ── Stripe Billing: card capture + real subscription ─────────────────────
@@ -256,6 +259,12 @@ const startSchema = putSchema.extend({ setupIntentId: z.string().max(80) });
 // POST /card — swap the card on file (SetupIntent from /checkout, confirmed
 // client-side). Future invoices — including a trial's day-7 charge — bill
 // the new card. Old cards are detached: one card on file, ever.
+//
+// If the tenant is overdue, the whole point of "Update card" is the payment
+// that failed, so we charge the OPEN invoice straight away rather than
+// leaving them in the banner until Stripe's next Smart Retry (which can be
+// days out). A decline is reported as such — the card is saved either way,
+// but the tenant stays past_due and is told why (402).
 subscription.post("/card", async (req, res) => {
   const auth = req.auth!;
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
@@ -270,11 +279,38 @@ subscription.post("/card", async (req, res) => {
   const customer = typeof si.customer === "string" ? si.customer : si.customer.id;
   const pmId = typeof si.payment_method === "string" ? si.payment_method : si.payment_method.id;
   await stripe.customers.update(customer, { invoice_settings: { default_payment_method: pmId } });
+  const prior = await subOf(auth.tenantId);
+  // /start pins the card ON the subscription, and a subscription-level default
+  // beats the customer's. Without this, every future renewal would still aim
+  // at the card we're about to detach.
+  if (prior?.stripeSubscriptionId && prior.status !== "canceled") {
+    await stripe.subscriptions.update(prior.stripeSubscriptionId, { default_payment_method: pmId }).catch(() => {});
+  }
   const old = await stripe.customers.listPaymentMethods(customer, { type: "card" });
   for (const p of old.data) if (p.id !== pmId) await stripe.paymentMethods.detach(p.id).catch(() => {});
   const pm = await stripe.paymentMethods.retrieve(pmId);
   await saveSub(auth.tenantId, { stripeCustomerId: customer, cardLast4: pm.card?.last4, cardBrand: pm.card?.brand });
-  res.json({ ok: true, cardLast4: pm.card?.last4 ?? null, cardBrand: pm.card?.brand ?? null });
+  const card = { cardLast4: pm.card?.last4 ?? null, cardBrand: pm.card?.brand ?? null };
+
+  // Overdue → settle the open invoice with the card they just gave us.
+  if (prior?.stripeSubscriptionId && (prior.status === "past_due" || prior.status === "unpaid")) {
+    const settled = await settleOpenInvoice(auth.tenantId, prior.stripeSubscriptionId, pmId);
+    clearSubscriptionCache(auth.tenantId);
+    if (settled.attempted && !settled.paid) {
+      // The card IS saved — but answering "ok" while the tenant is still
+      // past_due would be a lie the banner immediately contradicts.
+      res.status(402).json({
+        error: `Your new card was saved, but the payment we owe on your account didn't go through. ${settled.error ?? ""}`.trim(),
+        code: "card_saved_payment_failed",
+        status: settled.status,
+        ...card,
+      });
+      return;
+    }
+    res.json({ ok: true, ...card, status: settled.status, paidNow: settled.paid });
+    return;
+  }
+  res.json({ ok: true, ...card });
 });
 
 // DELETE /card — unlink the saved card entirely. Only without a live
@@ -467,10 +503,22 @@ subscription.post("/cancel", async (req, res) => {
 });
 
 // POST /api/subscription/reactivate —
-//  · still in the paid period ("canceling") → un-cancel, nothing to pay;
-//  · lapsed (canceled / past_due) with a card on file → new subscription,
-//    charged now, no second trial;
+//  · the Stripe subscription is still ALIVE (canceling / past_due / unpaid /
+//    incomplete) → never create a second one: un-cancel it, or settle its
+//    open invoice with the card on file;
+//  · genuinely lapsed (canceled / gone) with a card on file → new
+//    subscription, charged now, no second trial;
 //  · no card on file → 402 so the client runs the /checkout + /start flow.
+//
+// The live-subscription branch is the fix for the double-billing hole: an
+// overdue tenant used to get a brand-new subscription bolted on beside the
+// unpaid one, so both billed. Settling (rather than refusing) is the choice
+// that matches the rest of the file — /cancel never tears a live
+// subscription down mid-period and /start explicitly cancels a live one
+// before replacing it, so "reactivate" here means "put this subscription
+// straight", not "start another". It also keeps the grandfathered price:
+// the existing subscription's Price is untouched, whereas re-creating would
+// re-snapshot today's catalogue onto an existing customer.
 subscription.post("/reactivate", async (req, res) => {
   const auth = req.auth!;
   if (!canManage(auth.role) || !auth.tenantId) { res.status(403).json({ error: "Requires an operator account" }); return; }
@@ -478,13 +526,34 @@ subscription.post("/reactivate", async (req, res) => {
   if (!sub) { res.status(400).json({ error: "No subscription to reactivate" }); return; }
 
   if (stripe && sub.stripeSubscriptionId) {
-    if (sub.status === "canceling") {
-      const s = await stripe.subscriptions.update(sub.stripeSubscriptionId, { cancel_at_period_end: false });
-      const status = await syncFromStripe(auth.tenantId, s);
+    // Believe Stripe about whether the subscription still exists, not the
+    // local status — the local record can be a webhook behind.
+    const live = await stripe.subscriptions.retrieve(sub.stripeSubscriptionId).catch(() => null);
+    const gone = !live || live.status === "canceled" || live.status === "incomplete_expired";
+
+    if (live && !gone) {
+      if (live.cancel_at_period_end) {
+        const s = await stripe.subscriptions.update(live.id, { cancel_at_period_end: false });
+        const status = await syncFromStripe(auth.tenantId, s);
+        clearSubscriptionCache(auth.tenantId);
+        res.json({ ok: true, status });
+        return;
+      }
+      // Overdue: the subscription is fine, the invoice isn't. Charge it.
+      const settled = await settleOpenInvoice(auth.tenantId, live.id);
       clearSubscriptionCache(auth.tenantId);
-      res.json({ ok: true, status });
+      if (settled.attempted && !settled.paid) {
+        res.status(402).json({
+          error: `${settled.error ?? "We couldn't take the outstanding payment."} Update your card in Money → Subscription and we'll try again straight away.`,
+          code: "reactivate_payment_failed",
+          status: settled.status,
+        });
+        return;
+      }
+      res.json({ ok: true, status: settled.status, paidNow: settled.paid });
       return;
     }
+
     const customer = sub.stripeCustomerId;
     const cust = customer ? await stripe.customers.retrieve(customer) : null;
     const pm = cust && !cust.deleted ? cust.invoice_settings?.default_payment_method : null;

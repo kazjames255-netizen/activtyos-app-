@@ -188,21 +188,33 @@ function periodEnd(s: Stripe.Subscription): string | null {
   return iso(onSub ?? s.items?.data?.[0]?.current_period_end);
 }
 
+/** Local statuses that carry a pastDueSince stamp — the grace clock runs in
+ *  past_due and the stamp is kept (not restarted, not dropped) once dunning
+ *  has exhausted into "unpaid". */
+const OVERDUE = new Set(["past_due", "unpaid"]);
+
 /** Map a live Stripe subscription onto the tenant record. The one status we
- *  invent locally is "canceling" (Stripe says active + cancel_at_period_end). */
+ *  invent locally is "canceling" (Stripe says active + cancel_at_period_end).
+ *  "unpaid" is kept as itself, NOT folded into past_due: it's Stripe's
+ *  end-of-dunning state (every retry spent), so the grace period is already
+ *  over and accessFor() locks it — see middleware/subscription.ts. */
 export async function syncFromStripe(tenantId: string, s: Stripe.Subscription): Promise<string> {
   const status =
     s.status === "trialing" ? (s.cancel_at_period_end ? "canceling" : "trialing")
     : s.status === "active" ? (s.cancel_at_period_end ? "canceling" : "active")
-    : s.status === "past_due" || s.status === "unpaid" ? "past_due"
+    : s.status === "unpaid" ? "unpaid"
+    : s.status === "past_due" ? "past_due"
     : s.status === "canceled" || s.status === "incomplete_expired" ? "canceled"
     : "past_due"; // incomplete/paused — treat as needing attention
   // When it FIRST went past_due — the start of the 14-day grace period
-  // (middleware/subscription.ts). Kept across re-syncs, cleared once paid.
-  const prior = status === "past_due" ? await subOf(tenantId) : null;
+  // (middleware/subscription.ts). Kept across re-syncs (including the
+  // past_due → unpaid step), cleared once paid.
+  const prior = OVERDUE.has(status) ? await subOf(tenantId) : null;
   await saveSub(tenantId, {
     status,
-    pastDueSince: status === "past_due" ? (prior?.status === "past_due" && prior.pastDueSince) || new Date().toISOString() : null,
+    pastDueSince: OVERDUE.has(status)
+      ? (prior && OVERDUE.has(prior.status ?? "") && prior.pastDueSince) || new Date().toISOString()
+      : null,
     trialEndsAt: iso(s.trial_end),
     currentPeriodEnd: periodEnd(s),
     cancelAt: s.cancel_at_period_end ? (iso(s.cancel_at) ?? periodEnd(s)) : null,
@@ -212,13 +224,100 @@ export async function syncFromStripe(tenantId: string, s: Stripe.Subscription): 
 }
 
 /** A renewal failed (invoice.payment_failed): past_due, stamped with when it
- *  started. A later retry failing again doesn't restart the grace period. */
+ *  started. A later retry failing again doesn't restart the grace period —
+ *  and it must not UN-lock a tenant Stripe has already given up on: once the
+ *  record says "unpaid", a further failed retry leaves it unpaid. */
 export async function markPastDue(tenantId: string): Promise<void> {
   const prior = await subOf(tenantId);
+  const wasOverdue = OVERDUE.has(prior?.status ?? "");
   await saveSub(tenantId, {
-    status: "past_due",
-    pastDueSince: (prior?.status === "past_due" && prior.pastDueSince) || new Date().toISOString(),
+    status: prior?.status === "unpaid" ? "unpaid" : "past_due",
+    pastDueSince: (wasOverdue && prior?.pastDueSince) || new Date().toISOString(),
   });
+}
+
+// ── Settling an overdue subscription ─────────────────────────────────────
+// Stripe leaves the failed renewal's invoice OPEN and retries it on its own
+// schedule (Smart Retries — up to four days out). When the operator has just
+// handed us a working card there's no reason to make them wait: charge the
+// open invoice there and then. Everything here believes Stripe rather than
+// the attempt — the tenant record is re-synced from the live subscription
+// whether the charge worked or not, so a decline leaves them past_due.
+
+/** Stripe statuses with an open invoice worth attempting now. */
+const NEEDS_PAYMENT: ReadonlySet<Stripe.Subscription.Status> =
+  new Set<Stripe.Subscription.Status>(["past_due", "unpaid", "incomplete"]);
+
+export interface SettleResult {
+  /** Did we actually put a charge to Stripe? (false = nothing was owed.) */
+  attempted: boolean;
+  paid: boolean;
+  /** The tenant's status after re-syncing from Stripe. */
+  status: string;
+  /** Set whenever the money didn't move — safe to show the operator. */
+  error?: string;
+}
+
+/** A decline message an operator can act on. Stripe's own card-error text
+ *  ("Your card was declined.", "Your card has insufficient funds.") is
+ *  written for exactly this, so pass it through; anything else gets a plain
+ *  fallback rather than an API diagnostic. */
+function declineMessage(e: unknown): string {
+  const err = e as { type?: string; message?: string; code?: string };
+  const base = "We couldn't take the outstanding payment with that card.";
+  if (err?.type === "StripeCardError" && err.message) return `${base} ${err.message}`;
+  if (err?.code === "invoice_payment_intent_requires_action") {
+    return `${base} Your bank wants to confirm it — try paying the invoice from the emailed link.`;
+  }
+  if (err?.type === "StripeInvalidRequestError" && /payment method|source/i.test(err.message ?? "")) {
+    return "There's no usable card on file — add one in Money → Subscription.";
+  }
+  return base;
+}
+
+/** Pay the subscription's open invoice NOW, then re-sync the tenant from
+ *  Stripe. Safe to call on any subscription: one that owes nothing returns
+ *  `attempted: false` having only refreshed the record. */
+export async function settleOpenInvoice(
+  tenantId: string,
+  subscriptionId: string,
+  paymentMethodId?: string,
+): Promise<SettleResult> {
+  if (!stripe) return { attempted: false, paid: false, status: (await subOf(tenantId))?.status ?? "none" };
+  const s = await stripe.subscriptions.retrieve(subscriptionId, { expand: ["latest_invoice"] });
+  if (!NEEDS_PAYMENT.has(s.status)) {
+    return { attempted: false, paid: false, status: await syncFromStripe(tenantId, s) };
+  }
+  const invoice = typeof s.latest_invoice === "string"
+    ? await stripe.invoices.retrieve(s.latest_invoice)
+    : s.latest_invoice;
+  // Only an OPEN invoice is collectable — draft/void/uncollectible aren't, and
+  // a paid one means Stripe's own retry beat us to it.
+  if (!invoice?.id || invoice.status !== "open") {
+    return { attempted: false, paid: false, status: await syncFromStripe(tenantId, s) };
+  }
+
+  let paid = false;
+  let error: string | undefined;
+  try {
+    const result = await stripe.invoices.pay(invoice.id, {
+      ...(paymentMethodId ? { payment_method: paymentMethodId } : {}),
+      // The card was captured by a SetupIntent with usage "off_session", so
+      // its mandate covers this; on-session would risk a 3DS prompt we have
+      // no way to show from here.
+      off_session: true,
+    });
+    paid = result.status === "paid";
+    if (!paid) error = "The payment hasn't gone through yet — we'll keep trying.";
+  } catch (e) {
+    error = declineMessage(e);
+  }
+  // Re-read the subscription: Stripe decides the status, not the call above.
+  // (A decline therefore lands the tenant back on past_due/unpaid with their
+  // original pastDueSince — the grace clock is never restarted by a retry.)
+  const after = await stripe.subscriptions.retrieve(subscriptionId);
+  const status = await syncFromStripe(tenantId, after);
+  return { attempted: true, paid, status, error: paid ? undefined : error };
 }
 
 /** Find the tenant a Stripe customer belongs to (webhook lookups). */

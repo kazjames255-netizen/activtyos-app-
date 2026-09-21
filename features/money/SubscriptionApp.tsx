@@ -125,6 +125,10 @@ const STATUS_META: Record<string, { label: string; bg: string; fg: string }> = {
   canceling: { label: "Cancelling", bg: "#fdf0e3", fg: "#a5670a" },
   canceled: { label: "Cancelled", bg: "#fdebec", fg: "#c02636" },
   past_due: { label: "Payment due", bg: "#fdebec", fg: "#c02636" },
+  // Stripe's end-of-dunning state — every retry spent. Locked, but the
+  // subscription is still there: updating the card settles it (server pays
+  // the open invoice on the spot — server/src/lib/billing.ts settleOpenInvoice).
+  unpaid: { label: "Payment due", bg: "#fdebec", fg: "#c02636" },
   none: { label: "No plan", bg: "#eef0f5", fg: "#6b6880" },
 };
 
@@ -330,7 +334,7 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
   const sm = STATUS_META[c.status] ?? STATUS_META.none;
   const statusLabel: Record<string, string> = {
     trialing: t("money.subStatusTrialing"), active: t("money.subStatusActive"), canceling: t("money.subStatusCancelling"),
-    canceled: t("money.subStatusCancelled"), past_due: t("money.subStatusPaymentDue"), none: t("money.subStatusNoPlan"),
+    canceled: t("money.subStatusCancelled"), past_due: t("money.subStatusPaymentDue"), unpaid: t("money.subStatusPaymentDue"), none: t("money.subStatusNoPlan"),
   };
   const staffUsed = c.staffUsed ?? null;
   const overStaff = c.staffLimit != null && staffUsed != null && staffUsed >= c.staffLimit;
@@ -386,11 +390,11 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
           </div>
           {/* Payment failed: 14 days' full access, then read-only (safety
               records keep working) — see server/src/middleware/subscription.ts. */}
-          {c.status === "past_due" && (
+          {(c.status === "past_due" || c.status === "unpaid") && (
             <div className="mt-2.5 rounded-xl border border-[#f3c4c9] bg-[#fdebec] px-3.5 py-2.5 text-[12.5px] font-semibold leading-snug text-[#c02636]">
-              {c.access?.mode === "readonly"
-                ? t("money.subPastDueReadOnly", { date: fmtDay(c.pastDueSince) })
-                : t("money.subPastDueGrace", { date: fmtDay(c.access?.graceEndsAt) })}
+              {c.access?.mode === "grace"
+                ? t("money.subPastDueGrace", { date: fmtDay(c.access?.graceEndsAt) })
+                : t("money.subPastDueReadOnly", { date: fmtDay(c.pastDueSince) })}
               {data.billingConfigured && (
                 <button type="button" className="ml-2 font-extrabold underline" onClick={() => setUpdatingCard(true)}>{t("money.subUpdateCard")}</button>
               )}
@@ -408,7 +412,7 @@ export function SubscriptionApp({ gate = false, onStarted }: { gate?: boolean; o
 
           <div className="mt-3.5 flex flex-wrap gap-2">
             {(c.status === "active" || c.status === "trialing") && <Button variant="danger" sm onClick={() => act("cancel", "cancel")} disabled={acting === "cancel"}>{acting === "cancel" ? t("money.subCancelling") : t("money.subCancelSubscription")}</Button>}
-            {(c.status === "canceling" || c.status === "canceled") && <Button variant="primary" sm onClick={() => act("reactivate", "react")} disabled={acting === "react"}>{acting === "react" ? t("money.subReactivating") : t("money.subReactivate")}</Button>}
+            {(c.status === "canceling" || c.status === "canceled" || c.status === "unpaid") && <Button variant="primary" sm onClick={() => act("reactivate", "react")} disabled={acting === "react"}>{acting === "react" ? t("money.subReactivating") : t("money.subReactivate")}</Button>}
           </div>
         </div>
       )}
