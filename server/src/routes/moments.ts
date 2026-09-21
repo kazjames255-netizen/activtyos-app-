@@ -11,6 +11,7 @@ import { notify, parentEmailForChild } from "../lib/notify";
 import { ukToday } from "../lib/ukDate";
 import { siteChildIds, siteRecordFilter, staffSiteScope } from "../lib/siteScope";
 import { customerAreaOn } from "../lib/customerArea";
+import { whereInChunks } from "../lib/firestoreIn";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Moments (Pupils) — the photos a provider shares of the day, and the feed a
@@ -175,16 +176,16 @@ moments.get("/", async (req, res) => {
 
   if (auth.role === "parent") {
     const kids = await db.collection("children").where("parentUid", "==", req.user!.uid).get();
-    const ids = kids.docs.map((d) => d.id).slice(0, 10); // Firestore array-contains-any cap
+    const ids = kids.docs.map((d) => d.id);
     if (!ids.length) {
       res.json([]);
       return;
     }
-    const snap = await col.where("childIds", "array-contains-any", ids).get();
+    const docs = await whereInChunks(col, "childIds", "array-contains-any", ids);
     // Not from a provider that switched Moments off (Setup → Features / Customer area).
-    const tenants = [...new Set(snap.docs.map((d) => String(d.get("tenantId") ?? "")))].filter(Boolean);
+    const tenants = [...new Set(docs.map((d) => String(d.get("tenantId") ?? "")))].filter(Boolean);
     const on = new Map(await Promise.all(tenants.map(async (t) => [t, await customerAreaOn(t, "moments")] as const)));
-    const list = snap.docs
+    const list = docs
       .filter((d) => on.get(String(d.get("tenantId") ?? "")))
       .map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) }))
       .sort((a, b) => (`${(b as { createdAt?: string }).createdAt}` < `${(a as { createdAt?: string }).createdAt}` ? -1 : 1));

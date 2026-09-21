@@ -10,6 +10,7 @@ import { siteRecordFilter } from "../lib/siteScope";
 import type { Role } from "../middleware/role";
 import { notify, parentEmailForChild } from "../lib/notify";
 import { alertDsl, isSafeguardingLead, leadCovers, namesALead } from "../lib/dslAlert";
+import { whereInChunks } from "../lib/firestoreIn";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Incidents & Accidents (Pupils) — the safeguarding log every OFSTED-
@@ -211,10 +212,10 @@ incidents.get("/", async (req, res) => {
     // A parent reads their OWN children's records (accidents/incidents),
     // across every provider — scoped by the child's parentUid.
     const kids = await db.collection("children").where("parentUid", "==", req.user!.uid).get();
-    const ids = kids.docs.map((d) => d.id).slice(0, 10);
+    const ids = kids.docs.map((d) => d.id);
     if (!ids.length) { res.json([]); return; }
-    const snap = await col.where("childId", "in", ids).get();
-    let list = snap.docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; kind?: string; date?: string; time?: string; tenantId?: string; shareWithParent?: boolean; confidential?: boolean })[];
+    const docs = await whereInChunks(col, "childId", "in", ids);
+    let list = docs.map((d) => ({ id: d.id, ...(d.data() as Record<string, unknown>) })) as (Record<string, unknown> & { id: string; kind?: string; date?: string; time?: string; tenantId?: string; shareWithParent?: boolean; confidential?: boolean })[];
     // A parent NEVER sees safeguarding concerns (confidential, DSL-routed) unless
     // staff explicitly shared them; confidential records stay off their profile.
     // Behaviour records reach the parent only when staff chose "share with parent".
